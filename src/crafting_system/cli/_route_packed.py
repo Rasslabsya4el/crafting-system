@@ -29,6 +29,7 @@ from ._offers import BuyStartItem, free_action_cost
 from . import _packed
 from ._packed import PackedResult, lumped_policy, lumped_view
 from ._plan import Plan, packed_risk
+from ._route_chain import chain_of_route
 
 
 class _Reading:
@@ -164,7 +165,10 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
     risk, _ = packed_risk(result, plan.mean_remaining, free_action_cost(plan.offers))  # the route costs at least the solver's mean
     say(f"route risk evaluated ({time.perf_counter() - began:.1f} s)")
     view = lumped_view(lumped, reduced, classes.cls, walked)
-    return RouteResult(view, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began)
+    item_chain = chain_of_route(walked, chosen, labels, cost, gaps)  # what the route page reads: item states, not the shown member of a block
+    return RouteResult(
+        view, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began, item_chain
+    )
 
 
 def _divergence(plan: Plan, route, data: GameData, labels: dict[int, str], make):

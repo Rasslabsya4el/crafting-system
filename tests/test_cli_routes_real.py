@@ -210,6 +210,16 @@ def test_a_fractured_mod_reads_as_the_mod_of_the_item_not_as_a_mod_only_an_essen
 NOTE_PARTS = re.compile(r"T\d+( or better| to T\d+)?|any tier|crafted|essence only|tier too low|in some|at least \d+ of \d+")
 
 
+def test_no_step_prints_two_lines_that_read_alike(solved, data):
+    _, _, _, plan = solved
+
+    for row in build_section(route_input(plan), data).rows:
+        for field in row.fields:
+            if field.label in ("Chance per use", "On failure"):
+                texts = [line.text.rsplit(":", 1)[0].rsplit(" (", 1)[0] for line in field.lines]
+                assert len(texts) == len(set(texts)), (row.title, texts)  # two branches that read alike say what the player does next
+
+
 def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_no_empty_slot(solved, data):
     _, _, _, plan = solved
     section = build_section(route_input(plan), data)

@@ -14,6 +14,10 @@ Accepts, Trade, Chance per use, Tier chances, Cost per use, Uses on average, Ste
 only, never how a mechanic works. A step with no action (the dead end of a policy, the gap of a given route)
 is a row titled "No action" that says why.
 
+The states of a row are item states. A plan shown by its lumped chain (R04, R14) still has its rows made from the item states of
+its policy (`RouteInput.chain`, `_route_chain`), never from the shown member of a block: what a row says of an item (a mod lost, the
+tiers a draw can add) is a fact about items, and a block's members can differ in it.
+
 The chances of a row are the exact mixture of those of its states (OR-20): the sum over the states of (expected
 visits x chance) over the expected visits of the row (`_route_flow`). Chance per use lists the outcomes that do not lose
 a wanted mod, one line per place they lead to: the target, the same step again ("nothing gained"), another step.
@@ -46,9 +50,12 @@ what `_route_card` already reads.
 
 import json
 import math
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+
+import numpy as np
 
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
@@ -65,7 +72,8 @@ from ._plan import GIVEN_SOURCE, Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
-from ._route_flow import ENTRY_STATES, Edge, Step, build_flow
+from ._route_chain import chain_of_packed_policy
+from ._route_flow import ENTRY_STATES, Chain, Edge, Step, chain_of_policy, flow_of
 from ._route_html import render_page
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
@@ -162,18 +170,23 @@ class RouteInput:
     risk: RiskReport
     reasons: Mapping[CompressedState, str] = field(default_factory=dict)
     interval: IntervalAnswer | None = None  # the plan's interval over a rule axis (ticket #221); only the planner's own policy has one
+    chain: Chain | None = None  # the policy on item states as arrays, when `policy` is a lumped view (then the rows are made from this, not from the shown members of blocks)
 
 
 def route_input(plan: Plan, interval: IntervalAnswer | None = None) -> RouteInput:
-    """The planner's own policy, with the interval of the plan when the answer read a rule axis."""
-    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval)
+    """The planner's own policy, with the interval of the plan when the answer read a rule axis.
+
+    A packed plan shown by its lumped chain (`Plan.lumped`) gets the chain of its item states too: the page is made from that.
+    """
+    chain = chain_of_packed_policy(plan.policy) if plan.lumped else None
+    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval, chain=chain)
 
 
 def given_route_input(plan: Plan, route: Route, result: RouteResult) -> RouteInput:
     """A given route as a fixed policy; its gaps are states with no action and a reason."""
     name = route.name or Path(route.source).name
     reasons = {gap.state: gap.reason for gap in result.gaps}
-    return RouteInput(f"Given route: {name}", plan, result.policy, result.risk, reasons)
+    return RouteInput(f"Given route: {name}", plan, result.policy, result.risk, reasons, chain=result.chain)
 
 
 # --- numbers -----------------------------------------------------------------------------------------------
@@ -229,6 +242,18 @@ def _fields(*candidates: Field | None) -> tuple[Field, ...]:
     return tuple(candidate for candidate in candidates if candidate is not None)
 
 
+def _lost_leaves(chain: Chain, src: np.ndarray, dst: np.ndarray) -> tuple[range, np.ndarray]:
+    """For each edge `src -> dst` of the chain (item states), which leaves of the target the use stops meeting: the wanted mods it loses.
+
+    A leaf is lost on an edge when the item before has it met (PASSING) and the item after has not. Read on item states, so an Augmentation
+    never loses one and a Remove Crafted Mods loses only what a crafted mod gave.
+    """
+    width = len(chain.states[0].status)
+    status = np.array([state.status for state in (*chain.states, *chain.goals)], dtype=np.int8).reshape(chain.m + len(chain.goals), width)
+    met = int(Status.PASSING)
+    return range(status.shape[1]), (status[src] == met) & (status[dst] != met)
+
+
 class _View:
     """What the rows of one section share: the plan, the data, the flow and the anchors."""
 
@@ -237,14 +262,8 @@ class _View:
         self.route_field = route_field
         self.ab = self.plan.abstraction
         self.reader = _StateReader(self.ab)
-        self.flow = build_flow(
-            self.plan.start,
-            inp.policy,
-            self.ab.is_goal,
-            inp.reasons,
-            is_restart=lambda action: action.label == RESTART,
-            failed=self._lost_leaves,
-        )
+        chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
+        self.flow = flow_of(chain, is_restart=lambda action: action.label == RESTART, loss=_lost_leaves)
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
         self.first: FirstStep | None = None if starts is None else first_step(starts.chosen, data, self.plan.target)
@@ -324,13 +343,6 @@ class _View:
             found.append("a rare item")
         return list(dict.fromkeys(found))
 
-    @staticmethod
-    def _lost_leaves(before: CompressedState, after: CompressedState) -> tuple[int, ...]:
-        """The leaves of the target a use that takes `before` to `after` stops meeting: the wanted mods it loses (a leaf that was PASSING)."""
-        return tuple(
-            i for i, (now, then) in enumerate(zip(before.status, after.status)) if now is Status.PASSING and then is not Status.PASSING
-        )
-
     def lost(self, edge: Edge) -> list[str]:
         """What a failure edge costs the item, in words: the wanted mod its uses lose, or the list of those they may lose."""
         texts = [self.leaf_text(i) for i in edge.lost]
@@ -388,8 +400,7 @@ class _View:
         if len(shown) == 1:
             return [Line(chance_text(shown[0].chance))]
         lines = []
-        for edge in shown:
-            what, names_row = self.edge_phrase(step, edge)
+        for edge, (what, names_row) in zip(shown, self.phrases(step, shown)):
             text = f"{what}: {chance_text(edge.chance)}"
             lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1, below, always=names_row))
         return lines
@@ -397,10 +408,27 @@ class _View:
     def failure_lines(self, step: Step, failing: list[Edge], below: int) -> list[Line]:
         """One line per place a use that loses a wanted mod, or restarts the item, leads to."""
         lines = []
-        for edge in failing:
-            what, names_row = self.edge_phrase(step, edge)
+        for edge, (what, names_row) in zip(failing, self.phrases(step, failing)):
             lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1, None, always=names_row))
         return lines
+
+    def phrases(self, step: Step, edges: list[Edge]) -> list[tuple[str, bool]]:
+        """`edge_phrase` of each edge, and where two read alike, the action each goes on with: ", then Fracturing Orb".
+
+        Two branches that lead to different steps differ in what the player does next, and that is the one thing a player sees of
+        them when the item reads the same; branches to the same step are one edge already.
+        """
+        found = [self.edge_phrase(step, edge) for edge in edges]
+        counts = Counter(what for what, _ in found)
+        return [
+            (f"{what}, then {self.next_title(edge)}" if counts[what] > 1 and edge.to is not None else what, names_row)
+            for edge, (what, names_row) in zip(edges, found)
+        ]
+
+    def next_title(self, edge: Edge) -> str:
+        """The action of the step an edge leads to, as its row is titled."""
+        there = self.flow.steps[edge.to - 1].action  # `edge.to` is a step number (from 1)
+        return "no action" if there is None else self.title(there)
 
     def accepts(self, action: Action, forward: list[Edge], after: ItemCard) -> list[str]:
         """What a random craft accepts as a good result: how many mods the item may end up with, and that the rest is any.
@@ -428,13 +456,32 @@ class _View:
 
     @staticmethod
     def tier_text(line: TierLine) -> str:
-        """`+# to maximum Life: T1 6.7% (target) · T2 6.7% · none 33%`; when every tier is the target's, no tier is marked."""
+        """`+# to maximum Life: T1 1.4% (target) · T2 to T10 1.4% each · none 86%` (OR-31, format by the owner on #491).
+
+        Runs of tiers with the same chance are joined ("T2 to T10 1.4% each", two tiers "T2 and T3 1.4% each"); a tier the target accepts is
+        never joined with one it does not, and is marked "(target)"; when every tier is the target's, none is marked and the line ends with that.
+        """
         every = all(share.wanted for share in line.tiers)
-        parts = [
-            f"T{share.tier} {'0%' if share.chance == 0.0 else chance_text(share.chance)}{' (target)' if share.wanted and not every else ''}"
-            for share in line.tiers
-        ]
-        parts.append(f"none {'0%' if line.none == 0.0 else chance_text(line.none)}")
+
+        def percent(chance: float) -> str:
+            return "0%" if chance == 0.0 else chance_text(chance)
+
+        runs: list[list] = []  # [first tier, last tier, chance, wanted]
+        for share in line.tiers:
+            last = runs[-1] if runs else None
+            if last and last[1] + 1 == share.tier and last[3] == share.wanted and math.isclose(last[2], share.chance, rel_tol=1e-9, abs_tol=1e-15):
+                last[1] = share.tier
+            else:
+                runs.append([share.tier, share.tier, share.chance, share.wanted])
+        parts = []
+        for first, final, chance, wanted in runs:
+            mark = " (target)" if wanted and not every else ""
+            if final == first:
+                parts.append(f"T{first} {percent(chance)}{mark}")
+            else:
+                joiner = "and" if final == first + 1 else "to"
+                parts.append(f"T{first} {joiner} T{final} {percent(chance)} each{mark}")
+        parts.append(f"none {percent(line.none)}")
         return f"{line.text}: {' · '.join(parts)}" + (" · every tier is the target" if every else "")
 
     def branches(self, step: Step, after: ItemCard) -> tuple[Branch, ...]:
@@ -443,10 +490,10 @@ class _View:
         if len(edges) < 2 or step.action is None or step.action.label == RESTART:
             return ()
         found = []
-        for edge in edges:
+        for edge, (what, _) in zip(edges, self.phrases(step, edges)):
             card = card_of_states(self.ab, list(edge.states), self.reader)
             if card != after:
-                found.append(Branch(f"{self.edge_phrase(step, edge)[0]} ({chance_text(edge.chance)})", card))
+                found.append(Branch(f"{what} ({chance_text(edge.chance)})", card))
         return tuple(found)
 
     def cost_lines(self, action: Action) -> list[str]:
@@ -508,6 +555,17 @@ class _View:
             if essence.name == label and essence.level >= 5:
                 return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
         return None
+
+    def notes(self, action: Action, step: Step, restart: bool) -> list[str]:
+        """The Note lines of a row: the essence's, and, when the visits could not be solved, that this row's chances are a plain mean."""
+        found = []
+        if not restart and (essence := self.essence_note(action, step)):
+            found.append(essence)
+        if not self.flow.measured and len(step.states) > 1:
+            found.append(
+                f"the chances of this step are the plain mean of its {len(step.states):,} states: how often a run visits each could not be solved"
+            )
+        return found
 
     def vendor_row(self, step: FirstStep, final: bool) -> StepRow:
         """Row 1 of a plan that starts from a vendor recipe: what is handed over, the recipes, the price; the item card is what comes back."""
@@ -578,7 +636,7 @@ class _View:
             _plain("Uses on average", *uses),
             _plain("Step cost", money(step_cost)) if step_cost is not None else None,
             Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing else None,
-            _plain("Note", note) if (note := self.essence_note(action, step) if not restart else None) else None,
+            _plain("Note", *self.notes(action, step, restart)),
         )
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after))

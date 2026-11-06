@@ -1,43 +1,52 @@
-"""The steps of a policy: one step per player action, with the exact mixture of the chances of its states.
+"""The steps of a policy: one step per player action, with the exact mixture of the chances of its item states.
 
 A step is the set of states on which the policy takes the same action, found by its label and nothing else
 (OR-18): states with different actions branch, and neither a different chance nor a detail the search does not
 track splits one action into several steps. States with no action (a dead end of a policy, a gap of a given
 route) are steps too, one per reason. Steps are numbered in the order their first state is met breadth-first.
 
+The states are item states, never the blocks of a lumped chain: a lumped view shows a block by one member, and
+what a page says about an item (a mod lost, the tiers a draw can add) is a fact about one item. `Chain` is the
+policy on item states as arrays (a state per row, its edges in CSR form); `chain_of_policy` makes one from any
+policy mapping and `_route_chain` makes one from the walked graph of a packed plan, without building an `Action`
+per state. `flow_of(chain)` is the one place the steps are made.
+
 The chances of a step (OR-20). The states of one step need not have the same chance for an outcome, so the step
-shows the mixture of them: for an outcome, the sum over the step's states of (expected visits of the state x
-its exact chance, a `Fraction` of integer weights) divided by the expected visits of the step. The weights are the
-expected visits from the start under the policy itself: row `start` of N = (I - Q)^-1, where Q holds the chances
-among the states that have an action and can reach a goal. They are found by one dense linear solve over those
-states (float64, `numpy.linalg.solve`, cost O(n^3) in the number of states, with no limit on n); the chances
-they weigh stay exact fractions until the weighted sum. From the same N come the uses of a step (the sum of the
-visits of its states, so `sum(uses x cost)` is the mean cost of the policy) and, for a step with an action, the
-chance a run ever enters it. A step with no action is entered with the chance of stepping into it from the
-visited states. A state from which no run can ever reach a goal (it loops forever, or every way out ends in a
-state with no action) has no visits: a step whose states are all of that kind has `uses = inf` and the plain
-mean of its states as its chances; in a step that also has states that can finish, only those are counted.
+shows the mixture of them: for an outcome, the sum over the step's states of (expected visits of the state x its
+chance) divided by the expected visits of the step. The weights are the expected visits from the start under the
+policy itself: row `start` of N = (I - Q)^-1, where Q holds the chances among the states that have an action and can
+reach a goal. Up to `ENTRY_STATES` such states N is inverted (dense, float64); above that the row is the solution of
+the sparse system (I - Q)^T v = e_start by BiCGSTAB on the edge arrays (the method and the code of the packed
+solver's policy evaluation, with each self-loop divided out so that no `1 - p` is formed), checked by its residual,
+with a dense solve as the fallback for up to `DENSE_FALLBACK` states. Memory is O(edges), never O(states^2), above
+`ENTRY_STATES`. The chances are `Fraction`s of integer weights turned to float64 once (correctly rounded). From the
+same N come the uses of a step (the sum of the visits of its states, so `sum(uses x cost)` is the mean cost of the
+policy) and, for a step with an action, the chance a run ever enters it. A step with no action is entered with the
+chance of stepping into it from the visited states. A state from which no run can ever reach a goal (it loops
+forever, or every way out ends in a state with no action) has no visits: a step whose states are all of that kind has
+`uses = inf` and the plain mean of its states as its chances; in a step that also has states that can finish, only
+those are counted.
 
-Two things are stated, not hidden (ADR OR-12, OR-13), and both leave the chances and uses exact:
+Two things are stated, not hidden (OR-12, OR-13), and both leave the chances and uses exact where they are shown:
 
-* `Flow.measured` is False when the matrix cannot be solved in floats (a chance per use so small that it is lost in
-  the float): the uses and visits are then not known, and the chances of a step with several states are the plain
-  mean of them.
+* `Flow.measured` is False when the visits cannot be solved (a chance per use so small that it is lost in the
+  float, or a sparse solve that did not reach its residual): the uses and visits are then not known, and the chances
+  of a step with several states are the plain mean of them. The page says so on the goal card and on each step it
+  applies to.
 * `Flow.entered` is False when the policy has more than `ENTRY_STATES` states that can finish: the chance a run
-  enters a step needs one more solve per step, and it is left out (`Step.reached` is None for every step but the
-  first, which is reached for sure). Uses, costs and chances do not depend on it.
+  enters a step needs a solve per step, and it is left out (`Step.reached` is None for every step but the first,
+  which is reached for sure). Uses, costs and chances do not depend on it.
   TODO(#459): carry both as a `Limit` with its guarantee, once that record exists.
 
 An edge groups the outcomes that lead to the same place: a goal, or the next step. `kind`: "goal", "failure"
 (the item lost a wanted mod, the action is a restart, or the item lands in a step that restarts or that has no
 action: it is thrown away or the route stops), "again" (the same step, nothing lost), "forward" (any other step).
-Nothing is decided by what the item still costs to finish (PRES-6). Whether a use loses a wanted mod is told by
-the caller (`failed`), which keeps this module free of the compressed state. Pure, no I/O, deterministic.
+Nothing is decided by what the item still costs to finish (PRES-6). What a use loses of the wanted mods is told by
+the caller (`loss`), which keeps this module free of the compressed state. Pure, no I/O, deterministic.
 """
 
 import math
-from collections import deque
-from collections.abc import Callable, Hashable, Mapping
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal
@@ -45,11 +54,17 @@ from typing import Literal
 import numpy as np
 
 from crafting_system.solver import Action
+from crafting_system.solver._packed_solve import _bicgstab
 
 from ._reach import policy_states
 
-ENTRY_STATES = 1000  # the chance of entering a step is solved once per step when the policy has at most this many states that can finish
-_GOAL = -1  # the target "a goal state" while blocks are numbered from 0
+ENTRY_STATES = 1000  # up to this many states that can finish N is inverted and the chance of entering a step is solved per step; above it only the visits are found (sparse)
+DENSE_FALLBACK = 6000  # a sparse solve that did not converge falls back to a dense one for up to this many states
+VISITS_TOLERANCE = 1e-12  # the relative residual BiCGSTAB aims at
+ACCEPT_RESIDUAL = 1e-9  # the largest relative residual of the visits that is shown; above it the flow is not `measured`
+BICGSTAB_ITERATIONS = 4000
+BICGSTAB_RESTARTS = 3
+_GOAL = -1  # the target "a goal state" while steps are numbered from 0
 
 
 @dataclass(frozen=True)
@@ -59,16 +74,14 @@ class Edge[S]:
     `kind`: "goal" the target reached (`to` is then None), "failure" a wanted mod lost, a restart, or a landing
     in a step that restarts or has no action, "again" the same step with nothing lost, "forward" any other step.
     `chance` is the chance per use of the action, mixed over the step's states by their expected visits; `states` are
-    the states the outcomes land in (goal states for "goal"); `pairs` are the `(state, landing state)` pairs
-    behind the edge, in the step's breadth-first order; `lost` is everything `failed` said some of them loses (the wanted
-    mods, sorted), empty when no use of the edge loses any.
+    the states the outcomes land in (goal states for "goal"); `lost` is everything the loss reader said some of
+    them loses (the wanted mods, sorted), empty when no use of the edge loses any.
     """
 
     kind: Literal["forward", "failure", "again", "goal"]
     to: int | None
     chance: float
     states: tuple[S, ...]
-    pairs: tuple[tuple[S, S], ...] = ()
     lost: tuple = ()
 
 
@@ -76,14 +89,14 @@ class Edge[S]:
 class Step[S]:
     """One step of the route.
 
-    `states`: the compressed states it stands for, in breadth-first order. `weights`: the expected visits of each
+    `states`: the item states it stands for, in breadth-first order. `weights`: the expected visits of each
     of them from the start, the weights of the mixture (all 1.0 when the flow is not `measured`, or when none
     of the states can finish). `action`: the action of the step's first state, the label every state shares; None
-    when there is no action here and then `reason` says why (from the `reasons` of `build_flow`). `cost`: the
-    cost per use, the mean over the states by their weights (the same number for every state of one offer).
-    `edges`: one per distinct (target, whether a wanted mod is lost) pair, the goal first, then by step number; empty without an
-    action. `uses`: the expected number of uses of the action in one run from the start (None without an
-    action, or when the flow is not `measured`). `reached`: the chance a run ever enters the step.
+    when there is no action here and then `reason` says why. `cost`: the cost per use, the mean over the states by
+    their weights (the same number for every state of one offer). `edges`: one per distinct (target, whether a
+    wanted mod is lost) pair, the goal first, then by step number; empty without an action. `uses`: the expected
+    number of uses of the action in one run from the start (None without an action, or when the flow is not
+    `measured`). `reached`: the chance a run ever enters the step.
     """
 
     number: int
@@ -101,7 +114,7 @@ class Step[S]:
 class Flow[S]:
     """The steps (numbered from 1, the start's step first) and the step of every reachable non-goal state.
 
-    `measured`: whether the expected visits were computed (False when the chain cannot be solved in floats).
+    `measured`: whether the expected visits were computed (False when the chain cannot be solved).
     `entered`: whether `Step.reached` was computed (False above `ENTRY_STATES` states, see the module text).
     """
 
@@ -109,6 +122,110 @@ class Flow[S]:
     step_of: Mapping[S, int]
     measured: bool = True
     entered: bool = True
+
+
+@dataclass(frozen=True, eq=False)
+class Chain[S]:
+    """The policy on item states as arrays.
+
+    `states`: the reachable non-goal states, the start first (row `i` of every array); `goals`: the goal states they
+    lead to. `key[i]` is the index into `keys` of the step the state belongs to: `("action", label)` or
+    `("none", reason)` for a state with no action. `cost[i]` is the price of its action. The edges of state `i`
+    are `ptr[i]:ptr[i + 1]` of `dst` and `prob`: `dst < len(states)` is a state, `dst >= len(states)` is
+    the goal `goals[dst - len(states)]`; `prob` sums to 1 on a state with an action and the edges are in outcome order.
+    `action_of(i)` is the solver action of state `i` (called for the first state of a step only).
+    """
+
+    states: Sequence[S]
+    goals: Sequence[S]
+    key: np.ndarray
+    keys: tuple[Hashable, ...]
+    cost: np.ndarray
+    ptr: np.ndarray
+    dst: np.ndarray
+    prob: np.ndarray
+    action_of: Callable[[int], Action[S]]
+
+    @property
+    def m(self) -> int:
+        return len(self.states)
+
+
+def empty_chain() -> Chain:
+    """The chain of a start that already is a goal: no step."""
+    zero = np.zeros(0, dtype=np.int64)
+    return Chain([], [], zero, (), np.zeros(0), np.zeros(1, dtype=np.int64), zero, np.zeros(0), lambda i: None)  # type: ignore[arg-type,return-value]
+
+
+def chain_of_policy[S: Hashable](
+    start: S, policy: Mapping[S, Action[S]], is_goal: Callable[[S], bool], reasons: Mapping[S, str] | None = None
+) -> Chain[S]:
+    """The chain of `policy` from `start`; `reasons` says why a reachable non-goal state has no entry in `policy`."""
+    if is_goal(start):
+        return empty_chain()
+    reasons = reasons or {}
+    states = [s for s in policy_states(start, policy, is_goal) if not is_goal(s)]
+    index = {s: i for i, s in enumerate(states)}
+    m = len(states)
+    goals: list[S] = []
+    goal_index: dict[S, int] = {}
+    keys: dict[Hashable, int] = {}
+    key = np.zeros(m, dtype=np.int64)
+    cost = np.zeros(m)
+    ptr = [0]
+    dst: list[int] = []
+    prob: list[float] = []
+    for i, state in enumerate(states):
+        if state in policy:
+            action = policy[state]
+            key[i] = keys.setdefault(("action", action.label), len(keys))
+            cost[i] = action.cost
+            total = sum(weight for _, weight in action.outcomes)
+            merged: dict[S, Fraction] = {}
+            for successor, weight in action.outcomes:
+                if weight > 0:
+                    merged[successor] = merged.get(successor, Fraction(0)) + Fraction(weight, total)
+            for successor, chance in merged.items():
+                if is_goal(successor):
+                    dst.append(m + goal_index.setdefault(successor, len(goal_index)))
+                    if len(goals) < len(goal_index):
+                        goals.append(successor)
+                else:
+                    dst.append(index[successor])
+                prob.append(float(chance))
+        else:
+            key[i] = keys.setdefault(("none", reasons.get(state)), len(keys))
+        ptr.append(len(dst))
+    return Chain(
+        states,
+        goals,
+        key,
+        tuple(keys),
+        cost,
+        np.array(ptr, dtype=np.int64),
+        np.array(dst, dtype=np.int64),
+        np.array(prob),
+        lambda i: policy[states[i]],
+    )
+
+
+def failure_by(failed: Callable[[S, S], tuple] | None) -> Callable | None:  # type: ignore[type-var]
+    """A loss reader from `failed(state, landing)`, which says what a use that takes `state` to `landing` loses (a tuple of sortable items, empty for nothing)."""
+    if failed is None:
+        return None
+
+    def loss(chain: Chain, src: np.ndarray, dst: np.ndarray) -> tuple[Sequence, np.ndarray]:
+        everything = [*chain.states, *chain.goals]
+        found = [tuple(failed(chain.states[s], everything[d])) for s, d in zip(src.tolist(), dst.tolist())]
+        items = sorted({item for each in found for item in each})
+        column = {item: u for u, item in enumerate(items)}
+        matrix = np.zeros((len(found), len(items)), dtype=bool)
+        for e, each in enumerate(found):
+            for item in each:
+                matrix[e, column[item]] = True
+        return items, matrix
+
+    return loss
 
 
 def build_flow[S: Hashable](
@@ -126,176 +243,195 @@ def build_flow[S: Hashable](
     wanted mods: a tuple of sortable items (the leaves of the target it stops meeting), empty for nothing. Outcomes that
     lead to the same step are one edge, except that those which lose a wanted mod are apart from those which do not.
     """
-    if is_goal(start):
+    return flow_of(chain_of_policy(start, policy, is_goal, reasons), is_restart, failure_by(failed))
+
+
+def flow_of[S: Hashable](
+    chain: Chain[S],
+    is_restart: Callable[[Action[S]], bool] | None = None,
+    loss: Callable[[Chain, np.ndarray, np.ndarray], tuple[Sequence, np.ndarray]] | None = None,
+) -> Flow[S]:
+    """The steps of `chain`. `loss(chain, src, dst)` gives `(items, matrix)`: for the edges `src[e] -> dst[e]` which of `items` they lose."""
+    m = chain.m
+    if m == 0:
         return Flow((), {})
-    reasons = reasons or {}
-    states = [s for s in policy_states(start, policy, is_goal) if not is_goal(s)]
+    edges_per_state = np.diff(chain.ptr)
+    src = np.repeat(np.arange(m), edges_per_state)
+    dst = chain.dst
+    into_goal = dst >= m
+    into_state = ~into_goal
 
-    outs: dict[S, list[tuple[S, Fraction]]] = {}  # per state: successor -> exact chance, merged, in outcome order
-    for state in states:
-        if state in policy:
-            chances: dict[S, Fraction] = {}
-            total = sum(weight for _, weight in policy[state].outcomes)
-            for successor, weight in policy[state].outcomes:
-                if weight > 0:
-                    chances[successor] = chances.get(successor, Fraction(0)) + Fraction(weight, total)
-            outs[state] = list(chances.items())
+    # the steps: one per key, numbered by the first state that has it
+    nkeys = len(chain.keys)
+    first_of_key = np.full(nkeys, m, dtype=np.int64)
+    np.minimum.at(first_of_key, chain.key, np.arange(m))
+    used = np.flatnonzero(first_of_key < m)
+    used = used[np.argsort(first_of_key[used], kind="stable")]
+    rank = np.full(nkeys, -1, dtype=np.int64)
+    rank[used] = np.arange(len(used))
+    nsteps = len(used)
+    step = rank[chain.key]  # step number from 0 of every state
+    step_key = [chain.keys[k] for k in used.tolist()]
+    step_first = first_of_key[used]
+    step_acts = np.array([k[0] == "action" for k in step_key], dtype=bool)
+    step_action = [chain.action_of(int(i)) if acts else None for i, acts in zip(step_first.tolist(), step_acts.tolist())]
+    restarting = np.array(
+        [action is not None and is_restart is not None and bool(is_restart(action)) for action in step_action], dtype=bool
+    )
+    has_action = step_acts[step]
+
+    finishing = _can_finish(m, src, dst, into_goal, into_state)
+    visits, solved, inverse, tpos = _visits(chain, src, finishing)
+    weights = np.where(finishing, visits, 0.0) if solved else np.zeros(m)
+    raw = np.bincount(step, weights=weights, minlength=nsteps)
+    mix = np.where(raw[step] > 0.0, weights, 1.0)  # nobody can finish here, or unmeasured: the plain mean
+    total = np.bincount(step, weights=mix, minlength=nsteps)
+    reached = _entered(chain, step, nsteps, src, finishing, visits, inverse, tpos)
+
+    # the edges, grouped by (step, target step, whether a wanted mod is lost)
+    target = np.where(into_goal, _GOAL, step[np.minimum(dst, m - 1)])
+    if loss is None or len(dst) == 0:
+        items, lost_matrix = (), np.zeros((len(dst), 0), dtype=bool)
+    else:
+        items, lost_matrix = loss(chain, src, dst)
+    lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
+    lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
+    lost_matrix = lost_matrix & lost_edge[:, None]
+    code = ((step[src] * (nsteps + 1) + (target + 1)) * 2 + lost_edge).astype(np.int64)
+    group_codes, group = np.unique(code, return_inverse=True)
+    ngroups = len(group_codes)
+    group_lost = np.array([(c % 2) == 1 for c in group_codes.tolist()], dtype=bool)
+    group_target = (group_codes // 2) % (nsteps + 1) - 1
+    group_step = (group_codes // 2) // (nsteps + 1)
+    chance = np.bincount(group, weights=mix[src] * chain.prob, minlength=ngroups) / total[group_step]
+    gone = [np.bincount(group, weights=lost_matrix[:, u], minlength=ngroups) > 0 for u in range(len(items))]
+    width = m + len(chain.goals)
+    pair = np.unique(group.astype(np.int64) * width + dst)  # the distinct landing states of each group, sorted
+    pair_group = pair // width
+    bounds = np.searchsorted(pair_group, np.arange(ngroups + 1))
+    everything = (lambda d: chain.states[d] if d < m else chain.goals[d - m])
+    edges_of: list[list[Edge]] = [[] for _ in range(nsteps)]
+    for g in range(ngroups):
+        s, t = int(group_step[g]), int(group_target[g])
+        if t == _GOAL:
+            kind = "goal"
+        elif restarting[s] or group_lost[g] or not step_acts[t] or restarting[t]:
+            kind = "failure"
+        elif t == s:
+            kind = "again"
         else:
-            outs[state] = []
+            kind = "forward"
+        landing = tuple(everything(int(d)) for d in (pair[bounds[g] : bounds[g + 1]] % width).tolist())
+        lost = tuple(sorted(items[u] for u in range(len(items)) if gone[u][g]))
+        edges_of[s].append(Edge(kind, None if t == _GOAL else t + 1, float(chance[g]), landing, lost))  # type: ignore[arg-type]
 
-    numbers: dict[Hashable, int] = {}
-    block = {
-        state: numbers.setdefault(
-            ("action", policy[state].label) if state in policy else ("none", reasons.get(state)), len(numbers)
-        )
-        for state in states
-    }
-    count = len(numbers)
-    members: list[list[S]] = [[] for _ in range(count)]
-    for state in states:
-        members[block[state]].append(state)
-    has_action = [members[i][0] in policy for i in range(count)]
-    restarting = [has_action[i] and is_restart is not None and is_restart(policy[members[i][0]]) for i in range(count)]
-
-    visits, position, solved, inverse = _visits(start, states, policy, outs, is_goal)
-    reached = _entered(start, members, outs, position, visits, inverse)
-    entered = inverse is not None or start not in position
-
+    # the steps
+    order = np.argsort(step, kind="stable")
+    bounds = np.searchsorted(step[order], np.arange(nsteps + 1))
+    uses_sum = np.bincount(step, weights=np.where(finishing, visits, 0.0), minlength=nsteps)
+    finishers = np.bincount(step, weights=finishing, minlength=nsteps)
+    mean_cost = np.bincount(step, weights=mix * chain.cost, minlength=nsteps) / total
     steps = []
-    for index in range(count):
-        group = members[index]
-        weights = [visits.get(state, 0.0) for state in group] if solved else [0.0] * len(group)
-        mixing = weights if math.fsum(weights) > 0.0 else [1.0] * len(group)  # nobody can finish here, or unmeasured: the plain mean
-        total = math.fsum(mixing)
-        shares: dict[tuple[int, bool], list[float]] = {}
-        pairs: dict[tuple[int, bool], list[tuple[S, S]]] = {}
-        gone: dict[tuple[int, bool], set] = {}
-        for state, weight in zip(group, mixing, strict=True):
-            for successor, chance in outs[state]:
-                where = _GOAL if is_goal(successor) else block[successor]
-                lost = failed(state, successor) if where != _GOAL and not restarting[index] and failed is not None else ()  # a restart is one failure whatever it throws away
-                key = (where, bool(lost))
-                shares.setdefault(key, []).append(weight * float(chance))
-                pairs.setdefault(key, []).append((state, successor))
-                gone.setdefault(key, set()).update(lost)
-        edges = []
-        for where, lost in sorted(shares, key=lambda key: (key[0] != _GOAL, key[0], key[1])):
-            if where == _GOAL:
-                kind = "goal"
-            elif restarting[index] or lost or not has_action[where] or restarting[where]:
-                kind = "failure"
-            elif where == index:
-                kind = "again"
-            else:
-                kind = "forward"
-            landing = tuple(dict.fromkeys(successor for _, successor in pairs[(where, lost)]))
-            edges.append(
-                Edge(
-                    kind,
-                    None if where == _GOAL else where + 1,
-                    math.fsum(shares[(where, lost)]) / total,
-                    landing,
-                    tuple(dict.fromkeys(pairs[(where, lost)])),
-                    tuple(sorted(gone[(where, lost)])),
-                )
-            )
-        if has_action[index]:
-            finishing = [visits[state] for state in group if state in visits]
-            uses = math.inf if not any(state in position for state in group) else (math.fsum(finishing) if solved else None)
-            cost = math.fsum(w * policy[state].cost for state, w in zip(group, mixing, strict=True)) / total
+    for s in range(nsteps):
+        members = order[bounds[s] : bounds[s + 1]]
+        if step_acts[s]:
+            uses = math.inf if finishers[s] == 0 else (float(uses_sum[s]) if solved else None)
         else:
-            uses, cost = None, 0.0
+            uses = None
+        key = step_key[s]
         steps.append(
             Step(
-                number=index + 1,
-                states=tuple(group),
-                action=policy.get(group[0]),
-                reason=None if group[0] in policy else reasons.get(group[0]),
-                edges=tuple(edges) if has_action[index] else (),
+                number=s + 1,
+                states=tuple(chain.states[i] for i in members.tolist()),
+                action=step_action[s],
+                reason=None if step_acts[s] else key[1],
+                edges=tuple(edges_of[s]) if step_acts[s] else (),
                 uses=uses,
-                reached=reached[index],
-                weights=tuple(mixing),
-                cost=cost,
+                reached=reached[s],
+                weights=tuple(mix[members].tolist()),
+                cost=float(mean_cost[s]) if step_acts[s] else 0.0,
             )
         )
-    return Flow(tuple(steps), {state: block[state] + 1 for state in states}, solved, entered)
+    entered = inverse is not None or not finishing[0]
+    return Flow(tuple(steps), {chain.states[i]: int(step[i]) + 1 for i in range(m)}, solved, entered)
 
 
-def _can_finish[S: Hashable](
-    states: list[S], policy: Mapping[S, Action[S]], outs: Mapping[S, list[tuple[S, Fraction]]], is_goal: Callable[[S], bool]
-) -> set[S]:
+def _can_finish(m: int, src: np.ndarray, dst: np.ndarray, into_goal: np.ndarray, into_state: np.ndarray) -> np.ndarray:
     """The states with an action from which some run reaches a goal through states that have an action."""
-    entering: dict[S, list[S]] = {}
-    finishing: set[S] = set()
-    queue: deque[S] = deque()
-    for state in states:
-        if state not in policy:
-            continue
-        for successor, _ in outs[state]:
-            if is_goal(successor):
-                if state not in finishing:
-                    finishing.add(state)
-                    queue.append(state)
-            else:
-                entering.setdefault(successor, []).append(state)
-    while queue:
-        target = queue.popleft()
-        for state in entering.get(target, ()):
-            if state not in finishing:
-                finishing.add(state)
-                queue.append(state)
-    return finishing
+    finishing = np.zeros(m, dtype=bool)
+    finishing[src[into_goal]] = True
+    toward = np.minimum(dst, m - 1)
+    while True:
+        hit = into_state & finishing[toward]
+        fresh = np.zeros(m, dtype=bool)
+        fresh[src[hit]] = True
+        fresh &= ~finishing
+        if not fresh.any():
+            return finishing
+        finishing |= fresh
 
 
-def _visits[S: Hashable](
-    start: S,
-    states: list[S],
-    policy: Mapping[S, Action[S]],
-    outs: Mapping[S, list[tuple[S, Fraction]]],
-    is_goal: Callable[[S], bool],
-) -> tuple[dict[S, float], dict[S, int], bool, np.ndarray | None]:
-    """The expected visits from `start` of each state that can finish, their numbering, whether they were solved, and N.
+def _visits(chain: Chain, src: np.ndarray, finishing: np.ndarray):
+    """`(visits, solved, inverse, position)`: the expected visits from the start of each state (zero where a run cannot finish).
 
-    The visits are row `start` of N = (I - Q)^-1 over the states with an action that can reach a goal. N itself
-    (the whole inverse) is returned when there are at most `ENTRY_STATES` such states, else the row is found by one
-    solve of (I - Q)^T v = e_start. The numbering is empty when the start is not one of them (it has no action, or
-    cannot finish): then nothing else is a run's business.
+    `position[i]` numbers the states that can finish; `inverse` is N over them when there are at most `ENTRY_STATES`.
+    When the start cannot finish nothing else is a run's business: all zero and solved. `solved` is False when the
+    system could not be solved to `ACCEPT_RESIDUAL`.
     """
-    finishing = _can_finish(states, policy, outs, is_goal)
-    transient = [s for s in states if s in finishing]
-    position = {s: k for k, s in enumerate(transient)}
-    if start not in position:
-        return {}, {}, True, None
-    matrix = np.eye(len(transient))
-    for state in transient:
-        for successor, chance in outs[state]:
-            if successor in position:
-                matrix[position[state], position[successor]] -= float(chance)
+    m = chain.m
+    visits = np.zeros(m)
+    if not finishing[0]:
+        return visits, True, None, None
+    position = np.cumsum(finishing) - 1
+    nt = int(finishing.sum())
+    dst = chain.dst
+    inside = finishing[src] & (dst < m)
+    inside[inside] = finishing[dst[inside]]
+    row, column, p = position[src[inside]], position[dst[inside]], chain.prob[inside]
     try:
         with np.errstate(all="ignore"):
-            if len(transient) <= ENTRY_STATES:
+            if nt <= ENTRY_STATES:
+                matrix = np.eye(nt) - np.bincount(row * nt + column, weights=p, minlength=nt * nt).reshape(nt, nt)
                 inverse = np.linalg.inv(matrix)
-                row = inverse[position[start]]
+                found = inverse[position[0]]
             else:
                 inverse = None
-                base = np.zeros(len(transient))
-                base[position[start]] = 1.0
-                row = np.linalg.solve(matrix.T, base)
+                found = _sparse_visits(chain, src, finishing, position, nt, row, column, p)
     except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats: nothing to say about visits
-        return {}, position, False, None
-    if not np.all(np.isfinite(row)) or np.any(row < -1e-9):
-        return {}, position, False, None
-    return {state: max(0.0, float(row[position[state]])) for state in transient}, position, True, inverse
+        return visits, False, None, position
+    if found is None or not np.all(np.isfinite(found)) or np.any(found < -1e-9):
+        return visits, False, None, position
+    visits[finishing] = np.maximum(found, 0.0)
+    return visits, True, inverse, position
 
 
-def _entered[S: Hashable](
-    start: S,
-    members: list[list[S]],
-    outs: Mapping[S, list[tuple[S, Fraction]]],
-    position: Mapping[S, int],
-    visits: Mapping[S, float],
-    inverse: np.ndarray | None,
-) -> list[float | None]:
+def _sparse_visits(chain, src, finishing, position, nt, row, column, p):
+    """Row `start` of N by BiCGSTAB on (I - Q)^T v = e_start, each row divided by the chance to leave its state (self-loops out)."""
+    nonself = chain.dst != src
+    leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=chain.m)[finishing]  # a sum of positive terms
+    keep = row != column
+    r, c, w = row[keep], column[keep], p[keep]
+    coefficient = w / leave[c]  # the edge row -> column enters `column`: v_column - sum v_row p / leave_column = e / leave
+    b = np.zeros(nt)
+    b[position[0]] = 1.0 / leave[position[0]]
+
+    def matvec(x: np.ndarray) -> np.ndarray:
+        return x - np.bincount(c, weights=coefficient * x[r], minlength=nt)
+
+    x, residual, _ = _bicgstab(matvec, b, np.zeros(nt), VISITS_TOLERANCE, BICGSTAB_ITERATIONS)
+    for _ in range(BICGSTAB_RESTARTS):
+        if residual <= 10 * VISITS_TOLERANCE:
+            break
+        x, residual, _ = _bicgstab(matvec, b, x, VISITS_TOLERANCE, BICGSTAB_ITERATIONS)
+    if residual > 1e-10 and nt <= DENSE_FALLBACK:  # a stiff system: the dense solve is slow but sure
+        matrix = np.eye(nt)
+        np.subtract.at(matrix, (c, r), coefficient)  # matrix[column, row] -= coefficient
+        scaled = np.linalg.solve(matrix, b)
+        return scaled
+    return x if residual <= ACCEPT_RESIDUAL else None
+
+
+def _entered(chain, step, nsteps, src, finishing, visits, inverse, position) -> list[float | None]:
     """The chance a run ever enters each step: 1 for the first, None for the others when `inverse` (N) is not there.
 
     For a step A of states that can finish, the first state of A a run meets is a with chance H(a), and the visits
@@ -304,29 +440,29 @@ def _entered[S: Hashable](
     chance is the expected number of such steps into it, since a run never comes back from it. A step that has
     both kinds of state is left unmeasured (None).
     """
-    count = len(members)
-    result: list[float | None] = [None] * count
+    result: list[float | None] = [None] * nsteps
     result[0] = 1.0
-    if inverse is None or start not in position:
+    if inverse is None or not finishing[0]:
         return result
-    row = inverse[position[start]]
-    for index in range(1, count):
-        group = members[index]
-        inside = [position[state] for state in group if state in position]
-        if start in group:
-            result[index] = 1.0
-        elif inside and len(inside) == len(group):
+    m = chain.m
+    row = inverse[position[0]]
+    for s in range(1, nsteps):
+        members = np.flatnonzero(step == s)
+        live = finishing[members]
+        if 0 in members:
+            result[s] = 1.0
+        elif live.all():
+            inside = position[members]
             try:
                 with np.errstate(all="ignore"):
                     first = np.linalg.solve(inverse[np.ix_(inside, inside)].T, row[inside])
             except np.linalg.LinAlgError:
                 continue
             value = float(first.sum())
-            result[index] = min(1.0, max(0.0, value)) if math.isfinite(value) else None
-        elif not inside:
-            aim = set(group)
-            value = math.fsum(
-                visits[state] * float(chance) for state in visits for successor, chance in outs[state] if successor in aim
-            )
-            result[index] = min(1.0, max(0.0, value))
+            result[s] = min(1.0, max(0.0, value)) if math.isfinite(value) else None
+        elif not live.any():
+            into = np.zeros(m, dtype=bool)
+            into[members] = True
+            edge = (chain.dst < m) & into[np.minimum(chain.dst, m - 1)] & finishing[src]
+            result[s] = min(1.0, max(0.0, float(np.sum(visits[src[edge]] * chain.prob[edge]))))
     return result

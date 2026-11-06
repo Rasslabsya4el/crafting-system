@@ -194,6 +194,7 @@ When a step can add a mod of a family the target wants, the page shows the chanc
 
 - **Example.** R04's first Exalted Orb after "Cannot roll Attack Modifiers" adds Maximum Life or Increased Damage with Bow Skills every time (100%), and a top-tier mod of whichever lands 2 times in 15; the step shows the share of every tier of both families.
 - **Counter-example.** The R04 benchmark's check of the published odds (`tests/test_cli_r04_r14_real.py:104-111`) gives the first Exalted Orb only two numbers, 100% at any tier and 13% at the top tier, with nothing for the tiers in between.
+- **Format.** Runs of tiers with equal chances are joined ("T2 to T10 1.4% each"); the target's tier stays apart. Source: owner in the main chat, 2026-11-06 ([#491](https://github.com/Rasslabsya4el/crafting-system/issues/491)).
 - **Source.** Owner in the main chat, 2026-11-06: the system should say "T1 this chance, T2 this chance, and so on".
 
 ## Evidence

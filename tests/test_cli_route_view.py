@@ -518,8 +518,8 @@ def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step
     solved = _route_flow._visits
 
     def unsolvable(*arguments):  # the one place the numbers can still stop: a chance per use lost in the float
-        _, position, _, _ = solved(*arguments)
-        return {}, position, False, None
+        visits, _, _, position = solved(*arguments)
+        return visits * 0.0, False, None, position
 
     monkeypatch.setattr(_route_flow, "_visits", unsolvable)
 
@@ -722,6 +722,38 @@ def test_a_tier_line_marks_the_tiers_of_the_target_ends_with_none_and_is_in_the_
 
     assert _View.tier_text(line) == "+# to maximum Life: T1 ≈13% (target) · T2 10% · T3 0% · none 77%"
     assert _View.tier_text(all_wanted) == "#% increased Damage: T1 50% · T2 25% · none 25% · every tier is the target"  # nothing to tell apart
+
+
+def test_runs_of_tiers_with_the_same_chance_are_joined_and_the_target_tier_stays_apart_the_format_the_owner_chose_on_491():
+    life = TierLine(
+        "+# to maximum Life", tuple(TierShare(tier, 0.0143, tier == 1) for tier in range(1, 11)), 1 - 10 * 0.0143
+    )  # Life on a helmet: ten tiers of the same weight
+    two = TierLine("x", (TierShare(1, 0.1, False), TierShare(2, 0.1, False), TierShare(3, 0.2, False), TierShare(5, 0.1, False)), 0.5)
+    both = TierLine("y", (TierShare(1, 0.1, True), TierShare(2, 0.1, True), TierShare(3, 0.1, False)), 0.7)
+
+    assert _View.tier_text(life) == "+# to maximum Life: T1 ≈1.4% (target) · T2 to T10 ≈1.4% each · none ≈86%"
+    assert _View.tier_text(two) == "x: T1 and T2 10% each · T3 20% · T5 10% · none 50%"  # a missing tier (T4 cannot spawn) breaks a run
+    assert _View.tier_text(both) == "y: T1 and T2 10% each (target) · T3 10% · none 70%"  # the target's tiers never join the others
+
+
+def test_two_branches_that_read_alike_say_what_the_player_does_next_and_the_plain_mean_is_said_on_its_step(monkeypatch):
+    section = build_section(INPUTS["branch"](), DATA)
+    for row in section.rows:  # no step prints two lines that read alike
+        for field in row.fields:
+            if field.label in ("Chance per use", "On failure"):
+                texts = [line.text.rsplit(":", 1)[0].rsplit(" (", 1)[0] for line in field.lines]
+                assert len(texts) == len(set(texts)), (row.title, texts)
+
+    solved = _route_flow._visits
+
+    def unsolvable(*arguments):
+        visits, _, _, position = solved(*arguments)
+        return visits * 0.0, False, None, position
+
+    monkeypatch.setattr(_route_flow, "_visits", unsolvable)
+    rows = build_section(hand_input(START, LIFE_GOAL, chaos_for_life), DATA).rows
+    joined = [row for row in rows if "Note" in labels_of(row)]
+    assert joined and "plain mean of its" in lines_of(joined[0], "Note")[-1]  # on the step that joins states, not only on the goal card
 
 
 def test_the_same_model_renders_the_same_bytes():

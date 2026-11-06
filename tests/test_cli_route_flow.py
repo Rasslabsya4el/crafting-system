@@ -454,7 +454,7 @@ def test_a_use_that_loses_a_wanted_mod_is_a_failure_edge_apart_from_the_uses_tha
         ("forward", 2, pytest.approx(0.75)),
         ("failure", 2, pytest.approx(0.25)),
     ]
-    assert start.edges[1].pairs == (("S", "L"),) and start.edges[1].states == ("L",) and start.edges[1].lost == ("wanted mod",)
+    assert start.edges[1].states == ("L",) and start.edges[1].lost == ("wanted mod",)
     assert start.edges[0].lost == ()
 
 

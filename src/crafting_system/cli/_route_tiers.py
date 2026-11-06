@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.actions import Action, ActionError
+from crafting_system.actions import Action
 from crafting_system.items import tier_table
 
 from ._route_card import _hashes, _own_text
@@ -139,7 +139,7 @@ def tier_lines(
             continue
         try:
             outcomes = ab._prepare(state, action).outcomes
-        except ActionError:
+        except ValueError:  # ActionError (the action is refused here) and the other refusals of an item: no chance from this state
             continue
         finally:
             ab._prepared_by.clear()  # a policy of thousands of states must not keep a pool for each (the walk clears it after each state too)
