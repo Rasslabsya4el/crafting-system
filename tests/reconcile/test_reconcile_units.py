@@ -51,7 +51,7 @@ def _mod(type_, level, low, high, spawn, *, generation="suffix", domain="item", 
 
 
 def _base(name, item_class, tags, release="released"):
-    return {"name": name, "item_class": item_class, "tags": tags, "release_state": release}
+    return {"name": name, "item_class": item_class, "tags": tags, "release_state": release, "domain": "item"}
 
 
 EXPORT = Export(
@@ -150,19 +150,19 @@ def _bad(result):
 
 
 def test_the_ladder_orders_by_required_level_with_tier_1_the_highest():
-    tiers = ladder(EXPORT.mods, ["ring", "default"], "ResA2")
+    tiers = ladder(EXPORT.mods, ["ring", "default"], "item", "ResA2")
 
     assert tiers == {"ResA3": 1, "ResA2": 2, "ResA1": 3}
 
 
 def test_the_ladder_leaves_out_zero_weight_other_type_other_domain_other_generation_and_other_base_mods():
-    tiers = ladder(EXPORT.mods, ["ring", "default"], "ResA1")
+    tiers = ladder(EXPORT.mods, ["ring", "default"], "item", "ResA1")
 
     assert set(tiers) == {"ResA1", "ResA2", "ResA3"}
 
 
 def test_a_battle_royale_mod_that_can_spawn_is_not_on_the_ladder_and_does_not_shift_the_tiers():
-    tiers = ladder(EXPORT.mods, ["ring", "default"], "ResA1")
+    tiers = ladder(EXPORT.mods, ["ring", "default"], "item", "ResA1")
 
     assert "ResA2Royale" not in tiers
     assert tiers["ResA1"] == 3  # tier 4 if the Royale copy (level 5) counted
@@ -179,23 +179,23 @@ def test_the_first_matching_spawn_entry_decides_the_weight():
 
 
 def test_a_ladder_on_another_base_has_other_members():
-    assert ladder(EXPORT.mods, ["amulet"], "ResAAmuletOnly") == {"ResAAmuletOnly": 1}
+    assert ladder(EXPORT.mods, ["amulet"], "item", "ResAAmuletOnly") == {"ResAAmuletOnly": 1}
 
 
 def test_mods_that_tie_on_the_required_level_share_a_tier_and_the_next_one_skips():
-    tiers = ladder(EXPORT.mods, ["ring", "default"], "TieLow")
+    tiers = ladder(EXPORT.mods, ["ring", "default"], "item", "TieLow")
 
     assert tiers == {"TieA": 1, "TieB": 1, "TieLow": 3}
 
 
 def test_a_mod_that_cannot_spawn_on_the_base_is_absent_from_its_own_ladder():
-    assert "ResAAmuletOnly" not in ladder(EXPORT.mods, ["ring", "default"], "ResAAmuletOnly")
+    assert "ResAAmuletOnly" not in ladder(EXPORT.mods, ["ring", "default"], "item", "ResAAmuletOnly")
 
 
 def test_the_ladder_does_not_depend_on_the_order_of_the_mods():
     reversed_mods = dict(reversed(list(EXPORT.mods.items())))
 
-    assert ladder(reversed_mods, ["ring", "default"], "ResA2") == ladder(EXPORT.mods, ["ring", "default"], "ResA2")
+    assert ladder(reversed_mods, ["ring", "default"], "item", "ResA2") == ladder(EXPORT.mods, ["ring", "default"], "item", "ResA2")
 
 
 def test_stat_ranges_follow_the_order_of_the_stats():

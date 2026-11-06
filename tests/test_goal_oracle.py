@@ -322,14 +322,27 @@ def test_the_export_is_read_from_the_cache_folder_of_the_pin(tmp_path):
 # --- independence ---------------------------------------------------------------------------------------------------------
 
 
+SHARED_MODULE = "independent.ladder"  # the one module outside this folder that the oracle may import (ticket #419)
+SHARED_FILE = Path(__file__).resolve().parent / "independent" / "ladder.py"
+
+
 def imported_modules(source: str) -> set[str]:
+    """Every module a source imports; `from independent import x` counts as the module `independent.x`."""
     found = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             found.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and not node.level and node.module == "independent":
+            found.update(f"independent.{alias.name}" for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
             found.add(("." * node.level) + (node.module or ""))
     return found
+
+
+def outside_imports(modules: set[str]) -> set[str]:
+    """The absolute imports that are not the standard library modules the oracle uses, `yaml`, or exactly the shared ladder module."""
+    allowed = {"json", "os", "re", "dataclasses", "pathlib", "yaml"}
+    return {name for name in modules - {SHARED_MODULE} if not name.startswith(".") and name.split(".")[0] not in allowed}
 
 
 def sneaky_imports(source: str) -> list[str]:
@@ -358,9 +371,34 @@ def sneaky_imports(source: str) -> list[str]:
 def test_the_oracle_imports_the_standard_library_and_yaml_only(source):
     modules = imported_modules(source.read_text(encoding="utf-8"))
     assert not {name for name in modules if name.split(".")[0] == "crafting_system"}, "the oracle shares no code with the planner"
-    allowed = {"json", "os", "re", "dataclasses", "pathlib", "yaml"}
-    assert {name.split(".")[0] for name in modules if not name.startswith(".")} <= allowed
+    assert not outside_imports(modules), "the standard library, yaml and exactly the shared ladder module"
     assert not sneaky_imports(source.read_text(encoding="utf-8"))
+
+
+def test_the_shared_ladder_module_is_the_only_import_from_outside_the_folder_and_it_is_there():
+    assert SHARED_FILE.is_file()
+    assert not outside_imports(imported_modules("from independent import ladder as shared"))
+    assert not outside_imports(imported_modules("import independent.ladder"))
+    assert not outside_imports(imported_modules("from independent.ladder import natural_ladders"))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "import independent",
+        "from independent import other",
+        "from independent import ladder, other",
+        "from independent.other import x",
+        "import independent.other",
+        "from independent import *",
+        "import reconcile",
+        "from reconcile import ladder",
+        "import crafting_system",
+        "from crafting_system.items import Item",
+    ],
+)
+def test_nothing_else_from_outside_the_folder_is_allowed(text):
+    assert outside_imports(imported_modules(text))
 
 
 def test_the_import_scan_sees_every_way_to_import_the_planner():

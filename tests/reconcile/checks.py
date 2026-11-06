@@ -112,9 +112,15 @@ def _text_of(export: Export, mod_id: str) -> str | None:
     return normalise_stat_text(mod["text"]) if mod else None
 
 
-def _tiers_of(export: Export, base_ids: list[str], mod_id: str) -> dict[str, int | None]:
+def _ladder_on(export: Export, base_id: str, mod_id: str, influence: frozenset) -> dict[str, int]:
+    """The natural ladder of `mod_id` on a base, with the item's influence tags."""
+    base = export.bases[base_id]
+    return ladder(export.mods, base["tags"], base["domain"], mod_id, influence)
+
+
+def _tiers_of(export: Export, base_ids: list[str], mod_id: str, influence: frozenset) -> dict[str, int | None]:
     """The tier of `mod_id` on each base id: None where the mod cannot spawn on the base."""
-    return {base_id: ladder(export.mods, export.bases[base_id]["tags"], mod_id).get(mod_id) for base_id in base_ids}
+    return {base_id: _ladder_on(export, base_id, mod_id, influence).get(mod_id) for base_id in base_ids}
 
 
 def _pool_differences(export: Export, target_ids: list[str], accepted_ids: list[str]) -> list[str]:
@@ -199,7 +205,7 @@ def reconcile(
             add(values_slot, written, "game data: no mod has this id", str(list(mod.values)), "no mod")
         else:
             own_texts.add(normalise_stat_text(record["text"]))
-            tiers = _tiers_of(export, base_ids, mod.mod)
+            tiers = _tiers_of(export, base_ids, mod.mod, target.influence)
             for base_id, tier in tiers.items():
                 if tier is None:
                     add(tier_slot, written, f"game data: {mod.mod} cannot spawn on {base_id}", str(mod.tier), f"cannot spawn on {base_id}")
@@ -210,7 +216,7 @@ def reconcile(
                 derived_tier = next(iter(known))
                 if mod.tier is not None and mod.tier != derived_tier:
                     first = next(i for i, t in tiers.items() if t is not None)
-                    size = len(ladder(export.mods, export.bases[first]["tags"], mod.mod))
+                    size = len(_ladder_on(export, first, mod.mod, target.influence))
                     add(tier_slot, f"{written}: tier = {mod.tier}", f"game data: tier {derived_tier} of {size} on {first} (by required level)", mod.tier, derived_tier)
             ranges = stat_ranges(record)
             if mod.values:
@@ -237,10 +243,10 @@ def reconcile(
             raise FileFormatError(f"{mod.mod} has {len(ranges)} stats; the buy spec minimum check reads one-stat mods only")
         if derived_tier is None:
             continue  # the tier slot already says why
-        first = next(i for i, t in _tiers_of(export, base_ids, mod.mod).items() if t is not None)
+        first = next(i for i, t in _tiers_of(export, base_ids, mod.mod, target.influence).items() if t is not None)
         lower = [
             stat_ranges(export.mods[other])[0][1]
-            for other, tier in ladder(export.mods, export.bases[first]["tags"], mod.mod).items()
+            for other, tier in _ladder_on(export, first, mod.mod, target.influence).items()
             if tier > derived_tier
         ]
         floor = max(lower, default=None)
