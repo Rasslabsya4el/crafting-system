@@ -237,7 +237,7 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 
 - **Written (10 start entries; 7 `trade-api`, 2 `poe.ninja`, 1 `hand`).** In two committed files (section 2.4) and, outside the repository, in `<data dir>/prices.json` (the fetcher) and `<data dir>/price_overrides.toml` (by hand). `--start-price` is a third, per run.
 - **Read.** `resolve_start_price` copies only `chaos` and `source` (`_plan.py:252`); `make_plan` turns it into the `restart` offer when above 0 (`_plan.py:340-344`); the report prints the source (`_report.py:309,525`); the page prints the money and the title only. The resolved `Plan.start_price` is read again by: `cli/_route.py:253` (a given route's `restart` is refused when it is 0) and `:460` (the `restart` action is built from it); `cli/_interval.py:345` (the shift added to every total); `cli/_verify.py:139-156` (the simulation's `start_cost` and the computed total); `cli/_report.py:293,505`, `cli/_route_report.py:31,71`, `cli/_route_sim.py:72`, `cli/_benchmark.py:387,445,640`; for a candidate, `cli/_start_report.py:36` prints its `price_name`.
-- **Wins.** `start_price_of` (a ready `StartPrice`; non-plain candidates, `cli/_starts.py:89`; printed by `cli/_start_report.py:36`), then `--start-price`, then the override file, then the entry of the file that was loaded.
+- **Wins.** `start_price_of` (a ready `StartPrice`; non-plain candidates, `cli/_starts.py:89`; printed by `cli/_start_report.py:39`), then `--start-price`, then the override file, then the entry of the file that was loaded.
 - **Pinned by.** Slots `price.entry`, `price.base`, `price.item_level`, `price.source`, `price.pool` (11 targets, 55 checks, 12 known); `tests/test_prices_start_items.py` (4 entries against their recordings); `tests/test_prices_trade_market.py:80-100`; the price tests listed under F10.
 - **Known disagreements.** `price.source` R04, R13, V01 (#426); the `price.*` rows of F1 and F2: 12 in all.
 - **Issue.** #426, #425, #418, #428, #429, #406; #356 and #357 comments for the refresher.
@@ -311,7 +311,7 @@ The path that was built for OR-7 and does not run: `source_price` (`prices/price
 
 Order of precedence in code, first wins:
 
-1. `start_price_of`: a ready `StartPrice` handed to `make_plan` (`cli/_plan.py:266,310`). It skips `resolve_start_price`, so it beats `--start-price`, the override file and the file. `plan_with_starts` passes it for every non-plain start candidate (`cli/_starts.py:88-90`, price built at `:89`, printed by `cli/_start_report.py:36`); the candidate's own goods were priced from the file with the overrides on top (`cli/_start_options.py:276-295`).
+1. `start_price_of`: a ready `StartPrice` handed to `make_plan` (`cli/_plan.py:266,310`). It skips `resolve_start_price`, so it beats `--start-price`, the override file and the file. `plan_with_starts` passes it for every non-plain start candidate (`cli/_starts.py:88-90`, price built at `:89`, printed by `cli/_start_report.py:39`); the candidate's own goods were priced from the file with the overrides on top (`cli/_start_options.py:276-295`).
 2. `--start-price` (`cli/_plan.py:239-242`); it applies to the plain start item only.
 3. `price_overrides.toml` beside the file that was loaded (`prices/price_file.py:325-339`, `cli/_inputs.py:11-14`).
 4. The entry in the file that was loaded: `target.price_file` when the target names one (read at `cli/_main.py:116` and `cli/_benchmark.py:377`, `:463`), else `<data dir>/prices.json` (`cli/_inputs.py:13`; `crafting.toml` sets the data dir to `local/data`, not committed).
