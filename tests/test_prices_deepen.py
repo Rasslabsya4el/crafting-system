@@ -53,7 +53,7 @@ def test_the_recorded_offer_is_18_chaos_a_unit_on_24_units():
 def test_the_price_is_the_mean_of_the_cheapest_five_offers_and_the_depth_the_units_they_hold():
     offers = [offer(ask, units) for ask, units in [(10, 2), (11, 3), (12, 4), (13, 5), (14, 6), (50, 1000), (60, 1000)]]
 
-    got = read_offers(answer(*offers), RATES, k=5)
+    got = read_offers(answer(*offers), RATES, k=5, min_offers=1)
 
     assert got.chaos == pytest.approx(12.0)
     assert got.depth == 20.0
@@ -61,9 +61,19 @@ def test_the_price_is_the_mean_of_the_cheapest_five_offers_and_the_depth_the_uni
 
 
 def test_the_cheapest_are_found_whatever_order_the_site_lists_them_in():
-    got = read_offers(answer(offer(50, 9), offer(10, 2), offer(30, 4)), RATES, k=2)
+    got = read_offers(answer(offer(50, 9), offer(10, 2), offer(30, 4)), RATES, k=2, min_offers=1)
 
     assert (got.chaos, got.depth) == (20.0, 6.0)
+
+
+def test_a_book_of_fewer_than_ten_offers_is_priced_by_its_median_so_one_odd_offer_cannot_set_it():
+    """The Screaming Essence of Spite on 2026-11-07: 5, 10, 15 and 35 Chaos and one Divine Orb (400 Chaos at this rate): the mean is 93, the median 15."""
+    book = answer(offer(5, 11), offer(10, 59), offer(15, 1), offer(35, 18), offer(1, 2, currency="divine"))
+
+    got = read_offers(book, {"chaos": 1.0, "divine": 400.0})
+
+    assert got.thin and got.chaos == 15.0 and got.depth == 91.0 and got.used == 5
+    assert not read_offers(book, RATES, min_offers=5).thin and read_offers(book, RATES, min_offers=5).chaos == pytest.approx(93.0)
 
 
 def test_an_offer_asked_in_divine_orbs_is_turned_to_chaos_per_unit():

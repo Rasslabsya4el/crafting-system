@@ -137,6 +137,44 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
     return found, notes
 
 
+def thin_again(price_file: PriceFile, now: datetime) -> tuple[PriceFile, list[str]]:
+    """Read the bulk exchange again for the names whose trade reading came from a book of fewer than ten offers (it is now priced by the median).
+
+    A name priced by such a reading gets the new reading; a name that kept a price of the league and has the trade reading beside it
+    (`other`) gets that reading renewed. Nothing else changes.
+    """
+    from dataclasses import replace  # noqa: PLC0415
+
+    from crafting_system.prices.deepen import exchange_entry  # noqa: PLC0415
+    from crafting_system.prices.trade_exchange import exchange_body, read_offers  # noqa: PLC0415
+
+    client = trade_client(400)
+    ids = static_ids(client.data_static())
+    rates = {"chaos": 1.0, "divine": price_file.chaos_per_divine}
+    day = now.astimezone(UTC).date()
+    prices = dict(price_file.prices)
+    notes = []
+    for name, entry in sorted(price_file.prices.items()):
+        p = entry.provenance
+        on_a_thin_book = p is not None and p.kind == TRADE and (entry.detail or {}).get("exchange") and (entry.detail or {}).get("listings", 0) < 10
+        beside = p is not None and (p.other or {}).get("kind") == TRADE
+        if name not in ids or not (on_a_thin_book or beside):
+            continue
+        reading = read_offers(client.exchange(price_file.league, exchange_body(ids[name])), rates)
+        if reading is None:
+            notes.append(f"{name}: no offer on the trade site now; the entry is kept")
+            continue
+        fresh = exchange_entry(reading, price_file.league, day, ids[name])
+        if on_a_thin_book:
+            prices[name] = replace(fresh, provenance=replace(fresh.provenance, other=p.other))
+            notes.append(f"{name}: {entry.chaos:g} -> {fresh.chaos:g} (median of {reading.offers} offers, {reading.depth:g} units)")
+        else:
+            other = {"kind": TRADE, "chaos": fresh.chaos, "depth": fresh.provenance.depth}
+            prices[name] = replace(entry, provenance=replace(p, other=other))
+            notes.append(f"{name}: the trade reading beside it {p.other.get('chaos'):g} -> {fresh.chaos:g}")
+    return replace(price_file, prices=prices), notes
+
+
 def quiver_standins(new: PriceFile, ninja_get, league: str, day: str) -> dict[str, PriceEntry]:
     """R04's start quiver: the cheapest normal line of item level 81 or more with enough observations, read from today's stash overview."""
     from crafting_system.prices.ninja_items import parse_stash_overview  # noqa: PLC0415
@@ -168,6 +206,7 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--cache", required=True, help="a folder for the trade site's stat list and answers")
     parser.add_argument("--league", default="Allflame")
+    parser.add_argument("--thin-again", action="store_true", help="read OUT, read the bulk exchange again for the names that rest on a book of fewer than ten offers and write OUT")
     parser.add_argument("--starts-only", action="store_true", help="read OUT, ask the start items again and write OUT: no poe.ninja and no bulk-exchange request")
     parser.add_argument("--resume", action="store_true", help="skip the poe.ninja step: read the file this run wrote after it (OUT.stage1)")
     parser.add_argument("--below", type=float, default=100.0, help="read the trade offers of every name with fewer units than this behind its price")
@@ -188,6 +227,13 @@ def main() -> int:
     ids = static_ids(trade_client(5).data_static())
     wanted = wanted_names(old, ids)
     stage1 = Path(args.out + ".stage1")
+    if args.thin_again:
+        new, notes = thin_again(load_price_file(Path(args.out)), datetime.now(UTC))
+        for note in notes:
+            print("  thin:", note, flush=True)
+        write_price_file(Path(args.out), new)
+        print(f"wrote {args.out}: {len(notes)} names read again")
+        return 0
     if args.starts_only:
         new = load_price_file(Path(args.out))
         now = datetime.now(UTC)

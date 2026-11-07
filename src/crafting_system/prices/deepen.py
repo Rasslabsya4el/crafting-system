@@ -28,10 +28,12 @@ EARLIER_LEAGUE = (PREVIOUS_LEAGUE, STANDARD)
 
 def exchange_entry(reading: ExchangeReading, league: str, day: date, item_id: str, k: int = DEFAULT_K) -> PriceEntry:
     """The price entry of a reading of the bulk exchange: source `trade-api`, provenance `trade` with the units the offers hold."""
-    note = (
-        f"mean of the {reading.used} cheapest instant offers of the trade site's bulk exchange, "
-        f"{reading.depth:g} units in them, {reading.total} offers in all, {day.isoformat()}"
+    how = (
+        f"median of all {reading.used} offers (fewer than {DEFAULT_MIN_LISTINGS}: no market)"
+        if reading.thin
+        else f"mean of the {reading.used} cheapest instant offers"
     )
+    note = f"{how} of the trade site's bulk exchange, {reading.depth:g} units in them, {reading.total} offers in all, {day.isoformat()}"
     detail = {"league": league, "date": day.isoformat(), "exchange": item_id, "listings": reading.total, "used": reading.used, "k": k}
     return PriceEntry(reading.chaos, TRADE_SOURCE, note, detail, Provenance(TRADE, league, day.isoformat(), reading.depth, "units", reading.used))
 
