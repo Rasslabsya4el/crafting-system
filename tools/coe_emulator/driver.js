@@ -238,6 +238,20 @@
     return { repeats, counts, examples, failures, ...(errors.length ? { page_errors_after_craft: errors } : {}) };
   }
 
-  window.coeh = { build, legal, apply, describe, exported, restore };
+  // Seed the page's Math.random (mulberry32), the only source of chance the emulator's draws use, so that a
+  // run with the same seed on the same copy gives the same counts (ticket #544: provenance of a recorded count).
+  function seed(value) {
+    let state = value >>> 0;
+    Math.random = function () {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    return value;
+  }
+
+  window.coeh = { build, legal, apply, describe, exported, restore, seed };
   return true;
 })();

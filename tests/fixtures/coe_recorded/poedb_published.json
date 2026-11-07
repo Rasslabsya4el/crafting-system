@@ -1,0 +1,1482 @@
+{
+ "provenance": {
+  "what": "numbers PoEDB publishes; read on the date below by an anonymous GET of each page; facts only, no PoEDB code",
+  "read": "2026-11-07",
+  "game_version_of_the_data": "PoEDB's page of that day (3.29, the pin of this repository is repoe-fork 3.29.3.3)"
+ },
+ "belt_modifiers": {
+  "url": "https://poedb.tw/us/Belts",
+  "where": "tab 'Modifiers Calc', the list of the item class Belt; rows that spawn on the tags belt or default (a Leather Belt has exactly these two tags)",
+  "rows": [
+   {
+    "name": "of the Brute",
+    "level": 1,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(8-12) to Strength"
+   },
+   {
+    "name": "of the Wrestler",
+    "level": 11,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(13-17) to Strength"
+   },
+   {
+    "name": "of the Bear",
+    "level": 22,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(18-22) to Strength"
+   },
+   {
+    "name": "of the Lion",
+    "level": 33,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(23-27) to Strength"
+   },
+   {
+    "name": "of the Gorilla",
+    "level": 44,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(28-32) to Strength"
+   },
+   {
+    "name": "of the Goliath",
+    "level": 55,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(33-37) to Strength"
+   },
+   {
+    "name": "of the Leviathan",
+    "level": 66,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(38-42) to Strength"
+   },
+   {
+    "name": "of the Titan",
+    "level": 74,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(43-50) to Strength"
+   },
+   {
+    "name": "of the Gods",
+    "level": 82,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(51-55) to Strength"
+   },
+   {
+    "name": "of the Godslayer",
+    "level": 85,
+    "side": "suffix",
+    "families": [
+     "Strength"
+    ],
+    "weight": 1000,
+    "text": "+(56-60) to Strength"
+   },
+   {
+    "name": "Hale",
+    "level": 1,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(3-9) to maximum Life"
+   },
+   {
+    "name": "Healthy",
+    "level": 5,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(10-24) to maximum Life"
+   },
+   {
+    "name": "Sanguine",
+    "level": 11,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(25-39) to maximum Life"
+   },
+   {
+    "name": "Stalwart",
+    "level": 18,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(40-54) to maximum Life"
+   },
+   {
+    "name": "Stout",
+    "level": 24,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(55-69) to maximum Life"
+   },
+   {
+    "name": "Robust",
+    "level": 30,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(70-84) to maximum Life"
+   },
+   {
+    "name": "Rotund",
+    "level": 36,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(85-99) to maximum Life"
+   },
+   {
+    "name": "Virile",
+    "level": 44,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(100-114) to maximum Life"
+   },
+   {
+    "name": "Athlete's",
+    "level": 54,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(115-129) to maximum Life"
+   },
+   {
+    "name": "Fecund",
+    "level": 64,
+    "side": "prefix",
+    "families": [
+     "IncreasedLife"
+    ],
+    "weight": 1000,
+    "text": "+(130-144) to maximum Life"
+   },
+   {
+    "name": "Beryl",
+    "level": 1,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(15-19) to maximum Mana"
+   },
+   {
+    "name": "Cobalt",
+    "level": 11,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(20-24) to maximum Mana"
+   },
+   {
+    "name": "Azure",
+    "level": 17,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(25-29) to maximum Mana"
+   },
+   {
+    "name": "Sapphire",
+    "level": 23,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(30-34) to maximum Mana"
+   },
+   {
+    "name": "Cerulean",
+    "level": 29,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(35-39) to maximum Mana"
+   },
+   {
+    "name": "Aqua",
+    "level": 35,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(40-44) to maximum Mana"
+   },
+   {
+    "name": "Opalescent",
+    "level": 42,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(45-49) to maximum Mana"
+   },
+   {
+    "name": "Gentian",
+    "level": 51,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(50-54) to maximum Mana"
+   },
+   {
+    "name": "Chalybeous",
+    "level": 60,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(55-59) to maximum Mana"
+   },
+   {
+    "name": "Mazarine",
+    "level": 69,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(60-64) to maximum Mana"
+   },
+   {
+    "name": "Blue",
+    "level": 75,
+    "side": "prefix",
+    "families": [
+     "IncreasedMana"
+    ],
+    "weight": 1000,
+    "text": "+(65-68) to maximum Mana"
+   },
+   {
+    "name": "Shining",
+    "level": 3,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(1-3) to maximum Energy Shield"
+   },
+   {
+    "name": "Glimmering",
+    "level": 11,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(4-8) to maximum Energy Shield"
+   },
+   {
+    "name": "Glittering",
+    "level": 17,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(9-12) to maximum Energy Shield"
+   },
+   {
+    "name": "Glowing",
+    "level": 23,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(13-15) to maximum Energy Shield"
+   },
+   {
+    "name": "Radiating",
+    "level": 29,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(16-19) to maximum Energy Shield"
+   },
+   {
+    "name": "Pulsing",
+    "level": 35,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(20-22) to maximum Energy Shield"
+   },
+   {
+    "name": "Seething",
+    "level": 42,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(23-26) to maximum Energy Shield"
+   },
+   {
+    "name": "Blazing",
+    "level": 50,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(27-31) to maximum Energy Shield"
+   },
+   {
+    "name": "Scintillating",
+    "level": 59,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(32-37) to maximum Energy Shield"
+   },
+   {
+    "name": "Incandescent",
+    "level": 68,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(38-43) to maximum Energy Shield"
+   },
+   {
+    "name": "Resplendent",
+    "level": 74,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(44-47) to maximum Energy Shield"
+   },
+   {
+    "name": "Dazzling",
+    "level": 80,
+    "side": "prefix",
+    "families": [
+     "IncreasedEnergyShield"
+    ],
+    "weight": 1000,
+    "text": "+(48-51) to maximum Energy Shield"
+   },
+   {
+    "name": "Lacquered",
+    "level": 1,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(3-10) to Armour"
+   },
+   {
+    "name": "Studded",
+    "level": 18,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(11-35) to Armour"
+   },
+   {
+    "name": "Ribbed",
+    "level": 30,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(36-60) to Armour"
+   },
+   {
+    "name": "Fortified",
+    "level": 44,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(61-138) to Armour"
+   },
+   {
+    "name": "Plated",
+    "level": 57,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(139-322) to Armour"
+   },
+   {
+    "name": "Carapaced",
+    "level": 71,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(323-400) to Armour"
+   },
+   {
+    "name": "Encased",
+    "level": 83,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(401-460) to Armour"
+   },
+   {
+    "name": "Enveloped",
+    "level": 86,
+    "side": "prefix",
+    "families": [
+     "IncreasedPhysicalDamageReductionRating"
+    ],
+    "weight": 1000,
+    "text": "+(461-540) to Armour"
+   },
+   {
+    "name": "Catalysing",
+    "level": 4,
+    "side": "prefix",
+    "families": [
+     "IncreasedWeaponElementalDamagePercent"
+    ],
+    "weight": 300,
+    "text": "(5-10)% increased Elemental Damage with Attack Skills"
+   },
+   {
+    "name": "Infusing",
+    "level": 15,
+    "side": "prefix",
+    "families": [
+     "IncreasedWeaponElementalDamagePercent"
+    ],
+    "weight": 300,
+    "text": "(11-20)% increased Elemental Damage with Attack Skills"
+   },
+   {
+    "name": "Empowering",
+    "level": 30,
+    "side": "prefix",
+    "families": [
+     "IncreasedWeaponElementalDamagePercent"
+    ],
+    "weight": 300,
+    "text": "(21-30)% increased Elemental Damage with Attack Skills"
+   },
+   {
+    "name": "Unleashed",
+    "level": 60,
+    "side": "prefix",
+    "families": [
+     "IncreasedWeaponElementalDamagePercent"
+    ],
+    "weight": 300,
+    "text": "(31-36)% increased Elemental Damage with Attack Skills"
+   },
+   {
+    "name": "Overpowering",
+    "level": 81,
+    "side": "prefix",
+    "families": [
+     "IncreasedWeaponElementalDamagePercent"
+    ],
+    "weight": 300,
+    "text": "(37-42)% increased Elemental Damage with Attack Skills"
+   },
+   {
+    "name": "Devastating",
+    "level": 86,
+    "side": "prefix",
+    "families": [
+     "IncreasedWeaponElementalDamagePercent"
+    ],
+    "weight": 300,
+    "text": "(43-50)% increased Elemental Damage with Attack Skills"
+   },
+   {
+    "name": "of the Newt",
+    "level": 1,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (1-2) Life per second"
+   },
+   {
+    "name": "of the Lizard",
+    "level": 7,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (2.1-8) Life per second"
+   },
+   {
+    "name": "of the Flatworm",
+    "level": 19,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (8.1-16) Life per second"
+   },
+   {
+    "name": "of the Starfish",
+    "level": 31,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (16.1-24) Life per second"
+   },
+   {
+    "name": "of the Hydra",
+    "level": 44,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (24.1-32) Life per second"
+   },
+   {
+    "name": "of the Troll",
+    "level": 55,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (32.1-48) Life per second"
+   },
+   {
+    "name": "of Ryslatha",
+    "level": 68,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (48.1-64) Life per second"
+   },
+   {
+    "name": "of the Phoenix",
+    "level": 74,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (64.1-96) Life per second"
+   },
+   {
+    "name": "of Recuperation",
+    "level": 78,
+    "side": "suffix",
+    "families": [
+     "LifeRegeneration"
+    ],
+    "weight": 1000,
+    "text": "Regenerate (96.1-128) Life per second"
+   },
+   {
+    "name": "of the Pugilist",
+    "level": 5,
+    "side": "suffix",
+    "families": [
+     "StunThresholdReduction"
+    ],
+    "weight": 1000,
+    "text": "(5-7)% reduced Enemy Stun Threshold"
+   },
+   {
+    "name": "of the Brawler",
+    "level": 20,
+    "side": "suffix",
+    "families": [
+     "StunThresholdReduction"
+    ],
+    "weight": 1000,
+    "text": "(8-9)% reduced Enemy Stun Threshold"
+   },
+   {
+    "name": "of the Boxer",
+    "level": 30,
+    "side": "suffix",
+    "families": [
+     "StunThresholdReduction"
+    ],
+    "weight": 1000,
+    "text": "(10-11)% reduced Enemy Stun Threshold"
+   },
+   {
+    "name": "of the Combatant",
+    "level": 44,
+    "side": "suffix",
+    "families": [
+     "StunThresholdReduction"
+    ],
+    "weight": 1000,
+    "text": "(12-13)% reduced Enemy Stun Threshold"
+   },
+   {
+    "name": "of the Gladiator",
+    "level": 58,
+    "side": "suffix",
+    "families": [
+     "StunThresholdReduction"
+    ],
+    "weight": 1000,
+    "text": "(14-15)% reduced Enemy Stun Threshold"
+   },
+   {
+    "name": "of the Whelpling",
+    "level": 1,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(6-11)% to Fire Resistance"
+   },
+   {
+    "name": "of the Salamander",
+    "level": 12,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(12-17)% to Fire Resistance"
+   },
+   {
+    "name": "of the Drake",
+    "level": 24,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(18-23)% to Fire Resistance"
+   },
+   {
+    "name": "of the Kiln",
+    "level": 36,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(24-29)% to Fire Resistance"
+   },
+   {
+    "name": "of the Furnace",
+    "level": 48,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(30-35)% to Fire Resistance"
+   },
+   {
+    "name": "of the Volcano",
+    "level": 60,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(36-41)% to Fire Resistance"
+   },
+   {
+    "name": "of the Magma",
+    "level": 72,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(42-45)% to Fire Resistance"
+   },
+   {
+    "name": "of Tzteosh",
+    "level": 84,
+    "side": "suffix",
+    "families": [
+     "FireResistance"
+    ],
+    "weight": 1000,
+    "text": "+(46-48)% to Fire Resistance"
+   },
+   {
+    "name": "of the Inuit",
+    "level": 1,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(6-11)% to Cold Resistance"
+   },
+   {
+    "name": "of the Seal",
+    "level": 14,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(12-17)% to Cold Resistance"
+   },
+   {
+    "name": "of the Penguin",
+    "level": 26,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(18-23)% to Cold Resistance"
+   },
+   {
+    "name": "of the Yeti",
+    "level": 38,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(24-29)% to Cold Resistance"
+   },
+   {
+    "name": "of the Walrus",
+    "level": 50,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(30-35)% to Cold Resistance"
+   },
+   {
+    "name": "of the Polar Bear",
+    "level": 60,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(36-41)% to Cold Resistance"
+   },
+   {
+    "name": "of the Ice",
+    "level": 72,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(42-45)% to Cold Resistance"
+   },
+   {
+    "name": "of Haast",
+    "level": 84,
+    "side": "suffix",
+    "families": [
+     "ColdResistance"
+    ],
+    "weight": 1000,
+    "text": "+(46-48)% to Cold Resistance"
+   },
+   {
+    "name": "of the Cloud",
+    "level": 1,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(6-11)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Squall",
+    "level": 13,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(12-17)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Storm",
+    "level": 25,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(18-23)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Thunderhead",
+    "level": 37,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(24-29)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Tempest",
+    "level": 49,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(30-35)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Maelstrom",
+    "level": 60,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(36-41)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Lightning",
+    "level": 72,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(42-45)% to Lightning Resistance"
+   },
+   {
+    "name": "of Ephij",
+    "level": 84,
+    "side": "suffix",
+    "families": [
+     "LightningResistance"
+    ],
+    "weight": 1000,
+    "text": "+(46-48)% to Lightning Resistance"
+   },
+   {
+    "name": "of the Lost",
+    "level": 16,
+    "side": "suffix",
+    "families": [
+     "ChaosResistance"
+    ],
+    "weight": 250,
+    "text": "+(5-10)% to Chaos Resistance"
+   },
+   {
+    "name": "of Banishment",
+    "level": 30,
+    "side": "suffix",
+    "families": [
+     "ChaosResistance"
+    ],
+    "weight": 250,
+    "text": "+(11-15)% to Chaos Resistance"
+   },
+   {
+    "name": "of Eviction",
+    "level": 44,
+    "side": "suffix",
+    "families": [
+     "ChaosResistance"
+    ],
+    "weight": 250,
+    "text": "+(16-20)% to Chaos Resistance"
+   },
+   {
+    "name": "of Expulsion",
+    "level": 56,
+    "side": "suffix",
+    "families": [
+     "ChaosResistance"
+    ],
+    "weight": 250,
+    "text": "+(21-25)% to Chaos Resistance"
+   },
+   {
+    "name": "of Exile",
+    "level": 65,
+    "side": "suffix",
+    "families": [
+     "ChaosResistance"
+    ],
+    "weight": 250,
+    "text": "+(26-30)% to Chaos Resistance"
+   },
+   {
+    "name": "of Bameth",
+    "level": 81,
+    "side": "suffix",
+    "families": [
+     "ChaosResistance"
+    ],
+    "weight": 250,
+    "text": "+(31-35)% to Chaos Resistance"
+   },
+   {
+    "name": "of Thick Skin",
+    "level": 1,
+    "side": "suffix",
+    "families": [
+     "StunRecovery"
+    ],
+    "weight": 1000,
+    "text": "(11-13)% increased Stun and Block Recovery"
+   },
+   {
+    "name": "of Stone Skin",
+    "level": 17,
+    "side": "suffix",
+    "families": [
+     "StunRecovery"
+    ],
+    "weight": 1000,
+    "text": "(14-16)% increased Stun and Block Recovery"
+   },
+   {
+    "name": "of Iron Skin",
+    "level": 28,
+    "side": "suffix",
+    "families": [
+     "StunRecovery"
+    ],
+    "weight": 1000,
+    "text": "(17-19)% increased Stun and Block Recovery"
+   },
+   {
+    "name": "of Steel Skin",
+    "level": 42,
+    "side": "suffix",
+    "families": [
+     "StunRecovery"
+    ],
+    "weight": 1000,
+    "text": "(20-22)% increased Stun and Block Recovery"
+   },
+   {
+    "name": "of Adamantite Skin",
+    "level": 56,
+    "side": "suffix",
+    "families": [
+     "StunRecovery"
+    ],
+    "weight": 1000,
+    "text": "(23-25)% increased Stun and Block Recovery"
+   },
+   {
+    "name": "of Corundum Skin",
+    "level": 79,
+    "side": "suffix",
+    "families": [
+     "StunRecovery"
+    ],
+    "weight": 1000,
+    "text": "(26-28)% increased Stun and Block Recovery"
+   },
+   {
+    "name": "of Impact",
+    "level": 5,
+    "side": "suffix",
+    "families": [
+     "StunDurationIncreasePercent"
+    ],
+    "weight": 1000,
+    "text": "(11-15)% increased Stun Duration on Enemies"
+   },
+   {
+    "name": "of Dazing",
+    "level": 18,
+    "side": "suffix",
+    "families": [
+     "StunDurationIncreasePercent"
+    ],
+    "weight": 1000,
+    "text": "(16-20)% increased Stun Duration on Enemies"
+   },
+   {
+    "name": "of Stunning",
+    "level": 30,
+    "side": "suffix",
+    "families": [
+     "StunDurationIncreasePercent"
+    ],
+    "weight": 1000,
+    "text": "(21-25)% increased Stun Duration on Enemies"
+   },
+   {
+    "name": "of Slamming",
+    "level": 44,
+    "side": "suffix",
+    "families": [
+     "StunDurationIncreasePercent"
+    ],
+    "weight": 1000,
+    "text": "(26-30)% increased Stun Duration on Enemies"
+   },
+   {
+    "name": "of Staggering",
+    "level": 58,
+    "side": "suffix",
+    "families": [
+     "StunDurationIncreasePercent"
+    ],
+    "weight": 1000,
+    "text": "(31-35)% increased Stun Duration on Enemies"
+   },
+   {
+    "name": "of Refilling",
+    "level": 2,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 500,
+    "text": "(5-10)% increased Flask Charges gained"
+   },
+   {
+    "name": "of Restocking",
+    "level": 16,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 500,
+    "text": "(11-16)% increased Flask Charges gained"
+   },
+   {
+    "name": "of Replenishing",
+    "level": 32,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 500,
+    "text": "(17-22)% increased Flask Charges gained"
+   },
+   {
+    "name": "of Pouring",
+    "level": 48,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 500,
+    "text": "(23-28)% increased Flask Charges gained"
+   },
+   {
+    "name": "of Brimming",
+    "level": 70,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 500,
+    "text": "(29-34)% increased Flask Charges gained"
+   },
+   {
+    "name": "of Overflowing",
+    "level": 84,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 500,
+    "text": "(35-40)% increased Flask Charges gained"
+   },
+   {
+    "name": "Distilling",
+    "level": 45,
+    "side": "prefix",
+    "families": [
+     "FlaskEffect"
+    ],
+    "weight": 250,
+    "text": "Flasks applied to you have (4-6)% increased Effect"
+   },
+   {
+    "name": "Condensing",
+    "level": 65,
+    "side": "prefix",
+    "families": [
+     "FlaskEffect"
+    ],
+    "weight": 250,
+    "text": "Flasks applied to you have (7-9)% increased Effect"
+   },
+   {
+    "name": "Magnifying",
+    "level": 85,
+    "side": "prefix",
+    "families": [
+     "FlaskEffect"
+    ],
+    "weight": 250,
+    "text": "Flasks applied to you have (10-12)% increased Effect"
+   },
+   {
+    "name": "of Sipping",
+    "level": 3,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskCharges"
+    ],
+    "weight": 1000,
+    "text": "(10-20)% reduced Flask Charges used"
+   },
+   {
+    "name": "of Sipping",
+    "level": 8,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskDuration"
+    ],
+    "weight": 500,
+    "text": "(4-9)% increased Flask Effect Duration"
+   },
+   {
+    "name": "of Tasting",
+    "level": 34,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskDuration"
+    ],
+    "weight": 500,
+    "text": "(10-15)% increased Flask Effect Duration"
+   },
+   {
+    "name": "of Savouring",
+    "level": 50,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskDuration"
+    ],
+    "weight": 500,
+    "text": "(16-21)% increased Flask Effect Duration"
+   },
+   {
+    "name": "of Relishing",
+    "level": 66,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskDuration"
+    ],
+    "weight": 500,
+    "text": "(22-27)% increased Flask Effect Duration"
+   },
+   {
+    "name": "of Reveling",
+    "level": 82,
+    "side": "suffix",
+    "families": [
+     "BeltFlaskDuration"
+    ],
+    "weight": 500,
+    "text": "(28-33)% increased Flask Effect Duration"
+   },
+   {
+    "name": "Restoring",
+    "level": 5,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(5-10)% increased Flask Life Recovery rate"
+   },
+   {
+    "name": "Recovering",
+    "level": 21,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(11-16)% increased Flask Life Recovery rate"
+   },
+   {
+    "name": "Renewing",
+    "level": 35,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(17-22)% increased Flask Life Recovery rate"
+   },
+   {
+    "name": "Refreshing",
+    "level": 49,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(23-28)% increased Flask Life Recovery rate"
+   },
+   {
+    "name": "Rejuvenating",
+    "level": 63,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(29-34)% increased Flask Life Recovery rate"
+   },
+   {
+    "name": "Regenerating",
+    "level": 77,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(35-40)% increased Flask Life Recovery rate"
+   },
+   {
+    "name": "Affecting",
+    "level": 5,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(5-10)% increased Flask Mana Recovery rate"
+   },
+   {
+    "name": "Stirring",
+    "level": 21,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(11-16)% increased Flask Mana Recovery rate"
+   },
+   {
+    "name": "Heartening",
+    "level": 35,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(17-22)% increased Flask Mana Recovery rate"
+   },
+   {
+    "name": "Exciting",
+    "level": 49,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(23-28)% increased Flask Mana Recovery rate"
+   },
+   {
+    "name": "Galvanizing",
+    "level": 63,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(29-34)% increased Flask Mana Recovery rate"
+   },
+   {
+    "name": "Inspiring",
+    "level": 77,
+    "side": "prefix",
+    "families": [
+     "BeltFlaskRecoveryRate"
+    ],
+    "weight": 500,
+    "text": "(35-40)% increased Flask Mana Recovery rate"
+   },
+   {
+    "name": "Thorny",
+    "level": 1,
+    "side": "prefix",
+    "families": [
+     "AttackerTakesDamageNoRange"
+    ],
+    "weight": 1000,
+    "text": "Reflects (1-4) Physical Damage to Melee Attackers"
+   },
+   {
+    "name": "Spiny",
+    "level": 10,
+    "side": "prefix",
+    "families": [
+     "AttackerTakesDamageNoRange"
+    ],
+    "weight": 1000,
+    "text": "Reflects (5-10) Physical Damage to Melee Attackers"
+   }
+  ]
+ },
+ "essences": {
+  "url": "https://poedb.tw/us/Essence",
+  "entries": {
+   "Deafening Essence of Rage": {
+    "tier": 7,
+    "rule": "Upgrades a normal item to rare or reforges a rare item, guaranteeing one property",
+    "level_cap": null,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Amulets, Rings, Shields: +(51-58) to Strength Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Damage Penetrates (15-16) % Fire Resistance Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Damage Penetrates 8 % Fire Resistance"
+   },
+   "Shrieking Essence of Spite": {
+    "tier": 6,
+    "rule": "Upgrades a normal item to rare or reforges a rare item, guaranteeing one property",
+    "level_cap": null,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Amulets, Rings, Shields: +(43-50) to Intelligence Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Damage Penetrates (13-14) % Lightning Resistance Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Damage Penetrates 7 % Lightning Resistance"
+   },
+   "Shrieking Essence of Loathing": {
+    "tier": 6,
+    "rule": "Upgrades a normal item to rare or reforges a rare item, guaranteeing one property",
+    "level_cap": null,
+    "effects": "Quivers, Amulets: (35-38) % increased Global Critical Strike Chance Helmets, Body Armours: (7-8) % increased Mana Reservation Efficiency of Skills Boots: (26-30) % chance to Avoid Elemental Ailments Gloves, Rings: (21-23) % increased Global Critical Strike Chance Bows, Wands, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: (30-34) % increased Critical Strike Chance Belts: (31-35) % increased Stun Duration on Enemies Shields: (64-69) % increased Chance to Block"
+   },
+   "Deafening Essence of Envy": {
+    "tier": 7,
+    "rule": "Upgrades a normal item to rare or reforges a rare item, guaranteeing one property",
+    "level_cap": null,
+    "effects": "Quivers: Adds (23-37) to (49-61) Chaos Damage to Attacks Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(31-35) % to Chaos Resistance Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Adds (89-131) to (181-229) Chaos Damage Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Adds (53-79) to (101-131) Chaos Damage Amulets, Rings: (31-34) % increased Chaos Damage Essence of Hysteria"
+   },
+   "Whispering Essence of Hatred": {
+    "tier": 1,
+    "rule": "Upgrades a normal item to rare with one guaranteed property",
+    "level_cap": 35,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(6-11) % to Cold Resistance Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Adds (2-3) to (6-7) Cold Damage Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Adds (1-2) to (3-4) Cold Damage Amulets, Rings: (6-10) % increased Cold Damage"
+   },
+   "Muttering Essence of Hatred": {
+    "tier": 2,
+    "rule": "Upgrades a normal item to rare with one guaranteed property",
+    "level_cap": 45,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(12-17) % to Cold Resistance Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Adds (12-17) to (26-30) Cold Damage Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Adds (7-9) to (14-16) Cold Damage Amulets, Rings: (11-14) % increased Cold Damage"
+   },
+   "Weeping Essence of Hatred": {
+    "tier": 3,
+    "rule": "Upgrades a normal item to rare with one guaranteed property",
+    "level_cap": 60,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(18-23) % to Cold Resistance Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Adds (29-40) to (58-68) Cold Damage Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Adds (16-21) to (31-37) Cold Damage Amulets, Rings: (15-18) % increased Cold Damage"
+   },
+   "Wailing Essence of Hatred": {
+    "tier": 4,
+    "rule": "Upgrades a normal item to rare with one guaranteed property",
+    "level_cap": 75,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(24-29) % to Cold Resistance Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Adds (57-77) to (114-132) Cold Damage Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Adds (31-42) to (62-71) Cold Damage Amulets, Rings: (19-22) % increased Cold Damage"
+   },
+   "Screaming Essence of Hatred": {
+    "tier": 5,
+    "rule": "Upgrades a normal item to rare or reforges a rare item, guaranteeing one property",
+    "level_cap": null,
+    "effects": "Quivers, Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(36-41) % to Cold Resistance Bows, Staves, Two Hand Swords, Two Hand Axes, Two Hand Maces: Adds (99-136) to (200-232) Cold Damage Wands, Claws, Daggers, One Hand Swords, Thrusting One Hand Swords, One Hand Axes, One Hand Maces, Sceptres: Adds (54-74) to (108-126) Cold Damage Amulets, Rings: (23-26) % increased Cold Damage"
+   }
+  }
+ }
+}

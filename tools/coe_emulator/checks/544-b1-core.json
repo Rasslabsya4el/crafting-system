@@ -1,0 +1,183 @@
+[
+ {
+  "id": "chaos-r12-amulet",
+  "route": "R12",
+  "note": "Chaos Orb on R12's start amulet: a rare Paua Amulet of item level 84 whose fractured Lightning Resistance stays",
+  "base": "Metadata/Items/Amulets/Amulet1",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": [
+   "LightningResist2",
+   "IncreasedLife3",
+   "ColdResist3",
+   "IncreasedMana3"
+  ],
+  "fractured": [
+   "LightningResist2"
+  ],
+  "actions": [
+   "Chaos Orb"
+  ]
+ },
+ {
+  "id": "chaos-r13-belt",
+  "route": "R13",
+  "note": "Chaos Orb on a rare Leather Belt of item level 86 (R13's base) with four ordinary mods, none fractured: all four are removed",
+  "base": "Metadata/Items/Belts/Belt3",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [
+   "IncreasedLife3",
+   "IncreasedMana3",
+   "FireResist3",
+   "ColdResist3"
+  ],
+  "actions": [
+   "Chaos Orb"
+  ]
+ },
+ {
+  "id": "essence-r05-ring",
+  "route": "R05",
+  "note": "Deafening Essence of Rage on R05's start ring: a rare Amethyst Ring of item level 75 with the fractured All Attributes",
+  "base": "Metadata/Items/Rings/Ring10",
+  "item_level": 75,
+  "rarity": "rare",
+  "mods": [
+   "AllAttributes4"
+  ],
+  "fractured": [
+   "AllAttributes4"
+  ],
+  "actions": [
+   "Deafening Essence of Rage"
+  ]
+ },
+ {
+  "id": "essence-r10-boots",
+  "route": "R10",
+  "note": "Shrieking Essence of Spite on R10's start boots: Sorcerer Boots of item level 84 with the fractured Movement Speed",
+  "base": "Metadata/Items/Armours/Boots/BootsInt9",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": [
+   "MovementVelocity5"
+  ],
+  "fractured": [
+   "MovementVelocity5"
+  ],
+  "actions": [
+   "Shrieking Essence of Spite"
+  ]
+ },
+ {
+  "id": "essence-r11-helmet",
+  "route": "R11",
+  "note": "Shrieking Essence of Loathing on R11's start helmet: a Lion Pelt of item level 84 with the fractured Chaos Resistance",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": [
+   "ChaosResist6"
+  ],
+  "fractured": [
+   "ChaosResist6"
+  ],
+  "actions": [
+   "Shrieking Essence of Loathing"
+  ]
+ },
+ {
+  "id": "alteration-r13-belt",
+  "route": "R13",
+  "note": "Orb of Alteration on a magic Leather Belt of item level 86 (R13's base)",
+  "base": "Metadata/Items/Belts/Belt3",
+  "item_level": 86,
+  "rarity": "magic",
+  "mods": [
+   "FireResist3"
+  ],
+  "actions": [
+   "Orb of Alteration"
+  ]
+ },
+ {
+  "id": "augmentation-r13-belt",
+  "route": "R13",
+  "note": "Orb of Augmentation on a magic Leather Belt of item level 86 that holds one suffix: it adds a prefix",
+  "base": "Metadata/Items/Belts/Belt3",
+  "item_level": 86,
+  "rarity": "magic",
+  "mods": [
+   "FireResist3"
+  ],
+  "actions": [
+   "Orb of Augmentation"
+  ]
+ },
+ {
+  "id": "regal-r13-belt",
+  "route": "R13",
+  "note": "Regal Orb on a magic Leather Belt of item level 86 that holds a prefix and a suffix: it adds one more mod",
+  "base": "Metadata/Items/Belts/Belt3",
+  "item_level": 86,
+  "rarity": "magic",
+  "mods": [
+   "IncreasedMana3",
+   "ColdResist3"
+  ],
+  "actions": [
+   "Regal Orb"
+  ]
+ },
+ {
+  "id": "fossil-r08-boots",
+  "route": "R08",
+  "note": "A Dense and a Shuddering Fossil on R08's boots: Sorcerer Boots of item level 86, rare, no mod",
+  "base": "Metadata/Items/Armours/Boots/BootsInt9",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Fossils Dense Fossil + Shuddering Fossil"
+  ]
+ },
+ {
+  "id": "fossil-r09-boots",
+  "route": "R09",
+  "note": "A Pristine and a Shuddering Fossil on R09's boots: Two-Toned Boots (Evasion and Energy Shield) of item level 86, rare, no mod",
+  "base": "Metadata/Items/Armours/Boots/BootsAtlas1",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Fossils Pristine Fossil + Shuddering Fossil"
+  ]
+ },
+ {
+  "id": "essence-c02-helmet",
+  "route": "C02",
+  "note": "The prototype's case C02 (tests/test_proto_coe_comparison.py): Deafening Essence of Envy on a rare Royal Burgonet of item level 86 with no mod. The Craft of Exile calculator gives our exact chance of Life tier 1 and Fire Resistance tier 1 together 2.09% above its own number; the emulator is the draw itself",
+  "base": "Metadata/Items/Armours/Helmets/HelmetStr10",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Deafening Essence of Envy"
+  ],
+  "joint_families": [
+   [
+    "IncreasedLife",
+    "FireResistance"
+   ],
+   [
+    "IncreasedLife",
+    "ColdResistance"
+   ],
+   [
+    "FireResistance",
+    "ColdResistance"
+   ]
+  ]
+ }
+]

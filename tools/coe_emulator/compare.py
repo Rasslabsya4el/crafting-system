@@ -87,8 +87,13 @@ class Coe:
         self._ours: list[dict] | None = None
 
     def bitem(self, base_id: str) -> str:
-        name = self.data.base_items[base_id].name
-        found = [b["id_bitem"] for b in self.d["bitems"]["seq"] if b["name_bitem"] == name and b.get("is_legacy") == "0"]
+        base = self.data.base_items[base_id]
+        name = base.name
+        found = [b for b in self.d["bitems"]["seq"] if b["name_bitem"] == name and b.get("is_legacy") == "0"]
+        if len(found) > 1:  # several bases share a name (the three Two-Toned Boots): their attribute requirements tell them apart
+            wanted = dict(zip(("strength", "dexterity", "intelligence"), base.attribute_requirements))
+            found = [b for b in found if {k: v for k, v in json.loads(b["requirements"]).items() if v} == {k: v for k, v in wanted.items() if v}] or found
+        found = [b["id_bitem"] for b in found]
         if len(found) != 1:
             raise ValueError(f"no single Craft of Exile item named {name}")
         return found[0]

@@ -17,7 +17,7 @@ A check file is one check or a list of them:
               "influences": ["shaper"], "mods": [{"aid": "2008", "tindex": 7, "bench": 0, "frac": 0}]},
      "donor": {...an item spec, only for the Awakener's Orb...},
      "legal": true,
-     "apply": [{"craft": {"action": "harvest", "subaction": "hreroll", "ssaction": "6"}, "repeats": 1000}]}
+     "apply": [{"craft": {"action": "harvest", "subaction": "hreroll", "ssaction": "6"}, "repeats": 1000, "seed": 544}]}
 
 The answer per check: the built item, the legal-action table (when asked) and, per craft, the
 counts of the resulting items by their mods (and the refusals by their message).
@@ -143,6 +143,8 @@ class Emulator:
             answer["legal"] = self.call("legal")
         answer["apply"] = []
         for step in check.get("apply", []):
+            if step.get("seed") is not None:  # the run is reproducible: the same seed on the same copy gives the same counts
+                self.call("seed", step["seed"])
             result = self.call("apply", step["craft"], step.get("repeats", 1), {"donor": donor})
             answer["apply"].append({"craft": step["craft"], **result})
         answer["seconds"] = round(time.time() - started, 2)

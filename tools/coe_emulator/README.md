@@ -5,6 +5,7 @@ A debug tool, not part of the planner and not run by CI. The skill `.claude/skil
 - `emulator.py` fetches the site into `.claude/scratch/coe/site/` (git-ignored: it is third-party code and this repo is public) and runs checks written in Craft of Exile's terms. Needs only Python with Playwright 1.58 and its Chromium.
 - `driver.js` is loaded into the page; it calls the emulator's own functions, the ones its buttons call, and re-implements no rule.
 - `compare.py` is the debug loop: a check in our terms, our verdict and distribution beside the emulator's. Needs the project (`uv run --with playwright==1.58.0`).
+- `record.py` (ticket #544) records the emulator's counts as our own measurement: `run` applies one action of a check of `checks/544-b1-core.json` a few thousand times with a seed and writes the counts as sets of our mod ids; `merge` adds the runs into `tests/fixtures/coe_recorded/b1_core.json` with the sample sizes, seeds, date and the hashes of the copy. The driver seeds the page's `Math.random` (`coeh.seed`), the only source of chance in the emulator's draws, so a seed on the same copy repeats the counts. Keep each run under a minute (about 2,500 draws of a rare item); get a bigger sample from several seeds. `tests/test_coe_recorded_b1_core.py` compares the file with our exact distribution under a binomial test.
 - `checks/` holds worked checks: the #197 shield and its neighbours, the first sweep over every action kind, the Awakener's Orb and the #201 jewel questions in CoE terms.
 
 ## How the functions were found

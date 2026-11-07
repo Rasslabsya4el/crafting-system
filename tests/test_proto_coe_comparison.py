@@ -17,8 +17,8 @@ asks for the chance that the finished item holds all its targets. Three kinds of
   relative. It needs the local Craft of Exile copy (git-ignored, pinned by SHA256; see
   `coe_support.py`) and Node, and skips cleanly without them.
 * Our engine against the oracle on today's data (repoe-fork 3.29.3.3, the cached dump, which the
-  CI does not have): within the prototype's 5% investigation threshold, and pinned to the
-  difference measured now (within 0.1 percentage point) so that a drift is noticed.
+  CI does not have): pinned to the difference measured now (within 0.1 percentage point) so that a drift is noticed.
+  The old 5% investigation threshold is gone: the differences are the calculator's approximation, see below.
 * The side totals: the weight of the eligible prefixes and suffixes in both sources, against the
   doc's table. They agree except on the amulet, whose difference is explained below.
 
@@ -32,10 +32,23 @@ reason is that the dump puts the five "+1 to Level of all <type> Skill Gems" pre
 five separate groups (about 0.005 percentage points). With both undone the engine gives the
 prototype's number to the last digit.
 
-What remains of each difference (+0.14%, +2.09%, -1.27% and -0.5%) is not attributed to a cause: the
-prototype's doc names the structural difference (Craft of Exile factorizes the side requirements and
-their count composition, the engine keeps the joint family state through all draws) but claims no
-unique cause for each small discrepancy. They are within the 5% threshold and pinned, nothing more.
+What remains of each difference (+0.14%, +2.09%, -1.27% and -0.5%) is the Craft of Exile CALCULATOR's own approximation, not
+a difference of the rules (ticket #544; there is no percentage threshold in this file any more). The kernel run here
+(the calculator's final-probability kernel, loaded from the local copy) is not the draw: it is a closed form, and reading
+the local copy (never committed, and never quoted here) shows three approximations
+
+* it gives the shape of the finished item (how many prefixes and suffixes) as a polynomial in one prefix ratio that it
+  takes from rounded average weights, so its ratio does not follow the depletion of the pool;
+* it works out the chance of each shape by removing the heaviest mods of a side in order, whichever mod was drawn;
+* it works the prefix side and the suffix side out apart, so the two sides' chances are not drawn from one shared pool as
+  the game does.
+
+Our engine keeps the exact joint state through every draw. The emulator is the draw itself, so it is the right judge, and
+`tests/test_coe_recorded_b1_core.py` (counts in `tests/fixtures/coe_recorded/b1_core.json`) puts our model beside it on the
+very item of C02 (Deafening Essence of Envy on a rare Royal Burgonet of item level 86): every mod, every shape and the
+chance that Life and a Fire Resistance are on the item together agree under an exact binomial test with a Bonferroni
+correction. So the +2.09% is attributed to the calculator's approximations, with our engine on the emulator's side. The calculator's
+number is not reproduced digit by digit (that would need its heuristics re-implemented); that open point is issue #561. The pins below only notice a drift of our engine or of the data.
 
 Not carried from the prototype's pack: its hand fixtures run through the original JS kernel
 (weights 1/1/2, P(A)=7/12, P(A,C)=5/12, one draw 1/4); they are KA01-KA08 of
@@ -84,7 +97,6 @@ DOC_TOTALS = {
 # The relative difference (ours - CoE) / CoE in percent, measured on 3.29.3.3 and today's rules,
 # against the doc's row (+0.1437, +2.0874, -1.2730, -0.5356): only C09 moved, see the docstring (ticket #310 moved it back to -0.530).
 MEASURED_PERCENT = {"C01": 0.14367, "C02": 2.08735, "C06": -1.27302, "C09": -0.53010}
-THRESHOLD_PERCENT = 5.0  # the prototype's investigation threshold
 DRIFT_PERCENT = 0.1  # the pin tolerance, in percentage points
 
 IDS = [case.id for case in CASES]
@@ -148,13 +160,6 @@ def test_every_target_is_the_same_tier_in_both_sources(data, ours, coe, case_id)
 
 
 # --- our engine against the oracle ----------------------------------------------------------------
-
-
-@pytest.mark.parametrize("case_id", IDS)
-def test_our_chance_is_within_the_investigation_threshold_of_coes(ours, coe, case_id):
-    difference = relative_percent(ours.chance(BY_ID[case_id]), coe[case_id]["probability"])
-
-    assert abs(difference) < THRESHOLD_PERCENT
 
 
 @pytest.mark.parametrize("case_id", IDS)

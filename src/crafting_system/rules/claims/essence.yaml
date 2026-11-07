@@ -125,3 +125,21 @@ rules:
     quote: 'Metadata/Items/Currency/CurrencyEssenceSpite3: name "Shrieking Essence of Spite"'
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: essence.poedb_one_guaranteed_property
+    statement: PoEDB's essence list says an essence of tier 5 to 7 (Screaming, Shrieking, Deafening) upgrades a normal item to rare or reforges a rare item, guaranteeing one property, and one of tier 1 to 4 (Whispering, Muttering, Weeping, Wailing) only upgrades a normal item to rare, with one guaranteed property and the other properties restricted to level 35, 45, 60 or 75 and below. The value maps the essence tier to that level (tier 1 to 4). This is the published form of essence.forced_mod_counts_in_total (one forced mod, the rest drawn) and essence.low_levels_cap_random_mods (the caps); tests/test_coe_published_numbers.py puts our data beside it. PoEDB's page names only the patch 3.29, so patch_verified is the export the page's numbers were matched against (the test compares them with the pinned repoe-fork 3.29.3.3 pool), not a patch the page states.
+    source_kind: datamined
+    url: https://poedb.tw/us/Essence
+    quote: "Whispering Essence of Hatred, Essence Tier: 1. Upgrades a normal item to rare with one guaranteed property. Properties restricted to level 35 and below. ... Screaming Essence of Hatred, Essence Tier: 5. Upgrades a normal item to rare or reforges a rare item, guaranteeing one property"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-07
+    value: {1: 35, 2: 45, 3: 60, 4: 75}
+
+  - id: essence.poedb_forced_values_of_the_benchmark_routes
+    statement: The values PoEDB prints for the guaranteed property of the essences the benchmark routes use, on the item class of the route (a ring for R05, boots for R10, a helmet for R11 and for the prototype's case C02). The value maps the essence to its [low, high] range; the planner's forced mod must have the same range. PoEDB's page names only the patch 3.29, so patch_verified is the export the page's numbers were matched against (the test compares them with the pinned repoe-fork 3.29.3.3 pool), not a patch the page states.
+    source_kind: datamined
+    url: https://poedb.tw/us/Essence
+    quote: "Deafening Essence of Rage ... Amulets, Rings, Shields: +(51—58) to Strength; Shrieking Essence of Spite ... Amulets, Rings, Shields: +(43—50) to Intelligence; Shrieking Essence of Loathing ... Helmets, Body Armours: (7—8)% increased Mana Reservation Efficiency of Skills; Deafening Essence of Envy ... Helmets, Body Armours, Boots, Gloves, Belts, Shields: +(31—35)% to Chaos Resistance"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-07
+    value: {Deafening Essence of Rage: [51, 58], Shrieking Essence of Spite: [43, 50], Shrieking Essence of Loathing: [7, 8], Deafening Essence of Envy: [31, 35]}
