@@ -146,7 +146,7 @@ from .model import (
     Target,
 )
 from .parse import parse_target_text
-from .start_buy import StartBuyError, buy_spec_of, start_price_key
+from .start_buy import StartBuyError, base_line_name, buy_spec_of, ninja_line_name, shared_name_refusal, start_price_key
 
 __all__ = [
     "Condition",
@@ -166,13 +166,16 @@ __all__ = [
     "StartKind",
     "Target",
     "TargetError",
+    "base_line_name",
     "buy_spec_of",
     "floor_of",
     "item_level_options",
     "level_groups",
     "load_target",
+    "ninja_line_name",
     "parse_target",
     "refusal_at",
+    "shared_name_refusal",
     "start_price_key",
     "target_at_level",
 ]

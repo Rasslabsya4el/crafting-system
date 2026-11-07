@@ -25,7 +25,7 @@ from crafting_system.prices import PriceFile
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.prices.query_compare import other_item
-from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of
+from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
@@ -271,6 +271,7 @@ def resolve_start_price(
     A target that says `start: given` has no price to set: `--start-price` on it is refused. A bought one is a run's own number
     (`--start-price`, above 0), else the price file (hand overrides already in it) under the key computed from the target
     (`start_price_key`); a key that is not in the file is an error that names it: the cost of the whole craft would be wrong without it.
+    A poe.ninja price of a name that several bases share is refused with the words that say why (`shared_name_refusal`).
     """
     if target.start is not StartKind.BOUGHT:
         if override is not None:
@@ -294,6 +295,9 @@ def resolve_start_price(
             f"no price for the start item {name!r}. A bought start item must have a price. Price it with "
             "`python -m crafting_system.cli trade <target file>`, write it in price_overrides.toml, or give it with --start-price"
         )
+    refusal = shared_name_refusal(data, target.base_id, entry.source, f"the start item {name!r}")
+    if refusal is not None:  # a poe.ninja line has no base id: for a name that several bases share it prices none of them (#471)
+        raise PlanError(refusal)
     stored = (entry.detail or {}).get("query")
     return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None)
 
