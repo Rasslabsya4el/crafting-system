@@ -77,6 +77,29 @@ def run_phase(phase: str, route: str, say, use_incumbent: bool, net_seconds: flo
     return {"row": row, "policy": policy}
 
 
+def spike_watch(thresholds_mb=(1500, 2500, 3500, 4500)) -> None:
+    """Print the main thread's stack the first time the resident memory passes each threshold (where does the peak come from?)."""
+    import os
+
+    frames = {thread.ident: thread for thread in threading.enumerate()}
+    main_id = threading.main_thread().ident
+    pending = list(thresholds_mb)
+    while pending:
+        time.sleep(0.2)
+        try:
+            with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
+                rss = int(next(line for line in handle if line.startswith("VmRSS")).split()[1]) // 1024
+        except OSError:
+            return
+        if rss >= pending[0]:
+            print(f"SPIKE {rss} MB (threshold {pending.pop(0)}), main thread:", flush=True)
+            import traceback
+
+            traceback.print_stack(sys._current_frames()[main_id], file=sys.stdout)
+            sys.stdout.flush()
+    del frames
+
+
 def compare(envelope: dict, full: dict) -> dict:
     """The envelope's plan against the full plan: the mean, and the label of the action at each state the envelope's plan reaches."""
     a, b = envelope["row"], full["row"]
@@ -122,6 +145,7 @@ def main() -> None:
         _envelope.WARM_START = False
     faulthandler.dump_traceback_later(600, repeat=True, file=sys.stderr)
     threading.Thread(target=P.watch_memory, daemon=True).start()
+    threading.Thread(target=spike_watch, daemon=True).start()
     began = time.perf_counter()
 
     def say(line: str) -> None:
