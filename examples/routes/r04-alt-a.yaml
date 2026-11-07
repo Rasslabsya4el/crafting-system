@@ -1,4 +1,4 @@
-# The route of R04 COMPLETED (completion A of #599: the essence rerolls where the prefixes are full): r04-penetrating-quiver.yaml (the guide as written) plus one last rule that the guide does not have.
+# The route of R04 COMPLETED (completion C of #599: Remove Crafted Mods, then the essence, where the prefixes are full): r04-penetrating-quiver.yaml (the guide as written) plus one last rule that the guide does not have.
 #
 # The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, an
 # Annulment went somewhere the steps do not cover). r04-penetrating-quiver.yaml leaves those as gaps, so a run that reaches one never
@@ -55,12 +55,13 @@ rules:
           status: passing
     do: Exalted Orb
 
-  # (completion A) the Exalted Orbs are used up or the prefixes are full of the wrong mods, with the metamod on: reroll with the essence, which keeps the fractured Pierce.
+  # (completion C) the Exalted Orbs are used up or the prefixes are full of the wrong mods, with the metamod on: the game refuses an essence
+  # while "Cannot roll Attack Modifiers" is on the item (metamods.essence_refused), so take the crafted mod off first (step 9 of the guide, free at the bench).
   - when:
       rarity: rare
       fractured: [{family: Pierce}]
       crafted_mods: true
-    do: Deafening Essence of Rage
+    do: Remove Crafted Mods
 
   # Step 7: a suffix is free for the metamod, the Strength and the arrow are there.
   - when:
@@ -162,6 +163,12 @@ rules:
       fractured:
         without: [{family: Pierce}]
     do: restart
+
+  # (completion C) any other state with the Pierce fractured: back to step 5, which keeps the Pierce.
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+    do: Deafening Essence of Rage
 
   # Not in the guide: any state no rule above covers: buy the start item again.
   - do: restart
