@@ -96,12 +96,12 @@ def main(
         prog=COMMAND, description="Find the cheapest crafting policy for a target item (YAML in, text and JSON out)."
     )
     parser.add_argument("target", help="the target YAML file (see examples/targets/)")
-    parser.add_argument("--json", metavar="PATH", help="where to write the JSON policy (default: <output dir>/<target>.policy.json)")
+    parser.add_argument("--json", metavar="PATH", help="where to write the JSON policy (default: the output folder, named after the target)")
     parser.add_argument("--start-price", type=float, metavar="CHAOS", help="what the start item costs, in Chaos; wins over the price file")
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
-    parser.add_argument("--strands", action="store_true", help="consider Memory Strands (the setting memory_strands of crafting.toml); a start item with strands turns it on by itself")
-    parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (the setting recipe_starts of crafting.toml)")
-    parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (the setting price_source of crafting.toml, default both)")
+    parser.add_argument("--strands", action="store_true", help="consider Memory Strands (or turn them on in the planner settings); a start item with strands turns it on by itself")
+    parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (or turn recipe starts off in the planner settings)")
+    parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (or set it in the planner settings; default both)")
     parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
     parser.add_argument("--progress", action="store_true", help="print the phases of a long plan (the walk, the merge, the solve, the risk, the report) with their seconds to stderr")
@@ -138,7 +138,7 @@ def main(
             price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands,
         )  # fmt: skip
         if plan.approximation is not None and args.route:
-            raise PlanError("--route is not available for an approximate answer yet; run again with --exact")
+            raise PlanError("--route is not available for an approximate answer yet; run again with --exact to get an exact one")
         stage(f"plan made: mean {plan.mean_remaining:,.4f} Chaos, {len(plan.solution.values):,} states solved")
         report = build_report(plan, game)
         stage(f"report built: {len(report.states):,} states")

@@ -28,17 +28,10 @@ from crafting_system.prices import DUST, GOLD
 from crafting_system.risk import Estimate, IntervalReport, Route, expected_total
 from crafting_system.solver import Action
 
+from ._axes import axis_what, reading_pair
 from ._marking import ApproximateInput, approximate_inputs_of, number_text
 from ._plan import Plan
 
-AXIS_NAMES = {
-    "recombinator.alpha": "alpha",
-    "awakener.group_conflict": "group_conflict",
-}
-AXIS_WORDS = {
-    "recombinator.alpha": "the recombinator's mod selection exponent alpha (a mod is kept in proportion to its weight to the power alpha)",
-    "awakener.group_conflict": "which mod survives when the Awakener's Orb meets a group conflict",
-}
 FORMAT_NOTE = "The interval is the plan's cost at each value of the grid, not a bound: the true value can lie between two grid points."
 
 
@@ -59,11 +52,7 @@ def reading_text(reading: Hashable, used: frozenset[str] | None = None) -> str:
     values = getattr(reading, "values", None)
     if values is None:
         return str(reading)
-    shown = [
-        f"{AXIS_NAMES.get(name, name)} = {number_text(float(value)) if isinstance(value, int | float) or hasattr(value, 'numerator') else value}"
-        for name, value in values
-        if used is None or name in used
-    ]
+    shown = [reading_pair(name, value) for name, value in values if used is None or name in used]
     return ", ".join(shown) or "no rule axis"
 
 
@@ -131,7 +120,7 @@ class IntervalAnswer:
 
     def facts(self, divine: float) -> list[tuple[str, list[str]]]:
         """The answer as ordered `(label, lines)`: the text report prints them, the route page draws them as fields."""
-        names = ", ".join(AXIS_WORDS.get(axis, axis) for axis in self.axes)
+        names = ", ".join(axis_what(axis) for axis in self.axes)
         grid = ", ".join(row.reading for row in self.rows)
         out: list[tuple[str, list[str]]] = [
             ("Rule axis", [f"{names}; the plan is made at {self.plan_reading}; the grid is {grid}"]),
@@ -247,7 +236,7 @@ class IntervalAnswer:
             return {"value": _number(e.value), "low": _number(e.low), "high": _number(e.high)}
 
         return {
-            "rule_axes": [{"axis": axis, "words": AXIS_WORDS.get(axis, axis)} for axis in self.axes],
+            "rule_axes": [{"axis": axis, "words": axis_what(axis)} for axis in self.axes],
             "plan_reading": self.plan_reading,
             "readings": [
                 {"reading": row.reading, "plan_cost": est(row.plan_cost), "best_route_cost": None if row.best_cost is None else est(row.best_cost)}

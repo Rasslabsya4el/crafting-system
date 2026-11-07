@@ -628,7 +628,7 @@ class Search[S]:
                 if self.guard and fall > FALL_LIMIT:
                     raise BoundError(
                         f"the lower bound fell by {fall:.2%} from one round of the search to the next, which a consistent bound never does: "
-                        "it cannot be trusted for a cut (a declared block invariance may be wrong, #509)"
+                        "it cannot be trusted for a cut (a declared block invariance may be wrong)"
                     )
             self._last_root = root
             self.stats.lower_history.append(lower)

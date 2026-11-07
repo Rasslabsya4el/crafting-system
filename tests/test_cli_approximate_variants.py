@@ -322,8 +322,8 @@ def test_the_text_marks_the_answer_with_the_level_and_gives_no_risk_numbers(appr
     assert head.startswith("Answer: approximate (certified within ") and " of the exact mean)" in head
     assert f"Level: {SPREAD_LADDER[1].name};" in head
     assert "Blocks solved: " in text
-    assert "  success, p50, p90, CVaR  not given for an approximate answer" in text
-    assert "p90   " not in text and "success chance" not in text
+    assert "  Not given for an approximate answer: the success chance, the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth (" in text
+    assert "p90   " not in text and "success chance  " not in text
 
 
 def test_the_json_holds_the_interval_the_gap_the_level_and_the_blocks_and_no_risk_numbers(approximate, exact):

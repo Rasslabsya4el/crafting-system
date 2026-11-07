@@ -57,7 +57,7 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
         for gap in result.gaps:
             lines.append(f"  {ids[gap.state]}: {describe_state(plan, data, gap.state)}")
             lines.append(f"      {gap.reason}")
-    lines.append(f"Route run time: risk.evaluate and route build {result.seconds * 1000:.1f} ms")
+    lines.append(f"Route run time: the risk calculation and the route build {result.seconds * 1000:.1f} ms")
     return plain_base_names(data, "\n".join(lines) + "\n")  # a base by its game name, never its id (#553, #604)
 
 

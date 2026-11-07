@@ -74,7 +74,7 @@ def strand_setting(start_item: Item, *, asked: bool = False) -> StrandSetting:
     if start_item.memory_strands >= 1:
         return StrandSetting(True, f"the start item has {start_item.memory_strands} Memory Strands")
     if asked:
-        return StrandSetting(True, "the setting memory_strands is on (`--strands` or crafting.toml)")
+        return StrandSetting(True, "asked for by `--strands` or in the planner settings")
     return STRANDS_OFF
 
 
@@ -292,8 +292,8 @@ def resolve_start_price(
     entry = prices.prices.get(name)
     if entry is None:
         raise PlanError(
-            f"no price for the start item {name!r}. A bought start item must have a price. Price it with "
-            "`python -m crafting_system.cli trade <target file>`, write it in price_overrides.toml, or give it with --start-price"
+            f"no price for the start item {name!r}. A bought start item must have a price. Price it on the trade site with the "
+            "`trade` command, write a hand price for it in your price overrides, or give it with --start-price"
         )
     refusal = shared_name_refusal(data, target.base_id, entry.source, f"the start item {name!r}")
     if refusal is not None:  # a poe.ninja line has no base id: for a name that several bases share it prices none of them (#471)

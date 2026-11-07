@@ -126,8 +126,8 @@ def test_the_text_marks_the_answer_and_gives_no_risk_numbers(approximate):
     assert head.startswith("Answer: approximate (certified within ")
     assert " of the exact mean)" in head and "Level: family groups, all irrelevant families in one group;" in head
     assert "Blocks solved: " in text
-    assert "  success, p50, p90, CVaR  not given for an approximate answer" in text
-    assert "p90   " not in text and "success chance" not in text
+    assert "  Not given for an approximate answer: the success chance, the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth (" in text
+    assert "p90   " not in text and "success chance  " not in text
     assert "Run time: both solvers" in text
 
 
@@ -407,7 +407,7 @@ def test_a_given_route_is_refused_for_an_approximate_answer(command, budget, cap
     code, _ = command("--budget", str(budget), "--route", str(tmp_path / "route.yaml"))
 
     assert code == 1
-    assert "--route is not available for an approximate answer yet; run again with --exact" in capsys.readouterr().err
+    assert "--route is not available for an approximate answer yet; run again with --exact to get an exact one" in capsys.readouterr().err
 
 
 def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsys):

@@ -315,7 +315,7 @@ def test_without_game_data_the_command_says_to_fetch_it_and_sends_nothing(tmp_pa
     )
 
     assert code == 1
-    assert "crafting_system.data fetch" in capsys.readouterr().err and trade.requests == []
+    assert "fetch the game data first" in capsys.readouterr().err and trade.requests == []
 
 
 def test_the_old_trade_command_of_the_prices_module_says_where_it_went(tmp_path, capsys):

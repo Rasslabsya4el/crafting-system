@@ -456,9 +456,9 @@ def test_the_refused_recipes_are_in_the_explanation_with_their_reasons():
         (refusal,) = plan.starts.refused
         assert (refusal.reason, refusal.recipe) == (reason, recipe)
         assert [each["reason"] for each in document_of(plan)["start_options"]["refused"]] == [reason]
-    assert f"refused ({NO_TARGET_MOD}): no requirement of the target asks for what these recipes make: boots_movement_speed" in render_text(build_report(nothing, TOY))
+    assert f"refused ({NO_TARGET_MOD}): no requirement of the target asks for what these recipes make: Boots with movement speed" in render_text(build_report(nothing, TOY))
     text = render_text(build_report(capped, TOY))
-    assert f"refused: Boots with movement speed (boots_movement_speed): {CAP_BELOW_ASKED}: the recipe stops at tier 2 from the top" in text
+    assert f"refused: Boots with movement speed: {CAP_BELOW_ASKED}: the recipe stops at tier 2 from the top" in text
 
 
 def test_the_setting_off_returns_what_make_plan_returns(monkeypatch):
@@ -581,8 +581,9 @@ def test_the_answer_shows_the_cheapest_total_at_each_reading_of_the_cap_and_thei
     assert len(calls) == 2  # the plain start once and the nine-step start once: nothing is planned for each reading again
     assert ELEMENTAL_CLAIM in choice.claims
     text = render_text(build_report(plan, TOY))
-    assert "elemental_cap = wiki: " in text and "elemental_cap = coe: " in text and "Cheapest total over the readings:" in text
-    assert f"only at elemental_cap = coe" in text and ELEMENTAL_CLAIM not in text
+    assert "elemental recipe cap = the wiki's tier 3: " in text and "elemental recipe cap = Craft of Exile's tier 2: " in text
+    assert "Cheapest total over the readings:" in text
+    assert "only at elemental recipe cap = Craft of Exile's tier 2" in text and ELEMENTAL_CLAIM not in text and "elemental_cap" not in text  # #618
     assert "A weapon with a Ruby, Sapphire or Topaz Flask and an Orb of Augmentation gets its elemental damage mod one tier higher" in text  # the statement, not the id (#604)
     document = document_of(plan)["start_options"]
     assert document["reading_matters"] and document["total_range_chaos"]["low"] == pytest.approx(low)

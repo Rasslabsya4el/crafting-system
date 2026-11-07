@@ -143,8 +143,6 @@ def test_the_text_shows_no_p90_or_cvar_that_looks_certified(command, budget, cap
         if line.startswith("JSON policy written to"):
             continue  # a path that holds the test's name
         if "p90" in line or "CVaR" in line:
-            if line.strip().startswith("success, p50, p90, CVaR  not given for an approximate answer"):
-                continue
             assert "simulated" in line and "not certified" in line, line
     assert text.isascii()
 

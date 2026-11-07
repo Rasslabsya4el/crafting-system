@@ -724,7 +724,7 @@ _INTERNAL = [  # in this order: a dotted id is taken out of the text before its 
     ("an ADR number", re.compile(r"\bADR-?\d+\b")),
     ("a workflow word", re.compile(r"\b(?:grill(?:\s+[A-Z]\d+)?|main chat|open points?|in-game list|GPT researcher|research note)\b", re.I)),
     ("a base id in brackets", re.compile(r"\[(?=[A-Za-z0-9_]*[0-9A-Z])[A-Za-z][A-Za-z0-9_]*\]")),
-    ("a snake_case token", re.compile(r"\b[a-z]+(?:_[a-z0-9]+){2,}\b")),
+    ("a snake_case token", re.compile(r"\b[a-z]+(?:_[a-z0-9]+)+\b")),  # one underscore is enough: `elemental_cap` is an id (#618)
 ]
 
 
