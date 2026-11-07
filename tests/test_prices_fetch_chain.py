@@ -20,6 +20,7 @@ from crafting_system.prices.fetch import DEFAULT_STAGES, fetch_price_file
 from crafting_system.prices.ninja_history import ninja_history_stage
 from crafting_system.prices.poe_watch import poe_watch_stage
 from crafting_system.prices.previous_league import previous_league_stage
+from dataclasses import replace
 
 NOW = datetime(2026, 10, 30, 21, 0, 5, 123456, tzinfo=UTC)
 HUNTER_VISE = "Stygian Vise (ilvl 85, Hunter)"
@@ -234,9 +235,10 @@ def test_a_stage_never_overwrites_a_price_the_overviews_gave(ninja):
     result = fetch_price_file(ninja, NOW, wanted=["Hollow Fossil", HUNTER_VISE, "Zzz"], stages=[rogue])
 
     prices = result.price_file.prices
-    assert prices["Hollow Fossil"] == PriceEntry(206.8, "poe.ninja")
-    assert prices[HUNTER_VISE] == PriceEntry(1262.0, "poe.ninja", None, {"category": "BaseType"})
+    assert replace(prices["Hollow Fossil"], provenance=None) == PriceEntry(206.8, "poe.ninja")
+    assert replace(prices[HUNTER_VISE], provenance=None) == PriceEntry(1262.0, "poe.ninja", None, {"category": "BaseType"})
     assert prices["Chaos Orb"] == PriceEntry(1.0, "poe.ninja")
+    assert prices["Hollow Fossil"].provenance.kind == "ninja-exchange" and prices[HUNTER_VISE].provenance.kind == "ninja-stash"  # the rogue stage's rows are not theirs
     assert prices["Zzz"].chaos == 7.0
 
 

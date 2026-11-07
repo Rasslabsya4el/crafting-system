@@ -16,6 +16,7 @@ from datetime import date
 from .http_json import GetJson
 from .price_file import PriceEntry
 from .price_names import BaseKey
+from .provenance import KIND_OF_SOURCE, Provenance
 
 HISTORY_DAYS = 7  # a history fallback takes the median of the 7 days ending on its last day
 MIN_COUNT = 5  # the minimum sample of a poe.ninja stash line or history row (its own charts use it too)
@@ -49,8 +50,14 @@ Stage = Callable[[GetJson, Context, Sequence[Gap]], StageResult]
 
 
 def stamped_entry(chaos: float, source: str, league: str, day: date, note: str, **detail: object) -> PriceEntry:
-    """A fallback price: `source`, plus the league and the date it is a price of in `detail`."""
-    return PriceEntry(chaos, source, note, {"league": league, "date": day.isoformat(), **detail})
+    """A fallback price: `source`, plus the league and the date it is a price of in `detail` and as its provenance (#616).
+
+    The depth of a fallback is not recorded: a stage reads a median of daily rows or a ratio, not a count of units, so
+    the rule marks such a price as one with no recorded depth.
+    """
+    kind = KIND_OF_SOURCE.get(source)
+    recorded = Provenance(kind, league, day.isoformat()) if kind is not None else None
+    return PriceEntry(chaos, source, note, {"league": league, "date": day.isoformat(), **detail}, recorded)
 
 
 def run_stages(

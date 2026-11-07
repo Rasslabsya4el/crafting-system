@@ -2,9 +2,9 @@
 
 R08 and R09 are the fossil boots of the reference routes: rare Sorcerer Boots (Energy Shield) and rare Two-Toned Boots
 (Life) of item level 86, Fossils in a resonator until the boots hold the top tier of Energy Shield or Life and a
-Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`:
-the other real routes' prices plus the poe.ninja fossil and resonator lines of 2026-11-01 (no Tangled Fossil line, so
-the sets with a Tangled Fossil are unpriced and left out) and the trade price of the start boots (a normal base of
+Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-2026-11-07.json`:
+the other real routes' prices plus the poe.ninja fossil and resonator lines of 2026-11-07 (the Tangled Fossil has no line:
+the trade site's offers price it, so no set is left out for want of a price) and the trade price of the start boots (a normal base of
 item level 86, the mean of the 5 cheapest instant-buyout listings, plus the Orb of Alchemy that makes it rare). These
 tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it; CI fetches it, ticket
 #165) and skip cleanly without it.
@@ -28,13 +28,13 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
 RUNS = 200
 BUDGET = 60.0  # the plan is made as the command makes it by default: exact when the forecast fits, else approximate
 RATES = Rates(4e-5, 7e-6)  # injected (ADR-0023), so the decision does not depend on the machine
 ROUTES = {
-    "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.82716, "Dense Fossil"),
-    "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.02716, "Pristine Fossil"),
+    "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.83086, "Dense Fossil"),
+    "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.03086, "Pristine Fossil"),
 }
 SPEED_CRAFTS = 1  # the bench's plain Movement Speed craft at its top tier is the only craft that counts (the guide says "bench-craft the movement speed"; the three hybrid crafts are not asked since #404, OR-2)
 
@@ -81,11 +81,11 @@ def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, rout
     crafts = [priced for priced in plan.offers if isinstance(priced.offer.action, BenchCraft)]
 
     assert RESTART in offers
-    assert len(fossil_sets) == 10_670  # 12,700 sets of the boots, 2,030 with a Tangled Fossil unpriced and dropped
+    assert len(fossil_sets) == 12_700  # every set of the boots is priced: the snapshot of 2026-11-07 prices the Tangled Fossil (the older one had no line for it, #552)
     assert f"Fossils {guide_fossil} + Shuddering Fossil" in offers
     assert len(crafts) == SPEED_CRAFTS
     unpriced = {name for limit in of_kind(plan.limits, "unpriced") for name in limit.names}
-    assert unpriced == {"Tangled Fossil"}
+    assert unpriced == set()
 
 
 def test_the_policy_reaches_the_goal_with_exact_odds_and_mean(plan):

@@ -1,0 +1,170 @@
+"""Where a price came from, as data (#616, OR-7, OR-8, OR-23).
+
+A price entry carries its provenance, not a note: the **source**, the **date and league** of the reading, the
+**depth** and the **item** the price was taken for. The rule that reads it (`price_marks.py`) turns a price into
+a plain fact or an approximate input; this module only holds the record, writes it to JSON and reads it back.
+
+* `kind`: where the number is from (`KINDS`): the poe.ninja exchange overview of the league, the poe.ninja daily
+  rows of the league (history), the poe.ninja rows of an earlier league (previous league, Standard), poe.watch,
+  the trade site's instant-buyout listings, a hand price, or a default.
+* `league`, `date`: the league and the UTC day the reading is of.
+* `depth` and `depth_unit`: how much stood behind the number. For an exchange line it is the units traded on the day
+  (poe.ninja's `volumePrimaryValue`, in Chaos, divided by the price), unit `units`. For a trade price it is the units
+  held by the listings the mean is made of (a stack counts its size, any other item counts one), unit `units`;
+  `listings` is how many listings that is. For a stash line it is poe.ninja's observation count, unit
+  `observations`. `None` is "not recorded".
+* `item`: `exact` when the price is of the item the plan buys, `wider` when it was read for a wider item (a stand-in).
+  A wider item says which in `for_item`, and, when the exact item has listings of its own, how many (`exact_listings`)
+  and what they ask (`exact_price`, in Chaos), so a reader sees both.
+* `other`: the reading that was not taken, when two were compared (the same day's trade listings beside a thin
+  exchange line, `{"kind", "chaos", "depth"}`).
+
+An entry with no provenance block (a file written before #616, a hand-written test file) is read from its `source`
+and `detail` as far as they go (`derive`), and is not judged on depth: nothing was recorded to judge it by.
+Nothing here reads the clock.
+"""
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
+
+EXCHANGE = "ninja-exchange"
+HISTORY = "ninja-history"
+STASH = "ninja-stash"
+PREVIOUS_LEAGUE = "ninja-previous-league"
+STANDARD = "ninja-standard"
+WATCH = "poe-watch"
+TRADE = "trade"
+OVERRIDE = "override"
+DEFAULT = "default"
+KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVERRIDE, DEFAULT)
+
+UNITS = "units"
+OBSERVATIONS = "observations"
+DEPTH_UNITS = (UNITS, OBSERVATIONS)
+
+EXACT = "exact"
+WIDER = "wider"
+ITEMS = (EXACT, WIDER)
+
+SOURCE_WORDS = {
+    EXCHANGE: "poe.ninja exchange",
+    HISTORY: "poe.ninja daily rows",
+    STASH: "poe.ninja stash overview",
+    PREVIOUS_LEAGUE: "poe.ninja, previous league",
+    STANDARD: "poe.ninja, Standard",
+    WATCH: "poe.watch",
+    TRADE: "trade site, instant buyout",
+    OVERRIDE: "hand price",
+    DEFAULT: "default price",
+}  # in a player's words, for the page and the report
+
+# the source strings of a price entry (`PriceEntry.source`) and the kind each one means
+KIND_OF_SOURCE = {
+    "poe.ninja": EXCHANGE,
+    "poe.ninja-history": HISTORY,
+    "poe.ninja-previous-league": PREVIOUS_LEAGUE,
+    "poe.ninja-standard": STANDARD,
+    "poe.watch": WATCH,
+    "poe.watch-history": WATCH,
+    "trade-api": TRADE,
+    "override": OVERRIDE,
+    "hand": OVERRIDE,
+    "default": DEFAULT,
+}
+
+
+@dataclass(frozen=True)
+class Provenance:
+    kind: str
+    league: str
+    date: str  # ISO UTC date of the reading
+    depth: float | None = None
+    depth_unit: str = UNITS
+    listings: int | None = None  # a trade price: the listings the mean is made of
+    item: str = EXACT
+    for_item: str | None = None  # what a stand-in was read for, in words
+    exact_listings: int | None = None  # a stand-in: the listings the exact item has
+    exact_price: float | None = None  # a stand-in: what those listings ask, in Chaos (their mean)
+    other: Mapping[str, Any] | None = None  # the reading not taken: {"kind", "chaos", "depth"}
+    recorded: bool = True  # False for a provenance derived from a source string alone (`derive`)
+
+    def __post_init__(self) -> None:
+        if self.kind not in KINDS:
+            raise ValueError(f"provenance kind must be one of {', '.join(KINDS)}, got {self.kind!r}")
+        if self.item not in ITEMS:
+            raise ValueError(f"provenance item must be one of {', '.join(ITEMS)}, got {self.item!r}")
+        if self.depth_unit not in DEPTH_UNITS:
+            raise ValueError(f"provenance depth_unit must be one of {', '.join(DEPTH_UNITS)}, got {self.depth_unit!r}")
+
+    @property
+    def words(self) -> str:
+        """The source in a player's words, with its league and day: "poe.ninja exchange, Allflame, 2026-11-07"."""
+        return f"{SOURCE_WORDS[self.kind]}, {self.league}, {self.date}"
+
+
+def _number(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool) and value == value and abs(value) != float("inf")
+
+
+def to_json(provenance: Provenance) -> dict[str, Any]:
+    """The JSON object of a recorded provenance; fields at their default are left out."""
+    out: dict[str, Any] = {"kind": provenance.kind, "league": provenance.league, "date": provenance.date}
+    if provenance.depth is not None:
+        out["depth"] = provenance.depth
+        out["depth_unit"] = provenance.depth_unit
+    if provenance.listings is not None:
+        out["listings"] = provenance.listings
+    if provenance.item != EXACT:
+        out["item"] = provenance.item
+    for key in ("for_item", "exact_listings", "exact_price", "other"):
+        value = getattr(provenance, key)
+        if value is not None:
+            out[key] = dict(value) if isinstance(value, Mapping) else value
+    return out
+
+
+def from_json(raw: object, where: str) -> Provenance:
+    """A provenance from its JSON object; a bad shape is a `ValueError` that names `where`."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"{where}: provenance must be an object")
+    unknown = sorted(set(raw) - {"kind", "league", "date", "depth", "depth_unit", "listings", "item", "for_item", "exact_listings", "exact_price", "other"})
+    if unknown:
+        raise ValueError(f"{where}: provenance has an unknown key {unknown[0]!r}")
+    for key in ("kind", "league", "date"):
+        if not isinstance(raw.get(key), str) or not raw[key].strip():
+            raise ValueError(f"{where}: provenance {key} must be a non-empty string")
+    for key in ("depth", "exact_price"):
+        if key in raw and not (_number(raw[key]) and raw[key] >= 0):
+            raise ValueError(f"{where}: provenance {key} must be a number, zero or more")
+    for key in ("listings", "exact_listings"):
+        if key in raw and not (isinstance(raw[key], int) and not isinstance(raw[key], bool) and raw[key] >= 0):
+            raise ValueError(f"{where}: provenance {key} must be a whole number, zero or more")
+    if "for_item" in raw and not isinstance(raw["for_item"], str):
+        raise ValueError(f"{where}: provenance for_item must be a string")
+    if "other" in raw and not isinstance(raw["other"], dict):
+        raise ValueError(f"{where}: provenance other must be an object")
+    try:
+        return Provenance(
+            raw["kind"], raw["league"], raw["date"],
+            None if raw.get("depth") is None else float(raw["depth"]),
+            raw.get("depth_unit", UNITS), raw.get("listings"), raw.get("item", EXACT), raw.get("for_item"),
+            raw.get("exact_listings"), None if raw.get("exact_price") is None else float(raw["exact_price"]), raw.get("other"),
+        )  # fmt: skip
+    except ValueError as error:
+        raise ValueError(f"{where}: {error}") from None
+
+
+def derive(source: str, detail: Mapping[str, Any] | None, league: str, day: str) -> Provenance | None:
+    """What an entry with no provenance block says of itself: its `source` string and the league and date in its `detail`.
+
+    `league` and `day` are the price file's, used when the entry's `detail` names none. None when the source is not one the
+    code knows (a test's made-up source). The result is `recorded=False`: no depth was kept, so the rule does not judge it on depth.
+    """
+    kind = KIND_OF_SOURCE.get(source)
+    if kind is None:
+        return None
+    detail = detail or {}
+    where = detail.get("league") if isinstance(detail.get("league"), str) else league
+    when = detail.get("date") if isinstance(detail.get("date"), str) else day
+    return Provenance(kind, where, when, recorded=False)

@@ -49,7 +49,7 @@ def test_every_check_cites_its_rule_and_the_faults_it_finds_carry_it():
         match = re.match(r"\s*(OR-\d+|#\d+ and #\d+)", check.__doc__ or "")
         assert match, f"{check.__name__} does not open its docstring with the rule it keeps"
         assert pl.or_of(check) == match.group(1)
-    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (13, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
+    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (7, 13, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
     assert pl.or_of(pl.check_no_internal_names) == "#481 and #553"  # a decision of the main chat, not a rule of docs/owner-rules.md (which is not touched)
 
 
@@ -127,6 +127,36 @@ def fixtures(check, counter: dict[str, str], example: dict[str, str]) -> None:
     COUNTER[check.__name__] = counter
     EXAMPLE[check.__name__] = example
 
+
+AUG = step(1, "Orb of Augmentation", ("Accepts", "other mods: any"), ("Chance per use", "100%"))
+FOSSIL_STEP = step(1, "Fossil: Prismatic", ("Cost per use", "1 × Prismatic Fossil 5.87 c"))
+LEAGUE = "league Allflame, fetched 2026-11-07"
+FOSSIL_PRICE = "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07, 120 units behind it, the plan buys about 45"
+THIN_PRICE = "Prismatic Fossil: 8 Chaos, poe.ninja exchange, Allflame, 2026-11-07, 3.3 units behind it, the plan buys about 45"
+THIN_MARKED = THIN_PRICE + "; approximate: price on 3.3 units"
+THIN_INPUT = "The price of Prismatic Fossil is 8 Chaos, an approximate input: price on 3.3 units. The plan expects to buy about 45 of it. Source: poe.ninja exchange, Allflame, 2026-11-07."
+EARLIER = "Shrieking Essence of Fear: 0.34 Chaos, poe.ninja, previous league, Mirage, 2026-06-13"
+EARLIER_INPUT = "The price of Shrieking Essence of Fear is 0.34 Chaos, an approximate input: previous league's price (Mirage, 2026-06-13). Source: poe.ninja, previous league, Mirage, 2026-06-13."
+WIDER = "Thicket Bow, magic, item level 78-79, Hunter influence: 13 Chaos, trade site, instant buyout, Allflame, 2026-11-07, taken for a wider item (any rarity), 5 units behind it, the plan buys about 900"
+fixtures(
+    pl.check_price_source_shown,
+    counter={
+        "R04: the Prices line is the league and a date, and a step buys a fossil": page(route(goal(("Prices", "league Allflame, fetched 2026-10-31")), FOSSIL_STEP)),
+        "a price that names no source": page(route(goal(("Prices", LEAGUE, "Prismatic Fossil: 5.87 Chaos")), FOSSIL_STEP)),
+        "a previous league's price with no mark": page(route(goal(("Prices", LEAGUE, EARLIER)), AUG)),
+        "a stand-in for a wider item with no mark": page(route(goal(("Prices", LEAGUE, WIDER)), AUG)),
+        "#616: a price on 3.3 units for a plan that buys 45, with no mark": page(route(goal(("Prices", LEAGUE, THIN_PRICE)), FOSSIL_STEP)),
+        "a marked price that is not among the approximate inputs": page(route(goal(("Prices", LEAGUE, THIN_MARKED)), FOSSIL_STEP)),
+        "an approximate price input with no line in Prices": page(route(goal(("Prices", LEAGUE), ("Approximate inputs", THIN_INPUT)), AUG)),
+    },
+    example={
+        "the price names its source and the step's resource is in the list": page(route(goal(("Prices", LEAGUE, FOSSIL_PRICE)), FOSSIL_STEP)),
+        "a previous league's price marked approximate, and listed as an input": page(route(goal(("Prices", LEAGUE, EARLIER + "; approximate: previous league's price (Mirage, 2026-06-13)"), ("Approximate inputs", EARLIER_INPUT)), AUG)),
+        "a thin price marked approximate and listed as an input": page(route(goal(("Prices", LEAGUE, THIN_MARKED), ("Approximate inputs", THIN_INPUT)), FOSSIL_STEP)),
+        "a stand-in marked approximate": page(route(goal(("Prices", LEAGUE, WIDER + "; approximate: price of a wider item; the exact item has 0 listings"), ("Approximate inputs", "The price of Thicket Bow, magic, item level 78-79, Hunter influence is 13 Chaos, an approximate input: price of a wider item; the exact item has 0 listings. Source: trade site, instant buyout, Allflame, 2026-11-07.")), AUG)),
+        "a Chaos Orb has no price line": page(route(goal(("Prices", LEAGUE)), step(1, "Chaos Orb", ("Cost per use", "1 × Chaos Orb 1 c")))),
+    },
+)
 
 fixtures(
     pl.check_cut_guarantee,
@@ -381,11 +411,9 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
-ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other two, are fixed: no golden page is a known fault of their checks)
-
-KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it
-    **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
-}
+# No golden page is a known fault of a check: the six pages that dropped an action for want of a price (#552) price it now, from the evidence there is,
+# marked approximate (the real pages from the snapshot of 2026-11-07; the fixture pages from a previous league's price in `cli_support.price_file(evidence=True)`).
+KNOWN: dict[tuple[str, str], int] = {}  # (golden page, check) -> the issue that holds the fault; a strict xfail names it (OR-29)
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
 
 
@@ -423,7 +451,7 @@ def test_a_page_the_lint_cannot_read_raises_instead_of_passing(html):
 
 
 def test_every_known_fault_is_a_golden_page_that_exists_and_names_an_issue():
-    assert KNOWN and all(isinstance(issue, int) and issue > 0 for issue in KNOWN.values())
+    assert all(isinstance(issue, int) and issue > 0 for issue in KNOWN.values())
     stems = {path.stem for path in GOLDEN}
     assert {name for name, _ in KNOWN} <= stems
     assert {check for _, check in KNOWN} <= {check.__name__ for check in JUDGES}

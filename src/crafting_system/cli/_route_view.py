@@ -68,7 +68,8 @@ from crafting_system.targets import plain_base_names
 
 from ._interval import IntervalAnswer
 from ._limits import SHOWN_LABELS, STRANDS, grouped, limit_text, more_labels
-from ._marking import approximate_inputs, approximate_page_lines
+from ._marking import approximate_inputs, approximate_page_lines, price_inputs
+from ._price_marks import price_uses, use_line
 from ._plan import GIVEN_SOURCE, Plan
 from ._report import UNRESOLVED, Report
 from ._route import RESTART, Route, RouteResult
@@ -687,12 +688,14 @@ class _View:
         )
         success = risk.success_probability.value
         interval = self.inp.interval
+        uses = price_uses(plan, self.inp.policy, risk.mean.value)  # each price the policy buys with, its source and marks (#616, OR-7, OR-23)
         if interval is None:
-            approximate = approximate_page_lines(approximate_inputs(plan, self.inp.policy, self.data))
+            approximate = approximate_page_lines(approximate_inputs(plan, self.inp.policy, self.data, uses))
             rule = ()
         else:  # the claims of every route the interval shows, each with its spread; the plan and its interval come first
-            approximate = approximate_page_lines(interval.approximate_inputs)
+            approximate = approximate_page_lines((*interval.approximate_inputs, *price_inputs(uses)))
             rule = tuple(_plain(label, *lines) for label, lines in interval.facts(divine))
+        approximate = [plain_base_names(self.data, line) for line in approximate]  # a start item priced under a key with a base id is said by its game name (#553)
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
             self.start_field(),
@@ -701,7 +704,7 @@ class _View:
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
             *rule,
             _plain("Approximate inputs", *approximate, tone="warn"),
-            _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
+            _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}", *(plain_base_names(self.data, use_line(use)) for use in uses)),
         )
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
