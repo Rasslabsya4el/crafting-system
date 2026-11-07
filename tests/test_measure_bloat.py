@@ -238,8 +238,8 @@ def test_the_summary_has_the_routes_in_order_and_shows_the_missing_ones():
 
     lines = text.splitlines()
     assert lines[0] == "# bloat"
-    first = [line for line in lines if line.startswith("| R")]
-    assert [line.split(" | ")[0] for line in first[:9]] == ["| " + route for route in bloat.ORDER]
+    first = [line for line in lines if line.startswith(("| R", "| V"))]
+    assert [line.split(" | ")[0] for line in first[: len(bloat.ORDER)]] == ["| " + route for route in bloat.ORDER]
     assert "| R10 | missing | missing |" in text
     assert "816,153" in text and "41,200" in text and "589,930" in text
     assert "5 / 0 (0.25)" in text  # value groups / action groups (largest relative difference)
@@ -349,3 +349,16 @@ def test_the_workflow_is_a_reusable_one_job_per_route_with_the_limits_of_the_cha
     assert "actions/checkout@v7.0.1" in text and "./.github/actions/real-data" in text
     uploads = [step["with"]["name"] for job in (route, summary) for step in job["steps"] if "upload-artifact" in step.get("uses", "")]
     assert uploads == ["measure-bloat-${{ matrix.route }}", "measure-bloat"]
+
+
+def test_v01_is_measured_from_its_recipe_start_with_the_prices_its_target_names():
+    from abstraction_support import real_game_data
+
+    bench = next(b for b in BENCHMARKS if b.id == "V01")
+    assert "V01" in bloat.ORDER and bench.start is not None and bench.route is None
+
+    found = bloat.bloat_route(bench, real_game_data(), find_project_root(), load_config({}))
+
+    assert found["error"] is None and found["route_error"] is None
+    assert found["walked"] >= 1 and found["policy_blocks"] <= found["policy_states"] <= found["walked"]
+    assert set(found["parts"]) == set(bloat.COLUMNS)

@@ -227,6 +227,21 @@ measured, before and after a change of the page: run it on two refs and compare 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
     $D --long --timeout-minutes 120 --command 'uv run --no-sync python .github/scripts/page_size.py --route r14 --out $OUT_DIR'
 
+### What the `actions:` key of a target hides (#475)
+
+`.github/scripts/actions_key.py` plans each of the seven routes that carry an `actions:` key (J01, R04, R08, R09, R13, R14, V01) in three variants of
+a copy of the target's text (the committed file is never written): `kept`, `removed` (the key deleted: the kinds offered by default, the opt-in kinds
+such as Exalted Orb, Annulment, Fracturing Orb and the fossil sets not among them) and `all` (every kind the planner can use named, which is what OR-5
+asks for), each with the default solver (`auto`) and with `solver="envelope"`. Every job is a child process under a wall-clock cap (8 to 20 minutes,
+45 for the committed R14) and a memory cap (13 GB); the envelope also gets its own time and memory net. A job that does not finish leaves where it
+was: the last progress line, the `CompressedState` objects alive and the peak memory. 42 jobs are dealt over 16 runners, longest first, so that the
+caps on one runner add up to at most 50 minutes (`python .github/scripts/actions_key.py plan --count 16` prints the deal); the V01 numbers of the bloat
+step (`state_bloat.py run --route V01`) go on one runner too, and `summary` joins the records into the table of the ticket:
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 16 --timeout-minutes 60'
+    $D --command 'if [ $RUNNER_INDEX = 11 ]; then uv run --no-sync python .github/scripts/state_bloat.py run --route V01 --out $OUT_DIR/bloat; fi; uv run --no-sync python -u .github/scripts/actions_key.py batch --index $RUNNER_INDEX --count $RUNNER_COUNT --out $OUT_DIR/jobs'
+    python .github/scripts/actions_key.py summary --dir DOWNLOADED_ARTIFACTS --out OUT --runs 'run ID'
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some

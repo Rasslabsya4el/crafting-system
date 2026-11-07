@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       max-parallel: 16
       matrix:
-        route: ${{ inputs.trial && fromJSON('["R10"]') || fromJSON('["R12","R10","R11","R05","R13","R08","R09","R04","R14"]') }}
+        route: ${{ inputs.trial && fromJSON('["R10"]') || fromJSON('["R12","R10","R11","R05","R13","R08","R09","R04","R14","V01"]') }}
     defaults:
       run:
         shell: bash
