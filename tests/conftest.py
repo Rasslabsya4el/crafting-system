@@ -7,7 +7,6 @@ from collections import defaultdict
 from fnmatch import fnmatch
 from pathlib import Path
 
-import clock_support
 import pytest
 import shard_support
 
@@ -21,6 +20,10 @@ def fixed_clock(monkeypatch):
     on. A test that passes `today` / `now` is unaffected. `CRAFTING_TEST_REAL_CLOCK=1` turns this off.
     """
     if os.environ.get("CRAFTING_TEST_REAL_CLOCK") == "1":
+        return
+    try:
+        import clock_support  # imported here: the tests that copy this conftest into a bare project have no such module
+    except ModuleNotFoundError:
         return
     for name in clock_support.CLOCK_READERS:
         monkeypatch.setattr(importlib.import_module(name), "datetime", clock_support.FrozenDatetime)
