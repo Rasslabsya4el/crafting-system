@@ -504,7 +504,7 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     is found when its bound is first needed (`raise_level`), because that needs the bare item.
     """
     action = offer.offer.action
-    if isinstance(action, BuyStartItem) or action.opens_listing:  # both are always in the solve: the draw is the one action of the unopened start (ADR-0064)
+    if isinstance(action, BuyStartItem) or getattr(action, "opens_listing", False):  # both are always in the solve: the draw is the one action of the unopened start (ADR-0064)
         return RESTART_KIND, frozenset()
     reads = action.reads(data)
     if reads.item_state:

@@ -13,7 +13,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, OpenListing, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
@@ -145,7 +145,7 @@ def price_offers(
 
 def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer]) -> PricedOffer:
     """The draw that opens the bought listing `listing` (ADR-0064), priced as every action that consumes nothing is: the listing's price is the start price."""
-    action = OpenListing(rarity)
+    action = open_listing(rarity)
     paid = [entry.cost for entry in priced if entry.offer.resources and entry.cost > 0]  # the actions that cost something, not the free ones
     free_cost = DRAW_COST_SHARE * min(paid) if paid else FREE_ACTION_SHARE
     return PricedOffer(offer_of(action, action.label(data), data, listing, shares=False), free_cost, ())

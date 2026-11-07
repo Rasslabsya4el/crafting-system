@@ -13,7 +13,7 @@ def _state_without_hash(self) -> dict:
     return {name: value for name, value in self.__dict__.items() if name != "_hash"}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class Flags:
     """What the actions look at besides the mods: the rarity, corruption and influences.
 
@@ -24,6 +24,11 @@ class Flags:
     corrupted: bool
     influences: frozenset[Influence]
     unopened: bool = False
+
+    def __repr__(self) -> str:
+        """The dataclass repr, with `unopened` shown only when it is True: the text of every other state is what it was before ticket #640 (goldens key by it)."""
+        text = f"rarity={self.rarity!r}, corrupted={self.corrupted!r}, influences={self.influences!r}"
+        return f"Flags({text}, unopened=True)" if self.unopened else f"Flags({text})"
 
     def __hash__(self) -> int:
         try:

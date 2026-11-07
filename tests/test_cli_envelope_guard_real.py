@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.cli import make_plan
+from crafting_system.cli import _plan, make_plan
 from crafting_system.cli._envelope_plan import BoundError, envelope_result
 from crafting_system.cli._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
@@ -38,7 +38,9 @@ def r13():
 
     _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced)
-    exact = make_plan(data, load_target(TARGET_R13, data), load_price_file(PRICES), solver="packed", with_risk=False).mean_remaining
+    with pytest.MonkeyPatch.context() as patch:  # the research model starts from the item with no mods, so the exact mean is the plan's without the draw of a bought item's mods (ADR-0064)
+        patch.setattr(_plan, "unopened_listing", lambda data, start: None)
+        exact = make_plan(data, load_target(TARGET_R13, data), load_price_file(PRICES), solver="packed", with_risk=False).mean_remaining
     return abstraction, start, priced, bound, exact
 
 

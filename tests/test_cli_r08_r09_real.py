@@ -21,7 +21,7 @@ from abstraction_support import real_game_data
 from cli_support import read_json
 from limits_support import notes, of_kind
 
-from crafting_system.actions import ApplyFossils, BenchCraft
+from crafting_system.actions import DRAW_LABEL, ApplyFossils, BenchCraft
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
 from crafting_system.cli._decide import Rates
 from crafting_system.prices import load_price_file
@@ -101,7 +101,10 @@ def test_the_policy_starts_with_a_fossil_set(plan, data):
     report = build_report(plan, data)
 
     first = next(state for state in report.states if report.ids[plan.start] == state.id)
-    assert first.action.startswith("Fossils ")
+    assert first.action == DRAW_LABEL  # the bought rare is the item the market sells (ADR-0064): the draw of its mods comes first
+    by_id = {state.id: state for state in report.states}
+    after = [by_id[t.to].action for t in first.transitions if t.to in by_id]
+    assert any(action.startswith("Fossils ") for action in after)  # then the fossil sets, on the outcomes that are not the goal
 
 
 def test_the_solver_is_no_dearer_than_the_guides_given_route(plan, data, route):

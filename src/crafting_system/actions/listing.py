@@ -30,6 +30,7 @@ from .outcomes import Outcomes
 __all__ = [
     "DRAW_LABEL",
     "OpenListing",
+    "open_listing",
     "unopened_listing",
 ]
 
@@ -47,6 +48,11 @@ def unopened_listing(data: GameData, start: Item) -> Item | None:
     if start.rarity not in DRAWN_BY or start.mods or start.corrupted or start.imprints or start.veil_offer:
         return None
     return start.changed(data, rarity=Rarity.NORMAL, unopened=True)
+
+
+def open_listing(rarity: Rarity) -> "OpenListing":
+    """The draw that opens a listing of `rarity` (Magic or Rare); the planner asks for it here and names no concrete class."""
+    return OpenListing(rarity)
 
 
 @dataclass(frozen=True)

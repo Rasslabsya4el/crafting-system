@@ -174,11 +174,6 @@ def test_the_command_returns_the_policy_and_verify_agrees(command):
     assert "simulated, not certified" in text
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#622: since the Magic start of #576 (PR #607) the object risk read of R13's given route leaves its percentiles unresolved (about 480 s, then 'not computed'); it fails loudly the day #622 is fixed, delete this mark then",
-)
 def test_the_given_routes_percentiles_are_resolved_in_the_printed_report(command):
     _, _, text = command
 
