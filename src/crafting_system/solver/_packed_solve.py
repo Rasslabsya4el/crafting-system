@@ -10,7 +10,8 @@
    the cheapest such path lowers that distance with positive chance in every step, so the policy is proper.
 4. POLICY ITERATION. Each action has its self-loop compiled out (`cost / leave`, outcomes renormalised, as the object
    solver does: no `1 - p` in floats). A policy is evaluated by one linear solve: dense up to `dense_limit` states of the
-   policy, else BiCGSTAB; then every state takes the action of least Q, an action replacing the current one only when it
+   policy, else BiCGSTAB, whose result is taken on its TRUE residual (`_bicgstab`; a stiff system falls back to the dense solve, or is
+   refused, never accepted on the method's own claim: ticket #584); then every state takes the action of least Q, an action replacing the current one only when it
    is better by more than the rounding of the sum (so the iteration cannot cycle on noise).
 5. CERTIFICATE. `certify` computes, on the graph as given and for the candidate values, the residuals of the Bellman
    operator and from them the relative error bound of `solver/_certify.py`, here per state: with g(s) the cheapest
