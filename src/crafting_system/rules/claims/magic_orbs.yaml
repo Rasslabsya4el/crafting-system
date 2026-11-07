@@ -108,3 +108,12 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value: {transmutation: {Orb of Transmutation: 1}, alteration: {Orb of Alteration: 1}, augmentation: {Orb of Augmentation: 1}, regal: {Regal Orb: 1}}
+
+  - id: magic_orbs.poedb_belt_weights
+    statement: PoEDB's list of belt modifiers (its Modifiers Calc tab, item class Belt) gives each tier of a mod its own weight ("DropChance"); the 141 rows that spawn on a Leather Belt (tags belt and default) weigh 51,550 for the prefixes and 67,000 for the suffixes, every Life tier 1000. A draw picks a mod with chance weight over the eligible weights of the open side or sides (affix_pool.draw_proportional_to_weight), so these numbers give the chance of every tier of an Orb of Alteration, Augmentation or Regal Orb on a belt; tests/test_coe_published_numbers.py works them out from the table alone and compares them with our model and with the recorded Craft of Exile counts. The value gives the totals and the row count. PoEDB's page names only the patch 3.29, so patch_verified is the export the page's numbers were matched against (the test compares them with the pinned repoe-fork 3.29.3.3 pool), not a patch the page states.
+    source_kind: datamined
+    url: https://poedb.tw/us/Belts
+    quote: '{"Name":"Fecund","Level":"64","ModGenerationTypeID":"1","ModFamilyList":["IncreasedLife"],"DropChance":1000'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-07
+    value: {prefix_total: 51550, suffix_total: 67000, rows: 141}
