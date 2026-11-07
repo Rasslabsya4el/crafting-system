@@ -41,7 +41,7 @@ from crafting_system.cli._limits import GROUPS, SHOWN_LABELS, WITHIN_GAP, approx
 from crafting_system.cli._offers import offer_of
 from crafting_system.cli._plan import add_risk
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, PageError, build_section, route_input
 from crafting_system.abstraction import Coarsening, Goal, Wanted
 from crafting_system.prices import PriceEntry
 from crafting_system.risk import Estimate
@@ -269,12 +269,11 @@ def test_the_goal_card_of_the_page_has_the_section_grouped_by_kind(plan):
     assert "leaves_out" not in [field.label for field in card.fields]
 
 
-def test_a_plan_with_no_limit_has_no_section_on_the_page(plan):
+def test_a_plan_with_no_limit_is_refused_by_the_page_builder_not_drawn_without_the_section(plan):
     bare = dataclasses.replace(plan, limits=())
 
-    page = render_page(Page("x", (build_section(route_input(bare), DATA),)))
-
-    assert "What this answer leaves out" not in page
+    with pytest.raises(PageError, match="no limits"):  # a page with no section "What this answer leaves out" claims a guarantee it does not state (OR-13, #550)
+        build_section(route_input(bare), DATA)
 
 
 def test_the_json_limit_is_the_record_with_every_field(plan, tmp_path):

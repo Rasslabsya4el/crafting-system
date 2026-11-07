@@ -13,6 +13,7 @@ from html import escape
 import pytest
 from oracle import page_lint
 from items_support import DATA, roll
+from plan_support import planner_plan
 from route_view_support import ACTIONS, BELT, COLD_REQ, FRACTURED_COLD, LEVEL, LIFE, PRICES, START_NAME, belt
 
 from crafting_system.abstraction import Abstraction, Goal
@@ -118,9 +119,9 @@ def toy_plan(label: str, offers=OFFERS) -> Plan:
         policy[state] = offer_action(ab, by_label[label], state)
         order += [s for s, w in policy[state].outcomes if w > 0 and s not in order]
     values = {state: 0.0 if ab.is_goal(state) else 1.0 for state in order}
-    return Plan(
+    return planner_plan(
         target=target, abstraction=ab, leaf_labels=leaf_labels(target), prices=PRICES, start=first,
-        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, limits=(),
+        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced,
         solution=Solution(values, policy, 0.0), risk=evaluate(policy, first, ab.is_goal),
         solve_seconds=0.0, risk_seconds=0.0,
     )  # fmt: skip

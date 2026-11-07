@@ -36,6 +36,7 @@ from targets_support import EXAMPLES
 
 from crafting_system.actions import HarvestReforge
 from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
+from crafting_system.cli._limits import STRANDS
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._report import build_report, render_text
 from crafting_system.cli._route_flow import build_flow
@@ -45,6 +46,7 @@ from crafting_system.cli._route_view import (
     Field,
     Line,
     Page,
+    PageError,
     RouteInput,
     RouteSection,
     StepRow,
@@ -891,3 +893,32 @@ def test_every_approximate_claim_the_plan_reads_has_its_line_on_the_goal_card_of
     assert read, "the Harvest reforge of R12 reads an approximate claim"
     assert card["Approximate inputs"] == approximate_page_lines(read)
     assert all(" Source: " in line and "harvest_reforge." not in line for line in card["Approximate inputs"])
+
+
+# --- a page is drawn only from a plan with limits (ticket #550, OR-13) ---------------------------------------------
+
+
+def test_the_page_builder_refuses_a_plan_with_no_limits_and_names_the_cause():
+    inp = INPUTS["essence"]()
+    assert inp.plan.limits  # the fixture's limits come from the planner's own functions (`plan_support.planner_plan`)
+    bare = dataclasses.replace(inp, plan=dataclasses.replace(inp.plan, limits=()))
+
+    with pytest.raises(PageError, match=r"no limits.*OR-13"):
+        build_section(bare, DATA)
+
+
+def test_a_plan_without_the_limit_every_planner_plan_has_is_refused_even_with_other_limits():
+    inp = INPUTS["essence"]()
+    other = tuple(limit for limit in inp.plan.limits if limit.kind != STRANDS)
+    assert other  # the fixture has more than the Memory Strands limit
+    odd = dataclasses.replace(inp, plan=dataclasses.replace(inp.plan, limits=other))
+
+    with pytest.raises(PageError, match="Memory Strands"):
+        build_section(odd, DATA)
+
+
+def test_a_page_drawn_from_a_fixture_plan_has_the_part_what_this_answer_leaves_out():
+    section = build_section(INPUTS["essence"](), DATA)
+
+    assert section.goal.leaves_out
+    assert "Memory Strands" in [field.label for field in section.goal.leaves_out]

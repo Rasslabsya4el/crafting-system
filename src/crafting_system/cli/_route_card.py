@@ -11,7 +11,8 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 * `card_of_item(data, item)`: a concrete item, the start item. With `tiers` its mods carry their tier, with
   `rolled=False` they show the range of the tier, not the roll, and `filler` draws the slots it has no mod for.
 * `card_of_target(data, target)`: the goal. Each requirement leaf is a "wanted" slot on its mod's side,
-  the rest `any mod or empty`; a k-of-n group's members carry the note `at least k of n`. Each implicit
+  the rest `any mod or empty`; a k-of-n group is one heading `at least k of n of these:` with its members under it, each in the one mod
+  format with its own tier and no note of the group (`ItemCard.groups`, OR-15). Each implicit
   requirement is a wanted implicit (note `grade 3 or better, roll 30 or more`), the catalyst quality a
   property (`Prismatic catalyst quality 12% or more`).
 * `card_of_states(abstraction, states)`: the item after a step, the join of the compressed states the
@@ -94,8 +95,24 @@ class Slot:
 
     text: str  # exact mod text, or "any mod", "any mod or empty", "empty", "any mod with tag X"
     tone: Tone
-    marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only", "searing exarch", "eater of worlds"
+    marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only", "searing exarch", "eater of worlds", and for a member of a group "prefix" or "suffix"
     note: str = ""  # "any of 10 tiers", "tier too low", "at least 1 of 2", "in some"; "" otherwise
+
+
+NESTED_GROUP = (
+    "a k-of-n group inside another k-of-n group is not drawn on the target card yet: the card says each group once under its own heading, "
+    "and two nested headings could not be told apart from a group said twice (OR-15)"
+)
+
+
+@dataclass(frozen=True)
+class Group:
+    """A k-of-n group of the target, said once: the `heading` ("at least 1 of 4 of these:") and its members, each a line in the one mod format
+    with its own tier and no note of the group (OR-15). The members are not slots of a side: each says its side in words (the mark `prefix` or
+    `suffix`), so the card still shows which open slot a member would take. A group holds leaves only (`NESTED_GROUP`)."""
+
+    heading: str
+    members: tuple[Slot, ...]
 
 
 @dataclass(frozen=True)
@@ -109,6 +126,7 @@ class ItemCard:
     prefixes: tuple[Slot, ...]
     suffixes: tuple[Slot, ...]
     offer: tuple[Slot, ...] = ()  # what a veiled placeholder offers when unveiled; drawn only when there is some
+    groups: tuple[Group, ...] = ()  # the k-of-n groups of a target card, each once with its members under it (OR-15); empty on every other card
 
 
 ANY_MOD = Slot("any mod", "any")
@@ -361,22 +379,32 @@ def card_of_item(
 def card_of_target(data: GameData, target: Target) -> ItemCard:
     """The goal as an item: a wanted slot per requirement leaf on its mod's side, the rest `any mod or empty`.
 
-    A leaf drawn from several mods says `any of N tiers` and writes its ranges as `#`; the members of a
-    k-of-n group carry `at least k of n`. An implicit requirement is a wanted implicit, the quality
-    requirement a property pill.
+    A leaf drawn from several mods says `any of N tiers` and writes its ranges as `#`. A k-of-n group is
+    said once, in `groups`: its heading and its members, which are not slots of a side (OR-15). An implicit
+    requirement is a wanted implicit, the quality requirement a property pill.
     """
     tiers = tier_table(data, target.base_id)
     wanted: dict[Side, list[Slot]] = {side: [] for side in SIDES}
+    groups: list[Group] = []
 
-    def add(nodes, group: str) -> None:
+    def leaf(node) -> tuple[Side, str, str]:
+        return _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)
+
+    def add(nodes) -> None:
         for node in nodes:
             if isinstance(node, KOfN):
-                add(node.of, f"at least {node.at_least} of {len(node.of)}")
+                if any(isinstance(member, KOfN) for member in node.of):
+                    raise ValueError(NESTED_GROUP)
+                members = []
+                for member in node.of:
+                    side, text, tier_note = leaf(member)
+                    members.append(Slot(text, "wanted", (side.value,), tier_note))  # the side in words: which of the open slots the member would take
+                groups.append(Group(f"at least {node.at_least} of {len(node.of)} of these:", tuple(members)))
                 continue
-            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)
-            wanted[side].append(Slot(text, "wanted", (), _note(tier_note, group)))
+            side, text, tier_note = leaf(node)
+            wanted[side].append(Slot(text, "wanted", (), tier_note))
 
-    add(target.requirements, "")
+    add(target.requirements)
     influences = tuple(influence.value.title() for influence in sorted(target.influences))
     need = target.quality
     quality = _quality(_kind(need), need.min_percent, " or more") if need is not None else ""
@@ -385,7 +413,7 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
         _fill(wanted[side], _capacity(data, target.base_id, side), ANY_OR_EMPTY) for side in SIDES
     )
     implicits = (*_implicits(data, target.base_id), *(_wanted_implicit(data, wish) for wish in target.implicits))
-    return ItemCard(data.base_items[target.base_id].name, properties, implicits, (), prefixes, suffixes)
+    return ItemCard(data.base_items[target.base_id].name, properties, implicits, (), prefixes, suffixes, groups=tuple(groups))
 
 
 def _wanted_implicit(data: GameData, wish: ImplicitRequirement) -> Slot:
@@ -609,3 +637,20 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         sides[Side.PREFIX],
         sides[Side.SUFFIX],
     )
+
+
+def leaf_sides(data: GameData, target: Target) -> list[Side]:
+    """The side of each requirement leaf of `target`, in the order of `Goal.leaves` (the text report says it of a group's members, as the card does)."""
+    tiers = tier_table(data, target.base_id)
+    found: list[Side] = []
+
+    def walk(node) -> None:
+        if isinstance(node, KOfN):
+            for member in node.of:
+                walk(member)
+        else:
+            found.append(_leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)[0])
+
+    for requirement in target.requirements:
+        walk(requirement)
+    return found

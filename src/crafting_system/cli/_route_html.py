@@ -35,6 +35,7 @@ a{color:var(--text-link)}
 .pr{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px}
 .pl{font-size:11px;border:0.5px solid var(--border);border-radius:4px;padding:0 5px;color:var(--text-secondary)}
 .sd{font-size:11px;color:var(--text-muted);margin:5px 0 2px}
+.gh{font-size:11px;color:var(--text-primary);border-left:2px solid var(--border-success);padding-left:6px;margin:8px 0 2px}
 .s{font-size:12px;padding:2px 7px;border-radius:6px;margin:2px 0;border:0.5px solid var(--border)}
 .w{background:var(--bg-success);color:var(--text-success);border-color:var(--border-success)}
 .c{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
@@ -114,6 +115,9 @@ def _item(card: ItemCard, target: bool = False) -> str:
     parts += [_slot(slot) for slot in card.prefixes]
     parts.append('<div class="sd">Suffixes</div>')
     parts += [_slot(slot) for slot in card.suffixes]
+    for group in card.groups:  # a group once: its heading, its members under it
+        parts.append(f'<div class="gh">{escape(group.heading)}</div>')  # its own style: not a third list of the item beside Prefixes and Suffixes
+        parts += [_slot(slot) for slot in group.members]
     if card.offer:
         parts.append('<div class="sd">Unveil offer</div>')
         parts += [_slot(slot) for slot in card.offer]

@@ -31,6 +31,7 @@ from ._marking import (
 )
 from ._offers import without_ranges
 from ._plan import Plan, chance
+from ._route_card import leaf_sides
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
 from ._start_report import first_step_document, first_step_lines, start_document, start_lines
@@ -99,6 +100,31 @@ def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
     for requirement in plan.target.requirements:
         walk(requirement)
     return list(zip(plan.leaf_labels, leaves))
+
+
+def requirements_text(plan: Plan) -> str:
+    """The requirements of the target as one line: the plain ones, then each k-of-n group once as "at least k of n of: a (prefix); b (suffix)".
+
+    The words are the ones of the page's group heading (`_route_card.Group`), and a member says its side in words as it does there (OR-15). Reading
+    the leaves as a flat list would say that every member of a group is required.
+    """
+    labels = iter(plan.leaf_labels)
+    sides = iter(leaf_sides(plan.abstraction.data, plan.target))
+    plain: list[str] = []
+    groups: list[str] = []
+
+    def member(node) -> str:
+        if isinstance(node, KOfN):
+            return f"at least {node.at_least} of {len(node.of)} of: " + "; ".join(f"({member(each)})" if isinstance(each, KOfN) else member(each) for each in node.of)
+        return f"{next(labels)} ({next(sides).value})"
+
+    for requirement in plan.target.requirements:
+        if isinstance(requirement, KOfN):
+            groups.append(member(requirement))
+        else:
+            plain.append(next(labels))
+            next(sides)
+    return "; ".join([*plain, *groups])
 
 
 def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
@@ -303,7 +329,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if report.interval is not None:
         lines.extend(report.interval.text_lines(divine))
     lines.extend(approximate_lines(report.approximate_inputs))
-    lines.append(f"Requirements: {'; '.join(plan.leaf_labels)}")
+    lines.append(f"Requirements: {requirements_text(plan)}")
     lines.append(
         f"Prices: league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}, "
         f"1 Divine = {divine:,.2f} Chaos"

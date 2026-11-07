@@ -158,10 +158,18 @@ fixtures(
 )
 
 four = tuple(slot(text, "w", "T2, at least 1 of 4") for text in ("+(42-45)% to Fire Resistance", "+(42-45)% to Cold Resistance", "+(42-45)% to Lightning Resistance", "+(100-114) to maximum Life"))
+HEADING_OF_FOUR = '<div class="gh">at least 1 of 4 of these:</div>'
+members = tuple(slot(text, "w", "T2") for text in ("+(42-45)% to Fire Resistance", "+(42-45)% to Cold Resistance", "+(42-45)% to Lightning Resistance", "+(100-114) to maximum Life"))
 fixtures(
     pl.check_group_printed_once,
-    counter={"R05: at least 1 of 4 flattened into four lines with notes": page(route(goal(target=item(prefixes=four, target=True)), *TWO_ACTIONS))},
-    example={"the group is one line": page(route(goal(target=item(prefixes=(slot("Fire, Cold or Lightning Resistance or Life", "w", "T2, at least 1 of 4"), ANY, ANY), target=True)), *TWO_ACTIONS))},
+    counter={
+        "R05: at least 1 of 4 flattened into four lines with notes": page(route(goal(target=item(prefixes=four, target=True)), *TWO_ACTIONS)),
+        "a heading and a member that carries the group again": page(route(goal(target=item(suffixes=(HEADING_OF_FOUR, slot("+(42-45)% to Fire Resistance", "w", "T2, at least 1 of 4"), *members[1:]), target=True)), *TWO_ACTIONS)),
+    },
+    example={
+        "the group is one line": page(route(goal(target=item(prefixes=(slot("Fire, Cold or Lightning Resistance or Life", "w", "T2, at least 1 of 4"), ANY, ANY), target=True)), *TWO_ACTIONS)),
+        "the group is one heading with its members under it": page(route(goal(target=item(suffixes=(HEADING_OF_FOUR, *members), target=True)), *TWO_ACTIONS)),
+    },
 )
 
 bought = step(1, "Buy Sorcerer Boots, item level 84", ("Cost per use", "17 c"), after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), ANY, ANY)))
@@ -373,11 +381,9 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
-ISSUE_NO_LIMITS, ISSUE_GROUP, ISSUE_UNPRICED = 550, 551, 552  # the issues #543 filed; OR-29
+ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other two, are fixed: no golden page is a known fault of their checks)
 
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it
-    **{(name, "check_cut_guarantee"): ISSUE_NO_LIMITS for name in ("approximate_conflict", "bench_craft", "branch", "essence", "interval_tiny", "remove_crafted_then_chaos", "unveil_offer")},
-    **{(name, "check_group_printed_once"): ISSUE_GROUP for name in ("real_r05", "real_r11")},
     **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
 }
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it

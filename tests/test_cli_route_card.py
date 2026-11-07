@@ -18,6 +18,7 @@ from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli._route_card import (
     _leaf_slot,
+    Group,
     ItemCard,
     Slot,
     _StateReader,
@@ -27,6 +28,7 @@ from crafting_system.cli._route_card import (
     mod_text,
     tracks_junk,
 )
+from crafting_system.cli._route_html import _item
 from crafting_system.items import ExplicitMod, Influence, Rarity, Side, accepted_by_tier, tier_table
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target
 
@@ -213,13 +215,39 @@ def test_a_leaf_with_one_possible_mod_keeps_the_exact_text_with_its_ranges_and_t
     assert card.prefixes[0] == Slot("+(25-39) to maximum Life", "wanted", note="T1")
 
 
-def test_the_members_of_a_k_of_n_group_say_so():
+def test_a_k_of_n_group_is_said_once_with_its_members_under_it_and_no_note_of_the_group_on_a_member():
     group = KOfN(1, (gem_leaf(), resist_leaf()))
 
     card = card_of_target(POOL, target_of(group))
 
-    assert card.prefixes[0] == Slot(GEM_TEXT, "wanted", note="T1, at least 1 of 2")
-    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", note="any tier, at least 1 of 2")
+    assert card.groups == (Group("at least 1 of 2 of these:", (Slot(GEM_TEXT, "wanted", ("prefix",), "T1"), Slot(RESIST_TEXT, "wanted", ("suffix",), "any tier"))),)
+    assert card.prefixes == (ANY_OR_EMPTY,) * 3 and card.suffixes == (ANY_OR_EMPTY,) * 3  # the members are not slots of a side
+    assert not any("at least" in slot.note for slot in (*card.prefixes, *card.suffixes))
+
+
+def test_a_requirement_beside_a_group_stays_a_slot_of_its_side():
+    card = card_of_target(POOL, target_of(gem_leaf(), KOfN(1, (gem_leaf(), resist_leaf()))))
+
+    assert card.prefixes[0] == Slot(GEM_TEXT, "wanted", note="T1")
+    assert [group.heading for group in card.groups] == ["at least 1 of 2 of these:"]
+
+
+def test_a_group_inside_a_group_is_refused_with_a_clear_error_not_drawn_with_a_lost_link():
+    nested = KOfN(1, (gem_leaf(), KOfN(1, (resist_leaf(), resist_leaf(min_tier=2)))))
+
+    with pytest.raises(ValueError, match="inside another k-of-n group"):
+        card_of_target(POOL, target_of(nested))
+
+
+def test_the_page_prints_a_group_once_as_a_heading_with_its_members_under_it():
+    html = _item(card_of_target(POOL, target_of(KOfN(1, (gem_leaf(), resist_leaf())))), target=True)
+
+    assert html.count("at least 1 of 2") == 1
+    heading = '<div class="gh">at least 1 of 2 of these:</div>'
+    assert html.index(heading) < html.index(GEM_TEXT) < html.index(RESIST_TEXT)  # the members follow their heading, each in the one mod format
+    assert f'<div class="s w">{GEM_TEXT}<span class="n"> · T1</span><span class="b">prefix</span></div>' in html
+    assert f'<span class="b">suffix</span>' in html  # each member says its side in words
+    assert 'class="sd">at least' not in html  # the heading has a style of its own, it is not a third list beside Prefixes and Suffixes
 
 
 def test_the_influences_of_the_target_are_properties():
