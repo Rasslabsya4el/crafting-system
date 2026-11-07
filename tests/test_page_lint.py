@@ -411,11 +411,9 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
-ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other two, are fixed: no golden page is a known fault of their checks)
-
-KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it
-    **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
-}
+# No golden page is a known fault of a check: the six pages that dropped an action for want of a price (#552) price it now, from the evidence there is,
+# marked approximate (the real pages from the snapshot of 2026-11-07; the fixture pages from a previous league's price in `cli_support.price_file(evidence=True)`).
+KNOWN: dict[tuple[str, str], int] = {}  # (golden page, check) -> the issue that holds the fault; a strict xfail names it (OR-29)
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
 
 
@@ -453,7 +451,7 @@ def test_a_page_the_lint_cannot_read_raises_instead_of_passing(html):
 
 
 def test_every_known_fault_is_a_golden_page_that_exists_and_names_an_issue():
-    assert KNOWN and all(isinstance(issue, int) and issue > 0 for issue in KNOWN.values())
+    assert all(isinstance(issue, int) and issue > 0 for issue in KNOWN.values())
     stems = {path.stem for path in GOLDEN}
     assert {name for name, _ in KNOWN} <= stems
     assert {check for _, check in KNOWN} <= {check.__name__ for check in JUDGES}
