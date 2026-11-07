@@ -94,7 +94,8 @@ WARM_START = True  # each round's solve starts from the last round's policy and 
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
-PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`)
+PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
+PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
 POLL_SECONDS = 0.5  # how often a round that expands many states asks the net inside it
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
@@ -425,7 +426,7 @@ class Search[S]:
                 # the offers still to be realized are among those whose bound is below the best now (it only falls): ask the problem to make their
                 # expensive parts side by side before they are built one by one
                 ahead = [position for la, position in reversed(cands[-PRIME_AHEAD:]) if first or la < best]
-                if len(ahead) > 1:
+                if len(ahead) >= PRIME_FROM:
                     prime(self.states[i], ahead)
                 primed = len(ahead)
             first = False

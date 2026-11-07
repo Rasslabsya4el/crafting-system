@@ -388,6 +388,10 @@ def test_the_search_primes_the_offers_it_is_about_to_build_and_the_answer_does_n
 
     monkeypatch.setattr(CraftingProblem, "prime", recording)
     fresh = abstraction()
+    envelope_result(fresh, fresh.compress(START_ITEM), offers)
+    assert not calls  # seven offers: a pool of processes costs more than it saves
+    monkeypatch.setattr(_envelope, "PRIME_FROM", 2)
+    fresh = abstraction()
     result = envelope_result(fresh, fresh.compress(START_ITEM), offers)
     assert calls and all(len(positions) >= 2 and len(set(positions)) == len(positions) for positions in calls)
     assert all(len(positions) <= _envelope.PRIME_AHEAD for positions in calls)
