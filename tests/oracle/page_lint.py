@@ -573,13 +573,18 @@ _UNMARKED = re.compile(r"\b(APPROXIMATE|UNVERIFIED)\b")
 
 
 def check_approximate_marked(page: Page) -> list[Fault]:
-    """OR-23: what the planner estimates is listed in the goal card as "Approximate inputs", each with its reason; a claim that
-    says APPROXIMATE or UNVERIFIED in its own words is not left in a step's text or on an item card (15 claims said so with no flag)."""
+    """OR-23: what the planner estimates is listed in the goal card as "Approximate inputs", each line saying what is approximate and
+    where the claim comes from ("statement Source: source."; a line may end with its "Spread: ..."); a claim that says APPROXIMATE or
+    UNVERIFIED in its own words is not left in a step's text or on an item card (15 claims said so with no flag)."""
     faults = []
     for route in page.routes:
         for line in route.goal_lines("Approximate inputs"):
-            if len(line.text.split()) < 4:  # the line is the claim's plain reason (no id in front, #553): a bare name is not one
-                faults.append(_fault("OR-23", check_approximate_marked, "goal card", f"an approximate input with no reason: {line.text[:100]}"))
+            statement, found, rest = line.text.partition(" Source: ")
+            source = rest.partition(" Spread: ")[0].rstrip(".")
+            if len(statement.split()) < 4:
+                faults.append(_fault("OR-23", check_approximate_marked, "goal card", f"an approximate input that does not say what is approximate: {line.text[:100]}"))
+            elif not found or len(source.split()) < 2:
+                faults.append(_fault("OR-23", check_approximate_marked, "goal card", f"an approximate input that does not name its source: {line.text[:100]}"))
         for step in route.steps:
             for label, lines in step.fields:
                 for line in lines:
@@ -706,26 +711,42 @@ def check_tier_step_has_tier_line(page: Page) -> list[Fault]:
 
 RULE_NO_INTERNAL_NAMES = "#481 and #553"
 
+_FILE_TYPES = "js|py|yaml|yml|json|md|txt|html|toml|csv|cfg"
+_SITES = "com|net|org|io|gg|ninja|watch"  # `poe.ninja`, `pathofexile.com`: a source a person may read, not an id
+
 _INTERNAL = [  # in this order: a dotted id is taken out of the text before its snake_case part is looked for
     ("a dotted claim id", re.compile(r"\b[a-z]+(?:_[a-z0-9]+)*\.[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")),
+    ("a file name", re.compile(rf"\b[\w-]+\.(?:{_FILE_TYPES})\b")),
+    ("a dotted claim id", re.compile(rf"\b[a-z]{{3,}}\.(?!(?:{_SITES})\b)[a-z]{{3,}}\b")),  # `conflict.odds`: no underscore in it
     ("a Metadata/ path", re.compile(r"\bMetadata/\S*")),
     ("a ticket number", re.compile(r"(?<![\w&])#\d{2,}\b")),
+    ("an issue or ticket number", re.compile(r"\b(?:issue|ticket|PR|pull request)s?\s+#?\d+\b", re.I)),
+    ("an ADR number", re.compile(r"\bADR-?\d+\b")),
+    ("a workflow word", re.compile(r"\b(?:grill(?:\s+[A-Z]\d+)?|main chat|open points?|in-game list|GPT researcher|research note)\b", re.I)),
     ("a base id in brackets", re.compile(r"\[(?=[A-Za-z0-9_]*[0-9A-Z])[A-Za-z][A-Za-z0-9_]*\]")),
     ("a snake_case token", re.compile(r"\b[a-z]+(?:_[a-z0-9]+){2,}\b")),
 ]
 
 
+def internal_names_in(text: str) -> list[tuple[str, str]]:
+    """(kind, text) of each internal name in `text`: what `check_no_internal_names` finds, for a test of the claims' own words."""
+    found = []
+    for name, pattern in _INTERNAL:
+        found += [(name, match.group(0)) for match in pattern.finditer(text)]
+        text = pattern.sub(" ", text)
+    return found
+
+
 def check_no_internal_names(page: Page) -> list[Fault]:
-    """#481 and #553: no internal id on the page (a dotted claim id, a snake_case token, a `Metadata/` path, a ticket number, a base id in
-    brackets). The owner reads the page and is not a developer: a base is named by its game name, a claim by its plain statement and
-    its source; the id may stay in the JSON answer, which is for tools. A decision of the main chat under #481, not a rule of the file."""
+    """#481 and #553: no internal id or workflow word on the page (a dotted claim id, a snake_case token, a `Metadata/` path, a file name,
+    a ticket, issue or ADR number, a word such as "grill" or "main chat", a base id in brackets). The owner reads the page and is not a
+    developer: a base is named by its game name, a claim by its plain statement and its source; the id may stay in the JSON answer, which
+    is for tools. A decision of the main chat under #481, not a rule of the file."""
     faults = []
     for route in page.routes:
         for where, text in _all_texts(route):
-            for name, pattern in _INTERNAL:
-                for found in pattern.finditer(text):
-                    faults.append(Fault(RULE_NO_INTERNAL_NAMES, "check_no_internal_names", where, f"{name}: {found.group(0)}"))
-                text = pattern.sub(" ", text)
+            for name, found in internal_names_in(text):
+                faults.append(Fault(RULE_NO_INTERNAL_NAMES, "check_no_internal_names", where, f"{name}: {found}"))
     return faults
 
 

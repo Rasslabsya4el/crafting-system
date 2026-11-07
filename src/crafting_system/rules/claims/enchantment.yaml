@@ -66,6 +66,8 @@ rules:
     quote: "groups [EnchantmentHeistArmour]: 75 mods, 21 with a white-socket or all-sockets-one-colour stat, 54 without; wiki Tailoring_Orb 'List of enchantments': 75 rows incl. 'Enchantment White Sockets' and 'Enchantment Defence Modifier Effect and Only Red Sockets'"
     approximate: true
     approximate_reason: "No source lists the Tailoring Orb pool of 3.29: the wiki page and the dump still show 75 enchants, and 54 is that list minus the 21 mods the 3.29.0 note says were removed."
+    page_statement: "The Tailoring Orb pool of 3.29 is taken as 54 body armour enchantments."
+    page_source: "the game data and the wiki list 75; 54 is that list minus the 21 mods the 3.29.0 patch note says were removed"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -168,6 +170,8 @@ rules:
     quote: "Since 3.23 I've been tracking blueprint curio case rewards with folks in the Prohibited Library Discord. Across 27,155 total items we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons."
     approximate: true
     approximate_reason: "No source states that the Tempering and Tailoring Orbs draw from the Curio Display table; a 263-click armour tally fits it, and for weapons there is no orb tally, so it is an inference."
+    page_statement: "The Tempering and Tailoring Orbs draw their enchantments by weight, not equally, with the weights of Curio Displays."
+    page_source: "player counts of enchanted items found in Curio Displays; nothing states that the orbs use the same table"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -178,6 +182,8 @@ rules:
     quote: "Armor Enchant, All-Time: 8% increased Explicit Life Modifier magnitudes 752; 8% increased Explicit Defence Modifier magnitudes 690; 8% increased Explicit Resistance Modifier magnitudes 504; 40% reduced Attribute Requirements 456; ... Can have 1 additional Crafted Modifier 36 (75 rows, 5,078 items)"
     approximate: true
     approximate_reason: "The players' sample ends at 3.27 and the 3.29.0 note only says enchants were removed, so GGG keeping every weight is assumed; 81% of the sample is from area level 83 and no item-level gate is measured."
+    page_statement: "The weights of the Tailoring Orb enchantments are taken from player counts of enchanted body armours, and every weight is assumed to have been kept in 3.29."
+    page_source: "player counts of 4,318 items from Curio Displays up to 3.27; the 3.29.0 note only says enchantments were removed"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value:
@@ -260,6 +266,8 @@ rules:
     quote: "Weapon Enchant, All-Time: 8% increased Explicit Critical Modifier magnitudes 453; 8% increased Explicit Speed Modifier magnitudes 451; 40% reduced Attribute Requirements 451; ... Can have 1 additional Crafted Modifier 32 (181 rows, 7,742 items)"
     approximate: true
     approximate_reason: "Same sample and the same two assumptions as the armour table (weights kept after 3.29.0, shares the same at every item level); a count of 15 to 50 per enchant carries 15% to 25% noise that is left in."
+    page_statement: "The weights of the Tempering Orb enchantments are taken from player counts of enchanted weapons, and depend on the tag as well as the kind."
+    page_source: "player counts from Curio Displays; no count of the orb's own results exists, and each count carries 15% to 25% noise"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value:
@@ -408,6 +416,8 @@ rules:
     quote: "we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons"
     approximate: true
     approximate_reason: "No source gives the orb's chance to roll this enchant and players disagree whether it can; it stays in the draw at its Curio weight as a click that misses, so the pools are the game's 136 and 54."
+    page_statement: "The enchantment that allows an extra crafted mod stays in the draw at the weight it has in Curio Displays, as a click that does nothing."
+    page_source: "player counts from Curio Displays; no source gives the orb's own chance and players disagree whether it can roll"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value: {curio_display_rate: {armour: 0.0083, weapon: 0.0048}, orb_probability: null}
@@ -435,6 +445,8 @@ rules:
     quote: "And after that you can replace the enchant with harvest as/crit per quality (or currently one of the settlers enchant)."
     approximate: true
     approximate_reason: "No source states the exclusivity in numbers; it is inferred from the wiki's one-enchantment rule and two player quotes, and no counter-example was found."
+    page_statement: "A Harvest quality enchantment replaces a Tempering or Tailoring enchantment, and the reverse, because they share the one enchantment slot."
+    page_source: "the wiki's one-enchantment rule and two player quotes; no counter-example found"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -479,6 +491,8 @@ rules:
     quote: "with both the larger, 3, never the sum, marked `approximate`"
     approximate: true
     approximate_reason: "No source says whether the extra crafted slot and the multimod stack; the thread's poster combined them and three crafts were made, nobody states a fourth, so the larger of the two limits is the default of grill B7."
+    page_statement: "When an item has both the extra crafted slot and the multimod, the limit of crafted mods is the larger of the two counts, not their sum."
+    page_source: "one forum thread whose poster combined them; the planner's own default"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
     value: {neither: 1, extra_slot: 2, multimod: 3, both: 3}
@@ -490,5 +504,7 @@ rules:
     quote: "The rarity of the item is no longer relevant when applying Cartographer's Chisels, Blacksmith's Whetstones, Armourer's Scraps, Glassblower's Baubles, and Catalysts to non-Unique items. Instead, the amount of Quality they provide is now based on the item level."
     approximate: true
     approximate_reason: "The 3.25 note says the amount depends on the item level and the wiki's Quality page gives the formula, but no source checks that formula on Armourer's Scraps or Blacksmith's Whetstones."
+    page_statement: "Armourer's Scraps and Blacksmith's Whetstones give quality by the same formula as catalysts, by item level."
+    page_source: "the 3.25 patch note and the wiki's Quality page; no source checks the formula on these items"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01

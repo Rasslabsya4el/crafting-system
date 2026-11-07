@@ -81,6 +81,8 @@ A claim that no other source settles (its only support is Craft of Exile's code,
 | Key | Meaning |
 |---|---|
 | `approximate` | exactly `true`, or absent; `false` is refused |
-| `approximate_reason` | one line, no newline, why no other source settles it; required with `approximate: true`, refused without it |
+| `approximate_reason` | one line, no newline, why no other source settles it; required with `approximate: true`, refused without it. For the people who maintain the claim and the JSON; a page does not print it |
+| `page_statement` | one sentence in a player's words saying what is approximate; required with `approximate: true`, refused without it (#553) |
+| `page_source` | the kind of evidence in plain words ("Craft of Exile's code only", "one Reddit report from 2020"), no full stop; required with `approximate: true`, refused without it (#553) |
 
-Every answer (the text report, the JSON policy, a given route and the route page) lists the approximate claims that the actions of its policy read, found through `Action.claims`; an answer with no such claim says nothing. When a patch update re-reads a claim and a source now settles it, both keys are removed. An approximate input is an uncertainty in the model and is never joined with the certified gap of an approximate answer (ADR-0023).
+Every answer (the text report, the JSON policy, a given route and the route page) lists the approximate claims that the actions of its policy read, found through `Action.claims`; an answer with no such claim says nothing. The page and the text report print "statement Source: source." and never the claim's id or its reason; `tests/test_rules_page_words.py` refuses a statement or a source that holds a ticket, issue or ADR number, a workflow word ("grill", "main chat"), a file name, a dotted id or a snake_case token. When a patch update re-reads a claim and a source now settles it, all four keys are removed. An approximate input is an uncertainty in the model and is never joined with the certified gap of an approximate answer (ADR-0023).

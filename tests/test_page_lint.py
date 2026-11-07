@@ -225,7 +225,7 @@ fixtures(
     example={
         "V01: one chance, the mixture of the eight states": page(route(goal(), step(1, "Regal Orb", ("Chance per use", "≈0.93%")))),
         "a tier run is not a range of one chance": page(route(goal(), *TWO_ACTIONS)),
-        "a case with an approximate input prints what it does not know": page(route(goal(("Approximate inputs", "No source says whether the base type stays"), ), step(1, "Regal Orb", ("Chance per use", "≈0.88% to ≈0.95%")))),
+        "a case with an approximate input prints what it does not know": page(route(goal(("Approximate inputs", "No source says whether the base type stays. Source: the wiki and one forum thread, which disagree."), ), step(1, "Regal Orb", ("Chance per use", "≈0.88% to ≈0.95%")))),
     },
 )
 
@@ -233,9 +233,15 @@ fixtures(
     pl.check_approximate_marked,
     counter={
         "a claim says APPROXIMATE in a step and is not listed": page(route(goal(), step(1, "Orb of Alchemy", ("Note", "APPROXIMATE: the weight is a guess")))),
-        "an approximate input with no reason": page(route(goal(("Approximate inputs", "The base type")), shared)),
+        "an approximate input with only a name": page(route(goal(("Approximate inputs", "The base type")), shared)),
+        "an approximate input with a statement and no source": page(route(goal(("Approximate inputs", "The vendor recipe keeps the base type of the item.")), shared)),
+        "an approximate input with a source and no statement": page(route(goal(("Approximate inputs", "The base type. Source: the wiki and one forum thread.")), shared)),
+        "an approximate input whose source is one word": page(route(goal(("Approximate inputs", "The vendor recipe keeps the base type of the item. Source: unknown.")), shared)),
     },
-    example={"V01: the vendor claims listed as Approximate inputs, each with its reason": page(route(goal(("Approximate inputs", "The wiki does not say whether the base type stays.")), shared))},
+    example={
+        "V01: the vendor claims listed as Approximate inputs, each with its statement and its source": page(route(goal(("Approximate inputs", "The vendor recipe keeps the base type of the input item. Source: the wiki does not say, and the one Reddit thread is split.")), shared)),
+        "a claim with a spread": page(route(goal(("Approximate inputs", "One recombination costs 25,000 to 250,000 Dust. Source: player reports. Spread: the planner uses 100,000; reports range from 25,000 to 250,000.")), shared)),
+    },
 )
 
 priced = "Not offered: Harvest Reforge Fire, Harvest Reforge Life (no price for Wild Crystallised Lifeforce). The plan is the cheapest among the actions that have a price."
@@ -270,11 +276,19 @@ fixtures(
     },
 )
 
-CANDIDATE = {
-    "a dotted claim id": ("harvest_reforge.refused_when_no_tagged_mod_fits_a_free_slot: No source says.", "The wiki names no rule for support gems."),
-    "a Metadata/ path": ("Metadata/Items/Armours/Boots/BootsStr1", "The wiki names the Sorcerer Boots base only by its game name."),
-    "a ticket number": ("see #543 for the reason", "see the audit for the reason"),
-    "a base id in brackets": ("Penetrating Arrow Quiver [QuiverNew5]", "The page names the Penetrating Arrow Quiver by its game name."),
+SRC = " Source: the wiki and one forum thread."
+CANDIDATE = {  # name -> (a statement with the internal form in it, the same thing said in words); both lines carry a source, so the whole lint passes the plain one
+    "a dotted claim id": ("harvest_reforge.refused_when_no_tagged_mod_fits_a_free_slot is read from the wiki." + SRC, "A tagged reforge can be refused when the tag has no mod on a free side." + SRC),
+    "a dotted claim id without an underscore": ("conflict.odds are a fit to a sample of 525 uses." + SRC, "The odds of an Orb of Conflict are a fit to a sample of 525 uses." + SRC),
+    "a file name": ("The count is read from package.js in the emulator." + SRC, "The count is read from the code of the emulator." + SRC),
+    "a Metadata/ path": ("Metadata/Items/Armours/Boots/BootsStr1 keeps its base type." + SRC, "The Sorcerer Boots base keeps its base type." + SRC),
+    "a ticket number": ("The reason is in #543 for this claim." + SRC, "The reason is the audit of the pages for this claim." + SRC),
+    "an issue or ticket number": ("The choice follows research ticket 86 for this claim." + SRC, "The choice follows the older guide for this claim." + SRC),
+    "an ADR number": ("The roll is the simplest reading in ADR-0048 here." + SRC, "The roll is the simplest reading here." + SRC),
+    "a workflow word": ("The default of grill B3 is used for this claim." + SRC, "The default of the planner is used for this claim." + SRC),
+    "a workflow word, the main chat": ("The claim was settled by the main chat for now." + SRC, "The claim was settled by the planner's own choice for now." + SRC),
+    "a base id in brackets": ("Penetrating Arrow Quiver [QuiverNew5] is bought as the start item." + SRC, "The Penetrating Arrow Quiver is bought as the start item." + SRC),
+    "a snake_case token": ("The claim spend_law_uniform_everywhere says so." + SRC, "The claim says so in the memory strands post." + SRC),
 }
 
 
@@ -311,6 +325,31 @@ def test_the_check_of_internal_names_fails_on_an_internal_name_and_passes_on_wor
     internal, plain = CANDIDATE[name]
     assert pl.check_no_internal_names(pl.read_page(page(route(goal(("Approximate inputs", internal)), shared)))), name
     assert pl.check_no_internal_names(pl.read_page(page(route(goal(("Approximate inputs", plain)), shared)))) == [], name
+
+
+@pytest.mark.parametrize(
+    ("text", "kind"),
+    [
+        ("vendor.gem_qualification_is_uncorrupted_skill_gems", "a dotted claim id"),
+        ("conflict.odds", "a dotted claim id"),
+        ("package.js", "a file name"),
+        ("issue 93", "an issue or ticket number"),
+        ("research ticket 86", "an issue or ticket number"),
+        ("ADR-0041", "an ADR number"),
+        ("grill B3", "a workflow word"),
+        ("the main chat", "a workflow word"),
+        ("the owner's in-game list", "a workflow word"),
+        ("#182", "a ticket number"),
+        ("spend_law_uniform", "a snake_case token"),
+    ],
+)
+def test_every_form_of_an_internal_name_is_found_and_named(text, kind):
+    assert kind in {found for found, _ in pl.internal_names_in(f"The claim, {text}, is read.")}
+
+
+@pytest.mark.parametrize("text", ["poe.ninja", "pathofexile.com", "3.29.3.3", "e.g. a belt", "Source: the wiki.", "ilvl 84.", "T1 to T3"])
+def test_a_name_a_person_may_read_is_not_an_internal_name(text):
+    assert pl.internal_names_in(text) == []
 
 
 def test_the_check_of_internal_names_is_one_of_the_checks_and_cites_the_issues_of_its_decision():

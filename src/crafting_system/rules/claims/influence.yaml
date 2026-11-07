@@ -23,6 +23,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The wiki's Influenced item page has one broader sentence that reads the other way, and the owner has not checked in game whether an orb of the item's own influence is refused (issue 93, round 2: unknown)."
+    page_statement: "An influenced Exalted Orb is refused on an item that already has an influence, even the orb's own."
+    page_source: "three orb pages, the item help text and Craft of Exile agree; one broader sentence of the wiki reads the other way"
 
   - id: influence.exalt_refused_on_fractured_item
     statement: "An influenced Exalted Orb is refused on a fractured item. (Synthesised items are not in the item model.)"
@@ -41,6 +43,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The Shaper's Exalted Orb page contradicts itself on an item with an Eldritch implicit, and the owner has not checked it in game."
+    page_statement: "An influenced Exalted Orb is refused on an item with an Eldritch implicit."
+    page_source: "the wiki's orb pages and Craft of Exile agree; the Shaper's Exalted Orb page lead reads the other way"
 
   - id: influence.exalt_rare_with_open_slot
     statement: "An influenced Exalted Orb needs a rare item with an open prefix or suffix slot."
@@ -108,6 +112,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Only Craft of Exile's guard speaks to the empty pool; the wiki is silent."
+    page_statement: "An influenced Exalted Orb on a rare item with an open slot but no mod that can roll is refused, and nothing is consumed."
+    page_source: "Craft of Exile's guard only; the wiki is silent"
 
   - id: influence.state_is_on_the_item
     statement: "The influence belongs to the item: removing or rerolling its influenced mods, Orb of Scouring included, keeps the influence and the pool's influence tags."

@@ -258,7 +258,7 @@ def base_in_words(data: GameData, base_id: str) -> str:
     differing = differences_between_same_name_bases(data, base_id)
     parts = []
     if "item class" in differing:
-        parts.append(f"{'an' if base.item_class[0] in 'AEIOU' else 'a'} {base.item_class.lower()}")
+        parts.append(f"item class {base.item_class}")  # no article: a/an by the sound of "One Hand Sword" or "Amulet" is a guess
     if "implicit mods" in differing:
         texts = [_plain(data.mods[mod_id].text or "") for mod_id in base.implicits if data.mods[mod_id].text]
         parts.append(f"the implicit {' and '.join(texts)}" if texts else "no implicit")
@@ -274,13 +274,13 @@ def plain_base_names(data: GameData, text: str) -> str:
     """`text` with each base id in brackets (the form of a price key, `Two-Toned Boots [BootsAtlas1] (ilvl 86)`) said in words.
 
     The page names a base by its game name; where two bases share the name the words of `base_in_words` follow it in parentheses. A
-    bracket that is not the tail of a base id is left as it is.
+    bracket that is not the tail of a shared base's id is left as it is.
     """
 
     def said(found: re.Match[str]) -> str:
         ids = [each for each in data.base_items if each.rsplit("/", 1)[-1] == found.group(1)]
         words = base_in_words(data, ids[0]) if len(ids) == 1 else ""
-        return f" ({words})" if words else ""
+        return f" ({words})" if words else found.group(0)  # a bracket that is no shared base stays as it is
 
     return _BASE_ID_IN_BRACKETS.sub(said, text)
 
@@ -301,9 +301,8 @@ def shared_name_refusal(data: GameData, base_id: str, source: str, what: str) ->
     differing = differences_between_same_name_bases(data, base_id)
     if not differing:
         return None
-    shown = ", ".join(each.rsplit("/", 1)[-1] for each in ids)
     return (
         f"the price of {what} is refused: it comes from {source}, whose line has a name and no base id, and the name "
-        f"'{data.base_items[base_id].name}' belongs to {len(ids)} bases ({shown}) that differ in {' and '.join(differing)}, "
+        f"'{data.base_items[base_id].name}' belongs to {len(ids)} bases that differ in {' and '.join(differing)}, "
         "so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
     )

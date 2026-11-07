@@ -78,6 +78,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "Unverified for 3.29: the owner's working choice in grill B3 (#94, answer 4b): \"An imprint is **used up** when it restores, and **several imprints** of one item can be kept.\" The only source is one 2014 forum answer relayed by the GPT researcher, not rechecked for 3.29."
+    page_statement: "An imprint is used up when it restores an item."
+    page_source: "one 2014 forum answer, not rechecked for 3.29"
 
   - id: imprint.several_per_item
     statement: "UNVERIFIED by me (relayed by the GPT researcher): an item may carry several imprints of different states, each used once; they share one name. 2014 player answers (not rechecked for 3.29), two sources."
@@ -88,6 +90,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "Unverified for 3.29: the owner's working choice in grill B3 (#94, answer 4b): \"An imprint is **used up** when it restores, and **several imprints** of one item can be kept.\" The only sources are two 2014 forum answers relayed by the GPT researcher, not rechecked for 3.29."
+    page_statement: "An item can carry several imprints of different states, each used once."
+    page_source: "two 2014 forum answers, not rechecked for 3.29"
 
   - id: imprint.allflame_copy_not_restorable
     statement: "UNVERIFIED by me (relayed by the GPT researcher): an item made by Allflame crafting in 3.29 cannot be returned to a previous state by an imprint; consistent with the wiki rule that items made from the original cannot use its imprint. Reported 2026-07-30 for 3.29."
@@ -98,3 +102,5 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "Unverified: one 2026-07-30 forum report relayed by the GPT researcher and not opened by me; the owner's grill B3 answer (#94) does not cover this rule."
+    page_statement: "An item made by Allflame crafting in 3.29 cannot be returned to a previous state by an imprint."
+    page_source: "one forum report of July 2026, consistent with the wiki rule for items made from the original"

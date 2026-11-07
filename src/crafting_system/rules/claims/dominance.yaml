@@ -32,6 +32,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives the odds of the two picks; the wiki says randomly and no count was found (issue 93, grill B2)."
+    page_statement: "An Orb of Dominance removes one influenced mod at random and then upgrades another one at random, each choice equally likely."
+    page_source: "Craft of Exile's code only; the wiki says 'randomly' and no count was found"
 
   - id: dominance.upgrade_next_tier_top_becomes_elevated
     statement: "An upgraded mod becomes the next better tier of the same mod in its own influence's chain (on an item with two influences, mods of the other influence are not in it); a top-tier mod becomes its Elevated version; an Elevated mod stays the same mod and its values are rerolled (this model keeps the lowest values of a new mod, as every action that lists its results does)."
@@ -58,6 +60,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Only Craft of Exile's code shows that the next tier is taken without an item level test (open point O-06 of research ticket 86)."
+    page_statement: "The upgrade of an influenced mod to the next tier does not check the item level."
+    page_source: "Craft of Exile's code; the wiki says it only of the Elevated step"
 
   - id: dominance.respects_side_locks_ignores_type_blocks
     statement: "Prefixes/Suffixes Cannot Be Changed protect the locked side from being removed or upgraded; Cannot roll Attack/Caster Modifiers are ignored."
@@ -84,6 +88,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Only Craft of Exile's table links a top-tier mod to its Elevated version; the export has no link field."
+    page_statement: "Which Elevated mod a top-tier mod becomes is read from Craft of Exile's table, for helmets, gloves, boots and body armour only."
+    page_source: "Craft of Exile's table; the game data has no such link"
 
   - id: dominance.refused_on_corrupted
     statement: "A corrupted item takes no Orb of Dominance."

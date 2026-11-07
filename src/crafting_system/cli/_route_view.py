@@ -68,7 +68,7 @@ from crafting_system.targets import plain_base_names
 
 from ._interval import IntervalAnswer
 from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
-from ._marking import approximate_inputs, approximate_page_line
+from ._marking import approximate_inputs, approximate_page_lines
 from ._plan import GIVEN_SOURCE, Plan
 from ._report import UNRESOLVED, Report
 from ._route import RESTART, Route, RouteResult
@@ -674,10 +674,10 @@ class _View:
         success = risk.success_probability.value
         interval = self.inp.interval
         if interval is None:
-            approximate = [approximate_page_line(item) for item in approximate_inputs(plan, self.inp.policy, self.data)]
+            approximate = approximate_page_lines(approximate_inputs(plan, self.inp.policy, self.data))
             rule = ()
         else:  # the claims of every route the interval shows, each with its spread; the plan and its interval come first
-            approximate = [approximate_page_line(item) for item in interval.approximate_inputs]
+            approximate = approximate_page_lines(interval.approximate_inputs)
             rule = tuple(_plain(label, *lines) for label, lines in interval.facts(divine))
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,

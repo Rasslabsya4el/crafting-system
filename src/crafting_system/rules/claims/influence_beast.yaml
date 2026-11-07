@@ -37,6 +37,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Unverified: no source says which mod the beast influence recipes add, so they borrow the pool of the influence's Exalted Orb (research ticket 86 O-09, grill B2)."
+    page_statement: "A beast's influence recipe adds one mod drawn from the pool of that influence's Exalted Orb."
+    page_source: "no source says which mod the recipes add; the planner borrows the Exalted Orb's pool"
 
   - id: influence_beast.refused_on_corrupted
     statement: "A corrupted item takes no beast influence recipe."

@@ -43,7 +43,7 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
         another = True
     stored_type, category = query.get("type"), (type_filters.get("category") or {}).get("option")
     if spec.base_type is not None and stored_type is None:
-        parts.append(f"any {category or 'item'} base" if category else "any base")
+        parts.append(f"any {_category_words(category)} base" if category else "any base")
     elif spec.base_type is not None and stored_type != spec.base_type:
         parts.append(f"base {stored_type}")
         another = True
@@ -83,3 +83,11 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
     if not parts:
         return None
     return f"price taken for {'another' if another else 'a wider'} item ({', '.join(parts)})"
+
+
+_CATEGORY_WORDS = {"armour.chest": "body armour"}
+
+
+def _category_words(category: str) -> str:
+    """The trade site's category option in words (`accessory.ring` -> `ring`): a page never prints the option itself (#553, #481)."""
+    return _CATEGORY_WORDS.get(category, category.rsplit(".", 1)[-1])

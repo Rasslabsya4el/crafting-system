@@ -38,6 +38,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The two wiki pages disagree in wording and no other source settles whether the flask or the gems lower the result's item level."
+    page_statement: "A vendor recipe is taken to keep the item level of the input, but it is not settled whether the flask or the gems can lower the result's item level."
+    page_source: "two wiki pages that disagree in wording; no other source settles it"
     value:
       result_item_level: input
 
@@ -50,6 +52,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split."
+    page_statement: "A vendor recipe is taken to keep the base type of the input item."
+    page_source: "the wiki does not say whether the base type stays, and the one Reddit thread on it is split"
     value:
       result_base_type: input
 
@@ -118,6 +122,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The wiki caps the elemental recipes at T3 and Craft of Exile at T2; no other source decides, so the cap is a rule axis of two readings."
+    page_statement: "A weapon with a Ruby, Sapphire or Topaz Flask and an Orb of Augmentation gets its elemental damage mod one tier higher, up to a cap that is tier 3 by one reading and tier 2 by the other."
+    page_source: "the wiki says tier 3 and Craft of Exile says tier 2; no other source decides"
     value:
       base_kinds:
         one_hand: [claw, dagger, one_hand_axe, one_hand_mace, one_hand_sword, rune_dagger, sceptre, thrusting_one_hand_sword, wand]
@@ -313,6 +319,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The wiki names no rule for support, Awakened or corrupted gems and no other source says."
+    page_statement: "Quality gems for a vendor recipe are counted as uncorrupted skill gems only, the narrowest reading."
+    page_source: "the wiki asks for 'quality gems' with the tag and gives no rule for support, Awakened or corrupted gems"
     value:
       gem_kinds: [skill]
       corrupted_gems: false

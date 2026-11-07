@@ -14,7 +14,7 @@ from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
 from crafting_system.items import Side
 from crafting_system.risk import Estimate
-from crafting_system.targets import KOfN
+from crafting_system.targets import KOfN, plain_base_names
 
 from ._interval import IntervalAnswer
 from ._limits import HEADING, limit_document, limit_text, ordered, unresolved
@@ -72,6 +72,7 @@ class Report:
     approximate_inputs: tuple[ApproximateInput, ...] = ()  # the approximate claims the policy's actions read (ADR-0028)
     first_step: FirstStep | None = None  # what is done before S1 when the start item is made at a vendor (ADR-0059, ticket #331)
     interval: IntervalAnswer | None = None  # the plan's interval over a rule axis it reads (ADR-0012, ticket #221); None when it reads none
+    data: GameData | None = None  # the game data the text is worded from: a base id in brackets is said in words (#553, #604)
 
 
 def with_interval(report: Report, interval: IntervalAnswer | None) -> Report:
@@ -196,6 +197,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
         approximate_inputs(plan, plan.view_policy, data),
         None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
+        data=data,
     )  # fmt: skip
 
 
@@ -408,7 +410,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if verification is not None:
         lines.append("")
         lines.extend(verification_lines(verification) if plan.approximation else _verification_lines(verification, plan))
-    return "\n".join(lines) + "\n"
+    text = "\n".join(lines) + "\n"
+    return text if report.data is None else plain_base_names(report.data, text)  # a base by its game name, never its id (#553, #604)
 
 
 def _count(value: Fraction) -> str:

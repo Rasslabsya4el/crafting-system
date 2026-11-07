@@ -50,6 +50,8 @@ rules:
     quote: "poec_simAddEldritchImplicit"
     approximate: true
     approximate_reason: "Only Craft of Exile's code and the absence of an exclusion in the data give it (open point OPEN-03 of the research); no player report was found."
+    page_statement: "An Ember or an Ichor can bring back the mod family the side already holds."
+    page_source: "Craft of Exile's code and the lack of an exclusion in the game data; no player report"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -148,6 +150,8 @@ rules:
     quote: "poec_simRollAffix(null,null,target,null,noaffix-prmods,!0,!1"
     approximate: true
     approximate_reason: "No source states how many modifiers an Eldritch Chaos Orb puts back since 3.17.2; Craft of Exile's code is the only implementation (open point OPEN-01 of the research)."
+    page_statement: "An Eldritch Chaos Orb puts back as many mods as a Chaos Orb would, less the mods that stay, all on the dominant side."
+    page_source: "Craft of Exile's code, the only implementation; no source states the count since 3.17.2"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -166,6 +170,8 @@ rules:
     quote: "case 'eldritchannul': ... keep = (searing ? \"prefix\" : \"suffix\") ... poec_simRemoveAffix(null,keep,null,!0,!1,!0,!1,!0,null)"
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives that the removal is uniform among the removable modifiers of the dominant side."
+    page_statement: "An Eldritch Orb of Annulment removes one mod of the dominant side, every removable mod equally likely."
+    page_source: "Craft of Exile's code only"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -200,6 +206,8 @@ rules:
     quote: "Orb of Conflict rates: ~(50 - 11n)% to upgrade per n tier difference"
     approximate: true
     approximate_reason: "A logistic fit to one 525-use player sample of 2023 (Standard); the wiki's 11% a tier and Craft of Exile's flat 50% disagree with it, and a difference of 4 or more is outside the sample."
+    page_statement: "An Orb of Conflict raises the higher or the lower implicit with chances taken from a curve fitted to a player sample; a tier difference of 4 or more is outside the sample."
+    page_source: "one player sample of 525 uses in 2023; the wiki's 11% a tier and Craft of Exile's flat 50% disagree with it"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
     value: {intercept: "0.10", slope: "0.52", places: 6, last_sampled_difference: 3}
@@ -211,6 +219,8 @@ rules:
     quote: "5/3 upgrade to 6/2: 28% (n=40)"
     approximate: true
     approximate_reason: "One player sample (525 Conflicts, one team, one league); the counts are recomputed from rounded percentages."
+    page_statement: "The chance that an Orb of Conflict raises the implicit the player wants raised depends on the tier difference between the two implicits."
+    page_source: "one player sample of 525 Conflicts from 2023, with counts recomputed from rounded percentages"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value: {"-2": [14, 21], "-1": [28, 49], "0": [54, 89], "1": [81, 201], "2": [33, 115], "3": [6, 50]}
@@ -222,6 +232,8 @@ rules:
     quote: 'As "upgrading" a tier 6 implicit does nothing, the favourable outcome is 5/5.'
     approximate: true
     approximate_reason: "One player sample of 25 uses (6/4); Craft of Exile's code agrees, no other source states the edge."
+    page_statement: "An Orb of Conflict that is asked to raise an implicit already at the top tier does nothing to it, and the other implicit is still lowered by one."
+    page_source: "one player sample of 25 uses; Craft of Exile's code agrees"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -232,6 +244,8 @@ rules:
     quote: "AvoidShockEldritchImplicitUniquePresence1 ... spawn_weights: no_tier_6_eldritch_implicit 0, boots 0, default 0"
     approximate: true
     approximate_reason: "No source says whether the game keeps a Presence variant lowered to a grade where it has no weight, or draws another mod; the model keeps the mod the data holds."
+    page_statement: "An Orb of Conflict moves an implicit to the mod of the same kind one grade away, even where no Ember could draw that mod."
+    page_source: "the game data; no source says whether the game keeps such a mod or draws another"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 

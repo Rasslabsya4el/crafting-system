@@ -877,5 +877,17 @@ def test_the_buy_and_restart_titles_name_a_shared_base_in_words_and_never_by_its
     plan = dataclasses.replace(inp.plan, start_price=StartPrice(key, 6.0, "trade-api"))
     section = build_section(dataclasses.replace(inp, plan=plan), data)
 
-    assert section.rows[0].title == f"Buy {base.name} (a belt), normal, item level 80"
+    assert section.rows[0].title == f"Buy {base.name} (item class Belt), normal, item level 80"
     assert plan.start_price.name == key
+
+
+def test_every_approximate_claim_the_plan_reads_has_its_line_on_the_goal_card_of_the_page(r12_plan):
+    """OR-23 (#553): the claims of `approximate_inputs(plan)` are the lines of the goal card, each as its statement and its source."""
+    from crafting_system.cli._marking import approximate_inputs, approximate_page_lines
+
+    read = approximate_inputs(r12_plan, r12_plan.view_policy, DATA)
+    card = {field.label: [line.text for line in field.lines] for field in build_section(route_input(r12_plan), DATA).goal.fields}
+
+    assert read, "the Harvest reforge of R12 reads an approximate claim"
+    assert card["Approximate inputs"] == approximate_page_lines(read)
+    assert all(" Source: " in line and "harvest_reforge." not in line for line in card["Approximate inputs"])

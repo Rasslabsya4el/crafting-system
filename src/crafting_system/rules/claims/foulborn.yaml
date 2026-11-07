@@ -11,6 +11,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: 'The case of an item with 0 strands rests on the wiki''s list from a private test; the emulator rates the orb at 100 and keeps other tiers at 8, 10, 12, 14 and 15 tiers (research #273 and #271 section 5).'
+    page_statement: "A Foulborn Augmentation, Regal or Exalted Orb draws like its plain version, but sees only the best half of the tiers of each mod type; the case of an item with no memory strands is the least certain."
+    page_source: "the wiki's list from a private test; Craft of Exile's emulator differs at several tier counts"
 
   - id: foulborn.on_stranded_item
     statement: 'On an item with s >= 1 strands a Foulborn orb cuts as if the item had s + 30 strands: denominator 2.5 (s + 30) + 147.5 in `rollable_tiers`. The cut is made before the orb spends its strands. The author believes it from tests of Foulborn Augmentation and Regal on both sides of several breakpoints; the Foulborn Exalted Orb is not tested by him. 491 Foulborn rows of his raw sheet fit. The sheet fit (claim foulborn.bonus_is_added_to_the_strand_denominator) shows the bonus is added to the denominator, not the larger of two cuts.'
@@ -35,6 +37,8 @@ rules:
       combines_with_strands: sum
     approximate: true
     approximate_reason: 75 is the largest bonus the data allow, with the post's statement; the cut on an item with no strands is open.
+    page_statement: "A Foulborn orb used on an item with memory strands adds a fixed bonus to the rating that decides which tiers it sees; the case of an item with no strands is open."
+    page_source: "one player sheet of 491 Foulborn crafts and the post that goes with it"
 
   - id: foulborn.zero_strand_cut_matches_eleven_strands
     statement: 'The cut of a Foulborn orb on its own is the cut of about 11 strands: the first author of the strands post saw that the tier restriction of Foulborn currency "exactly matched" that of 10 to 11 strands, and 11 strands is the denominator 175 (= 100 + 75) of the formula. With D = 175 the kept tiers for N = 1..13 eligible tiers are the wiki''s list 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7. The sentence does not say that the item he compared had no strands (it reads as Foulborn alone, since an item with strands would add to them); the reading for a 0-strand item is mine. The crafting AMA''s cluster-jewel advice (jewels carry no strands: "cull 1/2 (mid ilvl) or 1/3 (high ilvl)" of three tiers) fits D = 175 at 2 and 3 tiers but also fits the emulator''s rating of 100, so it does not separate the two. His sheet has no Foulborn row on a 0-strand item.'
@@ -45,6 +49,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: 'The author shows no cells for the 0-strand case, and the emulator rates Foulborn at 100 with other rounding, so its list differs from the wiki''s at 8, 10, 12, 14 and 15 tiers (in-game list #182).'
+    page_statement: "A Foulborn orb used on an item with no memory strands cuts the tiers as an item with about 11 strands would."
+    page_source: "the strands post's author saw an exact match with 10 to 11 strands; the author shows no 0-strand cells and the emulator differs from the wiki's list"
 
   # --- What a Foulborn orb spends, and where it comes from ---
   - id: foulborn.spend_ranges
@@ -74,6 +80,8 @@ rules:
     - 66
     approximate: true
     approximate_reason: 'Only the emulator''s table gives the row and the sheet''s indexing is an inference; PoEDB''s single figure 0-28 disagrees and nobody has tested the orb (in-game list #182).'
+    page_statement: "A Foulborn Exalted Orb spends a random number of memory strands up to a ceiling that grows with the number of mods the item has."
+    page_source: "Craft of Exile's emulator table; PoEDB's single figure disagrees and nobody has tested the orb"
 
   - id: foulborn.availability
     statement: The three Foulborn orbs exist since 3.27.0 (drop level 68, 68, 80) and come only from the Genesis Tree, birthed from a Lavish Wombgift.

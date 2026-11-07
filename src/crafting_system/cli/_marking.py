@@ -18,7 +18,6 @@ figure that looks like them. The certified interval of the mean is the only cert
 """
 
 import math
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
@@ -123,7 +122,7 @@ def is_jewel(data: GameData, base_id: str) -> bool:
 
 @dataclass(frozen=True)
 class ApproximateInput:
-    """A claim marked `approximate` that an action of the policy reads, with the reason it is marked.
+    """A claim marked `approximate` that an action of the policy reads, with the reason it is marked and what a person reads of it.
 
     `interval` is the claim's own spread where the answer carries one (ADR-0028, ticket #221): the low, the point the plan uses
     and the high of a cost, the grid of an exponent, the difference between two tables; `words` says it in plain words. Both
@@ -134,6 +133,8 @@ class ApproximateInput:
     reason: str
     interval: Mapping[str, object] | None = None
     words: str = ""
+    statement: str = ""  # what the page and the text report say is approximate, in a player's words (`Rule.page_statement`, #553)
+    source: str = ""  # the kind of evidence, in plain words (`Rule.page_source`)
 
 
 # the claims whose spread the answer shows: value keys of (point, low, high) and the unit in plain words
@@ -218,7 +219,7 @@ def approximate_inputs_of(plan: Plan, actions, data: GameData) -> tuple[Approxim
         if not rule.approximate:
             continue
         spread = claim_interval(rule)
-        found.append(ApproximateInput(rule.id, rule.approximate_reason, *(spread or (None, ""))))
+        found.append(ApproximateInput(rule.id, rule.approximate_reason, *(spread or (None, "")), rule.page_statement, rule.page_source))
     return tuple(found)
 
 
@@ -227,35 +228,30 @@ def approximate_lines(inputs: tuple[ApproximateInput, ...]) -> list[str]:
     if not inputs:
         return []
     lines = [APPROXIMATE_HEADING]
-    for item in inputs:
-        lines.append(f"  {item.claim}: {item.reason}")
-        if item.words:
-            lines.append(f"      spread: {item.words}")
+    for text, words in dict.fromkeys((approximate_statement(item), item.words) for item in inputs):  # a text said twice is said once
+        lines.append(f"  {text}")
+        if words:
+            lines.append(f"      spread: {words}")
     return lines
 
 
-_REFERENCE_NOTE = re.compile(r"\s*\([^()]*(?:#\d+|ADR-\d+)[^()]*\)")  # "(in-game list #182, check 1)", "(research #273 and #271 section 5)"
-_BARE_TICKET = re.compile(r"\s*#\d+")
-_BEFORE_PUNCTUATION = re.compile(r"\s+([.,;:])")
+def approximate_statement(item: ApproximateInput) -> str:
+    """What a person reads of one approximate input: the claim's plain statement and its source (#553, #481).
 
-
-def plain_reason(reason: str) -> str:
-    """A claim's reason as a page says it: the same words with the references to tickets and decision records taken out (#553, #481).
-
-    The registry keeps them in the reason (they trace the claim for the people who maintain it); the owner who reads the page is
-    not one of them. A parenthesis that holds a reference goes whole, and a bare `#182` goes alone ("on the owner's in-game list").
+    Never the claim's id and never its `reason`: the id and the reason are for the JSON answer and the people who maintain the claim.
+    The statement and the source are written for every approximate claim of the registry (`page_statement`, `page_source`).
     """
-    text = _BARE_TICKET.sub("", _REFERENCE_NOTE.sub("", reason))
-    return _BEFORE_PUNCTUATION.sub(r"\1", text).strip()
+    return f"{item.statement} Source: {item.source}."
 
 
 def approximate_page_line(item: ApproximateInput) -> str:
-    """The line a page prints for one approximate input: its plain reason, which says what is unsettled and which source says what, then its spread.
+    """The line a page prints for one approximate input: its statement, its source, then its spread when the claim has one."""
+    return approximate_statement(item) + (f" Spread: {item.words}." if item.words else "")
 
-    Never the claim's id (#553, #481): the id is for the JSON answer and the text report, which tools read. The reason is the registry's one
-    plain line of the claim (`approximate_reason`), so the page says the claim in words and names its source in them.
-    """
-    return plain_reason(item.reason) + (f" Spread: {item.words}." if item.words else "")
+
+def approximate_page_lines(inputs: tuple[ApproximateInput, ...]) -> list[str]:
+    """The page lines of the inputs, one line a text: two claims that say the same thing to a person are said once."""
+    return list(dict.fromkeys(approximate_page_line(item) for item in inputs))
 
 
 def approximate_inputs_document(inputs: tuple[ApproximateInput, ...]) -> list[dict]:

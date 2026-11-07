@@ -69,6 +69,8 @@ rules:
     quote: "craftDetail.add=poec_simRollAffix(null,null,\"suffix\",null,1,!0,!1,!1,!1,!1,!1,null,!1)"
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives how a side swap draws the added mod."
+    page_statement: "A beast's side swap adds a mod drawn by weight from the pool of its side, like an Exalted Orb, with the level cap of the beast."
+    page_source: "Craft of Exile's code only"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -79,6 +81,8 @@ rules:
     quote: "craftDetail.rem=poec_simRemoveAffix(null,\"prefix\",null,!0,!1,!1,!1,!1,null)"
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives how a side swap picks the removed mod."
+    page_statement: "A beast's side swap removes one mod of the other side, every non-fractured mod equally likely."
+    page_source: "Craft of Exile's code only"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -97,6 +101,8 @@ rules:
     quote: "No prefix to remove"
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives this refusal; the wiki does not say."
+    page_statement: "A beast's side swap cannot be used when the side it takes from holds no mod it may remove."
+    page_source: "Craft of Exile's code only; the wiki does not say"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -115,6 +121,8 @@ rules:
     quote: "Odds: **uniform among the allowed metamods** (main chat, marked approximate)."
     approximate: true
     approximate_reason: "No source gives how often the Matron adds each metamod when several are allowed; uniform is the default of grill B2."
+    page_statement: "When several metamods are allowed, Wild Bristle Matron adds each of them equally often."
+    page_source: "no source gives counts; the planner's own default"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -164,6 +172,8 @@ rules:
     quote: "No space to add aspect"
     approximate: true
     approximate_reason: "Only Craft of Exile's code and player reports give when an aspect craft is refused."
+    page_statement: "An aspect craft is refused on an item with no open suffix and on an item that already holds an aspect."
+    page_source: "Craft of Exile's code and player reports"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -193,5 +203,7 @@ rules:
     quote: "**Which mods are fractured is uniform** (main chat, marked approximate)."
     approximate: true
     approximate_reason: "No source says which mods a Talisman fracture takes; uniform, as the Fracturing Orb, is the default of grill B2."
+    page_statement: "A Talisman fracture takes any explicit mod with equal chance, like a Fracturing Orb."
+    page_source: "no source says; the planner copies the Fracturing Orb"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
