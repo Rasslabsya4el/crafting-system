@@ -473,11 +473,12 @@ def check_no_hidden_step(page: Page) -> list[Fault]:
 
 def check_bought_item_not_empty(page: Page) -> list[Fault]:
     """OR-17: the item after a "Buy ..." step is never drawn empty: a slot that is not the wanted mod reads "any mod or empty",
-    not "empty" (the R10 page the owner rejected drew the bought boots empty)."""
+    not "empty" (the R10 page the owner rejected drew the bought boots empty). A bought Normal base has no mods, so it is empty
+    and nothing is hidden (R04 and R14 buy one)."""
     faults = []
     for route in page.routes:
         for step in route.steps:
-            if re.match(r"Buy\b", step.title) and step.after is not None:
+            if re.match(r"Buy\b", step.title) and step.after is not None and step.after.rarity != "Normal":
                 empties = [slot for slot in step.after.slots if slot.tone == "empty"]
                 if empties:
                     faults.append(_fault("OR-17", check_bought_item_not_empty, f"step {step.number} ({step.title})", f"the bought item is drawn with {len(empties)} empty slot(s)"))
@@ -663,12 +664,19 @@ def check_tier_lines(page: Page) -> list[Fault]:
     return faults
 
 
+_ADDS_NO_TIERED_MOD = re.compile(r"^(Orb of Annulment|Annulment Orb|Orb of Fracturing|Fracturing Orb|Orb of Scouring|Scouring Orb|Bench ?craft|Restart|Remove)", re.I)
+
+
 def check_tier_step_has_tier_line(page: Page) -> list[Fault]:
     """OR-31: a step that names a goal mod and draws it by chance (a "Chance per use") shows "Tier chances", not only whether the
-    requirement is met (R04's check of the published odds gave two numbers)."""
+    requirement is met (R04's check of the published odds gave two numbers). The rule is about a step that can add a mod of a wanted
+    family, so an action that adds no mod to spawn by tier (an Annulment, a Fracturing Orb, a Scouring Orb, a bench craft, a restart)
+    is not asked for one."""
     faults = []
     for route in page.routes:
         for step in route.steps:
+            if _ADDS_NO_TIERED_MOD.match(step.title):
+                continue
             wants = [line for line in step.lines("Goal") if "crafted" not in line.text and re.search(r"\bT\d+\b", line.text)]
             if wants and step.has("Chance per use") and not step.has("Tier chances"):
                 faults.append(_fault("OR-31", check_tier_step_has_tier_line, f"step {step.number} ({step.title})", "the step can add a wanted mod and shows no 'Tier chances'"))

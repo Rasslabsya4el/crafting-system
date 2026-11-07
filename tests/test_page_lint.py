@@ -180,7 +180,10 @@ fixtures(
 fixtures(
     pl.check_bought_item_not_empty,
     counter={"R10 as the owner rejected it: the bought boots drawn empty": page(route(goal(), step(1, "Buy Sorcerer Boots, item level 84", after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), EMPTY, EMPTY), suffixes=(EMPTY, EMPTY, EMPTY)))))},
-    example={"R10 as accepted: any mod or empty for the rest": page(route(goal(), bought))},
+    example={
+        "R10 as accepted: any mod or empty for the rest": page(route(goal(), bought)),
+        "R04, R14: a bought Normal base has no mods to hide": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)))),
+    },
 )
 
 regal = ("Regal Orb", ("Goal", "+(130-144) to maximum Life · T1"), ("Accepts", "other mods: any"))
@@ -253,6 +256,7 @@ fixtures(
     counter={"R04: the Exalted Orb has a goal and a chance and only that": page(route(goal(), step(1, "Exalted Orb", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "13%"))))},
     example={
         "the step shows the chance of each tier": page(route(goal(), *TWO_ACTIONS)),
+        "an Annulment or a Fracturing Orb adds no mod, so no tier to show": page(route(goal(), step(1, "Orb of Annulment", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "≈25%")), step(2, "Fracturing Orb", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "≈25%")))),
         "a bench craft has no chance to show": page(route(goal(), step(1, "Benchcraft: +# to maximum Life", ("Goal", "+# to maximum Life · crafted"), ("Cost per use", "1 c"), after=item(suffixes=(slot("+# to maximum Life", "c", "crafted"), ANY, ANY))))),
     },
 )

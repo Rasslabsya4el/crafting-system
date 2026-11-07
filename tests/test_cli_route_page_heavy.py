@@ -207,13 +207,19 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 # judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
 # a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
 
-KNOWN_REAL: dict[tuple[str, str], int] = {}  # (route, check) -> the issue that holds the fault
+KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault
+    ("R04", "check_no_internal_names"): 553,  # "Penetrating Arrow Quiver [QuiverNew5]" in step 1 and step 5; no rule says yet (decision issue)
+    ("R14", "check_no_hidden_step"): 569,  # step 12: a Normal card is Rare after a bench craft
+}
 JUDGES = (*page_lint.CHECKS, page_lint.check_no_internal_names)
 
 
 @pytest.fixture(scope="module")
 def page_faults(section, route_id):
-    page = page_lint.read_page(render_page(Page(route_id, (section,))))
+    html = render_page(Page(route_id, (section,)))
+    if os.environ.get("OUT_DIR"):  # a heavy run uploads what is written there: the page itself, to read a fault the lint names
+        (Path(os.environ["OUT_DIR"]) / f"page_{route_id}.html").write_text(html, encoding="utf-8")
+    page = page_lint.read_page(html)
     assert page.routes and page.routes[0].steps, "the lint read no step from the page"
     return {check.__name__: check(page) for check in JUDGES}
 
