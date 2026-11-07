@@ -28,7 +28,7 @@ from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.abstraction._pattern import PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats
 from crafting_system.solver import PackedBuilder, solve_packed
 
-from ._offer_floor import OfferFloors
+from ._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
 from ._offers import BuyStartItem, PricedOffer
 
 FAKE = -1  # the tag of the floor action
@@ -196,14 +196,10 @@ def _tip_floor(priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], fl
 def _floor_of(floors: OfferFloors, outside: list[int], priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], float | None]:
     """The floor action of a key: the least floor of the offers outside the model there, or of all the offers when the key is a tip."""
     names = range(len(priced))
-    table = {
-        True: (floors.floor(outside, True), floors.floor(names, True)),
-        False: (floors.floor(outside, False), floors.floor(names, False)),
-    }
+    table = {klass: (floors.floor(outside, klass), floors.floor(names, klass)) for klass in (OTHER, INSIDE, OUTSIDE)}
 
     def floor(key: PatternKey, expanded: bool) -> float | None:
-        shaped = floors.shaped(key.flags, key.fractured, key.status)
-        cost = table[shaped][0 if expanded else 1]
+        cost = table[floors.klass(key.flags, key.fractured, key.status)][0 if expanded else 1]
         return None if cost == float("inf") else cost
 
     return floor
@@ -231,17 +227,17 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
     binding = fake < best * (1.0 - BINDING)
     if not binding[: len(model.keys)].any():
         return []
-    limit = {True: None, False: None}
+    limit: dict[int, float | None] = {OTHER: None, INSIDE: None, OUTSIDE: None}
     for k in np.flatnonzero(binding[: len(model.keys)]).tolist():
         key = model.keys[k]
         if not model.expanded[k]:
             continue
-        shaped = floors.shaped(key.flags, key.fractured, key.status)
+        klass = floors.klass(key.flags, key.fractured, key.status)
         bound = float(best[k])
-        limit[shaped] = bound if limit[shaped] is None else max(limit[shaped], bound)
+        limit[klass] = bound if limit[klass] is None else max(limit[klass], bound)
     found: list[tuple[float, int]] = []
     for position in outside:
-        low = floors.needed(position, limit[True], limit[False])
+        low = floors.needed(position, limit)
         if low is not None:
             found.append((low, position))
     found.sort()

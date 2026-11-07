@@ -7,18 +7,22 @@ two numbers, and the proof that they are a floor of the cost of the offers it le
 
 For an offer `a` and a state `s` outside `E` (every necessary leaf of the goal that is open at the start is PASSING) that has the flags and the
 fractured mods of the start, one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
-with the same shape (the claim and its proof are in `_bound_prune`: Wald's identity over the number of uses). So
+with the same shape (the claim and its proof are in `_bound_prune`: Wald's identity over the number of uses). So, with three classes of states,
 
-    Q*(s, a) >= c(a) + (1 - pbar(a)) rho        for s outside E with the start's shape (a "shaped" state),
-    Q*(s, a) >= c(a)                            for every state (costs are not negative),
-    V*(s)    >= rho                             for a shaped state, V*(s) >= 0 for every state.
+    class OUTSIDE (outside E, the start's shape):   Q*(s, a) >= c(a) + (1 - pbar(a)) rho,  V*(s) >= rho,
+    class INSIDE  (in E, the start's shape):        Q*(s, a) >= c(a) + (1 - pbar(a)) rho  for an *erasing reroll* `a` (its result does not depend on the state
+                                                    but through the flags and the fractured mods, so it lands in E with the same chance as from outside),
+                                                    Q*(s, a) >= c(a) for any other offer (a craft from a state in E may stay in E),
+    class OTHER   (any other shape):                Q*(s, a) >= c(a),
+
+and `V*(s) >= 0` everywhere (costs are not negative).
 
 An offer that fractures, changes the flags or reads the item's implicits, quality or offer has `pbar = 1`: its floor is its cost. The one thing taken
 on the contract of `Reads` and not checked is the assumption of `_bound_prune` (2): an offer the game refuses on the bare item of the start's shape
 is refused at every state of that shape; it only moves `rho` (the refused offers are not in the minimum that makes `rho`). The floors of the offers
 themselves treat a refused offer as any other, at its cost.
 
-`OfferFloors.lower(position, shaped)` is the floor of an offer in a class of states, and `OfferFloors.needed` says whether an offer outside the model
+`OfferFloors.lower(position, klass)` is the floor of an offer in a class of states, and `OfferFloors.needed` says whether an offer outside the model
 could lower the value of a key whose model value is `limit` (the test of the certificate of `_bound_prune`, level by level, so that the exact chance of a
 reroll, which is an exact distribution, is computed only for an offer whose looser floors did not already rule it out).
 """
@@ -43,6 +47,9 @@ from ._bound_prune import (
     ZERO,
 )
 from ._offers import PricedOffer
+
+
+OTHER, INSIDE, OUTSIDE = 0, 1, 2  # the classes of states a floor is stated for (see the module text)
 
 
 class OfferFloors:
@@ -77,24 +84,24 @@ class OfferFloors:
 
     # ---- the classes of states ------------------------------------------------------------------------------------------
 
-    def shaped(self, flags, fractured, status: tuple) -> bool:
-        """Whether a state with these flags, fractured mods and status is outside `E` and has the start's shape: the class `rho` and `pbar` hold in."""
+    def klass(self, flags, fractured, status: tuple) -> int:
+        """The class of a state with these flags, fractured mods and status: `OUTSIDE` (outside `E`, the start's shape), `INSIDE` (in `E`, the start's shape) or `OTHER`."""
         if not self.chosen or (flags, fractured) != self.shape:
-            return False
-        return not all(status[index] is Status.PASSING for index in self.chosen)
+            return OTHER
+        return INSIDE if all(status[index] is Status.PASSING for index in self.chosen) else OUTSIDE
 
     # ---- the floors -----------------------------------------------------------------------------------------------------
 
-    def lower(self, position: int, shaped: bool) -> float:
-        """A floor of `Q*(s, a)` for the offer at `position` and a state of the class (never above the exact cost)."""
+    def lower(self, position: int, klass: int) -> float:
+        """A floor of `Q*(s, a)` for the offer at `position` and a state of the class `klass` (never above the exact cost)."""
         entry = self.entries[position]
-        if not shaped or entry.pbar == ONE:
+        if entry.pbar == ONE or klass == OTHER or (klass == INSIDE and entry.kind != REROLL):
             return entry.cost
         return entry.cost + float(1 - entry.pbar) * self.rho
 
-    def floor(self, positions, shaped: bool) -> float:
+    def floor(self, positions, klass: int) -> float:
         """The least floor over `positions` (infinity for none)."""
-        return min((self.lower(position, shaped) for position in positions), default=math.inf)
+        return min((self.lower(position, klass) for position in positions), default=math.inf)
 
     def initial(self) -> list[int]:
         """The offers the model starts with: the restart, the crafts and the `SMALL_START` rerolls of least cost / pbar (the cheapest offers if none)."""
@@ -105,27 +112,29 @@ class OfferFloors:
             inside.update(entry.index for entry in sorted(self.entries, key=lambda entry: (entry.cost, entry.index))[:SMALL_START])
         return sorted(inside)
 
-    def needed(self, position: int, limit_shaped: float | None, limit_plain: float | None) -> float | None:
+    def needed(self, position: int, limits: dict[int, float | None]) -> float | None:
         """The floor that makes the offer at `position` worth building, or None when it cannot lower the value of any key it was asked about.
 
-        `limit_shaped` is the largest model value of a key in the class `shaped` that the model capped (None when none was), `limit_plain` that of the
-        other keys. The offer is needed when its floor in a class is not above the limit of the class. A reroll's floor in the class `shaped` is brought
-        from `pbar = 1` through the loose bound to the exact chance, a level at a time, and stops at the first level whose floor is above the limit.
+        `limits[klass]` is the largest model value of a key of that class that the model capped (None when none was). The offer is needed when its floor in a
+        class is not above the limit of the class. A reroll's floor is brought from `pbar = 1` through the loose bound to the exact chance, a level at a time,
+        and stops at the first level whose floor is above the limits.
         """
         entry = self.entries[position]
-        if limit_plain is not None and entry.cost * (1 - SLACK) <= limit_plain:
+        if limits[OTHER] is not None and entry.cost * (1 - SLACK) <= limits[OTHER]:
             return entry.cost
-        if limit_shaped is None:
-            return None
         for level in (0, 1, 2):
             if level and entry.kind == REROLL and entry.level < level:
                 self._raise(entry, level)
-            low = self.lower(position, True)
-            if low * (1 - SLACK) > limit_shaped:
+            found = [
+                (low, klass)
+                for klass in (INSIDE, OUTSIDE)
+                if limits[klass] is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]
+            ]
+            if not found:
                 return None
             if entry.kind != REROLL or entry.level >= 2:
-                return low
-        return self.lower(position, True)
+                return min(low for low, _ in found)
+        return min(low for low, _ in found)
 
 
 __all__ = ["OfferFloors"]

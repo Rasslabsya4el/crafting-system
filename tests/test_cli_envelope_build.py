@@ -27,7 +27,9 @@ from crafting_system.cli._envelope import Net, NoPolicy
 from crafting_system.cli import _envelope_plan
 from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.cli._limits import limit_text
-from crafting_system.cli._offer_floor import OfferFloors
+from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
+from crafting_system.cli._offers import BuyStartItem
 from crafting_system.solver import ConvergenceError
 from crafting_system.cli._pattern_bound import pattern_lower_bound, pattern_offers
 
@@ -323,3 +325,52 @@ def test_a_model_built_in_floats_is_below_the_exact_model_by_about_1e_9(world):
     other = abstraction()
     plan = envelope_result(other, other.compress(START_ITEM), offers, bound=bound)  # the search on it still gives the full walk's mean
     assert plan.solution.values[start] == pytest.approx(world[3].solution.values[start], rel=TOLERANCE)
+
+
+def test_the_floor_of_an_offer_is_below_its_exact_q_at_every_state_of_the_world_in_every_class(world):
+    """`floors.lower(offer, klass of s) <= Q*(s, offer)` for each state of the walked graph and each offer the game allows there; `V*(s) >= rho` outside E."""
+    ab, start, offers, _, exact, _ = world
+    fresh = abstraction()
+    floors = OfferFloors(fresh, fresh.compress(START_ITEM), offers, START_ITEM)
+    assert floors.rho > 0 and floors.chosen
+    for entry in floors.entries:
+        if entry.kind == "reroll":
+            floors._raise(entry, 2)  # the exact chance, the tightest floor
+    seen = set()
+    for state, value in exact.items():
+        klass = floors.klass(state.flags, state.fractured, state.status)
+        seen.add(klass)
+        if ab.is_goal(state):
+            continue
+        if klass == OUTSIDE:
+            assert value >= floors.rho * (1 - 1e-9), (state, value, floors.rho)
+        for position, priced in enumerate(offers):
+            action = priced.offer.action
+            if isinstance(action, BuyStartItem):
+                if state == start:
+                    continue
+                successors = {start: Fraction(1)}
+            else:
+                try:
+                    successors = ab.kernel(state, action)
+                except (NotApplicableError, OutOfScopeError):
+                    continue
+            q = priced.cost + float(sum(chance * exact[successor] for successor, chance in successors.items()))
+            assert floors.lower(position, klass) <= q * (1 + 1e-9), (priced.label, klass, state)
+    assert seen == {OTHER, INSIDE, OUTSIDE} or seen == {INSIDE, OUTSIDE}, seen  # the world has states in E and outside it
+    assert floors.klass(start.flags, start.fractured, start.status) == OUTSIDE
+
+
+def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):
+    _, _, offers, _, _, _ = world
+    fresh = abstraction()
+    floors = OfferFloors(fresh, fresh.compress(START_ITEM), offers, START_ITEM)
+    position = next(p for p, e in enumerate(floors.entries) if e.kind == "reroll")
+    craft = next(p for p, e in enumerate(floors.entries) if e.kind == "craft")
+    for level in (1, 2):
+        floors._raise(floors.entries[position], level)
+    reroll = floors.entries[position]
+    assert reroll.pbar < 1
+    assert floors.lower(position, INSIDE) == floors.lower(position, OUTSIDE) > reroll.cost
+    assert floors.lower(craft, INSIDE) == floors.entries[craft].cost < floors.lower(craft, OUTSIDE)
+    assert floors.lower(position, OTHER) == reroll.cost
