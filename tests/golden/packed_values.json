@@ -9,9 +9,9 @@
    "error_bound": 4.792952823517993e-08
   },
   "R14": {
-   "mean_remaining": 5784.488692221155,
-   "states": 816153,
-   "error_bound": 6.256277795824161e-08
+   "mean_remaining": 5784.183570718071,
+   "states": 816152,
+   "error_bound": 2.2748255501525705e-08
   },
   "S02": {
    "mean_remaining": 33878.67277501651,
