@@ -18,6 +18,7 @@ figure that looks like them. The certified interval of the mean is the only cert
 """
 
 import math
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
@@ -231,6 +232,30 @@ def approximate_lines(inputs: tuple[ApproximateInput, ...]) -> list[str]:
         if item.words:
             lines.append(f"      spread: {item.words}")
     return lines
+
+
+_REFERENCE_NOTE = re.compile(r"\s*\([^()]*(?:#\d+|ADR-\d+)[^()]*\)")  # "(in-game list #182, check 1)", "(research #273 and #271 section 5)"
+_BARE_TICKET = re.compile(r"\s*#\d+")
+_BEFORE_PUNCTUATION = re.compile(r"\s+([.,;:])")
+
+
+def plain_reason(reason: str) -> str:
+    """A claim's reason as a page says it: the same words with the references to tickets and decision records taken out (#553, #481).
+
+    The registry keeps them in the reason (they trace the claim for the people who maintain it); the owner who reads the page is
+    not one of them. A parenthesis that holds a reference goes whole, and a bare `#182` goes alone ("on the owner's in-game list").
+    """
+    text = _BARE_TICKET.sub("", _REFERENCE_NOTE.sub("", reason))
+    return _BEFORE_PUNCTUATION.sub(r"\1", text).strip()
+
+
+def approximate_page_line(item: ApproximateInput) -> str:
+    """The line a page prints for one approximate input: its plain reason, which says what is unsettled and which source says what, then its spread.
+
+    Never the claim's id (#553, #481): the id is for the JSON answer and the text report, which tools read. The reason is the registry's one
+    plain line of the claim (`approximate_reason`), so the page says the claim in words and names its source in them.
+    """
+    return plain_reason(item.reason) + (f" Spread: {item.words}." if item.words else "")
 
 
 def approximate_inputs_document(inputs: tuple[ApproximateInput, ...]) -> list[dict]:

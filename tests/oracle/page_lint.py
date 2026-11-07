@@ -32,9 +32,9 @@ the registry of mechanics, which a page does not print; OR-26 (a defect is trace
 issues) are about how a change is made. This lint is the "independent check" OR-26 asks for, and a test holds OR-29 (every known
 fault of a page is an issue named in a strict `xfail`).
 
-`check_no_internal_names` is NOT in `CHECKS`: no rule of `docs/owner-rules.md` says that a page must show no internal id (a dotted
-claim id, a snake_case token, a `Metadata/` path, a ticket number, a base id in brackets), so the main chat has to decide whether one
-does (issue filed by #543). The check and its fixtures exist, so that the decision costs one line.
+One check keeps a decision of the main chat and not a rule of the file: `check_no_internal_names` (#481 plain words, decided in #553):
+no internal id on a page (a dotted claim id, a snake_case token, a `Metadata/` path, a ticket number, a base id in brackets). No rule of
+`docs/owner-rules.md` says it, so the file is not touched; its faults carry `#481 and #553` where the others carry an `OR-n`.
 
 The percentages a page prints are rounded (two significant digits, "≈0.93%"); a sum of them is judged within the rounding.
 """
@@ -578,7 +578,7 @@ def check_approximate_marked(page: Page) -> list[Fault]:
     faults = []
     for route in page.routes:
         for line in route.goal_lines("Approximate inputs"):
-            if not re.search(r":\s*\S", line.text) or len(line.text.split(":", 1)[-1].split()) < 3:
+            if len(line.text.split()) < 4:  # the line is the claim's plain reason (no id in front, #553): a bare name is not one
                 faults.append(_fault("OR-23", check_approximate_marked, "goal card", f"an approximate input with no reason: {line.text[:100]}"))
         for step in route.steps:
             for label, lines in step.fields:
@@ -702,7 +702,9 @@ def check_tier_step_has_tier_line(page: Page) -> list[Fault]:
     return faults
 
 
-# --- not in CHECKS: no rule says it --------------------------------------------------------------------------
+# --- the decision of #553, not a rule of the file ------------------------------------------------------------
+
+RULE_NO_INTERNAL_NAMES = "#481 and #553"
 
 _INTERNAL = [  # in this order: a dotted id is taken out of the text before its snake_case part is looked for
     ("a dotted claim id", re.compile(r"\b[a-z]+(?:_[a-z0-9]+)*\.[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")),
@@ -714,14 +716,15 @@ _INTERNAL = [  # in this order: a dotted id is taken out of the text before its 
 
 
 def check_no_internal_names(page: Page) -> list[Fault]:
-    """Candidate, no OR yet: no internal id on the page (a dotted claim id, a snake_case token, a `Metadata/` path, a ticket number,
-    a base id in brackets). Left out of `CHECKS` until the main chat decides which rule it is."""
+    """#481 and #553: no internal id on the page (a dotted claim id, a snake_case token, a `Metadata/` path, a ticket number, a base id in
+    brackets). The owner reads the page and is not a developer: a base is named by its game name, a claim by its plain statement and
+    its source; the id may stay in the JSON answer, which is for tools. A decision of the main chat under #481, not a rule of the file."""
     faults = []
     for route in page.routes:
         for where, text in _all_texts(route):
             for name, pattern in _INTERNAL:
                 for found in pattern.finditer(text):
-                    faults.append(Fault("none", "check_no_internal_names", where, f"{name}: {found.group(0)}"))
+                    faults.append(Fault(RULE_NO_INTERNAL_NAMES, "check_no_internal_names", where, f"{name}: {found.group(0)}"))
                 text = pattern.sub(" ", text)
     return faults
 
@@ -755,12 +758,13 @@ CHECKS: tuple[Callable[[Page], list[Fault]], ...] = (
     check_no_dropped_for_price,
     check_tier_lines,
     check_tier_step_has_tier_line,
+    check_no_internal_names,
 )
 
 
 def or_of(check: Callable[[Page], list[Fault]]) -> str:
-    """The rule a check keeps: the `OR-n` its docstring opens with."""
-    match = re.match(r"\s*(OR-\d+)", check.__doc__ or "")
+    """The rule a check keeps: the `OR-n` its docstring opens with (or the issues `#481 and #553` of the one decision that is no rule)."""
+    match = re.match(r"\s*(OR-\d+|#\d+ and #\d+)", check.__doc__ or "")
     if not match:
         raise ValueError(f"{check.__name__} cites no rule")
     return match.group(1)

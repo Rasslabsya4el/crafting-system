@@ -17,7 +17,7 @@ from crafting_system.cli._plan import PlanError, resolve_start_price
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.prices.trade_query import BuyMod, BuySpec, TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
-from crafting_system.targets import StartBuyError, buy_spec_of, parse_target, start_price_key
+from crafting_system.targets import StartBuyError, base_in_words, buy_spec_of, parse_target, plain_base_names, start_price_key
 from crafting_system.targets.start_buy import (
     TRADE_CATEGORY,
     differences_between_same_name_bases,
@@ -600,3 +600,45 @@ def test_the_price_given_on_the_command_line_is_kept_for_a_shared_name_that_diff
     data, target = shared_amulet(**DIFFERENT_IMPLICIT)
 
     assert resolve_start_price(data, target, ninja_prices(data, target), 3.0).chaos == 3.0
+
+
+# -- the page names a base by its game name, never its id (#553, #481) -------------------------------------------------------
+
+
+def test_two_bases_of_one_name_are_told_apart_in_words_by_class_then_implicit_then_pool():
+    assert base_in_words(DATA, AMULET) == ""
+    data, _ = shared_amulet(**DIFFERENT_CLASS)
+    assert base_in_words(data, TWIN) == "a ring" and base_in_words(data, AMULET) == "an amulet"
+    data, _ = shared_amulet(**DIFFERENT_IMPLICIT)
+    assert base_in_words(data, TWIN) == "the implicit +(25-40) to maximum Life"
+    assert base_in_words(data, AMULET) == "the implicit (20-30)% increased Mana Regeneration Rate"
+    data, _ = shared_amulet(**DIFFERENT_MOD_TAGS)
+    assert base_in_words(data, TWIN) == "a different pool of mods"
+    data, _ = shared_amulet(**DIFFERENT_CLASS, **DIFFERENT_IMPLICIT)
+    assert base_in_words(data, TWIN) == "a ring, the implicit +(25-40) to maximum Life"
+
+
+@pytest.mark.parametrize("fields", [{}, LEGACY_TAG], ids=["identical twin", "twin with a tag no mod reads"])
+def test_two_bases_that_play_alike_are_said_to_play_alike_and_not_told_by_an_id(fields):
+    data, _ = shared_amulet(**fields)
+
+    assert base_in_words(data, AMULET) == base_in_words(data, TWIN) == "one of 2 bases of this name that play alike"
+
+
+def test_the_price_name_of_a_shared_base_is_said_in_words_for_the_page_and_keeps_its_id_in_the_key():
+    data, target = shared_amulet(**DIFFERENT_IMPLICIT)
+    key = start_price_key(data, target)
+
+    assert key.startswith("Paua Amulet [Amulet1], ")  # the key of the price file and the JSON is not changed
+    shown = plain_base_names(data, key)
+    assert shown.startswith("Paua Amulet (the implicit (20-30)% increased Mana Regeneration Rate), item level 84-100")
+    assert "[" not in shown and "Amulet1" not in shown
+
+
+def test_the_vendor_line_of_a_shared_base_is_said_in_words_and_a_bracket_that_is_no_base_is_left():
+    data, _ = shared_amulet(**LEGACY_TAG)
+
+    assert plain_base_names(data, "Paua Amulet [Amulet1] (ilvl 86)") == "Paua Amulet (one of 2 bases of this name that play alike) (ilvl 86)"
+    assert plain_base_names(data, "Lion Pelt (ilvl 84)") == "Lion Pelt (ilvl 84)"
+    assert plain_base_names(data, "an item [not a base]") == "an item [not a base]"
+    assert plain_base_names(DATA, "Paua Amulet [Amulet1], item level 84") == "Paua Amulet, item level 84"  # a name one base has needs no words

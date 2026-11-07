@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from crafting_system.data import GameData
 from crafting_system.items.vendor_recipes import RECIPES, GemInput, Recipe, RecipeStep
-from crafting_system.targets import Target
+from crafting_system.targets import Target, plain_base_names
 
 from ._route_card import card_of_item, mod_text
 from ._start_options import ORB_OF_AUGMENTATION, base_kind, good_name
@@ -117,7 +117,7 @@ def first_step(candidate: StartCandidate, data: GameData, target: Target) -> Fir
     hand = []
     for index, (name, count, chaos, source) in enumerate(candidate.goods):
         role = _role(index, name)
-        what = f"{name}, a Normal base" if role == ROLE_BASE else _gem_words(gems) if role == ROLE_GEMS and gems is not None else name
+        what = f"{plain_base_names(data, name)}, a Normal base" if role == ROLE_BASE else _gem_words(gems) if role == ROLE_GEMS and gems is not None else name
         hand.append(HandGood(role, count, name, what, chaos, source))
     rounds = tuple(
         RecipeRound(step.number, _hand_of_round(step), mod_text(data.mods[step.mod_id]), step.tier_from_top) for step in steps

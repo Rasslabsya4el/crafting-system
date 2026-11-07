@@ -46,10 +46,11 @@ def test_the_lint_imports_the_standard_library_only():
 
 def test_every_check_cites_its_rule_and_the_faults_it_finds_carry_it():
     for check in pl.CHECKS:
-        match = re.match(r"\s*(OR-\d+)", check.__doc__ or "")
+        match = re.match(r"\s*(OR-\d+|#\d+ and #\d+)", check.__doc__ or "")
         assert match, f"{check.__name__} does not open its docstring with the rule it keeps"
         assert pl.or_of(check) == match.group(1)
-    assert {pl.or_of(check) for check in pl.CHECKS} <= {f"OR-{n}" for n in (13, 15, 16, 17, 18, 19, 20, 23, 31)}
+    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (13, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
+    assert pl.or_of(pl.check_no_internal_names) == "#481 and #553"  # a decision of the main chat, not a rule of docs/owner-rules.md (which is not touched)
 
 
 # --- the markup of the route page, for the fixtures --------------------------------------------------------------
@@ -224,7 +225,7 @@ fixtures(
     example={
         "V01: one chance, the mixture of the eight states": page(route(goal(), step(1, "Regal Orb", ("Chance per use", "≈0.93%")))),
         "a tier run is not a range of one chance": page(route(goal(), *TWO_ACTIONS)),
-        "a case with an approximate input prints what it does not know": page(route(goal(("Approximate inputs", "vendor.x_y: no source says whether the base type stays"), ), step(1, "Regal Orb", ("Chance per use", "≈0.88% to ≈0.95%")))),
+        "a case with an approximate input prints what it does not know": page(route(goal(("Approximate inputs", "No source says whether the base type stays"), ), step(1, "Regal Orb", ("Chance per use", "≈0.88% to ≈0.95%")))),
     },
 )
 
@@ -232,9 +233,9 @@ fixtures(
     pl.check_approximate_marked,
     counter={
         "a claim says APPROXIMATE in a step and is not listed": page(route(goal(), step(1, "Orb of Alchemy", ("Note", "APPROXIMATE: the weight is a guess")))),
-        "an approximate input with no reason": page(route(goal(("Approximate inputs", "vendor.result_keeps_the_input_base_type")), shared)),
+        "an approximate input with no reason": page(route(goal(("Approximate inputs", "The base type")), shared)),
     },
-    example={"V01: the vendor claims listed as Approximate inputs, each with its reason": page(route(goal(("Approximate inputs", "vendor.result_keeps_the_input_base_type: The wiki does not say whether the base type stays.")), shared))},
+    example={"V01: the vendor claims listed as Approximate inputs, each with its reason": page(route(goal(("Approximate inputs", "The wiki does not say whether the base type stays.")), shared))},
 )
 
 priced = "Not offered: Harvest Reforge Fire, Harvest Reforge Life (no price for Wild Crystallised Lifeforce). The plan is the cheapest among the actions that have a price."
@@ -271,10 +272,17 @@ fixtures(
 
 CANDIDATE = {
     "a dotted claim id": ("harvest_reforge.refused_when_no_tagged_mod_fits_a_free_slot: No source says.", "The wiki names no rule for support gems."),
-    "a Metadata/ path": ("Metadata/Items/Armours/Boots/BootsStr1", "Sorcerer Boots"),
+    "a Metadata/ path": ("Metadata/Items/Armours/Boots/BootsStr1", "The wiki names the Sorcerer Boots base only by its game name."),
     "a ticket number": ("see #543 for the reason", "see the audit for the reason"),
-    "a base id in brackets": ("Penetrating Arrow Quiver [QuiverNew5]", "Penetrating Arrow Quiver"),
+    "a base id in brackets": ("Penetrating Arrow Quiver [QuiverNew5]", "The page names the Penetrating Arrow Quiver by its game name."),
 }
+
+
+fixtures(
+    pl.check_no_internal_names,
+    counter={name: page(route(goal(("Approximate inputs", internal)), shared)) for name, (internal, _) in CANDIDATE.items()},
+    example={name: page(route(goal(("Approximate inputs", plain)), shared)) for name, (_, plain) in CANDIDATE.items()},
+)
 
 
 def test_every_check_has_a_counter_example_and_an_example():
@@ -299,15 +307,15 @@ def test_a_check_passes_on_the_example_of_its_rule_and_the_page_passes_the_whole
 
 
 @pytest.mark.parametrize("name", sorted(CANDIDATE))
-def test_the_candidate_check_of_internal_names_fails_on_an_internal_name_and_passes_on_words(name):
+def test_the_check_of_internal_names_fails_on_an_internal_name_and_passes_on_words(name):
     internal, plain = CANDIDATE[name]
     assert pl.check_no_internal_names(pl.read_page(page(route(goal(("Approximate inputs", internal)), shared)))), name
     assert pl.check_no_internal_names(pl.read_page(page(route(goal(("Approximate inputs", plain)), shared)))) == [], name
 
 
-def test_the_internal_names_check_is_a_candidate_with_no_rule_until_the_main_chat_decides():
-    assert pl.check_no_internal_names not in pl.CHECKS
-    assert {fault.or_id for fault in pl.check_no_internal_names(pl.read_page(page(route(goal(("Approximate inputs", "a.b_c_d: x")), shared))))} == {"none"}
+def test_the_check_of_internal_names_is_one_of_the_checks_and_cites_the_issues_of_its_decision():
+    assert pl.check_no_internal_names in pl.CHECKS
+    assert {fault.or_id for fault in pl.check_no_internal_names(pl.read_page(page(route(goal(("Approximate inputs", "a.b_c_d: x")), shared))))} == {"#481 and #553"}
 
 
 def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
@@ -323,15 +331,14 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
-ISSUE_NO_LIMITS, ISSUE_GROUP, ISSUE_UNPRICED, ISSUE_NAMES = 550, 551, 552, 553  # the issues #543 filed; OR-29
+ISSUE_NO_LIMITS, ISSUE_GROUP, ISSUE_UNPRICED = 550, 551, 552  # the issues #543 filed; OR-29
 
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it
     **{(name, "check_cut_guarantee"): ISSUE_NO_LIMITS for name in ("approximate_conflict", "bench_craft", "branch", "essence", "interval_tiny", "remove_crafted_then_chaos", "unveil_offer")},
     **{(name, "check_group_printed_once"): ISSUE_GROUP for name in ("real_r05", "real_r11")},
     **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
-    **{(name, "check_no_internal_names"): ISSUE_NAMES for name in ("given_route_differs", "interval_tiny", "r12_fixture", "r12_fixture_given_route", "v01_minion_helmet")},
 }
-JUDGES = (*pl.CHECKS, pl.check_no_internal_names)
+JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
 
 
 def golden_cases():

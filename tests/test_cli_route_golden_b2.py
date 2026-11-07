@@ -56,7 +56,7 @@ def test_golden_a_route_whose_action_reads_an_approximate_claim_names_it_on_the_
     html = render_page(Page("Test page", (build_section(route_input(plan), DATA, anchor="policy"),)))
 
     assert "Approximate inputs" in html
-    assert "conflict.odds: the odds are a fit to a sample of 525 uses" in html
+    assert "the odds are a fit to a sample of 525 uses" in html and "conflict.odds" not in html  # the page names the claim by its reason, not its id (#553)
     assert_golden("approximate_conflict", html)
 
 

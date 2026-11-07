@@ -64,10 +64,11 @@ from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
+from crafting_system.targets import plain_base_names
 
 from ._interval import IntervalAnswer
 from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
-from ._marking import approximate_inputs
+from ._marking import approximate_inputs, approximate_page_line
 from ._plan import GIVEN_SOURCE, Plan
 from ._report import UNRESOLVED, Report
 from ._route import RESTART, Route, RouteResult
@@ -505,11 +506,15 @@ class _View:
             lines.append(f"total {money(priced.cost)}")
         return lines
 
+    def plan_name(self, price_name: str | None) -> str | None:
+        """A price name as the page shows it: the base by its game name, never its id (#553, #481); words tell it from a base of its name."""
+        return None if price_name is None else plain_base_names(self.data, price_name)
+
     def title(self, action: Action) -> str:
         if action.label == RESTART:
             if self.first is not None:
                 return "Restart: make the start item at the vendor again"
-            name = self.plan.start_price.name
+            name = self.plan_name(self.plan.start_price.name)
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
         offer = self.plan.offer_of(action).offer
         action = offer.action
@@ -599,7 +604,7 @@ class _View:
             self.trade_field(),
             _plain("Cost per use", *cost),
         )
-        title = f"Buy {price.name}" if price.name else "Start item"
+        title = f"Buy {self.plan_name(price.name)}" if price.name else "Start item"
         return StepRow(1, title, fields, self.start_card(), self.anchor(1), final, price.chaos)
 
     def step_row(self, step: Step) -> StepRow:
@@ -669,12 +674,10 @@ class _View:
         success = risk.success_probability.value
         interval = self.inp.interval
         if interval is None:
-            approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
+            approximate = [approximate_page_line(item) for item in approximate_inputs(plan, self.inp.policy, self.data)]
             rule = ()
         else:  # the claims of every route the interval shows, each with its spread; the plan and its interval come first
-            approximate = [
-                f"{item.claim}: {item.reason}" + (f" Spread: {item.words}." if item.words else "") for item in interval.approximate_inputs
-            ]
+            approximate = [approximate_page_line(item) for item in interval.approximate_inputs]
             rule = tuple(_plain(label, *lines) for label, lines in interval.facts(divine))
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,

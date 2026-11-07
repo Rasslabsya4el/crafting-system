@@ -47,10 +47,12 @@ from .model import Target
 __all__ = [
     "TRADE_CATEGORY",
     "StartBuyError",
+    "base_in_words",
     "base_line_name",
     "buy_spec_of",
     "ninja_line_name",
     "is_name_only_source",
+    "plain_base_names",
     "item_level_window",
     "same_name_bases",
     "shared_name_refusal",
@@ -241,6 +243,46 @@ def differences_between_same_name_bases(data: GameData, base_id: str) -> tuple[s
     if len({frozenset(each.tags) & pool_tags for each in bases}) > 1:
         differing.append("mod tags")
     return tuple(differing)
+
+
+def base_in_words(data: GameData, base_id: str) -> str:
+    """What tells this base from the other bases that share its name, in words (#553, #481); empty where the name is not shared.
+
+    The item class where it differs, then the implicit it holds, then a different pool of mods; where the bases agree in all three they
+    are one item to a crafter (`shared_name_refusal`) and the words say that. Never the base id: that is for the price key and the JSON.
+    """
+    ids = same_name_bases(data, base_id)
+    if len(ids) < 2:
+        return ""
+    base = data.base_items[base_id]
+    differing = differences_between_same_name_bases(data, base_id)
+    parts = []
+    if "item class" in differing:
+        parts.append(f"{'an' if base.item_class[0] in 'AEIOU' else 'a'} {base.item_class.lower()}")
+    if "implicit mods" in differing:
+        texts = [_plain(data.mods[mod_id].text or "") for mod_id in base.implicits if data.mods[mod_id].text]
+        parts.append(f"the implicit {' and '.join(texts)}" if texts else "no implicit")
+    if "mod tags" in differing:
+        parts.append("a different pool of mods")
+    return ", ".join(parts) if parts else f"one of {len(ids)} bases of this name that play alike"
+
+
+_BASE_ID_IN_BRACKETS = re.compile(r" \[([A-Za-z][A-Za-z0-9_]*)\]")
+
+
+def plain_base_names(data: GameData, text: str) -> str:
+    """`text` with each base id in brackets (the form of a price key, `Two-Toned Boots [BootsAtlas1] (ilvl 86)`) said in words.
+
+    The page names a base by its game name; where two bases share the name the words of `base_in_words` follow it in parentheses. A
+    bracket that is not the tail of a base id is left as it is.
+    """
+
+    def said(found: re.Match[str]) -> str:
+        ids = [each for each in data.base_items if each.rsplit("/", 1)[-1] == found.group(1)]
+        words = base_in_words(data, ids[0]) if len(ids) == 1 else ""
+        return f" ({words})" if words else ""
+
+    return _BASE_ID_IN_BRACKETS.sub(said, text)
 
 
 def shared_name_refusal(data: GameData, base_id: str, source: str, what: str) -> str | None:

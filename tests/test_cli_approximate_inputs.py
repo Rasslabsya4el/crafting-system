@@ -8,8 +8,10 @@ table of the toy rules. The plan is made by hand like `route_view_support.hand_i
 import dataclasses
 import datetime
 import json
+from html import escape
 
 import pytest
+from oracle import page_lint
 from items_support import DATA, roll
 from route_view_support import ACTIONS, BELT, COLD_REQ, FRACTURED_COLD, LEVEL, LIFE, PRICES, START_NAME, belt
 
@@ -21,6 +23,8 @@ from crafting_system.cli._marking import (
     approximate_inputs,
     approximate_inputs_document,
     approximate_lines,
+    approximate_page_line,
+    plain_reason,
 )
 from crafting_system.cli._plan import Plan, StartPrice, leaf_labels, offer_action
 from crafting_system.cli._report import Report, build_report, policy_document, render_text
@@ -29,7 +33,7 @@ from crafting_system.cli._route_report import render_route_text, route_document
 from crafting_system.cli._route_view import RouteInput, build_section, route_input
 from crafting_system.prices import CHAOS_ORB
 from crafting_system.risk import evaluate
-from crafting_system.rules import Rule, SourceKind, get_rule, rule_by_id
+from crafting_system.rules import Rule, SourceKind, get_rule, load_registry, rule_by_id
 from crafting_system.solver import Solution
 from crafting_system.targets import StartKind, Target
 
@@ -58,6 +62,7 @@ RULES = {
 
 MARKED_LINE = "toy.marked: only Craft of Exile's code gives the count"
 UNTAKEN_LINE = f"toy.untaken: {UNTAKEN_REASON}"
+PAGE_LINE = "only Craft of Exile's code gives the count"  # the page prints the reason alone, never the claim's id (#553, #481)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -244,7 +249,7 @@ def fields_of(inp: RouteInput) -> dict[str, list[str]]:
 def test_the_goal_card_of_the_page_has_an_approximate_inputs_field_between_success_and_prices():
     fields = fields_of(route_input(toy_plan("Marked Chaos")))
 
-    assert fields["Approximate inputs"] == [MARKED_LINE]
+    assert fields["Approximate inputs"] == [PAGE_LINE]
     labels = list(fields)
     assert labels.index("Approximate inputs") == labels.index("Prices") - 1
     assert labels.index("9 runs in 10") < labels.index("Approximate inputs")
@@ -262,8 +267,8 @@ def test_the_planner_and_a_given_route_each_list_their_own_inputs_on_the_page():
     other = toy_plan("Untaken Chaos")
     given_inp = dataclasses.replace(planner, label="Given route: toy", policy=other.policy)
 
-    assert fields_of(planner)["Approximate inputs"] == [MARKED_LINE]
-    assert fields_of(given_inp)["Approximate inputs"] == [UNTAKEN_LINE]
+    assert fields_of(planner)["Approximate inputs"] == [PAGE_LINE]
+    assert fields_of(given_inp)["Approximate inputs"] == [UNTAKEN_REASON]
 
 
 def test_a_goal_card_with_no_marked_claim_has_no_such_field(monkeypatch):
@@ -283,4 +288,51 @@ def test_a_claim_marked_in_the_registry_reaches_the_report_through_a_real_action
     assert report.approximate_inputs == (ApproximateInput("chaos_orb.cost", reason),)
     assert f"  chaos_orb.cost: {reason}" in render_text(report).splitlines()
     assert policy_document(report)["approximate_inputs"] == [{"claim": "chaos_orb.cost", "reason": reason}]
-    assert fields_of(route_input(plan))["Approximate inputs"] == [f"chaos_orb.cost: {reason}"]
+    assert fields_of(route_input(plan))["Approximate inputs"] == [reason]
+
+
+# -- the page names no claim by its id (#553, #481) ----------------------------------------------------------------------
+
+
+def test_the_page_line_of_an_input_is_its_plain_reason_and_its_spread_and_never_its_id():
+    spread = ApproximateInput("recombinator.count_table", "Player measurements of the 3.25 guide.", {"kind": "alternative_table"}, "the guide's table is used")
+
+    assert approximate_page_line(MARKED) == "only Craft of Exile's code gives the count"
+    assert approximate_page_line(spread) == "Player measurements of the 3.25 guide. Spread: the guide's table is used."
+
+
+@pytest.mark.parametrize(
+    ("reason", "plain"),
+    [
+        ("The wiki gives no odds (in-game list #182, check 1).", "The wiki gives no odds."),
+        ("The author shows no cells for it (in-game list #182).", "The author shows no cells for it."),
+        ("A fit to 28 observations (research #273 and #271 section 5).", "A fit to 28 observations."),
+        ("Nothing says it; the check goes on the owner's in-game list #182.", "Nothing says it; the check goes on the owner's in-game list."),
+        ("The owner's choice (#94, answer 4b): \"used up\". Not rechecked.", "The owner's choice: \"used up\". Not rechecked."),
+        ("The roll is the simplest reading (ADR-0048).", "The roll is the simplest reading."),
+        ("Only a forum report, never opened.", "Only a forum report, never opened."),
+    ],
+)
+def test_the_references_to_tickets_and_records_are_taken_out_of_a_reason_for_the_page(reason, plain):
+    assert plain_reason(reason) == plain
+
+
+HTML = (
+    '<html><body><main><h1>t</h1><section id="policy"><div class="rw"><div class="cd tg"><h3>Route goal</h3><div class="f">'
+    '<div class="k">Approximate inputs</div><div class="vl ml"><div>%s</div></div></div></div></div><div class="rw"><div class="cd" id="s1"><h3>1. Regal Orb</h3>'
+    '<div class="f"><div class="k">Cost per use</div><div class="v ml"><div>1 c</div></div></div></div></div></section></main></body></html>'
+)
+
+
+def test_no_claim_of_the_registry_prints_an_internal_name_on_a_page():
+    """Every claim marked approximate reaches a page as its reason; the page lint's check for internal names finds none in any of them."""
+    marked = [rule for rule in load_registry().values() if rule.approximate]
+    assert len(marked) > 100
+
+    faults = []
+    for rule in marked:
+        line = approximate_page_line(ApproximateInput(rule.id, rule.approximate_reason))
+        shown = page_lint.read_page(HTML % escape(line))
+        faults += [f"{rule.id}: {fault}" for fault in page_lint.check_no_internal_names(shown)]
+        assert len(line.split()) >= 4, rule.id
+    assert faults == []
