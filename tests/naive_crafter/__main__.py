@@ -15,9 +15,9 @@ and prints the verdict on the mean and on each step with the pooled standard err
 """
 
 import argparse
+import datetime
 import json
 import sys
-import time
 from pathlib import Path
 from random import Random
 
@@ -58,8 +58,12 @@ def play_long(route_id: str, seed: int, runs: int | None, seconds: float | None,
     player = Player(world, route, judge)
     rng = Random(555_000 + seed)
     tally = t.Tally()
-    started = time.time()
-    while (runs is None or tally.n + tally.stuck < runs) and (seconds is None or time.time() - started < seconds):
+    started = datetime.datetime.now(datetime.UTC)
+
+    def elapsed() -> float:
+        return (datetime.datetime.now(datetime.UTC) - started).total_seconds()
+
+    while (runs is None or tally.n + tally.stuck < runs) and (seconds is None or elapsed() < seconds):
         play, gap = player.try_play(rng, MUTANT_USES if off else 50_000_000)
         if gap is None:
             tally.add(play)
@@ -69,7 +73,7 @@ def play_long(route_id: str, seed: int, runs: int | None, seconds: float | None,
                 raise SystemExit(f"{route_id}: a play of a route with a restart met a gap: {gap}")
             if off and kind == "mean":
                 break  # a mutated route that cannot finish is judged by that alone
-    document = {"route": route_id, "kind": kind, "seed": seed, "off": list(off), "seconds": round(time.time() - started, 1), "tally": tally.to_dict()}
+    document = {"route": route_id, "kind": kind, "seed": seed, "off": list(off), "seconds": round(elapsed(), 1), "tally": tally.to_dict()}
     out.mkdir(parents=True, exist_ok=True)
     path = out / f"naive-{file_stem(route_id)}-{seed}{''.join('-off-' + name for name in off)}.json"
     path.write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
