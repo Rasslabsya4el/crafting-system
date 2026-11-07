@@ -252,3 +252,20 @@ def test_a_simulated_craft_starts_from_the_listing_and_agrees_with_the_computed_
     assert plan.simulated_start.unopened and not aim.start_item.unopened
     check = verify(data, plan, runs=4000, seed=7)
     assert check.agrees, check.reason
+
+
+def test_the_bound_pruning_bounds_the_offers_on_the_opened_item_and_keeps_the_draw(monkeypatch):
+    """The pruning of many offers (R08, R09) sees the unopened start as the item it opens into: the same values as the unpruned solve."""
+    from crafting_system.cli import _plan
+
+    data = RARE
+    aim = target(data, rarity="rare", actions="chaos-orb", wanted=("ToyP3", "ToyS3"))
+    entries = prices(start_price_key(data, aim))
+    entries.prices["Chaos Orb"] = type(entries.prices["Orb of Alteration"])(1.0, "fixture")
+    whole = make_plan(data, aim, entries)
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
+    pruned = make_plan(data, aim, entries)
+
+    assert pruned.pruned is not None and not pruned.pruned.fell_back
+    assert DRAW_LABEL in {offer.label for offer in pruned.pruned.used}
+    assert pruned.solution.values[pruned.start] == pytest.approx(whole.solution.values[whole.start], rel=1e-9)

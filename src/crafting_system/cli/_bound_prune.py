@@ -220,19 +220,26 @@ def solve_pruned(
     *,
     rounds: int = 8,
     min_offers: int = 40,
+    shape: CompressedState | None = None,
 ) -> Pruned:
     """Solve the plan of `priced` from `start` on as few offers as the certificate allows; see the module text.
 
     `item` is the start item (the twin key is read on it). With fewer than `min_offers` offers nothing is
     left out but the twins (there is nothing to gain). Raises what `solve` raises when even the fallback fails.
     """
-    found = _run(abstraction, start, priced, item, rounds, min_offers, False)
+    found = _run(abstraction, start, priced, item, rounds, min_offers, False, shape)
     assert isinstance(found, Pruned)
     return found
 
 
 def starting_offers(
-    abstraction: Abstraction, start: CompressedState, priced: Sequence[PricedOffer], item: Item, *, min_offers: int = 40
+    abstraction: Abstraction,
+    start: CompressedState,
+    priced: Sequence[PricedOffer],
+    item: Item,
+    *,
+    min_offers: int = 40,
+    shape: CompressedState | None = None,
 ) -> list[PricedOffer]:
     """The offers `solve_pruned` solves first: the twins merged, then `restart`, the crafts and the best rerolls.
 
@@ -240,7 +247,7 @@ def starting_offers(
     budget does not pay for a pilot over thousands of fossil sets that the certificate then proves not needed.
     With fewer than `min_offers` offers it is all of them.
     """
-    found = _run(abstraction, start, priced, item, 0, min_offers, True)
+    found = _run(abstraction, start, priced, item, 0, min_offers, True, shape)
     assert not isinstance(found, Pruned)
     return found
 
@@ -253,8 +260,11 @@ def _run(
     rounds: int,
     min_offers: int,
     start_set_only: bool,
+    shape: CompressedState | None = None,
 ) -> "Pruned | list[PricedOffer]":
     from ._plan import _Model  # _plan imports this module
+
+    shape = start if shape is None else shape  # the item the offers are bounded on: the start itself, or the item it opens into (ADR-0064)
 
     if len(priced) < min_offers and start_set_only:
         return list(priced)
@@ -299,7 +309,7 @@ def _run(
         kinds[index] = (kind, named)
         if kind == CRAFT:
             crafts |= named
-    chosen = goal_set(goal, start, crafts)
+    chosen = goal_set(goal, shape, crafts)
     u_mods = frozenset().union(*(goal.leaves[index].mod_ids for index in chosen)) if chosen else frozenset()
     entries: list[_Entry] = []
     for index, offer in enumerate(remaining):
@@ -310,7 +320,7 @@ def _run(
         elif kind == CRAFT:
             pbar = ONE if named & u_mods else ZERO
         entries.append(_Entry(index, offer, kind, 0, pbar))
-    bare = replace(start, slots=())
+    bare = replace(shape, slots=())
     mark("classify")
 
     def raise_level(entry: _Entry, level: int) -> None:
@@ -365,7 +375,7 @@ def _run(
             return fallback(f"the solver could not converge on the reduced model ({problem})", spent)
         mark(f"solve {spent} ({len(offers)} offers, {len(solution.values)} states)")
         non_goal = [state for state in solution.values if not abstraction.is_goal(state)]
-        moved = [state for state in non_goal if state.flags != start.flags or state.fractured != start.fractured]
+        moved = [state for state in non_goal if not state.flags.unopened and (state.flags != shape.flags or state.fractured != shape.fractured)]
         if moved:
             return fallback("an offer moves the item to another shape (flags or fractured mods)", spent)
         if not _finite(solution.error_bound):
@@ -494,7 +504,7 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     is found when its bound is first needed (`raise_level`), because that needs the bare item.
     """
     action = offer.offer.action
-    if isinstance(action, BuyStartItem):
+    if isinstance(action, BuyStartItem) or action.opens_listing:  # both are always in the solve: the draw is the one action of the unopened start (ADR-0064)
         return RESTART_KIND, frozenset()
     reads = action.reads(data)
     if reads.item_state:

@@ -439,6 +439,7 @@ def make_plan(
         allow_inputs=False,
     )
     start = abstraction.compress(listing or target.start_item)
+    shape = abstraction.compress(target.start_item) if listing is not None else None  # the item the start opens into: what the pruning bounds the offers on (ADR-0064)
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
@@ -450,7 +451,7 @@ def make_plan(
             # The exact run solves a small set first and proves the rest not needed: it is forecast on that set, not on
             # a pilot over thousands of fossil sets. An approximate answer is made of all the offers, twins merged.
             merged, merged_twins = (tuple(each) for each in merge_twins(data, target.start_item, priced))
-            forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE))
+            forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape))
         decision = decide(abstraction, start, forecast, budget, rates)
         if decision.message:
             limits += (whole_search_limit(decision.message),)
@@ -480,7 +481,7 @@ def make_plan(
     packed = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
     if many and solver not in ("packed", "envelope"):
-        pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
+        pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
     else:
