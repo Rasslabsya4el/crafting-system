@@ -7,6 +7,7 @@ mean. A route that rerolls with a Chaos Orb until the mod is a geometric run: me
 that restarts is solved by hand on a two-leaf target. No test asserts a run time.
 """
 
+import dataclasses
 import math
 import textwrap
 from pathlib import Path
@@ -17,6 +18,7 @@ from cli_support import run as run_command
 from targets_support import DATA, EXAMPLES
 
 from crafting_system.actions import ChaosOrb
+from crafting_system.cli._limits import unpriced_limits
 from crafting_system.cli import RouteError, RouteResult, evaluate_route, load_route, make_plan, parse_route
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target, start_price_key
@@ -450,6 +452,17 @@ def test_an_action_dropped_for_lack_of_a_price_names_the_missing_price(target):
 
     assert message.startswith(f'route.yaml:2: rules[0].do: "{REFORGE}" has no price')
     assert "Primal Crystallised Lifeforce" in message
+
+
+def test_an_essence_that_no_price_source_lists_is_refused_in_a_route_without_a_blank_missing_price(plan):
+    """The limit of an essence priced by its own item has no `names`: the message says no source lists a price, not "missing ."."""
+    essence = "Shrieking Essence of Spite"
+    unpriced = dataclasses.replace(plan, limits=(*plan.limits, *unpriced_limits([(essence, (essence,), "essence")])))
+
+    message = error_of(f"rules:\n  - do: {essence}\n", unpriced)
+
+    assert message.startswith(f'route.yaml:2: rules[0].do: "{essence}" has no price: no source lists a price for it. ')
+    assert "missing ." not in message and "Price it or remove the rule" in message
 
 
 def test_a_restart_is_refused_for_a_given_start_item_and_the_message_says_why(target):

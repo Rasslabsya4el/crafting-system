@@ -264,7 +264,7 @@ def test_g17_the_packed_path_says_which_twins_it_left_out_as_the_bound_pruning_d
     packed = make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, solver="packed")
     pruned = pooled.exact
 
-    (left_out,) = [limit for limit in packed.limits if limit.what == "Not searched" and limit.why == "same outcome as a cheaper offer"]
+    (left_out,) = [limit for limit in packed.limits if limit.what == "Not searched" and limit.why == "same outcome as a cheaper action"]
     assert packed.packed is not None and pruned.pruned is not None
     assert left_out.labels == tuple(dropped for dropped, _ in twins)
     assert left_out in pruned.limits  # the same limit, in the same words, whichever solver answered
@@ -275,7 +275,7 @@ def test_g17_an_approximate_answer_says_which_twins_it_left_out_and_claims_only_
     seconds = pooled.seconds
     plan = planned(pooled, (seconds.first + seconds.coarse) / 2)
 
-    (left_out,) = [limit for limit in plan.limits if limit.why == "same outcome as a cheaper offer"]
+    (left_out,) = [limit for limit in plan.limits if limit.why == "same outcome as a cheaper action"]
     assert plan.approximation is not None
     assert left_out.labels == tuple(dropped for dropped, _ in merge_twins(pooled.data, pooled.target.start_item, plan.offers)[1])
     assert left_out.guarantee == "The plan is within the stated gap of the cheapest among the methods offered: a cheaper action does the same."

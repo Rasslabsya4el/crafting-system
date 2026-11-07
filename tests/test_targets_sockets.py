@@ -991,7 +991,7 @@ def test_the_plan_of_a_socket_target_is_refused_because_the_planner_would_ignore
 def test_the_refusal_of_a_socket_target_says_the_planner_cannot_plan_it_yet(r12_target):
     asked = dataclasses.replace(r12_target, sockets=SocketRequirement(6, 6, 2, 2, 2))
 
-    with pytest.raises(PlanError, match=r"cannot plan yet.*#228"):
+    with pytest.raises(PlanError, match=r"cannot plan yet.*sockets"):
         make_plan(FIXTURE_DATA, asked, price_file())
 
 

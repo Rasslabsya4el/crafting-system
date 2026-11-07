@@ -243,5 +243,5 @@ def test_the_start_item_key_list_names_the_enchantment():
 def test_a_target_with_an_enchantment_is_refused_by_the_planner_because_it_would_ignore_it():
     target = parse(f"enchantment:\n  any_of: [{LIFE}]\n")
 
-    with pytest.raises(PlanError, match=r"asks for an enchantment, which the planner cannot plan yet.*#242"):
+    with pytest.raises(PlanError, match=r"asks for an enchantment, which the planner cannot plan yet"):
         make_plan(DATA, target, price_file())

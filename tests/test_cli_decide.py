@@ -94,7 +94,7 @@ def test_a_level_with_no_forecast_is_tried():
 def test_an_estimate_that_could_not_be_made_means_the_exact_run():
     decision = choose(None, R_KERNEL, R_SOLVE, 60.0, levels=LEVELS)
 
-    assert decision.action == "exact" and "could not be forecast" in decision.message
+    assert decision.action == "exact" and "could not be estimated" in decision.message
 
 
 def test_an_action_that_is_not_block_invariant_leaves_no_level_so_a_small_query_is_exact_and_says_so():
@@ -112,7 +112,7 @@ def test_an_action_that_is_not_block_invariant_refuses_a_query_past_what_the_exa
 
     assert decision.action == "refused"
     assert decision.message.startswith("no approximate answer was possible (Annulment is not declared block-invariant). ")
-    assert "22,994,524 transitions" in decision.message and "not offered" in decision.message
+    assert "22,994,524 possible moves between states" in decision.message and "not available" in decision.message
     assert decision.levels == ()
 
 
@@ -131,10 +131,10 @@ def test_nothing_to_pool_is_said_as_such():
 
 
 def test_the_exact_run_is_offered_up_to_two_million_transitions_only():
-    assert "run again with --exact (2,000,000 transitions, predicted at about 30 s)" in exact_offer(EXACT_TRANSITIONS, 30.0)
+    assert "run again and ask for it (2,000,000 possible moves between states, predicted at about 30 s)" in exact_offer(EXACT_TRANSITIONS, 30.0)
     assert "predicted at about 10 min" in exact_offer(EXACT_TRANSITIONS, 600.0)
     over = exact_offer(EXACT_TRANSITIONS + 1, 90.0)
-    assert "not offered" in over and "2,000,000" in over and "smaller list of crafts" in over
+    assert "not available" in over and "2,000,000" in over and "shorter list of crafts" in over
 
 
 # --- the refusal reads the declarations ----------------------------------------------------------------------
@@ -264,7 +264,7 @@ def test_decide_runs_exact_when_the_pilot_cannot_count_the_actions(exact):
 
     decision = decide(ab, exact.start, regal, 0.0, Rates(1.0, 1.0))
 
-    assert decision.action == "exact" and "could not be forecast" in decision.message
+    assert decision.action == "exact" and "could not be estimated" in decision.message
 
 
 @dataclasses.dataclass(frozen=True)
@@ -341,4 +341,4 @@ def test_a_count_cut_short_is_never_taken_for_a_small_graph():
     refused = choose(cut, R_KERNEL, R_SOLVE, 60.0, levels=(), refusal="Annulment is not declared block-invariant")
 
     assert fits.action != "exact"  # the forecast of the part that was counted fits, the rest is unknown
-    assert refused.action == "refused" and "the count stopped at 300 transitions and the graph is larger" in refused.message
+    assert refused.action == "refused" and "the count stopped at 300 possible moves between states and the search is larger" in refused.message

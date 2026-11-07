@@ -370,22 +370,20 @@ def make_plan(
     if setting.on:
         raise PlanError(
             f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
-            " (batch B5, tickets #275 onward); the cut and the spend of strands are not built, so an answer would silently ignore them"
+            ": the cut and the spend of strands are not built, so an answer would silently ignore them"
         )
     if target.implicits or target.quality is not None:
         raise PlanError(
             "the target asks for implicits or quality, which the planner cannot plan yet"
-            " (batch B2, tickets #142 onward)"
         )
     if target.sockets is not None:
         raise PlanError(
             "the target asks for sockets, which the planner cannot plan yet"
-            " (batch B6, tickets #228 and #231 onward): the finish of sockets is not built, so an answer would silently ignore them"
+            ": the finish of sockets is not built, so an answer would silently ignore them"
         )
     if target.enchantment is not None:
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"
-            " (batch B7, ticket #242 onward)"
         )
     price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price)
     goal = Goal.from_target(target)
@@ -419,7 +417,7 @@ def make_plan(
     if axes:
         raise PlanError(
             f"an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading "
-            "of it with the interval yet (ticket #220)"
+            "of it with the interval yet"
         )
     abstraction = Abstraction(
         data,
@@ -550,8 +548,8 @@ def guessed_rate_limit(why: str) -> Limit:
     return Limit(
         _limits.SOLVE,
         "The time of the search was guessed",
-        why + ", so the forecast used a fixed speed",
-        "The answer's own guarantee does not depend on it: the forecast only chose between the exact run and an approximate one.",
+        why + ", so the size estimate used a fixed speed",
+        "The answer's own guarantee does not depend on it: the size estimate only chose between the exact run and an approximate one.",
     )
 
 
@@ -615,7 +613,7 @@ def lumped_limit(item_states: int, shown: int) -> Limit:
 
 def _packed_note(decision: Decision) -> str:
     """The plan's note for a query the decision refused and the large-graph solver answers exactly: why there is no approximation and what ran."""
-    size = "" if decision.transitions is None else f" (forecast: at least {decision.transitions:,} possible moves between states)"
+    size = "" if decision.transitions is None else f" (estimated at least {decision.transitions:,} possible moves between states)"
     return (
         f"No approximate answer was possible ({decision.why}), so the whole search ran: it is large{size} "
         "and takes minutes and several GB of memory."
@@ -652,7 +650,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
         return risk, (
             Limit(
                 _limits.RISK,
-                "Not computed: p50, p90, CVaR",
+                _limits.not_computed(*_limits.QUANTILES),
                 f"the plan can lead from one state to another in {moves:,} ways, more than the {RISK_QUANTILE_TRANSITIONS:,} the percentile "
                 "calculation can hold in memory",
                 "The odds, the mean and the variance are exact.",

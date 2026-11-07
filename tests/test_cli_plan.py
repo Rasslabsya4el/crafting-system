@@ -186,12 +186,12 @@ def test_the_offers_priced_by_their_own_item_are_one_limit_for_each_kind_and_the
     )
 
     limits = unpriced_limits(dropped)
-    lines = [line for line in render_text(build_report(dataclasses.replace(plan, limits=limits), DATA)).splitlines() if "have no price" in line or "no price for" in line]
+    lines = [line for line in render_text(build_report(dataclasses.replace(plan, limits=limits), DATA)).splitlines() if "have no price" in line or "has no price" in line or "no price for" in line]
 
     claim = "The plan is the cheapest among the actions that have a price. A price for these could make it cheaper."
     assert lines == [
         "  These essences have no price, 4 in all: Screaming Essence of Greed, Shrieking Essence of Spite, Wailing Essence of Hatred, Deafening Essence of Zeal. " + claim,
-        "  These catalysts have no price: Perfect Catalyst. " + claim,
+        "  This action has no price: Perfect Catalyst. " + claim,
         f"  Not offered: Harvest Reforge Fire, Harvest Reforge Cold (no price for {LIFEFORCE}). " + claim,
         "  Not offered: Bare Essence (no price for Bare Essence). " + claim,
     ]
@@ -248,7 +248,7 @@ def test_a_start_item_that_already_meets_the_target_is_planned_the_same_by_the_p
 def test_a_target_with_quality_is_refused_because_the_planner_would_ignore_it(target):
     asked = dataclasses.replace(target, quality=QualityRequirement(CatalystType.INTRINSIC, 20))
 
-    with pytest.raises(PlanError, match=r"asks for implicits or quality.*cannot plan yet.*#142"):
+    with pytest.raises(PlanError, match=r"asks for implicits or quality.*cannot plan yet"):
         make_plan(DATA, asked, price_file())
 
 

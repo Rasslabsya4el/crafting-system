@@ -147,7 +147,7 @@ class _Pilot:
     def __init__(self, abstraction: Abstraction, actions: Iterable[Action], clock: Callable[[], float]):
         if abstraction.rerolls_values:
             raise EstimateRefused(
-                "an offered action rerolls the values of mods, which the size forecast has no rule for"
+                "an offered action rerolls the values of mods, which the size estimate has no rule for"
             )
         self.abstraction = abstraction
         self.data = abstraction.data
@@ -262,7 +262,7 @@ class _Pilot:
             mod = mods.get(entry.mod_id)
             if mod is None:
                 raise EstimateRefused(
-                    "a state holds a fracture made during the craft, which the size forecast has no rule for"
+                    "a state holds a fracture made during the craft, which the size estimate has no rule for"
                 )
             held |= held_families(mod)
             used[Side(mod.generation_type)] += 1

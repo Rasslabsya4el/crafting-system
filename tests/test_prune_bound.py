@@ -380,9 +380,9 @@ def test_the_plan_keeps_every_priced_offer_and_says_what_it_left_out(planned):
     labels = {priced.label for priced in plan.offers}
 
     assert len(plan.offers) == len(result.whole.offers)
-    assert reasons["same outcome as a cheaper offer"] == tuple(dropped for dropped, _ in plan.pruned.twins)
+    assert reasons["same outcome as a cheaper action"] == tuple(dropped for dropped, _ in plan.pruned.twins)
     assert reasons["proved never better: even its best case costs more than the plan"] == plan.pruned.bounded
-    assert set(reasons["same outcome as a cheaper offer"]) | set(plan.pruned.bounded) <= labels
+    assert set(reasons["same outcome as a cheaper action"]) | set(plan.pruned.bounded) <= labels
     assert not {priced.label for priced in plan.pruned.used} & set(plan.pruned.bounded)
     assert plan.pruned.rho > 0 and plan.pruned.j_max >= plan.pruned.rho * (1 - 1e-9)
     assert result.whole.pruned is None and not of_kind(result.whole.limits, "proved-unneeded")

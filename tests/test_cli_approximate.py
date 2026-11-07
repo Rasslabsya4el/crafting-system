@@ -166,7 +166,7 @@ def test_pooling_a_blocker_of_the_goal_craft_gives_a_gap_above_one_percent_and_t
     assert found.gap > 0.01 and not found.within_tolerance
     assert found.lower <= exact.mean_remaining <= found.upper  # still certified
     assert found.message.startswith(f"No level reaches 1%: the narrowest certified interval has a gap of {found.gap:.2%} ")
-    assert "run again with --exact (6,213 transitions, predicted at about 15 min)" in found.message
+    assert "run again and ask for it (6,213 possible moves between states, predicted at about 15 min)" in found.message
 
 
 def test_the_message_is_not_rounded_down_in_the_headline(approximate):
@@ -179,10 +179,10 @@ def test_the_message_is_not_rounded_down_in_the_headline(approximate):
     assert shown >= found.gap * 100 - 1e-9
 
 
-def test_a_gap_over_the_largest_exact_size_says_the_exact_run_is_not_offered(approximate):
+def test_a_gap_over_the_largest_exact_size_says_the_exact_run_is_not_available(approximate):
     found = climbed(approximate, candidate(approximate, [{COLD, MANA}]), transitions=22_994_524).approximation
 
-    assert "not offered" in found.message and "22,994,524 transitions" in found.message and "--exact" not in found.message
+    assert "not available" in found.message and "22,994,524 possible moves between states" in found.message and "ask for it" not in found.message
 
 
 def tail(coarse: Candidate, theta: float) -> Candidate:

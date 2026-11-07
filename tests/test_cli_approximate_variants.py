@@ -362,7 +362,7 @@ def test_a_ladder_of_one_rung_gives_a_gap_within_one_percent_or_the_narrowest_in
     else:
         assert found.gap > 0.01
         assert found.message.startswith(f"No level reaches 1%: the narrowest certified interval has a gap of {found.gap:.2%} ")
-        assert "run again with --exact (3,136 transitions" in found.message
+        assert "run again and ask for it (3,136 possible moves between states" in found.message
         assert answer["message"] == found.message
         assert "Answer: approximate (the certified gap is " in text and "above the 1% tolerance" in text
 

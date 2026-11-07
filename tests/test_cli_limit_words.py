@@ -3,7 +3,7 @@
 No `what` or `why` of a limit holds a ticket number, a setting key, a module name or a word of the solver. Two readings of the same fact:
 
 * every limit the planner can write, by its source: the strings of every `Limit(...)` call of the `cli` package (and of the other sentences
-  that end up in a limit: the decision's message, the notes of the percentile methods, the forecast's refusals), read from the code, so a limit
+  that end up in a limit: the decision's message, the notes of the percentile methods, the size estimate's refusals), read from the code, so a limit
   nobody has run here is read too;
 * the limits that real plans write, from the sources that fill a text in at run time.
 
@@ -22,8 +22,17 @@ from targets_support import DATA
 from crafting_system.abstraction import Gap
 from crafting_system.cli import STRANDS_OFF, make_plan
 from crafting_system.cli import _decide, _plan
-from crafting_system.cli._decide import Decision
-from crafting_system.cli._limits import Limit, claim, model_gap_limits, risk_limits, unpriced_limits
+from crafting_system.cli._decide import EXACT_TRANSITIONS, Decision, exact_offer
+from crafting_system.cli._limits import (
+    PERCENTILE_WORDS,
+    QUANTILES,
+    Limit,
+    claim,
+    model_gap_limits,
+    not_computed,
+    risk_limits,
+    unpriced_limits,
+)
 from crafting_system.cli._report import NOT_COMPUTED, UNRESOLVED
 from crafting_system.risk import Estimate
 from crafting_system.risk._report import GridInfo
@@ -33,12 +42,14 @@ SRC = Path(__file__).resolve().parent.parent / "src" / "crafting_system"
 
 # a ticket number, a flag, a settings file, a setting key (snake_case), an ADR, and the solver's own words
 BANNED = re.compile(
-    r"#\d+|--[a-z]|\.toml\b|\bADR\b|\b[a-z]+_[a-z_]+\b|\bpacked\b|\bcoarse\b|\blevels?\b|\bitem states?\b|\bpolic(?:y|ies)\b|\bsolver\b|\bpilot\b|\bgrid\b|\bkernel\b",
+    r"#\d+|--[a-z]|\.toml\b|\bADR\b|\b[a-z]+_[a-z_]+\b|\bpacked\b|\bcoarse\b|\blevels?\b|\bitem states?\b|\bpolic(?:y|ies)\b|\bsolver\b|\bpilot\b|\bgrid\b|\bkernel\b"
+    r"|\boffers?\b|\bgraph\b|\bforecasts?\b|\bCVaR\b|\bp50\b|\bp90\b|\btransitions?\b|\btickets?\b|\bbatch\b",
     re.IGNORECASE,
 )
 
 WATCHED = {"Limit", "Decision", "note", "EstimateRefused"}  # the calls whose strings end up in a limit
-WRITERS = {"choose", "measure_solve_rate", "_packed_note"}  # the functions that write the sentence of a limit and hand it on
+REFUSALS = ("cannot plan yet", "does not solve")  # a `PlanError` that tells a player what the planner cannot do yet is read too (the others are errors of usage)
+WRITERS = {"choose", "measure_solve_rate", "_packed_note", "exact_offer"}  # the functions that write the sentence of a limit and hand it on
 
 
 def without_docstring(function: ast.FunctionDef) -> list[ast.stmt]:
@@ -58,6 +69,8 @@ def watched_strings(path: Path) -> list[tuple[int, str]]:
             continue
         name = node.func.id if isinstance(node.func, ast.Name) else node.func.attr if isinstance(node.func, ast.Attribute) else ""
         if name in WATCHED:
+            found += [(node.lineno, text) for text in strings_of(node)]
+        elif name == "PlanError" and any(marker in text for text in strings_of(node) for marker in REFUSALS):
             found += [(node.lineno, text) for text in strings_of(node)]
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name in WRITERS:
@@ -142,11 +155,40 @@ def test_the_limits_written_from_what_a_run_finds_are_in_player_words():
         _plan.lumped_limit(87_251, 12),
         _plan.strands_limit(),
         *_plan.skipped_level_limits([("a tail cut", "no plan to follow")]),
-        _plan.guessed_rate_limit("the forecast covers only 6 possible moves between states, too few to time the search on"),
+        _plan.guessed_rate_limit("the size estimate covers only 6 possible moves between states, too few to time the search on"),
     ]
     for limit in written:
         read(limit)
     assert BANNED.search("the packed solver, ticket #190") and BANNED.search("memory_strands") and BANNED.search("--strands")  # the reading does catch them
+    assert all(BANNED.search(text) for text in ("Not computed: p50, p90, CVaR", "the forecast", "a cheaper offer", "the graph", "batch B2", "transitions"))
+
+
+def test_the_offer_of_the_exact_run_is_in_player_words():
+    for text in (
+        exact_offer(None, None),
+        exact_offer(5_000, 30.0, False),
+        exact_offer(EXACT_TRANSITIONS, 30.0),
+        exact_offer(EXACT_TRANSITIONS, None),
+        exact_offer(EXACT_TRANSITIONS + 1, 90.0),
+    ):
+        assert not BANNED.search(text), text
+
+
+def test_the_figures_a_risk_limit_cannot_compute_are_named_as_a_player_reads_them():
+    assert not_computed(*QUANTILES) == (
+        "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth"
+    )
+    assert not_computed("p90", "CVaR") == "Not computed: the cost 9 runs in 10 stay under and the average of the worst tenth"
+    assert not BANNED.search(not_computed(*PERCENTILE_WORDS))
+
+
+def test_an_unpriced_kind_is_in_the_plural_only_when_there_are_several():
+    (one,) = unpriced_limits([("Exalted Orb", ("Exalted Orb",), "exalted-orb")])
+    (many,) = unpriced_limits([("Exalted Orb", ("Exalted Orb",), "exalted-orb"), ("Other Orb", ("Other Orb",), "exalted-orb")])
+
+    assert one.what == "This action has no price" and one.labels == ("Exalted Orb",)
+    assert many.what == "These exalted orbs have no price"
+    assert not BANNED.search(one.what) and not BANNED.search(many.what)
 
 
 def test_the_decision_in_player_words_names_no_level():

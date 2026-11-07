@@ -220,6 +220,14 @@ def grouped(limits: Iterable[Limit]) -> list[tuple[str, list[Limit]]]:
     return [(TITLES.get(kind, kind), group) for kind, group in found.items()]
 
 
+def _own_price_head(kind: str, count: int) -> str:
+    """"These essences have no price", for one action "This action has no price" (the label follows): the kind is plural only when there are several."""
+    if count == 1:
+        return "This action has no price"
+    title = kind_title(kind).lower()
+    return f"These {title if title.endswith('s') else title + 's'} have no price"
+
+
 def unpriced_limits(dropped: Iterable[tuple]) -> tuple[Limit, ...]:
     """The limits of the offers left out for lack of a price: `dropped` holds (label, missing names) or (label, missing names, kind).
 
@@ -238,7 +246,7 @@ def unpriced_limits(dropped: Iterable[tuple]) -> tuple[Limit, ...]:
     found = [
         Limit(
             UNPRICED,
-            f"These {kind_title(kind).lower()} have no price",
+            _own_price_head(kind, len(labels)),
             "",
             labels=tuple(labels),
             **claim("the actions that have a price", "A price for these could make it cheaper."),
@@ -338,7 +346,7 @@ def twins_limit(twins: Sequence[tuple[str, str]]) -> Limit:
     return Limit(
         PROVED,
         "Not searched",
-        "same outcome as a cheaper offer",
+        "same outcome as a cheaper action",
         "The answer is exact among the methods offered: a cheaper action does the same.",
         tuple(dropped for dropped, _ in twins),
         approximate=f"The plan is {WITHIN_GAP} among the methods offered: a cheaper action does the same.",
@@ -348,6 +356,26 @@ def twins_limit(twins: Sequence[tuple[str, str]]) -> Limit:
 def unresolved(risk, estimate) -> bool:
     """Whether a quantile or CVaR is infinite only because the budget grid could not reach it: the odds are 1."""
     return math.isinf(estimate.value) and risk.success_probability.value >= 1.0 and not risk.grid.cause
+
+
+PERCENTILE_WORDS = {
+    "mean": "the mean cost",
+    "variance": "the variance",
+    "p50": "the median cost",
+    "p90": "the cost 9 runs in 10 stay under",
+    "CVaR": "the average of the worst tenth",
+}  # the figures of a risk report as a player reads them
+QUANTILES = ("p50", "p90", "CVaR")  # the three that need the percentile calculation
+
+
+def not_computed(*names: str) -> str:
+    """"Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth": the figures `names` (keys of `PERCENTILE_WORDS`)."""
+    words = [PERCENTILE_WORDS[name] for name in names]
+    if len(words) > 2:
+        listed = ", ".join(words[:-1]) + ", and " + words[-1]
+    else:
+        listed = " and ".join(words)
+    return f"Not computed: {listed}"
 
 
 def risk_limits(risk) -> tuple[Limit, ...]:
@@ -364,7 +392,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
         found.append(
             Limit(
                 RISK,
-                f"Not computed: {', '.join(gone)}",
+                not_computed(*gone),
                 "the plan starts more runs of its inputs than it finishes, so the cost of the whole craft has no finite mean"
                 if risk.grid.cause == "subcritical"
                 else "the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle, so no cost of the whole craft is computed",
@@ -375,7 +403,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
         found.append(
             Limit(
                 RISK,
-                "Not computed: p50, p90, CVaR",
+                not_computed(*QUANTILES),
                 "the inputs of the plan depend on each other in a cycle, so the cost of a run has no order to follow",
                 "The success chance, the mean cost and the variance are exact.",
             )
@@ -385,7 +413,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
         found.append(
             Limit(
                 RISK,
-                f"Not computed: {', '.join(cut)}",
+                not_computed(*cut),
                 "the cost of the whole craft is far above its cheapest step, so the percentile calculation cannot reach them"
                 + (f"; the faster methods gave up first: {'; '.join(risk.grid.gave_up)}" if risk.grid.gave_up else ""),
                 "The success chance and the mean cost are exact.",

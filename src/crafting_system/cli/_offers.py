@@ -8,7 +8,7 @@ missing price is dropped and reported (ADR-0007), never guessed.
 """
 
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
@@ -244,6 +244,13 @@ def offers_for(
     left_out_unwanted: list[str] = []
     kind_of = _listed(data, start_item, kind_names, label_names)
     listed = list(kind_of)
+    label_count = Counter(action.label(data) for action in listed)
+
+    def told_apart(action: Action) -> str:
+        """The label a limit names a left-out action by: the label alone, and for one that shares it with others the label and its variant (as the offers do)."""
+        label = action.label(data)
+        return label if label_count[label] == 1 or not action.variant else f"{label} [{action.variant}]"
+
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
@@ -251,12 +258,12 @@ def offers_for(
     for action in listed:
         adds = action.adds(data, start_item)
         if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
-            (left_out_asked if goal.takes_corrupted else left_out_corrupting).append(action.label(data))  # an item never arrives corrupted unasked
+            (left_out_asked if goal.takes_corrupted else left_out_corrupting).append(told_apart(action))  # an item never arrives corrupted unasked
             continue
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
-            left_out_unwanted.append(action.label(data))
+            left_out_unwanted.append(told_apart(action))
         elif adds.needs_roll_limit and not roll_matters:
-            left_out_rolls.append(action.label(data))
+            left_out_rolls.append(told_apart(action))
         else:
             candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
@@ -271,7 +278,7 @@ def offers_for(
             and not action.adds(data, start_item).named & counting
             and action.label(data) not in label_names
         ):
-            left_out_crafts.append(action.label(data))
+            left_out_crafts.append(told_apart(action))
             continue
         chosen.append(action)
     chosen, unusable = split_usable(data, start_item, chosen)

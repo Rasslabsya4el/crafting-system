@@ -53,7 +53,7 @@ def plan():
 
 def test_m1_a_refused_forecast_puts_its_own_text_in_the_limit_and_the_answer_stays_exact(monkeypatch):
     def refused(self, starts, actions, **options):
-        raise EstimateRefused("a state holds a fracture made during the craft, which the size forecast has no rule for")
+        raise EstimateRefused("a state holds a fracture made during the craft, which the size estimate has no rule for")
 
     monkeypatch.setattr(Abstraction, "estimate", refused)
 
@@ -62,8 +62,8 @@ def test_m1_a_refused_forecast_puts_its_own_text_in_the_limit_and_the_answer_sta
     (whole,) = [limit for limit in of_kind(made.limits, "how-solved") if limit.what == "The whole search was run"]
     assert made.approximation is None and made.risk is not None
     assert whole.why == (
-        "the size of the exact search could not be forecast "
-        "(a state holds a fracture made during the craft, which the size forecast has no rule for), so it was run in full"
+        "the size of the exact search could not be estimated "
+        "(a state holds a fracture made during the craft, which the size estimate has no rule for), so it was run in full"
     )
     assert whole.guarantee == "The answer is exact among the methods offered."
 
@@ -89,7 +89,7 @@ def test_m2_rate_a_calibration_that_cannot_run_names_why_and_a_measured_one_says
 
     assert measured[1] == "" and measured[0] != _decide.SOLVE_RATE_FALLBACK
     assert failed == (_decide.SOLVE_RATE_FALLBACK, "the timing run did not finish (no luck in 3000 sweeps)")
-    assert few == (_decide.SOLVE_RATE_FALLBACK, "the forecast covers only 20 possible moves between states, too few to time the search on")
+    assert few == (_decide.SOLVE_RATE_FALLBACK, "the size estimate covers only 20 possible moves between states, too few to time the search on")
     assert _decide.calibrate_solve_rate(abstraction, 0, estimate, {}) == _decide.SOLVE_RATE_FALLBACK  # the old function keeps its answer
 
 
@@ -98,8 +98,8 @@ def test_m2_rate_a_plan_whose_forecast_used_the_guessed_speed_says_so_and_a_give
     given = plan_of(budget=1e-9, rates=_decide.Rates(1.0, 1.0))
 
     (limit,) = [each for each in guessed.limits if each.what == "The time of the search was guessed"]
-    assert limit.kind == "how-solved" and "too few to time the search on" in limit.why and limit.why.endswith("so the forecast used a fixed speed")
-    assert limit.guarantee == "The answer's own guarantee does not depend on it: the forecast only chose between the exact run and an approximate one."
+    assert limit.kind == "how-solved" and "too few to time the search on" in limit.why and limit.why.endswith("so the size estimate used a fixed speed")
+    assert limit.guarantee == "The answer's own guarantee does not depend on it: the size estimate only chose between the exact run and an approximate one."
     assert not [each for each in given.limits if each.what == "The time of the search was guessed"]
 
 
@@ -198,9 +198,9 @@ def every_new_limit(plan) -> list[Limit]:
         *model_gap_limits([Gap("Harvest Reforge Defence", 3, "the model has no rule for a pool with a family on both sides", False), Gap("Toy Graft", 7, "consumes", True)]),
         _plan.states_limit(True),
         *risk_limits(risk),
-        _plan.guessed_rate_limit("the forecast covers only 20 possible moves between states, too few to time the search on"),
+        _plan.guessed_rate_limit("the size estimate covers only 20 possible moves between states, too few to time the search on"),
         *_plan.skipped_level_limits([("tail cut at theta 0.01 over family groups of 8", "no proper policy")]),
-        _plan.whole_search_limit("the size of the exact search could not be forecast (a reason), so it was run in full"),
+        _plan.whole_search_limit("the size of the exact search could not be estimated (a reason), so it was run in full"),
     ]
 
 
