@@ -70,16 +70,25 @@ ABYSS_DATA = _abyss(DATA)
 ABYSS_BASE_DATA = _robe_with_abyss_implicit(ABYSS_DATA)
 
 
-def parse(text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True, start: str | None = "given") -> Target:
-    """Parse `text` after the four header lines of `base` (so it starts on line 5); unless `header` is false it stands alone. Closed with `start: given` (OR-6)."""
+def parse(
+    text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True, start: str | None = "given", start_sockets: str | None = "any"
+) -> Target:
+    """Parse `text` after the four header lines of `base` (so it starts on line 5); unless `header` is false it stands alone.
+
+    Closed with `start: given` (OR-6) and a start item with `rarity: normal` (#545); a text that asks for `sockets:` gets `sockets: any` in its
+    start item unless it states its own or `start_sockets` is None (the refusal of a start item that states none).
+    """
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(with_start((HEADER.format(base=base) if header else "") + body, start), data, source="t.yaml")
+    closed = with_start((HEADER.format(base=base) if header else "") + body, start, sockets=start_sockets)
+    return parse_target(closed, data, source="t.yaml")
 
 
-def parse_error(text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True) -> str:
+def parse_error(
+    text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True, start_sockets: str | None = "any"
+) -> str:
     """The message of the `TargetError` that parsing `text` raises; fails the test if none is raised."""
     try:
-        parse(text, base=base, data=data, header=header)
+        parse(text, base=base, data=data, header=header, start_sockets=start_sockets)
     except TargetError as error:
         return str(error)
     raise AssertionError("the target parsed without an error")

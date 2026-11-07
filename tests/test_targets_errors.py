@@ -533,7 +533,7 @@ def test_a_price_file_must_be_text():
 
 
 COPY = "Metadata/Items/Amulets/Copy0"
-BASE_TEXT = "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nstart: given\n"
+BASE_TEXT = "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nstart_item:\n  rarity: normal\nstart: given\n"
 
 
 def two_amulets(original_state: str, copy_state: str):

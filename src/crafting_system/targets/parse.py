@@ -91,6 +91,7 @@ QUALITY_KEYS = ("type", "min_percent")
 SOCKET_KEYS = ("count", "links", "colours")
 SOCKET_COLOUR_KEYS = ("R", "G", "B")
 START_SOCKET_KEYS = ("count", "colours", "links")
+ANY_SOCKETS = "any"
 MIN_LINKS = 2
 BUYABLE_QUALITY = 20
 ENCHANTMENT_KEYS = ("any_of",)
@@ -243,9 +244,7 @@ class _Reader:
         enchantment = None
         if "enchantment" in root:
             enchantment = self.read_enchantment(root["enchantment"], root.key_lines["enchantment"], base_id)
-        stated = "start_item" in root and isinstance(root["start_item"], LineMap) and "sockets" in root["start_item"]
-        assumed = sockets is not None and not stated
-        start_item = self.read_start_item(root, base_id, item_level, influences, assume_socket=assumed)
+        start_item = self.read_start_item(root, base_id, item_level, influences, sockets_wanted=sockets is not None)
         if isinstance(quality, PlainQualityRequirement):
             self.check_plain_quality_reachable(root["quality"], quality, start_item)
         if enchantment is not None:
@@ -260,7 +259,7 @@ class _Reader:
             self.check_socket_scope(root, requirements, start_item)
         return Target(
             base_id, item_level, influences, requirements, start_item, start, price_file, implicits, quality,
-            actions, enchantment, allow_corrupted, sockets, assumed, item_level_floor,
+            actions, enchantment, allow_corrupted, sockets, item_level_floor,
         )  # fmt: skip
 
     def read_item_level_floor(self, root: LineMap, item_level: int) -> int:
@@ -889,11 +888,16 @@ class _Reader:
             return any(self.names_abyssal_socket(member) for member in node.of)
         return any(is_abyssal_socket_mod(self.data.mods[mod_id]) for mod_id in node.mod_ids)
 
-    def read_start_sockets(self, entry: object, line: int) -> Sockets:
-        """The `sockets:` of a start item: `colours` (a list of W, R, G, B, one per socket), `count` and `links` (group sizes in order)."""
+    def read_start_sockets(self, entry: object, line: int) -> Sockets | None:
+        """The `sockets:` of a start item: `colours` (a list of W, R, G, B, one per socket), `count` and `links` (group sizes in order).
+
+        `sockets: any` says the guide states none: the item then holds no sockets in the model, and none is assumed (None).
+        """
         path = "start_item.sockets"
+        if isinstance(entry, str) and entry.strip().lower() == ANY_SOCKETS:
+            return None
         if not isinstance(entry, LineMap):
-            self.fail(line, path, f"must be a mapping with `colours`, `count` and `links`, got {describe(entry)}")
+            self.fail(line, path, f"must be a mapping with `colours`, `count` and `links`, or the word any, got {describe(entry)}")
         self.check_keys(entry, path, START_SOCKET_KEYS)
         if not len(entry):
             self.fail(line, path, "name at least one of `count`, `colours` and `links`; an empty mapping states no sockets")
@@ -1020,10 +1024,23 @@ class _Reader:
     # -- the start item ----------------------------------------------------------------------------
 
     def read_start_item(
-        self, root: LineMap, base_id: str, item_level: int, influences: frozenset[Influence], *, assume_socket: bool = False
+        self, root: LineMap, base_id: str, item_level: int, influences: frozenset[Influence], *, sockets_wanted: bool = False
     ) -> Item:
-        line = root.key_lines.get("start_item", root.key_lines["base"])
-        fields: dict[str, object] = {"rarity": Rarity.NORMAL}
+        """The player's item, read from the `start_item:` block, which every target must carry with its `rarity:` (#545, OR-6).
+
+        Nothing is made up for an item the file does not describe: a missing block, a missing `rarity:` and, when the target asks for
+        sockets, a start item that states none (and does not say `sockets: any`) are refused, each naming its key.
+        """
+        if "start_item" not in root:
+            self.fail(
+                root.line,
+                "start_item",
+                "this key is required but missing: write `start_item:` with the `rarity:` of the item you hold or buy"
+                " (a plain item of the base is `start_item:` with `rarity: normal`), and its mods when it has some;"
+                " say in a comment that quotes the guide why that is the start item",
+            )
+        line = root.key_lines["start_item"]
+        fields: dict[str, object] = {}
         mods: tuple[ExplicitMod, ...] = ()
         mod_lines: list[int] = []
         implicits: tuple[ImplicitMod, ...] = ()
@@ -1033,50 +1050,55 @@ class _Reader:
         quality_line = line
         sockets_line = line
         enchantment_line = line
-        if "start_item" in root:
-            start = root["start_item"]
-            line = root.key_lines["start_item"]
-            if not isinstance(start, LineMap):
+        start = root["start_item"]
+        if not isinstance(start, LineMap):
+            self.fail(
+                line,
+                "start_item",
+                "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `sockets`, `enchantment`,"
+                " `veil_offer` and `memory_strands`,"
+                f" got {describe(start)}",
+            )
+        self.check_keys(start, "start_item", START_ITEM_KEYS)
+        if "mods" in start:
+            mods = self.read_start_mods(start["mods"], start.key_lines["mods"])
+            mod_lines = start["mods"].item_lines
+        if "implicits" in start:
+            implicits = self.read_start_implicits(start["implicits"], start.key_lines["implicits"], base_id)
+            implicit_lines = start["implicits"].item_lines
+        if "quality" in start:
+            item_class = self.data.base_items[base_id].item_class
+            fields["quality"] = self.read_start_quality(start["quality"], start.key_lines["quality"], item_class)
+            quality_line = start.key_lines["quality"]
+        if "sockets" in start:
+            sockets_line = start.key_lines["sockets"]
+            stated = self.read_start_sockets(start["sockets"], sockets_line)
+            if stated is not None:
+                fields["sockets"] = stated
+        elif sockets_wanted:
+            self.fail(
+                line,
+                "start_item.sockets",
+                "the target asks for sockets, so its start item must state its own: write `sockets:` under `start_item:` with"
+                " `colours`, `count` and `links`, or `sockets: any` when the guide does not say (no socket is assumed)",
+            )
+        if "enchantment" in start:
+            enchantment_line = start.key_lines["enchantment"]
+            fields["enchantment"] = self.read_start_enchantment(start["enchantment"], enchantment_line, base_id)
+        if "veil_offer" in start:
+            offer = self.read_veil_offer(start["veil_offer"], start.key_lines["veil_offer"])
+            offer_lines = start["veil_offer"].item_lines
+        if "memory_strands" in start:
+            fields["memory_strands"] = self.read_start_strands(start["memory_strands"], start.key_lines["memory_strands"])
+        fields["rarity"] = self.read_rarity(start, line)
+        if "corrupted" in start:
+            if not isinstance(start["corrupted"], bool):
                 self.fail(
-                    line,
-                    "start_item",
-                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `sockets`, `enchantment`,"
-                    " `veil_offer` and `memory_strands`,"
-                    f" got {describe(start)}",
+                    start.key_lines["corrupted"],
+                    "start_item.corrupted",
+                    f"must be true or false, got {describe(start['corrupted'])}",
                 )
-            self.check_keys(start, "start_item", START_ITEM_KEYS)
-            if "mods" in start:
-                mods = self.read_start_mods(start["mods"], start.key_lines["mods"])
-                mod_lines = start["mods"].item_lines
-            if "implicits" in start:
-                implicits = self.read_start_implicits(start["implicits"], start.key_lines["implicits"], base_id)
-                implicit_lines = start["implicits"].item_lines
-            if "quality" in start:
-                item_class = self.data.base_items[base_id].item_class
-                fields["quality"] = self.read_start_quality(start["quality"], start.key_lines["quality"], item_class)
-                quality_line = start.key_lines["quality"]
-            if "sockets" in start:
-                fields["sockets"] = self.read_start_sockets(start["sockets"], start.key_lines["sockets"])
-                sockets_line = start.key_lines["sockets"]
-            if "enchantment" in start:
-                enchantment_line = start.key_lines["enchantment"]
-                fields["enchantment"] = self.read_start_enchantment(start["enchantment"], enchantment_line, base_id)
-            if "veil_offer" in start:
-                offer = self.read_veil_offer(start["veil_offer"], start.key_lines["veil_offer"])
-                offer_lines = start["veil_offer"].item_lines
-            if "memory_strands" in start:
-                fields["memory_strands"] = self.read_start_strands(start["memory_strands"], start.key_lines["memory_strands"])
-            fields["rarity"] = self.read_rarity(start, bool(mods))
-            if "corrupted" in start:
-                if not isinstance(start["corrupted"], bool):
-                    self.fail(
-                        start.key_lines["corrupted"],
-                        "start_item.corrupted",
-                        f"must be true or false, got {describe(start['corrupted'])}",
-                    )
-                fields["corrupted"] = start["corrupted"]
-        if assume_socket and "sockets" not in fields:
-            fields["sockets"] = Sockets.unlinked((SocketColour.WHITE,))  # a target with sockets assumes one white socket (ADR-0046)
+            fields["corrupted"] = start["corrupted"]
         base = self.data.base_items.get(base_id)
         # an item carries every implicit of its base, at the low end, unless the file lists one that takes its place (#484, #449)
         held = implicits if base is None else with_base_implicits(self.data, base, implicits)
@@ -1117,10 +1139,15 @@ class _Reader:
                     self.fail(implicit_lines[index], f"start_item.implicits[{index}]", message)
             self.fail(line, "start_item", message)
 
-    def read_rarity(self, start: LineMap, has_mods: bool) -> Rarity:
-        if "rarity" not in start:
-            return Rarity.RARE if has_mods else Rarity.NORMAL
+    def read_rarity(self, start: LineMap, line: int) -> Rarity:
         allowed = [rarity.value for rarity in Rarity]
+        if "rarity" not in start:
+            self.fail(
+                line,
+                "start_item.rarity",
+                f"this key is required but missing: write the rarity of the start item (one of {quoted(allowed)});"
+                " it is not guessed from the mods listed",
+            )
         value = start["rarity"]
         if not isinstance(value, str) or value.lower() not in allowed:
             self.fail(start.key_lines["rarity"], "start_item.rarity", f"must be one of {quoted(allowed)}, got {describe(value)}")

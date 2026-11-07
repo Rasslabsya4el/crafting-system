@@ -72,6 +72,13 @@ requirements:
   - family: DamageWithWeaponTypeSkill
     not_crafted: true
 
+# Where the crafting starts (OR-4, #545). The guide's step 1 is "Buy a Penetrating Arrow Quiver with item level 81 or higher; uncorrupted,
+# unfractured and no influence", and its step 2 is "Apply an Essence of Insanity": it names no rarity and no mod of the bought quiver,
+# so the start is a plain (Normal) quiver of the base above, the one the Essence works on first. The quiver's other mods are
+# whatever it was bought with (OR-17); the first essence rerolls them.
+start_item:
+  rarity: normal
+
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
 start: bought

@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 from cli_support import price_file
+from start_support import with_start
 from enchant_support import (
     ARMOUR_EXTRA_SLOT,
     ARMOUR_LINKED,
@@ -35,7 +36,8 @@ WEAPON = "Rusted Sword"
 
 def parse(text: str, *, base: str = ARMOUR):
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(f"base: {base}\nitem_level: 84\nrequirements:\n  - stat: \"+# to maximum Life\"\n{body}start: given\n", DATA, source="t.yaml")
+    text = f"base: {base}\nitem_level: 84\nrequirements:\n  - stat: \"+# to maximum Life\"\n{body}start: given\n"
+    return parse_target(with_start(text), DATA, source="t.yaml")
 
 
 def parse_error(text: str, *, base: str = ARMOUR) -> str:
