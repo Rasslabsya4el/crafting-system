@@ -289,12 +289,21 @@ def _route(section: Node) -> Route:
 
 
 def read_page(html: str) -> Page:
-    """The page a reader sees, from the text of a rendered `.html` file."""
+    """The page a reader sees, from the text of a rendered `.html` file.
+
+    A page the lint cannot read (no route section, or no step in any of them: an empty file, a markup the lint does not know) raises
+    `PageUnreadable`. A lint that read nothing would find no fault, and every check would pass on it."""
     root = parse_tree(html)
     title = next((_squash(el.text()) for el in root.walk() if el.tag == "title"), "")
     body = next((el for el in root.walk() if el.tag == "body"), root)
     routes = tuple(_route(section) for section in root.walk() if section.tag == "section")
+    if not any(route.steps for route in routes):
+        raise PageUnreadable(f"the lint read {len(routes)} route(s) and no step from a page of {len(html)} characters")
     return Page(title, routes, _squash(body.text()))
+
+
+class PageUnreadable(ValueError):
+    """The page has no route with a step, so the lint cannot judge it."""
 
 
 def read_page_file(path: Path) -> Page:

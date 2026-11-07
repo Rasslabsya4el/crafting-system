@@ -346,8 +346,25 @@ def golden_cases():
 
 @pytest.mark.parametrize(("path", "check"), golden_cases())
 def test_a_golden_page_keeps_the_rule_of_every_check(path, check):
-    faults = check(pl.read_page_file(path))
+    page = pl.read_page_file(path)
+    assert page.routes and all(route.steps for route in page.routes), "the lint read no route or no step: a page it cannot read passes every check"
+    faults = check(page)
     assert faults == [], "\n".join(map(str, faults[:10]))
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        "",
+        "<html><body><main><h1>t</h1></main></body></html>",
+        "<html><body>" + page(route(goal(), *TWO_ACTIONS)).replace('class="rw"', 'class="row"') + "</body></html>",  # the builder renames a class
+        "<html><body>" + page(route(goal(), *TWO_ACTIONS)).replace("<section", "<article").replace("</section", "</article") + "</body></html>",
+    ],
+    ids=["empty", "no section", "a renamed row class", "a renamed section tag"],
+)
+def test_a_page_the_lint_cannot_read_raises_instead_of_passing(html):
+    with pytest.raises(pl.PageUnreadable):
+        pl.read_page(html)
 
 
 def test_every_known_fault_is_a_golden_page_that_exists_and_names_an_issue():
