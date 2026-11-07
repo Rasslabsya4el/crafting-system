@@ -46,7 +46,6 @@ import os
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
-from functools import lru_cache
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -724,15 +723,22 @@ _SITES = "com|net|org|io|gg|ninja|watch"  # `poe.ninja`, `pathofexile.com`: a so
 _ID_SHAPE = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Z][a-z]+){2,}\d+(?![A-Za-z0-9])")  # the fallback when the data is absent: two or more capitalised words, then digits, no space
 _TOKEN = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_]*")
 _REPO = Path(__file__).resolve().parents[2]
+_GAME_IDS: list[frozenset[str]] = []  # the set, read once
 
 
-@lru_cache(maxsize=1)
 def game_ids() -> frozenset[str]:
     """The mod ids and the base ids (the last part of the path) of the pinned game data that hold a digit; empty when the data is not on this machine.
 
     Read with `json` only, from `CRAFTING_CACHE_DIR` (else `local/cache`) `/repoe-fork/<pinned version>/`, the version being the one `PIN.json` names. An id with
     no digit is a word or a name a person may read, so it is not asked for: the ids of the data all end in a tier or carry one (`Strength1`).
     """
+    if _GAME_IDS:
+        return _GAME_IDS[0]
+    _GAME_IDS.append(_read_game_ids())
+    return _GAME_IDS[0]
+
+
+def _read_game_ids() -> frozenset[str]:
     try:
         version = json.loads(next((_REPO / "src").glob("*/data/PIN.json")).read_text(encoding="utf-8"))["version"]
         folder = Path(os.environ.get("CRAFTING_CACHE_DIR") or _REPO / "local" / "cache") / "repoe-fork" / version
