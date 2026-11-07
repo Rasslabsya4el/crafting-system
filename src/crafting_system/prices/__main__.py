@@ -14,6 +14,7 @@ from pathlib import Path
 
 from ..config import load_config
 from .fallbacks import MIN_COUNT
+from .deepen import deepen_with_trade, exchange_entry
 from .fetch import fetch_price_file
 from .http_json import GetJson, SourceError, http_get_json, paced
 from .price_names import FORESIGHT_PRICE_NAMES, canonical_price_name
@@ -29,8 +30,13 @@ from .price_file import (
     stale_warning,
     write_price_file,
 )
-from .trade_http import TradeError, Transport
+from .trade_exchange import exchange_body, read_offers, static_ids
+from .trade_http import RateLimiter, RequestBudget, TradeBlocked, TradeClient, TradeError, Transport, package_version, urllib_transport, user_agent
 from .trade_pricing import merge_trade_prices, stale_trade_warnings
+
+
+MAX_DEEPEN_REQUESTS = 400  # a safety bound on one run; the trade site's limits are what spaces the requests
+MAX_DEEPEN_WAIT = 1800.0  # seconds the limiter may wait for a window to open: a run that reads many names is slow by design, never faster than the site allows
 
 
 def main(
@@ -54,6 +60,14 @@ def main(
     fetch.add_argument("--league", help="league id (default: the current league poe.ninja lists)")
     fetch.add_argument("--previous-league", help="league to take old prices from (default: work it out)")
     fetch.add_argument("--wanted-file", help="text file, one resource name per line")
+    fetch.add_argument(
+        "--trade-below",
+        type=float,
+        help=(
+            "read the trade site's offers for every wanted name that has no price or a price on fewer units than this, "
+            "and keep the deeper reading (anonymous, a few requests a name, within the trade site's limits)"
+        ),
+    )
     check = commands.add_parser("check", help="report a stale price file and unpriced names")
     check.add_argument("--wanted-file", help="text file, one resource name per line")
     commands.add_parser("trade", help="moved: python -m crafting_system.cli trade TARGET.yaml")
@@ -88,6 +102,11 @@ def main(
                 old_price_file=old_file,
             )
             new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path)[0])
+            if args.trade_below is not None:
+                new_file, deepen_warnings = _deepen(
+                    new_file, wanted, args.trade_below, instant, env, transport, sleep, monotonic
+                )
+                trade_warnings = [*trade_warnings, *deepen_warnings]
             write_price_file(price_path, new_file)
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
             if result.thin:
@@ -115,6 +134,43 @@ def main(
         print(f"Error: {error}", file=sys.stderr)
         return 1
     return 0
+
+
+def _deepen(
+    price_file: PriceFile,
+    wanted: Sequence[str],
+    below: float,
+    now: datetime,
+    env: Mapping[str, str] | None,
+    transport: Transport | None,
+    sleep: Callable[[float], None] | None,
+    monotonic: Callable[[], float] | None,
+) -> tuple[PriceFile, list[str]]:
+    """The price file with the trade site's offers read for the thin and the missing names of `wanted` (#616)."""
+    client = TradeClient(
+        transport if transport is not None else urllib_transport(),
+        user_agent(package_version()),
+        RateLimiter(monotonic if monotonic is not None else time.monotonic, sleep if sleep is not None else time.sleep, max_wait=MAX_DEEPEN_WAIT, margin=2),
+        RequestBudget(MAX_DEEPEN_REQUESTS),
+        None,  # anonymous: no session is ever sent
+    )
+    ids = static_ids(client.data_static())
+    rates = {"chaos": 1.0, "divine": price_file.chaos_per_divine}
+    day = now.astimezone(UTC).date()
+
+    def read(name: str):
+        item_id = ids.get(name)
+        if item_id is None:
+            return None  # not an item of the bulk exchange (a base, a beast, a start item)
+        try:
+            reading = read_offers(client.exchange(price_file.league, exchange_body(item_id)), rates)
+        except TradeBlocked:
+            raise
+        except TradeError:
+            return None  # the site refused this one item (not a block): the name keeps the price it has
+        return None if reading is None else exchange_entry(reading, price_file.league, day, item_id)
+
+    return deepen_with_trade(price_file, [name for name in wanted if name in ids], read, below)
 
 
 def _old_price_file(path: Path) -> tuple[PriceFile | None, str | None]:

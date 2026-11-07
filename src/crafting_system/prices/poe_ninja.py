@@ -43,6 +43,7 @@ class ExchangeLine:
     chaos: float
     details_id: str
     thin: bool  # traded on zero volume: the price is not trustworthy
+    volume: float | None = None  # `volumePrimaryValue`: the Chaos traded on the latest day, None when the line gives none
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,8 @@ def parse_overview(data: Any) -> Overview:
         volume = line.get("volumePrimaryValue")
         thin = isinstance(volume, int | float) and not isinstance(volume, bool) and volume <= 0
         details_id = item.get("detailsId") if is_text(item.get("detailsId")) else item["id"]
-        parsed.append(ExchangeLine(item["name"], float(line["primaryValue"]), details_id, thin))
+        volume = float(volume) if isinstance(volume, int | float) and not isinstance(volume, bool) and volume >= 0 else None
+        parsed.append(ExchangeLine(item["name"], float(line["primaryValue"]), details_id, thin, volume))
 
     if not parsed:
         raise SourceError("no line with a usable price")

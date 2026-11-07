@@ -333,13 +333,23 @@ def weighted_visits(
     chain: Chain, values: Sequence[float], error: float, weight: Sequence[float]
 ) -> tuple[float, float, float]:
     """`(value, low, high)` of `sum_s N_s weight[s]` for non-negative weights, N the expected visits of every state."""
+    return weighted_visits_many(chain, values, error, [weight])[0]
+
+
+def weighted_visits_many(
+    chain: Chain, values: Sequence[float], error: float, weights: Sequence[Sequence[float]]
+) -> list[tuple[float, float, float]]:
+    """`weighted_visits` for several weights from one solve of the visits (the visits do not depend on the weight)."""
     if chain.goal[0]:
-        return 0.0, 0.0, 0.0
+        return [(0.0, 0.0, 0.0) for _ in weights]
     visits, slack, system = expected_visits(chain, values, error)
-    value = math.fsum(visits[s] * weight[s] for s in system.nodes)
-    spread = max((weight[s] for s in system.nodes), default=0.0) * slack
-    relative = max(MIN_COUNT_ROUNDING, (len(system.nodes) + 3) * EPS) * value
-    return value, max(0.0, value - spread - relative), value + spread + relative
+    found = []
+    for weight in weights:
+        value = math.fsum(visits[s] * weight[s] for s in system.nodes)
+        spread = max((weight[s] for s in system.nodes), default=0.0) * slack
+        relative = max(MIN_COUNT_ROUNDING, (len(system.nodes) + 3) * EPS) * value
+        found.append((value, max(0.0, value - spread - relative), value + spread + relative))
+    return found
 
 
 def _branching(chain: Chain, system: _System) -> bool:

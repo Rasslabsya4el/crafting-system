@@ -18,7 +18,9 @@ from pathlib import Path
 from typing import Any
 
 from ..config import Config
+from . import provenance as provenance_data
 from .price_names import canonical_price_name
+from .provenance import Provenance
 
 UNIT = "chaos"
 CHAOS_ORB = "Chaos Orb"
@@ -41,6 +43,7 @@ class PriceEntry:
     source: str
     note: str | None = None
     detail: Mapping[str, Any] | None = None  # a JSON object: how the price was found (#39)
+    provenance: Provenance | None = None  # where the price came from, as data: source, date, league, depth, the item it was taken for (#616)
 
 
 MARKET_THIN = "thin"
@@ -133,6 +136,7 @@ def _entry_to_json(entry: PriceEntry) -> dict[str, Any]:
         "source": entry.source,
         **({"note": entry.note} if entry.note is not None else {}),
         **({"detail": entry.detail} if entry.detail is not None else {}),
+        **({"provenance": provenance_data.to_json(entry.provenance)} if entry.provenance is not None else {}),
     }
 
 
@@ -218,7 +222,8 @@ def _entry_from_document(raw: object, name: str, label: str, path: Path) -> Pric
     detail = raw.get("detail")
     if detail is not None and not isinstance(detail, dict):
         raise ValueError(f"{path}: {label} {name!r}: detail must be an object")
-    return PriceEntry(float(raw["chaos"]), source, note, detail)
+    recorded = provenance_data.from_json(raw["provenance"], f"{path}: {label} {name!r}") if "provenance" in raw else None
+    return PriceEntry(float(raw["chaos"]), source, note, detail, recorded)
 
 
 def _ninja_from_document(raw_ninja: object, path: Path) -> dict[str, PriceEntry]:
@@ -333,8 +338,9 @@ def load_prices(price_file_path: Path, overrides_path: Path) -> PriceFile:
     if not overrides:
         return fetched
     prices = dict(fetched.prices)
+    day = fetched.fetched_at.astimezone(UTC).date().isoformat()
     for name, chaos in overrides.items():
-        prices[name] = PriceEntry(chaos, OVERRIDE_SOURCE)
+        prices[name] = PriceEntry(chaos, OVERRIDE_SOURCE, None, None, Provenance(provenance_data.OVERRIDE, fetched.league, day))
     chaos_per_divine = overrides.get(DIVINE_ORB, fetched.chaos_per_divine)
     return replace(fetched, prices=prices, chaos_per_divine=chaos_per_divine)
 

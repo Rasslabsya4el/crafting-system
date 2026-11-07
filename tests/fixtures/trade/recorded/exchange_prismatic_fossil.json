@@ -1,0 +1,25 @@
+{
+  "total": 1,
+  "result": {
+    "3161bc30f5bb7360df895db6f32fd02a2be25239543446c9c4f22b": {
+      "id": "3b4505ed7d3161bc30f5bb7360df895db6f32fd02a2be25239543446c9c4f22b",
+      "item": null,
+      "listing": {
+        "indexed": "2026-10-30T04:26:54+00:00",
+        "offers": [
+          {
+            "exchange": {
+              "currency": "chaos",
+              "amount": 18
+            },
+            "item": {
+              "currency": "prismatic-fossil",
+              "amount": 1,
+              "stock": 24
+            }
+          }
+        ]
+      }
+    }
+  }
+}
