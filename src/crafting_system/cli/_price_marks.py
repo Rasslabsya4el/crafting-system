@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB
 from crafting_system.prices.price_marks import PriceMark, chaos_text, price_marks, provenance_of, units_text
+from crafting_system.prices.provenance import WIDER
 from crafting_system.risk import expected_totals
 from crafting_system.solver import Action
 
@@ -31,6 +32,7 @@ class PriceUse:
     depth: float | None  # the units behind the price; None when not recorded
     uses: float | None  # the units the plan expects to buy; None when not solved
     marks: tuple[PriceMark, ...]
+    wider: str | None = None  # what a stand-in price was read for, in words; None for the exact item
 
     @property
     def approximate(self) -> bool:
@@ -107,15 +109,20 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
         marks = price_marks(entry, prices, uses if uses is not None or name in need else ceiling / entry.chaos)
         source = "no source recorded" if provenance is None else provenance.words
         depth = None if provenance is None else provenance.depth
-        found.append(PriceUse(name, entry.chaos, source, depth, uses, marks))
+        wider = None if provenance is None or provenance.item != WIDER else (provenance.for_item or "")
+        found.append(PriceUse(name, entry.chaos, source, depth, uses, marks, wider))
     return tuple(found)
 
 
 def use_line(use: PriceUse) -> str:
     """One price as a person reads it: "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07; approximate: price on 3.3 units"."""
     line = f"{use.name}: {chaos_text(use.chaos)} Chaos, {use.source}"
+    if use.wider is not None:
+        line += ", taken for a wider item" + (f" ({use.wider})" if use.wider else "")
     if use.depth is not None:
         line += f", {units_text(use.depth)} units behind it"
+        if use.uses is not None:
+            line += f", the plan buys about {units_text(use.uses)}"
     if use.marks:
         line += "; approximate: " + "; ".join(mark.reason for mark in use.marks)
     return line

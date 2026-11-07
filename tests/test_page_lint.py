@@ -131,17 +131,29 @@ def fixtures(check, counter: dict[str, str], example: dict[str, str]) -> None:
 AUG = step(1, "Orb of Augmentation", ("Accepts", "other mods: any"), ("Chance per use", "100%"))
 FOSSIL_STEP = step(1, "Fossil: Prismatic", ("Cost per use", "1 × Prismatic Fossil 5.87 c"))
 LEAGUE = "league Allflame, fetched 2026-11-07"
-FOSSIL_PRICE = "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07, 34 units behind it"
+FOSSIL_PRICE = "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07, 120 units behind it, the plan buys about 45"
+THIN_PRICE = "Prismatic Fossil: 8 Chaos, poe.ninja exchange, Allflame, 2026-11-07, 3.3 units behind it, the plan buys about 45"
+THIN_MARKED = THIN_PRICE + "; approximate: price on 3.3 units"
+THIN_INPUT = "The price of Prismatic Fossil is 8 Chaos, an approximate input: price on 3.3 units. The plan expects to buy about 45 of it. Source: poe.ninja exchange, Allflame, 2026-11-07."
+EARLIER = "Shrieking Essence of Fear: 0.34 Chaos, poe.ninja, previous league, Mirage, 2026-06-13"
+EARLIER_INPUT = "The price of Shrieking Essence of Fear is 0.34 Chaos, an approximate input: previous league's price (Mirage, 2026-06-13). Source: poe.ninja, previous league, Mirage, 2026-06-13."
+WIDER = "Thicket Bow, magic, item level 78-79, Hunter influence: 13 Chaos, trade site, instant buyout, Allflame, 2026-11-07, taken for a wider item (any rarity), 5 units behind it, the plan buys about 900"
 fixtures(
     pl.check_price_source_shown,
     counter={
         "R04: the Prices line is the league and a date, and a step buys a fossil": page(route(goal(("Prices", "league Allflame, fetched 2026-10-31")), FOSSIL_STEP)),
         "a price that names no source": page(route(goal(("Prices", LEAGUE, "Prismatic Fossil: 5.87 Chaos")), FOSSIL_STEP)),
-        "a previous league's price with no mark": page(route(goal(("Prices", LEAGUE, "Shrieking Essence of Fear: 0.34 Chaos, poe.ninja, previous league, Mirage, 2026-06-13")), AUG)),
+        "a previous league's price with no mark": page(route(goal(("Prices", LEAGUE, EARLIER)), AUG)),
+        "a stand-in for a wider item with no mark": page(route(goal(("Prices", LEAGUE, WIDER)), AUG)),
+        "#616: a price on 3.3 units for a plan that buys 45, with no mark": page(route(goal(("Prices", LEAGUE, THIN_PRICE)), FOSSIL_STEP)),
+        "a marked price that is not among the approximate inputs": page(route(goal(("Prices", LEAGUE, THIN_MARKED)), FOSSIL_STEP)),
+        "an approximate price input with no line in Prices": page(route(goal(("Prices", LEAGUE), ("Approximate inputs", THIN_INPUT)), AUG)),
     },
     example={
         "the price names its source and the step's resource is in the list": page(route(goal(("Prices", LEAGUE, FOSSIL_PRICE)), FOSSIL_STEP)),
-        "a previous league's price marked approximate": page(route(goal(("Prices", LEAGUE, "Shrieking Essence of Fear: 0.34 Chaos, poe.ninja, previous league, Mirage, 2026-06-13; approximate: previous league's price (Mirage, 2026-06-13)")), AUG)),
+        "a previous league's price marked approximate, and listed as an input": page(route(goal(("Prices", LEAGUE, EARLIER + "; approximate: previous league's price (Mirage, 2026-06-13)"), ("Approximate inputs", EARLIER_INPUT)), AUG)),
+        "a thin price marked approximate and listed as an input": page(route(goal(("Prices", LEAGUE, THIN_MARKED), ("Approximate inputs", THIN_INPUT)), FOSSIL_STEP)),
+        "a stand-in marked approximate": page(route(goal(("Prices", LEAGUE, WIDER + "; approximate: price of a wider item; the exact item has 0 listings"), ("Approximate inputs", "The price of Thicket Bow, magic, item level 78-79, Hunter influence is 13 Chaos, an approximate input: price of a wider item; the exact item has 0 listings. Source: trade site, instant buyout, Allflame, 2026-11-07.")), AUG)),
         "a Chaos Orb has no price line": page(route(goal(("Prices", LEAGUE)), step(1, "Chaos Orb", ("Cost per use", "1 × Chaos Orb 1 c")))),
     },
 )
