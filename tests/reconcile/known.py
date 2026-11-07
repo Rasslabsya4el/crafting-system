@@ -14,12 +14,13 @@ in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
     #494  point 2: the price entries of R08 and R09 are of a normal base plus a typed Alchemy, OR-16 (what was left of #417)
     #418  the start price is keyed by base name, not base id (the key says the base since #474; rows moved to #483 and #486)
     #425  R04's price is for item level 85 against 81; V01's hand price records no level
-    #426  R04, R13, V01 start prices are poe.ninja or hand stand-ins
+    #426  R04, V01 start prices are poe.ninja or hand stand-ins (R13's is a trade price since #576)
     #427  targets with no start price (J01, R03, R06): closed by #505, every target says `start: given` (J01) or `start: bought`, and a
           bought one has a key and a computed spec; the two prices that cannot be taken are #483
     #428  the spec and the price accept bases with another mod pool (rows moved to #483 and #486)
-    #483  the exact start item of R03, R05, R06, R10, R11, R12, R14 has no trade market (R03 and R06 have no price at all, a bought start item
+    #483  the exact start item of R03, R05, R06, R10, R11, R12 has no trade market (R03 and R06 have no price at all, a bought start item
           needs one, OR-6), so the committed price is for a wider item
+    #601  R14's start item (a magic Hunter bow, #576) has no trade market, so its committed price is for a wider item (the rest of #483 for R14)
     #486  the trade site cannot tell bases of one name apart by `type` (R04 quivers; the three Two-Toned Boots by their implicit since #474)
 
 Since #474 the buy spec is not a hand-written file: `derived_specs/<target>.yaml` is what the planner computes from the target, written
@@ -69,8 +70,7 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r12-lightning-amulet", "price.mods"): ("#483", "OR-3", "the stored search names the fractured resistance with no minimum, so every tier of it matches; the target's tier is priced from 12 (#470)", "fractured +#% to Lightning Resistance at least 12", "fractured +#% to Lightning Resistance (no minimum)"),
         ("r12-lightning-amulet", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any amulet; the exact item has 1 listing", "Paua Amulet", "any accessory.amulet"),
         ("r12-lightning-amulet", "price.item_level"): ("#483", "OR-3", "the price entry is for item level 75, the target plans 84; the exact item has 1 listing", "84", "75"),
-        ("r13-life-resist-belt", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
-        ("r14-hunter-bow", "price.rarity"): ("#483", "OR-3", "the target starts normal, the price entry searched any non-unique item", "normal", "nonunique"),
+        ("r14-hunter-bow", "price.rarity"): ("#601", "OR-3", "the target starts magic, the price entry searched any non-unique item (the exact item has no market)", "magic", "nonunique"),
         ("v01-minion-helmet", "price.item_level"): ("#425", "OR-3", "the hand price records no item level: the check cannot tell", "84", "cannot tell (label 84)"),
         ("v01-minion-helmet", "price.source"): ("#426", "OR-7", "the start price is a hand stand-in", "trade-api", "hand"),
     }

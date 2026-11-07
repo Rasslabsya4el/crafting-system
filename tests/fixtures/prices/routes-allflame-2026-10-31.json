@@ -262,10 +262,61 @@
       "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
       "source": "poe.ninja"
     },
-    "Leather Belt, normal, item level 86-100": {
-      "chaos": 10.0,
-      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
-      "source": "poe.ninja"
+    "Leather Belt, magic, item level 86-100": {
+      "chaos": 15.234,
+      "detail": {
+        "date": "2026-11-07",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 28,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "accessory.belt"
+                  },
+                  "rarity": {
+                    "option": "magic"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Leather Belt"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "5d473a3006703b53fabcad1e514aa34485143cc97d85c3e18834dac17b239bd9",
+        "usable": 10,
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 28 on the site, listed any time",
+      "source": "trade-api"
     },
     "Lion Pelt, item level 84, fractured +(31-35)% to Chaos Resistance": {
       "chaos": 20.0,
@@ -824,7 +875,7 @@
       "note": "trade price of a normal base of item level 86 (29.8) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target; the key names a rare item with no mods, this price is of a normal base plus the typed Alchemy (#494 point 2)",
       "source": "trade-api"
     },
-    "Thicket Bow, normal, item level 78-79, Hunter influence": {
+    "Thicket Bow, magic, item level 78-79, Hunter influence": {
       "chaos": 13.0,
       "detail": {
         "date": "2026-11-01",
@@ -884,7 +935,7 @@
         "query_hash": "0c8292aec6aca6eec1c1e19559b01b9b10ad8274aadd17b75c65ec95b5c1cd37",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time; priced for a Hunter bow of item level 78 or more, any non-unique rarity; the exact item (normal, item level 78 to 79) has 0 listings, issue #483",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time; a STAND-IN for a wider item (OR-7): priced for a Hunter bow of item level 78 or more, any non-unique rarity (searched 2026-11-01); the exact item (magic, item level 78 to 79) has 0 listings (searched 2026-11-07), and 2 at item level 78 or more with no top bound, both priced at 2 Divine Orbs = 744.4 Chaos at 372.2 Chaos per Divine (instant buyout, listed 2026-09-13 and 2026-09-14; searched 2026-11-07), issue #601",
       "source": "trade-api"
     },
     "Two-Toned Boots [BootsAtlas1], item level 86-100": {

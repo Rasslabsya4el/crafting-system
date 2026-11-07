@@ -141,14 +141,23 @@ def test_a_cell_says_where_a_job_stopped():
 
 
 def test_the_names_of_a_key_are_read_from_a_list_and_from_lines_and_a_probe_adds_one():
-    assert key.key_names(text_of("v01-minion-helmet")) == ["transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb"]
-    assert key.key_names(text_of("r13-life-resist-belt"))[0] == "transmutation-orb"
-    assert key.key_names(text_of("r04-penetrating-quiver"))[:2] == ["Essence of Insanity", "Deafening Essence of Rage"]
-    assert key.key_names(text_of("r12-lightning-amulet")) == []
+    """The parser is tested on its own texts: what a committed target names changes with the guide it quotes (R13 and R14 lost their Transmutation Orb in #576)."""
+    as_list = "base: x\nactions: [transmutation-orb, alteration-orb,  regal-orb]  # a flow list\nrequirements: []\n"
+    as_lines = "base: x\nactions:\n  - Essence of Insanity  # a comment\n  - Deafening Essence of Rage\n  - remove-crafted-mods\nrequirements: []\n"
 
-    probed = key.with_variant(text_of("j01-cobalt-life-attack-speed"), "plus=divine-orb")
+    assert key.key_names(as_list) == ["transmutation-orb", "alteration-orb", "regal-orb"]
+    assert key.key_names(as_lines) == ["Essence of Insanity", "Deafening Essence of Rage", "remove-crafted-mods"]
+    assert key.key_names("base: x\nrequirements: []\n") == []
+
+    probed = key.with_variant("base: x\nactions: [chaos-orb]\n", "plus=divine-orb")
 
     assert [line for line in probed.splitlines() if line.startswith("actions:")] == ["actions: [chaos-orb, divine-orb]"]
+
+
+def test_every_committed_target_with_a_key_has_names_the_parser_finds():
+    for name in CARRYING:  # whatever a target names today, the parser reads at least one name from its key line
+        assert key.key_names(text_of(name)), name
+    assert key.key_names(text_of("r12-lightning-amulet")) == []  # a committed target with no key
 
 
 def test_the_probes_add_each_kind_the_key_does_not_name_under_each_solver():

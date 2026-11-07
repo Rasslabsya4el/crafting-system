@@ -39,12 +39,12 @@ OFFERS = {
         "Remove Crafted Mods", "Bench craft Cannot roll Attack Modifiers", "restart",
     },
     "R14": {
-        "Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Annulment", "Exalted Orb",
+        "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Annulment", "Exalted Orb",
         "Remove Crafted Mods", "Bench craft Can have up to 3 Crafted Modifiers", "Bench craft Cannot roll Attack Modifiers",
         "Bench craft +2 to Level of Socketed Support Gems", "Bench craft +(18-20)% to Chaos Damage over Time Multiplier", "restart",
     },
 }
-START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, normal, item level 78-79, Hunter influence", "trade-api", 13.0)}
+START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api", 13.0)}
 
 
 @pytest.fixture(scope="module")

@@ -52,7 +52,7 @@ def test_the_r13_example_parses_into_the_route():
     target = load_target(R13, DATA)
 
     assert (target.base_id, target.item_level) == (BELT, 86)
-    assert target.start_item.mods == () and target.start_item.rarity is Rarity.NORMAL
+    assert target.start_item.mods == () and target.start_item.rarity is Rarity.MAGIC  # the guide opens with Alteration (#576)
     life, resists, damage = target.requirements
     assert isinstance(life, Requirement)
     assert (life.family, life.min_tier, life.not_crafted) == ("IncreasedLife", 1, True)

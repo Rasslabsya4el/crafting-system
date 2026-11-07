@@ -14,8 +14,7 @@
 #      anything else.
 #   3. Craft the damage modifier at the bench.
 #
-# The guide starts from a magic belt; the target starts from a normal one, so the first rule is the
-# Orb of Transmutation that makes it magic. The guide's "tier-1 resistance" is any of fire, cold and
+# The guide starts from a magic belt and so does the target (#576), so no rule makes the belt magic. The guide's "tier-1 resistance" is any of fire, cold and
 # lightning (the target asks for two of the three), and an unstated tier is the top tier (owner rule).
 
 name: R13, Reddit guide
@@ -91,7 +90,3 @@ rules:
       rarity: magic
     do: Orb of Alteration
 
-  # The belt is normal at the start (the guide's magic belt, made magic).
-  - when:
-      rarity: normal
-    do: Orb of Transmutation

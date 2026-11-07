@@ -1,6 +1,6 @@
 """The age of a price does not depend on the day the suite runs (ticket #542, split from #473 point 9; OR-7).
 
-The committed trade prices are dated 2026-10-31 and 2026-11-01 and the limit is 7 whole days (`MAX_AGE_DAYS`), so they are stale from
+The committed trade prices are dated 2026-10-31, 2026-11-01 and (R13's Magic belt, #576) 2026-11-07 and the limit is 7 whole days (`MAX_AGE_DAYS`), so they are stale from
 2026-11-07 and 2026-11-08. These tests pin the rule on both sides with the day written as an offset from the stored date, and pin the
 test clock: every place that defaults to the real clock reads `clock_support.FIXED_NOW`.
 """
@@ -57,7 +57,7 @@ def test_a_committed_price_file_warns_after_seven_days_and_not_before(path):
 def test_the_two_route_price_files_hold_the_trade_prices_the_rule_is_pinned_on():
     dated = {name: {day for _, day in trade_entries(FIXTURES / name)[1]} for name in ("routes-allflame-2026-10-31.json", "vendor-v01-2026-11-01.json")}
 
-    assert dated["routes-allflame-2026-10-31.json"] == {date(2026, 10, 31), date(2026, 11, 1)}
+    assert dated["routes-allflame-2026-10-31.json"] == {date(2026, 10, 31), date(2026, 11, 1), date(2026, 11, 7)}  # R13's Magic belt was searched on 11-07 (#576)
     assert dated["vendor-v01-2026-11-01.json"]
 
 

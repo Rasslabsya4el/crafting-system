@@ -137,7 +137,7 @@ def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
     exact = make_plan(data, load_target(TARGET_R13, data), load_price_file(PRICES), solver="packed", with_risk=False).mean_remaining
     sound = envelope_result(abstraction, start, priced, bound=bound)
     assert sound.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
-    factor = 1.0 + 9.0 * (np.arange(len(bound.value)) % 4 == 1)
+    factor = 1.0 + 9.0 * (np.arange(len(bound.value)) % 4 == 0)  # one key in four; the keys moved by one when R13's Normal start state went (#576): `== 1` raised none the search looks at
     wrong = dataclasses.replace(bound, value=bound.value * factor)
     with pytest.raises(BoundError, match="lower bound"):  # the guard sees this bound is not consistent as the search looks further ...
         envelope_result(abstraction, start, priced, bound=wrong)

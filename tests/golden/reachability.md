@@ -47,7 +47,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `remove-crafted-mods` | yes |  | r04, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14 |  |  |
 | `fossil-set` | yes | opt-in | r08, r09 |  |  |
 | `alchemy-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
-| `transmutation-orb` | yes |  | r13, r14, v01 |  |  |
+| `transmutation-orb` | yes |  | v01 |  |  |
 | `alteration-orb` | yes |  | r13, r14, v01 |  |  |
 | `augmentation-orb` | yes |  | r13, r14, v01 |  |  |
 | `regal-orb` | yes |  | r13, r14, v01 |  |  |
@@ -69,7 +69,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `awakeners-orb` | **no** |  | none | `planner=False`: the solver takes no donors yet (#211, #212) and the interval over its rule axis does not exist (#220); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 14 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
-| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so are the lazy offer loop, #212, and the interval driver, #220, #221); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (8 of 14 start items list such actions) | ACT2-11 |
+| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so are the lazy offer loop, #212, and the interval driver, #220, #221); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (10 of 14 start items list such actions) | ACT2-11 |
 | `catalyst` | **no** | reads: any | none | `planner=False`: the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158) |  |
 | `eldritch-implicit-currency` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
 | `eldritch-chaos-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
@@ -108,8 +108,8 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r10-fractured-boots-70-life | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
 | r11 | plans | no key | 59 | 19 | 0 | 4 | chaos-orb, divine-orb, essence, harvest-reforge |
 | r12 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
-| r13 | plans | 6 names | 6 | 0 | 0 | 6 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods, transmutation-orb |
-| r14 | plans | 10 names | 11 | 0 | 0 | 8 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods, transmutation-orb |
+| r13 | plans | 5 names | 5 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
+| r14 | plans | 9 names | 10 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
 | v01 | plans | 4 names | 4 | 0 | 0 | 4 | alteration-orb, augmentation-orb, regal-orb, transmutation-orb |
 | v01 (recipe start) | plans | 4 names | 3 | 0 | 0 | 3 | alteration-orb, augmentation-orb, regal-orb |
 
