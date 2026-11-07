@@ -41,7 +41,7 @@ from ._start_step import FirstStep, first_step
 from ._verify import SIGMAS, Verification
 
 FORMAT = "crafting-system-policy/3"  # /3: `requirements` keeps the k-of-n groups (ticket #630); /2 listed every leaf flat
-POLICY_HEADING = "Policy (one block for each action you take, numbered as the steps of the route page; step 1 is the start item)"
+POLICY_HEADING = "Policy (one block for each action you take, numbered as the steps of the route page, whose step 1 is how you get the start item)"
 GOAL = "goal"
 DEAD_END = "dead end"
 RESULT_ROWS = ("success", "mean", "p50", "p90")  # the rows of the result block, as the keys of `PERCENTILE_WORDS` name them
@@ -230,21 +230,22 @@ def _requirement_parts(plan: Plan, state: CompressedState) -> list[str]:
 
     A member of a group is a leaf of the target, but it is not required on its own: an item that has the Life mod of "1 of 4: Life or a resistance"
     does not lack the three resistances. A group says what is met (with its k and n, as the page words a group) and, when it is not met yet, how
-    many more it lacks and which members could still be.
+    many more it lacks and which members could still be; a member the item holds below its tier is said where it is listed ("Z (held, too weak)"),
+    once, at any depth of nesting. Every leaf that stands at PASSING or BELOW is named somewhere on the line (`_unnamed_mods` relies on it).
     """
     leaves = iter(zip(plan.leaf_labels, state.status))
-    requirements = plan.target.requirements
 
     def member(node) -> tuple[str, Status]:
+        """(text, standing) of a leaf, or of a nested group: it stands PASSING when met and says all its members, each with how it is held."""
         if not isinstance(node, KOfN):
             return next(leaves)
         found = [member(each) for each in node.of]
         met = sum(status is Status.PASSING for _, status in found)
-        label = f"at least {node.at_least} of {len(node.of)} of: " + ", ".join(text for text, _ in found)
+        label = f"at least {node.at_least} of {len(node.of)} of: " + ", ".join(_held(text, status) for text, status in found)
         return label, Status.PASSING if met >= node.at_least else Status.ABSENT
 
     parts: list[str] = []
-    for requirement in requirements:
+    for requirement in plan.target.requirements:
         if not isinstance(requirement, KOfN):
             label, status = next(leaves)
             parts.append(f"{_VERB[status]} {label}")
@@ -254,11 +255,21 @@ def _requirement_parts(plan: Plan, state: CompressedState) -> list[str]:
         wanted = f"the group needs {requirement.at_least} of {len(found)}"
         if met:
             parts.append(f"has {', '.join(met)} ({wanted})")
-        parts.extend(f"too weak: {text}" for text, status in found if status is Status.BELOW)
-        if len(met) < requirement.at_least:
-            missing = [text for text, status in found if status is not Status.PASSING]
+        if len(met) < requirement.at_least:  # the weak members are listed here, among those still to find
+            missing = [_weak(text, status) for text, status in found if status is not Status.PASSING]
             parts.append(f"lacks {requirement.at_least - len(met)} of: {', '.join(missing)}" + ("" if met else f" ({wanted})"))
+        else:  # met: the weak members are not listed as missing, but the item holds them
+            parts.extend(f"too weak: {text}" for text, status in found if status is Status.BELOW)
     return parts
+
+
+def _weak(text: str, status: Status) -> str:
+    return f"{text} (held, too weak)" if status is Status.BELOW else text
+
+
+def _held(text: str, status: Status) -> str:
+    """A member of a nested group as it is listed: how the item holds it."""
+    return {Status.PASSING: f"{text} (held)", Status.BELOW: f"{text} (held, too weak)", Status.ABSENT: text}[status]
 
 
 def _unnamed_mods(state: CompressedState) -> list:
