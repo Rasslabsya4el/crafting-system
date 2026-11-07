@@ -26,7 +26,7 @@ import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.abstraction._pattern import PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats
-from crafting_system.solver import PackedBuilder, solve_packed
+from crafting_system.solver import PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
 from ._offers import BuyStartItem, PricedOffer
@@ -210,7 +210,10 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
     """The offers outside the model that could lower the value of a key where the floor action is the cheapest, the least floors first.
 
     At a key whose floor action is cheaper than every action of the model, the value is the floor and not the model's own; an offer outside the model
-    whose floor there is not above the model's best could lower it. All of them are returned: adding them costs the offers' own kernels, once each
+    whose floor there is not above the model's best could lower it. Only a key that the policy of the model reaches from the start counts, as in the search
+    (`_envelope`): when that policy takes the floor action nowhere, it is a policy of the model on all the offers, and the value of the start is the model's
+    own (it is at most the exact value, and at least the value of a policy of the exact model); the keys the policy does not reach keep the value the floor
+    action gives them, which is a lower bound all the same. All of them are returned: adding them costs the offers' own kernels, once each
     (`PatternBuilder` builds only what they add), and a round for each few would cost a solve and a pass over the offers for nothing. Nothing is
     returned when the floor action is the cheapest nowhere.
     """
@@ -226,6 +229,9 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
     fake = np.full(n, np.inf)
     np.minimum.at(fake, owner[~real], q[~real])
     binding = fake < best * (1.0 - BINDING)
+    reached = np.zeros(n, dtype=bool)
+    reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # only a key the policy of the model reaches from the start can change the value of the start
+    binding &= reached
     if not binding[: len(model.keys)].any():
         return [], {OTHER: None, INSIDE: None, OUTSIDE: None}
     limit: dict[int, float | None] = {OTHER: None, INSIDE: None, OUTSIDE: None}
