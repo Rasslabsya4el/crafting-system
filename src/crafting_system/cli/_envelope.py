@@ -312,6 +312,8 @@ class Search[S]:
         self.tags: np.ndarray | None = None  # the tag (offer position, or FAKE) of the action the last solve chose at each node, NO_ACTION where none
         self.n_solved = 0
         self.restart_kernel: int | None = None
+        self.prime_skip = 0  # states to leave before the problem is asked to prime again (see `realize`)
+        self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
         self._last_root: float | None = None
         self.intern(problem.start)
@@ -421,13 +423,18 @@ class Search[S]:
         first = force
         prime = getattr(self.p, "prime", None)
         primed = 0  # how many of the offers at the end of `cands` have been primed
+        self.prime_skip = max(self.prime_skip - 1, 0)
         while cands and (first or cands[-1][0] < best):
-            if prime is not None and primed == 0:
+            if prime is not None and primed == 0 and not self.prime_skip:
                 # the offers still to be realized are among those whose bound is below the best now (it only falls): ask the problem to make their
                 # expensive parts side by side before they are built one by one
                 ahead = [position for la, position in reversed(cands[-PRIME_AHEAD:]) if first or la < best]
                 if len(ahead) >= PRIME_FROM:
-                    prime(self.states[i], ahead)
+                    made = prime(self.states[i], ahead)
+                    # a call that found everything made already (the pools of one offer are the same at most states) costs the preparation of every offer
+                    # for nothing: the next calls wait 2, 4, ... 64 states while the answer stays 0
+                    self.prime_zero = 0 if made else self.prime_zero + 1
+                    self.prime_skip = min(2**self.prime_zero, 64) if not made else 0
                 primed = len(ahead)
             first = False
             primed -= 1

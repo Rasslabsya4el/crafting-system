@@ -150,9 +150,9 @@ class CraftingProblem:
             self.ab.gaps.note(self.offers[position].label, state, gap)
             raise Refused from None
 
-    def prime(self, state: CompressedState, positions: Sequence[int]) -> None:
-        """Make the exact distributions of these offers at `state` in the process pool (ticket #250, #626); a no-op with one worker or no `fork`."""
-        self.ab.prime(
+    def prime(self, state: CompressedState, positions: Sequence[int]) -> int:
+        """Make the exact distributions of these offers at `state` in the process pool (ticket #250, #626); returns how many it made (0 with one worker, no `fork`, or all made)."""
+        return self.ab.prime(
             [(state, self.offers[position].offer.action) for position in positions if not isinstance(self.offers[position].offer.action, BuyStartItem)]
         )
 
