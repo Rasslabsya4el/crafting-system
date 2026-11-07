@@ -57,7 +57,9 @@ def main(argv: list[str]) -> int:
         target = load_target(root / bench.target, data)
         extra = {} if args.budget is None else {"budget": args.budget, "rates": Rates(4e-5, 7e-6)}  # the rates are injected, so the decision does not depend on the machine
         plan = make_plan(data, target, prices, **extra) if bench.start is None else plan_with_starts(data, target, prices, **extra)
+        print(f"{name}: planned in {time.perf_counter() - began:,.0f} s; {len(plan.view_policy):,} states in the policy, {len(plan.offers):,} offers", flush=True)
         uses = price_uses(plan, plan.view_policy, all_uses=True)
+        print(f"{name}: the uses solved in {time.perf_counter() - began:,.0f} s", flush=True)
         document = {
             "route": name,
             "prices": args.prices,
