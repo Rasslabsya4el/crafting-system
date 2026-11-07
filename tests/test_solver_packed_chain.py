@@ -140,6 +140,16 @@ def test_the_row_of_the_start_found_by_the_same_pieces_agrees_with_the_dense_row
     assert caught > 1e-3
 
 
+def test_cut_rows_too_many_to_put_back_in_the_memory_allowed_are_refused_not_guessed(monkeypatch):
+    rng = np.random.default_rng(11)
+    n = 40
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=6, density=2)
+    monkeypatch.setattr(pc, "WOODBURY_CELLS", 10)
+
+    with pytest.raises(pc.CyclesTooTangled, match="cells"):
+        pc.inverse_diagonal(n, ptr, col, weight, invert_limit=3)
+
+
 def test_a_chain_of_one_state_and_of_none():
     ptr, col, weight = np.zeros(2, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0)
     assert pc.inverse_diagonal(1, ptr, col, weight)[0].tolist() == [1.0]

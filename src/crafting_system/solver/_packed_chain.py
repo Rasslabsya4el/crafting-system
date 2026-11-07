@@ -32,6 +32,11 @@ from ._packed import expand_ranges
 
 INVERT_LIMIT = 4_000  # a component of at most this many states is inverted whole (a dense inverse of 4,000 states: 0.13 GB, a second or two); a bigger one is cut
 BLOCK_CELLS = 40_000_000  # the cells (edges or states x right-hand sides) held at once by a gather or a block of solves: 320 MB of float64
+WOODBURY_CELLS = 500_000_000  # the cells the Woodbury step may hold (4 GB of float64): derived from the memory of a runner (16 GB), the one resource it needs; past it the cycles are too tangled to put back and `CyclesTooTangled` says so
+
+
+class CyclesTooTangled(ValueError):
+    """The cut rows of a chain are too many to put back within `WOODBURY_CELLS`: the chances that need them are not measured, never guessed."""
 
 
 def components(n: int, ptr: np.ndarray, col: np.ndarray) -> tuple[np.ndarray, int]:
@@ -320,6 +325,11 @@ def _woodbury(
     say(f"cycles: the chain without the cut rows has {count:,} components, the biggest {int(sizes.max()):,}; {q:,} distinct rows are cut")
     rows = [(col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]) for g in groups]  # the rows of K
     wanted = np.flatnonzero(big)
+    cells = (2 * len(wanted) + 2 * q) * q  # N_B U and K N_B on the wanted states, K N_B U and its inverse
+    if cells > WOODBURY_CELLS:
+        raise CyclesTooTangled(
+            f"putting back {q:,} distinct cut rows for {len(wanted):,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows"
+        )
     block = max(1, BLOCK_CELLS // max(1, n))
     y_w = np.zeros((len(wanted), q))  # N_B U on the wanted states
     t = np.zeros((q, q))  # K N_B U

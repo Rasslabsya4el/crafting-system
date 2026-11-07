@@ -62,7 +62,7 @@ from typing import Literal
 import numpy as np
 
 from crafting_system.solver import Action
-from crafting_system.solver._packed_chain import inverse_diagonal
+from crafting_system.solver._packed_chain import CyclesTooTangled, inverse_diagonal
 from crafting_system.solver._packed_solve import DENSE_FALLBACK, DENSE_FALLBACK_RESIDUAL, DENSE_LIMIT, bicgstab_checked
 
 from ._limits import STEPS, Limit, claim
@@ -634,7 +634,8 @@ def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> np.ndarray |
     with np.errstate(all="ignore"):
         try:
             diagonal, deviation = inverse_diagonal(system.nt, ptr, column, weight, start=start, start_row=visits * system.leave, progress=say)
-        except np.linalg.LinAlgError:
+        except (np.linalg.LinAlgError, CyclesTooTangled) as error:  # not measured, never a guess: the benchmark line shows `?` and counts it
+            say(f"visit chances: not measured ({error})")
             return None
         if not (deviation <= AGREE and np.all(np.isfinite(diagonal)) and np.all(diagonal >= 1.0 - 1e-9)):
             say(f"visit chances: the cycles of the chain and the visits disagree by {deviation:.3g}, no chance is shown")

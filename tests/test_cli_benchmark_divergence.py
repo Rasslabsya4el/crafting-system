@@ -83,6 +83,28 @@ def test_no_chance_is_a_bound_and_no_size_of_chain_turns_one_into_a_bound():
     assert not hasattr(_route_flow.Reach(0.5), "exact")  # a chance is the exact chance or None, never "at most" (#572)
 
 
+def test_cycles_too_tangled_for_the_memory_leave_the_chances_not_measured_and_never_a_bound(monkeypatch):
+    policy, chain = hand_chain()
+    index = {state: i for i, state in enumerate(chain.states)}
+    small_limits(monkeypatch)
+    monkeypatch.setattr(packed_chain, "WOODBURY_CELLS", 1)
+
+    reached = reach_of(chain, [index["S"], index["B"]])
+
+    assert [r.chance for r in reached] == [1.0, None]  # the start is visited for sure; the other is not measured
+
+
+def test_a_disagreement_between_the_cycles_and_the_visits_leaves_the_chances_not_measured(monkeypatch):
+    policy, chain = hand_chain()
+    index = {state: i for i, state in enumerate(chain.states)}
+    real = _route_flow.inverse_diagonal
+    monkeypatch.setattr(_route_flow, "inverse_diagonal", lambda *a, **k: (real(*a, **k)[0], 0.5))  # the row of the start disagrees by 50%
+
+    reached = reach_of(chain, [index["B"]])
+
+    assert reached[0].chance is None
+
+
 def test_the_chance_of_a_state_the_run_cannot_finish_from_is_not_measured():
     policy = {"S": act("s", ("A", 1), ("goal", 1)), "A": act("a", ("A", 1))}  # A loops for ever
     chain = chain_of_policy("S", policy, is_goal)
