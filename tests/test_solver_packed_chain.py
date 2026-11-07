@@ -147,6 +147,44 @@ def test_the_row_of_the_start_found_by_the_same_pieces_agrees_with_the_dense_row
     assert caught > 1e-3
 
 
+def layered_chain(rng, n, layers, back):
+    """`(dense Q, ptr, col, weight)` of a sparse chain in layers: each state goes to three states of the next layer and `back` states of an earlier one (a state may be named twice in a row)."""
+    per = n // layers
+    rows, cols = [], []
+    for s in range(n):
+        layer = s // per
+        for _ in range(3):
+            rows.append(s)
+            cols.append(min(layers - 1, layer + 1) * per + int(rng.integers(per)))
+        for _ in range(back):
+            rows.append(s)
+            cols.append(int(rng.integers(0, layer + 1)) * per + int(rng.integers(per)))
+    rows, cols = np.array(rows), np.array(cols)
+    keep = rows != cols
+    rows, cols = rows[keep], cols[keep]
+    order = np.lexsort((cols, rows))
+    rows, cols = rows[order], cols[order]
+    weight = rng.random(len(rows))
+    weight = weight / np.bincount(rows, weights=weight, minlength=n)[rows] * 0.85
+    dense = np.zeros((n, n))
+    np.add.at(dense, (rows, cols), weight)
+    return dense, np.searchsorted(rows, np.arange(n + 1)), cols, weight
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_a_big_component_of_a_sparse_layered_chain_is_cut_state_by_state_in_batches_and_put_back_exactly(seed):
+    """The shape of R14's policy (372,000 edges for 87,000 states, one component of 18,786 after its 12 shared rows are cut), at a size a dense inverse can check."""
+    rng = np.random.default_rng(700 + seed)
+    n = 400
+    dense, ptr, col, weight = layered_chain(rng, n, 10, 1)
+    exact = inverse_of(dense)
+
+    got, deviation = pc.inverse_diagonal(n, ptr, col, weight, np.ones(n), invert_limit=60, start=0, start_row=exact[0])
+
+    assert got == pytest.approx(np.diag(exact), rel=1e-9)
+    assert deviation < 1e-9
+
+
 def test_cut_rows_too_many_to_put_back_in_the_memory_allowed_are_refused_not_guessed(monkeypatch):
     rng = np.random.default_rng(11)
     n = 40

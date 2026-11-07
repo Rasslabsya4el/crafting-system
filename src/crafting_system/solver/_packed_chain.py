@@ -35,6 +35,7 @@ from ._packed import expand_ranges
 
 INVERT_LIMIT = 4_000  # a component of at most this many states is inverted whole (a dense inverse of 4,000 states: 0.13 GB, a second or two); a bigger one is cut
 BLOCK_CELLS = 40_000_000  # the cells (edges or states x right-hand sides) held at once by a gather or a block of solves: 320 MB of float64
+CUT_BATCH = 40  # a round cuts the 1/40 of a component's states that most cycles run through, and looks again
 WOODBURY_CELLS = 500_000_000  # the cells the Woodbury step may hold (4 GB of float64): derived from the memory of a runner (16 GB), the one resource it needs; past it the cycles are too tangled to put back and `CyclesTooTangled` says so
 
 
@@ -310,11 +311,14 @@ def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int) ->
         if not len(over):
             return cut
         row = np.repeat(np.arange(n), np.diff(new_ptr))
-        entered = np.bincount(new_col[label[row] == label[new_col]], minlength=n)  # the edges of its own component that enter each state
+        inside = label[row] == label[new_col]
+        entered = np.bincount(new_col[inside], minlength=n)  # the edges of its own component that enter each state
+        leaving = np.bincount(row[inside], minlength=n)  # ... and that leave it: a state many cycles run through has both
+        score = entered.astype(float) * leaving
         for c in over.tolist():
             members = np.flatnonzero(label == c)
-            order = members[np.argsort(-entered[members], kind="stable")]
-            cut[order[: max(1, -(-len(members) // (4 * limit)))]] = True
+            order = members[np.argsort(-score[members], kind="stable")]
+            cut[order[: max(1, len(members) // CUT_BATCH)]] = True
 
 
 def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say) -> tuple[np.ndarray, float]:
@@ -357,7 +361,7 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
             t[a, lo:hi] = vals @ y[cols]
         rhs = np.zeros((n, hi - lo))
         for g in range(lo, hi):
-            rhs[rows[g][0], g - lo] = rows[g][1]
+            np.add.at(rhs[:, g - lo], rows[g][0], rows[g][1])  # (a row may name a state twice: its entries add)
         z_w[lo:hi, :] = (r[:, None] * base.solve_transposed(rhs))[wanted].T  # column a is A^-T of the row a of K, that is row a of K A^-1
     middle = np.linalg.inv(np.eye(q) - t)
     diagonal[wanted] += np.einsum("wa,ab,bw->w", y_w, middle, z_w, optimize=True)
