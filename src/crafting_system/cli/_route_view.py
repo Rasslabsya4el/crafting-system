@@ -516,7 +516,8 @@ class _View:
         if action.label == RESTART:
             return [money(self.plan.start_price.chaos)]
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price was paid in row 1 and is paid again by every restart
-            return ["free: the price of the listing is paid in step 1, and again by each restart"]
+            counted = money(self.plan.offer_of(action).cost)
+            return [f"free: the listing's price is paid in step 1 and again by each restart; counted as {counted} so that every step has a positive cost"]
         priced = self.plan.offer_of(action)
         lines = [f"{count_} × {name} {money(chaos)}" for name, count_, chaos, _ in priced.parts]
         if len(priced.parts) > 1:
@@ -638,7 +639,7 @@ class _View:
         if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
         never = step.uses is not None and math.isinf(step.uses)
-        step_cost = None if step.uses is None or never or action.label == DRAW_LABEL else step.uses * step.cost
+        step_cost = None if step.uses is None or never else step.uses * step.cost
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [count(step.uses)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
