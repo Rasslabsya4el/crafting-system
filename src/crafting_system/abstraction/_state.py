@@ -13,19 +13,28 @@ def _state_without_hash(self) -> dict:
     return {name: value for name, value in self.__dict__.items() if name != "_hash"}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class Flags:
-    """What the actions look at besides the mods: the rarity, corruption and influences."""
+    """What the actions look at besides the mods: the rarity, corruption and influences.
+
+    `unopened` is the bought listing whose mods are not drawn yet (`Item.unopened`): the one state where only the draw that opens it works.
+    """
 
     rarity: Rarity
     corrupted: bool
     influences: frozenset[Influence]
+    unopened: bool = False
+
+    def __repr__(self) -> str:
+        """The dataclass repr, with `unopened` shown only when it is True: the text of every other state is what it was before ticket #640 (goldens key by it)."""
+        text = f"rarity={self.rarity!r}, corrupted={self.corrupted!r}, influences={self.influences!r}"
+        return f"Flags({text}, unopened=True)" if self.unopened else f"Flags({text})"
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
-            value = hash((self.rarity, self.corrupted, self.influences))
+            value = hash((self.rarity, self.corrupted, self.influences, self.unopened))
             object.__setattr__(self, "_hash", value)
             return value
 
@@ -203,7 +212,7 @@ class CompressedState:
         except AttributeError:
             flags = self.flags
             value = (
-                (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences))),
+                (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences)), flags.unopened),
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.fractured),
                 tuple(int(entry) for entry in self.status),
                 tuple(slot.key for slot in self.slots),

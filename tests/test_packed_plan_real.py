@@ -186,17 +186,9 @@ def reads(both, data):
     )
 
 
-def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluation(reads, request):
-    """Ticket #70, the percentile half of the test below. R13 fails it since the Magic start of #576 (PR #607): see #622."""
+def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluation(reads):
+    """Ticket #70, the percentile half of the test below. R13 failed it from the Magic start of #576 until the draw of the bought item's mods (#640, #622)."""
     route_id, by_object, by_graph = reads
-    if route_id == "R13":
-        request.applymarker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="#622: the object read of R13's given route leaves p90 unresolved (infinite) where the packed read gives about 28,429; it fails loudly the day #622 is fixed, delete this mark then",
-            )
-        )
 
     assert len(by_graph.gaps) == len(by_object.gaps)
     if by_object.gaps:

@@ -84,7 +84,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from fractions import Fraction
 from functools import cache
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item
@@ -640,6 +640,10 @@ class Action(ABC):
     `claims` answers the sixth by itself (see the module docstring); override it only when the module of
     the class holds several actions that read different claims.
     """
+
+    # True only for the draw that opens a bought listing (`actions.listing`, ticket #640): the one action that works on an unopened item,
+    # and the unopened item takes no other.
+    opens_listing: ClassVar[bool] = False
 
     def __init_subclass__(cls, **kwargs) -> None:
         """Wrap the `outcomes` a subclass defines in the strand guard (see `strand_use.py`): it refuses an undeclared action on an item with strands and applies the spend of a declared one."""

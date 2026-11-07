@@ -102,14 +102,14 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
-| r08 | plans | 2 names | 10671 | 2026 | 0 | 2 | bench-craft, fossil-set |
-| r09 | plans | 2 names | 10671 | 2026 | 0 | 2 | bench-craft, fossil-set |
+| r08 | plans | 2 names | 10672 | 2026 | 0 | 2 | bench-craft, fossil-set |
+| r09 | plans | 2 names | 10672 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r10-fractured-boots | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
 | r10-fractured-boots-70-life | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
 | r11 | plans | no key | 59 | 19 | 0 | 4 | chaos-orb, divine-orb, essence, harvest-reforge |
 | r12 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
-| r13 | plans | 5 names | 5 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
-| r14 | plans | 9 names | 10 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
+| r13 | plans | 5 names | 6 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
+| r14 | plans | 9 names | 11 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
 | v01 | plans | 4 names | 4 | 0 | 0 | 4 | alteration-orb, augmentation-orb, regal-orb, transmutation-orb |
 | v01 (recipe start) | plans | 4 names | 3 | 0 | 0 | 3 | alteration-orb, augmentation-orb, regal-orb |
 

@@ -62,6 +62,7 @@ from naive_crafter.play import Gap, Judge, Player, lacking, read_route
 from naive_crafter.world import load_world
 from naive_planner_side import data_pin, inputs_of
 
+from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import evaluate_route, load_route, make_plan
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -313,7 +314,7 @@ def test_each_step_costs_what_the_planner_says(played, label):
 def test_the_planners_policy_takes_only_the_actions_the_route_file_names(played):
     stem, _ = COVERED[played.route]
 
-    assert set(played.exact_spend) <= set(route_labels(stem))
+    assert set(played.exact_spend) - {DRAW_LABEL} <= set(route_labels(stem))  # the draw of a bought item's mods is the market's, not a step the route file names (ADR-0064)
 
 
 @pytest.mark.parametrize("played", list(COVERED), indirect=True)

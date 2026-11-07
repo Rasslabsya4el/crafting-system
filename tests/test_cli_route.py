@@ -17,7 +17,7 @@ from cli_support import R12, geometric_p90_clicks, given, price_file, read_json
 from cli_support import run as run_command
 from targets_support import DATA, EXAMPLES
 
-from crafting_system.actions import ChaosOrb
+from crafting_system.actions import DRAW_LABEL, ChaosOrb
 from crafting_system.cli._limits import unpriced_limits
 from crafting_system.cli import RouteError, RouteResult, evaluate_route, load_route, make_plan, parse_route
 from crafting_system.prices import PriceEntry
@@ -334,8 +334,15 @@ start: bought
 
     assert result.gaps == ()
     assert result.risk.success_probability.value == 1.0
-    assert result.risk.mean.value == pytest.approx((1.0 + START_PRICE * gem_only) / goal_chance, rel=1e-9)
-    assert {action.label for action in result.policy.values()} == {"restart", CHAOS}
+    # The bought rare is the item the market sells (ADR-0064): the route opens with the draw, an Orb of Alchemy's, which is the draw of a Chaos Orb on a
+    # bare rare. After it a state with the gem alone restarts (START_PRICE, then the draw again) and every other state rerolls, so with g the chance of the
+    # goal, b of the gem alone, d what the draw costs and V what the route costs from the listing:
+    #   X = 1 + b (S + V) + (1 - g - b) X   (a rerolled state)   and   V = d + b (S + V) + (1 - g - b) X.
+    d = next(entry.cost for entry in plan.offers if entry.offer.action.opens_listing)
+    s, g, b = START_PRICE, goal_chance, gem_only
+    expected = (d + b * s + (1 - g - b) * (1 + b * s) / (g + b)) / (1 - b - (1 - g - b) * b / (g + b))
+    assert result.risk.mean.value == pytest.approx(expected, rel=1e-9)
+    assert {action.label for action in result.policy.values()} == {"restart", CHAOS, DRAW_LABEL}
 
 
 # --- the reader's errors -----------------------------------------------------------------------------

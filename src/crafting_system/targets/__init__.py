@@ -54,7 +54,12 @@ Keys (unknown keys are errors, with a close-match hint):
                             # The extra crafted slot ("Can have 1 additional Crafted Modifier") can be reached only by a
                             # start item that already holds it; no orb is planned for it (ADR-0053).
     start_item:             # required (#545): the item you hold or buy; nothing is made up for a missing block
-      rarity: rare          # required: normal, magic or rare; never guessed from the mods listed
+      rarity: rare          # required: normal, magic or rare; never guessed from the mods listed. For a BOUGHT start (`start: bought`)
+                            # that is Magic or Rare and lists no mod, the item is the one the market sells (ADR-0064, OR-17): a Magic
+                            # one holds what an Orb of Alteration leaves on the base (1 or 2 mods at their game weights, the influence's
+                            # mods included), a Rare one what an Orb of Alchemy leaves (4 to 6), and the plan opens with that draw and
+                            # decides on each outcome. A Normal one holds none; a start with a mod listed names its mods (no draw); a
+                            # GIVEN start is the item you hold, exactly as written.
       corrupted: false      # optional
       mods:                 # optional; each mod by its game-data id, its values and whether it is fractured; its tier is the game data's (OR-3)
         - mod: LightningResist2

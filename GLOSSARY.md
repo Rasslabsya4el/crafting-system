@@ -126,6 +126,10 @@ _Avoid_: the owner's reading (it is the guide's words that win)
 **Start item**:
 The concrete item a query starts from. Every target file states it (`start_item:` with its `rarity:`), and the parser makes up none (#545). A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6.
 
+**Listing draw**:
+The draw of the mods of a bought start item whose mods the target does not name. A bought Magic or Rare start item that lists no mod is the item the market sells, so it holds what an Orb of Alteration (Magic: 1 or 2 mods) or an Orb of Alchemy (Rare: 4 to 6) leaves on its base, at the game weights. The plan opens with this free chance step and decides on each outcome; the start price stays the price of the listing (ADR-0064, #640). In the code it is `OpenListing`, and the item it opens is an **unopened listing** (`Item.unopened`): a Normal item with no mod that only the draw works on, which a restart returns to.
+_Avoid_: unknown mods, empty start item
+
 **Vendor recipe**:
 One of five recipes (boots movement speed, weapon flat damage, jewellery chaos resistance, a spell-gem weapon, a minion helmet) that turn a Normal base and cheap goods into a Magic item with one chosen mod. It is a start-item source chosen outside the solver: the planner plans the plain start item and each recipe-made one and keeps the cheapest total (ADR-0059).
 _Avoid_: vendor action, recipe action (it is never an action of a route)

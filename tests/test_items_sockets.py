@@ -239,7 +239,7 @@ def test_the_pre_b6_fields_keep_their_order_and_sockets_comes_after_them_then_im
         "enchantment",
         "memory_strands",
     ]
-    assert names[11:] == ["sockets", "imprints"]  # a new field goes last (sockets, ADR-0046; imprints, ADR-0060)
+    assert names[11:] == ["sockets", "imprints", "unopened"]  # a new field goes last (sockets, ADR-0046; imprints, ADR-0060; unopened, ADR-0064)
 
 
 def test_a_pickle_round_trip_keeps_an_item_equal():

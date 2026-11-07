@@ -450,7 +450,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
                 RISK,
                 "Cost figures by a slower method",
                 "; ".join(risk.grid.gave_up),
-                "Each cost figure shown is certified by the method that finished; one it could not reach is marked as not computed.",
+                "The success chance and the mean cost are exact. Each cost figure shown is certified by the method that finished; one it could not reach is marked as not computed.",
             )
         )
     return tuple(found)

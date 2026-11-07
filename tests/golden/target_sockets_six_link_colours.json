@@ -67,7 +67,8 @@
         1
       ]
     },
-    "imprints": []
+    "imprints": [],
+    "unopened": false
   },
   "start": "given",
   "price_file": null,

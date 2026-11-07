@@ -253,12 +253,11 @@ requirements:
     min_tier: any
 start_item:
   rarity: rare
-start: bought
+start: given
 """
+    # a given bare rare (the item the player holds, as written, OR-6): a bought one would open with the draw of its mods (ADR-0064) and this chain starts at the bare rare
     target = parse_target(text, DATA, source="tiny.yaml")
-    prices = price_file(start=None)
-    prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")
-    plan = make_plan(DATA, target, prices)
+    plan = make_plan(DATA, target, price_file(start=None))
     route = parse_route(f"rules:\n  - do: {CHAOS}\n", plan, DATA)
     return plan, evaluate_route(plan, route, DATA)
 

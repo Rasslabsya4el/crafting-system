@@ -35,6 +35,7 @@ import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
 
+from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import _packed, main
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.config import find_project_root, load_config
@@ -97,7 +98,9 @@ def test_the_plan_of_r14_does_not_open_with_a_transmutation_and_has_no_such_step
     _, document, _ = cli
     first = next(state for state in document["states"] if state["id"] == document["start"]["state"])
 
-    assert first["action"] in {"Orb of Alteration", "Orb of Augmentation"}
+    assert first["action"] == DRAW_LABEL  # the bought bow is the item the market sells (ADR-0064): the draw comes first
+    after = {state["action"] for state in document["states"] if state["id"] != first["id"]}
+    assert "Orb of Alteration" in after
     assert "Orb of Transmutation" not in {state["action"] for state in document["states"]}
 
 

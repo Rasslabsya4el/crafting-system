@@ -26,7 +26,7 @@ from abstraction_support import real_game_data
 from cli_support import read_json
 from limits_support import labels_of, only
 
-from crafting_system.actions import BenchCraft, RemoveCraftedMods
+from crafting_system.actions import DRAW_LABEL, BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
 from crafting_system.cli._report import unresolved
 from crafting_system.items import Rarity
@@ -133,7 +133,10 @@ def test_the_policy_does_not_open_with_a_transmutation_and_none_is_offered(plan,
     report = build_report(plan, data)
 
     first = next(state for state in report.states if report.ids[plan.start] == state.id)
-    assert first.action in {"Orb of Alteration", "Orb of Augmentation"}  # the bought belt is Magic with no mod: the cheapest way on is an Augmentation, the Alterations follow
+    assert first.action == DRAW_LABEL  # the bought belt is the item the market sells (ADR-0064): the draw comes first, then a move on each outcome
+    by_id = {state.id: state for state in report.states}
+    after = {by_id[t.to].action for t in first.transitions if t.to in by_id}
+    assert after <= {"Orb of Alteration", "Orb of Augmentation", "Regal Orb"} and "Orb of Alteration" in after  # an Augmentation only where it can be used
     assert "Orb of Transmutation" not in {priced.label for priced in plan.offers}
     assert "Orb of Transmutation" not in {state.action for state in report.states}
 
@@ -171,11 +174,6 @@ def test_the_command_returns_the_policy_and_verify_agrees(command):
     assert "simulated, not certified" in text
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#622: since the Magic start of #576 (PR #607) the object risk read of R13's given route leaves its percentiles unresolved (about 480 s, then 'not computed'); it fails loudly the day #622 is fixed, delete this mark then",
-)
 def test_the_given_routes_percentiles_are_resolved_in_the_printed_report(command):
     _, _, text = command
 
