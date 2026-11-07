@@ -210,8 +210,8 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
     """The offers outside the model that could lower the value of a key where the floor action is the cheapest, the least floors first.
 
     At a key whose floor action is cheaper than every action of the model, the value is the floor and not the model's own; an offer outside the model
-    whose floor there is not above the model's best could lower it. Only a key that the policy of the model reaches from the start counts, as in the search
-    (`_envelope`): when that policy takes the floor action nowhere, it is a policy of the model on all the offers, and the value of the start is the model's
+    whose floor there is not above the model's best could lower it. Only a key that the policy of the model reaches from the start, or has the start's shape (the class of
+    `_offer_floor` where the floors are strong), counts; when that policy takes the floor action nowhere, it is a policy of the model on all the offers, and the value of the start is the model's
     own (it is at most the exact value, and at least the value of a policy of the exact model); the keys the policy does not reach keep the value the floor
     action gives them, which is a lower bound all the same. All of them are returned: adding them costs the offers' own kernels, once each
     (`PatternBuilder` builds only what they add), and a round for each few would cost a solve and a pass over the offers for nothing. Nothing is
@@ -230,8 +230,9 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
     np.minimum.at(fake, owner[~real], q[~real])
     binding = fake < best * (1.0 - BINDING)
     reached = np.zeros(n, dtype=bool)
-    reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # only a key the policy of the model reaches from the start can change the value of the start
-    binding &= reached
+    reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
+    shaped = np.array([floors.klass(key.flags, key.fractured, key.status) != OTHER for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
+    binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape has the cost of an offer as its floor and is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
         return [], {OTHER: None, INSIDE: None, OUTSIDE: None}
     limit: dict[int, float | None] = {OTHER: None, INSIDE: None, OUTSIDE: None}
