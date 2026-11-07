@@ -5,7 +5,7 @@
 
 `run` builds the plan of one benchmark route the way `cli._benchmark.run_route(..., heavy=True)` does (same target, offers, prices,
 start and options: it calls the same functions, only the risk run is left out; the prices are the committed file of the benchmark routes,
-`PRICES`, because a CI checkout has no price file of its own), keeps the states the planner walked with the optimal
+`PRICES`, because a CI checkout has no price file of its own; V01, which starts from a vendor recipe, reads the price file its target names), keeps the states the planner walked with the optimal
 value and the first action of the optimal policy at each, and then, for each part of `CompressedState` (and for the names of the junk
 mods inside `slots`), projects that part away and counts what is left:
 
@@ -61,7 +61,7 @@ from crafting_system.targets import load_target
 PARTS = ("flags", "fractured", "status", "slots", "implicits", "quality", "offer", "imprints")
 JUNK = "junk_names"
 COLUMNS = (*PARTS, JUNK)
-ORDER = ("R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14")
+ORDER = ("R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01")
 VALUE_TOLERANCE = 1e-9  # values in a group differ when their relative difference is above this
 FORMAT = "crafting-system-state-bloat/1"
 PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
@@ -290,7 +290,7 @@ def plan_of(bench: BenchmarkRoute, data: GameData, root: Path, config: Config, p
         raise ValueError(_missing_message(missing))
     if bench.start is None:
         return make_plan(data, target, loaded, with_risk=False, solver=solver)
-    return plan_with_starts(data, target, loaded, with_risk=False, solver=solver)
+    return plan_with_starts(data, target, loaded, solver=solver)  # it plans each start without the risk and measures it for the one it keeps (V01 is small)
 
 
 def walked_of(plan: Plan) -> dict:
@@ -517,7 +517,12 @@ def run_command(arguments: argparse.Namespace) -> int:
     data = load_game_data(cache_dir=config.cache_dir)
     out = Path(arguments.out) / f"route-{bench.id}.json"
     root = find_project_root()
-    prices = load_price_file(Path(arguments.prices) if arguments.prices else root / PRICES)
+    if arguments.prices:
+        prices = load_price_file(Path(arguments.prices))
+    elif bench.start is not None:
+        prices = None  # a route that starts from a vendor recipe (V01) reads the price file its target names (`benchmark_routes.py` does the same)
+    else:
+        prices = load_price_file(root / PRICES)
     document = bloat_route(
         bench, data, root, config, prices, solver=arguments.solver, say=say, keep=lambda partial: write_json(out, _clean(partial))
     )

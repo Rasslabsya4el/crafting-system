@@ -266,6 +266,28 @@ expected to fail until #619.
     $D --command 'uv run --no-sync python .github/scripts/completion_check.py R04 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'
     $D --long --timeout-minutes 120 --command 'uv run --no-sync python .github/scripts/completion_check.py R14 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'
 
+### What the `actions:` key of a target hides (#475)
+
+`.github/scripts/actions_key.py` plans each of the seven routes that carry an `actions:` key (J01, R04, R08, R09, R13, R14, V01) in three variants of
+a copy of the target's text (the committed file is never written): `kept`, `removed` (the key deleted: the kinds offered by default, the opt-in kinds
+such as Exalted Orb, Annulment, Fracturing Orb and the fossil sets not among them) and `all` (every kind the planner can use named, which is what OR-5
+asks for), each with the default solver (`auto`) and with `solver="envelope"`. Every job is a child process under a wall-clock cap (8 to 20 minutes,
+45 for the committed R14) and a memory cap (13 GB); the envelope also gets its own time and memory net. A job that does not finish leaves where it
+was: the last progress line, the `CompressedState` objects alive and the peak memory. 42 jobs are dealt over the runners, longest first, so that the
+caps on one runner add up to at most 50 minutes (`actions_key.py plan --count N --variants kept` prints the deal). One dispatch per variant keeps each run small
+enough for the runner budget: 7 runners for `kept`, 5 for `removed`, 5 for `all`. The V01 numbers of the bloat step (`state_bloat.py run --route V01`) go
+on one runner of the first, and `summary` joins the records of the three into the table of the ticket:
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --timeout-minutes 60'
+    $D --runners 7 --command 'if [ $RUNNER_INDEX = 4 ]; then uv run --no-sync python .github/scripts/state_bloat.py run --route V01 --out $OUT_DIR/bloat; fi; uv run --no-sync python -u .github/scripts/actions_key.py batch --variants kept --index $RUNNER_INDEX --count $RUNNER_COUNT --out $OUT_DIR/jobs'
+    $D --runners 5 --command 'uv run --no-sync python -u .github/scripts/actions_key.py batch --variants removed --index $RUNNER_INDEX --count $RUNNER_COUNT --out $OUT_DIR/jobs'
+    $D --runners 5 --command 'uv run --no-sync python -u .github/scripts/actions_key.py batch --variants all --index $RUNNER_INDEX --count $RUNNER_COUNT --out $OUT_DIR/jobs'
+    python .github/scripts/actions_key.py summary --dir DOWNLOADED_ARTIFACTS --out OUT --runs 'run IDs'
+
+A job the caps stopped is looked at again with more time: `actions_key.py jobs --jobs R08-kept-envelope --cap-minutes 52 --out DIR` (one runner each, up to the runner's 60 minutes).
+`actions_key.py probe --routes J01,V01 --index $RUNNER_INDEX --count $RUNNER_COUNT --out DIR` adds the kinds the key does not name to the key of a small route one at a time
+(45 seconds each, both solvers), which names the kind that makes a graph of 8 states explode.
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some
