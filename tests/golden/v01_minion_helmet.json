@@ -1,5 +1,5 @@
 {
-  "format": "crafting-system-policy/2",
+  "format": "crafting-system-policy/3",
   "unit": "chaos",
   "answer": {
     "approximate": false
@@ -19,10 +19,13 @@
     }
   ],
   "target": "v01-minion-helmet.yaml",
-  "requirements": [
-    "+1 to Level of all Minion Skill Gems",
-    "family IncreasedLife (top tier, not crafted)"
-  ],
+  "requirements": {
+    "plain": [
+      "+1 to Level of all Minion Skill Gems",
+      "family IncreasedLife (top tier, not crafted)"
+    ],
+    "groups": []
+  },
   "prices": {
     "league": "Allflame",
     "fetched_at": "2026-10-31T12:37:32Z",
