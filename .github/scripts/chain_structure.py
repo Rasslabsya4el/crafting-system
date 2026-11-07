@@ -21,7 +21,7 @@ from packed_routes import inputs, peak_mb, watch_memory
 
 from crafting_system.cli import _packed, make_plan
 from crafting_system.cli._route_chain import chain_of_plan
-from crafting_system.cli._route_flow import _can_finish, _solved
+from crafting_system.cli._route_flow import _can_finish, _entries, _solved
 from crafting_system.solver._packed_chain import _row_groups, _without_rows, components
 
 
@@ -85,7 +85,7 @@ def main() -> None:
     finishing = _can_finish(m, src, chain.dst, chain.dst >= m, chain.dst < m)
     say(f"chain: {m:,} states, {len(chain.dst):,} edges, {int(finishing.sum()):,} can finish")
     done = _solved(chain)
-    say(f"visits solved: {done.solved}, entry chances unsettled: {done.unsettled}; sum of visits x cost {float((done.visits * chain.cost).sum()):.4f}, plan mean {plan.mean_remaining:.4f}")
+    say(f"visits solved: {done.solved}, entry chances unsettled: {_entries(chain)[1]}; sum of visits x cost {float((done.visits * chain.cost).sum()):.4f}, plan mean {plan.mean_remaining:.4f}")
     result = describe(*csr_among(chain, finishing))
     say(f"structure: {result}")
     if arguments.out:

@@ -279,8 +279,9 @@ def flow_of[S: Hashable](
     )
     has_action = step_acts[step]
 
-    done = _solved(chain)  # made once for a chain: the plan's limits and the page both read it
-    finishing, visits, solved, reached = done.finishing, done.visits, done.solved, done.reached
+    done = _solved(chain)  # made once for a chain: the plan's limits and the page both read them
+    finishing, visits, solved = done.finishing, done.visits, done.solved
+    reached, unsettled = _entries(chain)
     weights = np.where(finishing, visits, 0.0) if solved else np.zeros(m)
     raw = np.bincount(step, weights=weights, minlength=nsteps)
     mix = np.where(raw[step] > 0.0, weights, 1.0)  # nobody can finish here, or unmeasured: the plain mean
@@ -350,7 +351,7 @@ def flow_of[S: Hashable](
                 cost=float(mean_cost[s]) if step_acts[s] else 0.0,
             )
         )
-    return Flow(tuple(steps), {chain.states[i]: int(step[i]) + 1 for i in range(m)}, solved, done.entered)
+    return Flow(tuple(steps), {chain.states[i]: int(step[i]) + 1 for i in range(m)}, solved, solved and unsettled == 0)
 
 
 def flow_limits(chain: Chain) -> tuple[Limit, ...]:
@@ -375,12 +376,13 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
                 ),
             ),
         )
-    if not done.entered:
+    reached, unsettled = _entries(chain)
+    if unsettled:
         return (
             Limit(
                 STEPS,
                 "How often a run enters a step is not shown",
-                f"the calculation of the share of runs that enter a step did not settle for {done.unsettled} of the {len(done.reached)} steps",
+                f"the calculation of the share of runs that enter a step did not settle for {unsettled} of the {len(reached)} steps",
                 **claim(
                     "the methods offered",
                     "The uses and cost of each step and the chances of each step are as shown; only the share of runs that ever enter a step is missing where it did not settle.",
@@ -420,48 +422,50 @@ def _numbering(chain: Chain) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 @dataclass(frozen=True)
 class _Solved:
-    """What the solves of a chain give, made once (`_solved`): the states that can finish, their expected visits and the chance of entering each step.
+    """What the visits solve of a chain gives, made once (`_solved`): the states that can finish and their expected visits.
 
-    `solved`: the visits were solved to `ACCEPT_RESIDUAL`. `reached[s]`: the chance of entering step `s` (None where it is not defined or not solved);
-    `unsettled`: how many steps had a solve that did not reach the residual; `entered`: whether none did.
+    `solved`: the visits were solved to `ACCEPT_RESIDUAL`. `inverse`: N over the states that can finish, when there are at most `DENSE_LIMIT` of them.
     """
 
     finishing: np.ndarray
     visits: np.ndarray
     solved: bool
-    reached: list[float | None]
-    unsettled: int
-
-    @property
-    def entered(self) -> bool:
-        return self.solved and self.unsettled == 0
+    inverse: np.ndarray | None
 
 
 def _solved(chain: Chain) -> _Solved:
-    """The solves of `chain`, kept on it: the plan's limits and the page both read them, and a solve of a big policy takes minutes."""
+    """The visits of `chain`, kept on it: the plan's limits, the page and the benchmark all read them, and a solve of a big policy takes a minute."""
     key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)  # a test that changes a limit gets its own
     cached = chain.__dict__.get("_solved")
     if cached is None or cached[0] != key:
-        cached = (key, _solve_chain(chain))
+        m = chain.m
+        src = np.repeat(np.arange(m), np.diff(chain.ptr))
+        into_goal = chain.dst >= m
+        finishing = _can_finish(m, src, chain.dst, into_goal, ~into_goal)
+        visits, solved, inverse = _visits(chain, _system(chain, src, finishing), finishing)
+        cached = (key, _Solved(finishing, visits, solved, inverse))
         object.__setattr__(chain, "_solved", cached)
     return cached[1]
 
 
-def _solve_chain(chain: Chain) -> _Solved:
-    m = chain.m
-    src = np.repeat(np.arange(m), np.diff(chain.ptr))
-    into_goal = chain.dst >= m
-    finishing = _can_finish(m, src, chain.dst, into_goal, ~into_goal)
-    step, used, _ = _numbering(chain)
-    nsteps = len(used)
-    system = _system(chain, src, finishing)
-    visits, solved, inverse = _visits(chain, system, finishing)
-    reached: list[float | None] = [None] * nsteps
-    reached[0] = 1.0
-    unsettled = 0
-    if solved and system is not None:
-        reached, unsettled = _entered(chain, step, nsteps, src, finishing, visits, system, inverse)
-    return _Solved(finishing, visits, solved, reached, unsettled)
+def _entries(chain: Chain) -> tuple[list[float | None], int]:
+    """`(reached, unsettled)` of `chain`, kept on it: the chance of entering each step (None where it is not defined or not solved) and how many steps had a solve that did not settle."""
+    key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)
+    cached = chain.__dict__.get("_entries")
+    if cached is None or cached[0] != key:
+        done = _solved(chain)
+        m = chain.m
+        src = np.repeat(np.arange(m), np.diff(chain.ptr))
+        step, used, _ = _numbering(chain)
+        system = _system(chain, src, done.finishing)
+        reached: list[float | None] = [None] * len(used)
+        reached[0] = 1.0
+        unsettled = 0
+        if done.solved and system is not None:
+            reached, unsettled = _entered(chain, step, len(used), src, done.finishing, done.visits, system, done.inverse)
+        cached = (key, (reached, unsettled))
+        object.__setattr__(chain, "_entries", cached)
+    return cached[1]
 
 
 @dataclass(frozen=True)
