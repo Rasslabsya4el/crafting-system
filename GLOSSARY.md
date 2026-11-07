@@ -371,6 +371,10 @@ _Avoid_: test craft, reference craft
 A route written down in a YAML file by an agent from a guide, and evaluated exactly as a fixed policy instead of searched for: ordered rules "when the compressed state matches these conditions, do this action", the first match wins, and a rule may restart by buying the start item again. A reachable state no rule covers is reported as a gap. It gives the guide's cost, which guides do not state, and `--route` also lets users compare their own route with the solver's.
 _Avoid_: guide policy, manual policy
 
+**Completed route**:
+A **Given route** with its gaps filled so that it finishes and has a cost to compare with the planner's (`examples/routes/<route>-restart.yaml`, `BenchmarkRoute.completed`): the guide's rules plus rules the guide does not have, each marked "NOT IN THE GUIDE". What it may add is written once, in `src/crafting_system/cli/_route.py` ("A COMPLETED ROUTE"), and checked by `tests/test_route_completion.py` and `.github/scripts/completion_check.py`.
+_Avoid_: restart route, guide with restart
+
 **Batch**:
 One stage of v1's action set (B1 to B4), finished when its benchmark routes pass.
 _Avoid_: phase, milestone

@@ -1,22 +1,27 @@
-# The route of R04 COMPLETED: r04-penetrating-quiver.yaml (the guide as written) plus the rules the guide does not have (ticket #599).
+# The route of R04 COMPLETED: r04-penetrating-quiver.yaml (the guide as written) plus the rules the guide does not have (tickets #599, #628).
+#
+# What a completed route may add, and how that is checked, is written once in src/crafting_system/cli/_route.py ("A COMPLETED ROUTE") and
+# checked by tests/test_route_completion.py and .github/scripts/completion_check.py. Here, only what this guide needs.
 #
 # The guide has 13 gaps and they are all one place: the metamod "Cannot roll Attack Modifiers" is on the quiver, the Pierce is fractured, the
 # Strength and the arrow are there, and the prefixes are full of mods that are not the target's tiers (the two Exalted Orbs of its step 8 landed
 # on a tier below the top one, or the prefixes were full before them). The guide says its two Exalted Orbs "guarantee" the prefixes, which is
-# true of the families and not of the tiers (OR-4), so it has no word for what a player does next. A route with a gap never finishes, so the
-# benchmark compares the planner with this route instead: the guide plus what a player does there, and `restart` last.
+# true of the families and not of the tiers (OR-4), so it has no word for what a player does next. Its own loop is step 5: "Use Deafening Essence
+# of Rage until 'Bow Attacks fire an additional Arrow'", which keeps the fractured Pierce.
 #
 # What this file adds (each marked "NOT IN THE GUIDE" below):
 #   a. The game refuses an essence while "Cannot roll Attack Modifiers" is on the quiver (the emulator's "Cannot be used on an item that has a
-#      metamod (other than multimod) on it", our metamods.essence_refused), so with the craft on and no prefix to fill the player removes the
-#      craft (Remove Crafted Mods, the guide's step 9, 0.37 Chaos) and is back at step 5 with the Pierce still fractured.
-#   b. The metamod is crafted only when a prefix is free (step 8 reads "the remaining prefixes"); with the prefixes full the player rerolls
-#      with the essence instead of paying for a craft that cannot be used.
+#      metamod (other than multimod) on it", our metamods.essence_refused). So the action that makes the guide's loop legal at a gap is taking
+#      the craft off (Remove Crafted Mods, 0.37 Chaos; the guide's step 9 does it at the end), and the loop goes on from step 5.
+#   b. Step 7 of the guide is EDITED, not only added to. Its words are: "Craft 'Cannot roll Attack Modifiers'", and step 8: "Use two Exalted Orb to
+#      guarantee Maximum Life and Increased Damage with Bow Skills as your remaining prefix modifiers". Step 7 as written has no condition on the
+#      prefixes. Left so, (a) makes the route cycle: craft the metamod (372.2 Chaos) on a quiver whose prefixes are full, remove it by (a), craft it
+#      again, for ever (a mean of infinity). So step 7 here also asks a free prefix, which is what "the remaining prefix modifiers" of step 8 need,
+#      and with the prefixes full the quiver is rerolled by step 5's essence (the second rule marked (b)).
 #   c. The last rule `restart` (buy the quiver again) catches what is left: a state with no fractured Pierce that the guide's steps 2 to 4 do
-#      not cover.
+#      not cover. The completion never reaches it with a fractured Pierce on the quiver, where it would throw the Pierce away.
 # Before #599 this file had the last rule only: every gap bought a new quiver and lost a fractured Pierce (1,041 Chaos of Fracturing Orbs at
-# 1 in 4 on average), 297,863 Chaos in all against 209,294 with the additions. The guide's own rules below are unchanged except step 7's
-# open prefix (b).
+# 1 in 4 on average), 297,863 Chaos in all against 209,294 with the additions.
 #
 # The guide's route file, as it stands in r04-penetrating-quiver.yaml:
 #

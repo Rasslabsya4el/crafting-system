@@ -87,7 +87,7 @@ def stopped(data, both):
     """(route id, the full walk's exact mean, the plan of a search that a state net stopped).
 
     R05 needs no help: its search does not close before the net. R13's start is bought, so a restart exists, but restarting at every tip never reaches the goal: until the
-    search has closed a chain to it, U is infinite and a stop is an error (#582). So it is given the guide's route (completed with a restart) as the
+    search has closed a chain to it, U is infinite and a stop is an error (#582). So it is given the guide's completed route as the
     first executable policy, and the net stops it after the first round.
     """
     route, full, _ = both

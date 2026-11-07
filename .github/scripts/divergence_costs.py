@@ -3,7 +3,7 @@
     python .github/scripts/divergence_costs.py R04 OUT_DIR [EXTRA_ROUTE.yaml ...]
 
 Plans the benchmark route (the packed solver, as `benchmark --heavy` does), then for the planner's policy, the guide as written, the guide
-completed with a restart and each EXTRA route file (a completion read another way) prints and writes `OUT_DIR/costs.json`:
+completed and each EXTRA route file (a completion read another way) prints and writes `OUT_DIR/costs.json`:
 
 * the steps of the policy by action: the expected uses of the action in one run and the Chaos it carries (uses x price), which add up
   to the mean;

@@ -255,6 +255,17 @@ planner's own mean). The visits are the exact row of `(I - Q)^-1` (OR-20), not t
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
     $D --command 'uv run --no-sync python .github/scripts/divergence_costs.py R04 $OUT_DIR/costs examples/routes/my-trial.yaml 2>&1 | tee $OUT_DIR/costs.log'
 
+### The rule of a completed route on every state (#599, #628)
+
+`.github/scripts/completion_check.py R04 OUT_DIR` plans the route, reads its completed route on the walked graph and lists every state where a `restart` that
+the guide does not have fires while an action of the guide's own rules is legal (`cli/_route_completion.py`, the rule in `cli/_route.py`). Exit code 0: none.
+The small, hand-built version of the same check runs in CI (`tests/test_route_completion.py`). R04 takes about 10 minutes, R14 about 40 (`--long`); R14 is
+expected to fail until #619.
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
+    $D --command 'uv run --no-sync python .github/scripts/completion_check.py R04 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'
+    $D --long --timeout-minutes 120 --command 'uv run --no-sync python .github/scripts/completion_check.py R14 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some

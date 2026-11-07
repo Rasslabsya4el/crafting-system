@@ -616,7 +616,7 @@ def render_summary(document: dict) -> str:
             lines.extend(_review_summary("guide", given))
         if entry["completed_route"] is not None:
             completed = entry["completed_route"]
-            lines.append("  given route, completed with a restart  " + _summary_line(completed) + f", {completed['gaps']} gap(s)")
+            lines.append("  given route, completed (see cli/_route.py)  " + _summary_line(completed) + f", {completed['gaps']} gap(s)")
             lines.extend(_review_summary("completed route", completed))
         for odds in entry["published_odds"]:
             if odds["published"] is None:  # no number to check: our chance at the target's tiers, beside the guide's family-level row above it
