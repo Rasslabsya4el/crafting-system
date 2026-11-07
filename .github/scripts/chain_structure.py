@@ -68,6 +68,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--route", required=True)
     parser.add_argument("--out")
+    parser.add_argument("--dump", action="store_true", help="also write the arrays of the chain to <out>/<route>.chain.npz (only for a chain of a few million edges)")
     arguments = parser.parse_args()
     threading.Thread(target=watch_memory, daemon=True).start()
     began = time.perf_counter()
@@ -91,6 +92,8 @@ def main() -> None:
     if arguments.out:
         out = Path(arguments.out)
         out.mkdir(parents=True, exist_ok=True)
+        if arguments.dump:  # the chain itself, for work on its cycles away from the 40-minute plan (R14: 372,000 edges, a few MB)
+            np.savez_compressed(out / f"{arguments.route}.chain.npz", ptr=chain.ptr, dst=chain.dst, prob=chain.prob, cost=chain.cost, key=chain.key, visits=done.visits)
         (out / f"{arguments.route}.structure.json").write_text(json.dumps({"route": arguments.route, **result}, indent=1) + "\n", encoding="utf-8")
 
 
