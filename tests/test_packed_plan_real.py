@@ -147,11 +147,23 @@ def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_say
     assert only(cut.limits, "risk").what == "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth" and notes(reference.limits) == []  # G19
 
 
-def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluation(both, data, request):
-    """Ticket #70, the percentile half of the test above. R13 fails it since the Magic start of #576 (PR #607): see #622."""
+@pytest.fixture(scope="module")
+def reads(both, data):
+    """(route id, the given route read on the object plan, the same route read on the packed plan): each read once, the object one of R13 takes about 10 minutes (#622)."""
     from crafting_system.cli import evaluate_route, load_route
 
     route_id, reference, packed = both
+    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
+    return (
+        route_id,
+        evaluate_route(reference, load_route(route_path, reference, data), data),
+        evaluate_route(packed, load_route(route_path, packed, data), data),
+    )
+
+
+def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluation(reads, request):
+    """Ticket #70, the percentile half of the test below. R13 fails it since the Magic start of #576 (PR #607): see #622."""
+    route_id, by_object, by_graph = reads
     if route_id == "R13":
         request.applymarker(
             pytest.mark.xfail(
@@ -160,10 +172,6 @@ def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluatio
                 reason="#622: the object read of R13's given route leaves p90 unresolved (infinite) where the packed read gives about 28,429; it fails loudly the day #622 is fixed, delete this mark then",
             )
         )
-    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
-
-    by_object = evaluate_route(reference, load_route(route_path, reference, data), data)
-    by_graph = evaluate_route(packed, load_route(route_path, packed, data), data)
 
     assert len(by_graph.gaps) == len(by_object.gaps)
     if by_object.gaps:
@@ -171,15 +179,9 @@ def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluatio
     assert by_graph.risk.p90.value == pytest.approx(by_object.risk.p90.value, rel=1e-6)
 
 
-def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(both, data):
-    """Ticket #70: `evaluate_route` on a packed plan reads the route in the walked graph; same mean, quantiles, gaps and first divergence."""
-    from crafting_system.cli import evaluate_route, load_route
-
-    route_id, reference, packed = both
-    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
-
-    by_object = evaluate_route(reference, load_route(route_path, reference, data), data)
-    by_graph = evaluate_route(packed, load_route(route_path, packed, data), data)
+def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(reads):
+    """Ticket #70: `evaluate_route` on a packed plan reads the route in the walked graph; same mean, gaps and first divergence."""
+    _, by_object, by_graph = reads
 
     assert by_graph.risk.success_probability.value == pytest.approx(by_object.risk.success_probability.value, abs=1e-9)
     assert len(by_graph.gaps) == len(by_object.gaps)
@@ -195,16 +197,15 @@ def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(bot
     }
 
 
-def test_the_divergences_of_a_given_route_read_on_the_packed_graph_have_the_chances_of_the_object_evaluation(both, data):
+def test_the_divergences_of_a_given_route_read_on_the_packed_graph_have_the_chances_of_the_object_evaluation(both, reads, data):
     """Ticket #554: the divergence lines of `benchmark` (every state where the guide and the planner part, each with its chance under both policies) are the same on a packed plan."""
-    from crafting_system.cli import evaluate_route, load_route
     from crafting_system.cli._benchmark_divergence import divergences_of
 
-    route_id, reference, packed = both
-    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
+    _, reference, packed = both
+    _, object_result, graph_result = reads
 
-    by_object = divergences_of(reference, evaluate_route(reference, load_route(route_path, reference, data), data), data)
-    by_graph = divergences_of(packed, evaluate_route(packed, load_route(route_path, packed, data), data), data)
+    by_object = divergences_of(reference, object_result, data)
+    by_graph = divergences_of(packed, graph_result, data)
 
     assert by_graph["count"] == by_object["count"]
     rows = lambda block: {row["description"]: row for row in block["shown"]}  # noqa: E731

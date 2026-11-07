@@ -117,8 +117,11 @@ def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_certified_quan
 
 
 def test_the_solver_is_no_dearer_than_the_guides_given_route(plan, data):
-    route = load_route(ROUTE, plan, data)
-    result = evaluate_route(plan, route, data)
+    # The route is read on the packed graph: the same mean as the object read (`test_packed_plan_real.py`), in seconds and not in the 10 minutes the object read
+    # of this route takes since the Magic start (#622); the shard has 25 minutes for this file and the command test below already holds one such read.
+    packed = make_plan(data, plan.target, load_price_file(PRICES), solver="packed", with_risk=False)
+    route = load_route(ROUTE, packed, data)
+    result = evaluate_route(packed, route, data)
 
     assert result.gaps == ()
     assert result.risk.success_probability.value == pytest.approx(1.0)
