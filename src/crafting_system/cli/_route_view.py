@@ -81,6 +81,12 @@ from ._route_trade import BuyStep, buy_step
 from ._start_step import ROLE_GEMS, FirstStep, first_step
 
 PLANNER_LABEL = "Cheapest policy of the planner"
+
+
+class PageError(ValueError):
+    """A page that cannot be drawn honestly from the plan it was given."""
+
+
 NEVER_FINISHES = "never finishes from here"
 GAPS = "never finishes: the route has gaps"
 NEVER = "never finishes"
@@ -259,6 +265,13 @@ class _View:
     """What the rows of one section share: the plan, the data, the flow and the anchors."""
 
     def __init__(self, inp: RouteInput, data: GameData, buy: BuyStep | None, prefix: str, route_field: bool) -> None:
+        if not inp.plan.limits:
+            # A real plan always leaves something out (it says at least that it does not plan with Memory Strands), so a plan with no limits is not
+            # one the planner made, and a page drawn from it would say "Cheapest policy of the planner" with no part "What this answer leaves out" (OR-13).
+            raise PageError(
+                "the plan has no limits, so the page would claim a guarantee it does not state (OR-13): "
+                "a plan made by the planner always carries what it leaves out (`Plan.limits`); build this one with them"
+            )
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
         self.route_field = route_field
         self.ab = self.plan.abstraction

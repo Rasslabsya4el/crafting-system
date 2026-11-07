@@ -429,16 +429,20 @@ _GROUP = re.compile(r"\bat least (\d+) of (\d+)\b", re.I)
 
 
 def check_group_printed_once(page: Page) -> list[Fault]:
-    """OR-15: a group "at least k of n" is printed once on a card, as one line. The same "at least k of n" on several lines of
-    one card is the group flattened into its members, each with a note (R05: "at least 1 of 4" on four lines)."""
+    """OR-15: a group "at least k of n" is printed once on a card, as one heading line with its members under it. The same
+    "at least k of n" on several lines of one card, or in the note of a member line, is the group flattened into its members, each
+    with a note (R05: "at least 1 of 4" on four lines)."""
     faults = []
     for route in page.routes:
         cards = ([("target card", route.target)] if route.target else []) + [(f"step {s.number} ({s.title})", s.after) for s in route.steps if s.after]
         for where, card in cards:
             groups: dict[tuple[str, str], int] = {}
-            for slot in card.slots:
-                for match in _GROUP.finditer(f"{slot.text} {slot.note}"):
+            for caption, slots in card.sides:  # the heading of a group is the caption of the lines under it
+                for match in _GROUP.finditer(caption):
                     groups[match.groups()] = groups.get(match.groups(), 0) + 1
+                for slot in slots:
+                    for match in _GROUP.finditer(f"{slot.text} {slot.note}"):
+                        groups[match.groups()] = groups.get(match.groups(), 0) + 1
             for (k, n), lines in groups.items():
                 if lines > 1:
                     faults.append(_fault("OR-15", check_group_printed_once, where, f"'at least {k} of {n}' is printed on {lines} lines, not once"))

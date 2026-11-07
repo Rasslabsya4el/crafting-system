@@ -11,6 +11,7 @@ import dataclasses
 import pytest
 from implicits_support import BELT, implicit, placeholder
 from items_support import DATA
+from plan_support import planner_plan
 from targets_implicits_support import TEXTED
 from route_view_support import assert_golden
 from test_cli_approximate_inputs import RULES, make_rule, toy_plan
@@ -99,9 +100,9 @@ def unveil_plan() -> Plan:
     first = ab.compress(UNVEIL_START)
     priced, _ = price_offers((Offer("Chaos Orb", ChaosOrb(), {CHAOS_ORB: 1}),), PRICES)
     policy = {first: offer_action(ab, priced[0], first)}
-    return Plan(
+    return planner_plan(
         target=target, abstraction=ab, leaf_labels=leaf_labels(target), prices=PRICES, start=first,
-        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, limits=(),
+        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced,
         solution=Solution({first: 1.0}, policy, 0.0), risk=evaluate(policy, first, ab.is_goal),
         solve_seconds=0.0, risk_seconds=0.0,
     )  # fmt: skip

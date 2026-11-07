@@ -16,11 +16,12 @@ from pathlib import Path
 import golden_diff
 from abstraction_oracle import crafted_item
 from items_support import DATA, item, roll
+from plan_support import planner_plan
 
 from crafting_system.abstraction import Abstraction, CompressedState, Goal
 from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods
 from crafting_system.cli import Offer, price_offers
-from crafting_system.cli._plan import Plan, StartPrice, leaf_labels, offer_action
+from crafting_system.cli._plan import StartPrice, leaf_labels, offer_action
 from crafting_system.cli._route_view import RouteInput, route_input
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
@@ -109,9 +110,9 @@ def hand_input(start: Item, requirements: tuple[Requirement, ...], choose: Choos
             continue
         policy[state] = offer_action(ab, by_label[picked], state)
         order += [s for s, w in policy[state].outcomes if w > 0 and s not in order]
-    plan = Plan(
+    plan = planner_plan(
         target=target, abstraction=ab, leaf_labels=leaf_labels(target), prices=PRICES, start=first,
-        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, limits=(),
+        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced,
         solution=Solution({}, policy, 0.0), risk=evaluate(policy, first, ab.is_goal),
         solve_seconds=0.0, risk_seconds=0.0,
     )  # fmt: skip

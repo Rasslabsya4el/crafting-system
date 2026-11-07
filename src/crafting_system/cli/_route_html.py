@@ -114,6 +114,9 @@ def _item(card: ItemCard, target: bool = False) -> str:
     parts += [_slot(slot) for slot in card.prefixes]
     parts.append('<div class="sd">Suffixes</div>')
     parts += [_slot(slot) for slot in card.suffixes]
+    for group in card.groups:  # a group once: its heading, its members under it
+        parts.append(f'<div class="sd">{escape(group.heading)}</div>')
+        parts += [_slot(slot) for slot in group.members]
     if card.offer:
         parts.append('<div class="sd">Unveil offer</div>')
         parts += [_slot(slot) for slot in card.offer]
