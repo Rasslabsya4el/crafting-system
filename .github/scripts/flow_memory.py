@@ -11,6 +11,7 @@ the peak of each stage, the size of the chain, and the stack at each stage's pea
 
 import argparse
 import json
+import os
 import sys
 import threading
 import time
@@ -24,7 +25,7 @@ from crafting_system.cli import _plan, _route_flow, make_plan  # noqa: E402
 
 
 def status_mb(field: str) -> int:
-    with open("/proc/self/status", encoding="utf-8") as handle:
+    with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
         return int(next(line for line in handle if line.startswith(field)).split()[1]) // 1024
 
 
