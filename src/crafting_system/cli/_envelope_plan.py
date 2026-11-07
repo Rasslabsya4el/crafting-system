@@ -248,10 +248,37 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             "The search was stopped",
             f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} item states looked at; the plan restarts from the start item "
             "wherever the search had not looked",
-            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, and no plan costs less "
-            f"than {info.lower:,.2f}.",
+            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item. " + certificate_text(info),
         ),
     )
 
 
-__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "envelope_limits", "envelope_result", "route_incumbent"]
+def certificate_gap(info: EnvelopeInfo) -> float | None:
+    """The most the stop can have cost, `U / LB - 1`: how far the plan can be above the best possible cost. None when `LB` is not above zero."""
+    if not info.lower > 0.0 or not math.isfinite(info.upper):
+        return None
+    return max(info.upper / info.lower - 1.0, 0.0)
+
+
+def certificate_text(info: EnvelopeInfo) -> str:
+    """What a stopped search still guarantees, next to the point answer (OR-11, OR-13): `[LB, U]`, the gap, the bound used and what it bounds.
+
+    The plan and its exact mean `U` stay the answer; the interval only says how far the stop could be from the best possible cost. `LB` is a
+    lower bound of the whole graph: the optimistic model of the crafted pattern (the walk-free bound), raised by the actions the search looked at,
+    and never above the best cost of any plan over every state the item can reach, expanded or not.
+    """
+    gap = certificate_gap(info)
+    lower = max(info.lower, 0.0)
+    head = f"The best possible cost lies in [{lower:,.2f}, {info.upper:,.2f}] Chaos after the start item. "
+    gap_text = (
+        f"The stop can have cost at most {gap:.2%} (the plan's cost over the lower end, less one). " if gap is not None else "No gap can be stated: the lower end is not above zero. "
+    )
+    bound = (
+        "The lower end is a lower bound of the best cost over the whole graph of the item, not only the part the search looked at: it comes from an "
+        "optimistic model that keeps only the item's rarity, the number of mods on each side, its fractured and crafted mods, which costs no more than "
+        "the real game, and it was raised by the actions the search looked at."
+    )
+    return head + gap_text + bound
+
+
+__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "certificate_gap", "certificate_text", "envelope_limits", "envelope_result", "route_incumbent"]

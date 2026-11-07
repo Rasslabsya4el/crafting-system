@@ -23,6 +23,7 @@ from test_cli_approximate import TARGET as APPROX_TARGET
 
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
 from crafting_system.cli._envelope import Net
+from crafting_system.cli._envelope_plan import EnvelopeInfo, certificate_gap, certificate_text
 from crafting_system.cli._limits import SHOWN_LABELS, SOLVE, limit_text
 from crafting_system.cli._plan import PlanError
 from crafting_system.cli._route_html import render_page
@@ -97,6 +98,36 @@ def test_a_net_in_make_plan_stops_the_search_and_the_plan_says_so(coarse):
     assert "The search was stopped" in cut.what and "not shown to be the best" in cut.guarantee
     assert info.lower <= exact * (1 + 1e-9) <= info.upper * (1 + 1e-9)
     assert stopped.mean_remaining == info.upper
+
+
+def test_a_stopped_search_prints_the_certificate_next_to_the_point_answer(coarse):
+    """#499: the `Limit` of a net stop carries [LB, U], the gap, the bound used and that it bounds the whole graph; the plan stays the answer."""
+    target, prices, full = coarse
+    stopped = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96))
+    info = stopped.packed.info["envelope"]
+    (cut,) = search_limit(stopped)
+    text = limit_text(cut)
+    assert f"it costs {info.upper:,.2f} Chaos on average" in text  # the point answer comes first and is the exact mean of the plan kept
+    assert f"[{info.lower:,.2f}, {info.upper:,.2f}]" in text
+    gap = certificate_gap(info)
+    assert gap == pytest.approx(info.upper / info.lower - 1.0) and f"{gap:.2%}" in text
+    assert info.lower <= full.mean_remaining * (1 + 1e-9) <= info.upper * (1 + 1e-9)
+    assert "whole graph" in text and "not only the part the search looked at" in text and "rarity" in text  # the bound used, and what it bounds
+    assert "about" not in text and " to " not in text.split("[")[1].split("]")[0]  # never an interval answer (OR-11)
+    report = build_report(stopped, COARSE)
+    assert text in render_text(report)  # the text report, and the JSON policy, say it in the same words
+    assert any(entry["guarantee"] == cut.guarantee for entry in policy_document(report)["limits"])
+
+
+def test_a_finished_search_prints_no_certificate(both):
+    _, envelope = both
+    (cut,) = search_limit(envelope)
+    assert "[" not in limit_text(cut) and "best possible cost" not in limit_text(cut) and "exact" in cut.guarantee
+
+
+def test_the_gap_is_not_stated_when_the_lower_end_is_not_above_zero():
+    info = EnvelopeInfo(False, "time limit", 0.0, 12.0, 3, 10, 5, 6, 9, 0, False, None, 4, 0.0, 0.0, None)
+    assert certificate_gap(info) is None and "No gap can be stated" in certificate_text(info)
 
 
 def test_a_net_that_stops_before_any_plan_exists_is_an_error_that_says_so(coarse):

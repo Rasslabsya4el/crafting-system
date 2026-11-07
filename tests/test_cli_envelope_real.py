@@ -19,7 +19,10 @@ import pytest
 from abstraction_support import real_game_data
 
 from crafting_system.cli import make_plan
-from crafting_system.cli._envelope_plan import BoundError, envelope_result
+from crafting_system.cli._envelope import Net
+from crafting_system.cli._envelope_plan import BoundError, certificate_gap, envelope_result, route_incumbent
+from crafting_system.cli._limits import SOLVE, limit_text
+from crafting_system.cli._route import load_route
 from crafting_system.cli._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -73,6 +76,41 @@ def test_the_envelope_expands_fewer_states_than_the_walk_and_says_which_cut_ran(
     if route == "R13":  # its bound is its exact cost: the search looks at the policy and little else
         assert info.expanded <= len(full.solution.values) // 10
     assert any(limit.what.startswith("The search expanded only what could matter") for limit in envelope.limits)
+
+
+@pytest.fixture(scope="module")
+def stopped(data, both):
+    """(route id, the full walk's exact mean, the plan of a search that a state net stopped).
+
+    R05 needs no help: its search does not close before the net. R13's start is bought but its search closes in one stretch, so it is given the
+    guide's route (completed with a restart) as the first executable policy; the net stops it after the first round.
+    """
+    route, full, _ = both
+    target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[route]}.yaml", data)
+    prices = load_price_file(PRICES)
+    options = {"net": Net(states=1)}
+    if route == "R13":
+        unsolved = make_plan(data, target, prices, solve_it=False)
+        options["incumbent"] = route_incumbent(load_route(ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml", unsolved, data), data)
+    else:
+        options["net"] = Net(states=5)
+    return route, full.mean_remaining, make_plan(data, target, prices, solver="envelope", with_risk=False, **options)
+
+
+def test_a_stopped_search_on_a_real_route_certifies_the_exact_cost_between_its_bounds(stopped):
+    """#499: LB <= the exact value <= U; the gap is printed with them, next to the plan's own mean, and names the bound and what it bounds."""
+    route, exact, plan = stopped
+    info = plan.packed.info["envelope"]
+    assert not info.exact and info.stopped and info.keys_missing == 0
+    assert info.lower <= exact * (1 + 1e-9) <= info.upper * (1 + 1e-9)
+    assert plan.mean_remaining == info.upper  # the plan and its mean stay the answer
+    (cut,) = [limit for limit in plan.limits if limit.kind == SOLVE and limit.what.startswith("The search was stopped")]
+    text = limit_text(cut)
+    gap = certificate_gap(info)
+    assert gap is not None and gap == pytest.approx(info.upper / info.lower - 1.0) and gap > 0.0
+    assert f"[{info.lower:,.2f}, {info.upper:,.2f}]" in text and f"{gap:.2%}" in text
+    assert "whole graph" in text and "not only the part the search looked at" in text
+    print(f"{route}: exact {exact:,.4f}, certificate [{info.lower:,.4f}, {info.upper:,.4f}], gap {gap:.4%}")  # visible with -s
 
 
 def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
