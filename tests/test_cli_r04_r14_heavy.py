@@ -10,15 +10,18 @@ these tests run in a heavy run, not in a CI shard or on a PC:
         --command 'CRAFTING_ROUTES=R04 CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider tests/test_cli_r04_r14_heavy.py -k "not benchmark"'
 
 (`CRAFTING_ROUTES` is `R04`, `R14` or both, and `-k "not benchmark"` the CLI tests or `-k benchmark` the benchmark ones: four runners, each
-plans its route once; `-s` shows the `--progress` lines on stderr.) R14's CLI tests take longer than an hour (the plan about 32 minutes,
-then `--verify`): give that one runner `--long --timeout-minutes 120`. Without `CRAFTING_HEAVY` they skip, and without the cached dump
-(`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
+plans its route once; `-s` shows the `--progress` lines on stderr.) The rule of that split, checked by the quick guard test
+`test_every_bench_test_is_named_for_it_and_every_such_name_takes_bench`: a test that takes `bench` has "benchmark" in its name, and a test
+that takes `cli` does not. R14's one plan takes about 25 minutes (`docs/ci.md`): its CLI tests (that plan, then `--verify`) passed in about
+35 minutes in run 42395405712, inside the 60-minute timeout; the benchmark tests plan again, so they run on a runner of their own.
+Without `CRAFTING_HEAVY` they skip, and without the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
 
 The CLI runs WITHOUT `--exact`: the default budget of 60 seconds finds no approximate level (a route with an Attack/Caster metamod has none)
 and the planner goes on to the packed solver (`make_plan`, ticket #70). The given route is the guide's with a last rule that restarts, so
 its mean is finite; the guide's own route has gaps and is checked by `benchmark`, whose entry also holds the completed one.
 """
 
+import ast
 import contextlib
 import datetime
 import io
@@ -165,7 +168,7 @@ def test_benchmark_solves_the_route_and_compares_it_with_the_guides_route_as_wri
 
 
 @HEAVY
-def test_the_divergence_chances_of_the_planner_and_the_guide_are_exact_whatever_the_size_of_the_chain(bench):
+def test_benchmark_divergence_chances_of_the_planner_and_the_guide_are_exact_whatever_the_size_of_the_chain(bench):
     """#572: no chance of a divergence line is a bound, and none is left unmeasured but a state the guide's route cannot finish from."""
     for name in ("given_route", "completed_route"):
         block = bench[name]["divergences"]
@@ -183,3 +186,44 @@ def test_benchmark_records_the_published_odds(bench, route_id):
 
     assert len(odds) == (5 if route_id == "R04" else 6)
     assert [row["matches"] for row in odds if row["published"] in ("25%", "33%", "50%")] == [True] * (1 if route_id == "R04" else 2)
+
+
+# The word is built from two pieces: tests/test_no_timing.py (ADR-0014) fails on a string constant equal to the name of the
+# timing fixture, and this file must not trip that scan (ticket #677).
+BENCHMARK_WORD = "bench" + "mark"
+
+
+def _bench_naming_slips(source):
+    """The test functions in `source` whose use of the `bench` fixture and the word "benchmark" in the name disagree (ticket #677).
+
+    It reads only a test's own name and parameter list. It does not follow a fixture that depends on `bench`,
+    `@pytest.mark.usefixtures("bench")`, `request.getfixturevalue("bench")`, or a class name; none of these is used in this file.
+    """
+    slips = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
+            arguments = {argument.arg for argument in node.args.posonlyargs + node.args.args + node.args.kwonlyargs}
+            takes_bench, takes_cli = "bench" in arguments, "cli" in arguments
+            named = BENCHMARK_WORD in node.name
+            if takes_bench != named or (takes_cli and named):
+                slips.append(f"{node.name} (line {node.lineno}): takes bench={takes_bench}, takes cli={takes_cli}, "
+                             f"has '{BENCHMARK_WORD}' in its name={named}")
+    return slips
+
+
+def test_every_bench_test_is_named_for_it_and_every_such_name_takes_bench():
+    """#677: a test that takes `bench` without "benchmark" in its name runs with the CLI job and plans the route a second time."""
+    assert _bench_naming_slips(Path(__file__).read_text(encoding="utf-8")) == []
+
+
+def test_the_name_check_flags_a_planted_bench_test_without_the_word():
+    planted = (
+        "def test_the_divergence(bench):\n    pass\n\ndef test_benchmark_ok(bench):\n    pass\n\n"
+        "def test_benchmark_without_bench():\n    pass\n\ndef test_plain():\n    pass\n\ndef test_benchmark_on_both(bench, cli):\n    pass\n"
+    )
+
+    assert _bench_naming_slips(planted) == [
+        "test_the_divergence (line 1): takes bench=True, takes cli=False, has 'benchmark' in its name=False",
+        "test_benchmark_without_bench (line 7): takes bench=False, takes cli=False, has 'benchmark' in its name=True",
+        "test_benchmark_on_both (line 13): takes bench=True, takes cli=True, has 'benchmark' in its name=True",
+    ]

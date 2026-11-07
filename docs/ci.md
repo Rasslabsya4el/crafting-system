@@ -212,6 +212,8 @@ runner each, since each plans its route once (R04 about 10 minutes, R14 about 25
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 4 --timeout-minutes 60'
     $D --command 'case $RUNNER_INDEX in 1) R=R04; K="not benchmark";; 2) R=R04; K=benchmark;; 3) R=R14; K="not benchmark";; 4) R=R14; K=benchmark;; esac; CRAFTING_ROUTES=$R CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider --durations=0 -s tests/test_cli_r04_r14_heavy.py -k "$K"'
 
+The rule of that split, checked by the quick guard test `test_every_bench_test_is_named_for_it_and_every_such_name_takes_bench` in the same file: a test that takes `bench` has "benchmark" in its name, and a test that takes `cli` does not.
+
 `chain_dump.py` plans a route and writes its lumped policy chain (`<route>.chain.npz`, with `--risk` also the risk the product code
 gives), the data to work on the risk without the walk; `cli_stages.py` times the stages after the plan (report, text, JSON, route
 page, `--verify`).
