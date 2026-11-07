@@ -12,6 +12,11 @@ The statistic is stated in `coe_recorded_support.py`: an exact two-sided binomia
 over every cell of this module, `ALPHA` = 0.01 for the module. There is no percentage threshold. A cell that fails is a
 disagreement between our model and the emulator: it is filed as an issue (OR-29), never hidden by a wider test.
 
+The roll cells (OR-4) are the goal lines that ask a roll, not a tier: R10's and R11's "+# to maximum Life" of at least 70 and
+96. The record holds, for those two essence cases, how many finished items carry each rolled value of each Life mod of ours;
+the cell is the share of items that hold a Life mod whose roll the line's own judge passes, against our chance (the mod's
+chance times the share of its uniform rolls that reach the roll). A model whose roll ranges are shifted by one must fail.
+
 The tier-aware cells (OR-1, OR-2) put the emulator's chance that the finished item holds a mod "at tier T1" beside
 what OUR GOAL says is that mod: the target file of the route is loaded, and each of its mod lines is judged by the
 requirement's own `tier_ok` set (`accepted_by_tier`), not by a tier number written here.
@@ -36,6 +41,7 @@ from coe_recorded_support import (
     joint_cells,
     load_recorded,
     mod_cells,
+    roll_cell,
     shape_cells,
 )
 
@@ -91,7 +97,9 @@ def leaves(node):
 
 
 def line_name(line) -> str:
-    """The name of a goal line's cell: the line as the target file writes it (a tier, or the mods it names / accepts)."""
+    """The name of a goal line's cell: the line as the target file writes it (a roll, a tier, or the mods it names / accepts)."""
+    if line.min_roll is not None:
+        return f"{line.family or line.stat} roll {list(line.min_roll)}"
     return f"{line.family or line.stat} {'tier ' + str(line.min_tier) if line.min_tier is not None else 'by its mod'}"
 
 
@@ -105,6 +113,8 @@ def tier_cells(data, case, record, our, target) -> list[Cell]:
     marginals = our.marginals()
     cells = []
     for line in (leaf for requirement in target.requirements for leaf in leaves(requirement)):
+        if line.min_roll is not None:
+            continue  # a line that asks a roll is covered by its roll cell only (`roll_cells`)
         accepted = set(line.tier_ok if line.tier_ok is not None else line.mod_ids)
         if accepted & our.kept:
             continue  # the item already holds it: see the test of the kept mods
@@ -120,6 +130,17 @@ def tier_cells(data, case, record, our, target) -> list[Cell]:
     return cells
 
 
+def roll_cells(data, case, record, our, target, by=0) -> list[Cell]:
+    """For each goal line that asks a roll: the share of finished items whose roll reaches it, the emulator's against ours (moved by `by`)."""
+    marginals = our.marginals()
+    cells = []
+    for line in (leaf for requirement in target.requirements for leaf in leaves(requirement)):
+        if line.min_roll is None or not (line.mod_ids & marginals.keys()):
+            continue
+        cells.append(roll_cell(data, case, line_name(line), record, our, line, by))
+    return cells
+
+
 @pytest.fixture(scope="module")
 def all_cells(data, ours, targets):
     cells = []
@@ -129,6 +150,7 @@ def all_cells(data, ours, targets):
         cells += joint_cells(case, record, ours[case])
         if TARGET_OF[case]:
             cells += tier_cells(data, case, record, ours[case], targets[TARGET_OF[case]])
+            cells += roll_cells(data, case, record, ours[case], targets[TARGET_OF[case]])
     return cells
 
 
@@ -226,7 +248,7 @@ def test_the_emulator_frequencies_are_ours_under_the_binomial_test(all_cells, ca
 def test_the_module_tests_many_cells_with_a_stated_correction(all_cells):
     testable = [cell for cell in all_cells if cell.testable]
     assert len(testable) >= 200
-    assert {cell.kind for cell in testable} == {"mod", "shape", "tier", "joint"}
+    assert {cell.kind for cell in testable} == {"mod", "shape", "tier", "joint", "roll"}
     assert ALPHA == 0.01 and MIN_EXPECTED == 5
 
 
@@ -238,7 +260,7 @@ def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(data, o
     the item holds its mod already (`kept`: the fractured start mod, the essence's forced mod) or our model's chance of it is
     exactly 0 (the action cannot add it: a suffix to a full magic item, a bench-only mod).
     """
-    tested = {(cell.case, cell.name) for cell in all_cells if cell.kind == "tier" and cell.testable}
+    tested = {(cell.case, cell.kind, cell.name) for cell in all_cells if cell.kind in ("tier", "roll") and cell.testable}
     asked = set()
     for case, target_name in TARGET_OF.items():
         if not target_name:
@@ -251,22 +273,64 @@ def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(data, o
             possible = accepted & marginals.keys()
             if sum(marginals[mod_id] for mod_id in possible) == 0:
                 continue
-            asked.add((case, line_name(line)))
+            asked.add((case, "roll" if line.min_roll is not None else "tier", line_name(line)))
     assert asked <= tested, f"goal lines with no tested cell: {sorted(asked - tested)}"
+    # a line that asks a roll is covered by its roll cell alone: no tier cell (the mods of the line, any roll) stands for it
+    rolls = {(case, name) for case, kind, name in asked if kind == "roll"}
+    assert {case for case, _ in rolls} == {"essence-r10-boots", "essence-r11-helmet"}
+    assert not [cell for cell in all_cells if cell.kind == "tier" and (cell.case, cell.name) in rolls]
     # the lines that matter are among them: Life T1 on the belt, Defences and Movement Speed on the boots, Life on the other routes
-    for case, family in [
-        ("alteration-r13-belt", "IncreasedLife"),
-        ("regal-r13-belt", "IncreasedLife"),
-        ("augmentation-r13-belt", "IncreasedLife"),
-        ("fossil-r08-boots", "DefencesPercent"),
-        ("fossil-r08-boots", "MovementVelocity"),
-        ("fossil-r09-boots", "IncreasedLife"),
-        ("fossil-r09-boots", "MovementVelocity"),
-        ("essence-r10-boots", "+# to maximum Life"),
-        ("essence-r11-helmet", "+# to maximum Life"),
-        ("essence-r11-helmet", "DefencesPercent"),
+    for case, kind, family in [
+        ("alteration-r13-belt", "tier", "IncreasedLife"),
+        ("regal-r13-belt", "tier", "IncreasedLife"),
+        ("augmentation-r13-belt", "tier", "IncreasedLife"),
+        ("fossil-r08-boots", "tier", "DefencesPercent"),
+        ("fossil-r08-boots", "tier", "MovementVelocity"),
+        ("fossil-r09-boots", "tier", "IncreasedLife"),
+        ("fossil-r09-boots", "tier", "MovementVelocity"),
+        ("essence-r10-boots", "roll", "+# to maximum Life"),
+        ("essence-r11-helmet", "roll", "+# to maximum Life"),
+        ("essence-r11-helmet", "tier", "DefencesPercent"),
     ]:
-        assert any(c == case and name.startswith(family + " ") for c, name in asked), (case, family)
+        assert any(c == case and k == kind and name.startswith(family + " ") for c, k, name in asked), (case, family)
+
+
+ROLL_CASES = {"essence-r10-boots": 70, "essence-r11-helmet": 96}  # the roll each goal line asks, as the target files write it
+
+
+@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+def test_the_roll_line_is_a_testable_cell_that_passes_the_binomial_test(data, ours, targets, all_cells, case):
+    """One roll cell for the case's roll line, testable under MIN_EXPECTED, and not a failure at the module's correction."""
+    (line,) = [leaf for requirement in targets[TARGET_OF[case]].requirements for leaf in leaves(requirement) if leaf.min_roll is not None]
+    assert line.min_roll == (ROLL_CASES[case],) and line.stat == "+# to maximum Life"
+    (cell,) = [cell for cell in all_cells if cell.case == case and cell.kind == "roll"]
+    assert cell.name == line_name(line) and cell.testable, cell.describe()
+    assert cell not in failures(all_cells), cell.describe()
+
+
+@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+def test_the_recorded_rolls_are_of_the_finished_items_and_inside_our_ranges(data, case):
+    """The histogram of a Life mod adds up to the items the record counts with that mod, and no rolled value is outside our range."""
+    record = CASES[case]
+    histograms = record["rolls"]["+# to maximum Life"]
+    assert histograms
+    for mod_id, histogram in histograms.items():
+        assert sum(histogram.values()) == record["mods"][mod_id], (case, mod_id)
+        (stat,) = data.mods[mod_id].stats
+        low, high = min(stat.min, stat.max), max(stat.min, stat.max)
+        assert all(low <= float(value) <= high for value in histogram), (case, mod_id, low, high, sorted(histogram, key=float))
+
+
+@pytest.mark.parametrize("by", [1, -1])
+@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+def test_a_model_with_the_roll_ranges_shifted_by_one_fails_the_roll_cell(data, ours, targets, all_cells, case, by):
+    """The control: our model with every stat range of its mods moved by one is rejected by the same cell, at the module's correction."""
+    testable = [cell for cell in all_cells if cell.testable]
+    (own,) = [cell for cell in testable if cell.case == case and cell.kind == "roll"]
+    (wrong,) = roll_cells(data, case, CASES[case], ours[case], targets[TARGET_OF[case]], by)
+    assert (wrong.n, wrong.seen) == (own.n, own.seen) and wrong.ours != own.ours
+    bound = ALPHA / len(testable)
+    assert wrong.p_value < bound <= own.p_value, f"{wrong.describe()} (bound {bound:.1e}); the true cell: {own.describe()}"
 
 
 def test_c02_the_life_and_a_resistance_together_are_the_emulator_s(all_cells):

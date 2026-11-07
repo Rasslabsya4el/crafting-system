@@ -20,7 +20,9 @@ A check file is one check or a list of them:
      "apply": [{"craft": {"action": "harvest", "subaction": "hreroll", "ssaction": "6"}, "repeats": 1000, "seed": 544}]}
 
 The answer per check: the built item, the legal-action table (when asked) and, per craft, the
-counts of the resulting items by their mods (and the refusals by their message).
+counts of the resulting items by their mods (and the refusals by their message). A step with
+`"track": ["+# to maximum Life"]` also gets `rolls`: per mod (`aid:tindex`) of that name, how many
+finished items carry each rolled value (ticket #573).
 """
 
 import argparse
@@ -145,7 +147,7 @@ class Emulator:
         for step in check.get("apply", []):
             if step.get("seed") is not None:  # the run is reproducible: the same seed on the same copy gives the same counts
                 self.call("seed", step["seed"])
-            result = self.call("apply", step["craft"], step.get("repeats", 1), {"donor": donor})
+            result = self.call("apply", step["craft"], step.get("repeats", 1), {"donor": donor, "track": step.get("track")})
             answer["apply"].append({"craft": step["craft"], **result})
         answer["seconds"] = round(time.time() - started, 2)
         if self.errors:

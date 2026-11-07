@@ -11,6 +11,10 @@ The test (stated in one place, `ALPHA` and `MIN_EXPECTED`):
 * Each cell is one event with an exact chance `p` of ours (a Fraction turned to a float) and a count `k` out of the
   `n` applications the emulator recorded: "the finished item holds mod M", "the new mods are 2 prefixes and 1
   suffix", "the item holds a mod that the goal's tier line accepts".
+* A goal line that asks a roll (`min_roll`) is a "roll" cell: "the finished item holds a mod of the line's with a rolled
+  value that reaches the roll". The emulator side is the count of the rolled values it recorded for the line's stat text
+  (`record["rolls"]`, a histogram per mod of ours); our side is the chance of each mod (`marginals`) times the chance that its
+  roll, uniform over the integers of each stat's range, reaches the roll (`roll_law`, the planner's own law).
 * A cell is tested by the exact two-sided binomial test, `p_value = min(1, 2 * min(P(X <= k), P(X >= k)))` with
   `X ~ Binomial(n, p)`. No normal approximation, so a small cell is as honest as a large one.
 * The cells are many, so the test is Bonferroni-corrected: a cell is a failure when `p_value < ALPHA / m`, where
@@ -23,12 +27,14 @@ The test (stated in one place, `ALPHA` and `MIN_EXPECTED`):
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from pathlib import Path
 
+from crafting_system.abstraction import Status, status_of
+from crafting_system.abstraction._rolls import roll_law
 from crafting_system.actions.catalog import catalog
-from crafting_system.data import GameData
+from crafting_system.data import GameData, StatRange
 from crafting_system.items import ExplicitMod, Item, Rarity
 
 RECORDED = Path(__file__).resolve().parent / "fixtures" / "coe_recorded" / "b1_core.json"
@@ -86,7 +92,7 @@ class Cell:
     """One tested event: its chance in our model and the count the emulator gave."""
 
     case: str
-    kind: str  # "mod", "shape" or "tier"
+    kind: str  # "mod", "shape", "tier", "joint" or "roll"
     name: str
     n: int
     seen: int
@@ -252,3 +258,37 @@ def shape_cells(case: str, record: dict, ours: OurCase) -> list[Cell]:
     theirs = record["shapes"]
     mine = ours.shapes()
     return lump({key: (theirs.get(key, 0), float(mine.get(key, 0))) for key in set(theirs) | set(mine)}, case, n)
+
+
+def shifted(mod, by: int):
+    """The mod with every stat range moved by `by`: the wrong roll range of the control (a model whose ranges are off by one)."""
+    return replace(mod, stats=tuple(StatRange(stat.id, stat.min + by, stat.max + by) for stat in mod.stats))
+
+
+def roll_chance(data: GameData, ours: OurCase, line, by: int = 0) -> float:
+    """Our chance that the finished item holds a mod of `line` whose roll reaches the line's `min_roll`.
+
+    A mod of the line is held at most once (they are one family), so the chances add: for each mod our model can add, its
+    marginal chance times the share of its rolls that the line passes. `by` moves every stat range (the control).
+    """
+    marginals = ours.marginals()
+    total = 0.0
+    for mod_id in sorted(line.mod_ids & marginals.keys()):
+        law = roll_law([line], shifted(data.mods[mod_id], by), crafted=False)
+        passing = sum((chance for statuses, chance in law if statuses[0] == Status.PASSING), Fraction(0))
+        total += float(marginals[mod_id] * passing)
+    return total
+
+
+def roll_seen(record: dict, line) -> int:
+    """The finished items of the emulator that hold a mod of `line` rolled to reach its `min_roll` (the goal's own judge, `status_of`)."""
+    seen = 0
+    for mod_id, histogram in record["rolls"][line.stat].items():
+        for value, count in histogram.items():
+            if mod_id in line.mod_ids and status_of(line, mod_id, (json.loads(value),), False) is Status.PASSING:
+                seen += count
+    return seen
+
+
+def roll_cell(data: GameData, case: str, name: str, record: dict, ours: OurCase, line, by: int = 0) -> Cell:
+    return Cell(case, "roll", name, record["applied"], roll_seen(record, line), roll_chance(data, ours, line, by))

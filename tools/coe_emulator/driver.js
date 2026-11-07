@@ -12,7 +12,9 @@
  *                      buttons' "disabled" class, and the reasons in crsim_dreasons / crsim_preasons.
  *   apply(craft, n)    n times: restore the built item, set crsim_params as the buttons do, call
  *                      poec_simApplyCraftGO(null, null, true) (poec_simAwaken for an Awakener's Orb),
- *                      and count the resulting items.
+ *                      and count the resulting items. With `options.track` (a list of mod names, as the page
+ *                      shows them: "+# to maximum Life") it also counts, per mod and tier, how often each rolled
+ *                      value stands on a finished item (`rolls`, ticket #573).
  *
  * A mod is {aid, tindex, bench, frac}: the CoE modifier id and the index into
  * poecd.tiers[aid][base] (ordered by item level, the highest tier last; -1 is the highest).
@@ -58,6 +60,7 @@
         mgrp: String(affix.mgrp),
         name: affix.id > 0 ? modifier(affix.id).name_modifier : "veiled",
         nvalues: affix.nvalues,
+        rolls: clone(affix.rolls),
         level: affix.id > 0 && affix.tindex !== "e" ? Number(poecd.tiers[affix.id][crsim_settings.base][affix.tindex].ilvl) : null,
       })),
       meta: clone(crsim_data.meta_flags),
@@ -172,6 +175,8 @@
     const examples = {};
     const failures = {};
     const pageErrors = [];
+    const track = new Set(options.track || []);
+    const rolls = {};
     for (let index = 0; index < repeats; index += 1) {
       restore();
       notices.length = 0;
@@ -232,10 +237,19 @@
       const key = signature(item);
       counts[key] = (counts[key] || 0) + 1;
       if (!examples[key]) examples[key] = { item, notice: message || null };
+      if (track.size) {
+        // the value each tracked mod rolled on this finished item, one count per (mod, tier, value)
+        for (const mod of item.mods) {
+          if (!track.has(mod.name) || !mod.rolls) continue;
+          const slot = (rolls[`${mod.aid}:${mod.tindex}`] ||= {});
+          const value = JSON.stringify(mod.rolls);
+          slot[value] = (slot[value] || 0) + 1;
+        }
+      }
     }
     restore();
     const errors = [...new Set(pageErrors)];
-    return { repeats, counts, examples, failures, ...(errors.length ? { page_errors_after_craft: errors } : {}) };
+    return { repeats, counts, examples, failures, ...(track.size ? { rolls } : {}), ...(errors.length ? { page_errors_after_craft: errors } : {}) };
   }
 
   // Seed the page's Math.random (mulberry32), the only source of chance the emulator's draws use, so that a
