@@ -150,7 +150,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
 | `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
-| `--k` | command `trade` |  | read | prices/price_file.py: _entry_to_json (compared; on the planning path); prices/price_file.py: write_price_file (used in DictComp; on the planning path); and 7 more |
+| `--k` | command `trade` |  | read | prices/deepen.py: _offers (an attribute or method of it is used; not on the planning path); prices/price_file.py: _entry_to_json (compared; on the planning path); and 9 more |
 | `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |

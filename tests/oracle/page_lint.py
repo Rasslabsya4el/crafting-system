@@ -660,7 +660,7 @@ def check_approximate_marked(page: Page) -> list[Fault]:
 
 
 _SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price")
-_COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) [\d.,]+ c(?:\s|$)")
+_COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) (?:≈ )?[\d.,]+ c(?:\s|$)")
 _PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
 
 

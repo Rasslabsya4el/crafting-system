@@ -88,6 +88,14 @@ def priced_rows(rows, spec, price_file) -> list[float]:
     return sorted(value for value in found if not isinstance(value, str))
 
 
+def _words_of(phrase: str | None) -> str | None:
+    """`other_item`'s "price taken for a wider item (item level 84 or more)" as what it is taken for: "item level 84 or more"."""
+    if phrase is None:
+        return None
+    start, end = phrase.find("("), phrase.rfind(")")
+    return phrase[start + 1 : end] if 0 <= start < end else phrase
+
+
 def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetime, data, targets: dict) -> tuple[dict[str, PriceEntry], list[str]]:
     """The trade-priced start items of `old`, asked again today: the stored search, and the exact item of the target."""
     client = trade_client(120)
@@ -118,7 +126,7 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         if composite is not None:
             chaos += alchemy
             sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
-        taken_for = None if composite is not None else other_item(spec, stored)  # a composite is a normal base the plan makes rare: its search is the item by design
+        taken_for = None if composite is not None else _words_of(other_item(spec, stored))  # a composite is a normal base the plan makes rare: its search is the item by design
         item = WIDER if (taken_for is not None or composite == WIDER) else EXACT
         for_item = taken_for if taken_for is not None else ("any of the bases that share this name on the trade site" if composite == WIDER else None)
         exact_listings = exact_price = None
