@@ -699,9 +699,9 @@ class PatternBuilder:
                     try:
                         self._offers_of_key(i, first, tick)
                     except _Stopped as reached:
-                        self.ab._prepared_by.clear()
+                        self.ab.release_prepared(keep_erased=True)
                         return reached.reason
-                    self.ab._prepared_by.clear()
+                    self.ab.release_prepared(keep_erased=True)
             self.expanded[i] = True
             i += 1
             now = time.perf_counter()
