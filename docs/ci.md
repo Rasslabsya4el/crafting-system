@@ -194,12 +194,13 @@ the planner, and `tests/test_naive_crafter_routes.py` puts its mean (and the spe
 is 12,000 Chaos, so its standard error there is a tenth of the mean). The real precision of R13 is this heavy run, which runs the same test file with
 `NAIVE_RUNS` plays, `NAIVE_SEED` (the runner's index) and `NAIVE_OUT` (a folder for each route's tally) and then pools the tallies of all the runners:
 
-    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 8'
-    $D --command 'case $RUNNER_INDEX in [1-5]) R=R13; N=1000;; 6) R=R05; N=30000;; 7) R=R10; N=30000;; 8) R=R11; N=30000;; esac; NAIVE_RUNS=$N NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR uv run --no-sync pytest -q -p no:cacheprovider -k $R tests/test_naive_crafter_routes.py'
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 2'
+    $D --command 'export NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR; if [ "$RUNNER_INDEX" = "2" ]; then NAIVE_RUNS=30000 uv run --no-sync pytest -q -p no:cacheprovider -k "R05 or R10 or R11" tests/test_naive_crafter_routes.py; fi; NAIVE_RUNS=1000 uv run --no-sync pytest -q -p no:cacheprovider -k R13 tests/test_naive_crafter_routes.py'
     gh run download <run id> --dir results
     PYTHONPATH=tests python -m naive_crafter merge results        # pools the runners of a route, judges the pool, exits 1 on a disagreement
 
-An R13 play takes about 1.6 seconds, so 1,000 plays are about 30 minutes on one runner.
+An R13 play takes about 1.6 seconds, so 1,000 plays are about 30 minutes on one runner; the three cheap routes at 30,000 plays take a few minutes
+together. More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of the other sections) give R13 a smaller standard error.
 
 ### R04 and R14 end to end (#70)
 
