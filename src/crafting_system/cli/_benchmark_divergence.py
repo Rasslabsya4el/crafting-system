@@ -220,16 +220,24 @@ def per_use_lines(first: dict | None, label: str) -> list[str]:
 
 
 def _use_text(use: dict) -> str:
-    """`Fossils Prismatic Fossil: one use costs 1.59 Chaos (0.20 for 1 Prismatic Fossil + 1.39 for 1 X), ends in the target with chance 0.07% and one bench craft short of it with chance 2.20%`."""
+    """`Fossils Prismatic Fossil: one use costs 1.59 Chaos (...), reaches the target with chance 2.27%: the item ends in the target, or is one certain bench craft away from it (...)`.
+
+    One number for the chance, so that the two actions can be read side by side: the parts of it are told after it. An action the game refuses at the
+    state says so in the words of the refusal.
+    """
     if use["error"] is not None:
-        return f"{use['action']}: no numbers, {use['error']}"
+        return f"{use['action']} cannot be used there: {use['error']}"
     parts = " + ".join(f"{money(part['chaos'])} for {part['count']} {part['resource']}" for part in use["parts"])
     cost = f"{money(use['cost'])} Chaos" + (f" ({parts})" if len(use["parts"]) > 1 else "")
     others = use["other_items"]
     extra = f", plus the value of {others} other item(s) it consumes" if others else ""
-    reach = f"ends in the target with chance {chance_text(use['chance'])}"
-    if use.get("short") is not None:
-        reach += f" and one bench craft short of it with chance {chance_text(use['short'])}"
+    if use.get("short") is None:
+        reach = f"ends in the target with chance {chance_text(use['chance'])}"
+    else:
+        reach = (
+            f"reaches the target with chance {chance_text(use['reach'])}: the item ends in the target, or is one certain bench craft away from it "
+            f"({chance_text(use['chance'])} in the target itself, {chance_text(use['short'])} one certain bench craft away)"
+        )
     return f"{use['action']}: one use costs {cost}{extra}, {reach}"
 
 
