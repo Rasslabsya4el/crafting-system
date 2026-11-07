@@ -262,6 +262,23 @@ def joint_cells(case: str, record: dict, ours: OurCase) -> list[Cell]:
     ]
 
 
+def target_cells(case: str, record: dict, use: dict) -> list[Cell]:
+    """The two joint "the target is met" cells of a case recorded with a `target` (ticket #617).
+
+    `use` is the planner's own numbers for one use of the case's action on its start item (`_benchmark_use.per_use_of`): the chance the
+    item is the target (`chance`) and the chance it is one sure bench craft short of it (`short`). The emulator's items were read by the same
+    judge (`record.py`, `reading_of`). The cells are "the item is the target" and "the item is the target or one bench craft short of it": the
+    second is the chance the benchmark's review row tells as the odds of a use.
+    """
+    found = record["target"]
+    n = record["applied"]
+    assert found["goal"] + found["short"] + found["other"] == n, f"{case}: the readings do not add up to the applied items"
+    return [
+        Cell(case, "target", "ends in the target", n, found["goal"], use["chance"]),
+        Cell(case, "target", "ends in the target or one bench craft short of it", n, found["goal"] + found["short"], use["chance"] + use["short"]),
+    ]
+
+
 def shape_cells(case: str, record: dict, ours: OurCase) -> list[Cell]:
     n = record["applied"]
     theirs = record["shapes"]
