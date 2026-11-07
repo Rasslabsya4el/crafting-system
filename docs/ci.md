@@ -288,6 +288,16 @@ A job the caps stopped is looked at again with more time: `actions_key.py jobs -
 `actions_key.py probe --routes J01,V01 --index $RUNNER_INDEX --count $RUNNER_COUNT --out DIR` adds the kinds the key does not name to the key of a small route one at a time
 (45 seconds each, both solvers), which names the kind that makes a graph of 8 states explode.
 
+### The cycles of a route's chain (#572, #490, #584, #600)
+
+`.github/scripts/chain_structure.py --route r04|r14 --out DIR` plans the route, makes the item-state chain of the planner's policy and writes
+`<route>.structure.json`: the strongly connected components of the chain (how many, the biggest), the rows that several states share (a reroll
+sends every state that takes it to the same thousands of outcomes, a restart sends every one back to the start), and the components that remain
+when those rows are cut. These are the numbers the exact visit chances work from (`solver/_packed_chain.py`: the cost is one solve for each
+distinct shared row, however many states ask). It also checks the visits and the entry chances of every step (`entry chances unsettled`). A solve
+of the route page or of the benchmark is accepted on its true residual (`|b - A x| / |b|` for BiCGSTAB, measured with one more product; the
+backward error of the route flow), never on the residual BiCGSTAB claims of its own recurrence, which drifts from the true one on a stiff system.
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some

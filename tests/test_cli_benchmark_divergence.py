@@ -10,6 +10,7 @@ dense solve of the text report) on random chains. No test asserts a run time.
 import random
 from fractions import Fraction
 
+import numpy as np
 import pytest
 from cli_support import TODAY, price_file, read_json
 from targets_support import DATA, EXAMPLES
@@ -22,6 +23,7 @@ from crafting_system.cli._report import number_states
 from crafting_system.cli._route_flow import chain_of_policy, reach_of
 from crafting_system.config import load_config
 from crafting_system.prices import PriceEntry
+from crafting_system.solver import _packed_chain as packed_chain
 from crafting_system.solver import Action, Outcome
 from crafting_system.targets import parse_target, start_price_key
 from test_cli_benchmark import entry_of
@@ -57,42 +59,78 @@ def test_the_chance_of_visiting_a_state_is_the_closed_form_on_a_hand_chain():
 
     # From S each pass ends in B with 3/10 or in the goal with 1/5, so B is visited with (3/10) / (3/10 + 1/5) = 3/5. The start is visited for sure.
     assert [r.chance for r in reached] == [pytest.approx(1.0), pytest.approx(0.6)]
-    assert all(r.exact for r in reached)
 
 
-def test_above_the_inversion_limit_the_chance_is_the_same_by_a_solve_with_the_state_absorbing(monkeypatch):
+def small_limits(monkeypatch):
+    """Every size limit of the solves lowered to its least: the iteration instead of the dense solve, and the cycles cut and put back instead of inverted whole."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 1)
+    monkeypatch.setattr(packed_chain, "INVERT_LIMIT", 1)
+
+
+def test_with_every_size_limit_lowered_the_chance_is_the_same(monkeypatch):
     policy, chain = hand_chain()
     index = {state: i for i, state in enumerate(chain.states)}
-    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)  # the sparse path
+    small_limits(monkeypatch)
 
     reached = reach_of(chain, [index["S"], index["B"]])
 
     assert reached[0].chance == pytest.approx(1.0)
-    assert reached[1].chance == pytest.approx(0.6, rel=1e-9) and reached[1].exact
+    assert reached[1].chance == pytest.approx(0.6, rel=1e-9)
 
 
-def test_a_state_past_the_solve_budget_gets_an_upper_bound_that_says_so(monkeypatch):
+def test_no_chance_is_a_bound_and_no_size_of_chain_turns_one_into_a_bound():
+    assert not hasattr(_route_flow, "EXACT_RETURNS") and not hasattr(_route_flow, "EXACT_RETURN_EDGES") and not hasattr(_route_flow, "ENTRY_STATES")
+    assert not hasattr(_route_flow.Reach(0.5), "exact")  # a chance is the exact chance or None, never "at most" (#572)
+
+
+def test_cycles_too_tangled_for_the_memory_leave_the_chances_not_measured_and_never_a_bound(monkeypatch):
     policy, chain = hand_chain()
     index = {state: i for i, state in enumerate(chain.states)}
-    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
-    monkeypatch.setattr(_route_flow, "EXACT_RETURNS", 0)
+    small_limits(monkeypatch)
+    monkeypatch.setattr(packed_chain, "WOODBURY_CELLS", 1)
 
-    (bound,) = reach_of(chain, [index["B"]])
+    reached = reach_of(chain, [index["S"], index["B"]])
 
-    # The visits of B are 0.6 / (1 - 2/5 * 3/5) and no self-loop is taken in B, so the bound is the visits, capped at 1.
-    assert not bound.exact
-    assert 0.6 <= bound.chance <= 1.0
+    assert [r.chance for r in reached] == [1.0, None]  # the start is visited for sure; the other is not measured
 
 
-def test_a_chain_with_too_many_edges_gets_bounds_only(monkeypatch):
+def test_a_run_that_runs_out_of_memory_putting_the_cycles_back_leaves_the_chances_not_measured_with_the_reason(monkeypatch):
     policy, chain = hand_chain()
     index = {state: i for i, state in enumerate(chain.states)}
-    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
-    monkeypatch.setattr(_route_flow, "EXACT_RETURN_EDGES", 2)  # the chain has more edges than this
 
-    (bound,) = reach_of(chain, [index["B"]])
+    def broken(*arguments, **keywords):
+        raise MemoryError
 
-    assert not bound.exact and 0.6 <= bound.chance <= 1.0
+    monkeypatch.setattr(_route_flow, "inverse_diagonal", broken)
+
+    (reached,) = reach_of(chain, [index["B"]])
+
+    assert reached.chance is None and "memory of the run ran out" in reached.why
+
+
+def test_the_block_says_in_notes_why_a_chance_is_a_question_mark_and_when_the_digits_printed_are_more_than_the_residual_supports(tiny, monkeypatch):
+    plan, result = tiny
+    monkeypatch.setattr(divergence_module, "reach_of", lambda chain, wanted: [_route_flow.Reach(None, "the cycles are too tangled") for _ in wanted])
+
+    block = divergences_of(plan, result, DATA)
+    text = "\n".join(divergence_lines(block))
+
+    assert block["notes"][0].startswith("3 chance(s) of the planner are `?` (not measured): the cycles are too tangled")
+    assert "    note: 3 chance(s) of the guide are `?`" in text and "(the planner visits it with chance ?, the guide with chance ?)" in text
+    monkeypatch.setattr(divergence_module, "reach_of", lambda chain, wanted: [_route_flow.Reach(0.5, None, 3e-3) for _ in wanted])
+
+    stiff = divergences_of(plan, result, DATA)
+
+    assert "supports about 2 significant digits, fewer than printed" in stiff["notes"][0] and "residual of 1e-09" in stiff["notes"][0]
+def test_a_disagreement_between_the_cycles_and_the_visits_leaves_the_chances_not_measured(monkeypatch):
+    policy, chain = hand_chain()
+    index = {state: i for i, state in enumerate(chain.states)}
+    real = _route_flow.inverse_diagonal
+    monkeypatch.setattr(_route_flow, "inverse_diagonal", lambda *a, **k: (real(*a, **k)[0], 0.5))  # the row of the start disagrees by 50%
+
+    reached = reach_of(chain, [index["B"]])
+
+    assert reached[0].chance is None
 
 
 def test_the_chance_of_a_state_the_run_cannot_finish_from_is_not_measured():
@@ -102,14 +140,56 @@ def test_the_chance_of_a_state_the_run_cannot_finish_from_is_not_measured():
 
     (stuck,) = reach_of(chain, [index["A"]])
 
-    assert stuck.chance is None and not stuck.exact
+    assert stuck.chance is None
+
+
+def random_policy(rng, size):
+    names = [f"s{i}" for i in range(size)]
+    policy = {}
+    for name in names:
+        pool = [*names, "goal"]
+        targets = rng.sample(pool, min(len(pool), rng.randint(2, 4)))
+        policy[name] = act("a", *((target, rng.choice([1, 2, 3])) for target in targets))
+    return policy
+
+
+def test_the_chances_of_a_chain_above_the_old_limit_equal_the_single_solves_and_the_dense_inverse(monkeypatch):
+    """A random chain of 60 states with rows that many states share, past the lowered limits: every chance by the cycles of the chain, by one absorbing solve per state, by the inverse."""
+    rng = random.Random(572)
+    names = [f"s{i}" for i in range(60)]
+    reroll = [(name, rng.choice([1, 2, 3])) for name in rng.sample(names, 25)] + [("goal", 2)]
+    policy = {}
+    for number, name in enumerate(names):
+        if number % 3 == 0:
+            policy[name] = act("reroll", *reroll)  # the rows that many states share
+        else:
+            targets = rng.sample([*names, "goal"], rng.randint(2, 4))
+            policy[name] = act("a", *((target, rng.choice([1, 2, 3])) for target in targets))
+    chain = chain_of_policy("s0", policy, is_goal)
+    small_limits(monkeypatch)
+
+    reached = reach_of(chain, list(range(chain.m)))
+
+    assert chain.m > 30 and all(r.chance is not None for r in reached)
+    expected = reach_probabilities("s0", policy, is_goal)  # the older dense solve of the text report: one linear solve per state
+    for state, found in zip(chain.states, reached):
+        assert found.chance == pytest.approx(expected[state], rel=1e-7, abs=1e-9)
+    n = chain.m
+    q = np.zeros((n, n))
+    for i in range(n):
+        for e in range(chain.ptr[i], chain.ptr[i + 1]):
+            if chain.dst[e] < n:
+                q[i, chain.dst[e]] += chain.prob[e]
+    inverse = np.linalg.inv(np.eye(n) - q)
+    for i, found in enumerate(reached):
+        assert found.chance == pytest.approx(min(1.0, inverse[0, i] / inverse[i, i]), rel=1e-7, abs=1e-9)
 
 
 @pytest.mark.parametrize("seed", [554, 22, 24, 32, 34, 37])  # the last five are seeds on which the iteration of `_bicgstab` claimed a residual it did not have
 @pytest.mark.parametrize("sparse", [False, True])
 def test_the_visit_chance_matches_the_dense_solve_of_the_text_report_on_random_policies(monkeypatch, sparse, seed):
     if sparse:
-        monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
+        small_limits(monkeypatch)
     rng = random.Random(seed)
     checked = 0
     for _ in range(150):
@@ -127,7 +207,28 @@ def test_the_visit_chance_matches_the_dense_solve_of_the_text_report_on_random_p
         expected = reach_probabilities("s0", policy, is_goal)
         for state, found in zip(chain.states, reached):
             assert found.chance == pytest.approx(expected[state], rel=1e-7, abs=1e-9)
-            assert found.exact
+        checked += 1
+    assert checked > 50
+
+
+@pytest.mark.parametrize("seed", [554, 22, 24, 32, 34, 37])  # seed 34: the iteration claimed 3.6e-19 for visits that were 26% off (#600)
+def test_the_visits_of_the_route_page_by_the_iteration_are_the_dense_visits_on_the_random_chains(monkeypatch, seed):
+    from crafting_system.cli._route_flow import build_flow
+
+    rng = random.Random(seed)
+    checked = 0
+    for _ in range(150):
+        policy = random_policy(rng, rng.randint(2, 8))
+        dense = build_flow("s0", policy, is_goal)
+        with monkeypatch.context() as sparse:
+            sparse.setattr(_route_flow, "DENSE_LIMIT", 1)  # the iteration, the dense solve only as the fallback of a stiff system
+            flow = build_flow("s0", policy, is_goal)
+        assert flow.measured == dense.measured and len(flow.steps) == len(dense.steps)
+        if not dense.measured:
+            continue
+        for a, b in zip(dense.steps, flow.steps):
+            assert b.weights == pytest.approx(a.weights, rel=1e-7, abs=1e-12)
+            assert b.uses == pytest.approx(a.uses, rel=1e-7, abs=1e-12) or (a.uses is None and b.uses is None)
         checked += 1
     assert checked > 50
 
@@ -183,7 +284,7 @@ def test_every_state_where_the_route_and_the_planner_part_is_listed_with_its_cha
     block = divergences_of(plan, result, DATA)
 
     assert result.divergences and result.divergence == result.divergences[0]
-    assert block["count"] == 3 == len(result.divergences) == len(ids) and block["more"] is None
+    assert block["count"] == 3 == len(result.divergences) == len(ids) and block["more"] is None and "notes" not in block
     by_state = {row["state"]: row for row in block["shown"]}
     assert set(by_state) == set(ids.values())
     for state, state_id in ids.items():
@@ -193,7 +294,7 @@ def test_every_state_where_the_route_and_the_planner_part_is_listed_with_its_cha
         route_chance = 1.0 if state == start else visit_chance(plan, result.policy[start], state)
         assert row["planner_chance"] == pytest.approx(planner_chance, rel=1e-9)
         assert row["route_chance"] == pytest.approx(route_chance, rel=1e-9)
-        assert row["planner_chance_exact"] and row["route_chance_exact"]
+        assert "planner_chance_exact" not in row and "route_chance_exact" not in row  # a chance is exact or not measured (#572)
         assert row["description"].startswith("rare;")
     chances = [max(row["planner_chance"], row["route_chance"]) for row in block["shown"]]
     assert chances == sorted(chances, reverse=True) and block["shown"][0]["state"] == ids[start]
@@ -375,31 +476,27 @@ def test_a_packed_plan_lists_every_divergence_also_where_the_route_never_goes(ti
     assert len(evaluate_route(packed, route, DATA).divergences) == 3
 
 
-def hidden_row(planner, route, planner_exact=True, route_exact=True):
-    return {
-        "state": None, "description": "rare", "solver_action": "A", "route_action": "B",
-        "planner_chance": planner, "planner_chance_exact": planner_exact, "route_chance": route, "route_chance_exact": route_exact,
-    }
+def hidden_row(planner, route):
+    return {"state": None, "description": "rare", "solver_action": "A", "route_action": "B", "planner_chance": planner, "route_chance": route}
 
 
-def test_the_more_line_says_at_most_when_a_hidden_chance_is_a_bound_and_counts_the_unmeasured(tiny, monkeypatch):
+def test_the_more_line_counts_the_unmeasured_and_never_says_at_most(tiny, monkeypatch):
     plan, result = tiny
     monkeypatch.setattr(divergence_module, "SHOWN", 1)
-    rows = [hidden_row(1.0, 1.0), hidden_row(0.5, None, route_exact=False), hidden_row(0.25, 0.1, planner_exact=False)]
+    rows = [hidden_row(1.0, 1.0), hidden_row(0.5, None), hidden_row(0.25, 0.1)]
     monkeypatch.setattr(divergence_module, "_row", lambda *a, **k: rows.pop(0))
 
     block = divergences_of(plan, result, DATA)
 
     more = block["more"]
     assert more["count"] == 2 and more["planner_chance"] == pytest.approx(0.75) and more["route_chance"] == pytest.approx(0.1)
-    assert more["planner_chance_exact"] is False and more["route_chance_exact"] is True
     assert more["planner_unmeasured"] == 0 and more["route_unmeasured"] == 1
     text = "\n".join(divergence_lines(block))
-    assert "visited at most 0.75 times by the planner" in text
+    assert "visited 0.75 times by the planner" in text and "at most" not in text
     assert "0.1 (and 1 not measured, left out) times by the guide" in text
 
 
-def test_the_more_line_has_no_qualifier_when_every_hidden_chance_is_exact(tiny, monkeypatch):
+def test_the_more_line_has_no_qualifier_when_every_hidden_chance_is_measured(tiny, monkeypatch):
     plan, result = tiny
     monkeypatch.setattr(divergence_module, "SHOWN", 1)
 

@@ -521,8 +521,8 @@ def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step
     solved = _route_flow._visits
 
     def unsolvable(*arguments):  # the one place the numbers can still stop: a chance per use lost in the float
-        visits, _, _, position = solved(*arguments)
-        return visits * 0.0, False, None, position
+        visits, _, _ = solved(*arguments)
+        return visits * 0.0, False, None
 
     monkeypatch.setattr(_route_flow, "_visits", unsolvable)
 
@@ -534,14 +534,16 @@ def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step
     assert joined  # said on a step that joins states (the goal card says it as a limit, `flow_limits`)
 
 
-def test_a_policy_with_more_states_than_the_entry_limit_says_so_and_keeps_every_other_number(monkeypatch):
-    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
+def test_the_page_of_a_policy_solved_by_the_iteration_instead_of_the_dense_solve_is_the_same_page(monkeypatch):
+    """No size of policy leaves out the share of runs that enter a step (#490): the two ways to the same numbers give one page."""
+    dense = build_section(INPUTS["branch"](), DATA)
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 1)
 
-    section = build_section(INPUTS["branch"](), DATA)
+    sparse = build_section(INPUTS["branch"](), DATA)
 
-    chaos = section.rows[2]
-    assert "Uses on average" in labels_of(chaos) and "reached" not in lines_of(chaos, "Uses on average")[0]
-    assert lines_of(section.rows[1], "Chance per use")[0] == "the target: ≈84%"  # the mixture does not depend on it
+    assert [lines_of(row, "Uses on average") for row in sparse.rows] == [lines_of(row, "Uses on average") for row in dense.rows]
+    assert lines_of(sparse.rows[1], "Chance per use")[0] == "the target: ≈84%"  # the mixture does not depend on it
+    assert any("reached in" in line for row in sparse.rows for line in lines_of(row, "Uses on average"))
 
 
 def test_a_step_with_several_branches_draws_the_card_of_each_whose_items_differ_from_the_card_after_it():
@@ -747,8 +749,8 @@ def test_two_branches_that_read_alike_say_what_the_player_does_next_and_the_plai
     solved = _route_flow._visits
 
     def unsolvable(*arguments):
-        visits, _, _, position = solved(*arguments)
-        return visits * 0.0, False, None, position
+        visits, _, _ = solved(*arguments)
+        return visits * 0.0, False, None
 
     monkeypatch.setattr(_route_flow, "_visits", unsolvable)
     rows = build_section(hand_input(START, LIFE_GOAL, chaos_for_life), DATA).rows

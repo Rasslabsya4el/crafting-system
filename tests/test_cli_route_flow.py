@@ -487,6 +487,110 @@ def test_landing_in_a_step_that_restarts_or_has_no_action_is_a_failure_and_a_res
     assert [(edge.kind, edge.to) for edge in step_with(flow, "T").edges] == [("failure", 1)]
 
 
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_the_chance_of_entering_a_step_is_the_same_by_the_inverse_and_by_one_solve_per_step_and_matches_the_older_dense_solve(monkeypatch, dense_limit):
+    """#490: a policy above the (lowered) dense limit has the chance of entering each step, equal to an independent computation.
+
+    The independent one: make the step's states dead ends (a run stops at the first of them), then the chance of ever visiting a state of the step is
+    the sum of the visit chances `reach_probabilities` (the older dense solve of the text report) gives its states.
+    """
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = 0
+    for start, policy in finishing_policies(490, 150):
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        for step in flow.steps[1:]:
+            if step.reached is None or step.action is None:
+                continue
+            absorbing = {state: action for state, action in policy.items() if state not in set(step.states)}
+            chances = reach_probabilities(start, absorbing, is_goal)
+            expected = sum(chances.get(state, 0.0) for state in step.states)
+            assert step.reached == pytest.approx(expected, rel=1e-8, abs=1e-12), (start, step.states)
+            checked += 1
+    assert checked > 100
+
+
+def stiff_policy(rng: random.Random, size: int, power: int):
+    """Every state stays with weight 10**power against 1 to 3 weights of 1 to 3 to others and the goal: a chance per use of about 10**-power."""
+    names = [f"s{i}" for i in range(size)]
+    policy = {}
+    for name in names:
+        others = [*rng.sample(names, rng.randint(1, 3)), "goal"]
+        policy[name] = act(rng.choice(["a", "b", "c"]), (name, 10**power), *((t, rng.choice([1, 2, 3])) for t in others if t != name))
+    return names[0], policy
+
+
+def exact_entry(policy, start, members) -> float:
+    """The chance of ever reaching a state of `members` from `start` (all states can finish), by `Fraction` elimination: no float in it."""
+    states = [s for s in policy if s not in members]
+    index = {s: i for i, s in enumerate(states)}
+    n = len(states)
+    rows = [[Fraction(0)] * (n + 1) for _ in range(n)]
+    for s in states:
+        total = sum(w for _, w in policy[s].outcomes)
+        rows[index[s]][index[s]] += 1
+        for target, w in policy[s].outcomes:
+            if target in members:
+                rows[index[s]][n] += Fraction(w, total)
+            elif target != "goal":
+                rows[index[s]][index[target]] -= Fraction(w, total)
+    for c in range(n):
+        pivot = next(r for r in range(c, n) if rows[r][c] != 0)
+        rows[c], rows[pivot] = rows[pivot], rows[c]
+        rows[c] = [v / rows[c][c] for v in rows[c]]
+        for r in range(n):
+            if r != c and rows[r][c] != 0:
+                rows[r] = [a - rows[r][c] * b for a, b in zip(rows[r], rows[c])]
+    return float(rows[index[start]][n])
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+@pytest.mark.parametrize("power", [6, 10, 13])
+def test_the_chance_of_entering_a_step_of_a_stiff_policy_is_good_by_the_inverse_and_by_one_solve_per_step(monkeypatch, dense_limit, power):
+    """#615: an inverse of I - Q has 1 - p = 1e-13 +- 1e-16 on its diagonal and was good to 3 digits (entry chances off by 3e-4); the inverse of I - P with the self-loops divided out is not."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = 0
+    for seed in range(25):
+        rng = random.Random(seed)
+        start, policy = stiff_policy(rng, rng.randint(4, 8), power)
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        for step in flow.steps[1:]:
+            if step.reached is not None and step.action is not None:
+                assert step.reached == pytest.approx(exact_entry(policy, start, set(step.states)), rel=1e-9), (seed, step.states)
+                checked += 1
+    assert checked > 20
+
+
+def test_a_stiff_plan_says_in_a_limit_how_many_digits_its_checked_residual_supports_and_an_ordinary_one_says_nothing():
+    rng = random.Random(3)
+    start, policy = stiff_policy(rng, 5, 12)
+    mild_start, mild = hand_policy()
+
+    (limit,) = _route_flow.flow_limits(_route_flow.chain_of_policy(start, policy, is_goal))
+
+    assert limit.what == "The numbers of the steps are good to fewer digits than printed" and limit.approximate
+    assert "significant digits" in limit.why and "residual of 1e-09" in limit.guarantee
+    assert _route_flow.flow_limits(_route_flow.chain_of_policy(mild_start, mild, is_goal)) == ()
+
+
+def hand_policy():
+    return "S", {"S": act("s", ("S", 5), ("B", 3), ("goal", 2)), "B": act("b", ("S", 2), ("goal", 3))}
+
+
+def test_a_chance_is_not_measured_with_the_reason_when_its_state_cannot_finish_or_the_visits_were_not_solved(monkeypatch):
+    policy = {"S": act("s", ("A", 1), ("goal", 1)), "A": act("a", ("A", 1))}  # A loops for ever
+    chain = _route_flow.chain_of_policy("S", policy, is_goal)
+
+    (stuck,) = _route_flow.reach_of(chain, [1])
+    monkeypatch.setattr(_route_flow, "_linear", lambda *arguments: None)
+    monkeypatch.setattr(_route_flow, "ACCEPT_RESIDUAL", -1.0)
+    unsolved = _route_flow.reach_of(_route_flow.chain_of_policy("S", hand_policy()[1], is_goal), [1])
+
+    assert stuck.chance is None and "no run can finish from this state" in stuck.why
+    assert unsolved[0].chance is None and "not solved to a residual" in unsolved[0].why
+
+
 def test_the_chance_of_entering_a_step_that_joins_states_is_one_chance_not_the_sum_of_theirs():
     # S reaches A with 1/4, and A always goes on to B; A and B share the action x, so the run enters the step once.
     policy = {
@@ -571,7 +675,8 @@ def test_the_uses_of_a_chain_of_steps_add_up_to_the_mean_cost():
     assert sum(step.uses * step.action.cost for step in flow.steps) == pytest.approx(evaluate(policy, 0, is_goal).mean.value)
 
 
-def test_a_chain_of_more_steps_than_the_old_cap_is_still_solved():
+def test_a_chain_of_more_steps_than_the_old_cap_is_still_solved(monkeypatch):
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 2000)  # one inverse for the 1,599 steps' entry chances, not 1,599 solves (this test is about the cap)
     policy = chain(1600)  # 1,600 steps: the old cap was 1,500 and left the uses and the costs out
 
     flow = build_flow(0, policy, is_goal)
@@ -588,15 +693,27 @@ def test_no_silent_limit_is_left_in_the_module():
     assert not hasattr(_route_flow, "MAX_STEPS") and not hasattr(_route_flow, "REFINE_WORK")
 
 
-def test_a_chance_per_use_too_small_for_floats_leaves_the_flow_unmeasured_instead_of_failing():
-    policy = {"A": act("a", ("A", 10**17 - 1), ("goal", 1))}
+def test_a_chance_per_use_too_small_for_one_minus_p_in_floats_is_still_solved_because_no_one_minus_p_is_formed():
+    policy = {"A": act("a", ("A", 10**17 - 1), ("goal", 1))}  # 1 - 1e-17 is 1.0 in floats: the inverse of I - Q is singular
 
     flow = build_flow("A", policy, is_goal)
 
-    assert not flow.measured
+    assert flow.measured and flow.entered
     (step,) = flow.steps
-    assert step.uses is None and step.reached == 1.0 and not flow.entered
+    assert step.uses == pytest.approx(1e17, rel=1e-9) and step.reached == 1.0  # one in 1e17 leaves: 1e17 uses, as the closed form says
     assert [(edge.kind, edge.to) for edge in step.edges] == [("goal", None), ("again", 1)]
+
+
+def test_a_flow_whose_visits_no_solve_reaches_stays_unmeasured_instead_of_failing(monkeypatch):
+    monkeypatch.setattr(_route_flow, "_linear", lambda *arguments: None)
+    monkeypatch.setattr(_route_flow, "ACCEPT_RESIDUAL", -1.0)  # the dense inverse of the small chain is no longer accepted either
+    policy = {"A": act("a", ("A", 1), ("goal", 1))}
+
+    flow = build_flow("A", policy, is_goal)
+
+    assert not flow.measured and not flow.entered
+    (step,) = flow.steps
+    assert step.uses is None and step.reached == 1.0
 
 
 def line(length: int) -> dict[int, Action]:

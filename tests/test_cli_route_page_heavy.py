@@ -79,18 +79,18 @@ def test_the_plan_is_shown_by_its_lumped_chain_and_the_page_is_made_from_item_st
 
 
 @HEAVY
-def test_the_page_of_a_big_plan_says_in_a_limit_that_the_share_of_runs_entering_a_step_is_left_out(plan, data):
+def test_the_share_of_runs_entering_a_step_is_solved_for_a_big_plan_and_no_limit_says_it_is_left_out(plan, data):
     from crafting_system.cli._limits import STEPS
-    from crafting_system.cli._route_flow import ENTRY_STATES, flow_limits
+    from crafting_system.cli._route_flow import DENSE_LIMIT, flow_limits
 
     chain = chain_of_packed_policy(plan.policy)
 
-    steps = [limit for limit in plan.limits if limit.kind == STEPS]
-
-    assert chain.m > ENTRY_STATES  # R04's policy has 18,696 item states, R14's 87,251
-    assert [limit.what for limit in steps] == ["How often a run enters a step is not shown"]  # solved, so only this one
-    assert steps == list(flow_limits(chain))
-    assert "What the steps show" in [field.label for field in build_section(route_input(plan), data).goal.leaves_out]
+    assert chain.m > DENSE_LIMIT  # R04's policy has 18,696 item states, R14's 87,251: the visits and every entry chance are solved by the iteration (#490)
+    assert [limit for limit in plan.limits if limit.kind == STEPS] == [] == list(flow_limits(chain))
+    flow = flow_of(chain)
+    assert flow.measured and flow.entered
+    assert flow.steps[0].reached == 1.0 and sum(step.reached is not None for step in flow.steps) > 1  # the chance of entering a step is there beyond the first
+    assert "What the steps show" not in [field.label for field in build_section(route_input(plan), data).goal.leaves_out]
 
 
 @HEAVY

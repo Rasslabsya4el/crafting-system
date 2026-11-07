@@ -68,13 +68,14 @@ def test_a_sparse_solve_of_the_visits_agrees_with_the_dense_inverse(plan, monkey
 
     chain = chain_of_packed_policy(plan.policy)
     dense = flow_of(chain)
-    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 5)  # every chain with more than 5 states that can finish goes to BiCGSTAB
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 5)  # every chain with more than 5 states that can finish goes to BiCGSTAB
 
     sparse = flow_of(chain)
 
-    assert sparse.measured and not sparse.entered and dense.entered
+    assert sparse.measured and sparse.entered and dense.entered
     for a, b in zip(dense.steps, sparse.steps):
         assert b.uses == pytest.approx(a.uses, rel=1e-8)
+        assert b.reached == pytest.approx(a.reached, rel=1e-7) if a.reached is not None else b.reached is None
         assert b.weights == pytest.approx(a.weights, rel=1e-7)
         assert [edge.chance for edge in b.edges] == pytest.approx([edge.chance for edge in a.edges], rel=1e-8)
 
