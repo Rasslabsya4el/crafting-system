@@ -78,6 +78,8 @@ from crafting_system.solver._packed_solve import solve_graph
 
 FLOOR = 1e-200  # a fake action of bound 0 is carried at this cost: the certificate divides by the cheapest cost of a state (a rise of 1e-200 moves no cut)
 FAKE = -1  # the tag of a fake action (a tip's bound, or the least bound of the offers not realized yet)
+NO_ACTION = -2  # the tag of "no action" in the policy handed to the next round
+WARM_START = True  # each round's solve starts from the last round's policy and values (False: from the cheapest path, as the first round does; for measuring)
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
@@ -202,6 +204,7 @@ class Search[S]:
         progress: Callable[[str], None] | None = None,
         tolerance: float = 1e-10,
         guard: bool = True,
+        warm: bool | None = None,
     ) -> None:
         self.p = problem
         self.net = net or Net()
@@ -209,6 +212,7 @@ class Search[S]:
         self.say = progress or (lambda _text: None)
         self.tolerance = tolerance
         self.guard = guard  # False for the tests that plant a wrong bound and watch what it does
+        self.warm = WARM_START if warm is None else warm
         self.stats = SearchStats()
         self.states: list[S] = []
         self.index: dict[S, int] = {}
@@ -223,6 +227,7 @@ class Search[S]:
         self.shared: dict[Hashable, int] = {}
         self.hits = 0
         self.values: np.ndarray | None = None  # the solved lower graph (node n_solved is the goal node)
+        self.tags: np.ndarray | None = None  # the tag (offer position, or FAKE) of the action the last solve chose at each node, NO_ACTION where none
         self.n_solved = 0
         self.restart_kernel: int | None = None
         self._last_root: float | None = None
@@ -455,6 +460,30 @@ class Search[S]:
         goal_flags = np.concatenate((goal, [True])) if lower else goal
         return assemble(goal_flags, ptr, act_tag, act_cost, act_kernel, succ, wt)
 
+    def _warm(self, graph: PackedGraph) -> tuple[np.ndarray, np.ndarray] | None:
+        """The start of the next solve: the last round's policy and values, carried to the nodes of `graph` (None in the first round).
+
+        A node keeps the action of the same tag it took (the offers realized stay; a fake action is the same tag whatever it costs now). A node the last
+        round did not know is a tip, whose one action is the fake. The policy is a guess: the solver proves it proper or replaces it
+        (`solver._packed_solve.warm_policy`), so it is no risk to the answer; it only saves the policy iteration from starting over. The values start
+        the first evaluation of the linear system: the last round's, the bound at a node it did not know.
+        """
+        if not self.warm or self.tags is None or self.values is None:
+            return None
+        nodes = graph.n
+        known = min(len(self.tags), nodes)
+        tag = np.full(nodes, FAKE, dtype=np.int32)
+        tag[:known] = self.tags[:known]
+        owner = graph.action_state()
+        found = np.flatnonzero(graph.act_tag == tag[owner])
+        policy = np.full(nodes, -1, dtype=np.int64)
+        policy[owner[found]] = found
+        value = np.zeros(nodes)
+        value[: len(self.states)] = self.lb[: len(self.states)]
+        carried = min(self.n_solved, len(self.states))
+        value[:carried] = np.where(np.isfinite(self.values[:carried]), self.values[:carried], value[:carried])
+        return policy, value
+
     def upper_value(self) -> float:
         """The value of the best executable policy of the graph now (restart at every tip): infinite when the start item is given and none closes."""
         if self.p.restart is None:
@@ -493,15 +522,24 @@ class Search[S]:
             self.stats.build_seconds += time.perf_counter() - mark
             mark = time.perf_counter()
             info: dict = {}
+            warm = self._warm(graph)
             try:
-                core = solve_graph(graph, tolerance=self.tolerance, info=info)
+                if warm is None:
+                    core = solve_graph(graph, tolerance=self.tolerance, info=info)
+                else:
+                    core = solve_graph(graph, tolerance=self.tolerance, info=info, start_policy=warm[0], start_value=warm[1])
             except ConvergenceError:
                 if self.guard:
                     self._probe()  # a bound that is not consistent can leave the lower graph unsolvable: say so, with the fault found
                 raise
             self.stats.solve_seconds += time.perf_counter() - mark
             for name, amount in info.items():
+                if isinstance(amount, str):
+                    name, amount = f"{name}_{amount}", 1
                 self.stats.solve_info[name] = self.stats.solve_info.get(name, 0) + amount
+            self.tags = np.full(graph.n, NO_ACTION, dtype=np.int32)
+            chosen = core.action >= 0
+            self.tags[chosen] = graph.act_tag[core.action[chosen]]
             self.values = core.value
             self.n_solved = len(self.states)
             self.stats.rounds += 1
@@ -532,7 +570,7 @@ class Search[S]:
             self.say(
                 f"  totals: build {self.stats.build_seconds:.0f} s, solve {self.stats.solve_seconds:.0f} s, expand {self.stats.expand_seconds:.0f} s; "
                 f"this solve {time.perf_counter() - mark:.1f} s on {graph.n:,} nodes, {graph.num_actions:,} actions, {graph.num_edges:,} edges stored: "
-                + ", ".join(f"{name} {amount:.4g}" if isinstance(amount, float) else f"{name} {amount:,}" for name, amount in sorted(info.items()))
+                + ", ".join(f"{name} {amount:.4g}" if isinstance(amount, float) else f"{name} {amount}" for name, amount in sorted(info.items()))
             )
             if not len(fake):
                 self.stats.touched = len(self.states)

@@ -27,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packed_routes as P  # noqa: E402  (the inputs of a route, the memory watch)
 
-from crafting_system.cli import _packed, make_plan  # noqa: E402
+from crafting_system.cli import _envelope, _packed, make_plan  # noqa: E402
 from crafting_system.cli._envelope import Net  # noqa: E402
 from crafting_system.cli._envelope_plan import route_incumbent  # noqa: E402
 from crafting_system.cli._route import load_route  # noqa: E402
@@ -115,8 +115,11 @@ def main() -> None:
     parser.add_argument("--incumbent", action="store_true")
     parser.add_argument("--net-seconds", type=float, help="stop the envelope search after this many seconds (the plan then states [LB, U])")
     parser.add_argument("--out")
+    parser.add_argument("--cold", action="store_true", help="start each round's solve from the cheapest path, as before #568 (for the comparison)")
     parser.add_argument("--profile", action="store_true", help="print the 40 most expensive functions (cumulative) after the run")
     arguments = parser.parse_args()
+    if arguments.cold:
+        _envelope.WARM_START = False
     faulthandler.dump_traceback_later(600, repeat=True, file=sys.stderr)
     threading.Thread(target=P.watch_memory, daemon=True).start()
     began = time.perf_counter()

@@ -198,6 +198,84 @@ def proper_states(work: Work, alive: np.ndarray, effective: np.ndarray) -> tuple
     return inside, ok, distance, policy
 
 
+def reaches_goal(work: Work, policy: np.ndarray) -> np.ndarray:
+    """The states that reach a goal with positive chance under `policy` (-1: no action): a goal reaches itself, a state with no action only if it is one.
+
+    Reverse search from the goals over the kernels the policy uses (each once, however many states share it), so a pass costs the edges of the distinct
+    kernels and not those of every state.
+    """
+    g, n = work.g, work.n
+    reached = g.goal.copy()
+    states = np.flatnonzero(policy >= 0)
+    if not len(states):
+        return reached
+    kernels, slot = np.unique(g.act_kernel[policy[states]], return_inverse=True)
+    sizes = work.ksize[kernels]
+    dst = g.k_succ[expand_ranges(g.k_ptr[kernels], sizes)]
+    owner = np.repeat(np.arange(len(kernels)), sizes)
+    by_dst = np.argsort(dst, kind="stable")
+    owner_of = owner[by_dst]
+    edge_ptr = np.searchsorted(dst[by_dst], np.arange(n + 1))  # the edges into state s: edge_ptr[s]:edge_ptr[s + 1] of `owner_of`
+    by_slot = np.argsort(slot, kind="stable")
+    user_ptr = np.searchsorted(slot[by_slot], np.arange(len(kernels) + 1))  # the states using kernel k: by_slot[user_ptr[k]:user_ptr[k + 1]]
+    seen = np.zeros(len(kernels), dtype=bool)
+    frontier = np.flatnonzero(reached)
+    while len(frontier):
+        into = expand_ranges(edge_ptr[frontier], edge_ptr[frontier + 1] - edge_ptr[frontier])
+        hit = np.unique(owner_of[into])
+        hit = hit[~seen[hit]]
+        seen[hit] = True
+        users = states[by_slot[expand_ranges(user_ptr[hit], user_ptr[hit + 1] - user_ptr[hit])]]
+        frontier = users[~reached[users]]
+        reached[frontier] = True
+    return reached
+
+
+def warm_policy(work: Work, alive: np.ndarray, effective: np.ndarray, start: np.ndarray, info: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """`(inside, ok, policy)` from a policy given for the states (an action index of this graph, or -1), proved proper on `inside`.
+
+    Properness of a policy is a finite Markov chain's: every state reaches the goal with certainty iff every state reaches it with positive chance
+    (otherwise some closed class holds no goal), and the policy's actions stay inside the set. So:
+
+    1. The states `inside0` that have an alive action (and the goals) are the only candidates for Y, the set of states with a proper policy. If the
+       given policy, taken where its action stays inside `inside0`, reaches the goal from every one of them, it is proper on `inside0`, so
+       `inside0` is Y and no search for Y is needed. This is the case that a warm start is for.
+    2. Otherwise Y is found as `proper_states` finds it, and the given policy is kept at the states of Y that reach the goal under it with positive
+       chance; at every other state of Y (it reaches no goal, has no action given or a given one that leaves Y) the policy is replaced by the cheapest
+       path's, which lowers the path cost to the goal with positive chance at each step. The result is proper: a state that kept its action still
+       reaches the goal by the states that reach it (they all kept theirs); a replaced state follows the strictly falling cheapest-path costs until
+       it meets a state that kept its action or the goal. (The mix of two policies that is not proper is the one that is not checked: this one is.)
+
+    `info["warm"]` says which: "kept" (1), or "repaired" with `info["warm_replaced"]` the number of states whose action was replaced (2).
+    """
+    g = work.g
+    own = work.act_state
+    has_alive = np.zeros(work.n, dtype=bool)
+    has_alive[own[alive]] = True
+    asked = (start >= 0) & (start < work.A)
+    asked[asked] = own[start[asked]] == np.flatnonzero(asked)  # an action of another state is no action of this one
+
+    def given(ok: np.ndarray, inside: np.ndarray) -> np.ndarray:
+        kept = asked & inside & ~g.goal
+        kept[kept] = ok[start[kept]]
+        return np.where(kept, start, -1)
+
+    inside = g.goal | has_alive
+    ok = alive & ~kernel_any(g, ~inside)[g.act_kernel]
+    policy = given(ok, inside)
+    wanted = inside & ~g.goal
+    if reaches_goal(work, policy)[wanted].all():
+        info["warm"] = "kept"
+        return inside, ok, policy
+    inside, ok, _, cheapest = proper_states(work, alive, effective)
+    kept = given(ok, inside)
+    policy = np.where(kept >= 0, kept, cheapest)
+    stuck = inside & ~g.goal & ~reaches_goal(work, policy)
+    info["warm"] = "repaired"
+    info["warm_replaced"] = int((inside & ~g.goal & ((kept < 0) | stuck)).sum())
+    return inside, ok, np.where(stuck, cheapest, policy)
+
+
 # ---- evaluating a policy ---------------------------------------------------------------------------------------------
 
 
@@ -362,8 +440,16 @@ def solve_graph(
     accept_bound: float = ACCEPT_BOUND,
     progress: Callable[[str], None] | None = None,
     info: dict | None = None,
+    start_policy: np.ndarray | None = None,
+    start_value: np.ndarray | None = None,
 ) -> Core:
-    """Policy iteration on `graph` itself (no merge): see the module docstring, steps 2 to 5."""
+    """Policy iteration on `graph` itself (no merge): see the module docstring, steps 2 to 5.
+
+    `start_policy` (an action index of the graph for each state, -1 where none) and `start_value` (a vector of values to start the first evaluation
+    from) warm-start the iteration with those of a nearby graph, as the envelope search does round after round. The policy need not be proper on this
+    graph: `warm_policy` keeps it where it is and replaces it where it is not, and proves the result proper. The answer does not depend on the start
+    (the same fixed point, to the certified error), only the work.
+    """
     say = progress or (lambda _text: None)
     info = {} if info is None else info
     began = time.perf_counter()
@@ -378,10 +464,14 @@ def solve_graph(
     with np.errstate(divide="ignore"):
         effective = np.where(alive, graph.act_cost / np.where(alive, leave, 1.0), INF)
     mark = time.perf_counter()
-    inside, ok, distance, policy = proper_states(work, alive, effective)
+    if start_policy is None:
+        inside, ok, distance, policy = proper_states(work, alive, effective)
+        value = np.where(inside, np.where(np.isfinite(distance), distance, 0.0), 0.0)
+    else:
+        inside, ok, policy = warm_policy(work, alive, effective, np.asarray(start_policy), info)
+        value = np.zeros(n) if start_value is None else np.where(inside & np.isfinite(start_value), start_value, 0.0)
     info["seconds_proper"] = time.perf_counter() - mark
     say(f"proper states: {int(inside.sum()):,} of {n:,} ({time.perf_counter() - began:.1f} s)")
-    value = np.where(inside, np.where(np.isfinite(distance), distance, 0.0), 0.0)
     terms = work.state_reduce(np.maximum, work.asize.astype(np.float64) + 1.0, 0.0)
     noise = (terms + 2.0) * EPS
     rounds = 0
