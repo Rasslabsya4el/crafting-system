@@ -17,6 +17,14 @@ price is stored under; the trade query is `build_query` of the spec. Nothing is 
   item level has no maximum in the query.
 * **The rarity** is the start item's, as the target states it. (R08 and R09 start rare with no mods; their committed prices are of a Normal
   base plus an Alchemy typed into the sum, which the keys and the tests mark as a price for another item, #494 point 2.)
+* **The key** is the one place a price name of a start item is made (#471). It carries what tells two start items apart for buying: the base
+  (the base id too, where the name is shared), the rarity, the item level window, the influences and the corruption, then the start mods.
+  Two targets that differ in any of these read two price entries. `base_line_name` is the other name made here: the poe.ninja-style line
+  of a Normal base (`Lion Pelt (ilvl 84)`) that a vendor recipe buys, with the base id in it where the name is shared.
+* **A poe.ninja price for a shared name is refused** (`shared_name_refusal`): its line has a name, a level and a variant, no base id,
+  so for a name that belongs to several bases it is the price of none of them. The trade site has no discriminator either (checked on
+  2026-11-07 against `GET /api/trade/data/items`: one plain entry per base name, and `disc` only on legacy uniques), so the own implicit above is
+  all the query can use.
 * **The start mods** are searched by their stat text, with the lowest roll of the mod's own stat range as the minimum (OR-3: the tier the
   price is taken for is the mod the target names; its window starts there), and `fractured` as the target says.
 """
@@ -26,7 +34,9 @@ import re
 from crafting_system.data import BaseItem, GameData, Mod
 from crafting_system.items import Rarity
 from crafting_system.items.model import MAX_ITEM_LEVEL
-from crafting_system.prices.price_names import canonical_influences
+from crafting_system.prices.poe_ninja import SOURCE as NINJA_SOURCE
+from crafting_system.prices.poe_watch import SOURCE as WATCH_SOURCE
+from crafting_system.prices.price_names import base_price_name, canonical_influences
 from crafting_system.prices.trade_query import BuyMod, BuySpec
 from crafting_system.prices.trade_stats import normalize_text
 
@@ -36,9 +46,12 @@ from .model import Target
 __all__ = [
     "TRADE_CATEGORY",
     "StartBuyError",
+    "base_line_name",
     "buy_spec_of",
+    "ninja_line_name",
     "item_level_window",
     "same_name_bases",
+    "shared_name_refusal",
     "start_price_key",
 ]
 
@@ -143,7 +156,7 @@ def buy_spec_of(data: GameData, target: Target) -> BuySpec:
         mod = data.mods[entry.mod_id]
         mods.append((BuyMod(_plain(mod.text or ""), _minimum(mod), entry.fractured), _plain(mod.text or "")))
     return BuySpec(
-        name=_key(_base_label(data, base), rarity, low, high, influences, [(buy.fractured, shown) for buy, shown in mods]),
+        name=_key(_base_label(data, base), rarity, low, high, influences, item.corrupted, [(buy.fractured, shown) for buy, shown in mods]),
         base_type=base.name,
         category=category,
         rarity=rarity.value,
@@ -155,14 +168,18 @@ def buy_spec_of(data: GameData, target: Target) -> BuySpec:
     )
 
 
-def _key(base: str, rarity: Rarity, low: int, high: int, influences: tuple[str, ...], mods: list[tuple[bool, str]]) -> str:
-    """The price key, readable as the item: `Amethyst Ring, item level 75-83, fractured +(13-15) to all Attributes`."""
+def _key(
+    base: str, rarity: Rarity, low: int, high: int, influences: tuple[str, ...], corrupted: bool, mods: list[tuple[bool, str]]
+) -> str:
+    """The price key, readable as the item: `Amethyst Ring, item level 75-83, corrupted, fractured +(13-15) to all Attributes`."""
     parts = [base]
     if rarity is not Rarity.RARE:
         parts.append(rarity.value)
     parts.append(f"item level {low}" if low == high else f"item level {low}-{high}")
     if influences:
         parts.append("/".join(influences) + " influence")
+    if corrupted:
+        parts.append("corrupted")
     parts.extend(f"{'fractured ' if fractured else ''}{shown}" for fractured, shown in mods)
     return ", ".join(parts)
 
@@ -170,3 +187,41 @@ def _key(base: str, rarity: Rarity, low: int, high: int, influences: tuple[str, 
 def start_price_key(data: GameData, target: Target) -> str:
     """The name the target's start item has in the price file: the name of its buy spec."""
     return buy_spec_of(data, target).name
+
+
+def base_line_name(data: GameData, target: Target) -> str:
+    """The price name of the target's Normal base at its item level and influences: `Lion Pelt (ilvl 84)`.
+
+    A vendor recipe buys this base and makes the start item from it (`cli/_start_options.py`). The base is named like the start item's base
+    in its key: where the name is shared, the base id is in it (`Two-Toned Boots [BootsAtlas1] (ilvl 86)`), so a price of this name is the price of
+    this base.
+    """
+    return base_price_name(_base_label(data, data.base_items[target.base_id]), target.item_level, [each.value for each in target.influences])
+
+
+def ninja_line_name(data: GameData, target: Target) -> str:
+    """The name a poe.ninja stash line of the target's Normal base has (`Two-Toned Boots (ilvl 86)`): the base's name, level and variant, no base id.
+
+    It is the same as `base_line_name` where the name is not shared. Where it is, a price of this name is refused (`shared_name_refusal`).
+    """
+    return base_price_name(data.base_items[target.base_id].name, target.item_level, [each.value for each in target.influences])
+
+
+def shared_name_refusal(data: GameData, base_id: str, source: str, what: str) -> str | None:
+    """The words that refuse a price, or None when the price may be used.
+
+    A poe.ninja line has a name, a level and a variant, no base id (poe.watch's base lines are matched by name and level the same way). Where
+    the name belongs to several bases it is the price of none of them, and `what` (the start item or the base line the price is for) is not
+    priced by it. Prices from every other source are kept.
+    """
+    if not source.startswith((NINJA_SOURCE, WATCH_SOURCE)):
+        return None
+    ids = same_name_bases(data, base_id)
+    if len(ids) < 2:
+        return None
+    shown = ", ".join(each.rsplit("/", 1)[-1] for each in ids)
+    return (
+        f"the price of {what} is refused: it comes from {source}, whose line has a name and no base id, and the name "
+        f"'{data.base_items[base_id].name}' belongs to {len(ids)} bases ({shown}), so the line is the price of none of them. "
+        "Price this base on the trade site, or write its price by hand"
+    )

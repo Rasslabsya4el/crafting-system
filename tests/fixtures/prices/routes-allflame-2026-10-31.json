@@ -446,8 +446,8 @@
     },
     "Penetrating Arrow Quiver [QuiverNew5], normal, item level 81": {
       "chaos": 9.0,
-      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more",
-      "source": "poe.ninja"
+      "note": "typed by hand from the poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more. The line has no base id and the name belongs to QuiverNew5 and Quiver12 (one implicit, one mod pool), so it is kept as a hand price, not as a poe.ninja price (#471); to be replaced by a trade price",
+      "source": "hand"
     },
     "Potent Chaotic Resonator": {
       "chaos": 1.39,

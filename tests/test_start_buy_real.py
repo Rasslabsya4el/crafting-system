@@ -62,7 +62,7 @@ OTHER_ITEM = {
     "r14-hunter-bow": "#483 the exact item has 0 listings: the stored price is for any non-unique rarity of item level 78 or more",
     "r08-energy-shield-boots": "#494 point 2 the key names a rare item with no mods, the stored price is of a normal base plus a typed Alchemy",
     "r09-life-boots": "#494 point 2 and #483 the stored price is of a normal base plus a typed Alchemy, taken for any of the three Two-Toned Boots",
-    "r04-penetrating-quiver": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
+    "r04-penetrating-quiver": "#426 the stored price is a hand price of a poe.ninja number, not a trade search: it has no body",
     "r13-life-resist-belt": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
 }
