@@ -53,7 +53,7 @@ import yaml
 from abstraction_support import real_game_data
 from naive_crafter import tally as t
 from naive_crafter.craft import Laws, Unsupported
-from naive_crafter.play import Judge, Player, lacking, read_route
+from naive_crafter.play import Gap, Judge, Player, lacking, read_route
 from naive_crafter.world import load_world
 
 from crafting_system.cli import evaluate_route, load_route, make_plan
@@ -336,6 +336,36 @@ def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(play
 
     assert not verdict.agrees, str(verdict)
 
+
+
+# The laws of #610 on the two routes that use them. A play of these is long, so the heavy run judges them (`NAIVE_HEAVY=1`, `NAIVE_MUT_RUNS` plays each, default 300); the units of
+# `naive_crafter/test_naive_mechanics.py` show each law with an exact answer on a tiny ring. A mutated route that cannot finish (a play that goes on for `MUTANT_USES` uses, or
+# meets a gap) is as far from the planner as a route can be and counts as killed.
+MUTANT_USES = 3_000_000
+MUTATIONS_HEAVY = [
+    ("no multimod", Laws(multimod=False), "R14 with restart"),
+    ("no metamod filter", Laws(metamod_filter=False), "R14 with restart"),
+    ("an Annulment may remove the fractured mod", Laws(annul_spares_fractured=False), "R04 with restart"),
+    ("a metamod does not refuse an essence", Laws(metamod_refuses_rerolls=False), "R04 with restart"),
+    ("no metamod filter", Laws(metamod_filter=False), "R04 with restart"),
+    ("a Fracturing Orb needs no four mods", Laws(fracture_needs_four=False), "R04 with restart"),
+]
+
+
+@pytest.mark.skipif(not HEAVY, reason="long: the heavy run judges these (NAIVE_HEAVY=1)")
+@pytest.mark.parametrize(("benchmarked", "name", "laws"), [(route, name, laws) for name, laws, route in MUTATIONS_HEAVY], indirect=["benchmarked"])
+def test_each_law_of_the_metamod_routes_turned_off_moves_the_route_past_the_line(benchmarked, name, laws):
+    stem, _ = BENCHMARKED[benchmarked.route]
+    runs = int(os.environ.get("NAIVE_MUT_RUNS", "300"))
+    try:
+        wrong = t.simulate(play_world(stem, laws), runs, seed=7, max_uses=MUTANT_USES)
+    except Gap as stuck:
+        print(f"{benchmarked.route} with {name}: cannot finish ({stuck})")
+        return
+    verdict = t.verdict_on(f"{benchmarked.route} with {name}", benchmarked.exact_mean, wrong.mean_se())
+    print(verdict)  # the distance, shown with -rP
+
+    assert not verdict.agrees, str(verdict)
 
 
 # --- the routes it cannot play -------------------------------------------------------------------------------
