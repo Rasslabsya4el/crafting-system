@@ -14,7 +14,7 @@ First step, before S1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 rec
     2 or more uncorrupted skill gems with the Minion tag, 40% quality in all (the cheapest set) -> +1 to Level of all Minion Skill Gems, T2
   You get back: Magic Lion Pelt, item level 84, with only +1 to Level of all Minion Skill Gems, T2 (the recipe wipes every other mod)
   Start price: 8.00 Chaos = the goods above; a restart makes the item again at this price
-Start options (the cheapest total of start price and expected cost to craft wins; the plain start item is always one; `--no-recipe-starts`, or recipe_starts = false under [planner] in crafting.toml, turns recipe starts off):
+Start options (the cheapest total of start price and expected cost to craft wins; the plain start item is always one; the option `--no-recipe-starts`, or the recipe starts setting in the planner settings, turns recipe starts off):
   planned: the target's own start item (Lion Pelt, normal, item level 84): 1,348.94 Chaos = start 2.00 + crafting 1,346.94
   chosen: Helmet with +1 to Minion Skill Gems (vendor recipe): 866.40 Chaos = start 8.00 + crafting 858.40
 What this answer leaves out:
