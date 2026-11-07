@@ -73,7 +73,7 @@ universe may miss that slot, and the members that hold it are not made (issue #5
 import time
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterator, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from fractions import Fraction
 from functools import reduce
@@ -175,17 +175,21 @@ class _Universe:
             for kind in sorted({slot.kind for _, _, slot in rows}):
                 self.classes[side][_tagset(kind)].append(_PureKind(kind, Slot(side, kind, zero), kind_type))
         self.zero = zero
-        self._seed_named(pattern, influences, kinds)
+        self.influences = influences
+        self.kinds = kinds
+        self._seed_named(pattern, pattern.actions)
 
-    def _seed_named(self, pattern: "Pattern", influences: frozenset, kinds) -> None:
+    def _seed_named(self, pattern: "Pattern", actions: Sequence[Action]) -> int:
         """Add the ordinary mods an offered action puts on the item by name and that the pool does not list (an essence's forced mod).
 
         `Adds.named` is the same on every use, so the slot is known before any kernel is run; this is what keeps a slot that only a member that
-        is not offered would have produced from missing (see the module docstring, "The universe").
+        is not offered would have produced from missing (see the module docstring, "The universe"). Returns how many slots the universe gained.
         """
         ab = pattern.ab
+        influences, kinds = self.influences, self.kinds
+        gained = 0
         probe = Item.build(ab.data, base_id=ab.base_id, item_level=ab.item_level, rarity=Rarity.RARE, influences=influences)
-        for action in pattern.actions:
+        for action in actions:
             try:
                 adds = action.adds(ab.data, probe)
             except NotApplicableError:
@@ -196,7 +200,8 @@ class _Universe:
                 mod = ab.data.mods.get(mod_id)
                 if mod is None or mod.domain == "crafted" or mod.generation_type not in (side.value for side in SIDES):
                     continue
-                self.note(Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences)))
+                gained += self.note(Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences)))
+        return gained
 
     def note(self, slot: Slot) -> bool:
         """Add a slot a kernel produced that the pool did not list; True when the universe grew."""
@@ -287,6 +292,12 @@ class Pattern:
         self._tag_kind: dict[str, tuple] = {}
         self.grew = 0
         self.fallbacks = 0
+
+    def add_actions(self, actions: Sequence[Action]) -> None:
+        """Offer more actions: what they add by name joins the universe, and a universe that gains a slot counts as growth (`grew`), as a kernel's slot does."""
+        self.actions = (*self.actions, *actions)
+        for universe in self._universes.values():
+            self.grew += universe._seed_named(self, actions)
 
     # ---- the key ----------------------------------------------------------------------------------------------
 
@@ -562,106 +573,198 @@ def build_pattern_model(
     gives it a bound of its own (`_pattern_bound`, a floor action to the goal). If the universe had grown in that pass, the keys expanded before
     the growth lack the members that hold the new slot, so none of them is kept: every key is a tip.
     """
-    pattern = Pattern(abstraction, tags, [offer.action for offer in offers if offer.action is not None])
-    began = time.perf_counter()
-    passes = 0
-    while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
-        pattern.grew = 0
-        model = _explore(pattern, start, offers, progress, max_keys, stop)
-        if model.stopped is not None:
-            if pattern.grew:
-                model.expanded = [False] * len(model.keys)
-                model.actions = [[] for _ in model.keys]
-            model.stats.universe_growth = passes
-            model.stats.seconds = time.perf_counter() - began
-            return model
-        if not pattern.grew:
-            model.stats.universe_growth = passes
-            model.stats.seconds = time.perf_counter() - began
-            return model
-        passes += 1
+    return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop).extend(offers)
 
 
-def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternOffer], progress, max_keys, stop=None) -> PatternModel:
-    ab = pattern.ab
-    stats = PatternStats()
-    index: dict[PatternKey, int] = {}
-    keys: list[PatternKey] = []
-    goal: list[bool] = []
-    expanded: list[bool] = []
-    stopped: str | None = None
+class PatternBuilder:
+    """The model of the key, built on a list of offers that can grow: `extend` adds offers and builds only what they add (ticket #626).
 
-    def intern(state: CompressedState) -> int:
-        key = pattern.key(state)
-        found = index.get(key)
+    A model built on a part of the offers and grown by the ones that turn out to matter would cost a whole build for each round if each round began
+    again; here a key that is expanded keeps its actions, and an offer added later is offered at the keys already expanded (its members, its kernels,
+    each distinct kernel once) and at the keys it finds. `extend` returns a snapshot of the model, so a model returned stays what it was when the builder
+    goes on. A build that stops (`stop`) leaves the builder unusable: the keys it had expanded do not all hold the offers being added, so the caller keeps
+    the model of the round before. A universe that grows (a slot no member held) begins the whole build again, as `build_pattern_model` always has.
+    """
+
+    def __init__(
+        self, abstraction: Abstraction, start: CompressedState, *, tags: bool | None = None, progress=None, max_keys: int | None = None, stop=None
+    ) -> None:
+        self.ab = abstraction
+        self.start = start
+        self.tags = tags
+        self.progress = progress
+        self.max_keys = max_keys
+        self.stop = stop
+        self.offers: list[PatternOffer] = []
+        self.restarts = 0
+        self.began = time.perf_counter()
+        self.dead = False
+        self._reset()
+
+    def _reset(self) -> None:
+        self.pattern = Pattern(self.ab, self.tags, [offer.action for offer in self.offers if offer.action is not None])
+        self.stats = PatternStats()
+        self.index: dict[PatternKey, int] = {}
+        self.keys: list[PatternKey] = []
+        self.goal: list[bool] = []
+        self.rows: list[list[tuple[int, int]]] = []
+        self.expanded: list[bool] = []
+        self.kernel_ids: dict[tuple, int] = {}
+        self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
+        self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
+        self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
+        self.done = 0  # the number of offers every expanded key holds
+        self.pattern.note(self.start)
+        self.start_id = self._intern(self.start)
+
+    def _intern(self, state: CompressedState) -> int:
+        key = self.pattern.key(state)
+        found = self.index.get(key)
         if found is None:
-            found = index[key] = len(keys)
-            keys.append(key)
-            goal.append(ab.is_goal(state))
-            if max_keys is not None and len(keys) > max_keys:
-                raise RuntimeError(f"more than {max_keys} keys")
+            found = self.index[key] = len(self.keys)
+            self.keys.append(key)
+            self.goal.append(self.ab.is_goal(state))
+            self.rows.append([])
+            self.expanded.append(False)
+            if self.max_keys is not None and len(self.keys) > self.max_keys:
+                raise RuntimeError(f"more than {self.max_keys} keys")
         return found
 
-    pattern.note(start)
-    start_id = intern(start)
-    actions: list[list[tuple[int, int]]] = []
-    kernel_ids: dict[tuple, int] = {}
-    kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
-    computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
-    gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
-    last = polled = time.perf_counter()
-    i = 0
+    def extend(self, offers: Sequence[PatternOffer]) -> PatternModel:
+        """Add `offers` to the model and build what they add; the snapshot of the model, with `stopped` set if a net ended the build."""
+        if self.dead:
+            raise RuntimeError("the build was stopped; use the model of the round before")
+        self.offers.extend(offers)
+        self.pattern.grew = 0
+        self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
+        while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
+            stopped = self._pass()
+            if stopped is not None:
+                self.dead = True
+                if self.pattern.grew:
+                    self.expanded = [False] * len(self.keys)
+                    self.rows = [[] for _ in self.keys]
+                return self._snapshot(stopped)
+            if not self.pattern.grew:
+                return self._snapshot(None)
+            self.restarts += 1
+            self._reset()
+            self.pattern.grew = 0
 
-    def tick(oi: int) -> None:
-        """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step)."""
-        nonlocal last, polled
-        now = time.perf_counter()
-        if now - polled < POLL_SECONDS:
-            return
-        polled = now
-        if stop is not None:
-            reason = stop()
-            if reason is not None:
-                raise _Stopped(reason)
-        if progress is not None and now - last >= 30:
-            last = now
-            progress(
-                f"keys found {len(keys):,} expanded {i:,} (now offer {oi + 1:,} of {len(offers):,} of key {i:,}) kernels {stats.kernels:,} members {stats.members:,}"
-            )
+    def _snapshot(self, stopped: str | None) -> PatternModel:
+        stats = replace(self.stats)
+        stats.keys = len(self.keys)
+        stats.goal_keys = sum(self.goal)
+        stats.fallbacks = self.pattern.fallbacks
+        stats.universe_growth = self.restarts
+        stats.abstract_actions = sum(len(row) for row in self.rows)
+        stats.abstract_edges = sum(len(self.kernels[kid][0]) for row in self.rows for _, kid in row)
+        stats.seconds = time.perf_counter() - self.began
+        stats.modes = Counter(self.stats.modes)
+        return PatternModel(
+            list(self.keys), list(self.goal), [list(row) for row in self.rows], list(self.kernels), stats, dict(self.index), list(self.expanded), stopped
+        )
 
-    while i < len(keys):
-        key = keys[i]
-        row: list[tuple[int, int]] = []
-        if stop is not None and (reason := stop()) is not None:
-            stopped = reason
-            break
-        if not goal[i]:
-            if not pattern.members(key, Mode.ANY):
-                raise _no_member(key)
-            by_mode: dict[Mode, list[CompressedState]] = {}
-            try:
-                _offers_of_key(pattern, ab, key, i, start_id, offers, row, by_mode, stats, kernel_ids, kernels, computed, gaps, intern, tick)
-            except _Stopped as reached:
-                stopped = reached.reason
-                ab._prepared_by.clear()
-                break
-            ab._prepared_by.clear()
-        actions.append(row)
-        expanded.append(True)
-        stats.abstract_actions += len(row)
-        stats.abstract_edges += sum(len(kernels[kid][0]) for _, kid in row)
-        i += 1
-        now = time.perf_counter()
-        if progress is not None and now - last >= 30:
-            last = now
-            progress(f"keys found {len(keys):,} expanded {i:,} kernels {stats.kernels:,} members {stats.members:,}")
-    for _ in range(len(actions), len(keys)):  # the keys not expanded are tips: no actions, and `expanded` says it is not a dead end
-        actions.append([])
-        expanded.append(False)
-    stats.keys = len(keys)
-    stats.goal_keys = sum(goal)
-    stats.fallbacks = pattern.fallbacks
-    return PatternModel(keys, goal, actions, kernels, stats, index, expanded, stopped)
+    def _pass(self) -> str | None:
+        """Expand every key for the offers it lacks; the reason a net ended it, or None when it ran to the end."""
+        pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
+        last = polled = time.perf_counter()
+        i = 0
+
+        def tick(oi: int) -> None:
+            """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step)."""
+            nonlocal last, polled
+            now = time.perf_counter()
+            if now - polled < POLL_SECONDS:
+                return
+            polled = now
+            if self.stop is not None:
+                reason = self.stop()
+                if reason is not None:
+                    raise _Stopped(reason)
+            if progress is not None and now - last >= 30:
+                last = now
+                progress(
+                    f"keys found {len(self.keys):,} expanded {i:,} (now offer {oi + 1:,} of {len(offers):,} of key {i:,}) kernels {stats.kernels:,} members {stats.members:,}"
+                )
+
+        while i < len(self.keys):
+            if self.stop is not None and (reason := self.stop()) is not None:
+                return reason
+            if not self.goal[i]:
+                first = self.done if self.expanded[i] else 0
+                if first < len(offers):
+                    if not pattern.members(self.keys[i], Mode.ANY):
+                        raise _no_member(self.keys[i])
+                    try:
+                        self._offers_of_key(i, first, tick)
+                    except _Stopped as reached:
+                        self.ab._prepared_by.clear()
+                        return reached.reason
+                    self.ab._prepared_by.clear()
+            self.expanded[i] = True
+            i += 1
+            now = time.perf_counter()
+            if progress is not None and now - last >= 30:
+                last = now
+                progress(f"keys found {len(self.keys):,} expanded {i:,} kernels {stats.kernels:,} members {stats.members:,}")
+        self.done = len(offers)
+        return None
+
+    def _offers_of_key(self, i: int, first: int, tick) -> None:
+        """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
+        pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
+        key = self.keys[i]
+        by_mode: dict[Mode, list[CompressedState]] = {}
+        added: list[tuple[int, int]] = []
+        for oi in range(first, len(offers)):
+            offer = offers[oi]
+            tick(oi)
+            if offer.action is None:
+                if i != self.start_id:
+                    added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
+                continue
+            mode = pattern.mode_of(offer.action, key)
+            members = by_mode.get(mode)
+            if members is None:
+                members = by_mode[mode] = pattern.members(key, mode)
+                stats.members += len(members)
+            stats.modes[(mode.value, offer.label)] += 1
+            seen: set[int] = set()
+            for member in members:
+                stats.pairs += 1
+                try:
+                    ck = ab.kernel_key(member, offer.action)
+                except NotApplicableError:
+                    stats.refused_pairs += 1
+                    continue
+                except OutOfScopeError as gap:
+                    if _gap_everywhere(pattern, self.gaps, key, offer):
+                        stats.gap_pairs += 1
+                        continue
+                    raise _gap(offer, key, gap) from gap
+                kid = self.computed.get(ck)
+                if kid is None:
+                    try:
+                        exact = ab.kernel(member, offer.action)
+                    except NotApplicableError:
+                        stats.refused_pairs += 1
+                        continue
+                    except OutOfScopeError as gap:
+                        if _gap_everywhere(pattern, self.gaps, key, offer):
+                            stats.gap_pairs += 1
+                            continue
+                        raise _gap(offer, key, gap) from gap
+                    stats.kernels += 1
+                    pushed: dict[int, Fraction] = defaultdict(Fraction)
+                    for successor, chance in exact.items():
+                        pattern.note(successor)
+                        pushed[self._intern(successor)] += chance
+                    kid = self.computed[ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
+                if kid not in seen:
+                    seen.add(kid)
+                    added.append((oi, kid))
+        self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
 
 
 class _Stopped(Exception):
@@ -670,56 +773,6 @@ class _Stopped(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
-
-
-def _offers_of_key(pattern, ab, key, i, start_id, offers, row, by_mode, stats, kernel_ids, kernels, computed, gaps, intern, tick) -> None:
-    """Fill `row` with the abstract actions of key number `i` (one `(offer index, kernel id)` for each distinct pushed kernel of each offer)."""
-    for oi, offer in enumerate(offers):
-        tick(oi)
-        if offer.action is None:
-            if i != start_id:
-                row.append((oi, _kernel_id(kernel_ids, kernels, {start_id: Fraction(1)})))
-            continue
-        mode = pattern.mode_of(offer.action, key)
-        members = by_mode.get(mode)
-        if members is None:
-            members = by_mode[mode] = pattern.members(key, mode)
-            stats.members += len(members)
-        stats.modes[(mode.value, offer.label)] += 1
-        seen: set[int] = set()
-        for member in members:
-            stats.pairs += 1
-            try:
-                ck = ab.kernel_key(member, offer.action)
-            except NotApplicableError:
-                stats.refused_pairs += 1
-                continue
-            except OutOfScopeError as gap:
-                if _gap_everywhere(pattern, gaps, key, offer):
-                    stats.gap_pairs += 1
-                    continue
-                raise _gap(offer, key, gap) from gap
-            kid = computed.get(ck)
-            if kid is None:
-                try:
-                    exact = ab.kernel(member, offer.action)
-                except NotApplicableError:
-                    stats.refused_pairs += 1
-                    continue
-                except OutOfScopeError as gap:
-                    if _gap_everywhere(pattern, gaps, key, offer):
-                        stats.gap_pairs += 1
-                        continue
-                    raise _gap(offer, key, gap) from gap
-                stats.kernels += 1
-                pushed: dict[int, Fraction] = defaultdict(Fraction)
-                for successor, chance in exact.items():
-                    pattern.note(successor)
-                    pushed[intern(successor)] += chance
-                kid = computed[ck] = _kernel_id(kernel_ids, kernels, pushed)
-            if kid not in seen:
-                seen.add(kid)
-                row.append((oi, kid))
 
 
 def _no_member(key: PatternKey) -> OutOfScopeError:
@@ -779,4 +832,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["Mode", "Pattern", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "build_pattern_model"]
+__all__ = ["Mode", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "build_pattern_model"]
