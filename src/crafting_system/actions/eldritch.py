@@ -69,6 +69,7 @@ from crafting_system.items import (
     eldritch_side,
     spawn_weight,
 )
+from crafting_system.items.words import mod_words_of
 from crafting_system.rules import get_rule
 
 from .add import refuse_if_nothing_to_draw
@@ -273,7 +274,8 @@ class EldritchImplicitCurrency(Action):
         pool = implicit_pool(data, base, self.side, self.grade)
         if not pool:
             raise OutOfScopeError(
-                f"the game data holds no {self.side.value} implicit of grade {self.grade} with a spawn weight on a {base.item_class}"
+                f"the game data holds no {self.side.value} implicit of grade {self.grade} with a spawn weight on a {base.item_class}",
+                detail=f"the game data holds no {self.side.value} implicit of grade {self.grade} with a spawn weight on a {base.item_class}",
             )
         kept = tuple(
             entry for entry in item.eldritch_implicits(data).values() if eldritch_side(data.mods[entry.mod_id]) is OTHER[self.side]
@@ -527,7 +529,10 @@ def _sibling(data: GameData, entry: ImplicitMod, grade: int) -> ImplicitMod:
     mod_id = entry.mod_id[:-1] + str(grade)
     mod = data.mods.get(mod_id)
     if mod is None or eldritch_side(mod) is not eldritch_side(data.mods[entry.mod_id]) or eldritch_grade(mod) != grade:
-        raise OutOfScopeError(f"the game data holds no grade {grade} of the Eldritch implicit {entry.mod_id}")
+        raise OutOfScopeError(
+            f"the game data holds no grade {grade} of the Eldritch implicit {mod_words_of(data, entry.mod_id)}",
+            detail=f"the game data holds no grade {grade} of the Eldritch implicit {entry.mod_id}",
+        )
     return _implicit(mod)
 
 

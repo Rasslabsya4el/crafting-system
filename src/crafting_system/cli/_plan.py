@@ -444,15 +444,15 @@ def make_plan(
             forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE))
         decision = decide(abstraction, start, forecast, budget, rates)
         if decision.message:
-            limits += (whole_search_limit(decision.message),)
+            limits += (whole_search_limit(decision.message, decision.detail),)
         if decision.rate_why:
-            limits += (guessed_rate_limit(decision.rate_why),)
+            limits += (guessed_rate_limit(decision.rate_why, decision.rate_detail),)
         if decision.action == "refused":
             if solver == "object" or (PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE):
                 raise PlanError(decision.message)
             # no coarse level exists and the graph is beyond the object solver: the packed solver holds it (ticket #70, ADR-0063), so the
             # answer is exact and takes the walk's minutes instead of being refused
-            limits = with_limits(limits, (whole_search_limit(_packed_note(decision)),), _limits.SOLVE)
+            limits = with_limits(limits, (whole_search_limit(_packed_note(decision), decision.detail),), _limits.SOLVE)
         if decision.action == "approximate":
             try:
                 solved = climb(decision, start, merged)
@@ -543,27 +543,35 @@ def states_limit(tracked: bool) -> Limit:
     )
 
 
-def guessed_rate_limit(why: str) -> Limit:
-    """The limit of a forecast that used a fixed search speed because the speed could not be measured (M2)."""
+def guessed_rate_limit(why: str, detail: str = "") -> Limit:
+    """The limit of a forecast that used a fixed search speed because the speed could not be measured (M2); `detail` is the developer's text behind `why` (JSON only)."""
     return Limit(
         _limits.SOLVE,
         "The time of the search was guessed",
         why + ", so the size estimate used a fixed speed",
         "The answer's own guarantee does not depend on it: the size estimate only chose between the exact run and an approximate one.",
+        detail=(detail,) if detail else (),
     )
 
 
-def skipped_level_limits(skipped: Sequence[tuple[str, str]]) -> tuple[Limit, ...]:
-    """The limit of the tail-cut levels the ladder skipped because they had no policy to follow or did not converge (M3)."""
+def skipped_level_limits(skipped: Sequence[tuple[str, ...]]) -> tuple[Limit, ...]:
+    """The limit of the tail-cut levels the ladder skipped because they had no policy to follow or did not converge (M3).
+
+    Each entry is (level name, why) or (level name, why, the developer's text behind it); `detail` follows `names` one for one (JSON only).
+    """
     if not skipped:
         return ()
+    detail_of: dict[str, str] = {}
+    for _, why, *rest in skipped:
+        detail_of.setdefault(why, rest[0] if rest and rest[0] else why)
     return (
         Limit(
             _limits.SOLVE,
             "Approximate answers skipped",
             "they gave no plan to follow or did not settle: {names}",
-            labels=tuple(name for name, _ in skipped),
-            names=tuple(dict.fromkeys(why for _, why in skipped)),
+            labels=tuple(name for name, *_ in skipped),
+            names=tuple(detail_of),
+            detail=tuple(detail_of.values()) if any(len(entry) > 2 and entry[2] for entry in skipped) else (),
             guarantee="The stated gap is that of the approximate answer shown; a skipped one could only have narrowed it.",
         ),
     )
@@ -595,9 +603,12 @@ def start_limits(price: StartPrice) -> tuple[Limit, ...]:
     )
 
 
-def whole_search_limit(why: str) -> Limit:
-    """The limit of an exact answer found by the whole search, which took longer than the time budget or could not be forecast (G12, G13)."""
-    return Limit(_limits.SOLVE, "The whole search was run", why, "The answer is exact among the methods offered.")
+def whole_search_limit(why: str, detail: str = "") -> Limit:
+    """The limit of an exact answer found by the whole search, which took longer than the time budget or could not be forecast (G12, G13).
+
+    `detail` is the developer's text behind `why` (an exception's `detail`); the JSON carries it and no text does.
+    """
+    return Limit(_limits.SOLVE, "The whole search was run", why, "The answer is exact among the methods offered.", detail=(detail,) if detail else ())
 
 
 def lumped_limit(item_states: int, shown: int) -> Limit:
@@ -730,6 +741,7 @@ def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
                 "All the actions were solved",
                 f"the search first solved a smaller set of actions and could not prove it enough ({pruned.why})",
                 "The answer is exact among the methods offered.",
+                detail=(pruned.detail,) if pruned.detail else (),
             )
         )
     if pruned.twins:

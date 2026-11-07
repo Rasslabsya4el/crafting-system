@@ -257,7 +257,7 @@ def test_m3_a_skipped_tail_cut_is_kept_by_name_and_cause_and_becomes_a_limit_tha
 
     solved = climbed(approximate, skipped, good)
 
-    assert [name for name, _ in solved.skipped] == [skipped.level.name] and solved.skipped[0][1]  # the level and why it was skipped
+    assert [name for name, *_ in solved.skipped] == [skipped.level.name] and solved.skipped[0][1]  # the level and why it was skipped
     (limit,) = skipped_level_limits(solved.skipped)
     assert limit.kind == "how-solved" and limit.labels == (skipped.level.name,) and solved.skipped[0][1] in limit.reason()
     assert limit.guarantee == "The stated gap is that of the approximate answer shown; a skipped one could only have narrowed it."

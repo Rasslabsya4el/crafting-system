@@ -101,9 +101,12 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
         )
     if not jewels:
         reason = jewel_reason or (
-            "the 4, 5 or 6 mod ratio is admitted for regular items only, so rerolling a jewel is not modelled yet"
+            "the 4, 5 or 6 mod ratio is modelled for regular items only, so rerolling a jewel is not modelled yet"
         )
-        raise OutOfScopeError(f"the item is a jewel ({item_class}); {reason}")
+        raise OutOfScopeError(
+            f"the item is a jewel; {reason}",
+            detail=f"the item is a jewel ({item_class}); {reason}",
+        )
 
 
 def total_distribution(data: GameData | None = None, item: Item | None = None) -> Mapping[int, Fraction]:

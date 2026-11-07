@@ -117,7 +117,8 @@ class Coarsening:
     ):
         if abstraction.rerolls_values:
             raise OutOfScopeError(
-                "an enabled action rerolls values: its rollable mods are slots by mod id, which no family can be pooled over"
+                "an approximate answer cannot be made while an offered action rerolls the values of mods",
+                detail="an enabled action rerolls values: its rollable mods are slots by mod id, which no family can be pooled over",
             )
         self.abstraction = abstraction
         self.influences = influences
@@ -131,7 +132,10 @@ class Coarsening:
             ),
         )
         if partners(pool):
-            raise OutOfScopeError("a family with mods on both sides (a jewel) is not modelled in a coarsening")
+            raise OutOfScopeError(
+                "an approximate answer cannot be made for an item with a family that has mods on both sides (a jewel)",
+                detail="a family with mods on both sides (a jewel) is not modelled in a coarsening",
+            )
         self._side_of = {family.family: family.side for family in pool}
         self._weight = {family.family: family.weight for family in pool}  # the pool weight a family takes out when held
         self._kind_of = {family.family: abstraction.kind_of(family.mods[0].mod, influences) for family in pool}
@@ -260,34 +264,49 @@ class Coarsening:
         if reads.variants:
             if not (reads.junk and reads.pool_weight and reads.families is not None):
                 raise OutOfScopeError(
-                    f"{self._name(action)} declares variants but does not read the pool weight of the junk with named families, "
-                    "so the extremes of its pools are not defined (ADR-0023)"
+                    f"an approximate answer cannot include {self._name(action)}: the model has no rule for how the other mods of the item change what it draws",
+                    detail=(
+                        f"{self._name(action)} declares variants but does not read the pool weight of the junk with named families, "
+                        "so the extremes of its pools are not defined (ADR-0023)"
+                    ),
                 )
             if self.abstraction.models_metamods:
                 raise OutOfScopeError(
-                    f"{self._name(action)} has variants, but the state tells the mods of a family apart by their Attack/Caster tags "
-                    "(the metamods are modelled), which a pool of kinds does not carry: there is no weight-spread level for a route "
-                    "with a lock or a tag metamod (#69, ADR-0023)"
+                    f"an approximate answer cannot include {self._name(action)} on an item with a lock or an Attack or Caster metamod: there the model tells the mods of a family apart",
+                    detail=(
+                        f"{self._name(action)} has variants, but the state tells the mods of a family apart by their Attack/Caster tags "
+                        "(the metamods are modelled), which a pool of kinds does not carry: there is no weight-spread level for a route "
+                        "with a lock or a tag metamod (#69, ADR-0023)"
+                    ),
                 )
             return
         if not reads.block_invariant:
             raise OutOfScopeError(
-                f"{self._name(action)} is not declared block-invariant and declares no variants, so it has no family-group level "
-                "(ADR-0023: every other action refuses the coarse state until its invariance or its variants are proved)"
+                f"an approximate answer cannot include {self._name(action)}: the model has not shown yet that its result does not depend on which mods the item holds",
+                detail=(
+                    f"{self._name(action)} is not declared block-invariant and declares no variants, so it has no family-group level "
+                    "(ADR-0023: every other action refuses the coarse state until its invariance or its variants are proved)"
+                ),
             )
         if reads.junk and reads.families is None:
-            raise OutOfScopeError(f"{self._name(action)} reads every family of the item, so no family can be pooled for it")
+            raise OutOfScopeError(
+                f"an approximate answer cannot include {self._name(action)}: it reads every mod family of the item",
+                detail=f"{self._name(action)} reads every family of the item, so no family can be pooled for it",
+            )
         if reads.pool_weight:
             raise OutOfScopeError(
-                f"{self._name(action)} adds mods, so its kernel depends on the pool weight of the families held; "
-                "claiming block invariance for it is wrong, and it declares no variants (ADR-0023)"
+                f"an approximate answer cannot include {self._name(action)}: what it adds depends on the mod families the item holds, and the model has no rule for that yet",
+                detail=(
+                    f"{self._name(action)} adds mods, so its kernel depends on the pool weight of the families held; "
+                    "claiming block invariance for it is wrong, and it declares no variants (ADR-0023)"
+                ),
             )
 
     def _name(self, action: Action) -> str:
         try:
             return action.label(self._data)
         except ValueError:
-            return repr(action)
+            return "an offered action"  # never the repr: a cause is read by a person
 
     def _build_pools(self) -> None:
         goal_families = self._goal_families()
@@ -375,8 +394,11 @@ class Coarsening:
             mod = self._data.mods.get(entry.mod_id)
             if mod is None:
                 raise OutOfScopeError(
-                    f"the state holds a fractured mod as the family type {entry.mod_id}: "
-                    "the family-group level has no rule for a fracture made mid-route"
+                    "the state holds a fractured mod known only by its family, and an approximate answer has no rule for a fracture made during the craft",
+                    detail=(
+                        f"the state holds a fractured mod as the family type {entry.mod_id}: "
+                        "the family-group level has no rule for a fracture made mid-route"
+                    ),
                 )
             held |= held_families(mod)
         return held
@@ -538,8 +560,11 @@ class Coarsening:
         self.require_invariant(action)
         if self._holds_blocking_metamod(block):
             raise BlockHoldsMetamod(
-                "the block holds a lock or an Attack/Caster metamod: a lock keeps the junk of its side through a reroll, "
-                "which the family-group level does not pool yet (#69)"
+                "the item holds a lock or an Attack or Caster metamod, and an approximate answer cannot yet group the mods that a lock keeps through a reroll",
+                detail=(
+                    "the block holds a lock or an Attack/Caster metamod: a lock keeps the junk of its side through a reroll, "
+                    "which the family-group level does not pool yet (#69)"
+                ),
             )
         reads = action.reads(self._data)
         if reads.variants:

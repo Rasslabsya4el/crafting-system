@@ -51,6 +51,7 @@ from types import ModuleType
 from crafting_system.data import GameData, Mod
 from crafting_system.data.elevated import is_elevated, load_elevated
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity
+from crafting_system.items.words import mod_words
 from crafting_system.rules import Rule, get_rule
 
 from . import add, metamods, outcomes, pool
@@ -135,8 +136,11 @@ def influence_tag(data: GameData, item: Item, influence: Influence) -> str:
     class_key = None if base is None else INFLUENCE_TAGS.value["classes"].get(base.item_class)
     if class_key is None:
         raise OutOfScopeError(
-            f"the item class ({'unknown' if base is None else base.item_class}) has no admitted influence class key, "
-            "so the influence mods of its pool are not modelled"
+            f"the item class ({'unknown' if base is None else base.item_class}) takes no influence in the model, so the influence mods of its pool are not modelled",
+            detail=(
+                f"the item class ({'unknown' if base is None else base.item_class}) has no admitted influence class key, "
+                "so the influence mods of its pool are not modelled"
+            ),
         )
     return f"{class_key}_{INFLUENCE_TAGS.value['influences'][influence.value]}"
 
@@ -313,7 +317,10 @@ class OrbOfDominance(Action):
         if is_elevated(mod):
             return ExplicitMod(mod.id, _low(mod))
         if mod.id not in tiers:
-            raise OutOfScopeError(f"the influenced mod {mod.id} has no tier on this item, so its upgrade is not modelled")
+            raise OutOfScopeError(
+                f"the influenced mod {mod_words(mod)} has no tier on this item, so its upgrade is not modelled",
+                detail=f"the influenced mod {mod.id} has no tier on this item, so its upgrade is not modelled",
+            )
         held_tags = frozenset(item_tags(data, item))
 
         def decided_by(other: Mod) -> str | None:
@@ -329,15 +336,19 @@ class OrbOfDominance(Action):
             elevated_id = self._elevated_of(data).get(mod.id)
             if elevated_id is None or elevated_id not in data.mods:
                 raise OutOfScopeError(
-                    f"{mod.id} is a top-tier mod and no Elevated version of it is known for data version {data.version} "
-                    "(dominance.elevated_mapping_is_coe_table; `python -m crafting_system.data elevated` lists what it could not link)"
+                    f"{mod_words(mod)} is a top-tier mod and no Elevated version of it is known for data version {data.version}",
+                    detail=(
+                        f"{mod.id} is a top-tier mod and no Elevated version of it is known for data version {data.version} "
+                        "(dominance.elevated_mapping_is_coe_table; `python -m crafting_system.data elevated` lists what it could not link)"
+                    ),
                 )
             return ExplicitMod(elevated_id, _low(data.mods[elevated_id]))
         level = min(other.required_level for other in better)
         next_tier = [other for other in better if other.required_level == level]
         if len(next_tier) != 1:
             raise OutOfScopeError(
-                f"the next tier of {mod.id} is ambiguous ({', '.join(sorted(other.id for other in next_tier))} share required level {level})"
+                f"the next tier of {mod_words(mod)} is ambiguous: several mods share the next required level",
+                detail=f"the next tier of {mod.id} is ambiguous ({', '.join(sorted(other.id for other in next_tier))} share required level {level})",
             )
         # the chain only picks the mod; its tier is the data's, the item stores none
         return ExplicitMod(next_tier[0].id, _low(next_tier[0]))
@@ -359,7 +370,10 @@ class OrbOfDominance(Action):
         if item_class not in DOMINANCE_GATE.value:
             raise NotApplicableError(f"an Orb of Dominance works on body armour, boots, gloves and helmets only, and this item is a {item_class}")
         if item.influences and item.fractured_mods:
-            raise OutOfScopeError("an influenced item with a fractured mod does not exist in the game (dominance.influenced_item_is_never_fractured)")
+            raise OutOfScopeError(
+                "an influenced item with a fractured mod does not exist in the game",
+                detail="an influenced item with a fractured mod does not exist in the game (dominance.influenced_item_is_never_fractured)",
+            )
         locked = locked_sides(data, item)
         is_influenced = influence_spawn_test(data, item)
         eligible = [

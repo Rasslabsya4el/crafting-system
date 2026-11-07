@@ -160,7 +160,7 @@ def test_the_craft_works_on_a_talisman_too():
 def test_a_normal_or_magic_item_is_out_of_scope(rarity):
     item = amulet(LIFE, rarity=rarity) if rarity is Rarity.MAGIC else amulet(rarity=rarity)
 
-    with pytest.raises(OutOfScopeError, match="no admitted rule"):
+    with pytest.raises(OutOfScopeError, match="no rule for what an aspect craft"):
         AspectBeast("cat", 20).outcomes(BEAST_DATA, item)
 
 

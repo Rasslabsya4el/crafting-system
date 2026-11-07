@@ -423,7 +423,10 @@ class Recombinator(Action):
             exclusive = [index for index in members if entries[index].exclusive]
             pooled[side] = len(members) - len(exclusive) + (1 if exclusive else 0)
             if pooled[side] > MAX_POOLED:
-                raise OutOfScopeError(f"the pooled count of the {side.value}es is {pooled[side]} and the count table has rows to {MAX_POOLED} only")
+                raise OutOfScopeError(
+                    f"the pooled count of the {side.value}es is {pooled[side]} and the model's count table has rows to {MAX_POOLED} only",
+                    detail=f"the pooled count of the {side.value}es is {pooled[side]} and the count table has rows to {MAX_POOLED} only",
+                )
         for index, entry in enumerate(entries):
             if entry.mod.fractured and entry.source != base_index:
                 continue  # a fractured mod counts only if its own base is chosen

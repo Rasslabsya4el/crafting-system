@@ -160,8 +160,11 @@ class BlessedOrb(Action):
         for entry in item.implicits:
             if eldritch_side(data.mods[entry.mod_id]) is not None:
                 raise OutOfScopeError(
-                    f"the item holds the Eldritch implicit {entry.mod_id}: a Blessed Orb may be used on it, but no admitted "
-                    "claim says what it does to an Eldritch implicit, so the action is not offered (ADR-0027)"
+                    "the item holds an Eldritch implicit, and the model has no rule for what a Blessed Orb does to it, so the action is not offered",
+                    detail=(
+                        f"the item holds the Eldritch implicit {entry.mod_id}: a Blessed Orb may be used on it, but no admitted "
+                        "claim says what it does to an Eldritch implicit, so the action is not offered (ADR-0027)"
+                    ),
                 )
         kept = tuple(entry for entry in item.implicits if not has_range(data.mods[entry.mod_id]))
         ranged = [mod_id for mod_id, entry in stored.items() if has_range(data.mods[mod_id])]

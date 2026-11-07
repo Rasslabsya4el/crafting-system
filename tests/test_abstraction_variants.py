@@ -277,5 +277,5 @@ def test_a_pool_with_too_few_free_families_is_an_error_not_a_variant():
 def test_a_route_that_models_the_metamods_has_no_level_for_its_additions():
     ab = Abstraction(DATA, GOAL, AMULET, LEVEL, (*ADDITIONS, ANNUL), metamods=True)
 
-    with pytest.raises(OutOfScopeError, match="Attack/Caster tags"):
+    with pytest.raises(OutOfScopeError, match="Attack or Caster metamod"):
         Coarsening(ab)

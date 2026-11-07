@@ -257,5 +257,5 @@ def test_a_jewel_has_no_veiled_pool_and_a_signature_veil_is_out_of_scope(data):
             action.outcomes(data, item)
     signature = next(m.id for m in data.mods.values() if m.domain == "veiled" and m.id.startswith("Haku") and m.generation_type == "prefix")
     haku = Item.build(data, base_id=BOOTS, item_level=84, rarity=Rarity.RARE, mods=(low(data, signature),))
-    with pytest.raises(OutOfScopeError, match="signature"):
+    with pytest.raises(OutOfScopeError, match="particular kind"):
         Unveil().outcomes(data, haku)

@@ -184,7 +184,7 @@ def test_an_item_class_without_an_influence_key_is_out_of_scope():
     jewel = BaseItem("Metadata/Items/Jewels/ContractJewel", "Contract Jewel", "Jewel", "item", 1, (), (), "released")
     data = dataclasses.replace(INFLUENCE_DATA, base_items={**INFLUENCE_DATA.base_items, jewel.id: jewel})
     item = Item.build(data, base_id=jewel.id, item_level=84, rarity=Rarity.RARE, mods=())
-    with pytest.raises(OutOfScopeError, match="class key"):
+    with pytest.raises(OutOfScopeError, match="takes no influence in the model"):
         shaper_orb().outcomes(data, item)
 
 

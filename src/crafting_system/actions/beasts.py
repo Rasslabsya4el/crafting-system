@@ -226,7 +226,10 @@ class AspectBeast(Action):
         if base is None or base.domain != mod.domain:
             raise NotApplicableError(f"the aspect {self.mod_id} is of domain {mod.domain} and does not fit the base {item.base_id}")
         if item.rarity is not Rarity.RARE:
-            raise OutOfScopeError(f"the item is {item.rarity}; no admitted rule says what an aspect craft does to it")
+            raise OutOfScopeError(
+                f"the item is {item.rarity.value}, and the model has no rule for what an aspect craft does to it",
+                detail=f"the item is {item.rarity}; no admitted rule says what an aspect craft does to it",
+            )
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no aspect craft")
         side = Side(mod.generation_type)

@@ -50,7 +50,23 @@ class NotApplicableError(ActionError):
 
 
 class OutOfScopeError(ActionError):
-    """The item is in a state that no admitted rule covers yet, so no outcome is given."""
+    """The item is in a state that no admitted rule covers yet, so no outcome is given.
+
+    **A cause that a person reads is said in player words at its source (tickets #557, #618).** The model gap reaches the answer as the cause of
+    a limit ("Left out where the model has no rule"), as the reason an approximate answer was refused and as an `Error:` line, so the first
+    argument, `player`, is a sentence a player can read: no id, ticket or ADR number, file name, module path or word of the workflow, and a mod
+    or a base said as the game says it (`crafting_system.items.words`). `str(error)` is that sentence. What a developer needs (an id, an ADR, the
+    ticket) goes in `detail`. `detail` reaches the JSON policy through a `Limit` (`Limit.detail`: the model gaps, the decision's note, the fallback of
+    the bound pruning); a route line and the `Error:` line say the sentence only, and nothing is logged. `tests/test_cause_words.py` finds every
+    raise site by its syntax tree and reads the `player` of each, so a new site is read without anyone listing it.
+    """
+
+    def __init__(self, player: str, *, detail: str = "") -> None:
+        if not isinstance(player, str) or not isinstance(detail, str):
+            raise TypeError("an error of the model gaps takes the player's sentence (a str) and, as `detail`, the developer's text (a str)")
+        super().__init__(player)
+        self.player = player
+        self.detail = detail or player
 
 
 class ConsumesInputsError(OutOfScopeError):

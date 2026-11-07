@@ -34,6 +34,7 @@ from fractions import Fraction
 
 from crafting_system.actions import Action, NotApplicableError, OutOfScopeError, build_pool, partners
 from crafting_system.items import Item, Rarity, Side
+from crafting_system.items.words import base_words
 
 from ._kinds import MOD_PREFIX, base_kind, held_families
 from ._state import CompressedState
@@ -79,17 +80,24 @@ def input_kernel(ability, state: CompressedState, action: Action, prepared) -> d
     data = ability.data
     wants = tuple(need.want for need in action.inputs(data, prepared.item))
     if len(wants) != 1:
-        raise OutOfScopeError(f"the kernel averages over one input, and {action.label(data)} has {len(wants)}")
+        raise OutOfScopeError(
+            f"{action.label(data)} takes {len(wants)} items as input, and the model has a rule for one only",
+            detail=f"the kernel averages over one input, and {action.label(data)} has {len(wants)}",
+        )
     donor = wants[0]
     if (donor.base_id, donor.item_level) != (ability.base_id, ability.item_level):
         raise OutOfScopeError(
-            f"the input is an item on {donor.base_id} at item level {donor.item_level}, and this abstraction stands for items on "
-            f"{ability.base_id} at item level {ability.item_level}: an input of another base or item level has no compressed state"
+            f"the input is an item on {base_words(data, donor.base_id)} at item level {donor.item_level}, and this search stands for items on {base_words(data, ability.base_id)} at item level {ability.item_level}: an input of another base or item level is not modelled",
+            detail=(
+                f"the input is an item on {donor.base_id} at item level {donor.item_level}, and this abstraction stands for items on "
+                f"{ability.base_id} at item level {ability.item_level}: an input of another base or item level has no compressed state"
+            ),
         )
     want = ability.compress(donor)
     if want.flags.influences != state.flags.influences:
         raise OutOfScopeError(
-            "the input holds other influences than the item in hand: the weights of the mods under the other influences are not in the classes of the state"
+            "the input holds other influences than the item in hand, and the model has no rule for the mods of the other influences",
+            detail="the input holds other influences than the item in hand: the weights of the mods under the other influences are not in the classes of the state",
         )
     _refuse_partner_families(ability)
     kinds = ability._context(state.flags.influences).kinds
@@ -118,7 +126,10 @@ def _refuse_partner_families(ability) -> None:
         empty = Item.build(ability.data, base_id=ability.base_id, item_level=ability.item_level, rarity=Rarity.RARE)
         ability._has_partners = bool(partners(build_pool(ability.data, empty)))
     if ability._has_partners:
-        raise OutOfScopeError("the pool has a family with mods on both sides: the placement of the class slots in families is not modelled")
+        raise OutOfScopeError(
+            "a family with mods on both sides of the item (a jewel) is not modelled yet for an action that takes an input",
+            detail="the pool has a family with mods on both sides: the placement of the class slots in families is not modelled",
+        )
 
 
 def _entries(kinds, state: CompressedState) -> list[Entry]:
@@ -252,7 +263,8 @@ def _kernel_of(ability, state, want, action, types: list[_Type], specs: list[Spe
         outcomes = action.with_inputs((theirs_item,)).outcomes_under(ability.data, mine_item, ability._reading)
     except NotApplicableError as refusal:  # the game's refusal of the representative has been raised by `_prepare`: this is another placement's
         raise OutOfScopeError(
-            f"the game refuses {action.label(ability.data)} for some placements of the names and not for others ({refusal}): the average over them is not defined"
+            f"the game refuses {action.label(ability.data)} for some placements of the mods and not for others, so the model cannot average over them",
+            detail=f"the game refuses {action.label(ability.data)} for some placements of the names and not for others ({refusal}): the average over them is not defined",
         ) from refusal
     ability._check_type_blind(state, outcomes)
     ability._check_fracture_without_partners(state, outcomes)

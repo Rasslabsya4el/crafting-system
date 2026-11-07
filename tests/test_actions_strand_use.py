@@ -375,7 +375,7 @@ def test_a_toy_undeclared_action_is_refused_at_1_strand_and_offered_at_0():
         assert ToyReroll().strand_use(DATA) is None and ToyReroll().strand_claims(DATA) == frozenset()
         assert ToyReroll().outcomes(DATA, magic).chance_all([COLD_RESIST]) > 0  # ...and works there as it always did
         one = dataclasses.replace(magic, memory_strands=1)
-        with pytest.raises(OutOfScopeError, match="Toy Reroll has not declared what it does with Memory Strands"):
+        with pytest.raises(OutOfScopeError, match="Toy Reroll has no rule in the model for what it does with Memory Strands"):
             ToyReroll().outcomes(DATA, one)  # ...and refused at 1
         with pytest.raises(OutOfScopeError):
             ToyReroll().outcomes_under(DATA, dataclasses.replace(magic, memory_strands=100))

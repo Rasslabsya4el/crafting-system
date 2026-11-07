@@ -25,8 +25,9 @@ from fractions import Fraction
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.actions import Action
 from crafting_system.items import tier_table
+from crafting_system.items.words import mod_text
 
-from ._route_card import _hashes, _own_text
+from ._route_card import _hashes
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,7 @@ def wanted_families(ab: Abstraction) -> list[_Family]:
     families = []
     for key, ladder in found.items():
         best = min(ladder, key=lambda mod_id: (ladder[mod_id], mod_id))
-        families.append(_Family(_hashes(_own_text(data.mods[best])), ladder, frozenset(accepted[key])))
+        families.append(_Family(_hashes(mod_text(data.mods[best])), ladder, frozenset(accepted[key])))
     return families
 
 

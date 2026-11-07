@@ -308,16 +308,16 @@ def test_an_action_that_declares_neither_block_invariance_nor_variants_is_refuse
     block = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
 
     for bound in ("lower", "upper"):
-        with pytest.raises(OutOfScopeError, match="declares no variants"):
+        with pytest.raises(OutOfScopeError, match="has not shown yet"):
             pooling.kernel(block, action, bound)
-        with pytest.raises(OutOfScopeError, match="declares no variants"):
+        with pytest.raises(OutOfScopeError, match="has not shown yet"):
             pooling.variants(block, action, bound)
 
 
 def test_a_coarsening_cannot_be_built_over_an_enabled_action_that_declares_neither():
-    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+    with pytest.raises(OutOfScopeError, match="has not shown yet"):
         Coarsening(abstraction(actions=(*ENABLED, AnnulmentLike())), [{MANA, COLD}])
-    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+    with pytest.raises(OutOfScopeError, match="has not shown yet"):
         Coarsening(abstraction(actions=(*ENABLED, UndeclaredAddition())), [{MANA, COLD}])
 
 
@@ -328,7 +328,7 @@ class ReadsEveryFamily(AnnulmentLike):
 
 
 def test_an_action_that_reads_every_family_has_no_family_group_even_if_it_says_it_is_invariant():
-    with pytest.raises(OutOfScopeError, match="reads every family"):
+    with pytest.raises(OutOfScopeError, match="reads every mod family"):
         Coarsening(abstraction(actions=(*ENABLED, ReadsEveryFamily())), [{MANA, COLD}])
 
 
@@ -367,9 +367,9 @@ def test_reachable_and_a_model_refuse_an_action_that_declares_neither_instead_of
     pooling = coarsening(None)
     start = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
 
-    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+    with pytest.raises(OutOfScopeError, match="has not shown yet"):
         pooling.reachable([start], [CHAOS, UndeclaredAddition()])
-    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+    with pytest.raises(OutOfScopeError, match="has not shown yet"):
         CoarseModel(pooling, "lower", [CHAOS, UndeclaredAddition()])
 
 
@@ -395,11 +395,11 @@ class InvariantAddition(RegalOrb):
 
 
 def test_an_action_that_adds_mods_and_keeps_the_junk_is_refused_even_if_it_says_it_is_invariant():
-    with pytest.raises(OutOfScopeError, match="pool weight"):
+    with pytest.raises(OutOfScopeError, match="what it adds depends on the mod families"):
         Coarsening(abstraction(actions=(*ENABLED, InvariantAddition())), [{MANA, COLD}])
     pooling = coarsening(None)
     block = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
-    with pytest.raises(OutOfScopeError, match="pool weight"):
+    with pytest.raises(OutOfScopeError, match="what it adds depends on the mod families"):
         pooling.kernel(block, InvariantAddition(), "lower")
     assert RegalOrb().reads(DATA) == Reads.adding(variants=True)  # the shipped additions declare variants, not invariance
 
@@ -418,5 +418,5 @@ class VariantsReadingEveryFamily(RegalOrb):
 
 @pytest.mark.parametrize("action", [VariantsWithoutPoolWeight(), VariantsReadingEveryFamily()], ids=["no_pool_weight", "every_family"])
 def test_variants_need_the_pool_weight_and_named_families(action):
-    with pytest.raises(OutOfScopeError, match="declares variants but"):
+    with pytest.raises(OutOfScopeError, match="how the other mods of the item change what it draws"):
         Coarsening(abstraction(actions=(*ENABLED, action)), [{MANA, COLD}])

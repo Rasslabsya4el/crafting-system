@@ -493,7 +493,7 @@ def test_rounds_run_out_when_the_certificate_does_not_close(monkeypatch):
 
     found = run(offers, rounds=1)
 
-    assert found.fell_back is True and found.why == "the certificate did not close within 1 rounds" and found.rounds == 2  # one solve and the fallback solve
+    assert found.fell_back is True and found.why == "the proof that the smaller set is enough did not finish in 1 rounds" and found.rounds == 2  # one solve and the fallback solve
     assert harness.asked_sets[-1] == frozenset(o.label for o in offers)  # the fallback solves everything left after the twins
     assert found.bounded == () and found.rho == 0.0 and labels(found.used) == labels(offers)
 
@@ -547,7 +547,7 @@ def test_an_infinite_value_with_nothing_left_to_add_is_a_dead_state_of_the_full_
 
     found = run(offers)
 
-    assert found.fell_back and found.why == "a reachable state has no proper policy" and found.rounds == 2
+    assert found.fell_back and found.why == "a state the search can reach has no plan that finishes" and found.rounds == 2
 
 
 def test_an_offer_that_moves_the_item_to_another_shape_drops_the_bound(monkeypatch):
@@ -557,7 +557,7 @@ def test_an_offer_that_moves_the_item_to_another_shape_drops_the_bound(monkeypat
 
         found = run(offers)
 
-        assert found.fell_back and found.why == "an offer moves the item to another shape (flags or fractured mods)" and found.rounds == 2
+        assert found.fell_back and found.why == "an action of the smaller set changes what kind of item it is (its flags or fractured mods)" and found.rounds == 2
         assert found.bounded == () and found.rho == 0.0
 
 
@@ -578,9 +578,9 @@ def test_a_value_that_cannot_be_certified_drops_the_bound(monkeypatch):
 
     found = run(offers)
 
-    assert found.fell_back and found.why == "the solver could not certify its values"
+    assert found.fell_back and found.why == "the values found on the smaller set could not be proved exact"
     harness.default = values_of(5.5, error_bound=math.nan)
-    assert run(offers).why == "the solver could not certify its values"
+    assert run(offers).why == "the values found on the smaller set could not be proved exact"
 
 
 def test_a_solve_that_does_not_converge_drops_the_bound_and_says_why(monkeypatch):
@@ -590,7 +590,7 @@ def test_a_solve_that_does_not_converge_drops_the_bound_and_says_why(monkeypatch
 
     found = run(offers)
 
-    assert found.fell_back and found.why.startswith("the solver could not converge on the reduced model (") and "no luck" in found.why
+    assert found.fell_back and found.why == "the search on the smaller set of actions did not settle" and "no luck" not in found.why
     assert found.rounds == 2 and found.twins == () and found.solution.values[LIVE] == 5.5
 
 

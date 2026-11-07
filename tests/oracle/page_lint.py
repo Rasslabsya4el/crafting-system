@@ -41,6 +41,8 @@ The percentages a page prints are rounded (two significant digits, "≈0.93%"); 
 
 from __future__ import annotations
 
+import json
+import os
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -718,6 +720,53 @@ RULE_NO_INTERNAL_NAMES = "#481 and #553"
 _FILE_TYPES = "js|py|yaml|yml|json|md|txt|html|toml|csv|cfg"
 _SITES = "com|net|org|io|gg|ninja|watch"  # `poe.ninja`, `pathofexile.com`: a source a person may read, not an id
 
+_ID_SHAPE = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Z][a-z]+){2,}\d+(?![A-Za-z0-9])")  # the fallback when the data is absent: two or more capitalised words, then digits, no space
+_TOKEN = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_]*")
+_REPO = Path(__file__).resolve().parents[2]
+_GAME_IDS: list[frozenset[str]] = []  # the set, read once
+
+
+def game_ids() -> frozenset[str]:
+    """The mod ids and the base ids (the last part of the path) of the pinned game data that hold a digit; empty when the data is not on this machine.
+
+    Read with `json` only, from `CRAFTING_CACHE_DIR` (else `local/cache`) `/repoe-fork/<pinned version>/`, the version being the one `PIN.json` names. An id with
+    no digit is a word or a name a person may read, so it is not asked for: the ids of the data all end in a tier or carry one (`Strength1`).
+    """
+    if _GAME_IDS:
+        return _GAME_IDS[0]
+    _GAME_IDS.append(_read_game_ids())
+    return _GAME_IDS[0]
+
+
+def _read_game_ids() -> frozenset[str]:
+    try:
+        version = json.loads(next((_REPO / "src").glob("*/data/PIN.json")).read_text(encoding="utf-8"))["version"]
+        folder = Path(os.environ.get("CRAFTING_CACHE_DIR") or _REPO / "local" / "cache") / "repoe-fork" / version
+        mods = json.loads((folder / "mods.json").read_text(encoding="utf-8"))
+        bases = json.loads((folder / "base_items.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, KeyError, StopIteration):
+        return frozenset()
+    ids = {*mods, *(key.rsplit("/", 1)[-1] for key in bases)}
+    return frozenset(each for each in ids if any(char.isdigit() for char in each))
+
+
+class _GameIds:
+    """The pattern of "a game mod id": a token that is an id of the pinned data, else (no data) the shape of one (`_ID_SHAPE`)."""
+
+    def finditer(self, text: str) -> Iterator[re.Match[str]]:
+        ids = game_ids()
+        if not ids:
+            return _ID_SHAPE.finditer(text)
+        return (found for found in _TOKEN.finditer(text) if found.group(0) in ids)
+
+    def sub(self, replacement: str, text: str) -> str:
+        pieces, end = [], 0
+        for found in self.finditer(text):
+            pieces += [text[end : found.start()], replacement]
+            end = found.end()
+        return "".join(pieces) + text[end:]
+
+
 _INTERNAL = [  # in this order: a dotted id is taken out of the text before its snake_case part is looked for
     ("a dotted claim id", re.compile(r"\b[a-z]+(?:_[a-z0-9]+)*\.[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")),
     ("a file name", re.compile(rf"\b[\w-]+\.(?:{_FILE_TYPES})\b")),
@@ -728,6 +777,7 @@ _INTERNAL = [  # in this order: a dotted id is taken out of the text before its 
     ("an ADR number", re.compile(r"\bADR-?\d+\b")),
     ("a workflow word", re.compile(r"\b(?:grill(?:\s+[A-Z]\d+)?|main chat|open points?|in-game list|GPT researcher|research note)\b", re.I)),
     ("a base id in brackets", re.compile(r"\[(?=[A-Za-z0-9_]*[0-9A-Z])[A-Za-z][A-Za-z0-9_]*\]")),
+    ("a game mod id", _GameIds()),  # `IncreasedLifeEssence6`, `Strength1`, `IncreasedLifeEssence1_`: an id of the pinned data (#557); the page says a mod by its text
     ("a snake_case token", re.compile(r"\b[a-z]+(?:_[a-z0-9]+)+\b")),  # one underscore is enough: `elemental_cap` is an id (#618)
 ]
 

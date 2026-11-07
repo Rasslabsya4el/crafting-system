@@ -103,7 +103,7 @@ def test_a_class_with_no_influence_class_key_is_out_of_scope():
     odd = dataclasses.replace(DATA.base_items[BOW], item_class="Fishing Rod")
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, BOW: odd})
 
-    with pytest.raises(OutOfScopeError, match=r"Fishing Rod.*influence class key"):
+    with pytest.raises(OutOfScopeError, match=r"Fishing Rod.*takes no influence in the model"):
         item_tags(data, bow(influences=HUNTER))
     assert item_tags(data, bow()) == odd.tags  # without an influence nothing is asked of the class key
 

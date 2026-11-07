@@ -39,6 +39,9 @@ from crafting_system.solver import (
 from ._decide import TOLERANCE, Candidate, Decision, exact_offer
 from ._offers import BuyStartItem, PricedOffer
 
+NO_PLAN_TO_FOLLOW = "it gave no plan to follow"
+DID_NOT_SETTLE = "its values did not settle"
+
 
 @dataclass(frozen=True)
 class Approximation:
@@ -58,6 +61,7 @@ class Approximation:
     coarsening: object  # the `Coarsening` that built the blocks (`_lift` lifts the policy through it for `--verify`)
     message: str = ""
     expanded: int = 0  # the exact states a tail cut expanded (0 for a coarse level)
+    detail: str = ""  # the developer's text behind `message` (why the ladder stopped early); the JSON carries it, the text never (#557)
 
     @property
     def within_tolerance(self) -> bool:
@@ -72,7 +76,7 @@ class Solved:
     solution: Solution[CompressedState]
     start: CompressedState
     seconds: float
-    skipped: tuple[tuple[str, str], ...] = ()  # (level name, why) of each tail-cut level that had no policy to follow or did not converge (M3)
+    skipped: tuple[tuple[str, str, str], ...] = ()  # (level name, why, the developer's text behind it) of each tail-cut level that had no plan to follow or did not converge (M3)
 
 
 LEVEL_ALLOWANCE = 10.0  # the levels of a `climb` may take this many budgets of seconds together (a level with no forecast is built to find its size)
@@ -240,7 +244,7 @@ def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[P
     bounds: Bounds[CompressedState] = solve_bounds(lower, upper, [block])
     seconds = time.perf_counter() - began
     if block not in bounds.upper:
-        raise ValueError("the solver returned no value for the start block")
+        raise ValueError("the approximate search found no value for the start item")
     solution = Solution(bounds.upper, shown_policy(bounds.policy, bounds.upper), bounds.pessimistic_error)
     gap = bounds.gap_at(block)
     approximation = Approximation(
@@ -302,12 +306,12 @@ def climb(
 
     def guard() -> None:
         if allowed is not None and clock() - began > allowed:
-            raise LevelTimeout(f"the levels used the {allowed:.0f} s they are allowed (ten times the budget)")
+            raise LevelTimeout(f"the approximate answers used the {allowed:.0f} s they are allowed (ten times the budget)")
 
     models = Models(start, offers, guard)
     best: Solved | None = None
-    stopped = ""
-    skipped: list[tuple[str, str]] = []
+    stopped = stopped_detail = ""
+    skipped: list[tuple[str, str, str]] = []
     for candidate in decision.levels:
         try:
             solved = solve_level(candidate, start, offers, models)
@@ -315,12 +319,13 @@ def climb(
             stopped = str(timeout)
             break
         except BlockHoldsMetamod as held:
-            stopped = stopped or f"a block holds a metamod ({held})"
+            if not stopped:
+                stopped, stopped_detail = held.player, held.detail
             continue  # this level cannot bound the route; the next may pool differently
         except (NoPolicyError, ConvergenceError) as failed:
             if candidate.level.kind != "tail":
                 raise
-            skipped.append((candidate.level.name, str(failed) or "no reason was given"))
+            skipped.append((candidate.level.name, NO_PLAN_TO_FOLLOW if isinstance(failed, NoPolicyError) else DID_NOT_SETTLE, str(failed)))
             continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved
@@ -338,5 +343,6 @@ def climb(
             f"No level reaches {TOLERANCE:.0%}: the narrowest certified interval has a gap of {approximation.gap:.2%} "
             f"(level: {approximation.level}). " + (f"The ladder stopped early: {stopped}. " if stopped else "") + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
             approximation.expanded,
+            stopped_detail,
         )  # fmt: skip
     return Solved(approximation, best.solution, best.start, clock() - began, tuple(skipped))

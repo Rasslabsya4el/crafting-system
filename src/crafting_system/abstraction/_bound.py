@@ -275,12 +275,18 @@ def _passing_ids(abstraction: Abstraction, pool: Sequence[PoolFamily], leaf: int
 def _guard(abstraction: Abstraction, pool: Sequence[PoolFamily], leaves: Sequence[int]) -> None:
     """Raise `OutOfScopeError` when a leaf asks for a roll of a mod that the pool can draw."""
     if partners(pool):
-        raise OutOfScopeError("a family with mods on both sides is not modelled in the bound, so no bound is given")
+        raise OutOfScopeError(
+            "a family with mods on both sides of the item (a jewel) is not modelled yet",
+            detail="a family with mods on both sides is not modelled in the bound, so no bound is given",
+        )
     ids = {entry.mod.id for family in pool for entry in family.mods}
     for index in leaves:
         leaf = abstraction.goal.leaves[index]
         if leaf.has_roll_limit and ids & leaf.mod_ids:
-            raise OutOfScopeError("a roll limit on a drawn mod is not modelled yet, so no bound is given")
+            raise OutOfScopeError(
+                "a roll limit on a mod that the action draws is not modelled yet",
+                detail="a roll limit on a drawn mod is not modelled yet, so no bound is given",
+            )
 
 
 def reach_bound(

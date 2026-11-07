@@ -120,9 +120,15 @@ class WildBristleMatron(Action):
         item.validate(data)
         _refuse_if_corrupted(item, "beast craft")
         if item.rarity is Rarity.NORMAL:
-            raise OutOfScopeError("the item is normal; no admitted rule says what the Wild Bristle Matron does to a normal item")
+            raise OutOfScopeError(
+                "the item is normal, and the model has no rule for what the Wild Bristle Matron does to a normal item",
+                detail="the item is normal; no admitted rule says what the Wild Bristle Matron does to a normal item",
+            )
         if not item.mods:
-            raise OutOfScopeError(f"the item is {item.rarity} and holds no mod, which no admitted rule covers")
+            raise OutOfScopeError(
+                f"the item is {item.rarity.value} and holds no mod, and the model has no rule for that",
+                detail=f"the item is {item.rarity} and holds no mod, which no admitted rule covers",
+            )
         limit, held = crafted_limit(data, item), len(item.crafted_mods)
         if held >= limit:
             raise NotApplicableError(

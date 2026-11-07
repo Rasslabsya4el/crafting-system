@@ -101,6 +101,7 @@ def marking_document(approximation: Approximation | None, shift: float) -> dict:
         "tolerance": approximation.tolerance,
         "within_tolerance": approximation.within_tolerance,
         "message": approximation.message,
+        **({"detail": approximation.detail} if approximation.detail else {}),
     }
 
 

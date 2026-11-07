@@ -254,7 +254,7 @@ def test_a_metamod_needs_a_state_built_with_metamods_and_an_essence_is_refused_b
     without = abstraction(COLD_LEAF)
     with_metamods = Abstraction(DATA, Goal((COLD_LEAF,)), BELT, LEVEL, CRAFTS, metamods=True)
 
-    with pytest.raises(OutOfScopeError, match="metamods=True"):
+    with pytest.raises(OutOfScopeError, match="lock or an Attack or Caster metamod"):
         without.compress(start)
     with pytest.raises(NotApplicableError, match="metamod"):
         with_metamods.kernel(with_metamods.compress(start), HYSTERIA)
@@ -358,5 +358,5 @@ def test_a_fractured_metamod_is_refused_by_a_state_built_without_metamods():
     start = belt(roll(PREFIXES_LOCK, crafted=True, fractured=True), roll(LIFE))
 
     ChaosOrb().outcomes(DATA, start)  # the action models it
-    with pytest.raises(OutOfScopeError, match="metamods=True"):
+    with pytest.raises(OutOfScopeError, match="lock or an Attack or Caster metamod"):
         ab.compress(start)

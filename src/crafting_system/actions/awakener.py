@@ -45,6 +45,7 @@ from fractions import Fraction
 
 from crafting_system.data import GameData, conflicts
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity, Side
+from crafting_system.items.words import base_words, mod_words_of
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -185,8 +186,11 @@ class AwakenersOrb(Action):
         mod = data.mods.get(self.donor_mod)
         if mod is None or self.donor_mod not in influence_mods(data, self.donor_base, self.donor_level, self.donor_influence):
             raise OutOfScopeError(
-                f"{self.donor_mod} is not an influence mod of {self.donor_influence.value} that a donor on {self.donor_base} "
-                f"of item level {self.donor_level} can hold"
+                f"{mod_words_of(data, self.donor_mod)} is not an influence mod of {self.donor_influence.value} that a donor on {base_words(data, self.donor_base)} of item level {self.donor_level} can hold",
+                detail=(
+                    f"{self.donor_mod} is not an influence mod of {self.donor_influence.value} that a donor on {self.donor_base} "
+                    f"of item level {self.donor_level} can hold"
+                ),
             )
         entry = ExplicitMod(mod.id, _low_values(data, mod.id))
         want = Item.build(
@@ -252,8 +256,11 @@ class AwakenersOrb(Action):
             raise NotApplicableError(f"an Awakener's Orb needs item level {MINIMUM_ITEM_LEVEL.value}, and this item has {item.item_level}")
         if any(entry.fractured for entry in item.mods):
             raise OutOfScopeError(
-                "the item holds a fractured mod; in 3.29 a fractured item cannot carry an influence, so the Awakener's Orb "
-                "does not model it (ADR-0032)"
+                "the item holds a fractured mod; in 3.29 a fractured item cannot carry an influence, so the model has no rule for the Awakener's Orb on it",
+                detail=(
+                    "the item holds a fractured mod; in 3.29 a fractured item cannot carry an influence, so the Awakener's Orb "
+                    "does not model it (ADR-0032)"
+                ),
             )
 
 

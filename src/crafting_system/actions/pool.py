@@ -27,6 +27,7 @@ from itertools import chain
 
 from crafting_system.data import BaseItem, GameData, Mod
 from crafting_system.items import Item, Side, UnknownBaseError, effective_weight, spawn_weight, tier_table
+from crafting_system.items.words import mod_words
 from crafting_system.rules import get_rule
 
 from .cut import Cut, cut_weights
@@ -108,8 +109,11 @@ def item_tags(data: GameData, item: Item) -> tuple[str, ...]:
     class_key = INFLUENCE_TAGS.value["classes"].get(base.item_class)
     if class_key is None:
         raise OutOfScopeError(
-            f"the item is influenced and its class ({base.item_class}) has no admitted influence class key, "
-            "so the influence mods of its pool are not modelled"
+            f"the item is influenced and its class ({base.item_class}) takes no influence in the model, so the influence mods of its pool are not modelled",
+            detail=(
+                f"the item is influenced and its class ({base.item_class}) has no admitted influence class key, "
+                "so the influence mods of its pool are not modelled"
+            ),
         )
     keys = INFLUENCE_TAGS.value["influences"]
     return (*base.tags, *(f"{class_key}_{keys[influence.value]}" for influence in sorted(item.influences)))
@@ -268,8 +272,11 @@ def _compute_pool_candidates(
             continue
         if len(mod.families) != 1:
             raise OutOfScopeError(
-                f"mod {mod.id} is a candidate but has {len(mod.families)} families; "
-                "only mods with exactly one family are modelled"
+                f"the mod {mod_words(mod)} is a candidate but belongs to {len(mod.families)} families; the model has only mods with exactly one family",
+                detail=(
+                    f"mod {mod.id} is a candidate but has {len(mod.families)} families; "
+                    "only mods with exactly one family are modelled"
+                ),
             )
         candidates.append(Candidate(mod, weight, mod.families[0], Side(mod.generation_type)))
     return tuple(candidates)

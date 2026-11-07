@@ -260,8 +260,9 @@ def test_a_fractured_placeholder_is_the_generic_placeholder_and_a_fractured_pick
     ids=["signature_placeholder", "double_veil"],
 )
 def test_a_signature_placeholder_or_a_double_veil_is_out_of_scope_in_a_state(item):
-    with pytest.raises(OutOfScopeError, match="grill B2"):
+    with pytest.raises(OutOfScopeError, match="double veil|particular kind") as refused:
         ab().compress(item)
+    assert "grill B2" in refused.value.detail and "grill" not in str(refused.value)
     ab(actions=(AnnulmentOrb(),)).compress(item)  # a model that never looks at the offer keeps it as the junk it is
 
 

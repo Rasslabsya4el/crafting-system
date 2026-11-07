@@ -73,6 +73,7 @@ from crafting_system.cli._start_types import (
 )
 from crafting_system.items import ExplicitMod, Item, Rarity
 from crafting_system.items.vendor_recipes import RECIPES
+from crafting_system.items.words import mod_words_of
 from crafting_system.prices import PriceEntry, load_prices, write_price_file
 from crafting_system.targets import load_target, start_price_key
 from crafting_system.targets import parse_target as parse_target_text
@@ -156,7 +157,7 @@ def test_a_tier_the_cap_does_not_reach_is_refused_with_the_cap_named():
     assert found.candidates == ()
     (refusal,) = found.refused
     assert refusal.reason == CAP_BELOW_ASKED and refusal.recipe == "boots_movement_speed"
-    assert "tier 2 from the top" in refusal.detail and "MovementVelocity5" in refusal.detail
+    assert "tier 2 from the top" in refusal.detail and "MovementVelocity5" not in refusal.detail and mod_words_of(TOY, "MovementVelocity5") in refusal.detail  # the mod by its text (#557)
     assert "family MovementVelocity (tier 1 or better)" in refusal.detail  # what the target asks, not the other requirements
     assert "IncreasedLife" not in refusal.detail
 
@@ -287,7 +288,7 @@ def test_a_roll_the_recipe_does_not_promise_is_refused_and_a_roll_every_roll_mee
 
     assert straddles.candidates == ()
     (refusal,) = [each for each in straddles.refused if each.recipe == "jewellery_chaos_resistance"]
-    assert refusal.reason == ROLL_NOT_GUARANTEED and "ChaosResist5" in refusal.detail
+    assert refusal.reason == ROLL_NOT_GUARANTEED and mod_words_of(DATA, "ChaosResist5") in refusal.detail and "ChaosResist5" not in refusal.detail
     (candidate,) = promised.candidates
     assert candidate.key == "vendor:jewellery_chaos_resistance:5"
     assert candidate.item.mods == (ExplicitMod("ChaosResist5", (26,)),)  # the lowest roll of the range meets the limit of 25
@@ -301,7 +302,7 @@ def test_a_roll_limit_above_every_roll_of_the_rung_is_refused_for_the_roll_not_t
 
     (refusal,) = [each for each in found.refused if each.recipe == "jewellery_chaos_resistance"]
     assert found.candidates == () and refusal.reason == ROLL_NOT_GUARANTEED
-    assert "above every roll of step 5 (ChaosResist5)" in refusal.detail
+    assert f"above every roll of step 5 ({mod_words_of(DATA, 'ChaosResist5')})" in refusal.detail
 
 
 def test_a_hand_price_wins_over_the_trade_price_of_a_flask(tmp_path):

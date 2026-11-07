@@ -163,7 +163,7 @@ def test_without_a_lock_a_reroll_takes_the_metamod_with_the_rest():
 def test_an_item_with_a_blocking_metamod_is_out_of_scope_without_the_flag(meta):
     ab = abstraction(metamods=False)
 
-    with pytest.raises(OutOfScopeError, match="metamods"):
+    with pytest.raises(OutOfScopeError, match="metamod"):
         ab.compress(start_of("gem", meta))
 
 

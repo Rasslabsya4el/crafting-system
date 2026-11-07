@@ -195,9 +195,9 @@ def test_the_decision_finds_no_approximate_level_and_the_planner_goes_on_to_the_
     """Ticket #70: what was a refusal ("no approximate answer was possible") is now an exact answer of the packed solver, with the reason in the note."""
     decision = decide(unsolved.abstraction, unsolved.start, unsolved.offers, 60.0)
 
-    assert decision.action == "refused" and "Attack/Caster tags" in decision.why
+    assert decision.action == "refused" and "Attack or Caster metamod" in decision.why
     note = _packed_note(decision)
-    assert "Attack/Caster tags" in note and "whole search ran" in note
+    assert "Attack or Caster metamod" in note and "whole search ran" in note
 
 
 def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_target_once(data, prices, route_id):
@@ -215,7 +215,7 @@ def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_t
 def test_a_budget_run_with_the_object_solver_asked_for_still_refuses_with_the_reason(data, prices, route_id):
     target = load_target(ROOT / ROUTES[route_id][0], data)
 
-    with pytest.raises(PlanError, match=r"no approximate answer was possible.*Attack/Caster tags"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible.*Attack or Caster metamod"):
         make_plan(data, target, prices, budget=60.0, solver="object")
 
 

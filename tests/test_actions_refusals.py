@@ -45,7 +45,7 @@ def test_a_jewel_base_is_in_scope_for_a_chaos_orb_and_out_of_scope_for_a_harvest
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: jewel})
 
     assert ChaosOrb().outcomes(data, amulet()).components  # jewel.ordinary_orbs_work_on_jewels
-    with pytest.raises(OutOfScopeError, match=rf"jewel \({item_class}\).*regular items only"):
+    with pytest.raises(OutOfScopeError, match=r"jewel; .*regular items only"):
         HarvestReforge("lightning").outcomes(data, amulet())
 
 
@@ -64,7 +64,7 @@ def test_an_influenced_item_of_a_class_with_no_influence_class_key_is_out_of_sco
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword})
     item = dataclasses.replace(amulet(), influences=frozenset({Influence.SHAPER}))
 
-    with pytest.raises(OutOfScopeError, match="influence class key"):
+    with pytest.raises(OutOfScopeError, match="takes no influence in the model"):
         action.outcomes(data, item)
 
 

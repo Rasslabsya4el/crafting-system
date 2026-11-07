@@ -296,6 +296,8 @@ CANDIDATE = {  # name -> (a statement with the internal form in it, the same thi
     "a workflow word": ("The default of grill B3 is used for this claim." + SRC, "The default of the planner is used for this claim." + SRC),
     "a workflow word, the main chat": ("The claim was settled by the main chat for now." + SRC, "The claim was settled by the planner's own choice for now." + SRC),
     "a base id in brackets": ("Penetrating Arrow Quiver [QuiverNew5] is bought as the start item." + SRC, "The Penetrating Arrow Quiver is bought as the start item." + SRC),
+    "a game mod id": ("A roll limit on a new mod is not modelled yet (mod IncreasedLifeEssence6)." + SRC, "A roll limit on a new mod is not modelled yet (mod +(30-35) to maximum Life)." + SRC),
+    "a game mod id of four words": ("The state holds IncreasedLifeEssenceBootsGloves1 as a fracture." + SRC, "The state holds a fractured mod that adds to maximum Life." + SRC),
     "a snake_case token": ("The claim spend_law_uniform_everywhere says so." + SRC, "The claim says so in the memory strands post." + SRC),
     "a snake_case token with one underscore": ("The cap is read at elemental_cap = coe for this recipe." + SRC, "The cap is read at the elemental recipe cap of Craft of Exile for this recipe." + SRC),
 }
@@ -352,13 +354,50 @@ def test_the_check_of_internal_names_fails_on_an_internal_name_and_passes_on_wor
         ("spend_law_uniform", "a snake_case token"),
         ("elemental_cap", "a snake_case token"),
         ("group_conflict", "a snake_case token"),
+        ("IncreasedLifeEssence6", "a game mod id"),
+        ("IncreasedLifeEssenceBootsGloves1", "a game mod id"),
+        ("AvoidShockEldritchImplicitUniquePresence4", "a game mod id"),
     ],
 )
 def test_every_form_of_an_internal_name_is_found_and_named(text, kind):
     assert kind in {found for found, _ in pl.internal_names_in(f"The claim, {text}, is read.")}
 
 
-@pytest.mark.parametrize("text", ["poe.ninja", "pathofexile.com", "3.29.3.3", "e.g. a belt", "Source: the wiki.", "ilvl 84.", "T1 to T3"])
+needs_data = pytest.mark.skipif(not pl.game_ids(), reason="the pinned game data is not on this machine (CI has it); the shape fallback is tested below")
+
+
+@needs_data
+@pytest.mark.parametrize(
+    "text",
+    ["IncreasedLifeEssence1_", "Strength1", "Intelligence8", "MovementVelocity2Royale", "IncreasedLifeEssence6", "AllAttributes4"],
+)
+def test_an_id_of_the_game_data_is_found_whatever_its_shape(text):
+    """An id that ends in `_`, a one-word id (`Strength1`) and an id with letters after the digit (`MovementVelocity2Royale`): the shape alone misses them (#557)."""
+    assert ("a game mod id", text) in pl.internal_names_in(f"The mod {text} is read.")
+
+
+@needs_data
+def test_the_game_ids_are_the_mods_and_the_bases_of_the_data():
+    ids = pl.game_ids()
+    assert {"Strength1", "IncreasedLifeEssence1_", "MovementVelocity2Royale"} <= ids and len(ids) > 20_000
+    assert not {each for each in ids if each.islower()}  # a lower-case word with a digit is not one of them
+
+
+def test_the_shape_of_an_id_is_the_fallback_when_the_data_is_absent(monkeypatch):
+    monkeypatch.setattr(pl, "game_ids", lambda: frozenset())
+    found = lambda text: [word for kind, word in pl.internal_names_in(text) if kind == "a game mod id"]  # noqa: E731
+    assert found("The mod IncreasedLifeEssence6 is read.") == ["IncreasedLifeEssence6"]
+    assert found("The mod IncreasedLifeEssenceBootsGloves12 is read.") == ["IncreasedLifeEssenceBootsGloves12"]
+    assert found("Tier3 PoE2 Level 83 Memory Strands 40 Strength1") == []  # one word and a digit is a name a person may write: only the data can tell it
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "poe.ninja", "pathofexile.com", "3.29.3.3", "e.g. a belt", "Source: the wiki.", "ilvl 84.", "T1 to T3",
+        "Grand Eldritch Implicit 3", "PoE2", "Tier3", "Memory Strands 40", "Ctrl 5", "iPhone 15", "YouTube 2", "level 83 Fire Resistance 2 of 4",
+    ],
+)  # a word with a capital and digits, or two words and a number, is not an id: an id has no space
 def test_a_name_a_person_may_read_is_not_an_internal_name(text):
     assert pl.internal_names_in(text) == []
 

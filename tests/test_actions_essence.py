@@ -325,7 +325,7 @@ def test_essence_of_desolation_is_not_a_b1_action():
     data = with_essences(DATA, desolation)
 
     for item in (amulet(rarity=Rarity.NORMAL), amulet()):
-        with pytest.raises(OutOfScopeError, match="Essence of Desolation is not a B1 action"):
+        with pytest.raises(OutOfScopeError, match="Essence of Desolation is not modelled"):
             ApplyEssence("Essence of Desolation").outcomes(data, item)
 
 
@@ -353,7 +353,7 @@ def test_an_influence_of_a_class_with_no_key_makes_the_item_out_of_scope(name):
     }  # the odd class takes the essence like an amulet, so only the influence key is missing
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword}, essences=rod_essences)
     influenced = dataclasses.replace(amulet(rarity=Rarity.NORMAL), influences=frozenset({Influence.SHAPER}))
-    with pytest.raises(OutOfScopeError, match="influence class key"):
+    with pytest.raises(OutOfScopeError, match="takes no influence in the model"):
         ApplyEssence(name).outcomes(data, influenced)
 
 

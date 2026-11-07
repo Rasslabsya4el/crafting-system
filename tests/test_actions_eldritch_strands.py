@@ -159,8 +159,8 @@ def test_the_eldritch_exalted_and_annulment_orbs_declare_nothing_and_are_refused
     mods, implicits = (roll(LIFE), roll(FIRE)), (exarch(3),)  # a rare item with a dominant side and a free prefix slot
 
     assert action.strand_use(DATA) is None and action.strand_claims(DATA) == frozenset()
-    with pytest.raises(OutOfScopeError, match="has not declared"):
+    with pytest.raises(OutOfScopeError, match="has no rule in the model for what it does with Memory Strands"):
         action.outcomes(DATA, item(*mods, implicits=implicits, strands=1))
-    with pytest.raises(OutOfScopeError, match="has not declared"):
+    with pytest.raises(OutOfScopeError, match="has no rule in the model for what it does with Memory Strands"):
         action.outcomes(DATA, item(*mods, implicits=implicits, strands=STRANDS))
     assert action.outcomes(DATA, item(*mods, implicits=implicits)).components  # at 0 strands they still work

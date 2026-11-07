@@ -48,6 +48,7 @@ from crafting_system.items import (
     spawn_weight,
 )
 from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
+from crafting_system.items.words import base_words, mod_words, mod_words_of
 
 from ._gaps import ModelGaps, Prunings
 from ._goal import Goal, Status
@@ -71,7 +72,7 @@ Label = Hashable  # the contribution to every leaf as ints (a `RollLaw` for a mo
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
 ONE = Fraction(1)
 _SLOT_KEY = attrgetter("key")
-_ROLLED_BY_A_DRAW = "a pool draw that rolls an implicit afresh is not modelled: only a fixed result spreads the roll of an implicit over its law"
+_ROLLED_BY_A_DRAW = "an action that draws a new implicit and rolls its value is not modelled; only an action that sets the implicit to a fixed result is"
 Expanded = tuple[tuple[tuple[Status, ...], tuple[Slot, ...], Fraction], ...]  # (best of the new mods, the slots they add, chance)
 
 
@@ -445,8 +446,11 @@ class Abstraction:
             if held:
                 names = ", ".join(sorted(metamod.value for metamod in held))
                 raise OutOfScopeError(
-                    f"the item holds a metamod ({names}) and this abstraction was built with metamods=False: "
-                    "pass metamods=True to model what a lock or an Attack/Caster metamod changes"
+                    "the item holds a lock or an Attack or Caster metamod, and this search was not set up to model one",
+                    detail=(
+                        f"the item holds a metamod ({names}) and this abstraction was built with metamods=False: "
+                        "pass metamods=True to model what a lock or an Attack/Caster metamod changes"
+                    ),
                 )
         if self._tracks_offer:
             self._refuse_out_of_scope_veil(item)
@@ -483,10 +487,14 @@ class Abstraction:
         """
         held = [entry for entry in item.mods if self.data.mods[entry.mod_id].domain == VEILED_DOMAIN]
         if len(held) > 1:
-            raise OutOfScopeError("the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)")
+            raise OutOfScopeError(
+                "the item holds two veiled mods: a start item with a double veil is not modelled",
+                detail="the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)",
+            )
         if held and held[0].mod_id not in GENERIC_PLACEHOLDER_IDS:
             raise OutOfScopeError(
-                f"the item holds the signature placeholder {held[0].mod_id}; only the generic VeiledPrefix and VeiledSuffix are modelled (grill B2)"
+                "the item holds a veiled mod of a particular kind: only the plain veiled prefix and suffix are modelled",
+                detail=f"the item holds the signature placeholder {held[0].mod_id}; only the generic VeiledPrefix and VeiledSuffix are modelled (grill B2)",
             )
 
     def _held_by(
@@ -793,7 +801,10 @@ class Abstraction:
                 raise ValueError(f"{fossils!r} is a mixture of pools: it has no one set of family types")
             pool = part.pool
         if partners(pool):
-            raise OutOfScopeError("the family types of a pool with a family that has mods on both sides are not modelled")
+            raise OutOfScopeError(
+                "a family with mods on both sides of the item (a jewel) is not modelled yet",
+                detail="the family types of a pool with a family that has mods on both sides are not modelled",
+            )
         grouped: dict[FamilyType, list[str]] = defaultdict(list)
         for family in pool:
             grouped[self._family_type(family, tag, frozenset())].append(family.family)
@@ -847,7 +858,10 @@ class Abstraction:
         if found is None:
             found = implicit_values_for(self.goal.implicits, mod, grade, contribution)
             if found is None:
-                raise OutOfScopeError(f"no roll of {mod.id} gives {[int(v) for v in contribution]} to the implicits wanted")
+                raise OutOfScopeError(
+                    f"no roll of {mod_words(mod)} gives the values that the goal asks of the implicits",
+                    detail=f"no roll of {mod.id} gives {[int(v) for v in contribution]} to the implicits wanted",
+                )
             self._implicit_values[key] = found
         return found
 
@@ -859,7 +873,10 @@ class Abstraction:
         if found is None and line:
             found = self.data.mods.get(f"{line}{grade}")
             if found is None or eldritch_side(found) is not side:
-                raise OutOfScopeError(f"the game data holds no {side.value} implicit {line}{grade}")
+                raise OutOfScopeError(
+                    f"the game data holds no {side.value} implicit of the kind the item holds",
+                    detail=f"the game data holds no {side.value} implicit {line}{grade}",
+                )
             self._implicit_mods[key] = found
         elif found is None:
             if self._eldritch is None:
@@ -881,8 +898,11 @@ class Abstraction:
                     break
             else:
                 raise OutOfScopeError(
-                    f"no Eldritch mod of the {side.value} side and grade {grade} gives {[int(v) for v in contribution]}"
-                    " to the implicits wanted"
+                    f"no Eldritch mod of the {side.value} side and grade {grade} gives the values that the goal asks of the implicits",
+                    detail=(
+                        f"no Eldritch mod of the {side.value} side and grade {grade} gives {[int(v) for v in contribution]}"
+                        " to the implicits wanted"
+                    ),
                 )
             self._implicit_mods[key] = found
         return found
@@ -990,7 +1010,8 @@ class Abstraction:
         for leaf in self.goal.leaves:
             if mod.id in leaf.mod_ids and leaf.has_roll_limit:
                 raise OutOfScopeError(
-                    f"a roll limit on a forced, crafted or fixed-result new mod is not modelled yet (mod {mod.id})"
+                    f"a roll limit on a forced, crafted or fixed-result new mod is not modelled yet ({mod_words(mod)})",
+                    detail=f"a roll limit on a forced, crafted or fixed-result new mod is not modelled yet (mod {mod.id})",
                 )
 
     def _label(self, mod: Mod, influences: frozenset[Influence] = frozenset(), lucky: bool = False) -> Label:
@@ -1190,8 +1211,11 @@ class Abstraction:
         prepared = self._prepare(state, action)
         if not self._allow_inputs and action.inputs(self.data, prepared.item):
             raise ConsumesInputsError(
-                "the action consumes other items, and the planner does not price them yet (ticket #212): "
-                "its kernel would count them as free"
+                "the action consumes other items, and the planner does not price them yet, so it would count them as free",
+                detail=(
+                    "the action consumes other items, and the planner does not price them yet (ticket #212): "
+                    "its kernel would count them as free"
+                ),
             )
         return prepared
 
@@ -1268,8 +1292,11 @@ class Abstraction:
             except NotApplicableError:
                 continue
             raise OutOfScopeError(
-                "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
-                "depends on which family of the type was fractured"
+                "the item holds a fractured mod known only by its family, and whether the game refuses this action depends on which family was fractured",
+                detail=(
+                    "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
+                    "depends on which family of the type was fractured"
+                ),
             )
 
     def _check_same_item_space(self, outcomes: ActionOutcomes) -> None:
@@ -1282,8 +1309,11 @@ class Abstraction:
             made = part.retained
             if (made.base_id, made.item_level) != (self.base_id, self.item_level):
                 raise OutOfScopeError(
-                    f"the result is an item on {made.base_id} at item level {made.item_level}, and this abstraction stands for items on "
-                    f"{self.base_id} at item level {self.item_level}: the state of another base or item level is not modelled"
+                    f"the result is an item on {base_words(self.data, made.base_id)} at item level {made.item_level}, and this search stands for items on {base_words(self.data, self.base_id)} at item level {self.item_level}: the state of another base or item level is not modelled",
+                    detail=(
+                        f"the result is an item on {made.base_id} at item level {made.item_level}, and this abstraction stands for items on "
+                        f"{self.base_id} at item level {self.item_level}: the state of another base or item level is not modelled"
+                    ),
                 )
 
     def _check_fracture_without_partners(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
@@ -1300,8 +1330,11 @@ class Abstraction:
             self._has_partners = bool(partners(build_pool(self.data, empty)))
         if self._has_partners:
             raise OutOfScopeError(
-                "a fracture on an item whose pool has a family with mods on both sides (a Cobalt or Viridian Jewel) "
-                "is not modelled in the compressed state"
+                "a fracture on an item whose pool has a family with mods on both sides (a Cobalt or Viridian Jewel) is not modelled yet",
+                detail=(
+                    "a fracture on an item whose pool has a family with mods on both sides (a Cobalt or Viridian Jewel) "
+                    "is not modelled in the compressed state"
+                ),
             )
 
     def _check_type_blind(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
@@ -1329,9 +1362,12 @@ class Abstraction:
             plain = part.tag is None and part.pool == build_pool(self.data, part.retained)
             if forced & members or not plain:
                 raise OutOfScopeError(
-                    "the item holds a fractured mod known only as a family type, and this action draws from a pool "
-                    "that can tell the families of that type apart (a guaranteed tag, other weights, or a forced mod "
-                    "of one of them), so the result would depend on which family was fractured"
+                    "the item holds a fractured mod known only by its family, and this action draws from a pool that can tell the families of that kind apart, so the result would depend on which family was fractured",
+                    detail=(
+                        "the item holds a fractured mod known only as a family type, and this action draws from a pool "
+                        "that can tell the families of that type apart (a guaranteed tag, other weights, or a forced mod "
+                        "of one of them), so the result would depend on which family was fractured"
+                    ),
                 )
 
     def _mixture_kernel(self, state: CompressedState, prepared: _Prepared) -> dict[CompressedState, Fraction]:
@@ -1416,8 +1452,11 @@ class Abstraction:
             elif isinstance(origin, Slot):
                 if entry.mod_id in rerolled and self._has_laws:  # the slot does not say which mod of its family it stands for
                     raise OutOfScopeError(
-                        f"the goal has a roll limit and the action keeps mod {entry.mod_id} but rolls its value afresh: "
-                        "the kept slot would keep the contribution of its old roll"
+                        f"the goal has a roll limit and the action keeps the mod {mod_words_of(self.data, entry.mod_id)} but rolls its value afresh: the kept mod would keep the contribution of its old roll, and the model cannot tell which that was",
+                        detail=(
+                            f"the goal has a roll limit and the action keeps mod {entry.mod_id} but rolls its value afresh: "
+                            "the kept slot would keep the contribution of its old roll"
+                        ),
                     )
                 if before is not None and before != influences and self._kinds.influenced and not origin.crafted:
                     origin = self._reread(origin, entry, influences)
@@ -1608,7 +1647,10 @@ class Abstraction:
             return found
         influences = part.retained.influences
         if partners(part.pool):
-            raise OutOfScopeError("a fracture on an item whose pool has a family with mods on both sides is not modelled")
+            raise OutOfScopeError(
+                "a fracture on an item whose pool has a family with mods on both sides is not modelled yet",
+                detail="a fracture on an item whose pool has a family with mods on both sides is not modelled",
+            )
         label_of = self._labeller(influences)
         owner: dict[str, FamilyType] = {}
         for family in part.pool:
@@ -1842,7 +1884,8 @@ class Abstraction:
             for entry in family.mods:
                 if is_rollable(self._law(entry.mod, influences)):
                     raise OutOfScopeError(
-                        f"a roll limit on a mod of the pool of a draw that fractures one of its mods is not modelled yet (mod {entry.mod.id})"
+                        f"a roll limit on a mod of the pool of a draw that fractures one of its mods is not modelled yet ({mod_words(entry.mod)})",
+                        detail=f"a roll limit on a mod of the pool of a draw that fractures one of its mods is not modelled yet (mod {entry.mod.id})",
                     )
         self._unrolled.add(signature)
 
@@ -1875,8 +1918,11 @@ class Abstraction:
             group = self._canonical_groups()[self._group_key(own)]
             if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky, True)) for mod in group):
                 raise OutOfScopeError(
-                    f"a Divine Orb rerolls a crafted mod ({own.id}) that a roll limit looks at: the range of the real mod "
-                    "is not known from its canonical id, so its new roll cannot be modelled"
+                    f"a Divine Orb rerolls a crafted mod ({mod_words(own)}) that a roll limit looks at: the range of the real mod is not known, so its new roll cannot be modelled",
+                    detail=(
+                        f"a Divine Orb rerolls a crafted mod ({own.id}) that a roll limit looks at: the range of the real mod "
+                        "is not known from its canonical id, so its new roll cannot be modelled"
+                    ),
                 )
             return None
         base = base_kind(slot.kind)
@@ -1886,8 +1932,11 @@ class Abstraction:
             group = self._canonical_groups().get((family, slot.side.value, UNVEILED_DOMAIN, False), ())
             if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky)) for mod in group):
                 raise OutOfScopeError(
-                    f"a Divine Orb rerolls a mod unveiled from the pool ({base}) that a roll limit looks at: "
-                    "the slot does not say which mod of the family it is, so its new roll cannot be modelled"
+                    "a Divine Orb rerolls a mod unveiled from the pool that a roll limit looks at: the item does not say which mod of the family it is, so its new roll cannot be modelled",
+                    detail=(
+                        f"a Divine Orb rerolls a mod unveiled from the pool ({base}) that a roll limit looks at: "
+                        "the slot does not say which mod of the family it is, so its new roll cannot be modelled"
+                    ),
                 )
             return None
         if not base.startswith(MOD_PREFIX):

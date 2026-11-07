@@ -223,10 +223,14 @@ class BenchCraft(Action):
         _refuse_if_class_not_offered(data, item, option, f"the craft {self.mod_id}")
         if item.rarity is Rarity.NORMAL:
             raise OutOfScopeError(
-                "the item is normal; no admitted rule says what a bench craft does to a normal item"
+                "the item is normal, and the model has no rule for what a bench craft does to a normal item",
+                detail="the item is normal; no admitted rule says what a bench craft does to a normal item",
             )
         if not item.mods:
-            raise OutOfScopeError(f"the item is {item.rarity} and holds no mod, which no admitted rule covers")
+            raise OutOfScopeError(
+                f"the item is {item.rarity.value} and holds no mod, and the model has no rule for that",
+                detail=f"the item is {item.rarity} and holds no mod, which no admitted rule covers",
+            )
         for entry in item.mods:
             if conflicts(data.mods[entry.mod_id], mod) or entry.mod_id == mod.id:
                 raise NotApplicableError(
@@ -293,8 +297,11 @@ class RemoveCraftedMods(Action):
         kept = tuple(entry for entry in item.mods if not entry.crafted or entry.fractured)
         if not kept:
             raise OutOfScopeError(
-                f"the item is {item.rarity} and holds only crafted mods; "
-                "no admitted rule says what it becomes without a mod"
+                f"the item is {item.rarity.value} and holds only crafted mods, and the model has no rule for what it becomes without a mod",
+                detail=(
+                    f"the item is {item.rarity} and holds only crafted mods; "
+                    "no admitted rule says what it becomes without a mod"
+                ),
             )
         return BenchOutcomes(data, item.changed(data, mods=kept), None)
 

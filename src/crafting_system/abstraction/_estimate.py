@@ -52,7 +52,19 @@ VARIANT_FACTOR = 2  # a coarse level with variants has two kernels (the lightest
 
 
 class EstimateRefused(ValueError):
-    """The pilot cannot count this set of actions: the kernel of one of them cannot be computed."""
+    """The pilot cannot count this set of actions: the kernel of one of them cannot be computed.
+
+    The first argument, `player`, is a sentence a person reads (it reaches the answer as the reason no approximate answer was possible, #557);
+    `str(error)` is that sentence. What a developer needs goes in `detail`, which the limit of the decision carries to the JSON policy
+    (`Limit.detail`) and no text prints.
+    """
+
+    def __init__(self, player: str, *, detail: str = "") -> None:
+        if not isinstance(player, str) or not isinstance(detail, str):
+            raise TypeError("EstimateRefused takes the player's sentence (a str) and, as `detail`, the developer's text (a str)")
+        super().__init__(player)
+        self.player = player
+        self.detail = detail or player
 
 
 @dataclass(frozen=True)
@@ -175,7 +187,7 @@ class _Pilot:
         try:
             return action.label(self.data)
         except ValueError:
-            return repr(action)
+            return "an offered action"  # never the repr: a cause is read by a person
 
     def _classify(self, action: Action) -> None:
         self.abstraction._check_enabled(action)  # a caller's bug, raised as `Abstraction.kernel` does
@@ -245,7 +257,10 @@ class _Pilot:
         except (NotApplicableError, OutOfScopeError):  # either: the forecast only counts the graph, it offers nothing (the build writes a gap)
             return None
         except ValueError as error:  # a build would meet the same error, so there is nothing to forecast
-            raise EstimateRefused(f"the outcomes of {self._name(action)} cannot be computed: {error}") from error
+            raise EstimateRefused(
+                f"the outcomes of {self._name(action)} cannot be computed",
+                detail=f"the outcomes of {self._name(action)} cannot be computed: {error}",
+            ) from error
         if found:
             self._measure(state, action, found)
         return found or None

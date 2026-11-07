@@ -49,6 +49,7 @@ from typing import ClassVar
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import EnchantClass, EnchantKind, Item, enchant_class, enchant_info
+from crafting_system.items.words import mod_words
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -101,7 +102,10 @@ def enchant_pool(data: GameData, item_class: EnchantClass) -> tuple[tuple[Mod, F
         if info is not None and info.kind is EnchantKind.POOL and info.item_class is item_class:
             pool.append((mod, weigh(mod)))
     if not pool:
-        raise OutOfScopeError(f"the game data holds no {item_class.value} enchantment of the Tempering or Tailoring pool")
+        raise OutOfScopeError(
+            f"the game data holds no {item_class.value} enchantment of the Tempering or Tailoring pool",
+            detail=f"the game data holds no {item_class.value} enchantment of the Tempering or Tailoring pool",
+        )
     if len(_POOLS) >= 64:
         _POOLS.clear()
     _POOLS[key] = (data, tuple(pool))
@@ -112,7 +116,10 @@ def _armour_weight(mod: Mod) -> Fraction:
     value = BODY_ARMOUR_WEIGHT_CLASSES.value
     kind_name = value["kind_of"].get(mod.id)
     if kind_name is None:
-        raise OutOfScopeError(f"the claim {BODY_ARMOUR_WEIGHT_CLASSES.id} gives the body armour enchant {mod.id} no weight")
+        raise OutOfScopeError(
+            f"the model has no weight for the body armour enchantment {mod_words(mod)}",
+            detail=f"the claim {BODY_ARMOUR_WEIGHT_CLASSES.id} gives the body armour enchant {mod.id} no weight",
+        )
     entry = value["kinds"][kind_name]
     return Fraction(entry["items"], entry["enchants"])
 
@@ -120,7 +127,10 @@ def _armour_weight(mod: Mod) -> Fraction:
 def _weapon_weight(mod: Mod) -> Fraction:
     count = WEAPON_WEIGHTS_DEPEND_ON_TAG.value["count_of"].get(mod.id)
     if count is None:
-        raise OutOfScopeError(f"the claim {WEAPON_WEIGHTS_DEPEND_ON_TAG.id} gives the weapon enchant {mod.id} no weight")
+        raise OutOfScopeError(
+            f"the model has no weight for the weapon enchantment {mod_words(mod)}",
+            detail=f"the claim {WEAPON_WEIGHTS_DEPEND_ON_TAG.id} gives the weapon enchant {mod.id} no weight",
+        )
     return Fraction(count)
 
 
@@ -192,7 +202,8 @@ class _EnchantOrb(Action):
             )
         if item.corrupted:
             raise OutOfScopeError(
-                f"the item is corrupted, and no admitted rule says a {self.LABEL} works on a corrupted item ({MIRRORED_AND_CORRUPTION.id})"
+                f"the item is corrupted, and the model has no rule for a {self.LABEL} on a corrupted item",
+                detail=f"the item is corrupted, and no admitted rule says a {self.LABEL} works on a corrupted item ({MIRRORED_AND_CORRUPTION.id})",
             )
         pool = enchant_pool(data, self.ITEM_CLASS)
         total = sum((weight for _, weight in pool), Fraction(0))

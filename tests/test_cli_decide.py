@@ -284,14 +284,14 @@ def test_decide_refuses_the_ladder_for_an_offered_action_that_is_not_declared_bl
     decision = decide(exact.abstraction, exact.start, priced(offers), 0.0, Rates(1.0, 1.0))
 
     assert decision.action == "exact"  # small enough to run as it is
-    assert "Undeclared reroll is not declared block-invariant" in decision.message
+    assert "an approximate answer cannot include Undeclared reroll" in decision.message
 
 
 def test_make_plan_stops_with_the_refusal_when_the_exact_run_is_beyond_the_largest_size_run_and_the_object_solver_is_asked_for(target, monkeypatch):
     offers = [Offer("Undeclared reroll", UndeclaredReroll(), {CH: 1}), *OFFERS[1:]]
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
-    with pytest.raises(PlanError, match=r"no approximate answer was possible \(Undeclared reroll is not declared block-invariant"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible \(an approximate answer cannot include Undeclared reroll"):
         make_plan(DATA, target, PRICES, offers=offers, budget=0.0, rates=Rates(1.0, 1.0), solver="object")
 
 
@@ -307,7 +307,7 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
     assert plan.approximation is None and plan.packed is not None
     assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
     solved = only(plan.limits, "how-solved")  # G13: one limit, the packed note replaces the decision's message
-    assert "Undeclared reroll is not declared block-invariant" in solved.why and "whole search ran" in solved.why
+    assert "an approximate answer cannot include Undeclared reroll" in solved.why and "whole search ran" in solved.why
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 

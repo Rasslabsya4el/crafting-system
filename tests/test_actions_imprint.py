@@ -661,8 +661,8 @@ def test_both_actions_are_refused_on_a_stranded_item_until_their_strand_ticket_d
 
     stranded = dataclasses.replace(magic(LIFE_1), memory_strands=5)
     assert Imprint(CROAKER).strand_use(CONTRACT_DATA) is None and Restore(0).strand_use(CONTRACT_DATA) is None
-    with pytest.raises(OutOfScopeError, match="has not declared"):
+    with pytest.raises(OutOfScopeError, match="has no rule in the model for what it does with Memory Strands"):
         Imprint(CROAKER).outcomes(CONTRACT_DATA, stranded)
-    with pytest.raises(OutOfScopeError, match="has not declared"):
+    with pytest.raises(OutOfScopeError, match="has no rule in the model for what it does with Memory Strands"):
         Restore(0).outcomes(CONTRACT_DATA, dataclasses.replace(with_imprints(magic(MANA_1), magic(LIFE_1)), memory_strands=5))
     Imprint(CROAKER).outcomes(CONTRACT_DATA, magic(LIFE_1))  # at 0 strands nothing changes

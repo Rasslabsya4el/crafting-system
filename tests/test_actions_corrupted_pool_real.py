@@ -159,7 +159,7 @@ def test_cluster_and_timeless_jewels_of_the_real_data_are_refused(data):
 
     assert len(refused) == 4  # Small, Medium and Large Cluster Jewel, and the Timeless Jewel
     for base_id in refused:
-        with pytest.raises(OutOfScopeError, match="not checked"):
+        with pytest.raises(OutOfScopeError, match="does not check"):
             corrupted_implicit_pool(data, base_id, HIGH)
 
 
