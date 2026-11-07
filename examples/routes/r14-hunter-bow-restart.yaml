@@ -16,7 +16,7 @@
 # file does not invent it. The conditions and actions are explained in examples/routes/r12-lightning-amulet.yaml.
 #
 # The route (Reddit, Peuget guide, docs/research/2026-10-30-5-reference-routes.md, id R14):
-#   1. Orb of Alteration the Hunter bow until it has tier-1 Attack Speed.
+#   1. Orb of Alteration the (Magic, bought) Hunter bow until it has tier-1 Attack Speed.
 #   2. Regal Orb.
 #   3. Orb of Annulment until only the Attack Speed is left. If the Attack Speed is annulled, back to step 1
 #      (1 in 3 with 3 mods, 1 in 2 with 2).
@@ -34,11 +34,6 @@ name: R14 completed with restart, Reddit guide
 skip_refused: true  # a rule whose action the game refuses at a state falls through to the next that matches (the last one restarts)
 
 rules:
-  # The bow is normal at the start: the Orb of Transmutation makes it magic (the guide starts at the Alterations).
-  - when:
-      rarity: normal
-    do: Orb of Transmutation
-
   # Step 1, and step 2 when the tier-1 Attack Speed is there.
   - when:
       rarity: magic

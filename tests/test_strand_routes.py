@@ -157,12 +157,12 @@ def test_the_start_item_has_a_rule(stem):
 def test_s11_is_r13_with_step_zero():
     s11 = plain(read(S_ROUTES / "s11-remembrance-belt.yaml"))["rules"]
     r13 = plain(read(ROUTES / "r13-life-resist-belt.yaml"))["rules"]
-    assert r13[-1] == {"when": {"rarity": "normal"}, "do": "Orb of Transmutation"}
-    assert s11[: len(r13) - 1] == r13[:-1]
-    assert s11[len(r13) - 1 :] == [
+    assert all(rule.get("when", {}).get("rarity") != "normal" for rule in r13)  # R13 starts from a Magic belt (#576): no rule makes a Normal one magic
+    assert s11[: len(r13)] == r13
+    assert s11[len(r13) :] == [
         {"when": {"rarity": "normal", "memory_strands_below": 40}, "do": "Orb of Remembrance"},
-        r13[-1],
-    ]
+        {"when": {"rarity": "normal"}, "do": "Orb of Transmutation"},
+    ]  # S11 and S13 start from a Normal belt (a Remembrance Orb takes a Normal item), so they keep the Transmutation rule
 
 
 def test_s12_is_r05s_rule():

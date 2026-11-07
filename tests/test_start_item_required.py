@@ -25,10 +25,9 @@ EXAMPLE_FILES = sorted(EXAMPLES.glob("*.yaml"))
 HAD_NO_START_ITEM = {
     "r04-penetrating-quiver.yaml",
     "r06-strength-heavy-belt.yaml",
-    "r13-life-resist-belt.yaml",
-    "r14-hunter-bow.yaml",
     "v01-minion-helmet.yaml",
 }
+START_MAGIC = {"r13-life-resist-belt.yaml", "r14-hunter-bow.yaml"}  # their guides open with Alteration: a Magic start, no Transmutation Orb (#576)
 
 
 def refusal(text: str) -> str:
@@ -116,3 +115,5 @@ def test_every_committed_target_parses_and_states_its_start_item(real, path):
     assert re.search(r"(?m)^start_item:", text) and re.search(r"(?m)^  rarity:", text)
     if path.name in HAD_NO_START_ITEM:  # the plain item these files always started from, now written down with the guide's words
         assert target.start_item.rarity is Rarity.NORMAL and not target.start_item.mods
+    if path.name in START_MAGIC:
+        assert target.start_item.rarity is Rarity.MAGIC and not target.start_item.mods
