@@ -252,7 +252,10 @@ then for the planner, the guide as written, its completed form and each extra ro
 the Chaos carried by each action (they add up to the mean), every divergence of the planner's main line with the expected visits of the state
 under each side and what each carries (the whole list that `benchmark.json` cuts to ten), the gaps of the guide, and, for each route, its mean
 when it takes the planner's action in the states of one group of divergences (and of one pair of actions, and of all of them, which must give the
-planner's own mean). The visits are the exact row of `(I - Q)^-1` (OR-20), not the bounds `reach_of` gives on R04's chain of 28 million edges.
+planner's own mean; and, since #619, the mean of the planner's policy everywhere but where the route's action stays in that group, which is finite where the single
+adoption is not). For a completed route it also splits the uses of `restart` by the rule that fires them, with the rule's line and whether the guide has it (the start
+items bought per run are those plus 1). `START_PRICE=744` in the command solves the planner and prices the restarts at another start price, the price file untouched.
+The visits are the exact row of `(I - Q)^-1` (OR-20), not the bounds `reach_of` gives on R04's chain of 28 million edges.
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
     $D --command 'uv run --no-sync python .github/scripts/divergence_costs.py R04 $OUT_DIR/costs examples/routes/my-trial.yaml 2>&1 | tee $OUT_DIR/costs.log'
@@ -261,8 +264,7 @@ planner's own mean). The visits are the exact row of `(I - Q)^-1` (OR-20), not t
 
 `.github/scripts/completion_check.py R04 OUT_DIR` plans the route, reads its completed route on the walked graph and lists every state where a `restart` that
 the guide does not have fires while an action of the guide's own rules is legal (`cli/_route_completion.py`, the rule in `cli/_route.py`). Exit code 0: none.
-The small, hand-built version of the same check runs in CI (`tests/test_route_completion.py`). R04 takes about 10 minutes, R14 about 40 (`--long`); R14 is
-expected to fail until #619.
+The small, hand-built version of the same check runs in CI (`tests/test_route_completion.py`). R04 takes about 10 minutes, R14 about 40 (`--long`); both pass (R14 since #619).
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
     $D --command 'uv run --no-sync python .github/scripts/completion_check.py R04 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'

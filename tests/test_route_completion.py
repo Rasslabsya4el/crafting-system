@@ -55,10 +55,7 @@ def gap_item(data, route_id):
     return rare(data, plan.target.base_id, 78, (SPEED, MULTIMOD, NO_ATTACK, *JUNK_PREFIXES), influences=frozenset({Influence.HUNTER}))
 
 
-@pytest.fixture(scope="module", params=[
-    "R04",
-    pytest.param("R14", marks=pytest.mark.xfail(strict=True, reason="#619: R14's completed route ends in a catch-all restart that this check names; its files are changing under #576")),
-])
+@pytest.fixture(scope="module", params=["R04", "R14"])
 def route_id(request):
     return request.param
 
@@ -92,3 +89,24 @@ def test_the_guides_own_restarts_are_not_checked(data):
 
     assert added_restarts(guide, guide) == frozenset()
     assert "restart" not in guide_actions(guide) and "Deafening Essence of Rage" in guide_actions(guide)
+
+
+def test_r14_keeps_the_attack_speed_where_the_exalted_orbs_left_the_chaos_damage_over_time_prefix_too_weak(data):
+    """The state #619 measured (completion_check.py R14, run 42381244084): both metamods, the +1 gems, the Chaos Damage over Time prefix below the top tier.
+
+    Before #619 the catch-all `restart` bought a new bow there and threw the tier-1 Attack Speed away while the guide's Bench craft, Remove Crafted Mods and
+    Orb of Annulment were legal; now the crafts come off and the guide's step 3 goes on."""
+    plan = plan_of(data, "R14")
+    guide = load_route(ROOT / "examples" / "routes" / "r14-hunter-bow.yaml", plan, data)
+    path = ROOT / "examples" / "routes" / "r14-hunter-bow-restart.yaml"
+    item = rare(
+        data, plan.target.base_id, 78, (SPEED, MULTIMOD, NO_ATTACK, "LocalIncreaseSocketedGemLevel1", "PoisonDamagePrefixInfluence3"), influences=frozenset({Influence.HUNTER})
+    )
+    text = path.read_text(encoding="utf-8")
+    start, end = text.index("  # NOT IN THE GUIDE (a)"), text.index("  # NOT IN THE GUIDE (b)")
+    old = parse_route(text[:start] + text[end:], plan, data, "r14-before-619")  # the file without the rule that keeps the Attack Speed
+
+    (loss,) = losses_at_item(plan, guide, old, data, item)
+
+    assert {"Bench craft +2 to Level of Socketed Support Gems", "Remove Crafted Mods", "Orb of Annulment"} <= set(loss.legal)
+    assert losses_at_item(plan, guide, load_route(path, plan, data), data, item) == ()
