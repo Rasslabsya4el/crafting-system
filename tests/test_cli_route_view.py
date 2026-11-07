@@ -598,6 +598,43 @@ def test_golden_a_given_route_with_a_restart_and_a_trade_link(two_leaf_plan):
     assert_golden("restart", page_of(given(two_leaf_plan, RESTART_ROUTE), buy=buy))
 
 
+FRACTURED_START = f"""\
+base: Paua Amulet
+item_level: 84
+requirements:
+  - stat: "{GEM_TEXT}"
+  - family: ChaosResistance
+    min_tier: any
+start_item:
+  rarity: rare
+  mods:
+    - mod: LightningResist2
+      values: [14]
+      fractured: true
+start: bought
+"""
+RESTART_ON_A_LONE_GEM = RESTART_ROUTE.replace("LightningResistance", "ChaosResistance")
+
+
+@pytest.fixture(scope="module")
+def fractured_start_plan():
+    target = parse_target(FRACTURED_START, DATA, source="fractured.yaml")
+    prices = price_file(start=None)
+    prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")
+    return make_plan(DATA, target, prices)
+
+
+def test_golden_a_restart_that_buys_a_rare_item_with_a_fractured_mod_draws_it_as_the_first_card_does(fractured_start_plan):
+    """The restart of R10, R11 and R12 buys the Rare item with its fractured mod again (OR-17, #598); the page lint reads this golden."""
+    html = page_of(given(fractured_start_plan, RESTART_ON_A_LONE_GEM))
+    assert_golden("restart_fractured", html)
+    section = build_section(given(fractured_start_plan, RESTART_ON_A_LONE_GEM), DATA)
+    (restart,) = [row for row in section.rows if row.title.startswith("Restart")]
+    assert "fractured" in restart.title and restart.after.properties[0] == "Rare"
+    assert [s.text for s in restart.after.prefixes] == ["any mod or empty"] * 3
+    assert any(s.text == "any mod or empty" for s in restart.after.suffixes) and any("fractured" in s.marks for s in restart.after.suffixes)
+
+
 def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan):
     buy = buy_step(SPEC, "Test", MODS, STATS)
 
