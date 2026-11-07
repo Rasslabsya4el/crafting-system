@@ -16,6 +16,7 @@ of millions of edges. Never run on a PC: the plan of R04 takes about 5 minutes a
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -116,7 +117,8 @@ def main(argv: list[str]) -> int:
     root = find_project_root()
     data = load_game_data()
     target = load_target(root / bench.target, data)
-    plan = make_plan(data, target, load_price_file(root / PRICES))
+    start = os.environ.get("START_PRICE")  # a start price in Chaos for this run instead of the price file's (the file is not changed): the planner is solved at it
+    plan = make_plan(data, target, load_price_file(root / PRICES), start_price=float(start) if start else None)
     shift = plan.start_price.chaos
     say(f"planned: mean {plan.mean_remaining + shift:,.2f} with the start price {shift}")
 
@@ -167,6 +169,7 @@ def main(argv: list[str]) -> int:
 
     document["planner"]["top_states"] = top_states(planner_visits)
     routes = [("guide", bench.route), ("completed", bench.completed), *[(Path(p).name, p) for p in argv[2:]]]
+    guide = load_route(root / bench.route, plan, data)  # the rules of the guide, to tell the restarts a completion added
     for name, path in routes:
         if path is None:
             continue
@@ -212,6 +215,7 @@ def main(argv: list[str]) -> int:
             for (a, b), v in sorted(pairs.items(), key=lambda kv: -(kv[1][3] + kv[1][4]))
         ]
         entry["top_states"] = top_states(route_visits)
+        entry["restart_rules"] = restart_rules(plan, data, route, guide, route_visits, ids)
         entry["gap_states"] = [
             {"state": ids.get(gap.state), "reason": gap.reason, "visits_in_completed": None, "description": describe_state(plan, data, gap.state)}
             for gap in result.gaps
@@ -228,6 +232,13 @@ def main(argv: list[str]) -> int:
                 say(f"    top {label}: {row['state']} visits {row['visits']:.4g} carried {row['carried']:,.1f}: {row['description']}")
         for gap in entry["gap_states"]:
             say(f"    gap {gap['state']}: {gap['reason']}: {gap['description']}")
+        for line in entry["restart_rules"]:
+            say(
+                f"    restart rule at line {line['line']}{' (not in the guide)' if line['added'] else ''}: {line['states']} states, uses {line['uses']:.6g} per run"
+                f" x start price {line['price']:.4g} = {line['carried']:,.2f}"
+            )
+            for row in line["top_states"]:
+                say(f"        restart state {row['state']} visits {row['visits']:.4g}: {row['description']}")
         for row in rows[:12]:
             say(f"    {row['state']}: {row['description']}: guide {row['route_action']}, planner {row['planner_action']}, visits {row['planner_visits']:.4g} / {row['route_visits']:.4g}")
     for label, found in document["planner"]["top_states"].items():
@@ -244,6 +255,41 @@ def main(argv: list[str]) -> int:
         say("hybrids failed:\n" + traceback.format_exc())
     (out / "costs.json").write_text(json.dumps(document, indent=1, default=str), encoding="utf-8")
     return 0
+
+
+def restart_rules(plan, data, route, guide, route_visits, ids):
+    """The `restart` uses of a route split by the rule that fires them (ticket #619).
+
+    One row per rule of the route that fires a `restart` in some state of the walked graph: its line, whether the guide has it (a rule of the route whose
+    conditions and action are not in the guide is `added`), the states, the expected uses per run (the visits of those states: each visit buys the start item
+    once) and what they carry at the start price. The uses plus 1 are the start items bought per run.
+    """
+    from crafting_system.cli._report import describe_state
+    from crafting_system.cli._route import RESTART
+    from crafting_system.cli._route_completion import _fired, added_restarts
+    from crafting_system.cli._route_packed import _Reading
+
+    walked = plan.policy.walked
+    index = {state: i for i, state in enumerate(walked.states)}
+    reading = _Reading(plan, route, data)
+    added = added_restarts(guide, route)
+    rows: dict = {}
+    for state, (weight, price, label) in route_visits.items():
+        if label != RESTART:
+            continue
+        k = _fired(reading, route, index[state])
+        row = rows.setdefault(k, {"line": route.rules[k].line, "states": 0, "uses": 0.0, "price": price, "members": []})
+        row["states"] += 1
+        row["uses"] += weight
+        row["members"].append((weight, state))
+    out = []
+    for k, row in sorted(rows.items()):
+        members = sorted(row.pop("members"), key=lambda m: -m[0])
+        row["carried"] = row["uses"] * row["price"]
+        row["added"] = k in added
+        row["top_states"] = [{"state": ids.get(s), "visits": w, "description": describe_state(plan, data, s)} for w, s in members[:8]]
+        out.append(row)
+    return out
 
 
 def hybrids(document, plan, data, root, routes, say, shift):
@@ -283,24 +329,40 @@ def hybrids(document, plan, data, root, routes, say, shift):
             return mean_of(c2, k2) + shift
 
         everything = [i for members in groups.values() for i in members]
+        planner_mean = adopt(everything)
+
+        def kept(members):
+            """The mean of the planner's policy everywhere but at `members`, where the route's action stays (the single-group adoption of a group whose
+            follow-up states the route does not know is infinite; this one never is, and it is what the route's action costs there, ticket #619)."""
+            left = set(members)
+            return adopt([i for i in everything if i not in left])
+
         rows = []
         for key, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
             mean = adopt(members)
+            held = kept(members)
             rows.append(
                 {
                     "route_action": key[0], "planner_action": key[1], "status": key[2], "crafted": key[3], "states": len(members),
-                    "mean_if_adopted": mean, "saves": base - mean, "example": describe_state(plan, data, walked.states[members[0]]),
+                    "mean_if_adopted": mean, "saves": base - mean, "mean_if_route_acts_here_only": held, "route_costs_here": held - planner_mean,
+                    "example": describe_state(plan, data, walked.states[members[0]]),
                 }
             )
-            say(f"  adopt {key[1]} for {key[0]} at {len(members)} states {key[2]} crafted={key[3]}: mean {mean:,.2f} (saves {base - mean:,.2f})")
+            say(f"  adopt {key[1]} for {key[0]} at {len(members)} states {key[2]} crafted={key[3]}: mean {mean:,.2f} (saves {base - mean:,.2f}); the route's action there alone on the planner's policy: {held:,.2f} (costs {held - planner_mean:,.2f})")
         pairs: dict = {}
         for key, members in groups.items():
             pairs.setdefault((key[0], key[1]), []).extend(members)
         pair_rows = []
         for (theirs, ours), members in sorted(pairs.items(), key=lambda kv: -len(kv[1])):
             mean = adopt(members)
-            pair_rows.append({"route_action": theirs, "planner_action": ours, "states": len(members), "mean_if_adopted": mean, "saves": base - mean})
-            say(f"  PAIR adopt {ours} for {theirs} at {len(members)} states: mean {mean:,.2f} (saves {base - mean:,.2f})")
+            held = kept(members)
+            pair_rows.append(
+                {
+                    "route_action": theirs, "planner_action": ours, "states": len(members), "mean_if_adopted": mean, "saves": base - mean,
+                    "mean_if_route_acts_here_only": held, "route_costs_here": held - planner_mean,
+                }
+            )
+            say(f"  PAIR adopt {ours} for {theirs} at {len(members)} states: mean {mean:,.2f} (saves {base - mean:,.2f}); the route's action there alone on the planner's policy: {held:,.2f} (costs {held - planner_mean:,.2f})")
         document["hybrids"][name] = {"base": base, "all_adopted": adopt(everything), "groups": rows, "pairs": pair_rows}
         say(f"  all adopted: {document['hybrids'][name]['all_adopted']:,.2f} (the planner's mean is {document['planner']['mean']:,.2f})")
 
