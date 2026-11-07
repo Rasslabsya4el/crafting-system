@@ -94,6 +94,7 @@ WARM_START = True  # each round's solve starts from the last round's policy and 
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
+PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`)
 POLL_SECONDS = 0.5  # how often a round that expands many states asks the net inside it
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
@@ -136,6 +137,8 @@ class Problem[S](Protocol):
     def release(self) -> None:
         """Called after the work at one state, to let the problem drop what it cached for it."""
         ...
+
+    # optional: `prime(state, positions)` makes, side by side, what the kernels of these offers at the state will cost most (a process pool); it changes no answer
 
 
 @dataclass(frozen=True)
@@ -415,8 +418,18 @@ class Search[S]:
         rows, cands = self.rows[i], self.cands[i]
         best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
+        prime = getattr(self.p, "prime", None)
+        primed = 0  # how many of the offers at the end of `cands` have been primed
         while cands and (first or cands[-1][0] < best):
+            if prime is not None and primed == 0:
+                # the offers still to be realized are among those whose bound is below the best now (it only falls): ask the problem to make their
+                # expensive parts side by side before they are built one by one
+                ahead = [position for la, position in reversed(cands[-PRIME_AHEAD:]) if first or la < best]
+                if len(ahead) > 1:
+                    prime(self.states[i], ahead)
+                primed = len(ahead)
             first = False
+            primed -= 1
             _, position = cands.pop()
             try:
                 kid = self._kernel(i, position)

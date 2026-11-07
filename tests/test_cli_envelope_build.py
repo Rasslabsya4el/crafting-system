@@ -375,3 +375,20 @@ def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):
     assert floors.lower(position, INSIDE) == floors.lower(position, OUTSIDE) > reroll.cost
     assert floors.lower(craft, INSIDE) == floors.entries[craft].cost < floors.lower(craft, OUTSIDE)
     assert floors.lower(position, OTHER) == reroll.cost
+
+
+def test_the_search_primes_the_offers_it_is_about_to_build_and_the_answer_does_not_change(world, monkeypatch):
+    _, start, offers, full, _, _ = world
+    calls = []
+    real = CraftingProblem.prime
+
+    def recording(self, state, positions):
+        calls.append(list(positions))
+        return real(self, state, positions)
+
+    monkeypatch.setattr(CraftingProblem, "prime", recording)
+    fresh = abstraction()
+    result = envelope_result(fresh, fresh.compress(START_ITEM), offers)
+    assert calls and all(len(positions) >= 2 and len(set(positions)) == len(positions) for positions in calls)
+    assert all(len(positions) <= _envelope.PRIME_AHEAD for positions in calls)
+    assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)
