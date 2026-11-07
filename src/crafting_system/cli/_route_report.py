@@ -1,7 +1,8 @@
 """A given route next to the solver's policy: the text section and the `given_route` object of the JSON policy.
 
-The route's numbers carry the start price like the policy's do. A state is named by the id the report
-gives it (`S1`, ...); a gap on a state the policy never reaches has no such id and is named `R1`, `R2`, ...
+The route's numbers carry the start price like the policy's do. In the JSON a state is named by the id the report
+gives it (`S1`, ...); a gap on a state the policy never reaches has no such id and is named `R1`, `R2`, ... The text names the step of the report's
+tree that the state is in ("step 3 (Regal Orb)"), since the tree has a block for each step and not for each state (ticket #488).
 """
 
 from crafting_system.abstraction import CompressedState
@@ -24,10 +25,18 @@ def route_state_ids(report: Report, result: RouteResult) -> dict[CompressedState
     return ids
 
 
+def _place(report: Report, state: CompressedState) -> str:
+    """Where a state is in the text tree: the step it belongs to, or that the policy never reaches it."""
+    number = report.step_of.get(state)
+    if number is None:
+        return "a state the policy never reaches"
+    title = next(step.title for step in report.steps if step.number == number)
+    return f"step {number} ({title})"
+
+
 def render_route_text(report: Report, route: Route, result: RouteResult, data: GameData, *, file_name: str) -> str:
     """The section printed after the policy: the totals side by side, the first divergence and the gaps."""
     plan = report.plan
-    ids = route_state_ids(report, result)
     divine = plan.prices.chaos_per_divine
     shift = plan.start_price.chaos
     risk, solver = result.risk, plan.risk
@@ -46,7 +55,7 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
     if divergence is None:
         lines.append("No divergence: in every state of the policy's main line the route does what the policy does or has a gap.")
     else:
-        lines.append(f"First divergence on the policy's main line: {ids[divergence.state]}")
+        lines.append(f"First divergence on the policy's main line: {_place(report, divergence.state)}")
         lines.append(f"  {describe_state(plan, data, divergence.state)}")
         lines.append(f"  policy does {divergence.solver_action}, route does {divergence.route_action}")
     lines.append("")
@@ -55,7 +64,7 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
     else:
         lines.append(f"Gaps: {len(result.gaps)} reachable state(s) where the route does nothing, so it never finishes from there")
         for gap in result.gaps:
-            lines.append(f"  {ids[gap.state]}: {describe_state(plan, data, gap.state)}")
+            lines.append(f"  {_place(report, gap.state)}: {describe_state(plan, data, gap.state)}")
             lines.append(f"      {gap.reason}")
     lines.append(f"Route run time: the risk calculation and the route build {result.seconds * 1000:.1f} ms")
     return plain_base_names(data, "\n".join(lines) + "\n")  # a base by its game name, never its id (#553, #604)
