@@ -105,6 +105,13 @@ def main() -> None:
         seconds=round(time.perf_counter() - began, 1), mean=plan.mean_remaining, policy_states=len(plan.policy), peak_mb=status_mb("VmHWM"),
         limits=[limit.what for limit in plan.limits],
     )
+    result["peak_of_plan_mb"] = result["peak_mb"]
+    if plan.lumped:  # the steps of the page (`flow_of`) on the same chain: a different peak from the plan's, measured here so it is not guessed
+        from crafting_system.cli._route_chain import chain_of_packed_policy
+
+        chain = chain_of_packed_policy(plan.policy)
+        stage("flow_of (the page's steps)", lambda: _route_flow.flow_of(chain))
+        result["peak_mb"] = status_mb("VmHWM")
     info = getattr(plan.packed, "info", {}) or {}
     if "envelope" in info:
         result["search_peak_mb"] = info["envelope"].peak_mb
