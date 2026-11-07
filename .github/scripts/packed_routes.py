@@ -89,7 +89,8 @@ def inputs(route: str):
     data = load_game_data()
     if route == "s02":
         text = STRAND_TARGET.read_text(encoding="utf-8")
-        text = re.sub(r"(?m)^\s*(?:memory_strands|start_price):.*\n", "", text)  # the research file predates #474: its price is the 10.0 below
+        text = re.sub(r"(?m)^\s*memory_strands:.*\n", "", text)
+        text = re.sub(r"(?m)^start_price:.*$", "start: bought", text)  # the research file predates #474 and #505: its price is the 10.0 below
         text = re.sub(r"\b(?:%s)\b,? ?" % "|".join(STRAND_KINDS), "", text)
         prices = PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, FlatPrices())
         return data, parse_target(text, data, source="s02"), prices, 10.0
