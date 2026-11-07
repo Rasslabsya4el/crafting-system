@@ -373,3 +373,48 @@ def test_a_packed_plan_lists_every_divergence_also_where_the_route_never_goes(ti
 
     assert len(parted) == 3 and {(d.solver_action, d.route_action) for d in parted} == {(REFORGE, CHAOS)}
     assert len(evaluate_route(packed, route, DATA).divergences) == 3
+
+
+def hidden_row(planner, route, planner_exact=True, route_exact=True):
+    return {
+        "state": None, "description": "rare", "solver_action": "A", "route_action": "B",
+        "planner_chance": planner, "planner_chance_exact": planner_exact, "route_chance": route, "route_chance_exact": route_exact,
+    }
+
+
+def test_the_more_line_says_at_most_when_a_hidden_chance_is_a_bound_and_counts_the_unmeasured(tiny, monkeypatch):
+    plan, result = tiny
+    monkeypatch.setattr(divergence_module, "SHOWN", 1)
+    rows = [hidden_row(1.0, 1.0), hidden_row(0.5, None, route_exact=False), hidden_row(0.25, 0.1, planner_exact=False)]
+    monkeypatch.setattr(divergence_module, "_row", lambda *a, **k: rows.pop(0))
+
+    block = divergences_of(plan, result, DATA)
+
+    more = block["more"]
+    assert more["count"] == 2 and more["planner_chance"] == pytest.approx(0.75) and more["route_chance"] == pytest.approx(0.1)
+    assert more["planner_chance_exact"] is False and more["route_chance_exact"] is True
+    assert more["planner_unmeasured"] == 0 and more["route_unmeasured"] == 1
+    text = "\n".join(divergence_lines(block))
+    assert "visited at most 0.75 times by the planner" in text
+    assert "0.1 (and 1 not measured, left out) times by the guide" in text
+
+
+def test_the_more_line_has_no_qualifier_when_every_hidden_chance_is_exact(tiny, monkeypatch):
+    plan, result = tiny
+    monkeypatch.setattr(divergence_module, "SHOWN", 1)
+
+    text = "\n".join(divergence_lines(divergences_of(plan, result, DATA)))
+
+    assert "at most" not in text and "not measured" not in text and "and 2 more, visited" in text
+
+
+def test_the_needs_a_human_row_names_each_top_state_by_its_item_cut_short(tiny):
+    plan, result = tiny
+    block = divergences_of(plan, result, DATA)
+    block["shown"][0]["description"] = "rare; " + "lacks a very long mod text " * 8
+
+    row = [line for line in review_lines("guide", review_of(0.25, 0.5), block) if "top divergences" in line][0]
+
+    assert "S1 (rare; lacks a very long mod text" in row and "...)" in row  # the long one is cut
+    assert "(rare; lacks +1 to Level of all Lightning Skill Gems" in row  # the others are named by their item as well
+    assert "the guide does Chaos Orb, the planner does Harvest Reforge Lightning" in row

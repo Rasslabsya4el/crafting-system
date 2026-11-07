@@ -28,6 +28,7 @@ from ._route import Divergence, RouteResult
 from ._route_chain import chain_of_plan
 from ._route_flow import Chain, Reach, chain_of_policy, reach_of
 
+DESCRIPTION_CUT = 80  # the characters of an item description in the `needs a human` row, which names three states on one line
 SHOWN = 10  # the lines of divergence shown for a route; the rest are counted, with their chances, in `more`
 
 
@@ -71,6 +72,11 @@ def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
             "count": len(rest),
             "planner_chance": sum(row["planner_chance"] or 0.0 for row in rest),
             "route_chance": sum(row["route_chance"] or 0.0 for row in rest),
+            # the sums count a chance that is not measured as 0 and a bound as the number it is: these say how much of each sum is that
+            "planner_chance_exact": all(row["planner_chance_exact"] for row in rest if row["planner_chance"] is not None),
+            "route_chance_exact": all(row["route_chance_exact"] for row in rest if row["route_chance"] is not None),
+            "planner_unmeasured": sum(row["planner_chance"] is None for row in rest),
+            "route_unmeasured": sum(row["route_chance"] is None for row in rest),
         }
     )
     return {"count": len(rows), "shown": rows[:SHOWN], "more": more}
@@ -120,6 +126,11 @@ def _one_line(text: str) -> str:
     return " / ".join(part.strip() for part in text.splitlines() if part.strip())
 
 
+def _cut(text: str, length: int = DESCRIPTION_CUT) -> str:
+    """`text` cut to `length` characters, with `...` when something was left out."""
+    return text if len(text) <= length else text[: length - 3].rstrip() + "..."
+
+
 def _sum_text(total: float) -> str:
     """A sum of chances, which may pass 1: a plain number, not a percentage capped at 100%."""
     return f"{total:.4g}"
@@ -141,10 +152,17 @@ def divergence_lines(block: dict) -> list[str]:
     more = block["more"]
     if more is not None:
         lines.append(
-            f"    and {more['count']} more, visited {_sum_text(more['planner_chance'])} times by the planner and {_sum_text(more['route_chance'])} times by the guide, "
+            f"    and {more['count']} more, visited {_more_text(more, 'planner')} times by the planner and {_more_text(more, 'route')} times by the guide, "
             "summed over the states (a run that visits two of them counts twice)"
         )
     return lines
+
+
+def _more_text(more: dict, side: str) -> str:
+    """One sum of the hidden rows: `at most` when any of its chances is a bound, and how many states are left out of it because their chance is not measured."""
+    text = ("" if more.get(f"{side}_chance_exact", True) else "at most ") + _sum_text(more[f"{side}_chance"])
+    unmeasured = more.get(f"{side}_unmeasured", 0)
+    return f"{text} (and {unmeasured} not measured, left out)" if unmeasured else text
 
 
 def review_lines(label: str, ratio_block: dict, divergences: dict) -> list[str]:
@@ -160,5 +178,11 @@ def review_lines(label: str, ratio_block: dict, divergences: dict) -> list[str]:
         )
         top = divergences["shown"][:3]
         if top:
-            lines.append("    top divergences: " + "; ".join(f"{row['state'] or 'a state'}: the guide does {row['route_action']}, the planner does {row['solver_action']}" for row in top))
+            lines.append(
+                "    top divergences: "
+                + "; ".join(
+                    f"{row['state'] or 'a state'} ({_cut(_one_line(row['description']))}): the guide does {row['route_action']}, the planner does {row['solver_action']}"
+                    for row in top
+                )
+            )
     return lines

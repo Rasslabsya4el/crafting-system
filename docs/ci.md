@@ -180,6 +180,12 @@ and writes `<target>.count.json`. `simulate_route.py` plays a given route on con
 `cli/_route_sim.py`) and writes its success rate, mean, p50 and p90 with intervals; a state no rule covers stops that run,
 and with `--skip-refused` a rule whose action the game refuses is skipped (for the `*-restart.yaml` routes).
 
+### The benchmark over all routes, split over the runners (#554)
+
+`benchmark` prints, for each route with a given route, the divergences of the guide from the planner, the ratio of the two means and a "needs a human" row below `[benchmark] review_ratio` of `crafting.toml` (default 0.5, a prompt for a person and not a cut of the search). The summary lines are the output of one heavy run; `.github/scripts/benchmark_routes.py IDS OUT_DIR` runs `benchmark --heavy` on the routes `IDS` (comma separated) with the committed price snapshot, and prints each phase of the packed solver and of the visit chances as it ends. Four runners split the ten routes by `$RUNNER_INDEX` (R14 alone takes about 35 minutes, R04 alone about 10):
+
+    $D --runners 4 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; 3) R=R08,R09,R13;; 4) R=R12,R10,R11,R05,V01;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
+
 ### R04 and R14 end to end (#70)
 
 Since the packed solver the two routes are planned by the CLI itself: with the default budget the decision finds no approximate level
