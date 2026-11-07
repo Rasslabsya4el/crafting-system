@@ -15,6 +15,7 @@ from limits_support import only
 from targets_implicits_support import TEXTED, parse, parse_error
 
 from crafting_system.cli import STRANDS_OFF, PlanError, StrandSetting, build_report, main, make_plan, render_text, strand_setting
+from crafting_system.cli._report import POLICY_HEADING
 from crafting_system.cli._route_card import card_of_item
 from crafting_system.config import Config, load_config
 from crafting_system.items import (
@@ -350,7 +351,7 @@ def test_the_report_names_the_setting_when_it_is_off(tmp_path, capsys):
     lines = capsys.readouterr().out.splitlines()
     (found,) = [line for line in lines if line.startswith("  Memory Strands are not considered")]  # G1, a limit of the answer
     assert "the start item has none" in found and found.endswith("The plan makes no use of Memory Strands.")
-    assert lines.index("What this answer leaves out:") < lines.index(found) < lines.index("Policy (S = a state of the item; the start is S1)")
+    assert lines.index("What this answer leaves out:") < lines.index(found) < lines.index(POLICY_HEADING)
 
 
 def test_a_plan_made_without_the_setting_says_it_is_off():

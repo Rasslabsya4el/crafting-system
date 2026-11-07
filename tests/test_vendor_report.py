@@ -33,6 +33,7 @@ from vendor_starts_support import (
 
 from crafting_system.cli import build_report, plan_with_starts, policy_document, render_text
 from crafting_system.cli._route_view import build_section, route_input, write_route_page
+from crafting_system.cli._report import POLICY_HEADING
 from crafting_system.cli._start_step import ROLE_AUGMENTATION, ROLE_BASE, ROLE_FLASK, first_step
 from crafting_system.cli._start_types import SOURCE_PLAIN
 from crafting_system.prices import load_buy_spec
@@ -67,10 +68,10 @@ def test_the_text_report_names_the_goods_with_counts_the_item_that_comes_back_an
 
     assert text.isascii()
     lines = text.splitlines()
-    first = lines.index("First step, before S1: Vendor recipe: Boots with movement speed, 5 recipes in a row")
+    first = lines.index("Step 1: Vendor recipe: Boots with movement speed, 5 recipes in a row")
     assert lines[first - 1].startswith("Start item")  # the step sits in the header, before the options and the policy
     assert lines.index(next(line for line in lines if line.startswith("Start options"))) > first
-    assert lines.index("Policy (S = a state of the item; the start is S1)") > first
+    assert lines.index(POLICY_HEADING) > first
     assert lines[first + 1 : first + 5] == [
         "  You hand the vendor:",
         f"    1 {BOOTS_NAME}, a Normal base: {BASE_PRICE:,.2f} Chaos [trade-api]",

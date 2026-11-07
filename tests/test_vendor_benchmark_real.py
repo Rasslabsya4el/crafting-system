@@ -29,6 +29,7 @@ import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from cli_support import TODAY
+from report_steps_support import assert_report_is_the_page, blocks_of
 from route_view_support import GOLDEN, assert_golden
 
 from crafting_system.cli import (
@@ -125,7 +126,7 @@ def test_the_report_names_the_base_and_the_gems_with_their_counts_the_item_back_
     text = render_text(report, target_name="v01-minion-helmet.yaml")
     lines = text.splitlines()
 
-    first = lines.index("First step, before S1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe")
+    first = lines.index("Step 1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe")
     assert lines[first + 1 :first + 6] == [
         "  You hand the vendor:",
         f"    1 Lion Pelt (ilvl 84), a Normal base: {BASE_PRICE:,.2f} Chaos [hand]",
@@ -140,6 +141,22 @@ def test_the_report_names_the_base_and_the_gems_with_their_counts_the_item_back_
     assert "Start item (Helmet with +1" not in text
     assert "Quality gems for a vendor recipe are counted as uncorrupted skill gems only" in text  # the approximate claim of the gem rule is listed with the answer, in words (#604)
     assert "vendor.gem_qualification_is_uncorrupted_skill_gems" not in text
+
+
+def test_the_text_report_has_one_block_for_each_player_action_with_the_chances_of_the_page(plan, data, report):
+    """Ticket #488: V01's tree had 88 blocks, 79 of them a restart; it has the page's 3 actions now, with the page's chances (OR-18, OR-20)."""
+    text = render_text(report, target_name="v01-minion-helmet.yaml")
+
+    assert len(report.states) == 88  # the JSON still lists the states one by one
+    blocks = blocks_of(text)
+    assert [(number, title) for number, title, _ in blocks] == [
+        (2, "Orb of Augmentation"),
+        (3, "Regal Orb"),
+        (4, "Restart: make the start item at the vendor again"),
+    ]
+    assert_report_is_the_page(text, build_section(route_input(plan), data), plan)
+    regal = blocks[1][2]
+    assert [words for _, words in regal] == ["the target", "step 4: Restart: make the start item at the vendor again"]  # the eight Regal states: one block, one chance for the target
 
 
 def test_the_first_step_is_built_from_the_chosen_candidate_alone(plan, data):

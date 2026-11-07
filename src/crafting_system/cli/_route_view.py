@@ -74,7 +74,7 @@ from ._report import UNRESOLVED, Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
 from ._route_chain import chain_of_packed_policy
-from ._route_flow import Chain, Edge, Step, chain_of_policy, flow_limits, flow_of
+from ._route_flow import Chain, Edge, Flow, Step, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
@@ -261,24 +261,40 @@ def _lost_leaves(chain: Chain, src: np.ndarray, dst: np.ndarray) -> tuple[range,
     return range(status.shape[1]), (status[src] == met) & (status[dst] != met)
 
 
+def steps_of_chain(chain: Chain) -> Flow:
+    """The steps of a chain, as the page and the text report both draw them (`_route_flow.flow_of`): made once for a chain, then read from it.
+
+    The chain of a lumped plan is made once per policy, so the page, the text report and the plan's limits all read the same solve.
+    """
+    cached = getattr(chain, "_steps", None)
+    if cached is None:
+        cached = flow_of(chain, is_restart=lambda action: action.label == RESTART, loss=_lost_leaves)
+        object.__setattr__(chain, "_steps", cached)
+    return cached
+
+
+def _require_limits(plan: Plan) -> None:
+    """A page is drawn only from a plan that carries the limits a planner's plan has; the steps of the text report are not a page and ask nothing."""
+    if not any(limit.kind == STRANDS for limit in plan.limits):
+        # Every plan the planner makes carries the limit "Memory Strands are not considered" (`strands_limit`, the first one `plan_for` writes), so a plan
+        # without it is not one the planner made, and a page drawn from it would say "Cheapest policy of the planner" with no part "What this answer
+        # leaves out", or a part that lacks what every real plan has (OR-13).
+        raise PageError(
+            "the plan has no limits of a planner's plan (not even the Memory Strands one), so the page would claim a guarantee it does not state (OR-13): "
+            "a plan made by the planner always carries what it leaves out (`Plan.limits`); build this one with them"
+        )
+
+
 class _View:
     """What the rows of one section share: the plan, the data, the flow and the anchors."""
 
     def __init__(self, inp: RouteInput, data: GameData, buy: BuyStep | None, prefix: str, route_field: bool) -> None:
-        if not any(limit.kind == STRANDS for limit in inp.plan.limits):
-            # Every plan the planner makes carries the limit "Memory Strands are not considered" (`strands_limit`, the first one `plan_for` writes), so a plan
-            # without it is not one the planner made, and a page drawn from it would say "Cheapest policy of the planner" with no part "What this answer
-            # leaves out", or a part that lacks what every real plan has (OR-13).
-            raise PageError(
-                "the plan has no limits of a planner's plan (not even the Memory Strands one), so the page would claim a guarantee it does not state (OR-13): "
-                "a plan made by the planner always carries what it leaves out (`Plan.limits`); build this one with them"
-            )
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
         self.route_field = route_field
         self.ab = self.plan.abstraction
         self.reader = _StateReader(self.ab)
         self.chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
-        self.flow = flow_of(self.chain, is_restart=lambda action: action.label == RESTART, loss=_lost_leaves)
+        self.flow = steps_of_chain(self.chain)
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
         self.first: FirstStep | None = None if starts is None else first_step(starts.chosen, data, self.plan.target)
@@ -634,8 +650,8 @@ class _View:
         goal = self.gains(step, moving)
         if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
-        never = step.uses is not None and math.isinf(step.uses)
-        step_cost = None if step.uses is None or never else step.uses * step.cost
+        never = step.never_finishes
+        step_cost = step.step_cost
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [count(step.uses)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
@@ -722,6 +738,7 @@ def build_section(
 
     The goal card names the route in a "Route" field unless `route_field` is False (the page has a heading with it).
     """
+    _require_limits(inp.plan)
     view = _View(inp, data, buy, prefix, route_field)
     rows = [view.buy_row(final=not view.flow.steps)]
     rows += [view.step_row(step) for step in view.flow.steps]

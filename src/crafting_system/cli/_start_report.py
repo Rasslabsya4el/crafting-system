@@ -62,7 +62,7 @@ def _gives(text: str, note: str) -> str:
 
 def first_step_lines(step: FirstStep) -> list[str]:
     """The text block on the first step of a plan that starts from a vendor recipe (ASCII only): the bill, the recipes, the item back, the price."""
-    lines = [f"First step, before S1: {step.title}", "  You hand the vendor:"]
+    lines = [f"Step 1: {step.title}", "  You hand the vendor:"]
     for good in step.hand:
         lines.append(f"    {good.label}: {money(good.chaos)} Chaos [{good.price_source}]")
     if len(step.rounds) > 1:
