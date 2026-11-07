@@ -17,8 +17,9 @@ item_level: 86
 
 # Where the crafting starts (OR-4, #545, #576). The post's first step is "Alt spam for T1 Life and a resist" (thread pq4owv, u/Fabere's "Rule 10"):
 # an Orb of Alteration works on a Magic item only, and the post names no Transmutation Orb (a Normal start plus one would be a step the
-# guide does not give, OR-16), so the start is a Magic Leather Belt. It is bought with any mods or none (OR-17): the post names none
-# of its mods, and an Alteration rerolls them all.
+# guide does not give, OR-16), so the start is a Magic Leather Belt. It is bought, and the post names none of its mods: it is the item the
+# market sells (ADR-0064, OR-17), so it holds what an Orb of Alteration leaves on this base, 1 or 2 mods at their game weights, and the plan's
+# first decision is made on each outcome of that draw (an Augmentation only where it holds one mod, an Alteration where it holds two).
 start_item:
   rarity: magic
 

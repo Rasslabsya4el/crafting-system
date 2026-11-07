@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.cli import make_plan
+from crafting_system.cli import _plan, make_plan
 from crafting_system.cli._envelope import Net
 from crafting_system.cli._plan import add_risk
 from crafting_system.cli._envelope_plan import BoundError, certificate_gap, envelope_result, route_incumbent
@@ -126,7 +126,7 @@ def test_a_stopped_search_on_a_real_route_certifies_the_exact_cost_between_its_b
     print(f"{route}: exact {exact:,.4f}, certificate [{info.lower:,.4f}, {info.upper:,.4f}], gap {gap:.4%}")  # visible with -s
 
 
-def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
+def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data, monkeypatch):
     """The control on a real route: the comparison that every run above passes fails for a wrong bound (one key in four raised tenfold)."""
     if str(ROOT / "research" / "312") not in sys.path:
         sys.path.append(str(ROOT / "research" / "312"))
@@ -134,6 +134,7 @@ def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
 
     _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced)
+    monkeypatch.setattr(_plan, "unopened_listing", lambda data, start: None)  # the research model starts from the item with no mods: the plan without the draw of a bought item's mods (ADR-0064)
     exact = make_plan(data, load_target(TARGET_R13, data), load_price_file(PRICES), solver="packed", with_risk=False).mean_remaining
     sound = envelope_result(abstraction, start, priced, bound=bound)
     assert sound.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)

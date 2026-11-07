@@ -17,6 +17,7 @@ import pytest
 from abstraction_support import real_game_data
 from limits_support import labels_of, of_kind
 
+from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.cli._benchmark_outcomes import PublishedOutcome, published_outcomes
@@ -42,6 +43,7 @@ OFFERS = {
         "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Annulment", "Exalted Orb",
         "Remove Crafted Mods", "Bench craft Can have up to 3 Crafted Modifiers", "Bench craft Cannot roll Attack Modifiers",
         "Bench craft +2 to Level of Socketed Support Gems", "Bench craft +(18-20)% to Chaos Damage over Time Multiplier", "restart",
+        DRAW_LABEL,  # the bought Magic bow is the item the market sells (ADR-0064): the plan opens with the draw of its mods
     },
 }
 START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api", 13.0)}

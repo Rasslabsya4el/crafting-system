@@ -466,7 +466,7 @@ class Abstraction:
             ),
             key=lambda slot: slot.key,
         )
-        flags = Flags(item.rarity, item.corrupted, item.influences)
+        flags = Flags(item.rarity, item.corrupted, item.influences, item.unopened)
         return CompressedState(
             flags,
             tuple(fractured),
@@ -1154,6 +1154,7 @@ class Abstraction:
             rarity=flags.rarity,
             influences=flags.influences,
             corrupted=flags.corrupted,
+            unopened=flags.unopened,
             mods=tuple(mods),
             implicits=self._implicits_of(state),
             quality=state.quality,
@@ -1205,6 +1206,12 @@ class Abstraction:
         if state.offer and not action.reads(self.data).offer:
             raise NotApplicableError(
                 "the item holds an unveil offer, a choice node (ADR-0026): the only actions there are the picks, and there is no way to decline"
+            )
+        if state.flags.unopened != action.opens_listing:
+            raise NotApplicableError(
+                "the bought item's mods are not drawn yet, and the draw that opens it is the only action there"
+                if state.flags.unopened
+                else "the item is already open: the draw of a bought item's mods works only on the listing"
             )
         erasing = not self._kinds.reads_junk(action) and not self._metamods
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots

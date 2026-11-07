@@ -189,8 +189,15 @@ class Item:
     memory_strands: int = 0
     sockets: Sockets | None = None
     imprints: tuple["Item", ...] = ()
+    # A listing that is bought but whose mods are not rolled yet (ticket #640): a normal item with no mod that stands for the item the market
+    # sells. Only the draw that opens it (`actions.listing`) works on it; the draw gives a new item that is not unopened.
+    unopened: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.unopened) is not bool:
+            raise self._error(f"unopened {self.unopened!r} is not True or False")
+        if self.unopened and (self.rarity is not Rarity.NORMAL or self.mods or self.corrupted or self.imprints or self.veil_offer):
+            raise self._error("an unopened listing is a normal item with no mod, not corrupted, with no imprint and no offer")
         if type(self.item_level) is not int:
             raise self._error(f"item level {self.item_level!r} is not an integer")
         if not MIN_ITEM_LEVEL <= self.item_level <= MAX_ITEM_LEVEL:

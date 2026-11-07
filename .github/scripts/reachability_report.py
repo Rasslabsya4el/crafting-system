@@ -909,7 +909,7 @@ def offered_kinds(probe: Probe) -> dict[str, int]:
     counts: Counter = Counter()
     for priced in probe.plan.offers:  # type: ignore[attr-defined]
         action = priced.offer.action
-        if isinstance(action, BuyStartItem):
+        if isinstance(action, BuyStartItem) or action.opens_listing:  # neither is an action of the catalog: the restart and the draw of a bought item's mods (ADR-0064)
             continue
         counts[probe.owner.get(action, "(not in the catalog)")] += 1
     return dict(counts)
