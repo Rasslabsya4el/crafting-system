@@ -589,8 +589,17 @@ class PatternBuilder:
     """
 
     def __init__(
-        self, abstraction: Abstraction, start: CompressedState, *, tags: bool | None = None, progress=None, max_keys: int | None = None, stop=None
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        *,
+        tags: bool | None = None,
+        progress=None,
+        max_keys: int | None = None,
+        stop=None,
+        grow: bool = False,
     ) -> None:
+        self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
         self.ab = abstraction
         self.start = start
         self.tags = tags
@@ -616,6 +625,7 @@ class PatternBuilder:
         self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key holds
+        self.members_kept: dict[int, dict[Mode, list[CompressedState]]] = {}
         self.pattern.note(self.start)
         self.start_id = self._intern(self.start)
 
@@ -736,7 +746,7 @@ class PatternBuilder:
         """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
         key = self.keys[i]
-        by_mode: dict[Mode, list[CompressedState]] = {}
+        by_mode: dict[Mode, list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
         added: list[tuple[int, int]] = []
         for oi in range(first, len(offers)):
             offer = offers[oi]

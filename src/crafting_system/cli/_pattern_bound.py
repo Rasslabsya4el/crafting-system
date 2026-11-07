@@ -137,7 +137,7 @@ def pattern_lower_bound(
             f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
             f"({phases['floors']:.1f} s)"
         )
-    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop)
+    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None)
     kept = None  # the last round that ran to its end: (model, value, error bound, order)
     adding = list(order)
     rounds = 0
