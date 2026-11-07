@@ -90,6 +90,11 @@ def leaves(node):
         yield node
 
 
+def line_name(line) -> str:
+    """The name of a goal line's cell: the line as the target file writes it (a tier, or the mods it names / accepts)."""
+    return f"{line.family or line.stat} {'tier ' + str(line.min_tier) if line.min_tier is not None else 'by its mod'}"
+
+
 def tier_cells(data, case, record, our, target) -> list[Cell]:
     """For each mod line of the goal that a draw can satisfy: the chance that the finished item holds a mod that line accepts.
 
@@ -108,7 +113,7 @@ def tier_cells(data, case, record, our, target) -> list[Cell]:
             continue
         families = {family for mod_id in possible for family in data.mods[mod_id].families}
         assert len(families) == 1, f"{case}: the goal line {line.family or line.stat!r} reaches several families {families}"
-        name = f"{line.family or line.stat} {'tier ' + str(line.min_tier) if line.min_tier is not None else 'by its mod'}"
+        name = line_name(line)
         seen = sum(record["mods"].get(mod_id, 0) for mod_id in possible)
         chance = float(sum(marginals[mod_id] for mod_id in possible))
         cells.append(Cell(case, "tier", name, record["applied"], seen, chance))
@@ -225,16 +230,43 @@ def test_the_module_tests_many_cells_with_a_stated_correction(all_cells):
     assert ALPHA == 0.01 and MIN_EXPECTED == 5
 
 
-def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(all_cells):
-    """The tier cells exist for the lines of the goal that matter: Life T1 on the belt, Defences T1 and Movement Speed T1 on the boots."""
-    names = {(cell.case, cell.name) for cell in all_cells if cell.kind == "tier" and cell.testable}
-    assert ("alteration-r13-belt", "IncreasedLife tier 1") in names
-    assert ("regal-r13-belt", "IncreasedLife tier 1") in names
-    assert ("augmentation-r13-belt", "IncreasedLife tier 1") in names
-    assert ("fossil-r08-boots", "DefencesPercent tier 1") in names
-    assert ("fossil-r09-boots", "IncreasedLife tier 1") in names
-    assert ("essence-r10-boots", "IncreasedLife tier 1") in names
-    assert ("essence-r11-helmet", "IncreasedLife tier 1") in names
+def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(data, ours, targets, all_cells):
+    """Each mod line the route's target file asks is a tested tier cell, a mod the item already holds, or one the action cannot give.
+
+    The lines are read from the target files as they stand (a line the guide gives no tier, a roll, a named mod), never from
+    a list of names written here, so a target that is re-read cannot slip out of the comparison. A line is "forced" only when
+    the item holds its mod already (`kept`: the fractured start mod, the essence's forced mod) or our model's chance of it is
+    exactly 0 (the action cannot add it: a suffix to a full magic item, a bench-only mod).
+    """
+    tested = {(cell.case, cell.name) for cell in all_cells if cell.kind == "tier" and cell.testable}
+    asked = set()
+    for case, target_name in TARGET_OF.items():
+        if not target_name:
+            continue
+        marginals = ours[case].marginals()
+        for line in (leaf for requirement in targets[target_name].requirements for leaf in leaves(requirement)):
+            accepted = set(line.tier_ok if line.tier_ok is not None else line.mod_ids)
+            if accepted & ours[case].kept:
+                continue
+            possible = accepted & marginals.keys()
+            if sum(marginals[mod_id] for mod_id in possible) == 0:
+                continue
+            asked.add((case, line_name(line)))
+    assert asked <= tested, f"goal lines with no tested cell: {sorted(asked - tested)}"
+    # the lines that matter are among them: Life T1 on the belt, Defences and Movement Speed on the boots, Life on the other routes
+    for case, family in [
+        ("alteration-r13-belt", "IncreasedLife"),
+        ("regal-r13-belt", "IncreasedLife"),
+        ("augmentation-r13-belt", "IncreasedLife"),
+        ("fossil-r08-boots", "DefencesPercent"),
+        ("fossil-r08-boots", "MovementVelocity"),
+        ("fossil-r09-boots", "IncreasedLife"),
+        ("fossil-r09-boots", "MovementVelocity"),
+        ("essence-r10-boots", "+# to maximum Life"),
+        ("essence-r11-helmet", "+# to maximum Life"),
+        ("essence-r11-helmet", "DefencesPercent"),
+    ]:
+        assert any(c == case and name.startswith(family + " ") for c, name in asked), (case, family)
 
 
 def test_c02_the_life_and_a_resistance_together_are_the_emulator_s(all_cells):
