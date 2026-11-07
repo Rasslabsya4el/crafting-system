@@ -1,0 +1,94 @@
+{
+ "provenance": {
+  "R04": "GitHub run 42395491917 (heavy run of .github/scripts/benchmark_routes.py R04 on the branch claude/634-617-verdicts, commit 786a5c540ad8573e41e51c1f44557de4cf55e24b, 2026-11-07): benchmark.json routes[0].given_route and .completed_route. The target and the two route files are the same at that commit and now; the price file moved for the start items of R13 and R14 only, so the price of every action of R04 is the same. To be replaced by a benchmark run on main (dispatched with this PR).",
+  "R14": "GitHub run 42395636328 (heavy run of divergence_costs.py R14 on main, commit ddd23d91373aacfe00c16e6b0096d18462c7ebed, 2026-11-07): 'route guide: mean inf, success 0.0, 1 gap(s)' and 'route completed: mean 13125.571850205819, success 1.0, 0 gap(s)'. The target, the two route files and the price of every action of the route are the same at that commit and now (checked by hash and by cost).",
+  "inputs": "sha256 of the target and route files (line ends as in the repository) and the cost of one use of each action of the route at the price file; a heavy run (NAIVE_HEAVY=1) fails when they differ",
+  "success": "the success of a route as written is the LOW END of the planner's bracket (risk/_evaluate.py), so it is a lower bound (issue #683)",
+  "what": "the planner side of R04 and R14 for tests/test_naive_crafter_routes.py: the mean of the completed route (the route file with a restart) and the success value of the guide's route as written, from heavy runs of the benchmark's pipeline; a solve of 177,242 and 816,153 states, too long for a test"
+ },
+ "routes": {
+  "R04": {
+   "gaps": 13,
+   "inputs": {
+    "costs": {
+     "Bench craft Cannot roll Attack Modifiers": 372.2,
+     "Deafening Essence of Rage": 7.64,
+     "Essence of Insanity": 45.54,
+     "Exalted Orb": 2.29,
+     "Fracturing Orb": 260.4,
+     "Orb of Annulment": 11.42,
+     "restart": 9.0
+    },
+    "route": "0914f23b1b1db1320074a85d14f05310fd292a3d7370d9bc627165b5feda53b0",
+    "target": "724ef091ef9f78b5e9954ce55b5c8c98c55148da71bea081531ebf38ed342d07"
+   },
+   "mean": null,
+   "stem": "r04-penetrating-quiver",
+   "success": 0.002945945214113695
+  },
+  "R04 with restart": {
+   "inputs": {
+    "costs": {
+     "Bench craft Cannot roll Attack Modifiers": 372.2,
+     "Deafening Essence of Rage": 7.64,
+     "Essence of Insanity": 45.54,
+     "Exalted Orb": 2.29,
+     "Fracturing Orb": 260.4,
+     "Orb of Annulment": 11.42,
+     "Remove Crafted Mods": 0.3668,
+     "restart": 9.0
+    },
+    "route": "4f6c0229e2688042115ba3bfe428cb8156b166f30f14135e31dd500b5b5c2c84",
+    "target": "724ef091ef9f78b5e9954ce55b5c8c98c55148da71bea081531ebf38ed342d07"
+   },
+   "mean": 209293.56539101215,
+   "p50": 145745.82,
+   "p90": 480358.72,
+   "stem": "r04-penetrating-quiver-restart",
+   "success": 1.0
+  },
+  "R14": {
+   "gaps": 1,
+   "inputs": {
+    "costs": {
+     "Bench craft +(18-20)% to Chaos Damage over Time Multiplier": 4.0,
+     "Bench craft +2 to Level of Socketed Support Gems": 9.16,
+     "Bench craft Can have up to 3 Crafted Modifiers": 744.4,
+     "Bench craft Cannot roll Attack Modifiers": 372.2,
+     "Exalted Orb": 2.29,
+     "Orb of Alteration": 0.1001,
+     "Orb of Annulment": 11.42,
+     "Regal Orb": 0.06364,
+     "Remove Crafted Mods": 0.3668,
+     "restart": 13.0
+    },
+    "route": "b334c25cac3511890735a44b29887625abfefea9ba49f37bdb9c156aa4b773c5",
+    "target": "6192dbf7c3672d2e261131a1a605c12a29860dcd411bab0e4bf5ea7236e1a17c"
+   },
+   "mean": null,
+   "stem": "r14-hunter-bow",
+   "success": 0.0
+  },
+  "R14 with restart": {
+   "inputs": {
+    "costs": {
+     "Bench craft +(18-20)% to Chaos Damage over Time Multiplier": 4.0,
+     "Bench craft +2 to Level of Socketed Support Gems": 9.16,
+     "Bench craft Can have up to 3 Crafted Modifiers": 744.4,
+     "Bench craft Cannot roll Attack Modifiers": 372.2,
+     "Exalted Orb": 2.29,
+     "Orb of Alteration": 0.1001,
+     "Orb of Annulment": 11.42,
+     "Regal Orb": 0.06364,
+     "Remove Crafted Mods": 0.3668,
+     "restart": 13.0
+    },
+    "route": "cd90be46872db93c8f06276473d2debf0b3b0c9109b53f400d6e259e14b65bfb",
+    "target": "6192dbf7c3672d2e261131a1a605c12a29860dcd411bab0e4bf5ea7236e1a17c"
+   },
+   "mean": 13125.571850205819,
+   "stem": "r14-hunter-bow-restart",
+   "success": 1.0
+  }
+ }
+}
