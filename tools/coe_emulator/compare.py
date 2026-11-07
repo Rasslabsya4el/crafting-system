@@ -41,6 +41,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from emulator import Emulator, default_copy  # noqa: E402
+from target_judge import TargetJudge  # noqa: E402
 
 from crafting_system import actions  # noqa: E402,F401  (registers every kind)
 from crafting_system.actions.catalog import catalog  # noqa: E402
@@ -345,6 +346,9 @@ def compare_action(data, coe: Coe, emulator: Emulator, item: Item, spec: dict, c
         row["candidates"].append(f"CoE mods that map to none of ours: {unmapped[:5]}")
     if applied["failures"]:
         row["candidates"].append(f"the emulator refused {sum(applied['failures'].values())} of {repeats} repeats that ours applies")
+    if spec.get("target") and not unmapped:
+        row["target_met"] = target_met(data, spec, item, action, results, n_ok)
+        row["candidates"] += row["target_met"].pop("flags")
     exact = finished_distribution(outcomes)
     if exact is not None:
         keys = set(exact) | set(results)
@@ -381,6 +385,31 @@ def compare_action(data, coe: Coe, emulator: Emulator, item: Item, spec: dict, c
     row["candidates"] += [f"mod {m['mod']}: ours {m['ours']}, CoE {m['coe']}" for m in marginals if m["z"] is not None and abs(m["z"]) > 4]
     row["candidates"] += [f"shape {m['shape']}: ours {m['ours']}, CoE {m['coe']}" for m in row["shapes"] if m["z"] is not None and abs(m["z"]) > 4]
     return row
+
+
+def target_met(data, spec: dict, item: Item, action, results: Counter, n_ok: int) -> dict:
+    """The joint "the target is met" count (ticket #617): the share of the emulator's finished items that are the target, or one sure bench craft short of it,
+    beside the planner's exact chance of one use of `action` (`_benchmark_use.per_use_of`, the same judge). Needs the check's item to be the target's start item."""
+    from crafting_system.cli._benchmark_use import per_use_of
+
+    judge = TargetJudge(data, spec["target"])
+    start = judge.target.start_item
+    if (item.base_id, item.item_level, item.rarity, item.mods) != (start.base_id, start.item_level, start.rarity, start.mods):
+        return {"note": "the check's item is not the target's start item: no target count", "flags": []}
+    readings: Counter = Counter()
+    for mods, count in results.items():
+        readings[judge.reading(sorted(mods))] += count
+    use = per_use_of(judge.plan, judge.plan.start, action.label(data))
+    block = {"target": spec["target"], "emulator": dict(readings), "ours": {key: use[key] for key in ("chance", "short")}, "flags": []}
+    for name, seen, mine in (
+        ("ends in the target", readings["goal"], use["chance"]),
+        ("ends in the target or one bench craft short of it", readings["goal"] + readings["short"], use["chance"] + use["short"]),
+    ):
+        z = z_score(mine, seen, n_ok)
+        block[name] = {"ours": round(mine, 5), "coe": round(seen / n_ok, 5), "z": None if z is None else round(z, 2)}
+        if z is not None and abs(z) > 4:
+            block["flags"].append(f"target: {name}: ours {mine:.5f}, CoE {seen / n_ok:.5f}")
+    return block
 
 
 def two_sample_z(hits_a: int, n_a: int, hits_b: int, n_b: int) -> float | None:

@@ -11,7 +11,9 @@ cannot be written, is an error.
 
 The check is on both sides (ticket #554): beside "the planner is not dearer than the guide" each route with a given route carries every
 state where the two part, with the chance of visiting it under each policy, the ratio planner mean / guide mean, and a "needs a human"
-row when that ratio is below the review line of the config (`_benchmark_divergence`). The row is a prompt, never a verdict or a cut.
+row when that ratio is below the review line of the config (`_benchmark_divergence`). The row is a prompt, never a verdict or a cut. A route that a person
+has taken apart carries a reviewed verdict (`_benchmark_verdicts`, ticket #634) and prints it until its ratio, its files or the planner's first divergent
+action have moved; the first divergence tells the chance and the cost of one use of both actions (ticket #617).
 """
 
 import argparse
@@ -34,12 +36,13 @@ from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
 
-from ._benchmark_divergence import divergence_lines, divergences_of, mean_ratio, review_lines, review_of
+from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
+from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
 from ._offers import default_offers
 from ._plan import Plan, make_plan
-from ._report import describe_state, money, number_states, percent
+from ._report import money, number_states, percent
 from ._route import RouteResult, evaluate_route, load_route
 from ._shares import weight_share
 from ._start_report import first_step_document
@@ -396,12 +399,17 @@ def run_route(
         if bench.route is not None:
             route = load_route(root / bench.route, plan, data)
             result = evaluate_route(plan, route, data)
-            entry["given_route"] = _given_route(plan, result, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio)
+            entry["given_route"] = _given_route(
+                plan, result, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio, _reviewing(bench, bench.route, GUIDE, root, config)
+            )
             timings["route_evaluate"] = result.seconds
             entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
             if bench.completed is not None:
                 again = evaluate_route(plan, load_route(root / bench.completed, plan, data), data)
-                entry["completed_route"] = _given_route(plan, again, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio)
+                entry["completed_route"] = _given_route(
+                    plan, again, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio,
+                    _reviewing(bench, bench.completed, COMPLETED, root, config),
+                )
                 timings["completed_route_evaluate"] = again.seconds
                 entry["solver_not_dearer_than_completed"] = _not_dearer(entry["solver"]["mean"], entry["completed_route"]["mean"])
     except _Skipped:
@@ -411,6 +419,14 @@ def run_route(
     timings["total"] = time.perf_counter() - began
     entry["timings_seconds"] = timings
     return entry, loaded
+
+
+def _reviewing(bench: BenchmarkRoute, route_file: str, side: str, root: Path, config: Config) -> Reviewing | None:
+    """What the verdict of one half of a route is judged on now: its tolerance and the hashes of the target and of the route file evaluated; None without a verdict."""
+    verdict = verdict_of(bench.id, side)
+    if verdict is None:
+        return None
+    return Reviewing(verdict, config.benchmark_review_tolerance, text_hash(root / bench.target), text_hash(root / route_file))
 
 
 def _start_entry(plan: Plan, data: GameData, expected: ExpectedStart | None) -> dict | None:
@@ -505,32 +521,35 @@ def _totals(success: Estimate, mean: Estimate, p50: Estimate, p90: Estimate, shi
 
 
 def _given_route(
-    plan: Plan, result: RouteResult, data: GameData, shift: float, solver_mean: float | None = None, review_line: float | None = None
+    plan: Plan,
+    result: RouteResult,
+    data: GameData,
+    shift: float,
+    solver_mean: float | None = None,
+    review_line: float | None = None,
+    reviewing: Reviewing | None = None,
 ) -> dict:
     """The guide's route at the planner's prices: its totals, its gaps and its first divergence from the planner.
 
     With a `review_line` (the config's `[benchmark] review_ratio`) it also carries every divergence with the chance of each and the
     ratio of the planner's mean `solver_mean` (start price included) to the guide's (ticket #554). A caller that wants the totals only
-    (`.github/scripts/measure_sim.py`) leaves it out and no visit chance is solved.
+    (`.github/scripts/measure_sim.py`) leaves it out and no visit chance is solved. `reviewing` is what the verdict of the route (if a person gave
+    one) is judged on (`_benchmark_verdicts`, ticket #634); the first divergence then also carries the numbers of one use of each action (ticket #617).
     """
     risk = result.risk
     found = _totals(risk.success_probability, risk.mean, risk.p50, risk.p90, shift)
     divergence = result.divergence
     found["gaps"] = len(result.gaps)
-    found["first_divergence"] = (
-        None
-        if divergence is None
-        else {
-            "state": number_states(plan)[divergence.state],
-            "description": describe_state(plan, data, divergence.state),
-            "solver_action": divergence.solver_action,
-            "route_action": divergence.route_action,
-        }
-    )
+    found["first_divergence"] = None
+    if divergence is not None:
+        first = first_divergence_of(plan, data, divergence, number_states(plan))
+        found["first_divergence"] = first if review_line is not None else {key: value for key, value in first.items() if key != "per_use"}
     found["seconds"] = result.seconds
     if review_line is not None:
         found["divergences"] = divergences_of(plan, result, data)
-        found["mean_ratio"] = review_of(mean_ratio(solver_mean, found["mean"]), review_line)
+        ratio = mean_ratio(solver_mean, found["mean"])
+        first_action = None if divergence is None else divergence.solver_action
+        found["mean_ratio"] = review_of(ratio, review_line, None if reviewing is None else reviewing.judge(ratio, first_action))
     return found
 
 
@@ -640,7 +659,7 @@ def _review_summary(label: str, totals: dict) -> list[str]:
     """The ratio, the "needs a human" row and the divergences of a route's totals (none for totals made without them)."""
     if "mean_ratio" not in totals:
         return []
-    return [*review_lines(label, totals["mean_ratio"], totals["divergences"]), *divergence_lines(totals["divergences"])]
+    return [*review_lines(label, totals["mean_ratio"], totals["divergences"], totals["first_divergence"]), *divergence_lines(totals["divergences"])]
 
 
 def _start_summary(start: dict) -> list[str]:

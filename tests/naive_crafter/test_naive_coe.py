@@ -63,7 +63,9 @@ def tested(cells):
 
 
 def test_the_cases_not_played_are_the_fossil_ones_and_nothing_else_is_left_out():
-    assert NOT_PLAYED == {"fossil-r08-boots": "fossils", "fossil-r09-boots": "fossils"}
+    assert NOT_PLAYED == dict.fromkeys(
+        ("fossil-r08-boots", "fossil-r09-boots", "start-r08-prismatic", "start-r08-pair", "start-r09-prismatic", "start-r09-pair"), "fossils"
+    )  # the four start-boots cases of #617 are fossil cases too
     assert set(PLAYED) == {
         "alteration-r13-belt",
         "augmentation-r13-belt",

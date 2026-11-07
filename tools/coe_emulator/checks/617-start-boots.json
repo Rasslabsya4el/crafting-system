@@ -1,0 +1,58 @@
+[
+ {
+  "id": "start-r08-prismatic",
+  "route": "R08",
+  "note": "One Prismatic Fossil on R08's start boots: Sorcerer Boots of item level 86, rare, no mod (#617, from #591). The planner's first action. The target is met when the finished item holds the top Energy Shield % and a Movement Speed tier 1, or no Movement Speed and an open prefix for the sure bench craft",
+  "base": "Metadata/Items/Armours/Boots/BootsInt9",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Fossils Prismatic Fossil"
+  ],
+  "repeats": 24000,
+  "target": "examples/targets/r08-energy-shield-boots.yaml"
+ },
+ {
+  "id": "start-r08-pair",
+  "route": "R08",
+  "note": "A Dense and a Shuddering Fossil on R08's start boots, as the case above (#617, from #591). The guide's action",
+  "base": "Metadata/Items/Armours/Boots/BootsInt9",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Fossils Dense Fossil + Shuddering Fossil"
+  ],
+  "repeats": 24000,
+  "target": "examples/targets/r08-energy-shield-boots.yaml"
+ },
+ {
+  "id": "start-r09-prismatic",
+  "route": "R09",
+  "note": "One Prismatic Fossil on R09's start boots: Two-Toned Boots (Evasion and Energy Shield) of item level 86, rare, no mod (#617, from #592). The planner's first action. The target is met when the finished item holds the top Life and a Movement Speed tier 1, or no Movement Speed and an open prefix for the sure bench craft",
+  "base": "Metadata/Items/Armours/Boots/BootsAtlas1",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Fossils Prismatic Fossil"
+  ],
+  "repeats": 24000,
+  "target": "examples/targets/r09-life-boots.yaml"
+ },
+ {
+  "id": "start-r09-pair",
+  "route": "R09",
+  "note": "A Pristine and a Shuddering Fossil on R09's start boots, as the case above (#617, from #592). The guide's action",
+  "base": "Metadata/Items/Armours/Boots/BootsAtlas1",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": [
+   "Fossils Pristine Fossil + Shuddering Fossil"
+  ],
+  "repeats": 24000,
+  "target": "examples/targets/r09-life-boots.yaml"
+ }
+]

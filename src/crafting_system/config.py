@@ -32,6 +32,10 @@ price above which the answer flags it; 20 means 20%.
 The setting `review_ratio` (table `[benchmark]`, a number above 0 and at most 1, default 0.5, ticket #554) is the review line of `benchmark`:
 a route whose planner mean is below this share of the guide's mean prints a "needs a human" row. It is a prompt for a person to look,
 never a cut of the search or a verdict (OR-12).
+
+The setting `review_tolerance` (same table, a number above 0 and below 1, default 0.2, ticket #634) is how far the ratio of a route that a person has
+reviewed may move from the ratio at review, as a share of that ratio and either way, before `benchmark` prints "NEEDS A HUMAN AGAIN"
+(prices drift week to week, so a ratio of 0.057 at review stays reviewed up to 0.068 and down to 0.046). It is a prompt, never a cut.
 """
 
 import math
@@ -69,6 +73,7 @@ class Config:
     price_source: str = "both"
     price_gap_percent: float = 20.0
     benchmark_review_ratio: float = 0.5
+    benchmark_review_tolerance: float = 0.2
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -116,6 +121,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         price_source=planner.get("price_source", "both"),
         price_gap_percent=float(planner.get("price_gap_percent", 20.0)),
         benchmark_review_ratio=float(benchmark.get("review_ratio", 0.5)),
+        benchmark_review_tolerance=float(benchmark.get("review_tolerance", 0.2)),
     )
 
 
@@ -175,10 +181,17 @@ def _read_benchmark(path: Path, table: object) -> dict[str, object]:
     if not isinstance(table, dict):
         raise ValueError(f"{path}: 'benchmark' must be a table")
     for key, value in table.items():
-        if key != "review_ratio":
-            raise ValueError(f"{path}: unknown key {key!r} in [benchmark] (known: review_ratio)")
-        if not (_is_percent(value) and value <= 1):
-            raise ValueError(f"{path}: [benchmark] {key!r}: must be a number above 0 and at most 1 (0.5 means a planner at half the guide's cost)")
+        if key == "review_ratio":
+            if not (_is_percent(value) and value <= 1):
+                raise ValueError(f"{path}: [benchmark] {key!r}: must be a number above 0 and at most 1 (0.5 means a planner at half the guide's cost)")
+        elif key == "review_tolerance":
+            if not (_is_percent(value) and value < 1):
+                raise ValueError(
+                    f"{path}: [benchmark] {key!r}: must be a number above 0 and below 1 (0.2 means a ratio may move by a fifth of the ratio at review; "
+                    "1 or more would never flag a drop)"
+                )
+        else:
+            raise ValueError(f"{path}: unknown key {key!r} in [benchmark] (known: review_ratio, review_tolerance)")
     return table
 
 

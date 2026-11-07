@@ -1,7 +1,7 @@
 """Record Craft of Exile emulator counts as our own measurement (ticket #544).
 
     PYTHONPATH=src python tools/coe_emulator/record.py run   cases.json CASE_ID --seed 5440 --repeats 1000 --out run.json
-    PYTHONPATH=src python tools/coe_emulator/record.py merge cases.json run1.json run2.json ... --out counts.json
+    PYTHONPATH=src python tools/coe_emulator/record.py merge cases.json run1.json run2.json ... --out counts.json [--into counts.json]
 
 `run` applies the ONE action of the case CASE_ID `--repeats` times in the emulator (headless, from the
 git-ignored local copy, one process, seeded: `driver.js` replaces the page's `Math.random` by a seeded
@@ -16,6 +16,11 @@ A case is a check of `compare.py` (our base, mods, rarity, `actions` with ONE la
 `note` (why this item and action) and `route` (the benchmark route the base comes from). A case with `roll_stats`
 (a list of stat texts, as our catalog writes them: "+# to maximum Life") also records, for each, how many finished items
 carry each rolled value of each of our mods with that text (ticket #573): the roll of a goal line that asks one.
+
+A case with `target` (the path of a target file, ticket #617) also records how many finished items MEET it, read by the planner's own
+judge (`crafting_system.cli._benchmark_use.reading_of`): the item is the target (`goal`), or one sure bench craft short of it (`short`:
+R08's top Energy Shield with an open prefix, whose Movement Speed the guide and the planner both craft at the bench). This is the joint
+"the target is met" count; it needs the prices only for the offers to exist, so the committed snapshot is used.
 """
 
 import argparse
@@ -31,6 +36,7 @@ sys.path.insert(0, str(HERE))
 
 import compare  # noqa: E402
 from emulator import Emulator, default_copy  # noqa: E402
+from target_judge import TargetJudge  # noqa: E402
 
 from crafting_system.actions.catalog import catalog  # noqa: E402
 from crafting_system.data import load_game_data  # noqa: E402
@@ -72,6 +78,14 @@ def run_case(spec: dict, seed: int, repeats: int, copy: Path) -> dict:
     for key, count in applied["counts"].items():
         mods = sorted(coe.our_mod(coe_base, m, pool) for m in applied["examples"][key]["item"]["mods"])
         results[json.dumps(mods)] += count
+    readings: Counter = Counter()  # the finished items by what they are next to the target (ticket #617)
+    if spec.get("target"):
+        judge = TargetJudge(data, spec["target"])
+        for key, count in results.items():
+            found = json.loads(key)
+            if any(mod_id.startswith("coe:") for mod_id in found):
+                raise SystemExit(f"{spec['id']}: a finished item holds a Craft of Exile mod that maps to none of ours: {found}")
+            readings[judge.reading(found)] += count
     rolls: dict[str, dict[str, Counter]] = {}  # stat text -> our mod id -> rolled value -> finished items
     for key, values in applied.get("rolls", {}).items():
         aid, tindex = key.split(":")
@@ -87,6 +101,7 @@ def run_case(spec: dict, seed: int, repeats: int, copy: Path) -> dict:
         "applied": sum(applied["counts"].values()), "refused": applied["failures"],
         "outcomes": dict(results), "page_errors": answer.get("page_errors", []),
         **({"rolls": {stat: {mod: dict(c) for mod, c in mods.items()} for stat, mods in rolls.items()}} if rolls else {}),
+        **({"readings": dict(readings)} if readings else {}),
     }  # fmt: skip
 
 
@@ -125,6 +140,9 @@ def merge(cases: dict[str, dict], runs: list[dict], copy: Path) -> dict:
             for stat, per_mod in run.get("rolls", {}).items():
                 for mod_id, values in per_mod.items():
                     rolled.setdefault(stat, {}).setdefault(mod_id, Counter()).update(values)
+        readings: Counter = Counter()
+        for run in case_runs:
+            readings.update(run.get("readings", {}))
         applied = sum(run["applied"] for run in case_runs)
         recorded[case_id] = {
             "route": spec.get("route"), "note": spec.get("note"),
@@ -135,6 +153,7 @@ def merge(cases: dict[str, dict], runs: list[dict], copy: Path) -> dict:
             "mods": dict(sorted(mods.items(), key=lambda pair: (-pair[1], pair[0]))),
             "shapes": dict(sorted(shapes.items())),
             **({"rolls": {stat: {mod: dict(sorted(c.items(), key=lambda pair: float(pair[0]))) for mod, c in sorted(mods.items())} for stat, mods in sorted(rolled.items())}} if rolled else {}),
+            **({"target": {"file": spec["target"], "goal": readings["goal"], "short": readings["short"], "other": readings["other"]}} if spec.get("target") else {}),
             **({"joints": {name: joints.get(name, 0) for name in ("+".join(n) for n in spec["joint_families"])}} if spec.get("joint_families") else {}),
             # the whole finished items are kept only when they are few (a single draw); a draw of several mods is
             # recorded by the frequency of each mod
@@ -155,6 +174,24 @@ def merge(cases: dict[str, dict], runs: list[dict], copy: Path) -> dict:
     }  # fmt: skip
 
 
+def add_to(existing: dict, merged: dict) -> dict:
+    """`existing` with the cases of `merged` added (a case of the same name is replaced).
+
+    The two must come from the same Craft of Exile code and data (the hashes of `package.js` and `poec_data.json`); the provenance of `existing` stays
+    and lists the added cases with the day and the fetch time of the copy they were recorded on.
+    """
+    old, new = existing["provenance"], merged["provenance"]
+    for key in ("package_js_sha256", "poec_data_json_sha256"):
+        if old[key] != new[key]:
+            raise SystemExit(f"the copy differs from the recorded file's ({key}): record every case again with `merge` instead of adding")
+    provenance = dict(old)
+    provenance["also_recorded"] = [
+        *old.get("also_recorded", []),
+        {"cases": sorted(merged["cases"]), "recorded": new["recorded"], "copy_fetched": new["copy_fetched"]},
+    ]
+    return {"provenance": provenance, "cases": {**existing["cases"], **merged["cases"]}}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -168,6 +205,7 @@ def main() -> None:
     many.add_argument("cases")
     many.add_argument("runs", nargs="+")
     many.add_argument("--out", type=Path, required=True)
+    many.add_argument("--into", type=Path, help="a recorded file to add the cases to (ticket #617): its other cases and its provenance stay, the copy must be the same")
     arguments = parser.parse_args()
     copy = default_copy()
     cases = load_cases(Path(arguments.cases))
@@ -177,7 +215,10 @@ def main() -> None:
         print(f"{result['case']}: seed {result['seed']}, {result['applied']} applied, {result['refused']} refused, {result['seconds']} s")
         return
     runs = [json.loads(Path(p).read_text(encoding="utf-8")) for p in arguments.runs]
-    arguments.out.write_text(json.dumps(merge(cases, runs, copy), indent=1) + "\n", encoding="utf-8")
+    merged = merge(cases, runs, copy)
+    if arguments.into is not None:
+        merged = add_to(json.loads(arguments.into.read_text(encoding="utf-8")), merged)
+    arguments.out.write_text(json.dumps(merged, indent=1) + "\n", encoding="utf-8")
     print(f"wrote {arguments.out}")
 
 
