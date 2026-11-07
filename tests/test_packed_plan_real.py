@@ -166,3 +166,29 @@ def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(bot
     if by_object.divergence is not None:
         assert by_graph.divergence.route_action == by_object.divergence.route_action
         assert by_graph.divergence.solver_action == by_object.divergence.solver_action
+    assert len(by_graph.divergences) == len(by_object.divergences)  # every divergence, not only the first (ticket #554)
+    assert {(d.state, d.solver_action, d.route_action) for d in by_graph.divergences} == {
+        (d.state, d.solver_action, d.route_action) for d in by_object.divergences
+    }
+
+
+def test_the_divergences_of_a_given_route_read_on_the_packed_graph_have_the_chances_of_the_object_evaluation(both, data):
+    """Ticket #554: the divergence lines of `benchmark` (every state where the guide and the planner part, each with its chance under both policies) are the same on a packed plan."""
+    from crafting_system.cli import evaluate_route, load_route
+    from crafting_system.cli._benchmark_divergence import divergences_of
+
+    route_id, reference, packed = both
+    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
+
+    by_object = divergences_of(reference, evaluate_route(reference, load_route(route_path, reference, data), data), data)
+    by_graph = divergences_of(packed, evaluate_route(packed, load_route(route_path, packed, data), data), data)
+
+    assert by_graph["count"] == by_object["count"]
+    rows = lambda block: {row["description"]: row for row in block["shown"]}  # noqa: E731
+    assert set(rows(by_graph)) == set(rows(by_object))
+    for description, row in rows(by_object).items():
+        for field in ("planner_chance", "route_chance"):
+            found = rows(by_graph)[description][field]
+            assert (found is None) == (row[field] is None)
+            if found is not None:
+                assert found == pytest.approx(row[field], abs=1e-6)

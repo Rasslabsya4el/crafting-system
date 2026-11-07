@@ -150,7 +150,11 @@ class Divergence:
 
 @dataclass(frozen=True)
 class RouteResult:
-    """The route as a fixed policy: its entries, the exact risk, the gaps, where it first parts from the solver, the time spent."""
+    """The route as a fixed policy: its entries, the exact risk, the gaps, where it first parts from the solver, the time spent.
+
+    `divergence` is the first state of the solver's main line where the route takes another action, `divergences` every such state in the same
+    order (breadth first from the start), the first included (ticket #554).
+    """
 
     policy: dict[CompressedState, Action[CompressedState]]
     risk: RiskReport
@@ -158,6 +162,7 @@ class RouteResult:
     divergence: Divergence | None
     seconds: float
     chain: object | None = None  # the route on item states as arrays (`_route_chain.Chain`), set when it was read on a packed plan whose `policy` is a lumped view
+    divergences: tuple[Divergence, ...] = ()
 
 
 # --- reading -------------------------------------------------------------------------------------
@@ -472,7 +477,7 @@ def _decide(plan: Plan, route: Route, data: GameData, state: CompressedState) ->
 
 
 def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
-    """The route as a fixed policy from `plan.start`, with its exact risk, gaps and first divergence from the solver.
+    """The route as a fixed policy from `plan.start`, with its exact risk, gaps and divergences from the solver.
 
     Breadth-first from the start: at every reachable non-goal state the first matching rule gives the
     action, built as the solver builds its own (same kernel, same integer weights). A state with no
@@ -502,7 +507,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
                 order.append(successor)
     risk = evaluate_risk(policy, plan.start, plan.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the route costs at least the solver's mean
 
-    divergence = None
+    divergences: list[Divergence] = []
     for state in policy_states(plan.start, plan.policy, plan.is_goal):
         if plan.is_goal(state) or state not in plan.policy:
             continue
@@ -510,6 +515,6 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
         if isinstance(choice, str):
             continue  # a gap, not a divergence
         if choice.label != plan.policy[state].label:
-            divergence = Divergence(state, str(plan.policy[state].label), str(choice.label))
-            break
-    return RouteResult(policy, risk, tuple(gaps), divergence, time.perf_counter() - began)
+            divergences.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
+    first = divergences[0] if divergences else None
+    return RouteResult(policy, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(divergences))

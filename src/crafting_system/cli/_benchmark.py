@@ -8,6 +8,10 @@ writes everything to `<output dir>/benchmark.json`. It NEVER fails a route: an o
 dearer than the guide or a route that cannot be planned (a missing price, a bad file) is written into
 that route's entry, and the exit code stays 0. Only game data that cannot be read, or an output that
 cannot be written, is an error.
+
+The check is on both sides (ticket #554): beside "the planner is not dearer than the guide" each route with a given route carries every
+state where the two part, with the chance of visiting it under each policy, the ratio planner mean / guide mean, and a "needs a human"
+row when that ratio is below the review line of the config (`_benchmark_divergence`). The row is a prompt, never a verdict or a cut.
 """
 
 import argparse
@@ -30,6 +34,7 @@ from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
 
+from ._benchmark_divergence import divergence_lines, divergences_of, mean_ratio, review_lines, review_of
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
 from ._offers import default_offers
@@ -391,12 +396,12 @@ def run_route(
         if bench.route is not None:
             route = load_route(root / bench.route, plan, data)
             result = evaluate_route(plan, route, data)
-            entry["given_route"] = _given_route(plan, result, data, shift)
+            entry["given_route"] = _given_route(plan, result, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio)
             timings["route_evaluate"] = result.seconds
             entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
             if bench.completed is not None:
                 again = evaluate_route(plan, load_route(root / bench.completed, plan, data), data)
-                entry["completed_route"] = _given_route(plan, again, data, shift)
+                entry["completed_route"] = _given_route(plan, again, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio)
                 timings["completed_route_evaluate"] = again.seconds
                 entry["solver_not_dearer_than_completed"] = _not_dearer(entry["solver"]["mean"], entry["completed_route"]["mean"])
     except _Skipped:
@@ -499,7 +504,15 @@ def _totals(success: Estimate, mean: Estimate, p50: Estimate, p90: Estimate, shi
     }
 
 
-def _given_route(plan: Plan, result: RouteResult, data: GameData, shift: float) -> dict:
+def _given_route(
+    plan: Plan, result: RouteResult, data: GameData, shift: float, solver_mean: float | None = None, review_line: float | None = None
+) -> dict:
+    """The guide's route at the planner's prices: its totals, its gaps and its first divergence from the planner.
+
+    With a `review_line` (the config's `[benchmark] review_ratio`) it also carries every divergence with the chance of each and the
+    ratio of the planner's mean `solver_mean` (start price included) to the guide's (ticket #554). A caller that wants the totals only
+    (`.github/scripts/measure_sim.py`) leaves it out and no visit chance is solved.
+    """
     risk = result.risk
     found = _totals(risk.success_probability, risk.mean, risk.p50, risk.p90, shift)
     divergence = result.divergence
@@ -515,6 +528,9 @@ def _given_route(plan: Plan, result: RouteResult, data: GameData, shift: float) 
         }
     )
     found["seconds"] = result.seconds
+    if review_line is not None:
+        found["divergences"] = divergences_of(plan, result, data)
+        found["mean_ratio"] = review_of(mean_ratio(solver_mean, found["mean"]), review_line)
     return found
 
 
@@ -597,15 +613,11 @@ def render_summary(document: dict) -> str:
         if entry["given_route"] is not None:
             given = entry["given_route"]
             lines.append("  given route  " + _summary_line(given) + f", {given['gaps']} gap(s)")
-            divergence = given["first_divergence"]
-            if divergence is not None:
-                lines.append(
-                    f"  first divergence {divergence['state']}: policy does {divergence['solver_action']}, "
-                    f"route does {divergence['route_action']}"
-                )
+            lines.extend(_review_summary("guide", given))
         if entry["completed_route"] is not None:
             completed = entry["completed_route"]
             lines.append("  given route, completed with a restart  " + _summary_line(completed) + f", {completed['gaps']} gap(s)")
+            lines.extend(_review_summary("completed route", completed))
         for odds in entry["published_odds"]:
             verdict = "matches" if odds["matches"] else "DIFFERS"
             lines.append(f"  published odds {odds['published']} ({odds['on']}): computed {odds['computed']}, {verdict}")
@@ -619,6 +631,13 @@ def render_summary(document: dict) -> str:
             lines.append(f"  add to {entry['missing_price']['overrides_file']} under [prices]:")
             lines.append(f"    {entry['missing_price']['override_line']}")
     return "\n".join(lines)
+
+
+def _review_summary(label: str, totals: dict) -> list[str]:
+    """The ratio, the "needs a human" row and the divergences of a route's totals (none for totals made without them)."""
+    if "mean_ratio" not in totals:
+        return []
+    return [*review_lines(label, totals["mean_ratio"], totals["divergences"]), *divergence_lines(totals["divergences"])]
 
 
 def _start_summary(start: dict) -> list[str]:

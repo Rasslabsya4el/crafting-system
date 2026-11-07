@@ -5,3 +5,9 @@
 data = "local/data"
 cache = "local/cache"
 output = "local/output"
+
+[benchmark]
+# The review line of `benchmark` (ticket #554). It is a prompt for a person to look, NOT a cut of the search and not a verdict (OR-12):
+# a route whose planner mean is below this share of the guide's mean prints a "needs a human" row with its top divergences, because a
+# planner far cheaper than the guide is as likely a missed cost or a wrong chance as a find. 0.5 = the planner costs less than half the guide.
+review_ratio = 0.5
