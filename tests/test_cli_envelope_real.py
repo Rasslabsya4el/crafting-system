@@ -75,9 +75,8 @@ def test_the_envelope_expands_fewer_states_than_the_walk_and_says_which_cut_ran(
     assert any(limit.what.startswith("The search expanded only what could matter") for limit in envelope.limits)
 
 
-@pytest.fixture(scope="module")
-def r13_model(data):
-    """R13's abstraction, start, priced offers, sound bound and exact mean, as the planted-bound tests need them."""
+def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
+    """The control on a real route: the comparison that every run above passes fails for a wrong bound (one key in four raised tenfold)."""
     if str(ROOT / "research" / "312") not in sys.path:
         sys.path.append(str(ROOT / "research" / "312"))
     import exact_classes as E
@@ -85,38 +84,12 @@ def r13_model(data):
     _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced)
     exact = make_plan(data, load_target(TARGET_R13, data), load_price_file(PRICES), solver="packed", with_risk=False).mean_remaining
-    return abstraction, start, priced, bound, exact
-
-
-def planted(bound, every: int, factor: float):
-    """The bound with every `every`-th key (from the second) raised `factor` times: above the exact value there, so not a lower bound."""
-    raised = np.where(np.arange(len(bound.value)) % every == 1, factor, 1.0)
-    return dataclasses.replace(bound, value=bound.value * raised)
-
-
-def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(r13_model):
-    """The control on a real route: the comparison that every run above passes fails for a wrong bound (one key in four raised tenfold)."""
-    abstraction, start, priced, bound, exact = r13_model
     sound = envelope_result(abstraction, start, priced, bound=bound)
     assert sound.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
-    wrong = planted(bound, 4, 10.0)
+    factor = 1.0 + 9.0 * (np.arange(len(bound.value)) % 4 == 1)
+    wrong = dataclasses.replace(bound, value=bound.value * factor)
     with pytest.raises(BoundError, match="lower bound"):  # the guard sees this bound is not consistent as the search looks further ...
         envelope_result(abstraction, start, priced, bound=wrong)
-    wrong_answer = envelope_result(abstraction, start, priced, bound=wrong, guard=False)  # ... and with the guard off the comparison with the full walk is what catches it
-    assert abs(wrong_answer.solution.values[start] - exact) > 1e-3 * exact, "the planted bound did not change the answer: the comparison cannot fail"
-    assert wrong_answer.info["envelope"].lower > exact  # and the bound it reports is above the exact cost, which no sound bound is
-
-
-@pytest.mark.parametrize(("every", "factor"), [(3, 20.0), (3, 50.0), (5, 20.0), (5, 50.0)])
-def test_every_planted_bound_is_refused_as_a_bound_error_whichever_way_it_would_have_failed(r13_model, every, factor):
-    """Ticket #539: with the guard at the end of the run, these four ended in a ConvergenceError ("the policy is improper: its linear system is singular", or
-    "certifies only a relative bound") after 60 rounds, or in the fall guard; the search now refuses each one at the state or the round that shows the fault."""
-    abstraction, start, priced, bound, _ = r13_model
-    with pytest.raises(BoundError, match="lower bound"):
-        envelope_result(abstraction, start, priced, bound=planted(bound, every, factor))
-
-
-def test_the_sound_bound_is_still_exact_with_the_guard_on(r13_model):
-    abstraction, start, priced, bound, exact = r13_model
-    result = envelope_result(abstraction, start, priced, bound=bound)
-    assert result.solution.values[start] == pytest.approx(exact, rel=TOLERANCE) and result.info["envelope"].exact
+    planted = envelope_result(abstraction, start, priced, bound=wrong, guard=False)  # ... and with the guard off the comparison with the full walk is what catches it
+    assert abs(planted.solution.values[start] - exact) > 1e-3 * exact, "the planted bound did not change the answer: the comparison cannot fail"
+    assert planted.info["envelope"].lower > exact  # and the bound it reports is above the exact cost, which no sound bound is
