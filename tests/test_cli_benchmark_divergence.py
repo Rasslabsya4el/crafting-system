@@ -343,3 +343,21 @@ def test_the_project_config_states_the_review_line_and_says_it_is_not_a_cut():
     assert "review_ratio = 0.5" in text and "NOT a cut of the search" in text
     assert load_config({}).benchmark_review_ratio == 0.5
 
+
+
+def test_a_packed_plan_lists_every_divergence_also_where_the_route_never_goes(tiny):
+    """The packed reading asks the route again at a state of the planner's line that the route does not reach (`labels` has no entry for it)."""
+    from crafting_system.cli import Divergence
+    from crafting_system.cli._route_packed import _divergences
+
+    plan, result = tiny
+    target = plan.target
+    prices = price_file(start=None)
+    prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")
+    packed = make_plan(DATA, target, prices, solver="packed")
+    route = parse_route(f"rules:\n  - do: {CHAOS}\n", packed, DATA)
+
+    parted = _divergences(packed, route, DATA, {}, Divergence)
+
+    assert len(parted) == 3 and {(d.solver_action, d.route_action) for d in parted} == {(REFORGE, CHAOS)}
+    assert len(evaluate_route(packed, route, DATA).divergences) == 3

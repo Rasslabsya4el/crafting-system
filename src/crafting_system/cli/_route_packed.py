@@ -180,7 +180,7 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
 
 def _divergences(plan: Plan, route, data: GameData, labels: dict[int, str], make) -> list:
     """Every state of the solver's main line (breadth first, the lower state number first) where the route takes another action, in that order."""
-    found = []
+    parted = []
     reading = _Reading(plan, route, data)
     graph = reading.graph
     mine = plan.policy.action_array
@@ -198,11 +198,11 @@ def _divergences(plan: Plan, route, data: GameData, labels: dict[int, str], make
                 if not isinstance(found, str):
                     theirs = found[0]  # the route does not reach this state; it would act here (a gap is not a divergence)
             if theirs is not None and theirs != ours:
-                found.append(make(reading.walked.states[i], ours, theirs))
+                parted.append(make(reading.walked.states[i], ours, theirs))
         if not len(frontier):
             break
         kernels = np.unique(graph.act_kernel[mine[frontier]])
         successors = np.unique(graph.k_succ[expand_ranges(graph.k_ptr[kernels], ksize[kernels])])
         frontier = successors[~seen[successors]].astype(np.int64)
         seen[frontier] = True
-    return found
+    return parted
