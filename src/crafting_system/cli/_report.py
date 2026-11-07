@@ -230,12 +230,10 @@ def _requirement_parts(plan: Plan, state: CompressedState) -> list[str]:
 
     A member of a group is a leaf of the target, but it is not required on its own: an item that has the Life mod of "1 of 4: Life or a resistance"
     does not lack the three resistances. A group says what is met (with its k and n, as the page words a group) and, when it is not met yet, how
-    many more it lacks and which members could still be. Without the target's requirements (a stand-in plan) every leaf is plain.
+    many more it lacks and which members could still be.
     """
     leaves = iter(zip(plan.leaf_labels, state.status))
-    requirements = getattr(getattr(plan, "target", None), "requirements", None)
-    if requirements is None:
-        return [f"{_VERB[status]} {label}" for label, status in leaves]
+    requirements = plan.target.requirements
 
     def member(node) -> tuple[str, Status]:
         if not isinstance(node, KOfN):

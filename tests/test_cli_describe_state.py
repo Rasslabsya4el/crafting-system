@@ -28,8 +28,14 @@ def slot(side, *contribution):
     return Slot(side, "", tuple(contribution))
 
 
+def plain_plan():
+    """A plan of three plain requirements (the leaf of a requirement is any node that is not a k-of-n group)."""
+    leaf = SimpleNamespace(mod_ids=frozenset())
+    return SimpleNamespace(leaf_labels=LABELS, target=SimpleNamespace(requirements=(leaf, leaf, leaf)))
+
+
 def describe(state):
-    return describe_state(SimpleNamespace(leaf_labels=LABELS), None, state)
+    return describe_state(plain_plan(), None, state)
 
 
 def test_r04_s309_the_mods_the_line_names_are_not_counted_again():
@@ -68,7 +74,7 @@ def test_a_requirement_a_fractured_mod_meets_takes_no_other_mod_with_it():
         [slot(Side.PREFIX, PASSING, ABSENT, ABSENT)],
         fractured=[FracturedMod("~1", (PASSING, ABSENT, ABSENT))],
     )
-    plan = SimpleNamespace(leaf_labels=LABELS)
+    plan = plain_plan()
     data = SimpleNamespace(mods={})  # a family type ("~1"): the line says the state does not tell which mod it is
 
     assert describe_state(plan, data, state).endswith("other mods: 1 prefix")  # the fractured mod meets the requirement, so this one is another mod

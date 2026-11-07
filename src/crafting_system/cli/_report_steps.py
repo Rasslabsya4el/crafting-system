@@ -43,7 +43,7 @@ def _step(view: _View, step) -> ReportStep:
         return ReportStep(number, "No action", items, item, reason=step.reason or "", acts=False, reached=step.reached)
     never = step.uses is not None and math.isinf(step.uses)
     return ReportStep(
-        number, view.title(step.action), items, item,
+        number, _ascii(view.title(step.action)), items, item,
         cost_parts=plan.offer_of(step.action).parts, cost=step.cost,
         uses=step.uses, step_cost=None if step.uses is None or never else step.uses * step.cost, never=never, reached=step.reached,
         outcomes=tuple(StepOutcome(edge.chance, _outcome(view, step, edge)) for edge in step.edges),
@@ -61,10 +61,15 @@ def _shared_parts(plan: Plan, data: GameData, states) -> str:
     return "; ".join(common)
 
 
+def _ascii(text: str) -> str:
+    """The page's words in the report's ASCII: the dot between a mod and its tier ("... Life · T1") is a comma."""
+    return text.replace(" · ", ", ")
+
+
 def _outcome(view: _View, step, edge) -> str:
     """What one branch of the step does, in the page's words, and the step it leads on to."""
     what, names_row = view.edge_phrase(step, edge)
     if edge.to is None or edge.kind == "again":
-        return what
+        return _ascii(what)
     there = f"step {edge.to + 1}: {_title(view, edge.to)}"
-    return there if names_row else f"{what}; next {there}"  # a phrase that only names the step ("the item of step 4", "the item is restarted") is the step
+    return _ascii(there if names_row else f"{what}; next {there}")  # a phrase that only names the step ("the item of step 4", "the item is restarted") is the step
