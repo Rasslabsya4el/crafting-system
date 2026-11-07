@@ -12,6 +12,7 @@ Needs the cached dump; skips cleanly without it (CI fetches it, ticket #165). No
 
 import dataclasses
 import sys
+from html import escape
 from pathlib import Path
 
 import numpy as np
@@ -20,8 +21,11 @@ from abstraction_support import real_game_data
 
 from crafting_system.cli import make_plan
 from crafting_system.cli._envelope import Net
+from crafting_system.cli._plan import add_risk
 from crafting_system.cli._envelope_plan import BoundError, certificate_gap, envelope_result, route_incumbent
-from crafting_system.cli._limits import SOLVE, limit_text
+from crafting_system.cli._limits import SHOWN_LABELS, SOLVE, limit_text
+from crafting_system.cli._route_html import render_page
+from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.cli._route import load_route
 from crafting_system.cli._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
@@ -82,8 +86,9 @@ def test_the_envelope_expands_fewer_states_than_the_walk_and_says_which_cut_ran(
 def stopped(data, both):
     """(route id, the full walk's exact mean, the plan of a search that a state net stopped).
 
-    R05 needs no help: its search does not close before the net. R13's start is bought but its search closes in one stretch, so it is given the
-    guide's route (completed with a restart) as the first executable policy; the net stops it after the first round.
+    R05 needs no help: its search does not close before the net. R13's start is bought, so a restart exists, but restarting at every tip never reaches the goal: until the
+    search has closed a chain to it, U is infinite and a stop is an error (#582). So it is given the guide's route (completed with a restart) as the
+    first executable policy, and the net stops it after the first round.
     """
     route, full, _ = both
     target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[route]}.yaml", data)
@@ -95,6 +100,14 @@ def stopped(data, both):
     else:
         options["net"] = Net(states=5)
     return route, full.mean_remaining, make_plan(data, target, prices, solver="envelope", with_risk=False, **options)
+
+
+def test_the_route_page_of_a_stopped_search_shows_the_same_certificate(stopped, data):
+    _, _, stopped_plan = stopped
+    plan = add_risk(stopped_plan)  # the page shows the percentiles, which the fixture left out
+    (cut,) = [limit for limit in plan.limits if limit.kind == SOLVE and limit.what.startswith("The search was stopped")]
+    page = render_page(Page("x", (build_section(route_input(plan), data),)))
+    assert escape(limit_text(cut, SHOWN_LABELS)) in page
 
 
 def test_a_stopped_search_on_a_real_route_certifies_the_exact_cost_between_its_bounds(stopped):
@@ -109,7 +122,7 @@ def test_a_stopped_search_on_a_real_route_certifies_the_exact_cost_between_its_b
     gap = certificate_gap(info)
     assert gap is not None and gap == pytest.approx(info.upper / info.lower - 1.0) and gap > 0.0
     assert f"[{info.lower:,.2f}, {info.upper:,.2f}]" in text and f"{gap:.2%}" in text
-    assert "whole graph" in text and "not only the part the search looked at" in text
+    assert "including the ones the search did not look at" in text
     print(f"{route}: exact {exact:,.4f}, certificate [{info.lower:,.4f}, {info.upper:,.4f}], gap {gap:.4%}")  # visible with -s
 
 

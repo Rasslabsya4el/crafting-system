@@ -289,17 +289,21 @@ def certificate_text(info: EnvelopeInfo) -> str:
     bound only at the states it expanded, and at the tips only when a lower solve fails, so the text never says the guard verified `LB`.
     """
     gap = certificate_gap(info)
-    lower = max(info.lower, 0.0)
+    lower = min(max(info.lower, 0.0), info.upper)  # a rounding of LB just above U never prints [x, y] with x above y
     low, high = certificate_figures(lower, info.upper)
-    head = f"The best possible cost lies in [{low}, {high}] Chaos after the start item. "
+    head = (
+        f"The best possible cost lies in [{low}, {high}] Chaos after the start item: no way of crafting this item, including the ones the search "
+        f"did not look at, costs less than {low} on average. "
+    )
     gap_text = (
-        f"The stop can have cost at most {certificate_gap_text(gap)} (the plan's cost over the lower end, less one). " if gap is not None else "No gap can be stated: the lower end is not above zero. "
+        f"The plan costs at most {certificate_gap_text(gap)} more than that best possible cost (its cost over {low}, less one). "
+        if gap is not None
+        else "No gap can be stated: the lower figure is not above zero. "
     )
     bound = (
-        "The lower end is a lower bound of the best cost over the whole graph of the item, not only the part the search looked at. It holds because "
-        "of how it is built, not because it was checked state by state: it comes from an optimistic model that keeps only the item's rarity, the "
-        "number of mods on each side, its fractured and crafted mods, so every step of it costs no more than the real game, and it was raised by "
-        "the actions the search looked at. The search checks the bound only at the states it looked at, never at the ones it left unexpanded."
+        f"{low} comes from a simplified count of the item that tracks only its rarity, how many mods it has on each side, and its fractured and "
+        "crafted mods, which never prices a step above its true cost; the search raised it with the steps it did look at. It holds because of how "
+        "that count is built, not because it was checked on every item the crafting can reach: the search checks it only on the ones it looked at."
     )
     return head + gap_text + bound
 

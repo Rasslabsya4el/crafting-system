@@ -11,6 +11,7 @@ The walk-free bound needs no game dump, so this runs on the committed fixture po
 
 import dataclasses
 import json
+import re
 from html import escape
 
 import pytest
@@ -112,8 +113,9 @@ def test_a_stopped_search_prints_the_certificate_next_to_the_point_answer(coarse
     gap = certificate_gap(info)
     assert gap == pytest.approx(info.upper / info.lower - 1.0) and f"{gap:.2%}" in text
     assert info.lower <= full.mean_remaining * (1 + 1e-9) <= info.upper * (1 + 1e-9)
-    assert "whole graph" in text and "not only the part the search looked at" in text and "rarity" in text  # the bound used, and what it bounds
-    assert "because of how it is built" in text and "never at the ones it left unexpanded" in text  # LB rests on the build of the bound, not on a check of every tip
+    assert "including the ones the search did not look at" in text and "rarity" in text  # the bound used, and what it bounds
+    assert "never prices a step above its true cost" in text and "not because it was checked on every item the crafting can reach" in text  # LB rests on the build of the bound, not on a check of every tip
+    assert not re.search(r"graph|lower bound|lower end|optimistic", text, re.I)  # player words (#481)
     assert "about" not in text and " to " not in text.split("[")[1].split("]")[0]  # never an interval answer (OR-11)
     report = build_report(stopped, COARSE)
     assert text in render_text(report)  # the text report, and the JSON policy, say it in the same words
@@ -133,9 +135,24 @@ def test_a_nearly_closed_stop_prints_figures_that_differ_and_a_gap_that_is_not_z
     text = certificate_text(info)
     print(text.split(" The lower end")[0])
     assert "[5,784.49, 5,784.49]" not in text and "[5,784.488, 5,784.489]" in text
-    assert "at most 1.4e-7 " in text and "0.00%" not in text
+    assert "at most 1.4e-7 more" in text and "0.00%" not in text
     assert certificate_gap_text(1.4306511020301116e-07) == "1.4e-7" and certificate_gap_text(0.0) == "0"
     assert certificate_gap_text(0.003681416052256692) == "0.37%" and certificate_gap_text(0.3206) == "32.06%"  # R04 and R05 keep their format
+
+
+def test_a_lower_figure_rounded_just_above_the_plan_is_clipped_to_it():
+    info = EnvelopeInfo(False, "the time limit of 1 seconds was reached", 10.0000000001, 10.0, 2, 5, 3, 3, 4, 0, True, None, 9, 0.0, 0.0, None)
+    assert "[10.00, 10.00]" in certificate_text(info) and "costs less than 10.00 on average" in certificate_text(info)
+
+
+def test_the_guarantee_of_a_stopped_search_is_in_player_words_like_every_limit(coarse):
+    """The rule of `test_cli_limits` (no internal name in a guarantee) holds for the stopped-search limit too, not only for the finished one."""
+    target, prices, _ = coarse
+    stopped = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96), with_risk=False)
+    (cut,) = search_limit(stopped)
+    assert cut.guarantee.endswith(".") and cut.guarantee[0].isupper()
+    assert not re.search(r"[a-z]+-[a-z]+-?[a-z]*|_|`|#\d|ticket|ADR|OR-\d|kind=", cut.guarantee), cut.guarantee
+    assert not re.search(r"graph|lower bound|lower end|optimistic|walk|pattern|kernel|state", cut.guarantee, re.I), cut.guarantee
 
 
 def test_the_gap_is_not_stated_when_the_lower_end_is_not_above_zero():
