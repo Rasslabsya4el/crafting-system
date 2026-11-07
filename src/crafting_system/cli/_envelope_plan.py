@@ -265,7 +265,9 @@ def certificate_text(info: EnvelopeInfo) -> str:
 
     The plan and its exact mean `U` stay the answer; the interval only says how far the stop could be from the best possible cost. `LB` is a
     lower bound of the whole graph: the optimistic model of the crafted pattern (the walk-free bound), raised by the actions the search looked at,
-    and never above the best cost of any plan over every state the item can reach, expanded or not.
+    and never above the best cost of any plan over every state the item can reach, expanded or not. It holds because the bound is sound by
+    construction (#497: the optimistic model costs no more than the real game at every key); the guard of the search (`BoundError`) checks the
+    bound only at the states it expanded, and at the tips only when a lower solve fails, so the text never says the guard verified `LB`.
     """
     gap = certificate_gap(info)
     lower = max(info.lower, 0.0)
@@ -274,9 +276,10 @@ def certificate_text(info: EnvelopeInfo) -> str:
         f"The stop can have cost at most {gap:.2%} (the plan's cost over the lower end, less one). " if gap is not None else "No gap can be stated: the lower end is not above zero. "
     )
     bound = (
-        "The lower end is a lower bound of the best cost over the whole graph of the item, not only the part the search looked at: it comes from an "
-        "optimistic model that keeps only the item's rarity, the number of mods on each side, its fractured and crafted mods, which costs no more than "
-        "the real game, and it was raised by the actions the search looked at."
+        "The lower end is a lower bound of the best cost over the whole graph of the item, not only the part the search looked at. It holds because "
+        "of how it is built, not because it was checked state by state: it comes from an optimistic model that keeps only the item's rarity, the "
+        "number of mods on each side, its fractured and crafted mods, so every step of it costs no more than the real game, and it was raised by "
+        "the actions the search looked at. The search checks the bound only at the states it looked at, never at the ones it left unexpanded."
     )
     return head + gap_text + bound
 

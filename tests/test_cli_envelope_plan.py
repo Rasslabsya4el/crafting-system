@@ -113,6 +113,7 @@ def test_a_stopped_search_prints_the_certificate_next_to_the_point_answer(coarse
     assert gap == pytest.approx(info.upper / info.lower - 1.0) and f"{gap:.2%}" in text
     assert info.lower <= full.mean_remaining * (1 + 1e-9) <= info.upper * (1 + 1e-9)
     assert "whole graph" in text and "not only the part the search looked at" in text and "rarity" in text  # the bound used, and what it bounds
+    assert "because of how it is built" in text and "never at the ones it left unexpanded" in text  # LB rests on the build of the bound, not on a check of every tip
     assert "about" not in text and " to " not in text.split("[")[1].split("]")[0]  # never an interval answer (OR-11)
     report = build_report(stopped, COARSE)
     assert text in render_text(report)  # the text report, and the JSON policy, say it in the same words
