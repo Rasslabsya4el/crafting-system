@@ -12,7 +12,7 @@ route file on concrete items by Monte Carlo with rules written from the publishe
 A disagreement is a failing test that names the step. Nothing is widened to pass.
 
 Covered, because their steps are plain spam: R05 (Deafening Essence of Rage), R10 (Shrieking Essence of Spite and a bench craft), R11
-(Shrieking Essence of Loathing), R13 (Orbs of Transmutation, Alteration and Regal, a restart, a bench craft). The others are listed in
+(Shrieking Essence of Loathing), R13 (Orbs of Alteration and Regal on a bought Magic belt since #576, a restart, a bench craft). The others are listed in
 `NOT_COVERED` with the mechanic each lacks; a test makes the naive crafter refuse each of them with a message that names it, and another
 makes the two lists together hold every route file of `examples/routes/`.
 
