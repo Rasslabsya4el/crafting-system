@@ -9,6 +9,7 @@ import random
 from collections import Counter
 from fractions import Fraction
 
+import numpy as np
 import pytest
 
 from crafting_system.cli import _route_flow
@@ -824,3 +825,62 @@ def test_a_step_of_dead_states_is_entered_through_a_dead_state_of_another_step_t
 
     assert step_with(flow, "E").reached == pytest.approx(1 / 2)
     assert step_with(flow, "D").reached == pytest.approx(1 / 4)
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_reading_the_chain_in_tiny_blocks_of_edges_gives_the_same_flow(monkeypatch, dense_limit):
+    """#595: the solves read the chain a block of `CHUNK_EDGES` edges at a time; the numbers do not depend on the size of the block."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = 0
+    for start, policy in mixed_policies(595, 25):
+        whole = build_flow(start, policy, is_goal)
+        with monkeypatch.context() as small:
+            small.setattr(_route_flow, "CHUNK_EDGES", 5)
+            blocks = build_flow(start, policy, is_goal)
+        assert blocks.measured and blocks.entered
+        for a, b in zip(whole.steps, blocks.steps):
+            assert (b.uses is None) == (a.uses is None)
+            assert b.uses == pytest.approx(a.uses, rel=1e-9) if a.uses is not None else True
+            assert b.reached == pytest.approx(a.reached, rel=1e-9, abs=1e-14)
+            assert b.weights == pytest.approx(a.weights, rel=1e-9)
+            assert [e.chance for e in b.edges] == pytest.approx([e.chance for e in a.edges], rel=1e-9)
+            checked += 1
+    assert checked > 50
+
+
+def dense_edges_chain(states: int, outcomes: int, seed: int):
+    """One action at `states` states, each with `outcomes` random successors (a few of them itself) and 5% to the goal: many edges among few states."""
+    rng = np.random.default_rng(seed)
+    dst = rng.integers(0, states, size=(states, outcomes)).astype(np.int64)
+    dst[:, 0] = states  # the goal
+    prob = rng.random((states, outcomes)) + 0.1
+    prob[:, 0] = prob[:, 1:].sum(axis=1) * 0.05
+    prob /= prob.sum(axis=1, keepdims=True)
+    return _route_flow.Chain(
+        list(range(states)), ["goal"], np.zeros(states, dtype=np.int64), (("action", "a"),), np.ones(states),
+        np.arange(0, states * outcomes + 1, outcomes, dtype=np.int64), dst.ravel(), prob.ravel(), lambda i: None,  # type: ignore[arg-type,return-value]
+    )
+
+
+def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array_the_size_of_the_edges_but_the_system(monkeypatch):
+    """#595: R04's flow peaked at 4.7 GB on 48.7 million edges, about 70 bytes an edge in arrays copied and indexed whole. Now the system is 12 bytes an edge and the rest is read a block at a time."""
+    import tracemalloc
+
+    states, outcomes = 3000, 150
+    chain = dense_edges_chain(states, outcomes, 1)
+    edges = states * outcomes
+    monkeypatch.setattr(_route_flow, "CHUNK_EDGES", edges // 8)
+    tracemalloc.start()
+    before = tracemalloc.get_traced_memory()[0]
+    tracemalloc.reset_peak()
+    done = _route_flow._solved(chain)
+    reached, unsettled = _route_flow._entries(chain)
+    peak = tracemalloc.get_traced_memory()[1] - before
+    tracemalloc.stop()
+    assert done.solved and unsettled == 0 and reached == [1.0]
+    assert peak < 20 * edges, f"{peak / edges:.1f} bytes an edge"
+    monkeypatch.undo()
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 5000)  # the same visits by one inverse
+    dense = _route_flow._solved(dense_edges_chain(states, outcomes, 1))
+    assert dense.inverse is not None
+    assert done.visits == pytest.approx(dense.visits, rel=1e-8)

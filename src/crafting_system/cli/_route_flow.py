@@ -413,19 +413,43 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
     return tuple(limits)
 
 
-def _can_finish(m: int, src: np.ndarray, dst: np.ndarray, into_goal: np.ndarray, into_state: np.ndarray) -> np.ndarray:
-    """The states with an action from which some run reaches a goal through states that have an action."""
+CHUNK_EDGES = 4_000_000  # the edges of the chain read at a time: the solves work in place on the chain's arrays, so the only array the size of the edges that is made is the system itself (ticket #595)
+
+
+def _blocks(ptr: np.ndarray) -> list[tuple[int, int]]:
+    """The rows `a:b` of a CSR with row pointers `ptr`, in blocks of at most `CHUNK_EDGES` edges (a row with more edges is a block of its own)."""
+    rows = len(ptr) - 1
+    blocks: list[tuple[int, int]] = []
+    a = 0
+    while a < rows:
+        b = min(max(int(np.searchsorted(ptr, ptr[a] + CHUNK_EDGES, side="right")) - 1, a + 1), rows)
+        blocks.append((a, b))
+        a = b
+    return blocks
+
+
+def _can_finish(chain: Chain) -> np.ndarray:
+    """The states with an action from which some run reaches a goal through states that have an action, found a block of edges at a time."""
+    m, ptr, dst = chain.m, chain.ptr, chain.dst
+    blocks = _blocks(ptr)
     finishing = np.zeros(m, dtype=bool)
-    finishing[src[into_goal]] = True
-    toward = np.minimum(dst, m - 1)
     while True:
-        hit = into_state & finishing[toward]
-        fresh = np.zeros(m, dtype=bool)
-        fresh[src[hit]] = True
-        fresh &= ~finishing
-        if not fresh.any():
+        changed = False
+        for a, b in blocks:
+            if finishing[a:b].all():
+                continue
+            lo, hi = int(ptr[a]), int(ptr[b])
+            row = np.repeat(np.arange(b - a), np.diff(ptr[a : b + 1]))
+            d = dst[lo:hi]
+            hit = (d >= m) | finishing[np.minimum(d, m - 1)]
+            fresh = np.zeros(b - a, dtype=bool)
+            fresh[row[hit]] = True
+            fresh &= ~finishing[a:b]
+            if fresh.any():
+                finishing[a:b] |= fresh
+                changed = True
+        if not changed:
             return finishing
-        finishing |= fresh
 
 
 def _numbering(chain: Chain) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -459,11 +483,8 @@ def _solved(chain: Chain) -> _Solved:
     key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)  # a test that changes a limit gets its own
     cached = chain.__dict__.get("_solved")
     if cached is None or cached[0] != key:
-        m = chain.m
-        src = np.repeat(np.arange(m), np.diff(chain.ptr))
-        into_goal = chain.dst >= m
-        finishing = _can_finish(m, src, chain.dst, into_goal, ~into_goal)
-        visits, solved, inverse = _visits(chain, _system(chain, src, finishing), finishing)
+        finishing = _can_finish(chain)
+        visits, solved, inverse = _visits(chain, _system(chain, finishing), finishing)
         cached = (key, _Solved(finishing, visits, solved, inverse))
         object.__setattr__(chain, "_solved", cached)
     return cached[1]
@@ -475,15 +496,13 @@ def _entries(chain: Chain) -> tuple[list[float | None], int]:
     cached = chain.__dict__.get("_entries")
     if cached is None or cached[0] != key:
         done = _solved(chain)
-        m = chain.m
-        src = np.repeat(np.arange(m), np.diff(chain.ptr))
         step, used, _ = _numbering(chain)
-        system = _system(chain, src, done.finishing)
         reached: list[float | None] = [None] * len(used)
         reached[0] = 1.0
         unsettled = 0
-        if done.solved and system is not None:
-            reached, unsettled = _entered(chain, step, len(used), src, done.finishing, done.visits, system, done.inverse)
+        system = _system(chain, done.finishing) if done.solved else None
+        if system is not None:
+            reached, unsettled = _entered(chain, step, len(used), done.finishing, done.visits, system, done.inverse)
         cached = (key, (reached, unsettled))
         object.__setattr__(chain, "_entries", cached)
     return cached[1]
@@ -491,30 +510,168 @@ def _entries(chain: Chain) -> tuple[list[float | None], int]:
 
 @dataclass(frozen=True)
 class _System:
-    """The chain on the states that can finish: `position[i]` numbers them; the edges among them (`row -> column`, chance `p`); `leave[s]`: the chance to leave `s` for any other state, a goal or not; `leak[s]`: the chance to go to a goal or to a state that cannot finish."""
+    """The chain on the states that can finish, as a CSR over their positions (`position[i]` numbers them), made once from the chain's arrays in blocks of edges.
+
+    `ptr`, `column` (int32), `p`: the edges of each state to another such state, in the order of the chain, self-loops left out; `own[s]`: the chance to stay (the
+    self-loops summed); `leave[s]`: the chance to leave `s` for any other state, a goal or not, a sum of positive terms (no `1 - p` is formed); `leak[s]`: the
+    chance to go to a goal or to a state that cannot finish. `blocks`: the rows in blocks of at most `CHUNK_EDGES` edges.
+    """
 
     position: np.ndarray
     nt: int
-    row: np.ndarray
+    ptr: np.ndarray
     column: np.ndarray
     p: np.ndarray
+    own: np.ndarray
     leave: np.ndarray
     leak: np.ndarray
+    blocks: list[tuple[int, int]]
+
+    @property
+    def row(self) -> np.ndarray:
+        """The state of each edge (made when asked: the dense solves and the cycles of the chain, not the iteration)."""
+        return np.repeat(np.arange(self.nt), np.diff(self.ptr))
 
 
-def _system(chain: Chain, src: np.ndarray, finishing: np.ndarray) -> _System | None:
+def _read(chain: Chain, finishing: np.ndarray, a: int, b: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """The edges of the states `a:b`: `(row, dst, prob, live, inside, other)`, `row` counted from `a`; `live`: the edge starts at a state that can finish; `inside`: and ends at one (or at itself); `other`: it is not a self-loop."""
+    lo, hi = int(chain.ptr[a]), int(chain.ptr[b])
+    row = np.repeat(np.arange(b - a), np.diff(chain.ptr[a : b + 1]))
+    d = chain.dst[lo:hi]
+    live = finishing[a:b][row]
+    inside = live & (d < chain.m)
+    inside[inside] = finishing[d[inside]]
+    return row, d, chain.prob[lo:hi], live, inside, d != row + a
+
+
+def _system(chain: Chain, finishing: np.ndarray) -> _System | None:
     """The system of the states that can finish, None when the start cannot (then nothing else is a run's business)."""
     if not finishing[0]:
         return None
-    m, dst = chain.m, chain.dst
+    m = chain.m
     position = np.cumsum(finishing) - 1
-    inside = finishing[src] & (dst < m)
-    inside[inside] = finishing[dst[inside]]
-    nonself = dst != src
-    leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=m)[finishing]  # a sum of positive terms: no `1 - p`
-    outside = finishing[src] & ~inside
-    leak = np.bincount(position[src[outside]], weights=chain.prob[outside], minlength=int(finishing.sum()))  # a sum of positive terms
-    return _System(position, int(finishing.sum()), position[src[inside]], position[dst[inside]], chain.prob[inside], leave, leak)
+    count, own, leave, leak = np.zeros(m, dtype=np.int64), np.zeros(m), np.zeros(m), np.zeros(m)
+    blocks = _blocks(chain.ptr)
+    for a, b in blocks:
+        if not finishing[a:b].any():
+            continue
+        row, _, p, live, inside, other = _read(chain, finishing, a, b)
+        n = b - a
+        count[a:b] = np.bincount(row[inside & other], minlength=n)
+        own[a:b] = np.bincount(row[live & ~other], weights=p[live & ~other], minlength=n)
+        leave[a:b] = np.bincount(row[live & other], weights=p[live & other], minlength=n)  # a sum of positive terms: no `1 - p`
+        leak[a:b] = np.bincount(row[live & ~inside], weights=p[live & ~inside], minlength=n)
+    nt = int(finishing.sum())
+    ptr = np.concatenate(([0], np.cumsum(count[finishing])))
+    column, weight = np.empty(int(ptr[-1]), dtype=np.int32), np.empty(int(ptr[-1]))
+    at = 0
+    for a, b in blocks:
+        if not finishing[a:b].any():
+            continue
+        row, d, p, _, inside, other = _read(chain, finishing, a, b)
+        keep = inside & other
+        taken = int(keep.sum())
+        column[at : at + taken] = position[d[keep]]
+        weight[at : at + taken] = p[keep]
+        at += taken
+    return _System(position, nt, ptr, column, weight, own[finishing], leave[finishing], leak[finishing], _blocks(ptr))
+
+
+def _explicit(system: _System) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """`(row, column, p)` of the chain on the states that can finish with the self-loops put back, as arrays in no order (the dense solves)."""
+    selfs = np.flatnonzero(system.own > 0)
+    return (
+        np.concatenate((system.row, selfs)),
+        np.concatenate((system.column.astype(np.int64), selfs)),
+        np.concatenate((system.p, system.own[selfs])),
+    )
+
+
+def _csr_with_self_loops(system: _System) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """`(ptr, column, p)` of the chain on the states that can finish as a CSR with the self-loop of a state last among its edges (the cycles of the chain)."""
+    has = system.own > 0
+    ptr = np.concatenate(([0], np.cumsum(np.diff(system.ptr) + has)))
+    column, p = np.empty(int(ptr[-1]), dtype=np.int64), np.empty(int(ptr[-1]))
+    where = np.arange(len(system.column)) + np.repeat(ptr[:-1] - system.ptr[:-1], np.diff(system.ptr))
+    column[where], p[where] = system.column, system.p
+    last = ptr[1:][has] - 1
+    column[last], p[last] = np.flatnonzero(has), system.own[has]
+    return ptr, column, p
+
+
+def _push(system: _System, v: np.ndarray) -> np.ndarray:
+    """For each state c: the sum over the edges r -> c of p v[r], divided by `leave[c]` (the self-loops divided out). Read a block of edges at a time."""
+    out = np.zeros(system.nt)
+    for a, b in system.blocks:
+        lo, hi = int(system.ptr[a]), int(system.ptr[b])
+        if hi > lo:
+            out += np.bincount(system.column[lo:hi], weights=system.p[lo:hi] * np.repeat(v[a:b], np.diff(system.ptr[a : b + 1])), minlength=system.nt)
+    return out / system.leave
+
+
+def _pull(system: _System, v: np.ndarray) -> np.ndarray:
+    """For each state s: the sum over the edges s -> t of p v[t], divided by `leave[s]` (the self-loops divided out). Read a block of edges at a time."""
+    out = np.zeros(system.nt)
+    for a, b in system.blocks:
+        lo, hi = int(system.ptr[a]), int(system.ptr[b])
+        if hi > lo:
+            counts = np.diff(system.ptr[a : b + 1])
+            filled = counts > 0
+            out[a:b][filled] = np.add.reduceat(system.p[lo:hi] * v[system.column[lo:hi]], system.ptr[a:b][filled] - lo)
+    return out / system.leave
+
+
+class _EdgeTerms:
+    """The terms of a linear system `x[s] = b[s] + sum over the edges e with own[e] = s of weight[e] x[dep[e]]` (weights not negative), the edges as arrays."""
+
+    def __init__(self, n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray) -> None:
+        self.n, self.own, self.dep, self.weight = n, own, dep, weight
+
+    def apply(self, x: np.ndarray) -> np.ndarray:
+        return np.bincount(self.own, weights=self.weight * x[self.dep], minlength=self.n)
+
+    def dense(self) -> np.ndarray:
+        return np.bincount(self.own * self.n + self.dep, weights=self.weight, minlength=self.n * self.n).reshape(self.n, self.n)
+
+
+class _PushTerms:
+    """The terms of the visits, `v[c] = e[c] / leave[c] + sum over the edges r -> c of p / leave[c] v[r]`, read from the system in blocks."""
+
+    def __init__(self, system: _System) -> None:
+        self.system = system
+
+    def apply(self, x: np.ndarray) -> np.ndarray:
+        return _push(self.system, x)
+
+    def dense(self) -> np.ndarray:
+        system, n = self.system, self.system.nt
+        matrix = np.zeros((n, n))
+        for a, b in system.blocks:
+            lo, hi = int(system.ptr[a]), int(system.ptr[b])
+            if hi > lo:
+                rows = np.repeat(np.arange(a, b), np.diff(system.ptr[a : b + 1]))
+                matrix += np.bincount(system.column[lo:hi].astype(np.int64) * n + rows, weights=system.p[lo:hi], minlength=n * n).reshape(n, n)
+        return matrix / system.leave[:, None]
+
+
+class _PullTerms:
+    """The terms of a chance of hitting, `h(s) = b(s) + sum over the free states t of p(s, t) / leave(s) h(t)` on the states `free` (a mask over the positions); the other states hold 0."""
+
+    def __init__(self, system: _System, free: np.ndarray) -> None:
+        self.system, self.free = system, free
+
+    def apply(self, x: np.ndarray) -> np.ndarray:
+        return self.free * _pull(self.system, self.free * x)
+
+    def dense(self) -> np.ndarray:
+        system, n = self.system, self.system.nt
+        matrix = np.zeros((n, n))
+        for a, b in system.blocks:
+            lo, hi = int(system.ptr[a]), int(system.ptr[b])
+            if hi > lo:
+                rows = np.repeat(np.arange(a, b), np.diff(system.ptr[a : b + 1]))
+                matrix += np.bincount(rows * n + system.column[lo:hi], weights=system.p[lo:hi], minlength=n * n).reshape(n, n)
+        return matrix / system.leave[:, None] * self.free[:, None] * self.free[None, :]
 
 
 def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tuple[np.ndarray, bool, np.ndarray | None]:
@@ -522,8 +679,9 @@ def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tupl
 
     Row `start` of N = (I - Q)^-1. With at most `DENSE_LIMIT` states that can finish, N is inverted whole (`inverse`, over the positions) and the row
     is read off it; its row is accepted only when it solves (I - Q)^T v = e_start to `ACCEPT_RESIDUAL`, else the system is solved as it is for more
-    states: (I - Q)^T v = e_start with each self-loop divided out, v[c] = e[c] / leave[c] + sum over the edges r -> c of p / leave[c] v[r] (`_linear`).
-    When the start cannot finish nothing else is a run's business: all zero and solved. `solved` is False when no solve reaches the residual.
+    states: (I - Q)^T v = e_start with each self-loop divided out, v[c] = e[c] / leave[c] + sum over the edges r -> c of p / leave[c] v[r] (`_linear`,
+    read from the system a block of edges at a time). When the start cannot finish nothing else is a run's business: all zero and solved. `solved` is
+    False when no solve reaches the residual.
     """
     visits = np.zeros(chain.m)
     if system is None:
@@ -536,14 +694,13 @@ def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tupl
             e = np.zeros(nt)
             e[start] = 1.0
             found = inverse[start]
-            if not (np.all(np.isfinite(found)) and _backward_error(nt, system.column, system.row, system.p, e, found) <= ACCEPT_RESIDUAL):
+            row, column, p = _explicit(system)
+            if not (np.all(np.isfinite(found)) and _backward_error(_EdgeTerms(nt, column, row, p), e, found) <= ACCEPT_RESIDUAL):
                 found = inverse = None
     if found is None:
-        keep = system.row != system.column
-        r, c, w = system.row[keep], system.column[keep], system.p[keep]
         b = np.zeros(nt)
         b[start] = 1.0 / system.leave[start]
-        found = _linear(nt, c, r, w / system.leave[c], b)
+        found = _linear(nt, _PushTerms(system), b)
     if found is None or not np.all(np.isfinite(found)) or np.any(found < -1e-9):
         return visits, False, None
     visits[finishing] = np.maximum(found, 0.0)
@@ -559,10 +716,9 @@ def _inverse(system: _System) -> np.ndarray | None:
     only the row of the start that the visits are read from: every entry of (I - P) (I - P)^-1 - I must be within `ACCEPT_RESIDUAL` of the size of the terms it is made of.
     """
     nt = system.nt
-    off = system.row != system.column
-    row, column = system.row[off], system.column[off]
+    row, column = system.row, system.column.astype(np.int64)
     with np.errstate(all="ignore"):
-        matrix = np.eye(nt) - np.bincount(row * nt + column, weights=system.p[off] / system.leave[row], minlength=nt * nt).reshape(nt, nt)
+        matrix = np.eye(nt) - np.bincount(row * nt + column, weights=system.p / system.leave[row], minlength=nt * nt).reshape(nt, nt)
         try:
             inverse = np.linalg.inv(matrix)
         except np.linalg.LinAlgError:
@@ -573,40 +729,40 @@ def _inverse(system: _System) -> np.ndarray | None:
         return inverse / system.leave[None, :]
 
 
-def _backward_error(n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray, b: np.ndarray, x: np.ndarray) -> float:
-    """The TRUE residual of `x` in `x[s] = b[s] + sum of weight[e] x[dep[e]]` (`own[e] = s`), measured against the size of the terms it is made of.
+def _backward_error(terms, b: np.ndarray, x: np.ndarray) -> float:
+    """The TRUE residual of `x` in `x[s] = b[s] + terms.apply(x)[s]`, measured against the size of the terms it is made of.
 
-    `max over s of |b[s] - (x[s] - sum weight x[dep])| / (|x[s]| + sum |weight| |x[dep]| + |b[s]|)`: the componentwise backward error. Plain
-    `|b - A x| / |b|` cannot get below the rounding of the terms when the answer is far larger than the right-hand side (a policy that restarts
+    `max over s of |b[s] - (x[s] - terms[s])| / (|x[s]| + the same terms of |x| + |b[s]|)`: the componentwise backward error (the weights are chances, not
+    negative). Plain `|b - A x| / |b|` cannot get below the rounding of the terms when the answer is far larger than the right-hand side (a policy that restarts
     a million times), and then refuses a solve that is as good as floats allow; this number is the size of the change of the system
     that would make `x` exact, so it is small exactly for such a solve and about 1 for a wrong iterate.
     """
     with np.errstate(all="ignore"):
-        terms = np.bincount(own, weights=weight * x[dep], minlength=n)
-        scale = np.abs(x) + np.bincount(own, weights=np.abs(weight) * np.abs(x[dep]), minlength=n) + np.abs(b)
-        error = np.abs(b - (x - terms)) / np.where(scale > 0, scale, 1.0)
+        scale = np.abs(x) + terms.apply(np.abs(x)) + np.abs(b)
+        error = np.abs(b - (x - terms.apply(x))) / np.where(scale > 0, scale, 1.0)
     return float(np.max(error)) if len(error) else 0.0
 
 
-def _linear(n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray, b: np.ndarray) -> np.ndarray | None:
-    """The `x` with `x[s] = b[s] + sum of weight[e] x[dep[e]]` over the edges `e` with `own[e] = s`, that is `(I - P) x = b`; None when no solve reaches `ACCEPT_RESIDUAL`.
+def _linear(n: int, terms, b: np.ndarray) -> np.ndarray | None:
+    """The `x` with `x[s] = b[s] + terms.apply(x)[s]`, that is `(I - P) x = b`; None when no solve reaches `ACCEPT_RESIDUAL`.
 
-    Dense up to `DENSE_LIMIT` states, else BiCGSTAB; a stiff system falls back to the dense solve for up to `DENSE_FALLBACK` states. Every
-    answer is accepted on its TRUE residual (`_backward_error`, one more product), never on a number a method claims of itself.
+    `terms` is `_EdgeTerms` (edges as arrays), `_PushTerms` or `_PullTerms` (read from the system in blocks). Dense up to `DENSE_LIMIT` states, else BiCGSTAB; a
+    stiff system falls back to the dense solve for up to `DENSE_FALLBACK` states. Every answer is accepted on its TRUE residual (`_backward_error`, one more
+    product), never on a number a method claims of itself.
     """
     with np.errstate(all="ignore"):
         if n > DENSE_LIMIT:
 
             def matvec(x: np.ndarray) -> np.ndarray:
-                return x - np.bincount(own, weights=weight * x[dep], minlength=n)
+                return x - terms.apply(x)
 
             x, _, _ = bicgstab_checked(matvec, b, np.zeros(n), VISITS_TOLERANCE)
-            error = _backward_error(n, own, dep, weight, b, x)
+            error = _backward_error(terms, b, x)
             if error <= DENSE_FALLBACK_RESIDUAL:
                 return x
             if n > DENSE_FALLBACK:  # too big for the dense solve: the iterate is shown only if its true residual is good enough
                 return x if error <= ACCEPT_RESIDUAL else None
-        matrix = np.eye(n) - np.bincount(own * n + dep, weights=weight, minlength=n * n).reshape(n, n)
+        matrix = np.eye(n) - terms.dense()
         bnorm = max(float(np.linalg.norm(b)), 1e-300)
         try:
             x = np.linalg.solve(matrix, b)
@@ -617,7 +773,7 @@ def _linear(n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray, b: np.
                 x = x + np.linalg.solve(matrix, correction)
         except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats: nothing to say
             return None
-        return x if _backward_error(n, own, dep, weight, b, x) <= ACCEPT_RESIDUAL else None
+        return x if _backward_error(terms, b, x) <= ACCEPT_RESIDUAL else None
 
 
 @dataclass(frozen=True)
@@ -670,10 +826,9 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     say = _packed.PROGRESS or (lambda _text: None)
     done = _solved(chain)
     say(f"visit chances: the visits of {int(done.finishing.sum()):,} states that can finish solved ({time.perf_counter() - began:.1f} s)")
-    src = np.repeat(np.arange(m), np.diff(chain.ptr))
     found: dict[int, Reach] = {}
     asked = [i for i in dict.fromkeys(wanted) if i != 0 and done.solved and done.finishing[0] and done.finishing[i]]
-    diagonal, why = _diagonal(chain, src, done, say) if asked else (None, None)
+    diagonal, why = _diagonal(chain, done, say) if asked else (None, None)
     position = np.cumsum(done.finishing) - 1
     error = precision_of(done) if asked else 0.0
     for i in dict.fromkeys(wanted):
@@ -693,22 +848,20 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     return [found[i] for i in wanted]
 
 
-def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> tuple[np.ndarray | None, str | None]:
+def _diagonal(chain: Chain, done: _Solved, say) -> tuple[np.ndarray | None, str | None]:
     """`(N[s, s] of every state that can finish (by position), None)`, or `(None, the reason)` when the cycles cannot be put back or the pieces do not agree with the visits.
 
     The chain is Q on the states that can finish, self-loops included, with `leave` the chance to leave each state (`_system`); the cycles of the
     chain give the diagonal of N = (I - Q)^-1 (`solver/_packed_chain.py`) and, from the same pieces, the row of the start, which must be the visits.
     """
-    system = _system(chain, src, done.finishing)
+    system = _system(chain, done.finishing)
     assert system is not None
-    ptr = np.searchsorted(system.row, np.arange(system.nt + 1))  # the edges are in the order of their states, which the positions keep
+    ptr, column, p = _csr_with_self_loops(system)
     start = int(system.position[0])
     visits = done.visits[done.finishing]
     with np.errstate(all="ignore"):
         try:
-            diagonal, deviation = inverse_diagonal(
-                system.nt, ptr, system.column, system.p, system.leave, start=start, start_row=visits, progress=say, leak=system.leak
-            )
+            diagonal, deviation = inverse_diagonal(system.nt, ptr, column, p, system.leave, start=start, start_row=visits, progress=say, leak=system.leak)
         except CyclesTooTangled as error:  # not measured, never a guess: the benchmark line shows `?` and says why
             why = f"the cycles of the chain are too tangled to put back within the memory of a run ({error})"
         except MemoryError:
@@ -727,22 +880,18 @@ def _entry_chance(system: _System, absorbing: np.ndarray, extra: np.ndarray | No
     """The chance a run from the start ever reaches a state of `absorbing` (a mask over the positions; the start is not in it); None when the solve did not settle.
 
     h(s) is that chance from s, the states of `absorbing` made to stop the run: h(s) = sum over u in `absorbing` of p(s, u) / leave(s) + extra(s) + sum over the
-    other states t of p(s, t) / leave(s) h(t), each self-loop divided out as in `_visits`. `extra[s]` (over the positions, already divided by `leave`) is the
-    chance of getting from `s` into the step by a way that leaves the states that can finish (`_entered`): it makes a step that holds dead states a hitting problem too.
+    other states t of p(s, t) / leave(s) h(t), each self-loop divided out as in `_visits`, read from the system a block of edges at a time. `extra[s]` (over the
+    positions, already divided by `leave`) is the chance of getting from `s` into the step by a way that leaves the states that can finish (`_entered`): it makes
+    a step that holds dead states a hitting problem too.
     """
     free = ~absorbing
-    index = np.cumsum(free) - 1
-    row, column = system.row, system.column
-    edge = (row != column) & free[row]
-    inner = edge & free[column]
-    entering = edge & absorbing[column]
-    b = np.bincount(index[row[entering]], weights=system.p[entering] / system.leave[row[entering]], minlength=int(free.sum()))
+    b = free * _pull(system, absorbing.astype(float))
     if extra is not None:
-        b = b + extra[free]
-    h = _linear(int(free.sum()), index[row[inner]], index[column[inner]], system.p[inner] / system.leave[row[inner]], b)
+        b = b + free * extra
+    h = _linear(system.nt, _PullTerms(system, free), b)
     if h is None:
         return None
-    return min(1.0, max(0.0, float(h[index[system.position[0]]])))
+    return min(1.0, max(0.0, float(h[system.position[0]])))
 
 
 @dataclass(frozen=True)
@@ -758,16 +907,23 @@ class _Dead:
     q: np.ndarray
 
 
-def _dead_region(chain: Chain, src: np.ndarray, finishing: np.ndarray) -> _Dead:
+def _dead_region(chain: Chain, finishing: np.ndarray) -> _Dead:
     """The states that cannot finish are closed: a run that steps into one never comes back to a state that can. Their edges are few next to the chain's."""
-    m, dst = chain.m, chain.dst
-    state = dst < m
-    dead = ~finishing[src] & state
-    live_to_dead = finishing[src] & state
-    live_to_dead[live_to_dead] = ~finishing[dst[live_to_dead]]
-    nonself = dead & (src != dst)
-    leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=m)
-    return _Dead(src[dead], dst[dead], chain.prob[dead], leave, src[live_to_dead], dst[live_to_dead], chain.prob[live_to_dead])
+    m = chain.m
+    dead_edges: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+    entering: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+    for a, b in _blocks(chain.ptr):
+        row, d, p, live, _, _ = _read(chain, finishing, a, b)
+        state = d < m
+        dead = ~live & state
+        into_dead = live & state
+        into_dead[into_dead] = ~finishing[d[into_dead]]
+        dead_edges.append((row[dead] + a, d[dead], p[dead]))
+        entering.append((row[into_dead] + a, d[into_dead], p[into_dead]))
+    row, column, p = (np.concatenate([part[k] for part in dead_edges]) for k in range(3))
+    out, into, q = (np.concatenate([part[k] for part in entering]) for k in range(3))
+    nonself = row != column
+    return _Dead(row, column, p, np.bincount(row[nonself], weights=p[nonself], minlength=m), out, into, q)
 
 
 def _dead_chances(m: int, dead: _Dead, target: np.ndarray) -> np.ndarray | None:
@@ -794,14 +950,14 @@ def _dead_chances(m: int, dead: _Dead, target: np.ndarray) -> np.ndarray | None:
     to_free = edge & free[dead.column]
     weight = dead.p / np.where(dead.leave[dead.row] > 0, dead.leave[dead.row], 1.0)
     b = np.bincount(index[dead.row[to_target]], weights=weight[to_target], minlength=int(free.sum()))
-    h = _linear(int(free.sum()), index[dead.row[to_free]], index[dead.column[to_free]], weight[to_free], b)
+    h = _linear(int(free.sum()), _EdgeTerms(int(free.sum()), index[dead.row[to_free]], index[dead.column[to_free]], weight[to_free]), b)
     if h is None:
         return None
     chances[free] = np.clip(h, 0.0, 1.0)
     return chances
 
 
-def _entered(chain, step, nsteps, src, finishing, visits, system, inverse) -> tuple[list[float | None], int]:
+def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[list[float | None], int]:
     """`(chance, unsettled)`: the chance a run ever enters each step (1 for the first), and how many steps had a solve that did not settle.
 
     For a step A of states that can finish, the first state of A a run meets is a with chance H(a), and the visits of N split by it:
@@ -842,7 +998,7 @@ def _entered(chain, step, nsteps, src, finishing, visits, system, inverse) -> tu
             else:
                 result[s] = value
         else:
-            dead = dead or _dead_region(chain, src, finishing)
+            dead = dead or _dead_region(chain, finishing)
             target = np.zeros(m, dtype=bool)
             target[members[~live]] = True
             chances = _dead_chances(m, dead, target)
