@@ -32,6 +32,7 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError
 from . import _limits
 from ._envelope import BoundError, Net, NoPolicy, Refused, Search, resident_mb
 from ._limits import Limit, claim
+from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
 from ._packed import PackedResult, Walked, solve_walked
 from ._pattern_bound import PatternBound, pattern_lower_bound
@@ -82,21 +83,21 @@ class CraftingProblem:
     def _key(self, state: CompressedState) -> int | None:
         return self.index.get(self.pattern.key(state))
 
-    def _shaped(self, state: CompressedState) -> bool:
-        return self.floors is not None and self.floors.shaped(state.flags, state.fractured, state.status)
+    def _klass(self, state: CompressedState) -> int:
+        return OTHER if self.floors is None else self.floors.klass(state.flags, state.fractured, state.status)
 
     def lower(self, state: CompressedState) -> float:
         k = self._key(state)
         if k is None:
             self.keys_missing += 1  # the model never reached this key: the floor of the offers' class (0 outside it) is a bound that needs no model
-            return self.floors.rho if self._shaped(state) else 0.0
+            return self.floors.rho if self._klass(state) == OUTSIDE else 0.0
         found = float(self.values[k])
-        return max(found, self.floors.rho) if self._shaped(state) else found
+        return max(found, self.floors.rho) if self._klass(state) == OUTSIDE else found
 
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
         found = None if k is None or self.tip[k] else self.lowest[k]
-        shaped = self._shaped(state)
+        klass = self._klass(state)
         out: list[tuple[float, int]] = []
         for position, priced in enumerate(self.offers):
             action = priced.offer.action
@@ -118,7 +119,7 @@ class CraftingProblem:
             else:
                 continue  # the model holds the offer and no member of the key can take it
             if self.floors is not None:
-                low = max(low, self.floors.lower(position, shaped))  # a floor of the same class as the state's: the bound of the state (`lower`) never exceeds the least of these
+                low = max(low, self.floors.lower(position, klass))  # a floor of the same class as the state's: the bound of the state (`lower`) never exceeds the least of these
             out.append((low, position))
         return out
 
