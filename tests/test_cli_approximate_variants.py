@@ -187,8 +187,8 @@ def test_annulment_and_the_three_additions_have_a_coarse_level_and_an_action_wit
 
     regal = coarse_refusal(TYPED, [ANNUL, ADDITIONS[0], UndeclaredRegal()])
     annulment = coarse_refusal(TYPED, [UndeclaredAnnulment(), *ADDITIONS])
-    assert regal is not None and regal.startswith("Regal Orb cannot be grouped for an approximate answer: the model has not shown yet that its result does not depend on which mods the item holds")
-    assert annulment is not None and annulment.startswith("Orb of Annulment cannot be grouped for an approximate answer: the model has not shown yet that its result does not depend on which mods the item holds")
+    assert regal is not None and regal.startswith("an approximate answer cannot include Regal Orb: the model has not shown yet that its result does not depend on which mods the item holds")
+    assert annulment is not None and annulment.startswith("an approximate answer cannot include Orb of Annulment: the model has not shown yet that its result does not depend on which mods the item holds")
 
 
 def with_undeclared(exact):
@@ -204,7 +204,7 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_exact_when_small_a
     decision = decide(ab, start, priced(offers), 0.0, RATES)
 
     assert decision.action == "exact" and decision.levels == ()
-    assert decision.message.startswith("no approximate answer was possible (Regal Orb cannot be grouped for an approximate answer")
+    assert decision.message.startswith("no approximate answer was possible (an approximate answer cannot include Regal Orb")
 
 
 def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_exact_run_is_beyond_what_was_run(exact, monkeypatch):
@@ -212,9 +212,9 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_e
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
     decision = decide(ab, start, priced(offers), 0.0, RATES)
-    assert decision.action == "refused" and "no approximate answer was possible (Regal Orb cannot be grouped for an approximate answer" in decision.message
+    assert decision.action == "refused" and "no approximate answer was possible (an approximate answer cannot include Regal Orb" in decision.message
 
-    with pytest.raises(PlanError, match=r"no approximate answer was possible \(Regal Orb cannot be grouped for an approximate answer"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible \(an approximate answer cannot include Regal Orb"):
         make_plan(DATA, exact.target, PRICES, offers=offers, budget=0.0, rates=RATES, solver="object")  # (the packed solver answers it, ticket #70)
 
 

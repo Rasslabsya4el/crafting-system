@@ -117,7 +117,7 @@ class Coarsening:
     ):
         if abstraction.rerolls_values:
             raise OutOfScopeError(
-                "an action that rerolls the values of mods cannot be grouped for an approximate answer",
+                "an approximate answer cannot be made while an offered action rerolls the values of mods",
                 detail="an enabled action rerolls values: its rollable mods are slots by mod id, which no family can be pooled over",
             )
         self.abstraction = abstraction
@@ -133,7 +133,7 @@ class Coarsening:
         )
         if partners(pool):
             raise OutOfScopeError(
-                "a family with mods on both sides of the item (a jewel) is not modelled yet for an approximate answer",
+                "an approximate answer cannot be made for an item with a family that has mods on both sides (a jewel)",
                 detail="a family with mods on both sides (a jewel) is not modelled in a coarsening",
             )
         self._side_of = {family.family: family.side for family in pool}
@@ -264,7 +264,7 @@ class Coarsening:
         if reads.variants:
             if not (reads.junk and reads.pool_weight and reads.families is not None):
                 raise OutOfScopeError(
-                    f"{self._name(action)} cannot be grouped for an approximate answer: the model has no rule for how the other mods of the item change what it draws",
+                    f"an approximate answer cannot include {self._name(action)}: the model has no rule for how the other mods of the item change what it draws",
                     detail=(
                         f"{self._name(action)} declares variants but does not read the pool weight of the junk with named families, "
                         "so the extremes of its pools are not defined (ADR-0023)"
@@ -272,7 +272,7 @@ class Coarsening:
                 )
             if self.abstraction.models_metamods:
                 raise OutOfScopeError(
-                    f"{self._name(action)} cannot be grouped for an approximate answer on an item with a lock or an Attack or Caster metamod: there the model tells the mods of a family apart",
+                    f"an approximate answer cannot include {self._name(action)} on an item with a lock or an Attack or Caster metamod: there the model tells the mods of a family apart",
                     detail=(
                         f"{self._name(action)} has variants, but the state tells the mods of a family apart by their Attack/Caster tags "
                         "(the metamods are modelled), which a pool of kinds does not carry: there is no weight-spread level for a route "
@@ -282,7 +282,7 @@ class Coarsening:
             return
         if not reads.block_invariant:
             raise OutOfScopeError(
-                f"{self._name(action)} cannot be grouped for an approximate answer: the model has not shown yet that its result does not depend on which mods the item holds",
+                f"an approximate answer cannot include {self._name(action)}: the model has not shown yet that its result does not depend on which mods the item holds",
                 detail=(
                     f"{self._name(action)} is not declared block-invariant and declares no variants, so it has no family-group level "
                     "(ADR-0023: every other action refuses the coarse state until its invariance or its variants are proved)"
@@ -290,12 +290,12 @@ class Coarsening:
             )
         if reads.junk and reads.families is None:
             raise OutOfScopeError(
-                f"{self._name(action)} cannot be grouped for an approximate answer: it reads every mod family of the item",
+                f"an approximate answer cannot include {self._name(action)}: it reads every mod family of the item",
                 detail=f"{self._name(action)} reads every family of the item, so no family can be pooled for it",
             )
         if reads.pool_weight:
             raise OutOfScopeError(
-                f"{self._name(action)} cannot be grouped for an approximate answer: what it adds depends on the mod families the item holds, and the model has no rule for that yet",
+                f"an approximate answer cannot include {self._name(action)}: what it adds depends on the mod families the item holds, and the model has no rule for that yet",
                 detail=(
                     f"{self._name(action)} adds mods, so its kernel depends on the pool weight of the families held; "
                     "claiming block invariance for it is wrong, and it declares no variants (ADR-0023)"

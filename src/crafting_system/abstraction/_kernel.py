@@ -72,7 +72,7 @@ Label = Hashable  # the contribution to every leaf as ints (a `RollLaw` for a mo
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
 ONE = Fraction(1)
 _SLOT_KEY = attrgetter("key")
-_ROLLED_BY_A_DRAW = "a pool draw that rolls an implicit afresh is not modelled: only a fixed result spreads the roll of an implicit over its odds"
+_ROLLED_BY_A_DRAW = "an action that draws a new implicit and rolls its value is not modelled; only an action that sets the implicit to a fixed result is"
 Expanded = tuple[tuple[tuple[Status, ...], tuple[Slot, ...], Fraction], ...]  # (best of the new mods, the slots they add, chance)
 
 
@@ -488,7 +488,7 @@ class Abstraction:
         held = [entry for entry in item.mods if self.data.mods[entry.mod_id].domain == VEILED_DOMAIN]
         if len(held) > 1:
             raise OutOfScopeError(
-                "the item holds two veiled placeholders: a start item with a double veil is not modelled",
+                "the item holds two veiled mods: a start item with a double veil is not modelled",
                 detail="the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)",
             )
         if held and held[0].mod_id not in GENERIC_PLACEHOLDER_IDS:

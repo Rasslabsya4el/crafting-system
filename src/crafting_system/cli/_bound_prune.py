@@ -77,7 +77,6 @@ LBQ compared after the same factor; J is raised by its certified error bound.
 """
 
 import heapq
-import logging
 import math
 import time
 from collections.abc import Callable, Iterable, Sequence
@@ -100,8 +99,6 @@ from crafting_system.items import Item
 from crafting_system.solver import ConvergenceError, Solution, solve
 
 from ._offers import BuyStartItem, PricedOffer
-
-log = logging.getLogger(__name__)  # what a developer needs behind a sentence of the answer (#557); no text of the answer carries it
 
 ZERO, ONE = Fraction(0), Fraction(1)
 
@@ -130,6 +127,7 @@ class Pruned:
     why: str = ""
     inapplicable: tuple[str, ...] = ()  # labels the game refuses on the bare item of the start's shape
     phases: tuple[tuple[str, float], ...] = field(default=(), compare=False)  # (phase, seconds), for the measure
+    detail: str = field(default="", repr=False)  # the developer's text behind `why` (the solver's error): the limit made from it carries it to the JSON (#557)
 
 
 @dataclass
@@ -285,12 +283,12 @@ def _run(
     def solve_on(offers: Iterable[PricedOffer]) -> Solution[CompressedState]:
         return solve(_Model(abstraction, start, offers, cache), [start])
 
-    def fallback(why: str, spent: int) -> Pruned:
+    def fallback(why: str, spent: int, detail: str = "") -> Pruned:
         solution = solve_on(remaining)
         mark("fallback solve")
         return Pruned(
             solution, tuple(remaining), tuple(twins), (), spent + 1, 0.0, _largest(solution, abstraction), True,
-            why, (), tuple(phases),
+            why, (), tuple(phases), detail,
         )
 
     # 2. classify
@@ -365,8 +363,7 @@ def _run(
             solution = solve_on(offers)
         except ConvergenceError as problem:
             mark(f"solve {spent}")
-            log.info("the reduced model did not converge: %s", problem)
-            return fallback("the search on the smaller set of actions did not settle", spent)
+            return fallback("the search on the smaller set of actions did not settle", spent, str(problem))
         mark(f"solve {spent} ({len(offers)} offers, {len(solution.values)} states)")
         non_goal = [state for state in solution.values if not abstraction.is_goal(state)]
         moved = [state for state in non_goal if state.flags != start.flags or state.fractured != start.fractured]

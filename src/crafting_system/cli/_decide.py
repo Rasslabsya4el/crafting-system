@@ -23,7 +23,6 @@ ticket #129). A tail cut needs a coarse model for its leaves, so `decide` builds
 own forecast fits and gives it that level's forecast; with no coarse level that fits there is no tail cut.
 """
 
-import logging
 import time
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
@@ -44,8 +43,6 @@ from crafting_system.solver import Action as SolverAction
 from crafting_system.solver import ConvergenceError, Outcome, TabularModel, solve
 
 from ._offers import BuyStartItem, PricedOffer
-
-log = logging.getLogger(__name__)  # what a developer needs behind a sentence of the answer (#557); no text of the answer carries it
 
 BUDGET_SECONDS = 60.0  # "about a minute" (#81 Q2)
 TOLERANCE = 0.01  # the owner's tolerance: a certified gap of at most 1%
@@ -139,6 +136,8 @@ class Decision:
     estimate: Estimate | None = None
     budget: float | None = None  # the seconds the query was decided against; `climb` bounds the time of the levels with it
     why: str = ""  # a refusal: why no coarse level exists (`make_plan` solves such a query exactly on the packed solver, ticket #70)
+    detail: str = ""  # the developer's text behind `message` and `why` (an exception's `detail`): the limit made from this decision carries it to the JSON (#557)
+    rate_detail: str = ""  # the same for `rate_why`
     rate_why: str = ""  # the solver's speed could not be measured and `SOLVE_RATE_FALLBACK` stood in for it: why (M2); the choice between exact and approximate used the guess
 
 
@@ -177,6 +176,7 @@ def choose(
     *,
     levels: Sequence[Candidate] = (),
     refusal: str | None = None,
+    refusal_detail: str = "",
 ) -> Decision:
     """Exact when the forecast fits `budget` seconds, otherwise the levels that fit, otherwise exact or a refusal.
 
@@ -186,7 +186,7 @@ def choose(
     """
     if estimate is None:
         cause = f" ({refusal})" if refusal else ""
-        return Decision("exact", message=f"the size of the exact search could not be estimated{cause}, so it was run in full")
+        return Decision("exact", message=f"the size of the exact search could not be estimated{cause}, so it was run in full", detail=refusal_detail)
     predicted = estimate.seconds(r_kernel, r_solve)
     size = estimate.transitions
     if predicted <= budget and estimate.complete:
@@ -203,23 +203,29 @@ def choose(
     )
     if size <= EXACT_TRANSITIONS and estimate.complete:  # a cut-short count is only a lower bound: it never shows the exact run to be small
         message = f"no approximate answer was possible ({why}); the exact search is estimated at about {minutes(predicted)} and was run in full"
-        return Decision("exact", message=message, predicted=predicted, transitions=size, estimate=estimate)
+        return Decision("exact", message=message, predicted=predicted, transitions=size, estimate=estimate, detail=refusal_detail)
     message = f"no approximate answer was possible ({why}). " + exact_offer(size, predicted, estimate.complete)
-    return Decision("refused", message=message, predicted=predicted, transitions=size, estimate=estimate, why=why)
+    return Decision("refused", message=message, predicted=predicted, transitions=size, estimate=estimate, why=why, detail=refusal_detail)
 
 
 # --- the glue: pilot, rates, candidates --------------------------------------------------------------------
 
 
-def coarse_refusal(abstraction: Abstraction, actions: Iterable[Action]) -> str | None:
-    """Why no coarse level exists for `actions`: the first of them that does not declare itself block-invariant (None if all do)."""
+def coarse_cause(abstraction: Abstraction, actions: Iterable[Action]) -> tuple[str, str] | None:
+    """(the sentence, the developer's text) of why no coarse level exists for `actions`: the first of them that does not declare itself block-invariant (None if all do)."""
     try:
         probe = Coarsening(abstraction)
         for action in actions:
             probe.require_invariant(action)
     except OutOfScopeError as refusal:
-        return str(refusal)
+        return refusal.player, refusal.detail
     return None
+
+
+def coarse_refusal(abstraction: Abstraction, actions: Iterable[Action]) -> str | None:
+    """Why no coarse level exists for `actions`, as a sentence a person reads (None if one does): `coarse_cause` without the developer's text."""
+    cause = coarse_cause(abstraction, actions)
+    return None if cause is None else cause[0]
 
 
 def calibrate_solve_rate(
@@ -241,6 +247,18 @@ def measure_solve_rate(
     clock: Callable[[], float] = time.perf_counter,
 ) -> tuple[float, str]:
     """`calibrate_solve_rate` and, when it had to stand in `SOLVE_RATE_FALLBACK`, why (empty when the rate was measured)."""
+    rate, why, _ = measure_solve_rate_detail(abstraction, start, estimate, costs, clock)
+    return rate, why
+
+
+def measure_solve_rate_detail(
+    abstraction: Abstraction,
+    start: CompressedState,
+    estimate: Estimate,
+    costs: dict[Action, float],
+    clock: Callable[[], float] = time.perf_counter,
+) -> tuple[float, str, str]:
+    """`measure_solve_rate` and the developer's text behind the reason (the solver's error; empty when there is none): the limit carries it to the JSON."""
     layers = estimate.first_layers(CALIBRATION_EDGES)
     table = {
         state: [
@@ -251,16 +269,15 @@ def measure_solve_rate(
     }
     edges = sum(len(action.outcomes) for offered in table.values() for action in offered)
     if edges < 100:
-        return SOLVE_RATE_FALLBACK, f"the size estimate covers only {edges:,} possible moves between states, too few to time the search on"
+        return SOLVE_RATE_FALLBACK, f"the size estimate covers only {edges:,} possible moves between states, too few to time the search on", ""
     seen = set(table) | {s for offered in table.values() for action in offered for s, _ in action.outcomes}
     model = TabularModel([state for state in seen if abstraction.is_goal(state)], table)
     began = clock()
     try:
         solve(model, [start])
     except (ConvergenceError, ValueError) as failed:
-        log.info("the timing run did not finish: %s", failed)
-        return SOLVE_RATE_FALLBACK, "the timing run did not finish"
-    return (clock() - began) / edges, ""
+        return SOLVE_RATE_FALLBACK, "the timing run did not finish", str(failed)
+    return (clock() - began) / edges, "", ""
 
 
 def decide(
@@ -280,17 +297,18 @@ def decide(
             [start], actions, clock=clock, limit=ADDING_LIMIT if walked else DEFAULT_LIMIT, seconds=max(budget * PILOT_SHARE, PILOT_FLOOR_SECONDS) if walked else None
         )
     except EstimateRefused as refused:
-        return choose(None, 0.0, 0.0, budget, refusal=str(refused))
+        return choose(None, 0.0, 0.0, budget, refusal=refused.player, refusal_detail=refused.detail)
     rates = rates or Rates()
     r_kernel = estimate.kernel_rate if rates.kernel is None else rates.kernel
     r_solve = rates.solve
-    rate_why = ""
+    rate_why = rate_detail = ""
     if r_solve is None:
         r_solve = SOLVE_RATE_CEILING
         if estimate.seconds(r_kernel, r_solve) > budget:
             costs = {p.offer.action: p.cost for p in offered}
-            r_solve, rate_why = measure_solve_rate(abstraction, start, estimate, costs, clock)
-    refusal = coarse_refusal(abstraction, actions)
+            r_solve, rate_why, rate_detail = measure_solve_rate_detail(abstraction, start, estimate, costs, clock)
+    cause = coarse_cause(abstraction, actions)
+    refusal, refusal_detail = (None, "") if cause is None else cause
     candidates = []
     if refusal is None and (estimate.seconds(r_kernel, r_solve) > budget or not estimate.complete):
         tried = set()
@@ -307,4 +325,8 @@ def decide(
                 if level.kind == "tail":
                     named = replace(level, size=base.level.size, name=f"{level.name} over {base.level.name}")
                     candidates.append(Candidate(named, base.estimate, base.coarsening))
-    return replace(choose(estimate, r_kernel, r_solve, budget, levels=candidates, refusal=refusal), rate_why=rate_why)
+    return replace(
+        choose(estimate, r_kernel, r_solve, budget, levels=candidates, refusal=refusal, refusal_detail=refusal_detail),
+        rate_why=rate_why,
+        rate_detail=rate_detail,
+    )

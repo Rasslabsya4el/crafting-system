@@ -144,7 +144,7 @@ def _refuse_out_of_scope_veil(data: GameData, item: Item) -> None:
     held = _placeholders(data, item)
     if len(held) > 1:
         raise OutOfScopeError(
-            "the item holds two veiled placeholders: a start item with a double veil is not modelled",
+            "the item holds two veiled mods: a start item with a double veil is not modelled",
             detail="the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)",
         )
     if held and held[0].mod_id not in GENERIC_PLACEHOLDERS:

@@ -81,7 +81,7 @@ def input_kernel(ability, state: CompressedState, action: Action, prepared) -> d
     wants = tuple(need.want for need in action.inputs(data, prepared.item))
     if len(wants) != 1:
         raise OutOfScopeError(
-            f"{action.label(data)} takes {len(wants)} items as input, and the model averages over exactly one",
+            f"{action.label(data)} takes {len(wants)} items as input, and the model has a rule for one only",
             detail=f"the kernel averages over one input, and {action.label(data)} has {len(wants)}",
         )
     donor = wants[0]

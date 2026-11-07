@@ -363,6 +363,34 @@ def test_every_form_of_an_internal_name_is_found_and_named(text, kind):
     assert kind in {found for found, _ in pl.internal_names_in(f"The claim, {text}, is read.")}
 
 
+needs_data = pytest.mark.skipif(not pl.game_ids(), reason="the pinned game data is not on this machine (CI has it); the shape fallback is tested below")
+
+
+@needs_data
+@pytest.mark.parametrize(
+    "text",
+    ["IncreasedLifeEssence1_", "Strength1", "Intelligence8", "MovementVelocity2Royale", "IncreasedLifeEssence6", "AllAttributes4"],
+)
+def test_an_id_of_the_game_data_is_found_whatever_its_shape(text):
+    """An id that ends in `_`, a one-word id (`Strength1`) and an id with letters after the digit (`MovementVelocity2Royale`): the shape alone misses them (#557)."""
+    assert ("a game mod id", text) in pl.internal_names_in(f"The mod {text} is read.")
+
+
+@needs_data
+def test_the_game_ids_are_the_mods_and_the_bases_of_the_data():
+    ids = pl.game_ids()
+    assert {"Strength1", "IncreasedLifeEssence1_", "MovementVelocity2Royale"} <= ids and len(ids) > 20_000
+    assert not {each for each in ids if each.islower()}  # a lower-case word with a digit is not one of them
+
+
+def test_the_shape_of_an_id_is_the_fallback_when_the_data_is_absent(monkeypatch):
+    monkeypatch.setattr(pl, "game_ids", lambda: frozenset())
+    found = lambda text: [word for kind, word in pl.internal_names_in(text) if kind == "a game mod id"]  # noqa: E731
+    assert found("The mod IncreasedLifeEssence6 is read.") == ["IncreasedLifeEssence6"]
+    assert found("The mod IncreasedLifeEssenceBootsGloves12 is read.") == ["IncreasedLifeEssenceBootsGloves12"]
+    assert found("Tier3 PoE2 Level 83 Memory Strands 40 Strength1") == []  # one word and a digit is a name a person may write: only the data can tell it
+
+
 @pytest.mark.parametrize(
     "text",
     [

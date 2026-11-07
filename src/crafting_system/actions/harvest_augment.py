@@ -233,7 +233,7 @@ def _swap_outcomes(data: GameData, item: Item, source: str, target: str, source_
     if item.corrupted:
         raise NotApplicableError("the item is corrupted, and a corrupted item takes no Harvest swap")
     refuse_unmodelled(data, item, "the swap crafts are modelled for regular items only, so this craft on a jewel is not modelled yet")
-    tiers = tiers_of(data, item)
+    tiers: Mapping[str, int] = tiers_of(data, item)
     locked = locked_sides(data, item)
     wanted = {template.replace("X", source) for template in source_stats.value}
     with_target = 0

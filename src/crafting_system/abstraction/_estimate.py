@@ -55,10 +55,13 @@ class EstimateRefused(ValueError):
     """The pilot cannot count this set of actions: the kernel of one of them cannot be computed.
 
     The first argument, `player`, is a sentence a person reads (it reaches the answer as the reason no approximate answer was possible, #557);
-    `str(error)` is that sentence. What a developer needs goes in `detail`, which the log carries and the text never does.
+    `str(error)` is that sentence. What a developer needs goes in `detail`, which the limit of the decision carries to the JSON policy
+    (`Limit.detail`) and no text prints.
     """
 
     def __init__(self, player: str, *, detail: str = "") -> None:
+        if not isinstance(player, str) or not isinstance(detail, str):
+            raise TypeError("EstimateRefused takes the player's sentence (a str) and, as `detail`, the developer's text (a str)")
         super().__init__(player)
         self.player = player
         self.detail = detail or player

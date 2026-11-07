@@ -60,12 +60,13 @@ NOT_READ = {"_route_html.py"}  # the page's CSS and script: the page lint reads 
 NOT_READ_PREFIX = "_benchmark"  # the benchmark command is a developer's tool; its words are filed as an issue (OR-29)
 PROGRAM_NAME = "COMMAND"  # the constant that holds the program name for `argparse`'s usage line
 
-LEAF_LABEL_LEAK = ", mod "  # `leaf_labels` writes ", mod <id>" into the `Requirements:` line and the state lines (issue #649): the game-id pattern is not asked of a mod written so
+LEAF_LABEL_LEAK = ", mod "  # `leaf_labels` writes ", mod <id>" into the `Requirements:` line and the state lines (issue #649): the game-id pattern is not asked of a mod written so, on those lines only
+LEAF_LABEL_LINES = re.compile(r"Requirements: |S\d+: |  .* = [0-9.,]+%; chance of one use")  # the lines that carry a leaf label: the requirements, a state ("S1: rare; ... lacks <leaf>; has <leaf>") and a chance line of the odds table
 
 
 def leaked_by_a_leaf_label(line: str, fault: str) -> bool:
     """Whether `fault` is the game id of a mod that `leaf_labels` writes after ", mod " (issue #649)."""
-    return fault.startswith("a game mod id: ") and f"{LEAF_LABEL_LEAK}{fault.removeprefix('a game mod id: ')}" in line
+    return bool(LEAF_LABEL_LINES.match(line)) and fault.startswith("a game mod id: ") and f"{LEAF_LABEL_LEAK}{fault.removeprefix('a game mod id: ')}" in line
 
 
 OPTION = re.compile(r"(?<![\w-])--[a-z][a-z0-9-]*")
