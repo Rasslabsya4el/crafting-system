@@ -23,6 +23,74 @@ from pathlib import Path
 PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"
 
 
+def hybrid_tools(plan, data):
+    """Functions to evaluate the mean of a route that takes the planner's action in some states (ticket #599).
+
+    `actions_of(route)` is the route's graph action and price at every state of the walked graph (a state it does nothing at: -1), `mean_of(chosen, cost)`
+    the exact mean (the start price excluded) of the policy that takes those actions, found on the lumped chain with a dense solve.
+    """
+    import numpy as np
+
+    from crafting_system.cli import _route_packed as packed
+    from crafting_system.cli._packed import lumped_policy
+    from crafting_system.solver import lump_policy
+    from crafting_system.solver._packed_merge import exact_classes, quotient
+
+    walked = plan.policy.walked
+    graph = walked.graph
+
+    def actions_of(route):
+        reading = packed._Reading(plan, route, data)
+        chosen = np.full(graph.n, -1, dtype=np.int64)
+        cost = np.zeros(graph.n)
+        for i in range(graph.n):
+            if graph.goal[i]:
+                continue
+            found = reading.choose(i)
+            if isinstance(found, str):
+                continue
+            chosen[i] = found[1]
+            cost[i] = reading.priced[found[0]].cost
+        return chosen, cost
+
+    def mean_of(chosen, cost):
+        chain = packed.restricted(graph, chosen, cost)
+        classes = exact_classes(chain)
+        reduced, _ = quotient(chain, classes)
+        class_action = np.where(np.diff(reduced.act_ptr) > 0, reduced.act_ptr[:-1], -1)
+        lumped = lump_policy(reduced, class_action, int(classes.cls[0]))
+        policy = lumped_policy(lumped, reduced, walked.offers)
+        goal = lumped.goal
+        reach, todo = {lumped.start}, [lumped.start]
+        while todo:
+            block = todo.pop()
+            if goal[block]:
+                continue
+            action = policy.get(block)
+            if action is None:
+                return float("inf")  # a reachable block with no action: the run never finishes
+            for target, _ in action.outcomes:
+                if target not in reach:
+                    reach.add(target)
+                    todo.append(target)
+        blocks = sorted(b for b in reach if not goal[b])
+        if lumped.start not in blocks:
+            return 0.0
+        index = {b: k for k, b in enumerate(blocks)}
+        matrix = np.eye(len(blocks))
+        rhs = np.zeros(len(blocks))
+        for b in blocks:
+            action = policy[b]
+            total = sum(weight for _, weight in action.outcomes)
+            rhs[index[b]] = action.cost
+            for target, weight in action.outcomes:
+                if target in index:
+                    matrix[index[b], index[target]] -= weight / total
+        return float(np.linalg.solve(matrix, rhs)[index[lumped.start]])
+
+    return actions_of, mean_of, walked
+
+
 def main(argv: list[str]) -> int:
     from crafting_system.cli import _benchmark, _packed, evaluate_route, load_route, make_plan
     from crafting_system.cli._report import describe_state, number_states
@@ -165,8 +233,65 @@ def main(argv: list[str]) -> int:
     for line in planner_table:
         if line.get("carried"):
             say(f"planner {line['action']}: uses {line['uses']:.4g} x {line['price']:.4g} = {line['carried']:,.1f}")
+    try:
+        hybrids(document, plan, data, root, routes, say, shift)
+    except Exception:  # the tables above are already worth having
+        import traceback
+
+        say("hybrids failed:\n" + traceback.format_exc())
     (out / "costs.json").write_text(json.dumps(document, indent=1, default=str), encoding="utf-8")
     return 0
+
+
+def hybrids(document, plan, data, root, routes, say, shift):
+    """For each base route: its mean when it takes the planner's action in the divergence states of one group, and in all of them.
+
+    A group is the pair (the route's action, the planner's action) together with which wanted mods the item holds and whether it carries a crafted
+    mod. Adopting a group alone shows what that group costs the route; adopting all must give the planner's own mean (the check of the method).
+    """
+    from crafting_system.cli import evaluate_route, load_route
+    from crafting_system.cli._report import describe_state
+
+    actions_of, mean_of, walked = hybrid_tools(plan, data)
+    graph = walked.graph
+    index = {state: i for i, state in enumerate(walked.states)}
+    mine = plan.policy.action_array
+    planner_cost = graph.act_cost
+    document["hybrids"] = {}
+    for name, path in routes:
+        if path is None or name == "guide":
+            continue
+        route = load_route(root / path if not Path(path).is_absolute() and (root / path).exists() else Path(path), plan, data)
+        result = evaluate_route(plan, route, data)
+        chosen, cost = actions_of(route)
+        base = mean_of(chosen, cost) + shift
+        say(f"hybrids of {name}: base mean {base:,.2f}")
+        groups: dict = {}
+        for divergence in result.divergences:
+            state = divergence.state
+            key = (divergence.route_action, divergence.solver_action, tuple(s.name for s in state.status), bool(state.crafted))
+            groups.setdefault(key, []).append(index[state])
+
+        def adopt(members):
+            c2, k2 = chosen.copy(), cost.copy()
+            for i in members:
+                c2[i] = mine[i]
+                k2[i] = planner_cost[mine[i]]
+            return mean_of(c2, k2) + shift
+
+        everything = [i for members in groups.values() for i in members]
+        rows = []
+        for key, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            mean = adopt(members)
+            rows.append(
+                {
+                    "route_action": key[0], "planner_action": key[1], "status": key[2], "crafted": key[3], "states": len(members),
+                    "mean_if_adopted": mean, "saves": base - mean, "example": describe_state(plan, data, walked.states[members[0]]),
+                }
+            )
+            say(f"  adopt {key[1]} for {key[0]} at {len(members)} states {key[2]} crafted={key[3]}: mean {mean:,.2f} (saves {base - mean:,.2f})")
+        document["hybrids"][name] = {"base": base, "all_adopted": adopt(everything), "groups": rows}
+        say(f"  all adopted: {document['hybrids'][name]['all_adopted']:,.2f} (the planner's mean is {document['planner']['mean']:,.2f})")
 
 
 if __name__ == "__main__":
