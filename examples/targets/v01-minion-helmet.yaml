@@ -16,8 +16,8 @@
 #   * "+1 to Level of all Minion Skill Gems": the stat text, exactly as the ticket and the research note write it.
 #     On a helmet it is the +1 mod (tier 2 of the helmet's ladder, item level 14, weight 250); the +2 mod
 #     (tier 1, item level 75, weight 25) has another text and does not count. The recipe makes the +1 mod.
-#   * "top-tier Life": the owner's rule for a tier nobody states is the TOP tier the item level allows (tier 1),
-#     rolled, not from the bench.
+#   * "plus life" (the ticket's words, which name no tier): the owner's rule for a tier nobody states is the
+#     TOP tier the item level allows (tier 1), rolled, not from the bench.
 #   * The four orbs of the actions line are the cheapest set that crafts it: Transmutation, Alteration, Augmentation
 #     and the Regal Orb. Fewer kinds keep the state space small, so the benchmark solves in seconds.
 #
@@ -45,9 +45,10 @@ requirements:
   # The Minion gem level, by its exact English stat text.
   - stat: "+1 to Level of all Minion Skill Gems"
 
-  # Life, the top tier (min_tier: 1), rolled, not crafted.
+  # Life, rolled, not crafted. V01 has no guide: its words are the ticket's ("a minion helmet with +1 to minion gems plus life", #331,
+  # from docs/research/2026-10-31-vendor-recipes.md), which names no tier, so there is no `min_tier` and OR-1 holds: the top tier the
+  # item level allows (tier 1 at 84, which `min_tier: 1` also wrote before #404).
   - family: IncreasedLife
-    min_tier: 1
     not_crafted: true
 
 # Where the crafting starts when no recipe is used: a Normal Lion Pelt (no `start_item` means a fresh Normal item

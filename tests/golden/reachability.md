@@ -65,7 +65,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `aspect-beast` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `beast-side-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `wild-bristle-matron` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `divine-orb` | yes |  | r10-fractured-boots-70-life |  |  |
+| `divine-orb` | yes |  | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
 | `awakeners-orb` | **no** |  | none | `planner=False`: the solver takes no donors yet (#211, #212) and the interval over its rule axis does not exist (#220); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 14 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
@@ -102,11 +102,11 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet (batch B2, tickets #142 onward) |  |  |  |  |  |  |
-| r08 | plans | 2 names | 10674 | 2026 | 0 | 2 | bench-craft, fossil-set |
-| r09 | plans | 2 names | 10674 | 2026 | 0 | 2 | bench-craft, fossil-set |
-| r10-fractured-boots | plans | no key | 60 | 19 | 0 | 5 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods |
+| r08 | plans | 2 names | 10671 | 2026 | 0 | 2 | bench-craft, fossil-set |
+| r09 | plans | 2 names | 10671 | 2026 | 0 | 2 | bench-craft, fossil-set |
+| r10-fractured-boots | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
 | r10-fractured-boots-70-life | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
-| r11 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
+| r11 | plans | no key | 59 | 19 | 0 | 4 | chaos-orb, divine-orb, essence, harvest-reforge |
 | r12 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r13 | plans | 6 names | 6 | 0 | 0 | 6 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods, transmutation-orb |
 | r14 | plans | 10 names | 11 | 0 | 0 | 8 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods, transmutation-orb |

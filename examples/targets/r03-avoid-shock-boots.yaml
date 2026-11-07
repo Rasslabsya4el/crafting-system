@@ -27,8 +27,15 @@
 #     the rolled Life prefixes do not count.
 #   * "60% chance to Avoid being Shocked": exactly what the Avoid Shock essence adds, "(56-60)%
 #     chance to Avoid being Shocked" (mod ChanceToAvoidShockEssence7), a suffix.
-#   * "+13% chance to Suppress Spell Damage (T1)": tier 1, "+(13-14)%" (mod ChanceToSuppressSpells5__).
-#   * "+43% to Fire Resistance (T2)": tier 2, "+(42-45)%" (mod FireResist7).
+#   * "+13% chance to Suppress Spell Damage (T1)": the guide names tier 1, so `min_tier: 1` (OR-4); on this base that is
+#     "+(13-14)%" (mod ChanceToSuppressSpells5__), the only mod of tier 1. The 13 is the roll the transcription shows beside
+#     its tier, not a minimum.
+#   * "+43% to Fire Resistance (T2)": the guide names tier 2, so `min_tier: 2` (OR-4): tier 2 or better, "+(42-45)%"
+#     (FireResist7) or "+(46-48)%" (FireResist8). The 43 is the roll shown beside the tier, not a minimum. (The file asked
+#     exactly FireResist7 before #404, which turned a better roll away.)
+#   * The other numbers of the transcription (30 and 10, 67, 60) are read the same way, as rolls shown on the finished item
+#     beside the mod that gives them (the unveiled mod, the bench craft, the essence), not as minimums; the one number the
+#     route works toward, the 40 of the Searing Exarch implicit, is a `min_roll` below.
 #   * "40% chance to Avoid being Shocked (Searing Exarch implicit)": an implicit, not a suffix. The
 #     text "#% chance to Avoid being Shocked" under `implicits:` selects only the six Searing Exarch
 #     grades of it (AvoidShockEldritchImplicit1 to 6, "(33-35)%" up to "(48-50)%"). It does not
@@ -67,12 +74,14 @@ requirements:
     mod: ChanceToAvoidShockEssence7
 
   # Suppress Spell Damage, tier 1. The fractured mod of the start item counts.
+  # Guide (docs/research/2026-10-30-5-reference-routes.md, R03): "+13% chance to Suppress Spell Damage (T1)".
   - family: ChanceToSuppressSpells
-    mod: ChanceToSuppressSpells5__
+    min_tier: 1
 
-  # Fire Resistance, tier 2 (the item level allows tier 1 as well; the guide asks for tier 2).
+  # Fire Resistance, tier 2 or better.
+  # Guide (same place): "+43% to Fire Resistance (T2)". Tier 1 is better than the tier the guide names, so it counts.
   - family: FireResistance
-    mod: FireResist7
+    min_tier: 2
 
 # The implicit the boots must show. Every entry here is required too. `stat` is the English text
 # of the implicit; only implicit mods are looked at, so the Avoid Shock suffix is not confused with it.

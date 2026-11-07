@@ -21,7 +21,8 @@
 #   * "Tier 1 Strength": the Strength of the Deafening Essence of Rage, "+(51-58) to Strength" (mod
 #     StrengthEssence7_, a suffix); a quiver has no other Strength, so it is the essence's.
 #   * "Bow Attacks fire an additional Arrow": the only tier (AdditionalArrowQuiver1_, a suffix).
-#   * "Maximum Life", "Increased Damage with Bow Skills": the top tier the item level allows, rolled (not crafted).
+#   * "Maximum Life", "Increased Damage with Bow Skills": the guide names no tier, so the top tier the item level allows (OR-1),
+#     rolled (not crafted).
 #   * "Resistances or Attack Speed" in the last step is a free choice of the owner's, not part of the target.
 #   * The guide's lists of "prefixes" and "suffixes" are not the item's sides: the Pierce is a prefix.
 
@@ -61,13 +62,14 @@ requirements:
   # Bow Attacks fire an additional Arrow.
   - family: AdditionalArrows
     mod: AdditionalArrowQuiver1_
-  # Maximum Life, the top tier (min_tier: 1), rolled, not crafted.
+  # Maximum Life, rolled, not crafted. The guide names no tier (step 8: "Use two Exalted Orb to guarantee Maximum Life and
+  # Increased Damage with Bow Skills as your remaining prefix modifiers"), so there is no `min_tier` and OR-1 holds: the top tier
+  # of the ladder at the item level. A guarantee is a guarantee of the family, not of its tier (OR-4, the "guarantee" bullet).
   - family: IncreasedLife
-    min_tier: 1
     not_crafted: true
-  # Increased Damage with Bow Skills, the top tier the item level allows (tier 2 at item level 81).
+  # Increased Damage with Bow Skills, rolled, not crafted. The guide names no tier (same step 8), so OR-1 holds: the top tier the
+  # item level allows (tier 2 at item level 81, which `min_tier: 2` also wrote before #404).
   - family: DamageWithWeaponTypeSkill
-    min_tier: 2
     not_crafted: true
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file

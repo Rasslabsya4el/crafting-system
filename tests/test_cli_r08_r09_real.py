@@ -36,7 +36,7 @@ ROUTES = {
     "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.82716, "Dense Fossil"),
     "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.02716, "Pristine Fossil"),
 }
-SPEED_CRAFTS = 4  # the bench's plain Movement Speed craft and its three hybrids, at their top tier, are the only crafts that count
+SPEED_CRAFTS = 1  # the bench's plain Movement Speed craft at its top tier is the only craft that counts (the guide says "bench-craft the movement speed"; the three hybrid crafts are not asked since #404, OR-2)
 
 
 def paths(route: str):

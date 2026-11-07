@@ -23,7 +23,7 @@ rules:
       requirements:
         - family: Intelligence
           status: passing
-        - family: IncreasedLife
+        - stat: "+# to maximum Life"
           status: passing
         - family: AvoidElementalStatusAilments
           status: absent
