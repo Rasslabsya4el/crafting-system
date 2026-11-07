@@ -94,6 +94,7 @@ WARM_START = True  # each round's solve starts from the last round's policy and 
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
+POLL_SECONDS = 0.5  # how often a round that expands many states asks the net inside it
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
 
@@ -656,17 +657,38 @@ class Search[S]:
             if stopped is not None:
                 break
             mark = time.perf_counter()
+            polled = mark
             for i in fake.tolist():
                 if not self.expanded[i]:
                     self.expand(i)
                 self.realize(i, force=True)
                 self.p.release()
+                if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
+                    polled = time.perf_counter()
+                    stopped = self._net(began)
+                    if stopped is not None:
+                        break
             self.stats.expand_seconds += time.perf_counter() - mark
+            if stopped is not None:
+                break
         self.stats.touched = len(self.states)
         if self.p.restart is None:
-            raise NoPolicy(f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on")
-        if not math.isfinite(self.upper_value()):
-            raise NoPolicy(f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} states")
+            raise NoPolicy(
+                f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
+                f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}"
+            )
+        try:
+            upper = self.upper_value()
+        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies: say so, with the bound
+            raise NoPolicy(
+                f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
+                f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+            ) from error
+        if not math.isfinite(upper):
+            raise NoPolicy(
+                f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} of {len(self.states):,} states "
+                f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+            )
         return SearchResult(self.states, self.index, self._graph("upper"), lower, False, stopped, True, self.stats)
 
 

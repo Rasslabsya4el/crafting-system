@@ -17,6 +17,7 @@ the report and the risk read) and returns the `PackedResult` that `make_plan` ta
 `envelope_limits` is the `Limit` the report shows: which cut ran and what it guarantees (OR-13).
 """
 
+import dataclasses
 import math
 import time
 from collections.abc import Callable, Hashable, Sequence
@@ -29,8 +30,9 @@ from crafting_system.abstraction._pattern import Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 
 from . import _limits
-from ._envelope import BoundError, Net, NoPolicy, Refused, Search
+from ._envelope import BoundError, Net, NoPolicy, Refused, Search, resident_mb
 from ._limits import Limit, claim
+from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
 from ._packed import PackedResult, Walked, solve_walked
 from ._pattern_bound import PatternBound, pattern_lower_bound
@@ -52,6 +54,9 @@ class CraftingProblem:
         self.pattern = Pattern(abstraction, tags=bound.model.keys[0].tags is not None)
         model = bound.model
         self.index = model.index
+        self.floors = bound.floors
+        self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
+        self.tip = [not built for built in model.expanded] if model.expanded else [False] * len(model.keys)  # keys the build did not reach
         values = np.asarray(bound.value, dtype=np.float64) * (1.0 - bound.error_bound)  # lowered by what the solver cannot certify
         self.values = values
         expected: list[float] = []  # the lowered value of each pushed kernel of the model, in expectation
@@ -62,7 +67,8 @@ class CraftingProblem:
         self.lowest: list[dict[int, float]] = []  # key -> offer position -> the least lowered backup of its abstract actions there
         for row in model.actions:
             found: dict[int, float] = {}
-            for position, kernel in row:
+            for index, kernel in row:
+                position = bound.positions[index]
                 q = self.offers[position].cost + expected[kernel]
                 if position not in found or q < found[position]:
                     found[position] = q
@@ -77,16 +83,21 @@ class CraftingProblem:
     def _key(self, state: CompressedState) -> int | None:
         return self.index.get(self.pattern.key(state))
 
+    def _klass(self, state: CompressedState) -> int:
+        return OTHER if self.floors is None else self.floors.klass(state.flags, state.fractured, state.status)
+
     def lower(self, state: CompressedState) -> float:
         k = self._key(state)
         if k is None:
-            self.keys_missing += 1  # the model never reached this key: 0 is a bound that needs no model
-            return 0.0
-        return float(self.values[k])
+            self.keys_missing += 1  # the model never reached this key: the floor of the offers' class (0 outside it) is a bound that needs no model
+            return self.floors.rho if self._klass(state) == OUTSIDE else 0.0
+        found = float(self.values[k])
+        return max(found, self.floors.rho) if self._klass(state) == OUTSIDE else found
 
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
-        found = None if k is None else self.lowest[k]
+        found = None if k is None or self.tip[k] else self.lowest[k]
+        klass = self._klass(state)
         out: list[tuple[float, int]] = []
         for position, priced in enumerate(self.offers):
             action = priced.offer.action
@@ -100,11 +111,16 @@ class CraftingProblem:
                 self.ab.prunings.note(priced.label, PRUNED_QUALITY)
                 continue
             if restart:
-                out.append((priced.cost + self.start_lower, position))
-            elif found is None:
-                out.append((0.0, position))
+                low = priced.cost + self.start_lower
+            elif found is None or position not in self.in_model:
+                low = priced.cost  # no abstract action to read: the offer's own cost, or its floor below
             elif position in found:
-                out.append((found[position], position))
+                low = found[position]
+            else:
+                continue  # the model holds the offer and no member of the key can take it
+            if self.floors is not None:
+                low = max(low, self.floors.lower(position, klass))  # a floor of the same class as the state's: the bound of the state (`lower`) never exceeds the least of these
+            out.append((low, position))
         return out
 
     def cost(self, position: int) -> float:
@@ -136,6 +152,29 @@ class CraftingProblem:
 
     def release(self) -> None:
         self.ab._prepared_by.clear()
+
+
+BUILD_SHARE = 0.5  # the share of a time net the bound's build may take: the search and the solve of the graph it ends with come after it
+
+
+def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None:
+    """The net of the bound's build (OR-12): the time net's share `BUILD_SHARE` and the memory net as it is (the state net counts the search's states).
+
+    `began` is the clock reading when `envelope_result` started. The build asks it between two offers; it returns the reason once one is reached.
+    """
+    if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
+        return None
+
+    def stop() -> str | None:
+        if net.seconds is not None and time.perf_counter() - began >= net.seconds * BUILD_SHARE:
+            return f"the time limit of {net.seconds * BUILD_SHARE:g} seconds (half of the {net.seconds:g} of the net) was reached"
+        if net.memory_mb is not None:
+            used = resident_mb()
+            if used is not None and used >= net.memory_mb:
+                return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
+        return None
+
+    return stop
 
 
 def route_incumbent(route, data) -> Callable[[CompressedState], list[str]]:
@@ -179,6 +218,10 @@ class EnvelopeInfo:
     bound_seconds: float
     seconds: float
     peak_mb: float | None
+    bound_stopped: str | None = None  # why the bound's build ended before it was complete (a net); None for a complete model
+    bound_expanded: int = 0  # keys the build expanded (the others were tips with a floor)
+    bound_offers: int = 0  # offers the model was built on (the rest are carried by their floors, `_pattern_bound`)
+    bound_rounds: int = 1
 
 
 def envelope_result(
@@ -193,6 +236,7 @@ def envelope_result(
     tolerance: float = 1e-10,
     progress: Callable[[str], None] | None = None,
     guard: bool = True,
+    item=None,
 ) -> PackedResult:
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
 
@@ -207,9 +251,15 @@ def envelope_result(
     say = progress or _packed.PROGRESS or (lambda _text: None)
     began = time.perf_counter()
     if bound is None:
-        bound = pattern_lower_bound(abstraction, start, offers, progress=say)
+        bound = pattern_lower_bound(abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began))
     built = time.perf_counter()
-    say(f"bound built: {bound.model.stats.keys:,} keys, start value {bound.start_value!r} ({built - began:.0f} s)")
+    expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)
+    say(
+        f"bound built: {bound.model.stats.keys:,} keys ({expanded:,} expanded), {len(bound.positions):,} of {len(offers):,} offers in the model, start value "
+        f"{bound.start_value!r} ({built - began:.0f} s)" + ("" if bound.complete else f"; STOPPED in the {bound.phase} phase: {bound.stopped}")
+    )
+    if net is not None and net.seconds is not None:
+        net = dataclasses.replace(net, seconds=max(net.seconds - (built - began), 0.0))  # the search has what the build left of the time
     problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting)
     where = {priced.label: position for position, priced in enumerate(offers)}
     positions = None if incumbent is None else (lambda state: [where[label] for label in incumbent(state) if label in where])
@@ -222,7 +272,7 @@ def envelope_result(
     packed.info["envelope"] = EnvelopeInfo(
         result.exact, result.stopped, result.lower, mean, stats.rounds, stats.touched, stats.expanded, stats.realized, stats.candidates,
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
-        time.perf_counter() - began, stats.peak_mb,
+        time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
     )  # fmt: skip
     return packed
 
@@ -305,7 +355,13 @@ def certificate_text(info: EnvelopeInfo) -> str:
         "crafted mods, which never prices a step above its true cost; the search raised it with the steps it did look at. It holds because of how "
         "that count is built, not because it was checked on every item the crafting can reach: the search checks it only on the ones it looked at."
     )
-    return head + gap_text + bound
+    cut = (
+        f" The count itself was stopped before it was finished ({info.bound_stopped}): it was built for {info.bound_expanded:,} of the {info.bound_keys:,} "
+        "kinds of item it had found, and it counts the rest at the least their steps can cost, so the lower figure is lower than a finished count would give."
+        if info.bound_stopped
+        else ""
+    )
+    return head + gap_text + bound + cut
 
 
 __all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "certificate_figures", "certificate_gap", "certificate_gap_text", "certificate_text", "envelope_limits", "envelope_result", "route_incumbent"]

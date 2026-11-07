@@ -72,8 +72,9 @@ universe may miss that slot, and the members that hold it are not made (issue #5
 
 import time
 from collections import Counter, defaultdict
-from collections.abc import Iterator, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import nullcontext
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from fractions import Fraction
 from functools import reduce
@@ -95,6 +96,11 @@ from ._state import CompressedState, Slot, best_of
 # member that is not a state of the route it says nothing about the states that are, and dropping the action from the key could put the bound
 # above the exact cost. The build refuses and says why. The clauses name the families themselves (`tests/test_cli_model_gaps.py` scans for them).
 
+SINK = -1  # the successor of the mass an approximate kernel does not account for: a state that costs nothing (the goal)
+SHRINK = Fraction(2**30 - 1, 2**30)  # every chance of a float kernel is taken this much lower; the float error is 1e-13, so no chance is above its exact one
+PRIME_FROM = 8  # a key that is given at least this many offers at once primes their distributions in a process pool, in chunks of ...
+PRIME_CHUNK = 32  # ... this many offers (the net is asked between two chunks)
+POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read, cheap beside one offer)
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
@@ -174,17 +180,21 @@ class _Universe:
             for kind in sorted({slot.kind for _, _, slot in rows}):
                 self.classes[side][_tagset(kind)].append(_PureKind(kind, Slot(side, kind, zero), kind_type))
         self.zero = zero
-        self._seed_named(pattern, influences, kinds)
+        self.influences = influences
+        self.kinds = kinds
+        self._seed_named(pattern, pattern.actions)
 
-    def _seed_named(self, pattern: "Pattern", influences: frozenset, kinds) -> None:
+    def _seed_named(self, pattern: "Pattern", actions: Sequence[Action]) -> int:
         """Add the ordinary mods an offered action puts on the item by name and that the pool does not list (an essence's forced mod).
 
         `Adds.named` is the same on every use, so the slot is known before any kernel is run; this is what keeps a slot that only a member that
-        is not offered would have produced from missing (see the module docstring, "The universe").
+        is not offered would have produced from missing (see the module docstring, "The universe"). Returns how many slots the universe gained.
         """
         ab = pattern.ab
+        influences, kinds = self.influences, self.kinds
+        gained = 0
         probe = Item.build(ab.data, base_id=ab.base_id, item_level=ab.item_level, rarity=Rarity.RARE, influences=influences)
-        for action in pattern.actions:
+        for action in actions:
             try:
                 adds = action.adds(ab.data, probe)
             except NotApplicableError:
@@ -195,7 +205,8 @@ class _Universe:
                 mod = ab.data.mods.get(mod_id)
                 if mod is None or mod.domain == "crafted" or mod.generation_type not in (side.value for side in SIDES):
                     continue
-                self.note(Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences)))
+                gained += self.note(Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences)))
+        return gained
 
     def note(self, slot: Slot) -> bool:
         """Add a slot a kernel produced that the pool did not list; True when the universe grew."""
@@ -257,6 +268,8 @@ class PatternModel:
     kernels: list[tuple[tuple[int, ...], tuple[int, ...]]]  # (successor keys, integer weights)
     stats: PatternStats
     index: dict[PatternKey, int]
+    expanded: list[bool] = field(default_factory=list)  # key -> whether its actions were built; a key the build did not reach is a tip (no actions, not a dead end)
+    stopped: str | None = None  # why the build ended before every key was expanded (a net), None for a complete model
 
 
 class Pattern:
@@ -284,6 +297,12 @@ class Pattern:
         self._tag_kind: dict[str, tuple] = {}
         self.grew = 0
         self.fallbacks = 0
+
+    def add_actions(self, actions: Sequence[Action]) -> None:
+        """Offer more actions: what they add by name joins the universe, and a universe that gains a slot counts as growth (`grew`), as a kernel's slot does."""
+        self.actions = (*self.actions, *actions)
+        for universe in self._universes.values():
+            self.grew += universe._seed_named(self, actions)
 
     # ---- the key ----------------------------------------------------------------------------------------------
 
@@ -543,6 +562,8 @@ def build_pattern_model(
     tags: bool | None = None,
     progress=None,
     max_keys: int | None = None,
+    stop: Callable[[], str | None] | None = None,
+    approximate: bool = False,
 ) -> PatternModel:
     """The optimistic model of the key from the start key, with no walk of the concrete graph.
 
@@ -551,112 +572,258 @@ def build_pattern_model(
     Two members with the same pushed kernel give one abstract action. If a kernel produces an ordinary slot the pool did not list, the
     universe grows and the build runs again (`stats.universe_growth` counts the restarts). Raises `OutOfScopeError` as `Pattern` does and
     `RuntimeError` when more than `max_keys` keys were found (a safety net the caller asks for, never a default).
+
+    `stop` is the stop-and-say-so net of the build (OR-12, OR-13): it is asked between two offers of a key (so a key that holds thousands of
+    offers is no longer one step) and returns the reason once a net is reached. The build then ends with `PatternModel.stopped` set. The key it was
+    expanding is left a tip like the keys it had not reached: a tip has no actions in the model, which is not "the key has none", so the caller
+    gives it a bound of its own (`_pattern_bound`, a floor action to the goal). If the universe had grown in that pass, the keys expanded before
+    the growth lack the members that hold the new slot, so none of them is kept: every key is a tip.
+
+    With `approximate` the distributions behind the kernels are made in floats (`Abstraction.approximate`), which costs a twentieth of the time. A kernel
+    made so is not the exact one: each of its chances is shrunk by `SHRINK` (2^-30, above the float error of 1e-13, so no chance exceeds its exact value)
+    and the mass that is then missing is the chance of the state `SINK` (a successor of -1, a goal that costs nothing). The expected value of any
+    non-negative function of the successors is then at most the exact one, so a model built so is a lower bound of the model built exactly, and it differs
+    from it by about 1e-9 of a value.
     """
-    pattern = Pattern(abstraction, tags, [offer.action for offer in offers if offer.action is not None])
-    began = time.perf_counter()
-    passes = 0
-    while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
-        pattern.grew = 0
-        model = _explore(pattern, start, offers, progress, max_keys)
-        if not pattern.grew:
-            model.stats.universe_growth = passes
-            model.stats.seconds = time.perf_counter() - began
-            return model
-        passes += 1
+    return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop, approximate=approximate).extend(offers)
 
 
-def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternOffer], progress, max_keys) -> PatternModel:
-    ab = pattern.ab
-    stats = PatternStats()
-    index: dict[PatternKey, int] = {}
-    keys: list[PatternKey] = []
-    goal: list[bool] = []
+class PatternBuilder:
+    """The model of the key, built on a list of offers that can grow: `extend` adds offers and builds only what they add (ticket #626).
 
-    def intern(state: CompressedState) -> int:
-        key = pattern.key(state)
-        found = index.get(key)
+    A model built on a part of the offers and grown by the ones that turn out to matter would cost a whole build for each round if each round began
+    again; here a key that is expanded keeps its actions, and an offer added later is offered at the keys already expanded (its members, its kernels,
+    each distinct kernel once) and at the keys it finds. `extend` returns a snapshot of the model, so a model returned stays what it was when the builder
+    goes on. A build that stops (`stop`) leaves the builder unusable: the keys it had expanded do not all hold the offers being added, so the caller keeps
+    the model of the round before. A universe that grows (a slot no member held) begins the whole build again, as `build_pattern_model` always has.
+    """
+
+    def __init__(
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        *,
+        tags: bool | None = None,
+        progress=None,
+        max_keys: int | None = None,
+        stop=None,
+        grow: bool = False,
+        approximate: bool = False,
+    ) -> None:
+        self.approximate = approximate  # the kernels are made in floats, shrunk and completed with the sink (see `_lowered`): a lower bound of the exact model
+        self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
+        self.ab = abstraction
+        self.start = start
+        self.tags = tags
+        self.progress = progress
+        self.max_keys = max_keys
+        self.stop = stop
+        self.offers: list[PatternOffer] = []
+        self.restarts = 0
+        self.began = time.perf_counter()
+        self.dead = False
+        self._reset()
+
+    def _reset(self) -> None:
+        self.pattern = Pattern(self.ab, self.tags, [offer.action for offer in self.offers if offer.action is not None])
+        self.stats = PatternStats()
+        self.index: dict[PatternKey, int] = {}
+        self.keys: list[PatternKey] = []
+        self.goal: list[bool] = []
+        self.rows: list[list[tuple[int, int]]] = []
+        self.expanded: list[bool] = []
+        self.kernel_ids: dict[tuple, int] = {}
+        self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
+        self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
+        self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
+        self.done = 0  # the number of offers every expanded key holds
+        self.members_kept: dict[int, dict[Mode, list[CompressedState]]] = {}
+        self.pattern.note(self.start)
+        self.start_id = self._intern(self.start)
+
+    def _intern(self, state: CompressedState) -> int:
+        key = self.pattern.key(state)
+        found = self.index.get(key)
         if found is None:
-            found = index[key] = len(keys)
-            keys.append(key)
-            goal.append(ab.is_goal(state))
-            if max_keys is not None and len(keys) > max_keys:
-                raise RuntimeError(f"more than {max_keys} keys")
+            found = self.index[key] = len(self.keys)
+            self.keys.append(key)
+            self.goal.append(self.ab.is_goal(state))
+            self.rows.append([])
+            self.expanded.append(False)
+            if self.max_keys is not None and len(self.keys) > self.max_keys:
+                raise RuntimeError(f"more than {self.max_keys} keys")
         return found
 
-    pattern.note(start)
-    start_id = intern(start)
-    actions: list[list[tuple[int, int]]] = []
-    kernel_ids: dict[tuple, int] = {}
-    kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
-    computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
-    gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
-    last = time.perf_counter()
-    i = 0
-    while i < len(keys):
-        key = keys[i]
-        row: list[tuple[int, int]] = []
-        if not goal[i]:
-            if not pattern.members(key, Mode.ANY):
-                raise _no_member(key)
-            by_mode: dict[Mode, list[CompressedState]] = {}
-            for oi, offer in enumerate(offers):
-                if offer.action is None:
-                    if i != start_id:
-                        row.append((oi, _kernel_id(kernel_ids, kernels, {start_id: Fraction(1)})))
-                    continue
-                mode = pattern.mode_of(offer.action, key)
-                members = by_mode.get(mode)
-                if members is None:
-                    members = by_mode[mode] = pattern.members(key, mode)
-                    stats.members += len(members)
-                stats.modes[(mode.value, offer.label)] += 1
-                seen: set[int] = set()
-                for member in members:
-                    stats.pairs += 1
+    def extend(self, offers: Sequence[PatternOffer]) -> PatternModel:
+        """Add `offers` to the model and build what they add; the snapshot of the model, with `stopped` set if a net ended the build."""
+        if self.dead:
+            raise RuntimeError("the build was stopped; use the model of the round before")
+        self.offers.extend(offers)
+        self.pattern.grew = 0
+        self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
+        while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
+            stopped = self._pass()
+            if stopped is not None:
+                self.dead = True
+                if self.pattern.grew:
+                    self.expanded = [False] * len(self.keys)
+                    self.rows = [[] for _ in self.keys]
+                return self._snapshot(stopped)
+            if not self.pattern.grew:
+                return self._snapshot(None)
+            self.restarts += 1
+            self._reset()
+            self.pattern.grew = 0
+
+    def _snapshot(self, stopped: str | None) -> PatternModel:
+        stats = replace(self.stats)
+        stats.keys = len(self.keys)
+        stats.goal_keys = sum(self.goal)
+        stats.fallbacks = self.pattern.fallbacks
+        stats.universe_growth = self.restarts
+        stats.abstract_actions = sum(len(row) for row in self.rows)
+        stats.abstract_edges = sum(len(self.kernels[kid][0]) for row in self.rows for _, kid in row)
+        stats.seconds = time.perf_counter() - self.began
+        stats.modes = Counter(self.stats.modes)
+        return PatternModel(
+            list(self.keys), list(self.goal), [list(row) for row in self.rows], list(self.kernels), stats, dict(self.index), list(self.expanded), stopped
+        )
+
+    def _pass(self) -> str | None:
+        """Expand every key for the offers it lacks; the reason a net ended it, or None when it ran to the end."""
+        with self.ab.approximate() if self.approximate else nullcontext():
+            return self._pass_keys()
+
+    def _pass_keys(self) -> str | None:
+        pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
+        last = polled = time.perf_counter()
+        i = 0
+
+        def tick(oi: int) -> None:
+            """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step)."""
+            nonlocal last, polled
+            now = time.perf_counter()
+            if now - polled < POLL_SECONDS:
+                return
+            polled = now
+            if self.stop is not None:
+                reason = self.stop()
+                if reason is not None:
+                    raise _Stopped(reason)
+            if progress is not None and now - last >= 30:
+                last = now
+                progress(
+                    f"keys found {len(self.keys):,} expanded {i:,} (now offer {oi + 1:,} of {len(offers):,} of key {i:,}) kernels {stats.kernels:,} members {stats.members:,}"
+                )
+
+        while i < len(self.keys):
+            if self.stop is not None and (reason := self.stop()) is not None:
+                return reason
+            if not self.goal[i]:
+                first = self.done if self.expanded[i] else 0
+                if first < len(offers):
+                    if not pattern.members(self.keys[i], Mode.ANY):
+                        raise _no_member(self.keys[i])
                     try:
-                        ck = ab.kernel_key(member, offer.action)
+                        self._offers_of_key(i, first, tick)
+                    except _Stopped as reached:
+                        self.ab.release_prepared(keep_erased=True)
+                        return reached.reason
+                    self.ab.release_prepared(keep_erased=True)
+            self.expanded[i] = True
+            i += 1
+            now = time.perf_counter()
+            if progress is not None and now - last >= 30:
+                last = now
+                progress(f"keys found {len(self.keys):,} expanded {i:,} kernels {stats.kernels:,} members {stats.members:,}")
+        self.done = len(offers)
+        return None
+
+    def _prime(self, key: PatternKey, lo: int, hi: int, by_mode: dict) -> None:
+        """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
+
+        The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
+        one after the other. Nothing is built here and nothing changes in the answer; with one worker, or no `fork`, this does nothing. A chunk is
+        at most `PRIME_CHUNK` offers so that the net is asked between chunks.
+        """
+        requests = []
+        for offer in self.offers[lo:hi]:
+            if offer.action is None:
+                continue
+            mode = self.pattern.mode_of(offer.action, key)
+            members = by_mode.get(mode)
+            if members is None:
+                members = by_mode[mode] = self.pattern.members(key, mode)
+                self.stats.members += len(members)
+            requests.extend((member, offer.action) for member in members)
+        self.ab.prime(requests)
+
+    def _offers_of_key(self, i: int, first: int, tick) -> None:
+        """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
+        pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
+        key = self.keys[i]
+        by_mode: dict[Mode, list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
+        added: list[tuple[int, int]] = []
+        for oi in range(first, len(offers)):
+            offer = offers[oi]
+            tick(oi)
+            if (oi - first) % PRIME_CHUNK == 0 and len(offers) - first >= PRIME_FROM:
+                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), by_mode)
+            if offer.action is None:
+                if i != self.start_id:
+                    added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
+                continue
+            mode = pattern.mode_of(offer.action, key)
+            members = by_mode.get(mode)
+            if members is None:
+                members = by_mode[mode] = pattern.members(key, mode)
+                stats.members += len(members)
+            stats.modes[(mode.value, offer.label)] += 1
+            seen: set[int] = set()
+            for member in members:
+                stats.pairs += 1
+                try:
+                    ck = ab.kernel_key(member, offer.action)
+                except NotApplicableError:
+                    stats.refused_pairs += 1
+                    continue
+                except OutOfScopeError as gap:
+                    if _gap_everywhere(pattern, self.gaps, key, offer):
+                        stats.gap_pairs += 1
+                        continue
+                    raise _gap(offer, key, gap) from gap
+                kid = self.computed.get(ck)
+                if kid is None:
+                    try:
+                        exact = ab.kernel(member, offer.action)
                     except NotApplicableError:
                         stats.refused_pairs += 1
                         continue
                     except OutOfScopeError as gap:
-                        if _gap_everywhere(pattern, gaps, key, offer):
+                        if _gap_everywhere(pattern, self.gaps, key, offer):
                             stats.gap_pairs += 1
                             continue
                         raise _gap(offer, key, gap) from gap
-                    kid = computed.get(ck)
-                    if kid is None:
-                        try:
-                            exact = ab.kernel(member, offer.action)
-                        except NotApplicableError:
-                            stats.refused_pairs += 1
-                            continue
-                        except OutOfScopeError as gap:
-                            if _gap_everywhere(pattern, gaps, key, offer):
-                                stats.gap_pairs += 1
-                                continue
-                            raise _gap(offer, key, gap) from gap
-                        stats.kernels += 1
-                        pushed: dict[int, Fraction] = defaultdict(Fraction)
-                        for successor, chance in exact.items():
-                            pattern.note(successor)
-                            pushed[intern(successor)] += chance
-                        kid = computed[ck] = _kernel_id(kernel_ids, kernels, pushed)
-                    if kid not in seen:
-                        seen.add(kid)
-                        row.append((oi, kid))
-            ab._prepared_by.clear()
-        actions.append(row)
-        stats.abstract_actions += len(row)
-        stats.abstract_edges += sum(len(kernels[kid][0]) for _, kid in row)
-        i += 1
-        now = time.perf_counter()
-        if progress is not None and now - last >= 30:
-            last = now
-            progress(f"keys found {len(keys):,} expanded {i:,} kernels {stats.kernels:,} members {stats.members:,}")
-    stats.keys = len(keys)
-    stats.goal_keys = sum(goal)
-    stats.fallbacks = pattern.fallbacks
-    return PatternModel(keys, goal, actions, kernels, stats, index)
+                    stats.kernels += 1
+                    pushed: dict[int, Fraction] = defaultdict(Fraction)
+                    for successor, chance in exact.items():
+                        pattern.note(successor)
+                        pushed[self._intern(successor)] += chance
+                    if self.approximate:
+                        pushed = _lowered(pushed)
+                    kid = self.computed[ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
+                if kid not in seen:
+                    seen.add(kid)
+                    added.append((oi, kid))
+        self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
+
+
+class _Stopped(Exception):
+    """Raised by the tick of a build when a net is reached, inside the expansion of one key."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 def _no_member(key: PatternKey) -> OutOfScopeError:
@@ -702,6 +869,24 @@ def _gap(offer: PatternOffer, key: PatternKey, gap: Exception) -> OutOfScopeErro
     )
 
 
+def _lowered(pushed: dict[int, Fraction]) -> dict[int, Fraction]:
+    """A kernel made in floats as a kernel that is below the exact one: each chance shrunk by `SHRINK`, the mass that is missing given to `SINK`.
+
+    A kernel with no float in it (a deterministic result, or a draw made exactly) is the exact one and stays. The chances of a float kernel are
+    positive sums and products of at most a few dozen steps, each with a relative error of 2^-53, so each is within 1e-13 of its exact value and
+    `chance x SHRINK` is below the exact one; a total above one after the shrink would mean an error far above that, and is refused.
+    """
+    if not any(isinstance(chance, float) for chance in pushed.values()):
+        return pushed
+    lowered = {successor: Fraction(chance) * SHRINK for successor, chance in pushed.items()}
+    missing = 1 - sum(lowered.values(), Fraction(0))
+    if missing < 0:
+        raise RuntimeError(f"a float kernel adds up to more than one after its chances were shrunk by 2^-30 (by {float(-missing):.3g}): its error is far above the float error")
+    if missing:
+        lowered[SINK] = missing
+    return lowered
+
+
 def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]) -> int:
     """The id of a pushed kernel (successor keys with integer weights, gcd-reduced), interned."""
     items = sorted(pushed.items())
@@ -716,4 +901,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["Mode", "Pattern", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "build_pattern_model"]
+__all__ = ["Mode", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "build_pattern_model"]
