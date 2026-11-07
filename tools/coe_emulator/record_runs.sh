@@ -1,4 +1,4 @@
-#!/bin/bash
+# bash script (run it as `bash tools/coe_emulator/record_runs.sh ...`)
 # Record one run of every case of a check file, for one runner of a heavy run (ticket #617):
 #
 #   tools/coe_emulator/record_runs.sh CHECKS.json REPEATS SEED_BASE OUT_DIR
