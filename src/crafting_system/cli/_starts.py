@@ -21,6 +21,7 @@ solver and with the one of #312.
 import dataclasses
 import itertools
 import math
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
@@ -76,6 +77,20 @@ def _by_price(candidate: StartCandidate) -> tuple[float, str]:
     if candidate.price is None:
         raise PlanError(f"the start option {candidate.label!r} has no price, so it cannot be compared")
     return (candidate.price, candidate.key)
+
+
+def _deadline(kwargs: dict[str, Any]) -> float | None:
+    """The clock reading at which the time net of this run is reached, or None when it has none (the net is one for the whole run, not for each start option)."""
+    net = kwargs.get("net")
+    seconds = getattr(net, "seconds", None)
+    return None if seconds is None else time.perf_counter() + seconds
+
+
+def _with_time_left(kwargs: dict[str, Any], deadline: float | None) -> dict[str, Any]:
+    """`kwargs` with the time net cut to what is left before `deadline` (a start option planned after the net was spent stops at once and fails, saying so)."""
+    if deadline is None:
+        return kwargs
+    return {**kwargs, "net": dataclasses.replace(kwargs["net"], seconds=max(deadline - time.perf_counter(), 0.0))}
 
 
 def readings_of(axes: tuple[tuple[str, tuple[str, ...]], ...]) -> list[Reading]:
@@ -148,6 +163,7 @@ def plan_with_starts(
 
     plain = plain_candidate(data, target, prices, start_price)
     order = [plain, *sorted(listing.candidates, key=_by_price)]
+    deadline = _deadline(kwargs)
     outcomes: dict[str, _Outcome] = {}
     skipped: dict[str, str] = {}
     by_reading: list[ReadingChoice] = []
@@ -161,7 +177,7 @@ def plan_with_starts(
                 if candidate.key != PLAIN_KEY and candidate.price is not None and candidate.price >= best_total:
                     skipped.setdefault(candidate.key, f"its start price {candidate.price:,.2f} Chaos is not below the best total found, {best_total:,.2f}")
                     continue
-                outcomes[candidate.key] = _plan_candidate(data, target, prices, candidate, start_price, offers=offers, **kwargs)
+                outcomes[candidate.key] = _plan_candidate(data, target, prices, candidate, start_price, offers=offers, **_with_time_left(kwargs, deadline))
             total = outcomes[candidate.key].total
             if total < best_total:
                 best_key, best_total = candidate.key, total
