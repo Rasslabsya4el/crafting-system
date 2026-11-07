@@ -47,14 +47,14 @@ def wanted(tmp_path, *names):
 
 def test_a_thin_line_is_replaced_by_the_deeper_trade_reading_and_the_other_is_kept_in_the_provenance(ninja, tmp_path):
     shallow = load_price_file(_first_fetch(ninja, tmp_path)).prices["Hollow Fossil"]
-    exchange = FakeExchange({"hollow-fossil": offers((300, 40), (310, 40), (320, 40)), "bound-fossil": offers((1, 1))})
+    exchange = FakeExchange({"hollow-fossil": offers(*[(300 + i, 10) for i in range(12)]), "bound-fossil": offers(*[(1, 1)] * 12)})
 
     code = run(tmp_path, ninja, exchange, "--wanted-file", wanted(tmp_path, "Hollow Fossil", "Bound Fossil"), "--trade-below", "1000000")
 
     assert code == 0
     saved = load_price_file(tmp_path / "data" / "prices.json").prices
     hollow = saved["Hollow Fossil"]
-    assert (hollow.source, hollow.chaos, hollow.provenance.kind, hollow.provenance.depth) == ("trade-api", 310.0, "trade", 120.0)
+    assert (hollow.source, hollow.chaos, hollow.provenance.kind, hollow.provenance.depth) == ("trade-api", 302.0, "trade", 50.0)
     assert hollow.provenance.other == {"kind": "ninja-exchange", "chaos": shallow.chaos, "depth": shallow.provenance.depth}
     assert saved["Bound Fossil"].source == "poe.ninja" and saved["Bound Fossil"].provenance.other["kind"] == "trade"  # the exchange line is the deeper one
 

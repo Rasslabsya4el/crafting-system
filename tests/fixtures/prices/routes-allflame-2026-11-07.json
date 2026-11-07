@@ -20,30 +20,20 @@
       "source": "poe.ninja"
     },
     "Aetheric Fossil": {
-      "chaos": 976.2,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "aetheric-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 1,
-        "used": 1
-      },
-      "note": "mean of the 1 cheapest instant offers of the trade site's bulk exchange, 1 units in them, 1 offers in all, 2026-11-07",
+      "chaos": 30.33,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 1.0,
+        "depth": 0.5001648532805804,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 1,
         "other": {
-          "chaos": 30.33,
-          "depth": 0.5001648532805804,
-          "kind": "ninja-exchange"
+          "chaos": 976.2,
+          "depth": 1.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Amethyst Ring, item level 75, fractured +(13-16) to all Attributes": {
       "chaos": 2.2,
@@ -241,30 +231,20 @@
       "source": "poe.ninja"
     },
     "Crystallised Rancour": {
-      "chaos": 817.4666666666667,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "sandswept-lifeforce",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 5 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 310.1,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 5.0,
+        "depth": 4.166397936149629,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 310.1,
-          "depth": 4.166397936149629,
-          "kind": "ninja-exchange"
+          "chaos": 817.4666666666667,
+          "depth": 5.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Deafening Essence of Anger": {
       "chaos": 7.29,
@@ -278,30 +258,20 @@
       "source": "poe.ninja"
     },
     "Deafening Essence of Anguish": {
-      "chaos": 18.333333333333332,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "deafening-essence-of-anguish",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 38 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 2.25,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 38.0,
+        "depth": 6.666666666666667,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 2.25,
-          "depth": 6.666666666666667,
-          "kind": "ninja-exchange"
+          "chaos": 18.333333333333332,
+          "depth": 38.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Deafening Essence of Contempt": {
       "chaos": 19.22,
@@ -331,30 +301,20 @@
       "source": "poe.ninja"
     },
     "Deafening Essence of Dread": {
-      "chaos": 30.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "deafening-essence-of-dread",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 27 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 1.85,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 27.0,
+        "depth": 12.34054054054054,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 1.85,
-          "depth": 12.34054054054054,
-          "kind": "ninja-exchange"
+          "chaos": 30.0,
+          "depth": 27.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Deafening Essence of Envy": {
       "chaos": 13.95,
@@ -432,30 +392,20 @@
       "source": "poe.ninja"
     },
     "Deafening Essence of Misery": {
-      "chaos": 15.5,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "deafening-essence-of-misery",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 36 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 8.42,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 36.0,
+        "depth": 28.990498812351543,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 8.42,
-          "depth": 28.990498812351543,
-          "kind": "ninja-exchange"
+          "chaos": 15.5,
+          "depth": 36.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Deafening Essence of Rage": {
       "chaos": 18.33,
@@ -528,30 +478,20 @@
       "source": "poe.ninja"
     },
     "Deafening Essence of Torment": {
-      "chaos": 15.333333333333334,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "deafening-essence-of-torment",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 30 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 9.21,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 30.0,
+        "depth": 26.503800217155263,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 9.21,
-          "depth": 26.503800217155263,
-          "kind": "ninja-exchange"
+          "chaos": 15.333333333333334,
+          "depth": 30.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Deafening Essence of Woe": {
       "chaos": 14.64,
@@ -592,56 +532,36 @@
       "source": "poe.ninja"
     },
     "Deft Fossil": {
-      "chaos": 338.06666666666666,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "deft-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 48 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 6.1,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 48.0,
+        "depth": 3.49672131147541,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 6.1,
-          "depth": 3.49672131147541,
-          "kind": "ninja-exchange"
+          "chaos": 338.06666666666666,
+          "depth": 48.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Dense Fossil": {
-      "chaos": 24.333333333333332,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "dense-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 142 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 23.48,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 142.0,
+        "depth": 69.16524701873935,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 23.48,
-          "depth": 69.16524701873935,
-          "kind": "ninja-exchange"
+          "chaos": 24.333333333333332,
+          "depth": 142.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Divine Orb": {
       "chaos": 488.1,
@@ -655,30 +575,20 @@
       "source": "poe.ninja"
     },
     "Essence of Delirium": {
-      "chaos": 279.05,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "essence-of-delirium",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 475 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 51.93,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 475.0,
+        "depth": 15.667244367417679,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 51.93,
-          "depth": 15.667244367417679,
-          "kind": "ninja-exchange"
+          "chaos": 279.05,
+          "depth": 475.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Essence of Desolation": {
       "chaos": 179.8,
@@ -708,56 +618,36 @@
       "source": "poe.ninja"
     },
     "Essence of Hysteria": {
-      "chaos": 46.666666666666664,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "essence-of-hysteria",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 191 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 32.49,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 191.0,
+        "depth": 11.332717759310556,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 32.49,
-          "depth": 11.332717759310556,
-          "kind": "ninja-exchange"
+          "chaos": 46.666666666666664,
+          "depth": 191.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Essence of Insanity": {
-      "chaos": 190.70000000000002,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "essence-of-insanity",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 360 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 51.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 360.0,
+        "depth": 22.333333333333332,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 51.0,
-          "depth": 22.333333333333332,
-          "kind": "ninja-exchange"
+          "chaos": 190.70000000000002,
+          "depth": 360.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Exalted Orb": {
       "chaos": 3.0,
@@ -771,56 +661,36 @@
       "source": "poe.ninja"
     },
     "Faceted Fossil": {
-      "chaos": 488.1,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "faceted-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 8 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 209.3,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 8.0,
+        "depth": 2.3330148112756808,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 209.3,
-          "depth": 2.3330148112756808,
-          "kind": "ninja-exchange"
+          "chaos": 488.1,
+          "depth": 8.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Fractured Fossil": {
-      "chaos": 558.1,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "fractured-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 13 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 48.76,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 13.0,
+        "depth": 2.834290401968827,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 48.76,
-          "depth": 2.834290401968827,
-          "kind": "ninja-exchange"
+          "chaos": 558.1,
+          "depth": 13.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Fracturing Orb": {
       "chaos": 436.4,
@@ -839,56 +709,36 @@
       "source": "poe.ninja"
     },
     "Frigid Fossil": {
-      "chaos": 248.3,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "frigid-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 88 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 4.44,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 88.0,
+        "depth": 13.175675675675674,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 4.44,
-          "depth": 13.175675675675674,
-          "kind": "ninja-exchange"
+          "chaos": 248.3,
+          "depth": 88.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Fundamental Fossil": {
-      "chaos": 46.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "fundamental-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 112 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 38.63,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 112.0,
+        "depth": 40.33134869272586,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 38.63,
-          "depth": 40.33134869272586,
-          "kind": "ninja-exchange"
+          "chaos": 46.0,
+          "depth": 112.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Gemcutter's Prism": {
       "chaos": 3.81,
@@ -902,30 +752,20 @@
       "source": "poe.ninja"
     },
     "Gilded Fossil": {
-      "chaos": 352.06666666666666,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "gilded-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 17 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 427.3,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 17.0,
+        "depth": 5.333489351743506,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 427.3,
-          "depth": 5.333489351743506,
-          "kind": "ninja-exchange"
+          "chaos": 352.06666666666666,
+          "depth": 17.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Glassblower's Bauble": {
       "chaos": 0.9834,
@@ -939,30 +779,20 @@
       "source": "poe.ninja"
     },
     "Glyphic Fossil": {
-      "chaos": 488.1,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "glyphic-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 9 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 32.36,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 9.0,
+        "depth": 1.8334363411619283,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 32.36,
-          "depth": 1.8334363411619283,
-          "kind": "ninja-exchange"
+          "chaos": 488.1,
+          "depth": 9.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Hinekora's Lock": {
       "chaos": 200111.0,
@@ -976,56 +806,36 @@
       "source": "poe.ninja"
     },
     "Hollow Fossil": {
-      "chaos": 383.73333333333335,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "hollow-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 18 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 281.2,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 18.0,
+        "depth": 5.4978662873399715,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 281.2,
-          "depth": 5.4978662873399715,
-          "kind": "ninja-exchange"
+          "chaos": 383.73333333333335,
+          "depth": 18.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Jagged Fossil": {
-      "chaos": 265.64,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "jagged-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 89 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 20.39,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 89.0,
+        "depth": 14.664051005394802,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 20.39,
-          "depth": 14.664051005394802,
-          "kind": "ninja-exchange"
+          "chaos": 265.64,
+          "depth": 89.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Leather Belt (ilvl 86)": {
       "chaos": 10.0,
@@ -1211,30 +1021,20 @@
       "source": "trade-api"
     },
     "Metallic Fossil": {
-      "chaos": 250.3,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "metallic-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 98 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 16.42,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 98.0,
+        "depth": 16.16930572472594,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 16.42,
-          "depth": 16.16930572472594,
-          "kind": "ninja-exchange"
+          "chaos": 250.3,
+          "depth": 98.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Muttering Essence of Anger": {
       "chaos": 8.75,
@@ -1405,30 +1205,20 @@
       "source": "trade-api"
     },
     "Opulent Fossil": {
-      "chaos": 10.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "opulent-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 80 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 16.87,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 80.0,
+        "depth": 18.33432128037937,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 16.87,
-          "depth": 18.33432128037937,
-          "kind": "ninja-exchange"
+          "chaos": 10.0,
+          "depth": 80.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Orb of Alchemy": {
       "chaos": 0.03086,
@@ -1619,56 +1409,36 @@
       "source": "poe.ninja"
     },
     "Potent Chaotic Resonator": {
-      "chaos": 203.44,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "potent-chaotic-resonator",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 319 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 3.19,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 319.0,
+        "depth": 76.52037617554859,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 3.19,
-          "depth": 76.52037617554859,
-          "kind": "ninja-exchange"
+          "chaos": 203.44,
+          "depth": 319.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Powerful Chaotic Resonator": {
-      "chaos": 8.3,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "powerful-chaotic-resonator",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 164 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.17,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 164.0,
+        "depth": 58.97435897435898,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.17,
-          "depth": 58.97435897435898,
-          "kind": "ninja-exchange"
+          "chaos": 8.3,
+          "depth": 164.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Primal Crystallised Lifeforce": {
       "chaos": 0.04377,
@@ -1682,30 +1452,20 @@
       "source": "poe.ninja"
     },
     "Prime Chaotic Resonator": {
-      "chaos": 263.62,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "prime-chaotic-resonator",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 8,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 18 units in them, 8 offers in all, 2026-11-07",
+      "chaos": 301.9,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 18.0,
+        "depth": 12.66644584299437,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 301.9,
-          "depth": 12.66644584299437,
-          "kind": "ninja-exchange"
+          "chaos": 263.62,
+          "depth": 18.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Primitive Chaotic Resonator": {
       "chaos": 1.02,
@@ -1735,30 +1495,20 @@
       "source": "poe.ninja"
     },
     "Pristine Fossil": {
-      "chaos": 207.24,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "pristine-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 142 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 16.65,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 142.0,
+        "depth": 37.00900900900901,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 16.65,
-          "depth": 37.00900900900901,
-          "kind": "ninja-exchange"
+          "chaos": 207.24,
+          "depth": 142.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Regal Orb": {
       "chaos": 0.0481,
@@ -1772,82 +1522,52 @@
       "source": "poe.ninja"
     },
     "Sacred Crystallised Lifeforce": {
-      "chaos": 84.23333333333333,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "sacred-lifeforce",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 3902 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 161.1,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 3902.0,
+        "depth": 32.82433271260087,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 161.1,
-          "depth": 32.82433271260087,
-          "kind": "ninja-exchange"
+          "chaos": 84.23333333333333,
+          "depth": 3902.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Sanctified Fossil": {
-      "chaos": 488.1,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "sanctified-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 1,
-        "used": 1
-      },
-      "note": "mean of the 1 cheapest instant offers of the trade site's bulk exchange, 6 units in them, 1 offers in all, 2026-11-07",
+      "chaos": 68.23,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 6.0,
+        "depth": 5.000732815477062,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 1,
         "other": {
-          "chaos": 68.23,
-          "depth": 5.000732815477062,
-          "kind": "ninja-exchange"
+          "chaos": 488.1,
+          "depth": 6.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Scorched Fossil": {
-      "chaos": 207.44,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "scorched-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 98 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 5.74,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 98.0,
+        "depth": 18.67595818815331,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 5.74,
-          "depth": 18.67595818815331,
-          "kind": "ninja-exchange"
+          "chaos": 207.44,
+          "depth": 98.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Anger": {
       "chaos": 16.25,
@@ -1897,56 +1617,39 @@
       "source": "trade-api"
     },
     "Screaming Essence of Contempt": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-contempt",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 162 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 10.78,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 162.0,
+        "depth": 20.825602968460114,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 10.78,
-          "depth": 20.825602968460114,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 162.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Doubt": {
-      "chaos": 14.0,
+      "chaos": 0.5769230769230769,
       "detail": {
         "date": "2026-11-07",
-        "exchange": "screaming-essence-of-doubt",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
+        "league": "Allflame"
       },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 145 units in them, 6 offers in all, 2026-11-07",
+      "note": "poe.watch /exchange/ratios, 12-hour window",
       "provenance": {
         "date": "2026-11-07",
-        "depth": 145.0,
-        "depth_unit": "units",
-        "kind": "trade",
+        "kind": "poe-watch",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.5769230769230769,
-          "depth": null,
-          "kind": "poe-watch"
+          "chaos": 14.0,
+          "depth": 145.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.watch"
     },
     "Screaming Essence of Dread": {
       "chaos": 195251.0,
@@ -1975,134 +1678,84 @@
       "source": "trade-api"
     },
     "Screaming Essence of Envy": {
-      "chaos": 13.75,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-envy",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 82 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 10.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 82.0,
+        "depth": 1.0,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 10.0,
-          "depth": 1.0,
-          "kind": "ninja-exchange"
+          "chaos": 13.75,
+          "depth": 82.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Fear": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-fear",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 129 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 129.0,
+        "depth": 0.5,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 0.5,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 129.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Greed": {
-      "chaos": 16.25,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-greed",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 134 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 3.33,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 134.0,
+        "depth": 5.0060060060060065,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 3.33,
-          "depth": 5.0060060060060065,
-          "kind": "ninja-exchange"
+          "chaos": 16.25,
+          "depth": 134.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Hatred": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-hatred",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 141 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 3.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 141.0,
+        "depth": 3.3333333333333335,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 3.0,
-          "depth": 3.3333333333333335,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 141.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Loathing": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-loathing",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 104 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 0.3333,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 104.0,
+        "depth": 2.0003000300030003,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.3333,
-          "depth": 2.0003000300030003,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 104.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Misery": {
       "chaos": 13.2,
@@ -2131,134 +1784,87 @@
       "source": "trade-api"
     },
     "Screaming Essence of Rage": {
-      "chaos": 8.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-rage",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 8,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 28 units in them, 8 offers in all, 2026-11-07",
+      "chaos": 3.08,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 28.0,
+        "depth": 2.1655844155844157,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 3.08,
-          "depth": 2.1655844155844157,
-          "kind": "ninja-exchange"
+          "chaos": 8.0,
+          "depth": 28.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Scorn": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-scorn",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 68 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 0.3333,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 68.0,
+        "depth": 1.0,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.3333,
-          "depth": 1.0,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 68.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Sorrow": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-sorrow",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 127 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 6.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 127.0,
+        "depth": 0.8333333333333334,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 6.0,
-          "depth": 0.8333333333333334,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 127.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Spite": {
-      "chaos": 110.62,
+      "chaos": 1.0,
       "detail": {
         "date": "2026-11-07",
-        "exchange": "screaming-essence-of-spite",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
+        "league": "Allflame"
       },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 91 units in them, 5 offers in all, 2026-11-07",
+      "note": "poe.watch /exchange/ratios, 12-hour window",
       "provenance": {
         "date": "2026-11-07",
-        "depth": 91.0,
-        "depth_unit": "units",
-        "kind": "trade",
+        "kind": "poe-watch",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": null,
-          "kind": "poe-watch"
+          "chaos": 110.62,
+          "depth": 91.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.watch"
     },
     "Screaming Essence of Suffering": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-suffering",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 96 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 96.0,
+        "depth": 1.0,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 1.0,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 96.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Torment": {
       "chaos": 14.0,
@@ -2313,134 +1919,84 @@
       "source": "trade-api"
     },
     "Screaming Essence of Wrath": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-wrath",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 134 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 3.7,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 134.0,
+        "depth": 18.154054054054054,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 3.7,
-          "depth": 18.154054054054054,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 134.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Screaming Essence of Zeal": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "screaming-essence-of-zeal",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 98 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 14.7,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 98.0,
+        "depth": 1.6666666666666667,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 14.7,
-          "depth": 1.6666666666666667,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 98.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Serrated Fossil": {
-      "chaos": 18.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "serrated-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 51 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 14.51,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 51.0,
+        "depth": 8.835286009648518,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 14.51,
-          "depth": 8.835286009648518,
-          "kind": "ninja-exchange"
+          "chaos": 18.0,
+          "depth": 51.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Anger": {
-      "chaos": 13.2,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-anger",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 36 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 36.0,
+        "depth": 0.5,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 0.5,
-          "kind": "ninja-exchange"
+          "chaos": 13.2,
+          "depth": 36.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Anguish": {
-      "chaos": 14.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-anguish",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 70 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 0.5,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 70.0,
+        "depth": 0.3334,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.5,
-          "depth": 0.3334,
-          "kind": "ninja-exchange"
+          "chaos": 14.8,
+          "depth": 70.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Contempt": {
       "chaos": 8.8,
@@ -2469,30 +2025,20 @@
       "source": "trade-api"
     },
     "Shrieking Essence of Doubt": {
-      "chaos": 6.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-doubt",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 7,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 40 units in them, 7 offers in all, 2026-11-07",
+      "chaos": 2.56,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 40.0,
+        "depth": 5.33984375,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 2.56,
-          "depth": 5.33984375,
-          "kind": "ninja-exchange"
+          "chaos": 6.0,
+          "depth": 40.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Dread": {
       "chaos": 8.0,
@@ -2516,264 +2062,167 @@
       "source": "trade-api"
     },
     "Shrieking Essence of Envy": {
-      "chaos": 22.5,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-envy",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 2,
-        "used": 2
-      },
-      "note": "mean of the 2 cheapest instant offers of the trade site's bulk exchange, 31 units in them, 2 offers in all, 2026-11-07",
+      "chaos": 16.88,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 31.0,
+        "depth": 2.8335308056872037,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 2,
         "other": {
-          "chaos": 16.88,
-          "depth": 2.8335308056872037,
-          "kind": "ninja-exchange"
+          "chaos": 22.5,
+          "depth": 31.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Fear": {
-      "chaos": 8.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-fear",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 71 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 0.3333,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 71.0,
+        "depth": 0.5001500150015001,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.3333,
-          "depth": 0.5001500150015001,
-          "kind": "ninja-exchange"
+          "chaos": 8.8,
+          "depth": 71.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Greed": {
-      "chaos": 14.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-greed",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 74 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 3.35,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 74.0,
+        "depth": 2.835820895522388,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 3.35,
-          "depth": 2.835820895522388,
-          "kind": "ninja-exchange"
+          "chaos": 14.8,
+          "depth": 74.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Hatred": {
-      "chaos": 12.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-hatred",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 74 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 74.0,
+        "depth": 0.5,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 0.5,
-          "kind": "ninja-exchange"
+          "chaos": 12.8,
+          "depth": 74.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Loathing": {
-      "chaos": 6.0,
+      "chaos": 0.7431192660550459,
       "detail": {
         "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-loathing",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 8,
-        "used": 5
+        "league": "Allflame"
       },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 42 units in them, 8 offers in all, 2026-11-07",
+      "note": "poe.watch /exchange/ratios, 24-hour window",
       "provenance": {
         "date": "2026-11-07",
-        "depth": 42.0,
-        "depth_unit": "units",
-        "kind": "trade",
+        "kind": "poe-watch",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.7431192660550459,
-          "depth": null,
-          "kind": "poe-watch"
+          "chaos": 6.0,
+          "depth": 42.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.watch"
     },
     "Shrieking Essence of Misery": {
-      "chaos": 14.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-misery",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 44 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 0.5,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 44.0,
+        "depth": 0.3334,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 0.5,
-          "depth": 0.3334,
-          "kind": "ninja-exchange"
+          "chaos": 14.8,
+          "depth": 44.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Rage": {
-      "chaos": 6.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-rage",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 7,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 43 units in them, 7 offers in all, 2026-11-07",
+      "chaos": 19.5,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 43.0,
+        "depth": 1.6666666666666667,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 19.5,
-          "depth": 1.6666666666666667,
-          "kind": "ninja-exchange"
+          "chaos": 6.0,
+          "depth": 43.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Scorn": {
-      "chaos": 8.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-scorn",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 35 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 22.19,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 35.0,
+        "depth": 11.000450653447498,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 22.19,
-          "depth": 11.000450653447498,
-          "kind": "ninja-exchange"
+          "chaos": 8.0,
+          "depth": 35.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Sorrow": {
-      "chaos": 14.75,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-sorrow",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 79 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 0.5,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 79.0,
+        "depth": 0.3334,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 0.5,
-          "depth": 0.3334,
-          "kind": "ninja-exchange"
+          "chaos": 14.75,
+          "depth": 79.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Spite": {
-      "chaos": 8.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-spite",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 46 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 7.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 46.0,
+        "depth": 0.16714285714285712,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 7.0,
-          "depth": 0.16714285714285712,
-          "kind": "ninja-exchange"
+          "chaos": 8.8,
+          "depth": 46.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Suffering": {
       "chaos": 14.8,
@@ -2797,56 +2246,36 @@
       "source": "trade-api"
     },
     "Shrieking Essence of Torment": {
-      "chaos": 14.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-torment",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 113 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 113.0,
+        "depth": 0.1667,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 0.1667,
-          "kind": "ninja-exchange"
+          "chaos": 14.8,
+          "depth": 113.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Woe": {
-      "chaos": 8.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-woe",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 6,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 42 units in them, 6 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 42.0,
+        "depth": 0.5,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 0.5,
-          "kind": "ninja-exchange"
+          "chaos": 8.0,
+          "depth": 42.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Wrath": {
       "chaos": 8.8,
@@ -2875,56 +2304,36 @@
       "source": "trade-api"
     },
     "Shrieking Essence of Zeal": {
-      "chaos": 12.8,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shrieking-essence-of-zeal",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 49 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 49.0,
+        "depth": 0.3333,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.0,
-          "depth": 0.3333,
-          "kind": "ninja-exchange"
+          "chaos": 12.8,
+          "depth": 49.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Shuddering Fossil": {
-      "chaos": 35.666666666666664,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "shuddering-fossil",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 3,
-        "used": 3
-      },
-      "note": "mean of the 3 cheapest instant offers of the trade site's bulk exchange, 65 units in them, 3 offers in all, 2026-11-07",
+      "chaos": 35.36,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 65.0,
+        "depth": 19.335407239819006,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 3,
         "other": {
-          "chaos": 35.36,
-          "depth": 19.335407239819006,
-          "kind": "ninja-exchange"
+          "chaos": 35.666666666666664,
+          "depth": 65.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed": {
       "chaos": 15.0,
@@ -3322,30 +2731,20 @@
       "source": "trade-api"
     },
     "Wailing Essence of Doubt": {
-      "chaos": 195251.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "wailing-essence-of-doubt",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 96 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 1.14,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 96.0,
+        "depth": 1.1666666666666667,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 1.14,
-          "depth": 1.1666666666666667,
-          "kind": "ninja-exchange"
+          "chaos": 195251.0,
+          "depth": 96.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Wailing Essence of Fear": {
       "chaos": 7.2,
@@ -3369,30 +2768,20 @@
       "source": "trade-api"
     },
     "Wailing Essence of Greed": {
-      "chaos": 13.75,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "wailing-essence-of-greed",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 154 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 10.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 154.0,
+        "depth": 0.16699999999999998,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 10.0,
-          "depth": 0.16699999999999998,
-          "kind": "ninja-exchange"
+          "chaos": 13.75,
+          "depth": 154.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Wailing Essence of Hatred": {
       "chaos": 16.666666666666668,
@@ -3631,56 +3020,36 @@
       "source": "trade-api"
     },
     "Weeping Essence of Contempt": {
-      "chaos": 13.75,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "weeping-essence-of-contempt",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 4,
-        "used": 4
-      },
-      "note": "mean of the 4 cheapest instant offers of the trade site's bulk exchange, 117 units in them, 4 offers in all, 2026-11-07",
+      "chaos": 8.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 117.0,
+        "depth": 0.33375,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 4,
         "other": {
-          "chaos": 8.0,
-          "depth": 0.33375,
-          "kind": "ninja-exchange"
+          "chaos": 13.75,
+          "depth": 117.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Weeping Essence of Doubt": {
-      "chaos": 14.0,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "weeping-essence-of-doubt",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 77 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 3.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 77.0,
+        "depth": 1.6666666666666667,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 3.0,
-          "depth": 1.6666666666666667,
-          "kind": "ninja-exchange"
+          "chaos": 14.0,
+          "depth": 77.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Weeping Essence of Fear": {
       "chaos": 13.75,
@@ -3704,30 +3073,20 @@
       "source": "trade-api"
     },
     "Weeping Essence of Greed": {
-      "chaos": 499.1,
-      "detail": {
-        "date": "2026-11-07",
-        "exchange": "weeping-essence-of-greed",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 5,
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant offers of the trade site's bulk exchange, 130 units in them, 5 offers in all, 2026-11-07",
+      "chaos": 4.0,
       "provenance": {
         "date": "2026-11-07",
-        "depth": 130.0,
+        "depth": 0.3325,
         "depth_unit": "units",
-        "kind": "trade",
+        "kind": "ninja-exchange",
         "league": "Allflame",
-        "listings": 5,
         "other": {
-          "chaos": 4.0,
-          "depth": 0.3325,
-          "kind": "ninja-exchange"
+          "chaos": 499.1,
+          "depth": 130.0,
+          "kind": "trade"
         }
       },
-      "source": "trade-api"
+      "source": "poe.ninja"
     },
     "Weeping Essence of Hatred": {
       "chaos": 14.0,
