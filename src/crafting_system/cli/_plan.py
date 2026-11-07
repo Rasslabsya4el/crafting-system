@@ -23,7 +23,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
-from crafting_system.solver import Action, Outcome, Solution, solve
+from crafting_system.solver import Action, ConvergenceError, Outcome, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
@@ -483,7 +483,7 @@ def make_plan(
                 packed = envelope_result(
                     abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net, item=target.start_item if many else None
                 )
-            except (OutOfScopeError, NoPolicy, BoundError) as error:
+            except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 raise PlanError(f"the envelope search cannot answer this target: {error}") from error
             limits += envelope_limits(packed.info["envelope"])
         else:

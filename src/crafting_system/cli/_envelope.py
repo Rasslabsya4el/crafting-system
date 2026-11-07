@@ -677,7 +677,14 @@ class Search[S]:
                 f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
                 f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}"
             )
-        if not math.isfinite(self.upper_value()):
+        try:
+            upper = self.upper_value()
+        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies: say so, with the bound
+            raise NoPolicy(
+                f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
+                f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+            ) from error
+        if not math.isfinite(upper):
             raise NoPolicy(
                 f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} of {len(self.states):,} states "
                 f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
