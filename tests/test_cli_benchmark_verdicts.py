@@ -242,6 +242,33 @@ def test_r08_r09_and_r04_carry_their_verdicts_as_real_finds():
     assert found[("R04", COMPLETED)].ratio == pytest.approx(0.331, abs=1e-3)
 
 
+# What the heavy run 42395491917 (the committed price snapshot) measured for the three routes: the ratio planner mean / guide mean and the
+# planner's first divergent action. The verdicts were written from it.
+MEASURED = {
+    ("R08", GUIDE): (0.05738580407161665, "Fossils Prismatic Fossil"),
+    ("R09", GUIDE): (0.05796558469433014, "Fossils Prismatic Fossil"),
+    ("R04", COMPLETED): (0.33095397065170684, "Exalted Orb"),
+}
+
+
+@pytest.mark.parametrize("key", sorted(MEASURED))
+def test_the_verdicts_of_the_real_routes_stand_at_the_measured_ratios_and_flag_again_when_prices_move_them(key):
+    """The benchmark prints R08, R09 and R04 reviewed at the numbers of the heavy run, and "NEEDS A HUMAN AGAIN" if a price moved a ratio by a quarter."""
+    ratio, action = MEASURED[key]
+    found = next(each for each in verdicts.VERDICTS if (each.id, each.side) == key)
+    bench = next(each for each in BENCHMARKS if each.id == key[0])
+    route = bench.route if key[1] == GUIDE else bench.completed
+    here = Reviewing(found, 0.2, text_hash(ROOT / bench.target), text_hash(ROOT / route))
+
+    standing = here.judge(ratio, action)
+    text = "\n".join(review_lines(key[1], review_of(ratio, 0.5, standing), NO_BLOCK))
+    moved = here.judge(ratio * 1.25, action)
+
+    assert standing["again"] is False and f"reviewed: real find (#{found.issues[0]}" in text and "NEEDS A HUMAN" not in text
+    assert moved["again"] is True and "above the ratio at review" in moved["reasons"][0]
+    assert here.judge(ratio, "Orb of Alchemy")["again"] is True
+
+
 def test_every_verdict_names_a_route_of_the_list_and_the_files_it_was_reviewed_on_are_unchanged():
     """A stale hash here means the target or the route changed since a person reviewed it: look again, then write the new hash and the date."""
     by_id = {bench.id: bench for bench in BENCHMARKS}
