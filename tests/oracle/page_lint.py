@@ -231,7 +231,7 @@ def _item(card: Node, caption: str = "") -> Item:
             name = _squash(child.text())
         elif "pr" in child.classes:
             props = [_squash(el.text()) for el in child.elements() if el.tag == "span"]
-        elif "sd" in child.classes:
+        elif "sd" in child.classes or "gh" in child.classes:  # a side's caption, or the heading of a group (its own style)
             sides.append((_squash(child.text()), []))
         elif "s" in child.classes and sides:
             sides[-1][1].append(_slot(child))

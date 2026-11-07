@@ -6,7 +6,7 @@ fixture that built `Plan(..., limits=())` drew pages no run could produce, and t
 planner" with no part "What this answer leaves out". `planner_plan` takes every field of `Plan` but `limits` and gets them from the same
 functions the planner uses; the page builder refuses a plan with none (`PageError`).
 
-What a fixture still does not have is the limits of the offers it did not choose (`offers_for`), since it names its offers by hand.
+What a fixture still does not have is the limits of the offers it did not choose (`offers_for`), since it names its offers by hand: issue #638.
 """
 
 from dataclasses import replace

@@ -158,7 +158,7 @@ fixtures(
 )
 
 four = tuple(slot(text, "w", "T2, at least 1 of 4") for text in ("+(42-45)% to Fire Resistance", "+(42-45)% to Cold Resistance", "+(42-45)% to Lightning Resistance", "+(100-114) to maximum Life"))
-HEADING_OF_FOUR = '<div class="sd">at least 1 of 4 of these:</div>'
+HEADING_OF_FOUR = '<div class="gh">at least 1 of 4 of these:</div>'
 members = tuple(slot(text, "w", "T2") for text in ("+(42-45)% to Fire Resistance", "+(42-45)% to Cold Resistance", "+(42-45)% to Lightning Resistance", "+(100-114) to maximum Life"))
 fixtures(
     pl.check_group_printed_once,

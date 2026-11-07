@@ -95,14 +95,21 @@ class Slot:
 
     text: str  # exact mod text, or "any mod", "any mod or empty", "empty", "any mod with tag X"
     tone: Tone
-    marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only", "searing exarch", "eater of worlds"
+    marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only", "searing exarch", "eater of worlds", and for a member of a group "prefix" or "suffix"
     note: str = ""  # "any of 10 tiers", "tier too low", "at least 1 of 2", "in some"; "" otherwise
+
+
+NESTED_GROUP = (
+    "a k-of-n group inside another k-of-n group is not drawn on the target card yet: the card says each group once under its own heading, "
+    "and two nested headings could not be told apart from a group said twice (OR-15)"
+)
 
 
 @dataclass(frozen=True)
 class Group:
     """A k-of-n group of the target, said once: the `heading` ("at least 1 of 4 of these:") and its members, each a line in the one mod format
-    with its own tier and no note of the group (OR-15). The members are not slots of a side: the group does not say on which side the item gets them."""
+    with its own tier and no note of the group (OR-15). The members are not slots of a side: each says its side in words (the mark `prefix` or
+    `suffix`), so the card still shows which open slot a member would take. A group holds leaves only (`NESTED_GROUP`)."""
 
     heading: str
     members: tuple[Slot, ...]
@@ -380,19 +387,22 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
     wanted: dict[Side, list[Slot]] = {side: [] for side in SIDES}
     groups: list[Group] = []
 
-    def leaf(node) -> tuple[Side, Slot]:
-        side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)
-        return side, Slot(text, "wanted", (), tier_note)
+    def leaf(node) -> tuple[Side, str, str]:
+        return _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)
 
     def add(nodes) -> None:
         for node in nodes:
             if isinstance(node, KOfN):
-                add([member for member in node.of if isinstance(member, KOfN)])  # a group inside a group is said once on its own
-                members = tuple(leaf(member)[1] for member in node.of if not isinstance(member, KOfN))
-                groups.append(Group(f"at least {node.at_least} of {len(node.of)} of these:", members))
+                if any(isinstance(member, KOfN) for member in node.of):
+                    raise ValueError(NESTED_GROUP)
+                members = []
+                for member in node.of:
+                    side, text, tier_note = leaf(member)
+                    members.append(Slot(text, "wanted", (side.value,), tier_note))  # the side in words: which of the open slots the member would take
+                groups.append(Group(f"at least {node.at_least} of {len(node.of)} of these:", tuple(members)))
                 continue
-            side, slot = leaf(node)
-            wanted[side].append(slot)
+            side, text, tier_note = leaf(node)
+            wanted[side].append(Slot(text, "wanted", (), tier_note))
 
     add(target.requirements)
     influences = tuple(influence.value.title() for influence in sorted(target.influences))
@@ -627,3 +637,20 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         sides[Side.PREFIX],
         sides[Side.SUFFIX],
     )
+
+
+def leaf_sides(data: GameData, target: Target) -> list[Side]:
+    """The side of each requirement leaf of `target`, in the order of `Goal.leaves` (the text report says it of a group's members, as the card does)."""
+    tiers = tier_table(data, target.base_id)
+    found: list[Side] = []
+
+    def walk(node) -> None:
+        if isinstance(node, KOfN):
+            for member in node.of:
+                walk(member)
+        else:
+            found.append(_leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)[0])
+
+    for requirement in target.requirements:
+        walk(requirement)
+    return found

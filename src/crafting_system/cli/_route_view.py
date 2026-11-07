@@ -67,7 +67,7 @@ from crafting_system.solver import Action
 from crafting_system.targets import plain_base_names
 
 from ._interval import IntervalAnswer
-from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
+from ._limits import SHOWN_LABELS, STRANDS, grouped, limit_text, more_labels
 from ._marking import approximate_inputs, approximate_page_lines
 from ._plan import GIVEN_SOURCE, Plan
 from ._report import UNRESOLVED, Report
@@ -265,11 +265,12 @@ class _View:
     """What the rows of one section share: the plan, the data, the flow and the anchors."""
 
     def __init__(self, inp: RouteInput, data: GameData, buy: BuyStep | None, prefix: str, route_field: bool) -> None:
-        if not inp.plan.limits:
-            # A real plan always leaves something out (it says at least that it does not plan with Memory Strands), so a plan with no limits is not
-            # one the planner made, and a page drawn from it would say "Cheapest policy of the planner" with no part "What this answer leaves out" (OR-13).
+        if not any(limit.kind == STRANDS for limit in inp.plan.limits):
+            # Every plan the planner makes carries the limit "Memory Strands are not considered" (`strands_limit`, the first one `plan_for` writes), so a plan
+            # without it is not one the planner made, and a page drawn from it would say "Cheapest policy of the planner" with no part "What this answer
+            # leaves out", or a part that lacks what every real plan has (OR-13).
             raise PageError(
-                "the plan has no limits, so the page would claim a guarantee it does not state (OR-13): "
+                "the plan has no limits of a planner's plan (not even the Memory Strands one), so the page would claim a guarantee it does not state (OR-13): "
                 "a plan made by the planner always carries what it leaves out (`Plan.limits`); build this one with them"
             )
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
