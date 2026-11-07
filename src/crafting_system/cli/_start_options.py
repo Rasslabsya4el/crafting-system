@@ -17,7 +17,7 @@ option and keeps the cheapest total (`_starts.plan_with_starts`).
   and a mod needs its required level. A step whose mod needs more than the target's item level is refused.
 * **The rule axis.** Each step table is read at every reading of the recipe's axis (the elemental cap: `wiki` T3, `coe` T2). A
   candidate or a refusal says at which values of the axis it holds.
-* **Price.** The base is a Normal base priced under `base_line_name` (the result keeps its level and influences; a poe.ninja line of a name several bases share is refused), plus the flasks,
+* **Price.** The base is a Normal base priced by `base_price_name` (the result keeps its level and influences), plus the flasks,
   the Orbs of Augmentation and the gems at the price file's lines (a trade price or a hand override on top, as for every
   price). A recipe with a missing line is refused and the names that are missing are listed.
 
@@ -34,10 +34,10 @@ from datetime import date
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, tier_table
 from crafting_system.items.vendor_recipes import RECIPES, GemInput, Recipe, RecipeStep
-from crafting_system.prices import PriceFile
+from crafting_system.prices import PriceFile, base_price_name
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.rules import rule_by_id
-from crafting_system.targets import KOfN, Requirement, Target, base_line_name, ninja_line_name, shared_name_refusal
+from crafting_system.targets import KOfN, Requirement, Target
 
 from ._plan import leaf_labels
 from ._start_types import (
@@ -272,15 +272,11 @@ def _examine(
     return _Examined((), tuple(refusals))
 
 
-def _goods(context: StartContext, recipe: Recipe, steps: tuple[RecipeStep, ...]) -> tuple[Goods, tuple[str, ...], tuple[str, ...]]:
-    """The priced goods of a recipe made of `steps`, the names the price file lacks, and the prices refused with their words.
-
-    The base is priced under `base_line_name`; where its name is shared by several bases a poe.ninja line of the plain name is refused
-    (`shared_name_refusal`), and any other price must be under the name with the base id.
-    """
+def _goods(context: StartContext, recipe: Recipe, steps: tuple[RecipeStep, ...]) -> tuple[Goods, tuple[str, ...]]:
+    """The priced goods of a recipe made of `steps` and the names the price file lacks."""
     target = context.target
-    base_name = base_line_name(context.data, target)
-    wanted: list[tuple[str, int]] = [(base_name, 1)]
+    base = context.data.base_items[target.base_id]
+    wanted: list[tuple[str, int]] = [(base_price_name(base.name, target.item_level, [each.value for each in target.influences]), 1)]
     for flask, count in Counter(step.flask for step in steps if step.flask).items():
         wanted.append((good_name(flask), count))
     augmentations = sum(step.augmentations for step in steps)
@@ -289,20 +285,13 @@ def _goods(context: StartContext, recipe: Recipe, steps: tuple[RecipeStep, ...])
     wanted.extend((gem_price_name(step.gems), 1) for step in steps if step.gems is not None)
     goods: list[tuple[str, int, float, str]] = []
     missing: list[str] = []
-    refused: list[str] = []
     for name, count in wanted:
         entry = context.prices.prices.get(name)
-        if entry is not None:
-            goods.append((name, count, count * entry.chaos, entry.source))
-            continue
-        line_name = ninja_line_name(context.data, target)
-        line = context.prices.prices.get(line_name) if name == base_name else None
-        refusal = None if line is None else shared_name_refusal(context.data, target.base_id, line.source, line_name)
-        if refusal is None:
+        if entry is None:
             missing.append(name)
         else:
-            refused.append(refusal)
-    return tuple(goods), tuple(missing), tuple(refused)
+            goods.append((name, count, count * entry.chaos, entry.source))
+    return tuple(goods), tuple(missing)
 
 
 def _label(recipe: Recipe, number: int) -> str:
@@ -348,11 +337,10 @@ def vendor_recipe_starts(context: StartContext) -> StartList:
         for number, found in sorted(counts_at.items()):
             axis, values = _scope(recipe, found)
             steps = recipe.steps(kind, found[0])[:number]
-            goods, missing, price_refusals = _goods(context, recipe, steps)
-            if missing or price_refusals:
-                words = [f"no price for {', '.join(sorted(missing))}"] if missing else []
+            goods, missing = _goods(context, recipe, steps)
+            if missing:
                 refused.append(
-                    RefusedStart(recipe.id, recipe.name, NO_PRICE, "; ".join([*words, *price_refusals]), axis=axis, reading_values=values)
+                    RefusedStart(recipe.id, recipe.name, NO_PRICE, f"no price for {', '.join(sorted(missing))}", axis=axis, reading_values=values)
                 )
                 continue
             label = _label(recipe, number)

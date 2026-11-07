@@ -58,7 +58,7 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r06-strength-heavy-belt", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Heavy Belt, normal, item level 75, Hunter influence", "no entry"),
         ("r04-penetrating-quiver", "price.base"): ("#486", "OR-3", "the price entry is by a name that two bases share, and neither the trade site nor poe.ninja can tell them apart", f"{_QUIVER}QuiverNew5", f"{_QUIVER}Quiver12, {_QUIVER}QuiverNew5"),
         ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85, labelled 81", "81", "85"),
-        ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a hand stand-in: a poe.ninja number kept by hand, because a poe.ninja price of a shared name is refused (#471)", "trade-api", "hand"),
+        ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
         ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has no market (0 listings)", "Amethyst Ring", "any accessory.ring"),
         ("r05-strength-ring", "price.pool"): ("#483", "OR-3", "the price entry accepts the Unset Ring and the Bone Ring; the exact item has no market", "Amethyst Ring", f"{_RING}Ring15 (+3 -0); {_RING}Ring16 (+23 -0)"),
         ("r08-energy-shield-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),
