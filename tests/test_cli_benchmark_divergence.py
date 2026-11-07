@@ -341,13 +341,3 @@ def test_the_project_config_states_the_review_line_and_says_it_is_not_a_cut():
     assert "review_ratio = 0.5" in text and "NOT a cut of the search" in text
     assert load_config({}).benchmark_review_ratio == 0.5
 
-
-def test_only_runs_the_named_routes_and_refuses_an_unknown_one(tmp_path, capsys):
-    out = tmp_path / "out"
-
-    code = main([COMMAND, "--out", str(out), "--only", "R12"], data=DATA, prices=price_file(), env={}, today=TODAY)
-
-    assert code == 0 and [e["id"] for e in read_json(out / "benchmark.json")["routes"]] == ["R12"]
-    capsys.readouterr()
-    code = main([COMMAND, "--out", str(out), "--only", "R99"], data=DATA, prices=price_file(), env={}, today=TODAY)
-    assert code == 1 and "--only names no benchmark route: R99" in capsys.readouterr().err

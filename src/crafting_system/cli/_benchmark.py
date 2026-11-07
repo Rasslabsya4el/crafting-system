@@ -280,7 +280,6 @@ def benchmark_main(
     )
     parser.add_argument("--out", metavar="DIR", help="where to write benchmark.json (default: the output dir)")
     parser.add_argument("--heavy", action="store_true", help="also solve the routes that take the planner hours (R04, R14); without it only their published odds are checked")
-    parser.add_argument("--only", metavar="IDS", help="run only these benchmark routes, comma separated (R12,R10): a heavy run splits the routes over its runners this way")
     args = parser.parse_args(list(argv))
 
     try:
@@ -290,14 +289,7 @@ def benchmark_main(
         out_dir = Path(args.out) if args.out else config.output_dir
         entries = []
         used_prices: PriceFile | None = None
-        chosen = BENCHMARKS
-        if args.only:
-            wanted = [name.strip() for name in args.only.split(",") if name.strip()]
-            unknown = [name for name in wanted if name not in {bench.id for bench in BENCHMARKS}]
-            if unknown:
-                raise ValueError(f"--only names no benchmark route: {', '.join(unknown)} (the routes are {', '.join(bench.id for bench in BENCHMARKS)})")
-            chosen = tuple(bench for bench in BENCHMARKS if bench.id in wanted)
-        for bench in chosen:
+        for bench in BENCHMARKS:
             entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy)
             entries.append(entry)
             used_prices = used_prices or loaded
