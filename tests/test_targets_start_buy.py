@@ -17,7 +17,13 @@ from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.prices.trade_query import BuyMod, BuySpec, TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
 from crafting_system.targets import StartBuyError, buy_spec_of, parse_target, start_price_key
-from crafting_system.targets.start_buy import TRADE_CATEGORY, item_level_window, same_name_bases
+from crafting_system.targets.start_buy import (
+    TRADE_CATEGORY,
+    differences_between_same_name_bases,
+    item_level_window,
+    same_name_bases,
+    shared_name_refusal,
+)
 
 AMULET = "Metadata/Items/Amulets/Amulet1"
 STATS = parse_trade_stats(json.loads((Path(__file__).parent / "fixtures" / "trade" / "stats_excerpt.json").read_text(encoding="utf-8")))
@@ -459,7 +465,136 @@ def test_a_price_taken_for_corrupted_items_says_it_was_taken_for_another_item_th
 
 def test_a_corrupted_start_item_priced_by_a_search_for_uncorrupted_items_says_it_was_taken_for_another_item_not_corrupted():
     target = target_at(76, CORRUPTED_RESIST)
-    _, prices = wider_prices(lambda query: None)
+    _, uncorrupted = wider_prices(lambda query: None)
+    (entry,) = uncorrupted.prices.values()
+    prices = PriceFile("Allflame", prices_date(), 400.0, {start_price_key(DATA, target): entry})  # a search for uncorrupted items stored under the corrupted key
 
     assert buy_spec_of(DATA, target).corrupted is True
     assert resolve_start_price(DATA, target, prices, None).taken_for == "price taken for another item (not corrupted)"
+
+
+# -- two items that differ in one thing read two price entries (#471, OR-3) ------------------------------------------
+
+
+def only_priced(data, target) -> PriceFile:
+    """A price file that prices the start item of `target` and nothing else."""
+    return PriceFile("Allflame", prices_date(), 400.0, {start_price_key(data, target): PriceEntry(7.5, "trade-api")})
+
+
+def reads_other_entries(data, first, second) -> bool:
+    """True when the price file of `first` does not serve `second` (it has no entry for it) and the other way round."""
+    for priced, other in ((first, second), (second, first)):
+        assert resolve_start_price(data, priced, only_priced(data, priced), None).chaos == 7.5
+        with pytest.raises(PlanError, match="no price for the start item"):
+            resolve_start_price(data, other, only_priced(data, priced), None)
+    return True
+
+
+def test_two_targets_that_differ_only_in_corruption_read_two_price_entries():
+    plain = target_at(84, FRACTURED_RESIST)
+    corrupted = target_at(84, CORRUPTED_RESIST)
+
+    assert start_price_key(DATA, corrupted) == "Paua Amulet, item level 84-100, corrupted, fractured +(42-45)% to Lightning Resistance"
+    assert reads_other_entries(DATA, plain, corrupted)
+
+
+def test_two_targets_that_differ_only_in_base_id_read_two_price_entries():
+    data = with_bases(**{TWIN: {}})
+    first = parse_target(f"base: {AMULET}\nitem_level: 84\n{FRACTURED_RESIST}", data, source="t.yaml")
+    second = parse_target(f"base: {TWIN}\nitem_level: 84\n{FRACTURED_RESIST}", data, source="t.yaml")
+
+    assert reads_other_entries(data, first, second)
+
+
+def test_two_targets_that_differ_only_in_rarity_read_two_price_entries():
+    plain = "start: bought\nrequirements:\n  - family: IncreasedLife\n"
+    rare = target_at(84, plain + "start_item:\n  rarity: rare\n  mods: []\n")
+    magic = target_at(84, plain + "start_item:\n  rarity: magic\n  mods: []\n")
+
+    assert reads_other_entries(DATA, rare, magic)
+
+
+def test_two_targets_that_differ_only_in_influences_read_two_price_entries():
+    tail = "start: bought\nrequirements:\n  - family: FireResistance\n"
+
+    assert reads_other_entries(
+        DATA, target_at(84, tail, base="Leather Belt"), target_at(84, "influence: [hunter]\n" + tail, base="Leather Belt")
+    )
+
+
+# -- a poe.ninja line prices the bases of a shared name only when they are one item to a crafter (#471) ------------
+
+
+def ninja_prices(data, target, source="poe.ninja") -> PriceFile:
+    return PriceFile("Allflame", prices_date(), 400.0, {start_price_key(data, target): PriceEntry(9.0, source)})
+
+
+def shared_amulet(**fields):
+    """The amulet and a twin of its name, the twin with the fields given; the target is the amulet."""
+    data = with_bases(**{TWIN: fields})
+    return data, parse_target(f"base: {AMULET}\nitem_level: 84\n{FRACTURED_RESIST}", data, source="t.yaml")
+
+
+LEGACY_TAG = {"tags": ("amulet", "default", "trade_market_legacy_item")}  # a tag no mod reads, like the real Quiver12's
+DIFFERENT_CLASS = {"item_class": "Ring"}
+DIFFERENT_IMPLICIT = {"implicits": ("IncreasedLifeImplicitBelt1",)}
+DIFFERENT_MOD_TAGS = {"tags": ("ring", "default")}  # both tags are read by mod weights: the pool differs
+
+
+@pytest.mark.parametrize("fields", [{}, LEGACY_TAG], ids=["identical twin", "twin with a tag no mod reads"])
+def test_a_poe_ninja_price_of_a_shared_name_prices_a_base_whose_twins_agree_in_class_implicits_and_tags(fields):
+    data, target = shared_amulet(**fields)
+
+    assert shared_name_refusal(data, AMULET, "poe.ninja", "x") is None
+    assert resolve_start_price(data, target, ninja_prices(data, target), None).chaos == 9.0
+
+
+@pytest.mark.parametrize(
+    ("fields", "differ"),
+    [(DIFFERENT_CLASS, "item class"), (DIFFERENT_IMPLICIT, "implicit mods"), (DIFFERENT_MOD_TAGS, "mod tags")],
+    ids=["item class", "implicit mods", "mod tags"],
+)
+def test_a_poe_ninja_price_is_refused_for_a_shared_name_when_the_bases_differ_in_one_thing(fields, differ):
+    data, target = shared_amulet(**fields)
+
+    with pytest.raises(PlanError) as error:
+        resolve_start_price(data, target, ninja_prices(data, target), None)
+
+    assert str(error.value) == (
+        "the price of the start item 'Paua Amulet [Amulet1], item level 84-100, fractured +(42-45)% to Lightning Resistance' is refused: "
+        f"it comes from poe.ninja, whose line has a name and no base id, and the name 'Paua Amulet' belongs to 2 bases (Amulet1, Amulet1Twin) that differ in {differ}, "
+        "so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
+    )
+
+
+def test_the_refusal_names_every_thing_that_differs():
+    data, _ = shared_amulet(**DIFFERENT_CLASS, **DIFFERENT_IMPLICIT)
+
+    assert differences_between_same_name_bases(data, AMULET) == ("item class", "implicit mods")
+
+
+@pytest.mark.parametrize("source", ["poe.ninja-history", "poe.ninja-previous-league", "poe.watch"])
+def test_every_name_only_source_is_refused_for_a_shared_name_that_differs_and_says_which(source):
+    data, target = shared_amulet(**DIFFERENT_IMPLICIT)
+
+    with pytest.raises(PlanError, match=f"it comes from {source}, whose line has a name and no base id"):
+        resolve_start_price(data, target, ninja_prices(data, target, source), None)
+
+
+@pytest.mark.parametrize("source", ["trade-api", "hand", "override"])
+def test_a_price_from_another_source_is_kept_for_a_shared_name_that_differs(source):
+    data, target = shared_amulet(**DIFFERENT_IMPLICIT)
+
+    assert resolve_start_price(data, target, ninja_prices(data, target, source), None).chaos == 9.0
+
+
+def test_a_poe_ninja_price_is_kept_for_a_name_one_base_has():
+    target = target_at(84, FRACTURED_RESIST)
+
+    assert resolve_start_price(DATA, target, ninja_prices(DATA, target), None).chaos == 9.0
+
+
+def test_the_price_given_on_the_command_line_is_kept_for_a_shared_name_that_differs():
+    data, target = shared_amulet(**DIFFERENT_IMPLICIT)
+
+    assert resolve_start_price(data, target, ninja_prices(data, target), 3.0).chaos == 3.0
