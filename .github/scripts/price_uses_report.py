@@ -24,6 +24,7 @@ GROUPS = ("R12,R10,R11", "R05,R13", "R08,R09", "R04", "R14")  # what one runner 
 
 def main(argv: list[str]) -> int:
     from crafting_system.cli import _benchmark, make_plan, plan_with_starts
+    from crafting_system.cli._decide import Rates
     from crafting_system.cli._price_marks import price_uses
     from crafting_system.config import find_project_root, load_config
     from crafting_system.data import load_game_data
@@ -34,6 +35,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("routes")
     parser.add_argument("out")
     parser.add_argument("--prices", default=PRICES)
+    parser.add_argument("--budget", type=float, default=None, help="seconds the plan may take (the decision of `make_plan`: exact when the forecast fits, else approximate), as the real-route tests plan R08 and R09")
     args = parser.parse_args(argv)
     if args.routes == "split":
         index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
@@ -53,7 +55,8 @@ def main(argv: list[str]) -> int:
             return 2
         began = time.perf_counter()
         target = load_target(root / bench.target, data)
-        plan = make_plan(data, target, prices) if bench.start is None else plan_with_starts(data, target, prices)
+        extra = {} if args.budget is None else {"budget": args.budget, "rates": Rates(4e-5, 7e-6)}  # the rates are injected, so the decision does not depend on the machine
+        plan = make_plan(data, target, prices, **extra) if bench.start is None else plan_with_starts(data, target, prices, **extra)
         uses = price_uses(plan, plan.view_policy, all_uses=True)
         document = {
             "route": name,
