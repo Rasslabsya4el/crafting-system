@@ -68,6 +68,9 @@
   ],
   "actions": [
    "Shrieking Essence of Spite"
+  ],
+  "roll_stats": [
+   "+# to maximum Life"
   ]
  },
  {
@@ -85,6 +88,9 @@
   ],
   "actions": [
    "Shrieking Essence of Loathing"
+  ],
+  "roll_stats": [
+   "+# to maximum Life"
   ]
  },
  {
@@ -180,4 +186,4 @@
    ]
   ]
  }
-]
+]

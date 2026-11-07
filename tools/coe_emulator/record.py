@@ -13,7 +13,9 @@ different seeds. `merge` adds the runs of each case into the file that is commit
 into it: only counts and provenance.
 
 A case is a check of `compare.py` (our base, mods, rarity, `actions` with ONE label of our catalog) plus
-`note` (why this item and action) and `route` (the benchmark route the base comes from).
+`note` (why this item and action) and `route` (the benchmark route the base comes from). A case with `roll_stats`
+(a list of stat texts, as our catalog writes them: "+# to maximum Life") also records, for each, how many finished items
+carry each rolled value of each of our mods with that text (ticket #573): the roll of a goal line that asks one.
 """
 
 import argparse
@@ -56,7 +58,10 @@ def run_case(spec: dict, seed: int, repeats: int, copy: Path) -> dict:
     emulator = Emulator(copy)
     try:
         started = time.time()
-        answer = emulator.check({"id": spec["id"], "item": coe_spec, "apply": [{"craft": craft, "repeats": repeats, "seed": seed}]})
+        step = {"craft": craft, "repeats": repeats, "seed": seed}
+        if spec.get("roll_stats"):
+            step["track"] = list(spec["roll_stats"])
+        answer = emulator.check({"id": spec["id"], "item": coe_spec, "apply": [step]})
         seconds = round(time.time() - started, 1)
     finally:
         emulator.close()
@@ -67,10 +72,21 @@ def run_case(spec: dict, seed: int, repeats: int, copy: Path) -> dict:
     for key, count in applied["counts"].items():
         mods = sorted(coe.our_mod(coe_base, m, pool) for m in applied["examples"][key]["item"]["mods"])
         results[json.dumps(mods)] += count
+    rolls: dict[str, dict[str, Counter]] = {}  # stat text -> our mod id -> rolled value -> finished items
+    for key, values in applied.get("rolls", {}).items():
+        aid, tindex = key.split(":")
+        mod_id = coe.our_mod(coe_base, {"aid": aid, "tindex": int(tindex)}, pool)
+        stat = coe.modifiers[aid]["name_modifier"]
+        if mod_id.startswith("coe:"):
+            raise SystemExit(f"{spec['id']}: the tracked mod {stat} ({key}) maps to none of ours")
+        for rolled, count in values.items():
+            (value,) = json.loads(rolled)  # a tracked mod has one stat
+            rolls.setdefault(stat, {}).setdefault(mod_id, Counter())[json.dumps(value)] += count
     return {
         "case": spec["id"], "action": label, "seed": seed, "repeats": repeats, "seconds": seconds,
         "applied": sum(applied["counts"].values()), "refused": applied["failures"],
         "outcomes": dict(results), "page_errors": answer.get("page_errors", []),
+        **({"rolls": {stat: {mod: dict(c) for mod, c in mods.items()} for stat, mods in rolls.items()}} if rolls else {}),
     }  # fmt: skip
 
 
@@ -104,6 +120,11 @@ def merge(cases: dict[str, dict], runs: list[dict], copy: Path) -> dict:
                 found = json.loads(key)
                 if all(any(name in families[mod_id] for mod_id in found) for name in names):
                     joints["+".join(names)] += count
+        rolled: dict[str, dict[str, Counter]] = {}
+        for run in case_runs:
+            for stat, per_mod in run.get("rolls", {}).items():
+                for mod_id, values in per_mod.items():
+                    rolled.setdefault(stat, {}).setdefault(mod_id, Counter()).update(values)
         applied = sum(run["applied"] for run in case_runs)
         recorded[case_id] = {
             "route": spec.get("route"), "note": spec.get("note"),
@@ -113,6 +134,7 @@ def merge(cases: dict[str, dict], runs: list[dict], copy: Path) -> dict:
             "runs": [{"seed": run["seed"], "repeats": run["repeats"], "seconds": run["seconds"]} for run in case_runs],
             "mods": dict(sorted(mods.items(), key=lambda pair: (-pair[1], pair[0]))),
             "shapes": dict(sorted(shapes.items())),
+            **({"rolls": {stat: {mod: dict(sorted(c.items(), key=lambda pair: float(pair[0]))) for mod, c in sorted(mods.items())} for stat, mods in sorted(rolled.items())}} if rolled else {}),
             **({"joints": {name: joints.get(name, 0) for name in ("+".join(n) for n in spec["joint_families"])}} if spec.get("joint_families") else {}),
             # the whole finished items are kept only when they are few (a single draw); a draw of several mods is
             # recorded by the frequency of each mod

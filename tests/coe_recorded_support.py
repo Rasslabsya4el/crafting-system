@@ -11,6 +11,18 @@ The test (stated in one place, `ALPHA` and `MIN_EXPECTED`):
 * Each cell is one event with an exact chance `p` of ours (a Fraction turned to a float) and a count `k` out of the
   `n` applications the emulator recorded: "the finished item holds mod M", "the new mods are 2 prefixes and 1
   suffix", "the item holds a mod that the goal's tier line accepts".
+* A goal line that asks a roll (`min_roll`) is a "roll" cell: "the finished item holds a mod of the line's with a rolled
+  value that reaches the roll". The emulator side is the count of the rolled values it recorded for the line's stat text
+  (`record["rolls"]`, a histogram per mod of ours); our side is the chance of each mod (`marginals`) times the chance that its
+  roll, uniform over the integers of each stat's range, reaches the roll (`roll_law`, the planner's own law).
+* A "histogram" cell is the whole law of the rolled values of one mod: the recorded count of each value against the
+  planner's roll law (`_intervals`, each integer of the range with the same chance), given the mod. It is the cell that has
+  the power to see a wrong roll range, which a threshold cell has not (a shift by one at a tier edge moves the threshold
+  chance by 0.17% to 0.24%). A value the emulator gave that our law gives chance 0 is an exact rejection (p = 0): that is
+  the exact part. Otherwise the values are binned so that each bin expects `MIN_EXPECTED`, and Pearson's statistic over the
+  bins is judged by the chi-square tail (`chi_square_sf`, exact for the chi-square law itself); Pearson's statistic follows
+  that law only asymptotically (the 5 expected per bin is the usual rule for it), so this p-value is an approximation.
+  The histogram cells and the binomial cells are ONE family of the Bonferroni correction (`failures(..., family=m)`).
 * A cell is tested by the exact two-sided binomial test, `p_value = min(1, 2 * min(P(X <= k), P(X >= k)))` with
   `X ~ Binomial(n, p)`. No normal approximation, so a small cell is as honest as a large one.
 * The cells are many, so the test is Bonferroni-corrected: a cell is a failure when `p_value < ALPHA / m`, where
@@ -23,12 +35,14 @@ The test (stated in one place, `ALPHA` and `MIN_EXPECTED`):
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from pathlib import Path
 
+from crafting_system.abstraction import Status, status_of
+from crafting_system.abstraction._rolls import _intervals, roll_law
 from crafting_system.actions.catalog import catalog
-from crafting_system.data import GameData
+from crafting_system.data import GameData, StatRange
 from crafting_system.items import ExplicitMod, Item, Rarity
 
 RECORDED = Path(__file__).resolve().parent / "fixtures" / "coe_recorded" / "b1_core.json"
@@ -86,7 +100,7 @@ class Cell:
     """One tested event: its chance in our model and the count the emulator gave."""
 
     case: str
-    kind: str  # "mod", "shape" or "tier"
+    kind: str  # "mod", "shape", "tier", "joint" or "roll"
     name: str
     n: int
     seen: int
@@ -108,10 +122,11 @@ class Cell:
         return f"{self.case} {self.kind} {self.name}: ours {self.ours:.5f} (expect {self.expected:.1f}), emulator {self.seen}/{self.n}, p {self.p_value:.2e}"
 
 
-def failures(cells: list[Cell], alpha: float = ALPHA) -> list[Cell]:
-    """The testable cells with p below `alpha / m`, `m` the number of testable cells (Bonferroni)."""
+def failures(cells: list[Cell], alpha: float = ALPHA, family: int | None = None) -> list[Cell]:
+    """The testable cells with p below `alpha / m` (Bonferroni): `m` is `family`, the number of cells of the whole module
+    (the binomial and the histogram cells together), or, when it is not given, the number of testable cells of `cells`."""
     testable = [cell for cell in cells if cell.testable]
-    bound = alpha / max(len(testable), 1)
+    bound = alpha / max(family if family is not None else len(testable), 1)
     return [cell for cell in testable if cell.p_value < bound]
 
 
@@ -252,3 +267,148 @@ def shape_cells(case: str, record: dict, ours: OurCase) -> list[Cell]:
     theirs = record["shapes"]
     mine = ours.shapes()
     return lump({key: (theirs.get(key, 0), float(mine.get(key, 0))) for key in set(theirs) | set(mine)}, case, n)
+
+
+def shifted(mod, by: int):
+    """The mod with every stat range moved by `by`: the wrong roll range of the control (a model whose ranges are off by one)."""
+    return replace(mod, stats=tuple(StatRange(stat.id, stat.min + by, stat.max + by) for stat in mod.stats))
+
+
+def roll_chance(data: GameData, ours: OurCase, line) -> float:
+    """Our chance that the finished item holds a mod of `line` whose roll reaches the line's `min_roll`.
+
+    A mod of the line is held at most once (they are one family), so the chances add: for each mod our model can add, its
+    marginal chance times the share of its rolls that the line passes.
+    """
+    marginals = ours.marginals()
+    total = 0.0
+    for mod_id in sorted(line.mod_ids & marginals.keys()):
+        law = roll_law([line], data.mods[mod_id], crafted=False)
+        passing = sum((chance for statuses, chance in law if statuses[0] == Status.PASSING), Fraction(0))
+        total += float(marginals[mod_id] * passing)
+    return total
+
+
+def roll_seen(record: dict, line) -> int:
+    """The finished items of the emulator that hold a mod of `line` rolled to reach its `min_roll` (the goal's own judge, `status_of`)."""
+    seen = 0
+    for mod_id, histogram in record["rolls"][line.stat].items():
+        for value, count in histogram.items():
+            if mod_id in line.mod_ids and status_of(line, mod_id, (json.loads(value),), False) is Status.PASSING:
+                seen += count
+    return seen
+
+
+def roll_cell(data: GameData, case: str, name: str, record: dict, ours: OurCase, line) -> Cell:
+    return Cell(case, "roll", name, record["applied"], roll_seen(record, line), roll_chance(data, ours, line))
+
+
+# --- the histogram of the rolled values of one mod -----------------------------------------------------
+
+
+def chi_square_sf(statistic: float, df: int) -> float:
+    """P(chi-square with `df` degrees of freedom >= `statistic`): the regularized upper incomplete gamma Q(df/2, statistic/2)."""
+    if df <= 0:
+        raise ValueError("df must be positive")
+    if statistic <= 0:
+        return 1.0
+    a, x = df / 2, statistic / 2
+    log_prefix = a * math.log(x) - x - math.lgamma(a)
+    if x < a + 1:  # the series of P(a, x), then Q = 1 - P
+        term = total = 1 / a
+        n = a
+        while abs(term) > abs(total) * 1e-16:
+            n += 1
+            term *= x / n
+            total += term
+        return max(0.0, 1.0 - total * math.exp(log_prefix))
+    tiny = 1e-300  # the continued fraction of Q(a, x), modified Lentz
+    b = x + 1 - a
+    c = 1 / tiny
+    d = 1 / b
+    h = d
+    for i in range(1, 10_000):
+        an = -i * (i - a)
+        b += 2
+        d = an * d + b
+        d = tiny if abs(d) < tiny else d
+        c = b + an / c
+        c = tiny if abs(c) < tiny else c
+        d = 1 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1) < 1e-16:
+            break
+    return min(1.0, math.exp(log_prefix) * h)
+
+
+def value_law(mod) -> dict[int, Fraction]:
+    """The planner's law of the value a single-stat mod rolls: every integer of the range, from the planner's own cutting of it."""
+    (stat,) = mod.stats
+    every = set(range(min(stat.min, stat.max) + 1, max(stat.min, stat.max) + 1))
+    return dict(_intervals(every, stat.min, stat.max, False))
+
+
+@dataclass(frozen=True)
+class HistogramCell:
+    """The recorded count of each rolled value of one mod, against our law of its value."""
+
+    case: str
+    mod_id: str
+    counts: dict[int, int]  # rolled value -> finished items of the emulator that carry it
+    law: dict[int, Fraction]
+
+    @property
+    def n(self) -> int:
+        return sum(self.counts.values())
+
+    @property
+    def unsupported(self) -> list[int]:
+        """The values the emulator gave that our law gives chance 0: each is an exact rejection."""
+        return sorted(value for value, count in self.counts.items() if count and self.law.get(value, 0) == 0)
+
+    def bins(self) -> list[tuple[float, int]]:
+        """(expected, seen) per bin: adjacent values are joined until the bin expects `MIN_EXPECTED`; a short last bin joins the one before."""
+        bins: list[list[float]] = []
+        expected = seen = 0.0
+        for value in sorted(self.law):
+            expected += self.n * float(self.law[value])
+            seen += self.counts.get(value, 0)
+            if expected >= MIN_EXPECTED:
+                bins.append([expected, seen])
+                expected = seen = 0.0
+        if bins and (expected or seen):
+            bins[-1][0] += expected
+            bins[-1][1] += seen
+        return [(e, int(k)) for e, k in bins]
+
+    @property
+    def testable(self) -> bool:
+        return self.n > 0 and (bool(self.unsupported) or len(self.bins()) >= 2)
+
+    @property
+    def p_value(self) -> float:
+        if self.unsupported:
+            return 0.0
+        bins = self.bins()
+        if len(bins) < 2:
+            return 1.0
+        return chi_square_sf(sum((k - e) ** 2 / e for e, k in bins), len(bins) - 1)
+
+    def describe(self) -> str:
+        return f"{self.case} histogram {self.mod_id}: {self.n} items, bins {len(self.bins())}, outside our law {self.unsupported}, p {self.p_value:.2e}"
+
+
+def histogram_cells(data: GameData, case: str, record: dict, stat: str, by: int = 0) -> list[HistogramCell]:
+    """One cell per mod of ours the record holds rolls for under `stat`; `by` moves our ranges (the control)."""
+    cells = []
+    for mod_id, histogram in sorted(record["rolls"][stat].items()):
+        assert all(float(value) == int(float(value)) for value in histogram), f"{mod_id}: a rolled value that is not a whole number"
+        counts = {int(float(value)): count for value, count in histogram.items()}
+        cells.append(HistogramCell(case, mod_id, counts, value_law(shifted(data.mods[mod_id], by))))
+    return cells
+
+
+def histogram_failures(cells: list[HistogramCell], family: int) -> list[HistogramCell]:
+    """The testable histogram cells with p below ALPHA / `family`, `family` the number of cells of the whole module (Bonferroni)."""
+    return [cell for cell in cells if cell.testable and cell.p_value < ALPHA / family]
