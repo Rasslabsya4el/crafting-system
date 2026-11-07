@@ -83,8 +83,7 @@ def main() -> None:
     say(f"planned: {len(plan.policy):,} policy states")
     chain = chain_of_plan(plan)
     m = chain.m
-    src = np.repeat(np.arange(m), np.diff(chain.ptr))
-    finishing = _can_finish(m, src, chain.dst, chain.dst >= m, chain.dst < m)
+    finishing = _can_finish(chain)
     say(f"chain: {m:,} states, {len(chain.dst):,} edges, {int(finishing.sum()):,} can finish")
     done = _solved(chain)
     say(f"visits solved: {done.solved}, entry chances unsettled: {_entries(chain)[1]}; sum of visits x cost {float((done.visits * chain.cost).sum()):.4f}, plan mean {plan.mean_remaining:.4f}")
@@ -97,7 +96,7 @@ def main() -> None:
     if arguments.check:  # the visit chance of the most visited states, by the cycles of the chain and by one absorbing solve each (two methods, one number)
         order = [int(i) for i in np.argsort(-done.visits) if i != 0][: arguments.check]
         found = reach_of(chain, order)
-        system = _system(chain, src, finishing)
+        system = _system(chain, finishing)
         checks = []
         for i, reach in zip(order, found):
             absorbing = np.zeros(system.nt, dtype=bool)

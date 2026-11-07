@@ -9,6 +9,7 @@ import random
 from collections import Counter
 from fractions import Fraction
 
+import numpy as np
 import pytest
 
 from crafting_system.cli import _route_flow
@@ -729,3 +730,157 @@ def test_a_line_of_look_alike_states_with_one_action_is_one_step_whatever_its_le
     (step,) = flow.steps  # no refinement, no per-state fall-back: the label is the step
     assert len(step.states) == 300 and flow.measured
     assert step.uses == pytest.approx(2.0, rel=1e-6)  # state i is visited with chance 2^-i: the sum is 2
+
+
+def can_stop_or_finish(policy) -> set:
+    """The states of `policy` from which a run reaches the goal or a state with no action (so no closed loop that never ends)."""
+    found = {s for s, a in policy.items() if any(o.state == "goal" or o.state not in policy for o in a.outcomes)}
+    while True:
+        more = {s for s, a in policy.items() if s not in found and any(o.state in found for o in a.outcomes)}
+        if not more:
+            return found
+        found |= more
+
+
+def mixed_policies(seed: int, wanted: int):
+    """Random policies whose start can finish and that have a step with live and dead states, where `reach_probabilities` is well defined (nothing loops for ever)."""
+    rng = random.Random(seed)
+    found = 0
+    while found < wanted:
+        start, policy = random_policy(rng)
+        if start not in policy or set(policy) != can_stop_or_finish(policy):
+            continue
+        flow = build_flow(start, policy, is_goal)
+        if not flow.measured or evaluate(policy, start, is_goal).success_probability.value == 0.0:
+            continue
+        if any(step.action is not None and any(w == 0.0 for w in step.weights) and any(w > 0.0 for w in step.weights) for step in flow.steps):
+            found += 1
+            yield start, policy
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_a_step_with_live_and_dead_states_has_a_chance_of_being_entered_that_matches_the_older_dense_solve(monkeypatch, dense_limit):
+    """#620: a step of states that can finish and states that cannot had `reached = None`. With the whole step made absorbing it is one hitting solve."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = mixed = 0
+    for start, policy in mixed_policies(620, 120):
+        flow = build_flow(start, policy, is_goal)
+        assert flow.entered
+        for step in flow.steps[1:]:
+            if step.action is None:
+                continue
+            assert step.reached is not None, (start, step.states)
+            absorbing = {state: action for state, action in policy.items() if state not in set(step.states)}
+            chances = reach_probabilities(start, absorbing, is_goal)
+            expected = sum(chances.get(state, 0.0) for state in step.states)
+            assert step.reached == pytest.approx(expected, rel=1e-8, abs=1e-12), (start, step.states)
+            checked += 1
+            mixed += any(w == 0.0 for w in step.weights) and any(w > 0.0 for w in step.weights)
+    assert checked > 150 and mixed >= 60
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_no_step_with_an_action_lacks_the_chance_of_being_entered_while_the_start_can_finish(monkeypatch, dense_limit):
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    rng = random.Random(6200)
+    checked = 0
+    for _ in range(600):
+        start, policy = random_policy(rng)
+        if start not in policy:
+            continue
+        chain = _route_flow.chain_of_policy(start, policy, is_goal)
+        if not _route_flow._solved(chain).finishing[0]:
+            continue
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        assert all(step.reached is not None for step in flow.steps if step.action is not None)
+        checked += 1
+    assert checked > 100
+
+
+def test_a_mixed_step_is_entered_directly_from_a_state_that_can_finish_and_through_a_dead_state_of_another_step():
+    # x = {L, D}: L finishes, D goes to the gap G. S reaches L with 1/5 and D with 1/5, and E (action y, dead) with 1/5, which steps on to D with 1/2.
+    policy = {
+        "S": act("s", ("L", 1), ("D", 1), ("E", 1), ("goal", 2)),
+        "L": act("x", ("goal", 1)),
+        "D": act("x", ("G", 1)),
+        "E": act("y", ("D", 1), ("G", 1)),
+    }
+
+    flow = build_flow("S", policy, is_goal)
+
+    assert step_with(flow, "L") is step_with(flow, "D")
+    assert step_with(flow, "L").reached == pytest.approx(1 / 5 + 1 / 5 + 1 / 5 * 1 / 2)
+    assert step_with(flow, "E").reached == pytest.approx(1 / 5)
+
+
+def test_a_step_of_dead_states_is_entered_through_a_dead_state_of_another_step_too():
+    policy = {
+        "S": act("s", ("E", 1), ("goal", 1)),
+        "E": act("y", ("D", 1), ("G", 1)),
+        "D": act("x", ("G", 1)),
+    }
+
+    flow = build_flow("S", policy, is_goal)
+
+    assert step_with(flow, "E").reached == pytest.approx(1 / 2)
+    assert step_with(flow, "D").reached == pytest.approx(1 / 4)
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_reading_the_chain_in_tiny_blocks_of_edges_gives_the_same_flow(monkeypatch, dense_limit):
+    """#595: the solves read the chain a block of `CHUNK_EDGES` edges at a time; the numbers do not depend on the size of the block."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = 0
+    for start, policy in mixed_policies(595, 25):
+        whole = build_flow(start, policy, is_goal)
+        with monkeypatch.context() as small:
+            small.setattr(_route_flow, "CHUNK_EDGES", 5)
+            blocks = build_flow(start, policy, is_goal)
+        assert blocks.measured and blocks.entered
+        for a, b in zip(whole.steps, blocks.steps):
+            assert (b.uses is None) == (a.uses is None)
+            assert b.uses == pytest.approx(a.uses, rel=1e-9) if a.uses is not None else True
+            assert b.reached == pytest.approx(a.reached, rel=1e-9, abs=1e-14)
+            assert b.weights == pytest.approx(a.weights, rel=1e-9)
+            assert [e.chance for e in b.edges] == pytest.approx([e.chance for e in a.edges], rel=1e-9)
+            checked += 1
+    assert checked > 50
+
+
+def dense_edges_chain(states: int, outcomes: int, seed: int):
+    """One action at `states` states, each with `outcomes` random successors (a few of them itself) and 5% to the goal: many edges among few states."""
+    rng = np.random.default_rng(seed)
+    dst = rng.integers(0, states, size=(states, outcomes)).astype(np.int64)
+    dst[:, 0] = states  # the goal
+    prob = rng.random((states, outcomes)) + 0.1
+    prob[:, 0] = prob[:, 1:].sum(axis=1) * 0.05
+    prob /= prob.sum(axis=1, keepdims=True)
+    return _route_flow.Chain(
+        list(range(states)), ["goal"], np.zeros(states, dtype=np.int64), (("action", "a"),), np.ones(states),
+        np.arange(0, states * outcomes + 1, outcomes, dtype=np.int64), dst.ravel(), prob.ravel(), lambda i: None,  # type: ignore[arg-type,return-value]
+    )
+
+
+def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array_the_size_of_the_edges_but_the_system(monkeypatch):
+    """#595: R04's flow peaked at 4.7 GB on 48.7 million edges, about 70 bytes an edge in arrays copied and indexed whole. Now the system is 12 bytes an edge and the rest is read a block at a time."""
+    import tracemalloc
+
+    states, outcomes = 3000, 150
+    chain = dense_edges_chain(states, outcomes, 1)
+    edges = states * outcomes
+    monkeypatch.setattr(_route_flow, "CHUNK_EDGES", edges // 8)
+    tracemalloc.start()
+    before = tracemalloc.get_traced_memory()[0]
+    tracemalloc.reset_peak()
+    done = _route_flow._solved(chain)
+    reached, unsettled = _route_flow._entries(chain)
+    peak = tracemalloc.get_traced_memory()[1] - before
+    tracemalloc.stop()
+    assert done.solved and unsettled == 0 and reached == [1.0]
+    assert peak < 20 * edges, f"{peak / edges:.1f} bytes an edge"
+    monkeypatch.undo()
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 5000)  # the same visits by one inverse
+    dense = _route_flow._solved(dense_edges_chain(states, outcomes, 1))
+    assert dense.inverse is not None
+    assert done.visits == pytest.approx(dense.visits, rel=1e-8)
