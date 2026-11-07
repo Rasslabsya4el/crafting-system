@@ -13,6 +13,8 @@ uv run pytest
 
 uv downloads the pinned Python (3.14) by itself.
 
+The naive crafter (`tests/naive_crafter/`) plays a guide's route by Monte Carlo without the planner's code and checks its cost against `risk.evaluate`; its long simulation runs on GitHub through the dispatcher, see `docs/ci.md` ("The naive crafter's long simulation").
+
 ## Directories
 
 The data, cache and output directories come from, in order of priority: an environment variable, the config file `crafting.toml` at the project root (or the file named by `CRAFTING_CONFIG`, used instead), then the built-in default. All defaults are inside the project and git-ignored. Relative paths in a config file count from that file's directory; in environment variables and defaults, from the project root. An empty variable counts as unset.
