@@ -38,7 +38,7 @@ import pytest
 import yaml
 from abstraction_support import real_game_data
 from naive_crafter import tally as t
-from naive_crafter.craft import Unsupported
+from naive_crafter.craft import Laws, Unsupported
 from naive_crafter.play import Judge, Player, lacking, read_route
 from naive_crafter.world import load_world
 
@@ -59,7 +59,8 @@ COVERED = {
     "R11": ("r11-reservation-helmet", 3000),
     "R13": ("r13-life-resist-belt", 16),
 }
-# the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it)
+# the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it); filed as issues (OR-29):
+# fossils (R08, R09) #608, the Harvest reforge (R12) #609, Exalted, Annulment, Fracturing, metamods and Remove Crafted Mods (R04, R14) #610
 NOT_COVERED = {
     "R04": ("r04-penetrating-quiver", ("Exalted Orb", "metamods", "Orb of Annulment", "Fracturing Orb")),
     "R04 with restart": ("r04-penetrating-quiver-restart", ("Exalted Orb", "metamods", "Orb of Annulment", "Fracturing Orb")),
@@ -177,6 +178,23 @@ def test_the_simulation_is_long_enough_to_say_something(played):
     limit = 0.5 if played.route == "R13" else 0.1  # R13 is judged on its steps and its heavy run; the rest to a tenth
 
     assert se <= limit * mean, f"{played.route}: {played.tally.n} plays give {mean:.5g} +- {se:.3g}"
+
+
+# --- the test can fail ------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("played", ["R05", "R10", "R11"], indirect=True)
+def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with_the_planner(played):
+    """If the law of 4, 5 or 6 mods were 1:1:1 instead of 8:3:1, the naive mean would be far from the planner's: the comparison has the power to see it."""
+    stem, _ = COVERED[played.route]
+    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=Laws(rare=((4, 1), (5, 1), (6, 1))))
+    judge = Judge(world)
+    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
+    verdict = t.verdict_on(f"{played.route} with the wrong law", played.exact_mean, wrong.mean_se())
+
+    assert not verdict.agrees, str(verdict)
+    assert verdict.distance > 10
 
 
 # --- the routes it cannot play -------------------------------------------------------------------------------
