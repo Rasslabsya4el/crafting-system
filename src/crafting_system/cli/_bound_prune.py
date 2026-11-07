@@ -375,7 +375,7 @@ def _run(
             return fallback(f"the solver could not converge on the reduced model ({problem})", spent)
         mark(f"solve {spent} ({len(offers)} offers, {len(solution.values)} states)")
         non_goal = [state for state in solution.values if not abstraction.is_goal(state)]
-        moved = [state for state in non_goal if not state.flags.unopened and (state.flags != shape.flags or state.fractured != shape.fractured)]
+        moved = [state for state in non_goal if not getattr(state.flags, "unopened", False) and (state.flags != shape.flags or state.fractured != shape.fractured)]
         if moved:
             return fallback("an offer moves the item to another shape (flags or fractured mods)", spent)
         if not _finite(solution.error_bound):
