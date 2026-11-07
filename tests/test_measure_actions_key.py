@@ -84,6 +84,15 @@ def test_every_job_is_dealt_once_and_within_the_minutes_of_a_runner():
         key.bins_for(4)
 
 
+def test_one_variant_is_dealt_over_fewer_runners():
+    for variant, count in (("kept", 7), ("removed", 5), ("all", 5)):
+        jobs = key.all_jobs((variant,))
+        runners = key.bins_for(count, jobs)
+
+        assert len(jobs) == len(key.ROUTES) * len(key.SOLVERS)
+        assert sorted(job for each in runners for job in each) == sorted(jobs)
+
+
 def test_the_envelope_and_the_walk_of_one_job_are_dealt_to_different_runners():
     runners = key.bins_for(16)
     where = {job: number for number, each in enumerate(runners) for job in each}

@@ -65,8 +65,9 @@ def job_id(route: str, variant: str, solver: str) -> str:
     return f"{route}-{variant}-{solver}"
 
 
-def all_jobs() -> list[tuple[str, str, str]]:
-    return [(route, variant, solver) for route in ROUTES for variant in VARIANTS for solver in SOLVERS]
+def all_jobs(variants: Sequence[str] = VARIANTS) -> list[tuple[str, str, str]]:
+    """Every job of the given variants (all three by default)."""
+    return [(route, variant, solver) for route in ROUTES for variant in variants for solver in SOLVERS]
 
 
 def cap_minutes(route: str, variant: str) -> int:
@@ -414,15 +415,24 @@ def say_job(record: dict) -> str:
 
 
 def batch_command(arguments: argparse.Namespace) -> int:
-    mine = bins_for(arguments.count, limit=None if arguments.no_limit else BIN_MINUTES)[arguments.index - 1]
+    jobs = all_jobs(variants_of(arguments.variants))
+    mine = bins_for(arguments.count, jobs, limit=None if arguments.no_limit else BIN_MINUTES)[arguments.index - 1]
     print(f"runner {arguments.index} of {arguments.count}: {', '.join(job_id(*job) for job in mine)}", flush=True)
     for route, variant, solver in mine:
         print(say_job(run_job(route, variant, solver, Path(arguments.out))), flush=True)
     return 0
 
 
+def variants_of(text: str) -> tuple[str, ...]:
+    chosen = tuple(name for name in text.split(",") if name)
+    unknown = [name for name in chosen if name not in VARIANTS]
+    if unknown or not chosen:
+        raise SystemExit(f"variants must be some of {', '.join(VARIANTS)}, got {text!r}")
+    return chosen
+
+
 def plan_command(arguments: argparse.Namespace) -> int:
-    for number, mine in enumerate(bins_for(arguments.count, limit=None), 1):
+    for number, mine in enumerate(bins_for(arguments.count, all_jobs(variants_of(arguments.variants)), limit=None), 1):
         total = sum(cap_minutes(route, variant) for route, variant, _ in mine)
         print(f"runner {number}: {total:3d} min  {', '.join(job_id(*job) for job in mine)}")
     return 0
@@ -564,11 +574,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     plan = commands.add_parser("plan", help="which jobs each runner takes")
     plan.add_argument("--count", type=int, required=True)
+    plan.add_argument("--variants", default=",".join(VARIANTS), help="comma separated variants (default all)")
     plan.set_defaults(handler=plan_command)
     batch = commands.add_parser("batch", help="run the jobs of one runner")
     batch.add_argument("--index", type=int, required=True, help="RUNNER_INDEX, 1..count")
     batch.add_argument("--count", type=int, required=True, help="RUNNER_COUNT")
     batch.add_argument("--out", required=True)
+    batch.add_argument("--variants", default=",".join(VARIANTS), help="comma separated variants to run (default all); the runners are dealt only these")
     batch.add_argument("--no-limit", action="store_true", help="deal the jobs over the runners even when one passes the minutes a runner may take")
     batch.set_defaults(handler=batch_command)
     one = commands.add_parser("one", help="run one job in this process (the child of `batch`)")
