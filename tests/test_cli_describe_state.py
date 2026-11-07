@@ -5,11 +5,16 @@ and the arrow the line had just named, so a reader took them for two more mods (
 is now the mods no requirement of the line names.
 """
 
+from pathlib import Path
 from types import SimpleNamespace
 
+from abstraction_support import real_game_data
+
 from crafting_system.abstraction import CompressedState, Flags, FracturedMod, Slot, Status
+from crafting_system.cli._plan import leaf_labels
 from crafting_system.cli._report import describe_state
 from crafting_system.items import Rarity, Side
+from crafting_system.targets import KOfN, load_target
 
 ABSENT, BELOW, PASSING = Status.ABSENT, Status.BELOW, Status.PASSING
 LABELS = ("family Strength", "family AdditionalArrows", "family IncreasedLife")
@@ -73,3 +78,47 @@ def test_the_count_keeps_the_plural_and_both_sides():
     state = item((ABSENT, ABSENT, ABSENT), [slot(Side.PREFIX, ABSENT, ABSENT, ABSENT)] * 2 + [slot(Side.SUFFIX, ABSENT, ABSENT, ABSENT)])
 
     assert describe(state).endswith("other mods: 2 prefixes, 1 suffix")
+
+
+# --- a k-of-n group is said once (ticket #644, OR-15) ---------------------------------------------------------------------------
+
+R05 = Path(__file__).resolve().parents[1] / "examples" / "targets" / "r05-strength-ring.yaml"
+
+
+def r05_plan():
+    data = real_game_data()
+    target = load_target(R05, data)
+    return data, SimpleNamespace(target=target, leaf_labels=leaf_labels(target), abstraction=SimpleNamespace(data=data))
+
+
+def r05_state(plan, group_status):
+    """Every plain requirement met; the four members of the 1-of-4 group (Life and three resistances) stand as `group_status`."""
+    group = next(each for each in plan.target.requirements if isinstance(each, KOfN))
+    first = sum(1 for each in plan.target.requirements[: plan.target.requirements.index(group)] if not isinstance(each, KOfN))
+    status = [PASSING] * len(plan.leaf_labels)
+    status[first : first + len(group.of)] = group_status
+    return item(status, [])
+
+
+def test_r05_an_item_with_the_life_mod_does_not_lack_the_three_resistances():
+    data, plan = r05_plan()
+    text = describe_state(plan, data, r05_state(plan, [PASSING, ABSENT, ABSENT, ABSENT]))
+
+    assert "lacks" not in text
+    assert text.count("(the group needs 1 of 4)") == 1
+    assert "Resistance" not in text  # the resistances are not said at all: the group is met
+
+
+def test_r05_an_item_with_none_of_the_group_lacks_one_of_the_four_and_says_so_once():
+    data, plan = r05_plan()
+    text = describe_state(plan, data, r05_state(plan, [ABSENT] * 4))
+
+    (lacks,) = [part for part in text.split("; ") if part.startswith("lacks")]
+    assert lacks.startswith("lacks 1 of: ") and lacks.count(",") == 3 and lacks.endswith("(the group needs 1 of 4)")
+
+
+def test_a_group_that_is_not_met_and_has_a_weak_member_says_so():
+    data, plan = r05_plan()
+    text = describe_state(plan, data, r05_state(plan, [BELOW, ABSENT, ABSENT, ABSENT]))
+
+    assert "too weak: " in text and "lacks 1 of: " in text and text.count("lacks") == 1
