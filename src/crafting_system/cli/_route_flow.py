@@ -511,6 +511,8 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     began = time.perf_counter()
     say = _packed.PROGRESS or (lambda _text: None)
     visits, solved, inverse, position = _visits(chain, src, finishing)
+    if solved and inverse is None and finishing[0]:
+        visits, solved = _verified_visits(chain, src, finishing, position, visits)
     say(f"visit chances: the visits of {int(finishing.sum()):,} states that can finish solved ({time.perf_counter() - began:.1f} s)")
     found: dict[int, Reach] = {}
     sparse: list[int] = []
@@ -527,6 +529,40 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     if sparse:
         found.update(_sparse_reach(chain, src, finishing, position, visits, sparse))
     return [found[i] for i in wanted]
+
+
+def _verified_visits(chain: Chain, src: np.ndarray, finishing: np.ndarray, position: np.ndarray, visits: np.ndarray):
+    """`(visits, solved)` where the sparse visits of `_visits` have been checked against the equation (I - Q)^T v = e_start itself.
+
+    `_bicgstab` reports the residual of its own recurrence, which on a small or stiff system can be tiny while the iterate is wrong
+    (found by the random chains of the tests of ticket #554, where the visits of a 6-state chain were 15% off). The true residual is
+    one product away; when it is above 1e-8 the system is solved densely up to `DENSE_FALLBACK` states, and above that the visits are
+    not trusted (`solved` False, so no chance is shown from them).
+    """
+    m, dst = chain.m, chain.dst
+    nt = int(finishing.sum())
+    inside = finishing[src] & (dst < m)
+    inside[inside] = finishing[dst[inside]]
+    row, column, p = position[src[inside]], position[dst[inside]], chain.prob[inside]
+    v = visits[finishing]
+    e = np.zeros(nt)
+    e[position[0]] = 1.0
+    residual = v - np.bincount(column, weights=p * v[row], minlength=nt) - e
+    if float(np.max(np.abs(residual))) <= 1e-8 * max(1.0, float(np.max(np.abs(v)))):
+        return visits, True
+    if nt > DENSE_FALLBACK:
+        return visits, False
+    matrix = np.eye(nt)
+    np.subtract.at(matrix, (column, row), p)  # (I - Q)^T: entry [column, row] holds the chance row -> column
+    try:
+        fixed = np.linalg.solve(matrix, e)
+    except np.linalg.LinAlgError:
+        return visits, False
+    if not np.all(np.isfinite(fixed)):
+        return visits, False
+    out = np.zeros(m)
+    out[finishing] = np.maximum(fixed, 0.0)
+    return out, True
 
 
 def _sparse_reach(chain: Chain, src: np.ndarray, finishing: np.ndarray, position: np.ndarray, visits: np.ndarray, states: list[int]) -> dict[int, Reach]:
@@ -570,8 +606,16 @@ def _escape(row, column, p, leave, nt: int, s: int) -> float | None:
         if residual <= 10 * VISITS_TOLERANCE:
             break
         h, residual, _ = _bicgstab(matvec, b, h, VISITS_TOLERANCE, BICGSTAB_ITERATIONS)
-    if not residual <= ACCEPT_RESIDUAL:
-        return None
+    true = float(np.max(np.abs(matvec(h) - b)))  # the residual of the equation itself: `_bicgstab` reports that of its own recurrence (see `_verified_visits`)
+    if not true <= 1e-9 * max(1.0, float(np.max(np.abs(b)))):
+        if nt > DENSE_FALLBACK:
+            return None
+        matrix = np.eye(nt)
+        np.subtract.at(matrix, (r, c), w)  # the dense solve is slow but sure
+        try:
+            h = np.linalg.solve(matrix, b)
+        except np.linalg.LinAlgError:
+            return None
     out = (row == s) & (column != s)
     back = float(np.sum(p[out] * h[column[out]]))
     leaving = float(leave[s])  # the chance to leave s, to every state, goal or not

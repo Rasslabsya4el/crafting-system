@@ -105,11 +105,12 @@ def test_the_chance_of_a_state_the_run_cannot_finish_from_is_not_measured():
     assert stuck.chance is None and not stuck.exact
 
 
+@pytest.mark.parametrize("seed", [554, 22, 24, 32, 34, 37])  # the last five are seeds on which the iteration of `_bicgstab` claimed a residual it did not have
 @pytest.mark.parametrize("sparse", [False, True])
-def test_the_visit_chance_matches_the_dense_solve_of_the_text_report_on_random_policies(monkeypatch, sparse):
+def test_the_visit_chance_matches_the_dense_solve_of_the_text_report_on_random_policies(monkeypatch, sparse, seed):
     if sparse:
         monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
-    rng = random.Random(554)
+    rng = random.Random(seed)
     checked = 0
     for _ in range(150):
         size = rng.randint(2, 8)
