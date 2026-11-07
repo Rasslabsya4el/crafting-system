@@ -1,13 +1,15 @@
 """The two outputs of a plan: the short text tree for the terminal and the JSON policy (ADR-0015).
 
-Both are built from the same `Report`: the states the policy can reach, numbered `S1`, `S2`, ... in
+Both are built from the same `Report`. The JSON policy lists the states the policy can reach, numbered `S1`, `S2`, ... in
 breadth-first order from the start (a goal is just "goal"), what is done in each, the chance of each
-transition, the expected cost still to pay and the chance the policy ever gets there. Text is ASCII
-only, so it prints on any console. Costs are in Chaos Orbs with a Divine Orb equivalent.
+transition, the expected cost still to pay and the chance the policy ever gets there. The text tree is made of the steps of the route page
+instead (`Report.steps`, `_report_steps`): one block for each action the player takes, with the exact mixture of the chances of the states that
+take it (ticket #488, OR-18, OR-20). Text is ASCII only, so it prints on any console. Costs are in Chaos Orbs with a Divine Orb equivalent.
 """
 
 import math
-from dataclasses import dataclass, replace
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState, Status
@@ -39,12 +41,11 @@ from ._start_step import FirstStep, first_step
 from ._verify import SIGMAS, Verification
 
 FORMAT = "crafting-system-policy/3"  # /3: `requirements` keeps the k-of-n groups (ticket #630); /2 listed every leaf flat
+POLICY_HEADING = "Policy (one block for each action you take, numbered as the steps of the route page; step 1 is the start item)"
 GOAL = "goal"
 DEAD_END = "dead end"
-MAX_TREE_DEPTH = 40
 RESULT_ROWS = ("success", "mean", "p50", "p90")  # the rows of the result block, as the keys of `PERCENTILE_WORDS` name them
 ROW_WIDTH = max(len(PERCENTILE_WORDS[name]) for name in RESULT_ROWS) + 2  # a row says its figure in words, then the value in this column
-MAX_TREE_STATES = 1_000  # the text tree stops here (R14's policy has 14,742 groups of states, 22 MB of text); the JSON policy and the route page hold all (ticket #70)
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,38 @@ class PolicyState:
 
 
 @dataclass(frozen=True)
+class StepOutcome:
+    chance: float  # the exact mixture over the step's states of the chance of this branch for one use
+    text: str  # what the branch does to the item, in the page's words, and the step it leads on to
+
+
+@dataclass(frozen=True)
+class ReportStep:
+    """One block of the text tree: a step of the route page (`number` is its row, whose row 1 is the start item).
+
+    `item` describes the item: the line of the state when exactly one takes the action here, else the parts of the line that all `items` states
+    share (empty when they share none). A step with no action (`acts` False)
+    says why in `reason` (empty when the policy gave none).
+    `uses` is the expected number of uses in one run (None when not solved), `never` that the step cannot finish, `reached` the chance a run
+    enters the step.
+    """
+
+    number: int
+    title: str
+    items: int
+    item: str
+    reason: str = ""
+    acts: bool = True
+    cost_parts: tuple[tuple[str, int, float, str], ...] = ()
+    cost: float = 0.0
+    uses: float | None = None
+    step_cost: float | None = None
+    never: bool = False
+    reached: float | None = None
+    outcomes: tuple[StepOutcome, ...] = ()
+
+
+@dataclass(frozen=True)
 class Report:
     plan: Plan
     ids: dict[CompressedState, str]
@@ -76,6 +109,8 @@ class Report:
     first_step: FirstStep | None = None  # what is done before S1 when the start item is made at a vendor (ADR-0059, ticket #331)
     interval: IntervalAnswer | None = None  # the plan's interval over a rule axis it reads (ADR-0012, ticket #221); None when it reads none
     data: GameData | None = None  # the game data the text is worded from: a base id in brackets is said in words (#553, #604)
+    steps: tuple[ReportStep, ...] = ()  # the blocks of the text tree, one for each step of the route page (ticket #488)
+    step_of: Mapping[CompressedState, int] = field(default_factory=dict)  # the page's row of each item state the policy reaches
 
 
 def with_interval(report: Report, interval: IntervalAnswer | None) -> Report:
@@ -151,10 +186,16 @@ def requirements_document(plan: Plan) -> dict:
 
 
 def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
-    """One line on a state: rarity, the fractured mods, what each requirement leaf stands at, and the crafted and other mods.
+    """One line on a state: its parts (`state_parts`) joined by "; "."""
+    return "; ".join(state_parts(plan, data, state))
+
+
+def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]:
+    """The parts of the line on a state: rarity, the fractured mods, what each requirement leaf stands at, and the crafted and other mods.
 
     The mods besides the fractured ones show only when the model tracks them (a bench action is offered):
-    the crafted mods by their text, and the rest as a count per side ("junk: 1 prefix, 2 suffixes").
+    the crafted mods by their text, and the rest as a count per side ("other mods: 1 prefix, 2 suffixes"). "Other" is meant: a mod that a
+    "has ..." or "too weak: ..." part of the same line already names is not counted again (ticket #613).
     """
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
@@ -173,14 +214,36 @@ def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
                 parts.append(f"crafted mod of {slot.side.value} (a family no requirement cares about)")
             else:
                 parts.append(f"crafted {_without_ranges(mod.text or mod.name)}")
-    junk = [slot for slot in state.slots if not slot.crafted]
+    junk = _unnamed_mods(state)
     if junk:
         shown = [f"{n} {side.value}{'' if n == 1 else 'es'}" for side in Side if (n := sum(s.side is side for s in junk))]
         parts.append("other mods: " + ", ".join(shown))
     if state.offer:  # in the order of Pick 1, 2, 3 (ADR-0026): without it "Pick 2" names nothing
         offered = [_without_ranges(data.mods[entry.mod_id].text or data.mods[entry.mod_id].name) for entry in state.offer]
         parts.append("unveil offer: " + " | ".join(f"{number}. {text}" for number, text in enumerate(offered, 1)))
-    return "; ".join(parts)
+    return parts
+
+
+def _unnamed_mods(state: CompressedState) -> list:
+    """The held mods (not crafted, not fractured) that no requirement part of the state's line names.
+
+    A leaf that stands at PASSING or BELOW names one mod: a fractured mod that gives it that standing, else a held mod that does (the
+    first one found; a mod that gives two leaves their standing names both). A leaf that stands ABSENT names none. A crafted mod is named by its own
+    part of the line ("crafted ..."), so a leaf it gives its standing to names no other mod.
+    """
+    left = [slot for slot in state.slots if not slot.crafted]
+    named = [slot for slot in state.slots if slot.crafted]
+    for leaf, status in enumerate(state.status):
+        if status is Status.ABSENT or any(entry.contribution[leaf] is status for entry in state.fractured):
+            continue
+        if any(slot.contribution[leaf] is status for slot in named):  # a mod already named by another part of the line gives this leaf its standing
+            continue
+        for slot in left:
+            if slot.contribution[leaf] is status:
+                left.remove(slot)
+                named.append(slot)
+                break
+    return left
 
 
 _without_ranges = without_ranges
@@ -242,11 +305,14 @@ def build_report(plan: Plan, data: GameData) -> Report:
         )  # fmt: skip
     offers = [priced.offer for priced in plan.offers if priced.offer.shares]
     shares = start_shares(data, plan.target.start_item, offers, _goal_leaf_nodes(plan))
+    from ._report_steps import report_steps  # it reads the route page's model, which imports this module
+
+    steps, step_of = report_steps(plan, data)
     return Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
         approximate_inputs(plan, plan.view_policy, data),
         None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
-        data=data,
+        data=data, steps=steps, step_of=step_of,
     )  # fmt: skip
 
 
@@ -383,55 +449,10 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines.extend(limit_lines(plan))
     lines.append(f"Blocks solved: {plan.approximation.blocks:,}" if plan.approximation else f"States solved: {len(plan.solution.values)}")
     lines.append("")
-    lines.append("Policy (S = a state of the item; the start is S1)")
-    printed: set[str] = set()
-    by_id = {state.id: state for state in report.states}
-    pending: list[str] = [report.ids[plan.start]] if plan.start in report.ids else []
-
-    def show(state_id: str, depth: int) -> None:
-        state = by_id[state_id]
-        pad = "    " * depth
-        printed.add(state_id)
-        reach = "" if state.reach is None else f", reached with chance {percent(state.reach)}"
-        lines.append(f"{pad}{state.id}: {state.description}")
-        parts = " + ".join(f"{count} {resource}" for resource, count, _, _ in state.cost_parts)
-        if not state.cost_parts:  # an action that consumes nothing: it is given a negligible cost (ADR-0026)
-            lines.append(f"{pad}  do: {state.action} (free; counted at {state.cost:.1g} Chaos so that every step has a positive cost)")
-        else:
-            lines.append(f"{pad}  do: {state.action} ({parts} = {money(state.cost)} Chaos each)")
-        lines.append(f"{pad}  expected cost from here {money(state.remaining)} Chaos{reach}")
-        later = []
-        for transition in state.transitions:
-            if transition.to == GOAL:
-                what = "goal reached"
-            elif transition.to == state.id:
-                what = f"nothing gained, back to {state.id}"
-            elif transition.to not in by_id:
-                what = f"{transition.to} (a dead end: no action is left there)"
-            elif transition.to in printed:
-                what = f"{transition.to} (shown above)"
-            else:
-                what = transition.to
-                later.append(transition.to)
-            lines.append(f"{pad}  {percent(transition.chance):>8}  {what}")
-        for child in later:
-            if child in printed:
-                continue
-            if len(printed) >= MAX_TREE_STATES:
-                lines.append(f"{pad}  ... {child} is not shown (the tree stops after {MAX_TREE_STATES:,} states; the JSON policy holds all of them)")
-            elif depth >= MAX_TREE_DEPTH:
-                lines.append(f"{pad}  ... {child} continues below")
-                pending.append(child)
-            else:
-                show(child, depth + 1)
-
-    while pending and len(printed) < MAX_TREE_STATES:
-        root = pending.pop(0)
-        if root not in printed:
-            show(root, 0)
-    if len(printed) < len(report.states):
-        lines.append(f"  ... {len(report.states) - len(printed):,} more states of the policy are not shown here; the JSON policy holds all {len(report.states):,}")
-    if not report.states:
+    lines.append(POLICY_HEADING)
+    for step in report.steps:
+        lines.extend(_step_lines(step))
+    if not report.steps:
         lines.append("  The start item already meets the target.")
     lines.append("")
     lines.append("Result")
@@ -468,6 +489,34 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.extend(verification_lines(verification) if plan.approximation else _verification_lines(verification, plan))
     text = "\n".join(lines) + "\n"
     return text if report.data is None else plain_base_names(report.data, text)  # a base by its game name, never its id (#553, #604)
+
+
+def _step_lines(step: ReportStep) -> list[str]:
+    """The block of one step: its title, the item, what it costs, how often it is used, and each branch with the exact mixture of its chance."""
+    lines = [f"Step {step.number}: {step.title}"]
+    if not step.acts:
+        lines.append(f"  no action here: {step.reason}" if step.reason else "  no action here")
+    if step.items == 1:
+        lines.append(f"  the item: {step.item}")
+    elif step.items > 1:
+        shared = f"; what they all share: {step.item}" if step.item else ""
+        lines.append(f"  {step.items:,} items take this action{shared}")
+        lines.append("  (the chances below are the mixture of theirs)")
+    if step.acts:
+        parts = " + ".join(f"{count} {resource}" for resource, count, _, _ in step.cost_parts)
+        if not step.cost_parts:  # an action that consumes nothing: the solver is given a negligible cost (ADR-0026)
+            lines.append(f"  cost per use: free (counted at {step.cost:.1g} Chaos so that every step has a positive cost)")
+        else:
+            lines.append(f"  cost per use: {parts} = {money(step.cost)} Chaos")
+        if step.never:
+            lines.append("  never finishes from here")
+        elif step.uses is not None:
+            lines.append(f"  used {step.uses:,.2f} times on average, {money(step.step_cost)} Chaos in all")
+    if step.reached is not None:
+        lines.append(f"  a run enters this step with chance {percent(step.reached)}")
+    for outcome in step.outcomes:
+        lines.append(f"    {percent(outcome.chance):>8}  {outcome.text}")
+    return lines
 
 
 def _count(value: Fraction) -> str:

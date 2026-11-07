@@ -84,10 +84,11 @@ def test_the_text_tree_shows_the_main_line_the_miss_the_odds_the_mean_and_p90(tm
     run(tmp_path)
 
     text = capsys.readouterr().out
-    assert "S1: rare; fractured +#% to Lightning Resistance; lacks +1 to Level of all Lightning Skill Gems" in text
-    assert "do: Harvest Reforge Lightning (50 Primal Crystallised Lifeforce = 0.50 Chaos each)" in text
-    assert f"{q * 100:.2f}%  goal reached" in text
-    assert "nothing gained, back to S1" in text
+    assert "Step 2: Harvest Reforge Lightning" in text and "S1" not in text  # one block for the one action, named as the page's row 2
+    assert "the item: rare; fractured +#% to Lightning Resistance; lacks +1 to Level of all Lightning Skill Gems" in text
+    assert "cost per use: 50 Primal Crystallised Lifeforce = 0.50 Chaos" in text
+    assert f"{q * 100:.2f}%  the target" in text
+    assert f"{(1 - q) * 100:.2f}%  nothing gained, this step again" in text
     assert "the mean cost" in text and "the cost 9 runs in 10 stay under" in text and "Divine" in text
     assert "risk figures" in text and "JSON policy written to" in text
     assert text.isascii()
