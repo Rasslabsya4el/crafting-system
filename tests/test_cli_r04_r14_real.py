@@ -96,7 +96,8 @@ def test_the_guides_route_and_its_completed_form_are_read_against_the_offers(uns
     assert as_written.rules[-1].when != When()  # the guide's own rules do not: what they leave out is a gap
     if route_id == "R14":
         assert [(rule.when, rule.do) for rule in completed.rules[: len(same)]] == same
-        assert len(completed.rules) == len(as_written.rules) + 1
+        # ticket #619: what is added is a Remove Crafted Mods that keeps the Attack Speed, then the restart
+        assert [rule.do for rule in completed.rules[len(same) :]] == ["Remove Crafted Mods", "restart"]
         return
     # R04 (ticket #599): a last `restart` alone bought a new quiver at every gap and lost the fractured Pierce (297,863 Chaos against the planner's 69,267).
     # The guide's rules stay, in order, but for step 7, which also asks a free prefix; what is added is a Remove Crafted Mods, an essence and the restart.
