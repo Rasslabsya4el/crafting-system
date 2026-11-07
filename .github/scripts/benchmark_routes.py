@@ -2,23 +2,41 @@
 
     python .github/scripts/benchmark_routes.py R12,R10,R11 OUT_DIR
 
-writes `OUT_DIR/benchmark.json` for those routes and prints the summary, exactly as `python -m crafting_system.cli benchmark --heavy` does for all of them.
+writes `OUT_DIR/benchmark.json` for those routes and prints the summary, as `python -m crafting_system.cli benchmark --heavy` does for all
+of them. A CI checkout has no price file of its own, so the routes with the plain start item are priced from the committed snapshot of
+the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-10-31.json`, as `measure_routes.py` does) and a route that starts from a
+vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`.
 """
 
 import sys
+from pathlib import Path
+
+PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"
 
 
 def main(argv: list[str]) -> int:
     from crafting_system.cli import _benchmark
+    from crafting_system.config import find_project_root
+    from crafting_system.prices import load_price_file
 
     wanted = [name for name in argv[0].split(",") if name]
-    known = [bench.id for bench in _benchmark.BENCHMARKS]
+    every = _benchmark.BENCHMARKS
+    known = [bench.id for bench in every]
     unknown = [name for name in wanted if name not in known]
     if unknown:
         print(f"no benchmark route {', '.join(unknown)}; the routes are {', '.join(known)}", file=sys.stderr)
         return 2
-    _benchmark.BENCHMARKS = tuple(bench for bench in _benchmark.BENCHMARKS if bench.id in wanted)
-    return _benchmark.benchmark_main(["--heavy", "--out", argv[1]], command="crafting-system")
+    chosen = [bench for bench in every if bench.id in wanted]
+    out = Path(argv[1])
+    code = 0
+    for folder, group, prices in (
+        (out, [bench for bench in chosen if bench.start is None], load_price_file(find_project_root() / PRICES)),
+        (out / "start", [bench for bench in chosen if bench.start is not None], None),
+    ):
+        if group:
+            _benchmark.BENCHMARKS = tuple(group)
+            code = max(code, _benchmark.benchmark_main(["--heavy", "--out", str(folder)], command="crafting-system", prices=prices))
+    return code
 
 
 if __name__ == "__main__":
