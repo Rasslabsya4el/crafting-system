@@ -292,6 +292,7 @@ UNRESOLVED = "not computed (the cost of the whole craft is far above its cheapes
 
 NOT_COMPUTED = {
     "subcritical": "not computed: the plan starts more runs of its inputs than it finishes, so its cost has no finite mean",
+    "undecided": "not computed: the chances of the plan are so close to 1 that the arithmetic could not fix the cost to within 1%",
     "unordered": "not computed: the inputs of the plan depend on each other in a cycle",
     "improper": "not computed: the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle",
 }

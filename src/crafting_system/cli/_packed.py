@@ -40,7 +40,9 @@ from crafting_system.solver import (
     solve_packed,
 )
 
+from . import _limits
 from ._decide import EXACT_TRANSITIONS
+from ._limits import Limit
 from ._offers import BuyStartItem, PricedOffer
 from ._prune import keyed_offers
 
@@ -324,3 +326,27 @@ def packed_result(
     if solver == "auto" and walked.graph.edges_counted() <= OBJECT_SOLVER_EDGES:
         return None
     return solve_walked(abstraction, start, walked, tolerance=tolerance, progress=progress)
+
+
+def evaluation_limits(info: Mapping) -> tuple[Limit, ...]:
+    """What the solve of the plan's values leaves out when it could not be exact (OR-12, OR-13): derived from the cost of the exact method, not from a count of states.
+
+    `info["linear_limit"]` (`solver/_packed_solve.evaluate_policy`) is set when the repeated approximation of how much each state costs stopped short of the
+    exact system and the exact method needed more memory than a run may use. The values are then taken from the approximation, which the independent check
+    at the end of the solve (the error bound printed with the plan) still bounds; the limit says it, with the memory the exact method needed. Empty when the
+    exact method was made, or not needed.
+    """
+    found = info.get("linear_limit")
+    if not found:
+        return ()
+    need = ""
+    if found.get("cells"):
+        need = f"; the exact calculation would need about {found['cells'] * 8 / 1e9:.1f} GB of memory and a run may use {found['allowed'] * 8 / 1e9:.1f} GB"
+    return (
+        Limit(
+            _limits.SOLVE,
+            "How much each state costs was found by approximation",
+            f"the plan has {found['states']:,} states whose costs depend on each other through long loops, and the approximation stopped at a distance of {found['error']:.1e} from the exact system{need}",
+            "The error bound printed with the plan is certified by a separate check against the exact rules of the model; the costs are not shown to be closer than that bound.",
+        ),
+    )

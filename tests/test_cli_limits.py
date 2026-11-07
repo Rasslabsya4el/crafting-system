@@ -156,9 +156,10 @@ def test_g20_a_quantile_the_grid_cannot_reach_is_a_limit_and_a_reached_one_is_no
         return Estimate(value, value, value)
 
     grid = GridInfo(0.5, True, 100, 0.0, 0.0)
-    unreached = SimpleNamespace(success_probability=estimate(1.0), p50=estimate(10.0), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
-    reached = SimpleNamespace(success_probability=estimate(1.0), p50=estimate(10.0), p90=estimate(20.0), cvar=estimate(30.0), grid=grid)
-    failing = SimpleNamespace(success_probability=estimate(0.5), p50=estimate(float("inf")), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
+    mean, variance = {"mean": estimate(5.0), "variance": estimate(1.0)}, {"mean": estimate(float("inf")), "variance": estimate(float("inf"))}
+    unreached = SimpleNamespace(success_probability=estimate(1.0), **mean, p50=estimate(10.0), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
+    reached = SimpleNamespace(success_probability=estimate(1.0), **mean, p50=estimate(10.0), p90=estimate(20.0), cvar=estimate(30.0), grid=grid)
+    failing = SimpleNamespace(success_probability=estimate(0.5), **variance, p50=estimate(float("inf")), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
 
     (limit,) = risk_limits(unreached)
     assert limit.what == "Not computed: the cost 9 runs in 10 stay under and the average of the worst tenth" and limit.guarantee == "The success chance and the mean cost are exact."
