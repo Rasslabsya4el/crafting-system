@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 import pytest
 from cli_support import LIFEFORCE, R12, START, price_file
 from items_support import DATA
+from oracle import page_lint
 
 from crafting_system.cli import make_plan
 from crafting_system.cli._marking import PRICE_CLAIM, approximate_inputs, approximate_inputs_document
@@ -90,7 +91,9 @@ def test_a_wider_start_item_is_marked_with_what_the_exact_item_has():
 def test_the_text_report_prints_each_price_with_its_source_and_marks(thin_plan):
     text = render_text(build_report(thin_plan, DATA))
 
-    assert f"  {LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units behind it; approximate: price on 10 units" in text
+    line = next(each for each in text.splitlines() if each.startswith(f"  {LIFEFORCE}: "))
+    assert line.startswith(f"  {LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units behind it, the plan buys about ")
+    assert line.endswith("; approximate: price on 10 units")
     assert "Approximate inputs (claims that no other source settles):" in text
     assert text.index("Prices: league") < text.index(f"  {LIFEFORCE}: 0.01 Chaos") < text.index("Start item")
 
@@ -110,7 +113,9 @@ def test_the_page_prints_the_source_of_each_price_and_its_marks(thin_plan):
     lines = [line.text for line in prices.lines]
 
     assert lines[0] == "league Test, fetched 2026-10-30"
-    assert f"{LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units behind it; approximate: price on 10 units" in lines
+    line = next(each for each in lines if each.startswith(f"{LIFEFORCE}: "))
+    assert line.startswith(f"{LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units behind it, the plan buys about ")
+    assert line.endswith("; approximate: price on 10 units")
     assert any("price on 10 units" in line.text and "Source: poe.ninja exchange, Test" in line.text for line in approximate.lines)
 
 
@@ -132,3 +137,25 @@ def test_a_plan_that_was_not_solved_still_lists_its_prices():
 
     assert {use.name for use in uses} >= {LIFEFORCE, START}
     assert datetime(2026, 10, 30, tzinfo=UTC) == plan.prices.fetched_at
+
+
+def lint_of_page(plan, check):
+    from crafting_system.cli._route_html import render_page
+    from crafting_system.cli._route_view import Page
+
+    html = render_page(Page("Test page", (build_section(route_input(plan), DATA),)))
+    return check(page_lint.read_page(html))
+
+
+def test_the_page_the_planner_draws_passes_the_check_of_price_sources_for_a_thin_and_a_deep_price(thin_plan, deep_plan):
+    assert lint_of_page(thin_plan, page_lint.check_price_source_shown) == []
+    assert lint_of_page(deep_plan, page_lint.check_price_source_shown) == []
+
+
+def test_the_check_of_price_sources_fails_on_the_same_page_when_the_mark_is_taken_out(thin_plan):
+    from crafting_system.cli._route_html import render_page
+    from crafting_system.cli._route_view import Page
+
+    html = render_page(Page("Test page", (build_section(route_input(thin_plan), DATA),))).replace("; approximate: price on 10 units", "")
+
+    assert page_lint.check_price_source_shown(page_lint.read_page(html))

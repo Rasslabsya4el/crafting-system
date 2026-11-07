@@ -604,25 +604,51 @@ _COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) [\d.,]+ c(?:\s|$)")
 _PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
 
 
+_BEHIND = re.compile(r"(?P<depth>[\d,]+(?:\.\d+)?) units behind it, the plan buys about (?P<uses>[\d,]+(?:\.\d+)?)")
+_PRICE_INPUT = re.compile(r"^The price of (?P<name>.+?) is [\d.,]+ Chaos, an approximate input")
+
+
 def check_price_source_shown(page: Page) -> list[Fault]:
-    """OR-7: the goal card's "Prices" names where each price came from: every line after the league line says its source (the exchange, the trade
-    site's instant buyout, a hand price, a previous league ...), a price of an earlier league or Standard says it is approximate, and every
-    resource of a step's "Cost per use" has such a line (R04's page printed "league Allflame, fetched 2026-10-31" and nothing else, #598)."""
+    """OR-7: the goal card's "Prices" names where each price came from, and no price stands unmarked when it is not a plain fact (#616, #598).
+    Every line after the league line says its source (the exchange, the trade site's instant buyout, a hand price, a previous league ...); a
+    price of an earlier league or Standard, a price taken for a wider item, and a price on fewer units than the plan buys ("N units behind it,
+    the plan buys about M", N below M) say "approximate:" and have their line in "Approximate inputs" ("The price of X is ..."); a line in
+    "Approximate inputs" about a price has its line in "Prices"; and every resource of a step's "Cost per use" has a line (R04's page printed
+    "league Allflame, fetched 2026-10-31" and nothing else, #598)."""
     faults = []
+
+    def fault(where: str, what: str) -> None:
+        faults.append(_fault("OR-7", check_price_source_shown, where, what))
+
     for route in page.routes:
-        lines = route.goal_lines("Prices")
-        priced = lines[1:]
+        priced = route.goal_lines("Prices")[1:]
+        inputs = {found.group("name") for line in route.goal_lines("Approximate inputs") if (found := _PRICE_INPUT.match(line.text))}
+        marked = set()
         for line in priced:
-            if not any(source in line.text for source in _SOURCES):
-                faults.append(_fault("OR-7", check_price_source_shown, "goal card, Prices", f"a price that does not name its source: {line.text[:100]}"))
-            elif ("previous league" in line.text or "Standard" in line.text) and "approximate:" not in line.text:
-                faults.append(_fault("OR-7", check_price_source_shown, "goal card, Prices", f"a price of an earlier league that is not marked approximate: {line.text[:100]}"))
+            name = line.text.partition(": ")[0]
+            text = line.text
+            if not any(source in text for source in _SOURCES):
+                fault("goal card, Prices", f"a price that does not name its source: {text[:100]}")
+            if "approximate:" in text:
+                marked.add(name)
+            else:
+                if "previous league" in text or "Standard" in text:
+                    fault("goal card, Prices", f"a price of an earlier league that is not marked approximate: {text[:100]}")
+                if "taken for a wider item" in text:
+                    fault("goal card, Prices", f"a price taken for a wider item that is not marked approximate: {text[:100]}")
+                behind = _BEHIND.search(text)
+                if behind and float(behind.group("depth").replace(",", "")) < float(behind.group("uses").replace(",", "")):
+                    fault("goal card, Prices", f"a price on fewer units than the plan buys that is not marked approximate: {text[:100]}")
+        for name in sorted(marked - inputs):
+            fault("goal card, Approximate inputs", f"{name} is marked approximate in Prices and is not among the approximate inputs")
+        for name in sorted(inputs - {line.text.partition(": ")[0] for line in priced}):
+            fault("goal card, Prices", f"{name} is an approximate input and has no line in Prices")
         named = {line.text.partition(": ")[0] for line in priced}
         for step in route.steps:
             for line in step.lines("Cost per use"):
                 found = _COST_LINE.match(line.text)
                 if found and found.group("name") not in _PLAIN_CURRENCY and found.group("name") not in named:
-                    faults.append(_fault("OR-7", check_price_source_shown, f"step {step.number} ({step.title})", f"{found.group('name')} is bought here and the goal card's Prices says nothing of its source"))
+                    fault(f"step {step.number} ({step.title})", f"{found.group('name')} is bought here and the goal card's Prices says nothing of its source")
     return faults
 
 
