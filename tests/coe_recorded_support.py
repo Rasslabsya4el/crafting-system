@@ -18,9 +18,11 @@ The test (stated in one place, `ALPHA` and `MIN_EXPECTED`):
 * A "histogram" cell is the whole law of the rolled values of one mod: the recorded count of each value against the
   planner's roll law (`_intervals`, each integer of the range with the same chance), given the mod. It is the cell that has
   the power to see a wrong roll range, which a threshold cell has not (a shift by one at a tier edge moves the threshold
-  chance by 0.17% to 0.24%). A value the emulator gave that our law gives chance 0 is an exact rejection (p = 0); otherwise
-  the values are binned so that each bin expects `MIN_EXPECTED`, and Pearson's chi-square over the bins is judged by its
-  exact tail (`chi_square_sf`). It is counted in the module's correction like any other cell.
+  chance by 0.17% to 0.24%). A value the emulator gave that our law gives chance 0 is an exact rejection (p = 0): that is
+  the exact part. Otherwise the values are binned so that each bin expects `MIN_EXPECTED`, and Pearson's statistic over the
+  bins is judged by the chi-square tail (`chi_square_sf`, exact for the chi-square law itself); Pearson's statistic follows
+  that law only asymptotically (the 5 expected per bin is the usual rule for it), so this p-value is an approximation.
+  The histogram cells and the binomial cells are ONE family of the Bonferroni correction (`failures(..., family=m)`).
 * A cell is tested by the exact two-sided binomial test, `p_value = min(1, 2 * min(P(X <= k), P(X >= k)))` with
   `X ~ Binomial(n, p)`. No normal approximation, so a small cell is as honest as a large one.
 * The cells are many, so the test is Bonferroni-corrected: a cell is a failure when `p_value < ALPHA / m`, where
@@ -120,10 +122,11 @@ class Cell:
         return f"{self.case} {self.kind} {self.name}: ours {self.ours:.5f} (expect {self.expected:.1f}), emulator {self.seen}/{self.n}, p {self.p_value:.2e}"
 
 
-def failures(cells: list[Cell], alpha: float = ALPHA) -> list[Cell]:
-    """The testable cells with p below `alpha / m`, `m` the number of testable cells (Bonferroni)."""
+def failures(cells: list[Cell], alpha: float = ALPHA, family: int | None = None) -> list[Cell]:
+    """The testable cells with p below `alpha / m` (Bonferroni): `m` is `family`, the number of cells of the whole module
+    (the binomial and the histogram cells together), or, when it is not given, the number of testable cells of `cells`."""
     testable = [cell for cell in cells if cell.testable]
-    bound = alpha / max(len(testable), 1)
+    bound = alpha / max(family if family is not None else len(testable), 1)
     return [cell for cell in testable if cell.p_value < bound]
 
 
@@ -271,16 +274,16 @@ def shifted(mod, by: int):
     return replace(mod, stats=tuple(StatRange(stat.id, stat.min + by, stat.max + by) for stat in mod.stats))
 
 
-def roll_chance(data: GameData, ours: OurCase, line, by: int = 0) -> float:
+def roll_chance(data: GameData, ours: OurCase, line) -> float:
     """Our chance that the finished item holds a mod of `line` whose roll reaches the line's `min_roll`.
 
     A mod of the line is held at most once (they are one family), so the chances add: for each mod our model can add, its
-    marginal chance times the share of its rolls that the line passes. `by` moves every stat range (the control).
+    marginal chance times the share of its rolls that the line passes.
     """
     marginals = ours.marginals()
     total = 0.0
     for mod_id in sorted(line.mod_ids & marginals.keys()):
-        law = roll_law([line], shifted(data.mods[mod_id], by), crafted=False)
+        law = roll_law([line], data.mods[mod_id], crafted=False)
         passing = sum((chance for statuses, chance in law if statuses[0] == Status.PASSING), Fraction(0))
         total += float(marginals[mod_id] * passing)
     return total
@@ -296,8 +299,8 @@ def roll_seen(record: dict, line) -> int:
     return seen
 
 
-def roll_cell(data: GameData, case: str, name: str, record: dict, ours: OurCase, line, by: int = 0) -> Cell:
-    return Cell(case, "roll", name, record["applied"], roll_seen(record, line), roll_chance(data, ours, line, by))
+def roll_cell(data: GameData, case: str, name: str, record: dict, ours: OurCase, line) -> Cell:
+    return Cell(case, "roll", name, record["applied"], roll_seen(record, line), roll_chance(data, ours, line))
 
 
 # --- the histogram of the rolled values of one mod -----------------------------------------------------
