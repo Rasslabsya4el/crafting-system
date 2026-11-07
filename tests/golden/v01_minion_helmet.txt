@@ -25,7 +25,7 @@ What this answer leaves out:
   A state lists the other mods only as a count per side (the model keeps the mods the target does not ask for by kind, not by name). The odds and costs count every one of them.
 States solved: 786
 
-Policy (one block for each action you take, numbered as the steps of the route page; step 1 is the start item)
+Policy (one block for each action you take, numbered as the steps of the route page, whose step 1 is how you get the start item)
 Step 2: Orb of Augmentation
   the item: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted)
   cost per use: 1 Orb of Augmentation = 0.02 Chaos
