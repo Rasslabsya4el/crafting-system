@@ -15,10 +15,11 @@ PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"
 
 
 def main(argv: list[str]) -> int:
-    from crafting_system.cli import _benchmark
+    from crafting_system.cli import _benchmark, _packed
     from crafting_system.config import find_project_root
     from crafting_system.prices import load_price_file
 
+    _packed.PROGRESS = lambda text: print(text, flush=True)  # each phase of the packed solver and of the divergences as it ends
     wanted = [name for name in argv[0].split(",") if name]
     every = _benchmark.BENCHMARKS
     known = [bench.id for bench in every]

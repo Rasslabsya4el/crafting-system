@@ -16,9 +16,12 @@ The lines are sorted by the larger of the two chances; lines past `SHOWN` are co
 (a state from which the route cannot finish), and one that is only an upper bound says so (`exact` false).
 """
 
+import time
+
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
 
+from . import _packed
 from ._plan import Plan
 from ._report import describe_state, number_states, percent
 from ._route import Divergence, RouteResult
@@ -45,10 +48,15 @@ def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
     found = result.divergences
     if not found:
         return {"count": 0, "shown": [], "more": None}
+    began = time.perf_counter()
+    say = _packed.PROGRESS or (lambda _text: None)  # a measuring script sets it to see each phase as it ends
     planner = chain_of_plan(plan)
     route = _route_chain(plan, result)
+    say(f"divergences: {len(found):,}; the chains of the planner ({planner.m:,} states) and of the route ({route.m:,}) made ({time.perf_counter() - began:.1f} s)")
     planner_reach = _chances(planner, [d.state for d in found])
+    say(f"divergences: the visit chances under the planner ({time.perf_counter() - began:.1f} s)")
     route_reach = _chances(route, [d.state for d in found])
+    say(f"divergences: the visit chances under the route ({time.perf_counter() - began:.1f} s)")
     ids = number_states(plan)
     rows = [
         _row(plan, data, ids, divergence, planner_reach[number], route_reach[number])
