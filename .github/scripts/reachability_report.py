@@ -57,8 +57,8 @@ BUILT_MODULES = (
     ("the price-source rule", f"{PACKAGE}.prices.price_source", "INPUTS-2, PLANNING-6", None),
     ("the item-level floor", f"{PACKAGE}.targets.floor", "TARGETS-3, PLANNING-8, ROUTES-13", None),
     ("the donor loop of two-input actions", f"{PACKAGE}.cli._donors", "ACT2-11", None),
-    ("the interval driver (ticket #220)", f"{PACKAGE}.cli._interval", "PRES-15", ("build_interval_answer",)),
-    ("the interval driver (ticket #220)", f"{PACKAGE}.cli._report", "PRES-15", ("with_interval",)),
+    ("the interval driver (wiring: ticket #589)", f"{PACKAGE}.cli._interval", "PRES-15", ("build_interval_answer",)),
+    ("the interval driver (wiring: ticket #589)", f"{PACKAGE}.cli._report", "PRES-15", ("with_interval",)),
 )
 
 # the findings of the audit that touch a kind, for the reader: ids only, no claim (the claim is the audit's)
