@@ -94,6 +94,34 @@ def test_cycles_too_tangled_for_the_memory_leave_the_chances_not_measured_and_ne
     assert [r.chance for r in reached] == [1.0, None]  # the start is visited for sure; the other is not measured
 
 
+def test_a_run_that_runs_out_of_memory_putting_the_cycles_back_leaves_the_chances_not_measured_with_the_reason(monkeypatch):
+    policy, chain = hand_chain()
+    index = {state: i for i, state in enumerate(chain.states)}
+
+    def broken(*arguments, **keywords):
+        raise MemoryError
+
+    monkeypatch.setattr(_route_flow, "inverse_diagonal", broken)
+
+    (reached,) = reach_of(chain, [index["B"]])
+
+    assert reached.chance is None and "memory of the run ran out" in reached.why
+
+
+def test_the_block_says_in_notes_why_a_chance_is_a_question_mark_and_when_the_digits_printed_are_more_than_the_residual_supports(tiny, monkeypatch):
+    plan, result = tiny
+    monkeypatch.setattr(divergence_module, "reach_of", lambda chain, wanted: [_route_flow.Reach(None, "the cycles are too tangled") for _ in wanted])
+
+    block = divergences_of(plan, result, DATA)
+    text = "\n".join(divergence_lines(block))
+
+    assert block["notes"][0].startswith("3 chance(s) of the planner are `?` (not measured): the cycles are too tangled")
+    assert "    note: 3 chance(s) of the guide are `?`" in text and "(the planner visits it with chance ?, the guide with chance ?)" in text
+    monkeypatch.setattr(divergence_module, "reach_of", lambda chain, wanted: [_route_flow.Reach(0.5, None, 3e-3) for _ in wanted])
+
+    stiff = divergences_of(plan, result, DATA)
+
+    assert "supports about 2 significant digits, fewer than printed" in stiff["notes"][0] and "residual of 1e-09" in stiff["notes"][0]
 def test_a_disagreement_between_the_cycles_and_the_visits_leaves_the_chances_not_measured(monkeypatch):
     policy, chain = hand_chain()
     index = {state: i for i, state in enumerate(chain.states)}
@@ -256,7 +284,7 @@ def test_every_state_where_the_route_and_the_planner_part_is_listed_with_its_cha
     block = divergences_of(plan, result, DATA)
 
     assert result.divergences and result.divergence == result.divergences[0]
-    assert block["count"] == 3 == len(result.divergences) == len(ids) and block["more"] is None
+    assert block["count"] == 3 == len(result.divergences) == len(ids) and block["more"] is None and "notes" not in block
     by_state = {row["state"]: row for row in block["shown"]}
     assert set(by_state) == set(ids.values())
     for state, state_id in ids.items():

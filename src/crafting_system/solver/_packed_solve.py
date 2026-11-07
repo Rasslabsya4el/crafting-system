@@ -541,7 +541,7 @@ def evaluate_policy(
 
         solved, residual, iterations = bicgstab_checked(matvec, rhs, start[states], tol)
         info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
-        info["linear_residual"] = residual  # the true one, |rhs - A x| / |rhs| of the values taken (or of the iterate the dense solve replaces)
+        info["linear_residual"] = residual  # the true one, |rhs - A x| / |rhs| (of the dense values instead, once they replace the iterate)
         info["policy_states"], info["policy_edges"], info["shared_edges"] = m, len(edge_weight), len(shared_prob)
         if not residual <= DENSE_FALLBACK_RESIDUAL:  # a stiff system: the dense solve is slow but sure
             if m > DENSE_FALLBACK and not residual <= ACCEPT_BOUND:  # a stop-and-say-so rail: a residual this large is not a value the certificate could accept
@@ -551,8 +551,11 @@ def evaluate_policy(
                     INF,
                 )
             if m <= DENSE_FALLBACK:
+                info["linear_residual_iterate"] = residual  # the iterate the dense solve replaces
                 solved = dense()
                 info["linear_replaced"] = info.get("linear_replaced", 0) + 1
+                with np.errstate(all="ignore"):  # the residual that goes with the values taken, not with the iterate thrown away
+                    info["linear_residual"] = float(np.linalg.norm(rhs - matvec(solved)) / max(float(np.linalg.norm(rhs)), 1e-300))
     if not np.all(np.isfinite(solved)):
         raise ConvergenceError("the evaluation of a policy did not give finite values", INF)
     values[states] = solved

@@ -185,6 +185,56 @@ def test_a_big_component_of_a_sparse_layered_chain_is_cut_state_by_state_in_batc
     assert deviation < 1e-9
 
 
+def stiff_chain(rng, n, power):
+    """`(ptr, col, weight, leave, leak, exact N)`: every state stays with chance 1 - delta (delta from 10**-power to 10**-(power - 3)), and sends 0.7 delta to one to three others and 0.3 delta out.
+
+    The reference is (I - P)^-1 diag(1 / leave) with P the rows divided by `leave`: it has no `1 - p` in it, so it is good to the last digits.
+    """
+    delta = 10.0 ** -(power - rng.integers(0, 4, size=n))
+    ptr, col, weight = [0], [], []
+    scaled = np.zeros((n, n))
+    for s in range(n):
+        targets = [u for u in rng.choice(n, size=int(rng.integers(1, 4)), replace=False).tolist() if u != s]
+        share = rng.random(len(targets))
+        share = share / share.sum() * 0.7 * delta[s]
+        for u, w in sorted([(s, 1.0 - delta[s]), *zip(targets, share.tolist(), strict=True)]):
+            col.append(u)
+            weight.append(w)
+            if u != s:
+                scaled[s, u] = w / delta[s]
+        ptr.append(len(col))
+    exact = np.linalg.inv(np.eye(n) - scaled) / delta[None, :]
+    return np.array(ptr), np.array(col), np.array(weight), delta, 0.3 * delta, exact
+
+
+@pytest.mark.parametrize("power", [6, 10, 13])
+@pytest.mark.parametrize("limit", [1000, 3])
+def test_a_chain_that_stays_where_it_is_with_chance_one_minus_1e_minus_13_gets_its_diagonal_whole_and_cut(power, limit):
+    """#615: the rows put back by the Woodbury step are not formed as 1 - p (the first version lost all digits at 1e-13); the check of the start row stays under `AGREE`."""
+    for seed in range(8):
+        rng = np.random.default_rng(900 + seed)
+        n = int(rng.integers(20, 50))
+        ptr, col, weight, leave, leak, exact = stiff_chain(rng, n, power)
+
+        got, deviation = pc.inverse_diagonal(n, ptr, col, weight, leave, invert_limit=limit, start=0, start_row=exact[0], leak=leak)
+
+        assert got == pytest.approx(np.diag(exact), rel=1e-9), (power, limit, seed)
+        assert deviation < 1e-6, (power, limit, seed)  # `AGREE` of the route flow
+
+
+def test_the_memory_counted_for_putting_cut_rows_back_has_the_blocks_in_it(monkeypatch):
+    rng = np.random.default_rng(12)
+    n = 80
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=10, density=3, loops=True)
+    monkeypatch.setattr(pc, "WOODBURY_CELLS", 1)
+    with pytest.raises(pc.CyclesTooTangled) as refused:
+        pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=3)
+    words = str(refused.value).replace(",", "").split()
+    q, wanted, cells = int(words[2]), int(words[7]), int(words[10])
+
+    assert cells >= (2 * wanted + 2 * q) * q + 6 * min(pc.BLOCK_CELLS, n * q)  # the blocks of a solve are held too, six of them
+
+
 def test_cut_rows_too_many_to_put_back_in_the_memory_allowed_are_refused_not_guessed(monkeypatch):
     rng = np.random.default_rng(11)
     n = 40

@@ -504,6 +504,17 @@ def test_the_dense_fallback_takes_over_when_bicgstab_cannot_reach_its_residual(m
     assert info["linear_iterations"] == 1 + ps.BICGSTAB_RESTARTS  # the first run and each restart stopped at its one step
 
 
+def test_after_the_dense_solve_replaces_an_iterate_the_residual_reported_is_that_of_the_values_taken(monkeypatch):
+    work, leave = prepared(LINE)
+    info = {}
+    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)  # one step: far from the answer
+
+    evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
+
+    assert info["linear_dense"] == 1 and info["linear_residual_iterate"] > ps.DENSE_FALLBACK_RESIDUAL  # the iterate thrown away
+    assert info["linear_residual"] <= 1e-14  # the dense values taken: not the iterate's residual
+
+
 def test_a_policy_longer_than_the_dense_fallback_whose_true_residual_is_large_is_refused_not_returned(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
@@ -876,8 +887,10 @@ def test_the_dense_fallback_is_made_for_a_residual_above_its_threshold_and_not_a
 
     values = evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
 
-    assert ("linear_dense" in info) is dense and info["linear_residual"] == residual
+    assert ("linear_dense" in info) is dense
+    assert (info["linear_residual"] <= 1e-14) if dense else (info["linear_residual"] == residual)  # the residual of the values taken
     if dense:
+        assert info["linear_residual_iterate"] == residual
         assert values.tolist() == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)  # the dense solve replaced the stub's values
     else:
         assert values[:5].tolist() == (LINE_VALUES * (1.0 + 1 + ps.BICGSTAB_RESTARTS)).tolist()  # the stub's last iterate, kept

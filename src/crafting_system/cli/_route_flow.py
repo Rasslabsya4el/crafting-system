@@ -30,17 +30,20 @@ reach a goal (it loops forever, or every way out ends in a state with no action)
 are all of that kind has `uses = inf` and the plain mean of its states as its chances; in a step that also has
 states that can finish, only those are counted.
 
-`reach_of` gives the chance a run ever visits a state, N[start, s] / N[s, s], exactly for any state of a chain of
-any size (ticket #572): the diagonal of N comes from the cycles of the chain (`solver/_packed_chain.py`) and is
+`reach_of` gives the chance a run ever visits a state, N[start, s] / N[s, s], for any state of a chain of
+any size (ticket #572), as a number and never as a bound: the diagonal of N comes from the cycles of the chain (`solver/_packed_chain.py`) and is
 checked against the visits, which another method found.
 
-Two things are stated, not hidden (OR-12, OR-13), and both leave the chances and uses exact where they are shown:
+Three things are stated, not hidden (OR-12, OR-13), and the chances and uses are as solved where they are shown:
 
 * `Flow.measured` is False when the visits cannot be solved (a chance per use so small that it is lost in the
   float, or a solve whose true residual stayed above `ACCEPT_RESIDUAL`): the uses and visits are then not known, and
   the chances of a step with several states are the plain mean of them. The page says so on each step it applies to.
 * `Flow.entered` is False when the chance of entering some step could not be solved to that residual (`Step.reached`
   is None for it). Uses, costs and chances do not depend on it, and it does not depend on the size of the policy.
+* The digits. What is checked is a residual (`ACCEPT_RESIDUAL`), and a stiff chain loses digits between a residual and an answer: a plan whose
+  runs take millions of steps is good to fewer digits than `percent` prints. `precision_of` estimates the error the residual guarantees (that
+  residual times the expected steps of a run) and `flow_limits` says how many digits it supports once it passes `STIFF_ERROR`.
 
 Both are `Limit` records (`flow_limits`, kind `STEPS`) written into `Plan.limits` when a plan is finished and shown, like every limit, by the text
 report, the JSON and the goal card of the page; a given route's own chain gets its own on its section.
@@ -355,7 +358,7 @@ def flow_of[S: Hashable](
 
 
 def flow_limits(chain: Chain) -> tuple[Limit, ...]:
-    """The limits of the steps made from `chain` (OR-12, OR-13): what the page then cannot promise. Empty when the visits were solved and the entry chances computed.
+    """The limits of the steps made from `chain` (OR-12, OR-13): what the page then cannot promise. Empty when the visits were solved, the entry chances computed and the digits printed are supported by the residual.
 
     Found by the solve itself, so they are written wherever a plan is finished (`Plan.limits`) and for a given route's own chain.
     """
@@ -377,8 +380,9 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
             ),
         )
     reached, unsettled = _entries(chain)
+    limits: list[Limit] = []
     if unsettled:
-        return (
+        limits.append(
             Limit(
                 STEPS,
                 "How often a run enters a step is not shown",
@@ -387,9 +391,24 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
                     "the methods offered",
                     "The uses and cost of each step and the chances of each step are as shown; only the share of runs that ever enter a step is missing where it did not settle.",
                 ),
-            ),
+            )
         )
-    return ()
+    error = precision_of(done)
+    if error > STIFF_ERROR:  # the residual is what is checked; on a stiff chain the digits are fewer than the residual (OR-13)
+        limits.append(
+            Limit(
+                STEPS,
+                "The numbers of the steps are good to fewer digits than printed",
+                f"a run of this plan takes about {float(done.visits.sum()):,.0f} steps, and a solve checked to a residual of {ACCEPT_RESIDUAL:g} is then good to about "
+                f"{digits_text(error)} significant digits",
+                **claim(
+                    "the methods offered",
+                    f"How often each step is used, what it costs, its chances and the share of runs that enter it are solutions of the plan's equations to a residual of {ACCEPT_RESIDUAL:g}; "
+                    f"on a plan that takes this many steps that supports about {digits_text(error)} digits, not the digits printed.",
+                ),
+            )
+        )
+    return tuple(limits)
 
 
 def _can_finish(m: int, src: np.ndarray, dst: np.ndarray, into_goal: np.ndarray, into_state: np.ndarray) -> np.ndarray:
@@ -470,7 +489,7 @@ def _entries(chain: Chain) -> tuple[list[float | None], int]:
 
 @dataclass(frozen=True)
 class _System:
-    """The chain on the states that can finish: `position[i]` numbers them; the edges among them (`row -> column`, chance `p`); `leave[s]`: the chance to leave `s` for any other state, a goal or not."""
+    """The chain on the states that can finish: `position[i]` numbers them; the edges among them (`row -> column`, chance `p`); `leave[s]`: the chance to leave `s` for any other state, a goal or not; `leak[s]`: the chance to go to a goal or to a state that cannot finish."""
 
     position: np.ndarray
     nt: int
@@ -478,6 +497,7 @@ class _System:
     column: np.ndarray
     p: np.ndarray
     leave: np.ndarray
+    leak: np.ndarray
 
 
 def _system(chain: Chain, src: np.ndarray, finishing: np.ndarray) -> _System | None:
@@ -490,7 +510,9 @@ def _system(chain: Chain, src: np.ndarray, finishing: np.ndarray) -> _System | N
     inside[inside] = finishing[dst[inside]]
     nonself = dst != src
     leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=m)[finishing]  # a sum of positive terms: no `1 - p`
-    return _System(position, int(finishing.sum()), position[src[inside]], position[dst[inside]], chain.prob[inside], leave)
+    outside = finishing[src] & ~inside
+    leak = np.bincount(position[src[outside]], weights=chain.prob[outside], minlength=int(finishing.sum()))  # a sum of positive terms
+    return _System(position, int(finishing.sum()), position[src[inside]], position[dst[inside]], chain.prob[inside], leave, leak)
 
 
 def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tuple[np.ndarray, bool, np.ndarray | None]:
@@ -507,11 +529,7 @@ def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tupl
     nt, start = system.nt, int(system.position[0])
     found = inverse = None
     if nt <= DENSE_LIMIT:
-        with np.errstate(all="ignore"):
-            try:
-                inverse = np.linalg.inv(np.eye(nt) - np.bincount(system.row * nt + system.column, weights=system.p, minlength=nt * nt).reshape(nt, nt))
-            except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats
-                inverse = None
+        inverse = _inverse(system)
         if inverse is not None:
             e = np.zeros(nt)
             e[start] = 1.0
@@ -528,6 +546,29 @@ def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tupl
         return visits, False, None
     visits[finishing] = np.maximum(found, 0.0)
     return visits, True, inverse
+
+
+def _inverse(system: _System) -> np.ndarray | None:
+    """N = (I - Q)^-1 over the states that can finish, dense, or None when it does not pass its check.
+
+    Not formed as I - Q: a state that stays with chance 1 - 1e-13 has 1 - p = 1e-13 +- 1e-16 there, and an inverse of that is good to three digits (an entry
+    chance off by 3e-4 in a test). Each row is divided by the chance to leave its state, which takes the self-loops out, and the inverse of
+    I - P (P = Q / leave without the diagonal) is scaled back by columns: N = (I - P)^-1 diag(1 / leave). The whole inverse is checked, not
+    only the row of the start that the visits are read from: every entry of (I - P) (I - P)^-1 - I must be within `ACCEPT_RESIDUAL` of the size of the terms it is made of.
+    """
+    nt = system.nt
+    off = system.row != system.column
+    row, column = system.row[off], system.column[off]
+    with np.errstate(all="ignore"):
+        matrix = np.eye(nt) - np.bincount(row * nt + column, weights=system.p[off] / system.leave[row], minlength=nt * nt).reshape(nt, nt)
+        try:
+            inverse = np.linalg.inv(matrix)
+        except np.linalg.LinAlgError:
+            return None
+        scale = np.abs(matrix) @ np.abs(inverse) + np.eye(nt)
+        if not (np.all(np.isfinite(inverse)) and np.max(np.abs(matrix @ inverse - np.eye(nt)) / scale) <= ACCEPT_RESIDUAL):
+            return None
+        return inverse / system.leave[None, :]
 
 
 def _backward_error(n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray, b: np.ndarray, x: np.ndarray) -> float:
@@ -581,11 +622,33 @@ def _linear(n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray, b: np.
 class Reach:
     """The chance a run ever visits one state of a chain (ticket #554).
 
-    `chance` is None when it is not measured: the visits could not be solved, the start cannot finish, or the state is one from
-    which no run can finish (a route that stops there). A chance that is given is the exact chance (ticket #572): no upper bound is shown for it.
+    `chance` is None when it is not measured, and `why` says in a line why: the visits could not be solved, the start cannot finish, the state
+    is one from which no run can finish (a route that stops there), or the cycles of the chain could not be put back or did not agree with the
+    visits. A chance that is given is a solution of its equations to a backward error of at most `ACCEPT_RESIDUAL`, checked against the visits
+    by another method (ticket #572); no upper bound is shown for it. `error` is the relative error that guarantee supports, and no more: the
+    residual is what is checked, and a stiff chain (a state a run is in for millions of steps) loses digits between a residual and an answer.
     """
 
     chance: float | None
+    why: str | None = None
+    error: float = 0.0
+
+
+STIFF_ERROR = 1e-4  # a chance is printed to 4 significant digits (`percent`): an error the guarantee supports above this is said, not hidden
+
+
+def precision_of(done: "_Solved") -> float:
+    """The relative error of a chance or a visit count that the residual `ACCEPT_RESIDUAL` guarantees, estimated as that residual times the expected number of steps of a run.
+
+    The condition number of I - Q is at least the expected steps of a run from the start (the sum of the visits), so a solve with a backward error of
+    `ACCEPT_RESIDUAL` is guaranteed to that times it, no better. R04 and R14 are about 1e-6; a chain with chances per use of 1e-10 is 1.
+    """
+    return float(done.visits.sum()) * ACCEPT_RESIDUAL
+
+
+def digits_text(error: float) -> str:
+    """How many significant digits an `error` supports, for a reader."""
+    return f"{max(0, int(-math.log10(error)) if error > 0 else 0)}"
 
 
 def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
@@ -594,12 +657,11 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     The expected visits N[start, s] are the same solve the steps of the page use (`_solved`). The diagonal N[s, s] of every state comes from the cycles
     of the chain, whatever its size (`solver/_packed_chain.py`: components of the chain inverted whole, the rows that many states share cut and put
     back by the Woodbury identity), and is checked: the same pieces give the row of the start, which must agree with the visits to `AGREE`, else
-    no chance is shown. The start is visited with chance 1.
+    no chance is shown (`Reach.why`). The start is visited with chance 1.
     """
     m = chain.m
-    unknown = Reach(None)
     if m == 0:
-        return [unknown for _ in wanted]
+        return [Reach(None, "the chain has no state") for _ in wanted]
     from . import _packed  # a measuring script sets `_packed.PROGRESS`; the library never does
 
     began = time.perf_counter()
@@ -609,21 +671,28 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     src = np.repeat(np.arange(m), np.diff(chain.ptr))
     found: dict[int, Reach] = {}
     asked = [i for i in dict.fromkeys(wanted) if i != 0 and done.solved and done.finishing[0] and done.finishing[i]]
-    diagonal = _diagonal(chain, src, done, say) if asked else None
+    diagonal, why = _diagonal(chain, src, done, say) if asked else (None, None)
     position = np.cumsum(done.finishing) - 1
+    error = precision_of(done) if asked else 0.0
     for i in dict.fromkeys(wanted):
         if i == 0:
             found[i] = Reach(1.0)
-        elif diagonal is None or not (done.solved and done.finishing[0] and done.finishing[i]):
-            found[i] = unknown
+        elif not done.solved:
+            found[i] = Reach(None, f"the visits of the chain were not solved to a residual of {ACCEPT_RESIDUAL:g}")
+        elif not done.finishing[0]:
+            found[i] = Reach(None, "no run can finish from the start of the chain")
+        elif not done.finishing[i]:
+            found[i] = Reach(None, "no run can finish from this state (the route stops there)")
+        elif diagonal is None:
+            found[i] = Reach(None, why)
         else:
-            found[i] = Reach(min(1.0, max(0.0, float(done.visits[i] / diagonal[position[i]]))))
+            found[i] = Reach(min(1.0, max(0.0, float(done.visits[i] / diagonal[position[i]]))), None, error)
     say(f"visit chances: {len(found):,} states done ({time.perf_counter() - began:.1f} s)")
     return [found[i] for i in wanted]
 
 
-def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> np.ndarray | None:
-    """N[s, s] of every state that can finish (by position), or None when the pieces do not agree with the visits or cannot be put back.
+def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> tuple[np.ndarray | None, str | None]:
+    """`(N[s, s] of every state that can finish (by position), None)`, or `(None, the reason)` when the cycles cannot be put back or the pieces do not agree with the visits.
 
     The chain is Q on the states that can finish, self-loops included, with `leave` the chance to leave each state (`_system`); the cycles of the
     chain give the diagonal of N = (I - Q)^-1 (`solver/_packed_chain.py`) and, from the same pieces, the row of the start, which must be the visits.
@@ -635,14 +704,21 @@ def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> np.ndarray |
     visits = done.visits[done.finishing]
     with np.errstate(all="ignore"):
         try:
-            diagonal, deviation = inverse_diagonal(system.nt, ptr, system.column, system.p, system.leave, start=start, start_row=visits, progress=say)
-        except (np.linalg.LinAlgError, CyclesTooTangled) as error:  # not measured, never a guess: the benchmark line shows `?` and counts it
-            say(f"visit chances: not measured ({error})")
-            return None
-        if not (deviation <= AGREE and np.all(np.isfinite(diagonal)) and np.all(diagonal >= 1.0 - 1e-9)):
-            say(f"visit chances: the cycles of the chain and the visits disagree by {deviation:.3g}, no chance is shown")
-            return None
-        return diagonal
+            diagonal, deviation = inverse_diagonal(
+                system.nt, ptr, system.column, system.p, system.leave, start=start, start_row=visits, progress=say, leak=system.leak
+            )
+        except CyclesTooTangled as error:  # not measured, never a guess: the benchmark line shows `?` and says why
+            why = f"the cycles of the chain are too tangled to put back within the memory of a run ({error})"
+        except MemoryError:
+            why = "the memory of the run ran out putting back the cycles of the chain"
+        except np.linalg.LinAlgError:
+            why = "a block of cycles of the chain is singular in floats"
+        else:
+            if deviation <= AGREE and np.all(np.isfinite(diagonal)) and np.all(diagonal >= 1.0 - 1e-9):
+                return diagonal, None
+            why = f"the cycles of the chain and the visits disagree by {deviation:.3g} (more than {AGREE:g})"
+    say(f"visit chances: not measured ({why})")
+    return None, why
 
 
 def _entry_chance(system: _System, absorbing: np.ndarray) -> float | None:

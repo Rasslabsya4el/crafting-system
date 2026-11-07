@@ -510,6 +510,87 @@ def test_the_chance_of_entering_a_step_is_the_same_by_the_inverse_and_by_one_sol
     assert checked > 100
 
 
+def stiff_policy(rng: random.Random, size: int, power: int):
+    """Every state stays with weight 10**power against 1 to 3 weights of 1 to 3 to others and the goal: a chance per use of about 10**-power."""
+    names = [f"s{i}" for i in range(size)]
+    policy = {}
+    for name in names:
+        others = [*rng.sample(names, rng.randint(1, 3)), "goal"]
+        policy[name] = act(rng.choice(["a", "b", "c"]), (name, 10**power), *((t, rng.choice([1, 2, 3])) for t in others if t != name))
+    return names[0], policy
+
+
+def exact_entry(policy, start, members) -> float:
+    """The chance of ever reaching a state of `members` from `start` (all states can finish), by `Fraction` elimination: no float in it."""
+    states = [s for s in policy if s not in members]
+    index = {s: i for i, s in enumerate(states)}
+    n = len(states)
+    rows = [[Fraction(0)] * (n + 1) for _ in range(n)]
+    for s in states:
+        total = sum(w for _, w in policy[s].outcomes)
+        rows[index[s]][index[s]] += 1
+        for target, w in policy[s].outcomes:
+            if target in members:
+                rows[index[s]][n] += Fraction(w, total)
+            elif target != "goal":
+                rows[index[s]][index[target]] -= Fraction(w, total)
+    for c in range(n):
+        pivot = next(r for r in range(c, n) if rows[r][c] != 0)
+        rows[c], rows[pivot] = rows[pivot], rows[c]
+        rows[c] = [v / rows[c][c] for v in rows[c]]
+        for r in range(n):
+            if r != c and rows[r][c] != 0:
+                rows[r] = [a - rows[r][c] * b for a, b in zip(rows[r], rows[c])]
+    return float(rows[index[start]][n])
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+@pytest.mark.parametrize("power", [6, 10, 13])
+def test_the_chance_of_entering_a_step_of_a_stiff_policy_is_good_by_the_inverse_and_by_one_solve_per_step(monkeypatch, dense_limit, power):
+    """#615: an inverse of I - Q has 1 - p = 1e-13 +- 1e-16 on its diagonal and was good to 3 digits (entry chances off by 3e-4); the inverse of I - P with the self-loops divided out is not."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = 0
+    for seed in range(25):
+        rng = random.Random(seed)
+        start, policy = stiff_policy(rng, rng.randint(4, 8), power)
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        for step in flow.steps[1:]:
+            if step.reached is not None and step.action is not None:
+                assert step.reached == pytest.approx(exact_entry(policy, start, set(step.states)), rel=1e-9), (seed, step.states)
+                checked += 1
+    assert checked > 20
+
+
+def test_a_stiff_plan_says_in_a_limit_how_many_digits_its_checked_residual_supports_and_an_ordinary_one_says_nothing():
+    rng = random.Random(3)
+    start, policy = stiff_policy(rng, 5, 12)
+    mild_start, mild = hand_policy()
+
+    (limit,) = _route_flow.flow_limits(_route_flow.chain_of_policy(start, policy, is_goal))
+
+    assert limit.what == "The numbers of the steps are good to fewer digits than printed" and limit.approximate
+    assert "significant digits" in limit.why and "residual of 1e-09" in limit.guarantee
+    assert _route_flow.flow_limits(_route_flow.chain_of_policy(mild_start, mild, is_goal)) == ()
+
+
+def hand_policy():
+    return "S", {"S": act("s", ("S", 5), ("B", 3), ("goal", 2)), "B": act("b", ("S", 2), ("goal", 3))}
+
+
+def test_a_chance_is_not_measured_with_the_reason_when_its_state_cannot_finish_or_the_visits_were_not_solved(monkeypatch):
+    policy = {"S": act("s", ("A", 1), ("goal", 1)), "A": act("a", ("A", 1))}  # A loops for ever
+    chain = _route_flow.chain_of_policy("S", policy, is_goal)
+
+    (stuck,) = _route_flow.reach_of(chain, [1])
+    monkeypatch.setattr(_route_flow, "_linear", lambda *arguments: None)
+    monkeypatch.setattr(_route_flow, "ACCEPT_RESIDUAL", -1.0)
+    unsolved = _route_flow.reach_of(_route_flow.chain_of_policy("S", hand_policy()[1], is_goal), [1])
+
+    assert stuck.chance is None and "no run can finish from this state" in stuck.why
+    assert unsolved[0].chance is None and "not solved to a residual" in unsolved[0].why
+
+
 def test_the_chance_of_entering_a_step_that_joins_states_is_one_chance_not_the_sum_of_theirs():
     # S reaches A with 1/4, and A always goes on to B; A and B share the action x, so the run enters the step once.
     policy = {

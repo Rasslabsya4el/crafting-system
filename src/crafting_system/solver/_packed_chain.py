@@ -1,4 +1,4 @@
-"""The diagonal of the fundamental matrix of a chain, exactly, from the cycles of the chain (tickets #572 and #490).
+"""The diagonal of the fundamental matrix of a chain from the cycles of the chain (the identities are exact; the numbers carry the rounding of dense inverses) (tickets #572 and #490).
 
 A chain with transient states and the chances `Q[s, t]` among them (the rest of each row leaks to a goal or to a state the run cannot finish
 from) has the fundamental matrix `N = (I - Q)^-1`: `N[s, t]` is the expected number of visits to `t` of a run that starts in `s`. The chance
@@ -34,9 +34,9 @@ import numpy as np
 from ._packed import expand_ranges
 
 INVERT_LIMIT = 4_000  # a component of at most this many states is inverted whole (a dense inverse of 4,000 states: 0.13 GB, a second or two); a bigger one is cut
-BLOCK_CELLS = 40_000_000  # the cells (edges or states x right-hand sides) held at once by a gather or a block of solves: 320 MB of float64
+BLOCK_CELLS = 10_000_000  # the cells (edges or states x right-hand sides) held at once by a gather or a block of solves: 80 MB of float64 (a block of solves holds about six of them)
 CUT_BATCH = 40  # a round cuts the 1/40 of a component's states that most cycles run through, and looks again
-WOODBURY_CELLS = 500_000_000  # the cells the Woodbury step may hold (4 GB of float64): derived from the memory of a runner (16 GB), the one resource it needs; past it the cycles are too tangled to put back and `CyclesTooTangled` says so
+WOODBURY_CELLS = 600_000_000  # the cells the Woodbury step may hold, all counted (4.8 GB of float64): what a runner (16 GB) has over a plan of R14 (8.5 GB), with a margin; past it the cycles are too tangled to put back and `CyclesTooTangled` says so
 
 
 class CyclesTooTangled(ValueError):
@@ -228,6 +228,7 @@ def inverse_diagonal(
     start: int = 0,
     start_row: np.ndarray | None = None,
     progress: Callable[[str], None] | None = None,
+    leak: np.ndarray | None = None,
 ) -> tuple[np.ndarray, float]:
     """`(diagonal of N = (I - Q)^-1, deviation)` for the chain `Q` (CSR, self-loops included), exact up to the rounding of the dense inverses.
 
@@ -237,6 +238,10 @@ def inverse_diagonal(
     A component of `P` of at most `invert_limit` states is inverted whole; above that the rows that several states share (compared as `Q` rows,
     self-loop included, so a reroll that some of its takers are among the outcomes of is still one row) are cut first and the Woodbury step of the
     module text is made.
+
+    `leak[s]` is the chance that `s` goes to a state outside the chain (a goal, a state that cannot finish), a sum of positive terms; the row of `s`
+    in `Q` and `leak[s]` add to 1. It is needed only to put the cut rows back without forming `1 - p` (see `_woodbury`); when it is not given it is
+    `1 - sum of the row`, which is as good as the rows are away from stiff.
 
     The check. When the row `start_row` of N for the state `start` is known from another method (a sparse solve whose true residual was
     measured), the same pieces give that row too, and `deviation` is the largest relative difference between the two over the states whose
@@ -262,7 +267,9 @@ def inverse_diagonal(
         return base.diagonal() * scale, _deviation(found, start_row, np.arange(n))
     cut = _cut_rows(n, ptr, col, weight, p_ptr, p_col, big, limit)
     say(f"cycles: {int(cut.sum()):,} rows cut from {int(big.sum()):,} states in components above {limit:,} ({time.perf_counter() - began:.1f} s)")
-    return _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say)
+    if leak is None:
+        leak = np.maximum(0.0, 1.0 - np.bincount(row, weights=weight, minlength=n))
+    return _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak)
 
 
 def _unit(n: int, at: int) -> np.ndarray:
@@ -321,11 +328,15 @@ def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int) ->
             cut[order[: max(1, len(members) // CUT_BATCH)]] = True
 
 
-def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say) -> tuple[np.ndarray, float]:
+def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak) -> tuple[np.ndarray, float]:
     """`(diagonal, deviation)` of N = (I - Q)^-1 by cutting the rows `cut` of Q out and putting them back (module text).
 
     With A = I - Q_B, where Q_B is Q with the rows `cut` emptied, A^-1 = (I - P_B)^-1 diag(r) with r = 1/leave on the rows kept and 1 on the rows cut
     (a cut row of A is the unit row), and N = A^-1 + A^-1 U (I - K A^-1 U)^-1 K A^-1 on the states of the `big` components; elsewhere N is A^-1.
+
+    I - K A^-1 U is not formed as a difference. A cut state that stays with chance 1 - 1e-13 has a row of K whose entry on itself times (A^-1 U)
+    on itself is 1 - 1e-13, and 1 minus that has no digits left. A row `a` of K and its leak add to 1, so M[a, b] = [a = b] leak(a) + sum over
+    the entries c of the row of K[a, c] ([a = b] - (A^-1 U)[c, b]), and for a cut state c of the group `a` the term is exactly 0.
     """
     new_ptr, new_col, new_weight = _without_rows(p_ptr, p_col, p_weight, cut)
     label, count = components(n, new_ptr, new_col)
@@ -338,14 +349,16 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
     say(f"cycles: the chain without the cut rows has {count:,} components, the biggest {int(sizes.max()):,}; {q:,} distinct rows are cut")
     rows = [(col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]) for g in groups]  # the rows of K, self-loops included
     wanted = np.flatnonzero(big)
-    cells = (2 * len(wanted) + 2 * q) * q  # A^-1 U and K A^-1 on the wanted states, K A^-1 U and its inverse
+    block = max(1, BLOCK_CELLS // max(1, n))
+    # everything that is held at once: A^-1 U and K A^-1 on the wanted states, K A^-1 U and its inverse, the blocks of a solve (the right-hand
+    # side, its scaled copy, the answer, the answer's copy and the gathers: six), and a chunk of the sum below
+    cells = (2 * len(wanted) + 2 * q) * q + 6 * min(BLOCK_CELLS, n * q) + min(BLOCK_CELLS, len(wanted) * q)
     if cells > WOODBURY_CELLS:
         raise CyclesTooTangled(
             f"putting back {q:,} distinct cut rows for {len(wanted):,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows"
         )
-    block = max(1, BLOCK_CELLS // max(1, n))
     y_w = np.zeros((len(wanted), q))  # A^-1 U on the wanted states
-    t = np.zeros((q, q))  # K A^-1 U
+    m = np.zeros((q, q))  # I - K A^-1 U, term by term (see the text above)
     z_w = np.zeros((q, len(wanted)))  # K A^-1 on the wanted states
     y_start = np.zeros(q)  # A^-1 U on the start
     for lo in range(0, q, block):
@@ -358,13 +371,18 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
         y_w[:, lo:hi] = y[wanted]
         y_start[lo:hi] = y[start]
         for a, (cols, vals) in enumerate(rows):
-            t[a, lo:hi] = vals @ y[cols]
+            m[a, lo:hi] = -(vals @ y[cols])
+            if lo <= a < hi:
+                m[a, a] = leak[groups[a][0]] + float(np.sum(vals * (1.0 - y[cols, a - lo])))
         rhs = np.zeros((n, hi - lo))
         for g in range(lo, hi):
             np.add.at(rhs[:, g - lo], rows[g][0], rows[g][1])  # (a row may name a state twice: its entries add)
         z_w[lo:hi, :] = (r[:, None] * base.solve_transposed(rhs))[wanted].T  # column a is A^-T of the row a of K, that is row a of K A^-1
-    middle = np.linalg.inv(np.eye(q) - t)
-    diagonal[wanted] += np.einsum("wa,ab,bw->w", y_w, middle, z_w, optimize=True)
+    middle = np.linalg.inv(m)
+    chunk = max(1, BLOCK_CELLS // max(1, q))  # the sum over a and b of y[w, a] middle[a, b] z[b, w], some states at a time: its first product is a chunk x q block
+    for lo in range(0, len(wanted), chunk):
+        part = slice(lo, min(len(wanted), lo + chunk))
+        diagonal[wanted[part]] += np.einsum("wa,aw->w", y_w[part] @ middle, z_w[:, part])
     deviation = 0.0
     if start_row is not None:
         row = r * base.solve_transposed(_unit(n, start))  # A^-1[start, :]

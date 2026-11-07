@@ -13,7 +13,8 @@ benchmark route with a given route now carries:
 
 The lines are sorted by the larger of the two chances; lines past `SHOWN` are counted, with the sum of their chances under each policy
 (a sum over states, so a run that visits two of them is counted twice), never dropped in silence. A chance that is not measured is None
-(a state from which the route cannot finish); every other is the exact chance, whatever the size of the chain (ticket #572).
+(a state from which the route cannot finish); every other is a number, never a bound, whatever the size of the chain (ticket #572); the block says in `notes` why a chance is `?`, and when the
+residual that was checked supports fewer digits than printed (a stiff chain).
 """
 
 import time
@@ -26,7 +27,7 @@ from ._plan import Plan
 from ._report import describe_state, number_states, percent
 from ._route import Divergence, RouteResult
 from ._route_chain import chain_of_plan
-from ._route_flow import Chain, Reach, chain_of_policy, reach_of
+from ._route_flow import ACCEPT_RESIDUAL, STIFF_ERROR, Chain, Reach, chain_of_policy, digits_text, reach_of
 
 DESCRIPTION_CUT = 80  # the characters of an item description in the `needs a human` row, which names three states on one line
 SHOWN = 10  # the lines of divergence shown for a route; the rest are counted, with their chances, in `more`
@@ -45,7 +46,7 @@ def review_of(ratio: float | None, line: float) -> dict:
 
 
 def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
-    """`{"count", "shown", "more"}`: the divergences of `result` from the planner's policy, the top `SHOWN` as lines and the rest counted."""
+    """`{"count", "shown", "more"}` (and `"notes"` when a chance is not measured or its digits are fewer than printed): the divergences of `result` from the planner's policy, the top `SHOWN` as lines and the rest counted."""
     found = result.divergences
     if not found:
         return {"count": 0, "shown": [], "more": None}
@@ -77,7 +78,30 @@ def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
             "route_unmeasured": sum(row["route_chance"] is None for row in rest),
         }
     )
-    return {"count": len(rows), "shown": rows[:SHOWN], "more": more}
+    block = {"count": len(rows), "shown": rows[:SHOWN], "more": more}
+    notes = _notes(("planner", planner_reach), ("guide", route_reach))
+    if notes:
+        block["notes"] = notes
+    return block
+
+
+def _notes(*sides: tuple[str, list[Reach]]) -> list[str]:
+    """One line for each reason a chance is `?`, and for a chain whose checked residual supports fewer digits than are printed (OR-13)."""
+    notes = []
+    for name, reaches in sides:
+        reasons: dict[str, int] = {}
+        for reach in reaches:
+            if reach.chance is None:
+                reasons[reach.why or "it was not solved"] = reasons.get(reach.why or "it was not solved", 0) + 1
+        for why, count in reasons.items():
+            notes.append(f"{count} chance(s) of the {name} are `?` (not measured): {why}")
+        worst = max((reach.error for reach in reaches), default=0.0)
+        if worst > STIFF_ERROR:
+            notes.append(
+                f"the {name}'s chances were solved to a residual of {ACCEPT_RESIDUAL:g}, which on this chain (about {worst / ACCEPT_RESIDUAL:,.0f} steps a run) "
+                f"supports about {digits_text(worst)} significant digits, fewer than printed"
+            )
+    return notes
 
 
 def _route_chain(plan: Plan, result: RouteResult) -> Chain:
@@ -149,6 +173,7 @@ def divergence_lines(block: dict) -> list[str]:
             f"    and {more['count']} more, visited {_more_text(more, 'planner')} times by the planner and {_more_text(more, 'route')} times by the guide, "
             "summed over the states (a run that visits two of them counts twice)"
         )
+    lines.extend(f"    note: {note}" for note in block.get("notes", []))
     return lines
 
 
