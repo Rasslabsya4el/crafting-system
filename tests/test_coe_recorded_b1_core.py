@@ -15,7 +15,7 @@ disagreement between our model and the emulator: it is filed as an issue (OR-29)
 The roll cells (OR-4) are the goal lines that ask a roll, not a tier: R10's and R11's "+# to maximum Life" of at least 70 and
 96. The record holds, for those two essence cases, how many finished items carry each rolled value of each Life mod of ours;
 the cell is the share of items that hold a Life mod whose roll the line's own judge passes, against our chance (the mod's
-chance times the share of its uniform rolls that reach the roll). A model whose roll ranges are shifted by one must fail.
+chance times the share of its uniform rolls that reach the roll). The histogram cells (one per Life mod, the whole law of its rolled values) are the control: a model whose roll ranges are shifted by one must fail them.
 
 The tier-aware cells (OR-1, OR-2) put the emulator's chance that the finished item holds a mod "at tier T1" beside
 what OUR GOAL says is that mod: the target file of the route is loaded, and each of its mod lines is judged by the
@@ -24,6 +24,7 @@ requirement's own `tier_ok` set (`accepted_by_tier`), not by a tier number writt
 Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it, so these run there.
 """
 
+import math
 import re
 from fractions import Fraction
 from pathlib import Path
@@ -37,7 +38,10 @@ from coe_recorded_support import (
     OurCase,
     binomial_two_sided,
     build_item,
+    chi_square_sf,
     failures,
+    histogram_cells,
+    histogram_failures,
     joint_cells,
     load_recorded,
     mod_cells,
@@ -321,16 +325,43 @@ def test_the_recorded_rolls_are_of_the_finished_items_and_inside_our_ranges(data
         assert all(low <= float(value) <= high for value in histogram), (case, mod_id, low, high, sorted(histogram, key=float))
 
 
+def module_family_size(all_cells, data) -> int:
+    """The cells of the whole module: every testable binomial cell and every histogram cell (the correction's m)."""
+    hist = [cell for case in ROLL_CASES for cell in histogram_cells(data, case, CASES[case], "+# to maximum Life")]
+    return len([cell for cell in all_cells if cell.testable]) + len([cell for cell in hist if cell.testable])
+
+
+@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+def test_the_histogram_of_each_life_mod_is_our_roll_law_under_the_correction(data, all_cells, case):
+    """One histogram cell per Life mod the record holds: its rolled values against the uniform law, not a failure at the module's correction."""
+    cells = histogram_cells(data, case, CASES[case], "+# to maximum Life")
+    assert len(cells) >= 8 and all(cell.testable and len(cell.bins()) >= 2 for cell in cells)
+    bad = histogram_failures(cells, module_family_size(all_cells, data))
+    assert not bad, "\n".join(cell.describe() for cell in bad)
+
+
 @pytest.mark.parametrize("by", [1, -1])
 @pytest.mark.parametrize("case", sorted(ROLL_CASES))
-def test_a_model_with_the_roll_ranges_shifted_by_one_fails_the_roll_cell(data, ours, targets, all_cells, case, by):
-    """The control: our model with every stat range of its mods moved by one is rejected by the same cell, at the module's correction."""
-    testable = [cell for cell in all_cells if cell.testable]
-    (own,) = [cell for cell in testable if cell.case == case and cell.kind == "roll"]
-    (wrong,) = roll_cells(data, case, CASES[case], ours[case], targets[TARGET_OF[case]], by)
-    assert (wrong.n, wrong.seen) == (own.n, own.seen) and wrong.ours != own.ours
-    bound = ALPHA / len(testable)
-    assert wrong.p_value < bound <= own.p_value, f"{wrong.describe()} (bound {bound:.1e}); the true cell: {own.describe()}"
+def test_a_model_with_the_roll_ranges_shifted_by_one_fails_the_histogram_cells(data, all_cells, case, by):
+    """The control: our law with every range moved by one gives chance 0 to a value the emulator gave (one edge of the range).
+
+    The threshold cell cannot be the control: the shift moves its chance by 0.17% (R10) and 0.24% (R11), which needs
+    about 1.2M and 0.6M applications to see. The histogram of the rolled values sees it at the recorded sample.
+    """
+    family = module_family_size(all_cells, data)
+    wrong = histogram_cells(data, case, CASES[case], "+# to maximum Life", by)
+    rejected = histogram_failures(wrong, family)
+    assert rejected, "the shifted law was not rejected by any mod"
+    assert all(cell.unsupported for cell in rejected)
+    assert not histogram_failures(histogram_cells(data, case, CASES[case], "+# to maximum Life"), family)
+
+
+@pytest.mark.parametrize(
+    ("statistic", "df", "tail"),
+    [(3.841458820694124, 1, 0.05), (5.991464547107979, 2, 0.05), (18.307038053275146, 10, 0.05), (4.0, 2, 0.1353352832366127), (0.0, 5, 1.0), (30.0, 4, 16 * math.exp(-15))],
+)
+def test_the_chi_square_tail(statistic, df, tail):
+    assert chi_square_sf(statistic, df) == pytest.approx(tail, rel=1e-6)
 
 
 def test_c02_the_life_and_a_resistance_together_are_the_emulator_s(all_cells):
