@@ -406,7 +406,7 @@ def _coarse_report(
     if folded is None:
         return None
     if not fits_dense(folded.chain, low_bins, max_bins) or not fits_dense(chain, high_bins, max_bins):
-        note(f"the coarse grid would need more than the {_dense.DENSE_LIMIT:,} cells the dense method holds")
+        note(f"a quicker percentile method would need more than the {_dense.DENSE_LIMIT:,} figures it can hold in memory")
         return None
     low_run, high_run = _both(
         (run_dense, (folded.chain, low_bins), dict(

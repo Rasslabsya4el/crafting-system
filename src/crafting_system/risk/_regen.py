@@ -152,7 +152,7 @@ def regenerative_runs(
         if chance <= 0.0 or float(f[0]) >= 1.0:
             return None
         if missing / chance > MAX_MISSING:
-            note(f"the attempts cut short hold {missing / chance:.1e} of the chance of success, more than the {MAX_MISSING:.0e} the run attempt by attempt allows")
+            note(f"the attempts cut short hold {missing / chance:.1e} of the chance of success, more than the {MAX_MISSING:.0e} the quicker method allows")
             return None
         cdf = renewal_cdf(g, f, target, max_bins, allowance)
         runs.append(BudgetRun(cdf, max(0.0, 1.0 - cdf[-1])))

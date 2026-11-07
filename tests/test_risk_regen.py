@@ -75,7 +75,7 @@ def test_c25_an_attempt_wise_run_refused_for_the_mass_it_cuts_is_written_and_a_r
     refused = narrow(regenerative=True)
 
     (said,) = refused.grid.gave_up
-    assert said.startswith("the attempts cut short hold ") and "more than the -1e+00 the run attempt by attempt allows" in said
+    assert said.startswith("the attempts cut short hold ") and "more than the -1e+00 the quicker method allows" in said
     assert math.isinf(refused.p90.high)  # the ordinary grid ran instead and could not reach it
     (limit,) = risk_limits(refused)
-    assert limit.what == "Not computed: p90, CVaR" and said in limit.reason() and "the faster methods gave up first" in limit_text(limit)
+    assert limit.what == "Not computed: the cost 9 runs in 10 stay under and the average of the worst tenth" and said in limit.reason() and "the faster methods gave up first" in limit_text(limit)

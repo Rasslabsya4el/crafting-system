@@ -152,4 +152,4 @@ def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, capsys
     assert totals["mean_cost"]["value"] <= document["given_route"]["mean_cost"]["value"] * (1 + 1e-9)
     assert document["states"]
     text = capsys.readouterr().out
-    assert "not resolved on the grid" not in text and "simulated, not certified" in text
+    assert "far above its cheapest step" not in text and "simulated, not certified" in text

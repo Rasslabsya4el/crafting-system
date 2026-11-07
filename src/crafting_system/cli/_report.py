@@ -236,13 +236,13 @@ def interval(estimate: Estimate, divine: float) -> str:
     return text
 
 
-UNRESOLVED = "not resolved on the grid (the cost scale is far above the cheapest action, ticket #190)"
+UNRESOLVED = "not computed (the cost of the whole craft is far above its cheapest step)"
 
 
 NOT_COMPUTED = {
-    "subcritical": "not computed: the policy starts more runs of its inputs than it finishes, so its cost has no finite mean",
-    "unordered": "not computed: the inputs of the policy depend on each other in a cycle",
-    "improper": "not computed: a state the policy reaches cannot finish, and its inputs depend on each other in a cycle",
+    "subcritical": "not computed: the plan starts more runs of its inputs than it finishes, so its cost has no finite mean",
+    "unordered": "not computed: the inputs of the plan depend on each other in a cycle",
+    "improper": "not computed: the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle",
 }
 
 

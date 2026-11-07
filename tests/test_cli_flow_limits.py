@@ -55,7 +55,7 @@ def test_a_plan_whose_visits_were_solved_and_whose_entry_chances_were_computed_h
 def test_visits_that_could_not_be_solved_are_a_limit_that_says_what_the_page_then_leaves_out(unsolvable):
     limit = only(made().limits, STEPS)
 
-    assert limit.what == "How often a step is used is not shown" and "relative residual of 1e-9" in limit.why
+    assert limit.what == "How often a step is used is not shown" and "could not be computed reliably" in limit.why
     assert limit.guarantee.startswith("The plan is the cheapest among the methods offered.")  # `claim`: an approximate answer says "within the stated gap"
     assert "plain mean of those states" in limit.guarantee and limit.approximate  # what the page cannot promise (OR-13)
     assert "relative residual" not in limit.guarantee  # the guarantee is in player words
@@ -66,7 +66,7 @@ def test_a_policy_with_more_states_than_the_entry_limit_is_a_limit_that_keeps_ev
 
     limit = only(made().limits, STEPS)
 
-    assert limit.what == "How often a run enters a step is not shown" and "made for at most 0 states" in limit.why
+    assert limit.what == "How often a run enters a step is not shown" and "made only up to 0 states" in limit.why
     assert "only the share of runs that ever enter a step is missing" in limit.guarantee and limit.approximate
 
 

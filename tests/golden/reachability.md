@@ -98,10 +98,10 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | Target | Entry | `actions:` | Offers | Dropped (no price) | Offers with donor items | Kinds | Kinds offered |
 |---|---|---|---|---|---|---|---|
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
-| r03 | refused: the target asks for implicits or quality, which the planner cannot plan yet (batch B2, tickets #142 onward) |  |  |  |  |  |  |
+| r03 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
-| r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet (batch B2, tickets #142 onward) |  |  |  |  |  |  |
+| r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r08 | plans | 2 names | 10671 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 10671 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r10-fractured-boots | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
@@ -119,14 +119,14 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 
 | Condition | Message | Benchmark targets it refuses |
 |---|---|---|
-| `setting.on` | Memory Strands are on ({setting.why}), which the planner cannot plan yet (batch B5, tickets #275 onward); the cut and the spend of strands are not built, so an answer would silently ignore them | no benchmark target |
-| `target.implicits or target.quality is not None` | the target asks for implicits or quality, which the planner cannot plan yet (batch B2, tickets #142 onward) | r03, r06 |
-| `target.sockets is not None` | the target asks for sockets, which the planner cannot plan yet (batch B6, tickets #228 and #231 onward): the finish of sockets is not built, so an answer would silently ignore them | no benchmark target |
-| `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet (batch B7, ticket #242 onward) | no benchmark target |
-| `axes` | an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading of it with the interval yet (ticket #220) | no benchmark target |
+| `setting.on` | Memory Strands are on ({setting.why}), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them | no benchmark target |
+| `target.implicits or target.quality is not None` | the target asks for implicits or quality, which the planner cannot plan yet | r03, r06 |
+| `target.sockets is not None` | the target asks for sockets, which the planner cannot plan yet: the finish of sockets is not built, so an answer would silently ignore them | no benchmark target |
+| `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
+| `axes` | an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading of it with the interval yet | no benchmark target |
 
 - `Abstraction(..., allow_inputs=False) in make_plan`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.
-- `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (the setting memory_strands is on (`--strands` or crafting.toml)), which the planner cannot plan yet (batch B5, tickets #275 onward)."
+- `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (the setting memory_strands is on (`--strands` or crafting.toml)), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
 - Targets that take a corrupted item (`allow_corrupted`, or a corrupted implicit): none; offers of a corrupting action over all entries: 0.
 - Fossil sets that use the Bloodstained Fossil (offered only when the target asks for a corrupted implicit): up to 2302 listed for one start item, 0 offered by any entry.
 

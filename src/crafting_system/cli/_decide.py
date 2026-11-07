@@ -11,7 +11,7 @@ the exact run may take. The rule:
   stops at the first whose certified gap is at most `TOLERANCE`;
 * an enabled or offered action that is not block-invariant leaves no level (`refusal`), and so does a ladder that
   fits nowhere: the query is exact, if the exact graph is within `EXACT_TRANSITIONS` (the largest size the solver
-  has been run on), otherwise **refused** with "no approximate level available".
+  has been run on), otherwise **refused** with "no approximate answer was possible".
 
 `decide` is the CLI's glue around it: it runs the pilot, measures `r_kernel` (in the pilot) and `r_solve` (a short
 calibration solve on the first layers of the pilot's own graph) unless the caller injects them, and builds the
@@ -151,18 +151,18 @@ def minutes(seconds: float) -> str:
 def exact_offer(transitions: int | None, predicted: float | None, complete: bool = True) -> str:
     """The sentence that offers the exact run, or says why it is not offered (ADR-0023); `complete` false: the count is a lower bound."""
     if transitions is None:
-        return "The exact run has no forecast, so its size is unknown."
+        return "The size of the exact run could not be estimated, so it is unknown."
     if not complete:
         return (
-            f"The exact run is not offered: the count stopped at {transitions:,} transitions and the graph is larger "
-            f"(the solver has been run on at most {EXACT_TRANSITIONS:,}). Offer a smaller list of crafts and run again."
+            f"The exact run is not available: the count stopped at {transitions:,} possible moves between states and the search is larger "
+            f"(the exact search has been run on at most {EXACT_TRANSITIONS:,}). Give a shorter list of crafts and run again."
         )
     if transitions <= EXACT_TRANSITIONS:
         when = "" if predicted is None else f", predicted at about {minutes(predicted)}"
-        return f"The exact answer is available: run again with --exact ({transitions:,} transitions{when})."
+        return f"The exact answer is available: run again and ask for it ({transitions:,} possible moves between states{when})."
     return (
-        f"The exact run is not offered: it is predicted at {transitions:,} transitions and the solver has been run on "
-        f"at most {EXACT_TRANSITIONS:,} (its memory is not measured beyond). Offer a smaller list of crafts and run again."
+        f"The exact run is not available: it is predicted at {transitions:,} possible moves between states and the exact search has been run on "
+        f"at most {EXACT_TRANSITIONS:,} (its memory is not measured beyond). Give a shorter list of crafts and run again."
     )
 
 
@@ -183,7 +183,7 @@ def choose(
     """
     if estimate is None:
         cause = f" ({refusal})" if refusal else ""
-        return Decision("exact", message=f"the size of the exact graph could not be forecast{cause}, so it is built as it is")
+        return Decision("exact", message=f"the size of the exact search could not be estimated{cause}, so it was run in full")
     predicted = estimate.seconds(r_kernel, r_solve)
     size = estimate.transitions
     if predicted <= budget and estimate.complete:
@@ -196,12 +196,12 @@ def choose(
     if refusal is None and fits:
         return Decision("approximate", fits, predicted=predicted, transitions=size, estimate=estimate, budget=budget)
     why = refusal or (
-        "no coarse level fits the time" if levels else "the irrelevant families are too few to pool, so no coarse level differs from the exact one"
+        "none fits the time" if levels else "too few mod families can be pooled for an approximate answer to differ from the exact one"
     )
     if size <= EXACT_TRANSITIONS and estimate.complete:  # a cut-short count is only a lower bound: it never shows the exact run to be small
-        message = f"no approximate level available ({why}); the exact run is predicted at about {minutes(predicted)} and is run as it is"
+        message = f"no approximate answer was possible ({why}); the exact search is estimated at about {minutes(predicted)} and was run in full"
         return Decision("exact", message=message, predicted=predicted, transitions=size, estimate=estimate)
-    message = f"no approximate level available ({why}). " + exact_offer(size, predicted, estimate.complete)
+    message = f"no approximate answer was possible ({why}). " + exact_offer(size, predicted, estimate.complete)
     return Decision("refused", message=message, predicted=predicted, transitions=size, estimate=estimate, why=why)
 
 
@@ -248,14 +248,14 @@ def measure_solve_rate(
     }
     edges = sum(len(action.outcomes) for offered in table.values() for action in offered)
     if edges < 100:
-        return SOLVE_RATE_FALLBACK, f"the pilot graph has {edges:,} transitions, too few to time the solver on"
+        return SOLVE_RATE_FALLBACK, f"the size estimate covers only {edges:,} possible moves between states, too few to time the search on"
     seen = set(table) | {s for offered in table.values() for action in offered for s, _ in action.outcomes}
     model = TabularModel([state for state in seen if abstraction.is_goal(state)], table)
     began = clock()
     try:
         solve(model, [start])
     except (ConvergenceError, ValueError) as failed:
-        return SOLVE_RATE_FALLBACK, f"the solver did not finish on the pilot graph ({failed})"
+        return SOLVE_RATE_FALLBACK, f"the timing run did not finish ({failed})"
     return (clock() - began) / edges, ""
 
 

@@ -44,7 +44,7 @@ def reach_limit[S: Hashable](start: S, policy: Mapping[S, Action[S]], is_goal: C
     return Limit(
         STATE_LINE,
         "The chance of reaching each state is not shown",
-        f"the policy has {transient:,} states that can be left and come back to, and the calculation takes at most {MAX_TRANSIENT:,}",
+        f"the plan has {transient:,} states that can be left and come back to, and the calculation takes at most {MAX_TRANSIENT:,}",
         "The plan, its cost and its odds are as stated; only that chance is missing.",
     )
 

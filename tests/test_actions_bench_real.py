@@ -17,6 +17,8 @@ from crafting_system.actions import (
     RemoveCraftedMods,
     bench_crafts,
 )
+from crafting_system.abstraction import Goal, Wanted
+from crafting_system.cli import _offers, offers_for
 from crafting_system.data import MissingDataError, load_game_data
 from crafting_system.items import ExplicitMod, Item, Rarity
 
@@ -215,3 +217,46 @@ def test_r14_a_bow_of_item_level_78_takes_the_finishing_crafts_of_the_route(data
         "JunMaster2ChaosDamageOverTimeMultiplier3",
     ):
         assert BenchCraft(mod_id).outcomes(data, item).chance_all([mod_id]) == 1
+
+
+def test_the_tiers_of_one_craft_have_labels_that_tell_them_apart_by_their_roll_range(data):
+    """#500: three tiers of the Fire Resistance craft read alike without their range, and the limit of the left-out crafts named all three the same."""
+    fire = {craft.mod_id: craft.label(data) for craft in bench_crafts(data) if craft.mod_id.endswith(("FireResist1", "FireResist2", "FireResist3_"))}
+
+    assert fire == {
+        "HelenaMasterFireResist1": "Bench craft +(16-20)% to Fire Resistance",
+        "EinharMasterFireResist2": "Bench craft +(21-28)% to Fire Resistance",
+        "EinharMasterFireResist3_": "Bench craft +(29-35)% to Fire Resistance",
+    }
+    labels = [craft.label(data) for craft in bench_crafts(data)]
+    shared = {label for label in labels if labels.count(label) > 1}
+    # before, 171 of the 263 labels were shared by several crafts; the six left share range and text, and no item class takes both crafts of a pair
+    assert shared == {
+        "Bench craft +(35-44) to maximum Mana",
+        "Bench craft +(45-54) to maximum Mana",
+        "Bench craft +(55-64) to maximum Mana",
+        "Bench craft +(65-74) to maximum Mana",
+        "Bench craft +(91-120) to Accuracy Rating",
+        "Bench craft Adds (1-4) to (32-36) Lightning Damage to Attacks",
+    }
+    for label in shared:
+        pair = [craft for craft in bench_crafts(data) if craft.label(data) == label]
+        assert len(pair) == 2 and not set.intersection(*(set(craft.option(data).item_classes) for craft in pair)), label
+
+
+def test_left_out_crafts_that_share_a_label_are_named_with_their_mod_id(data, monkeypatch):
+    """#500: should two crafts of one label meet on an item, the limit of the left-out crafts names each by its mod id, as the offers are."""
+    first, second = "EinharMasterLocalAccuracyRating1", "EinharMasterAccuracyRating1"
+    both = {BenchCraft(first): "bench-craft", BenchCraft(second): "bench-craft", BenchCraft("EinharMasterFireResist2"): "bench-craft"}
+    monkeypatch.setattr(_offers, "_listed", lambda *args, **kwargs: both)
+    bow = next(base for base in data.base_items.values() if base.item_class == "Bow" and "Thicket" in base.name)
+    start = Item.build(data, base_id=bow.id, item_level=78, rarity=Rarity.RARE, mods=(rolled(data, "IncreasedLife1"),))
+
+    chosen = offers_for(data, Goal((Wanted(frozenset({"IncreasedLife1"})),)), bow.id, start)
+
+    (left,) = [limit for limit in chosen.limits if limit.kind == "crafts"]
+    assert set(left.labels) == {
+        "Bench craft +(21-28)% to Fire Resistance",
+        f"Bench craft +(91-120) to Accuracy Rating [{first}]",
+        f"Bench craft +(91-120) to Accuracy Rating [{second}]",
+    }

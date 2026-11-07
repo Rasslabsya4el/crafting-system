@@ -147,7 +147,7 @@ class _Pilot:
     def __init__(self, abstraction: Abstraction, actions: Iterable[Action], clock: Callable[[], float]):
         if abstraction.rerolls_values:
             raise EstimateRefused(
-                "an enabled action rerolls values: its rollable mods are slots by mod id, which the pilot count has no rule for"
+                "an offered action rerolls the values of mods, which the size estimate has no rule for"
             )
         self.abstraction = abstraction
         self.data = abstraction.data
@@ -245,7 +245,7 @@ class _Pilot:
         except (NotApplicableError, OutOfScopeError):  # either: the forecast only counts the graph, it offers nothing (the build writes a gap)
             return None
         except ValueError as error:  # a build would meet the same error, so there is nothing to forecast
-            raise EstimateRefused(f"the kernel of {self._name(action)} cannot be computed: {error}") from error
+            raise EstimateRefused(f"the outcomes of {self._name(action)} cannot be computed: {error}") from error
         if found:
             self._measure(state, action, found)
         return found or None
@@ -262,7 +262,7 @@ class _Pilot:
             mod = mods.get(entry.mod_id)
             if mod is None:
                 raise EstimateRefused(
-                    f"the state holds a fractured mod as the family type {entry.mod_id}: the pilot count has no rule for a fracture made mid-route"
+                    "a state holds a fracture made during the craft, which the size estimate has no rule for"
                 )
             held |= held_families(mod)
             used[Side(mod.generation_type)] += 1

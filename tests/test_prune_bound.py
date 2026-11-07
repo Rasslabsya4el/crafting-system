@@ -380,9 +380,9 @@ def test_the_plan_keeps_every_priced_offer_and_says_what_it_left_out(planned):
     labels = {priced.label for priced in plan.offers}
 
     assert len(plan.offers) == len(result.whole.offers)
-    assert reasons["same outcome as a cheaper offer"] == tuple(dropped for dropped, _ in plan.pruned.twins)
+    assert reasons["same outcome as a cheaper action"] == tuple(dropped for dropped, _ in plan.pruned.twins)
     assert reasons["proved never better: even its best case costs more than the plan"] == plan.pruned.bounded
-    assert set(reasons["same outcome as a cheaper offer"]) | set(plan.pruned.bounded) <= labels
+    assert set(reasons["same outcome as a cheaper action"]) | set(plan.pruned.bounded) <= labels
     assert not {priced.label for priced in plan.pruned.used} & set(plan.pruned.bounded)
     assert plan.pruned.rho > 0 and plan.pruned.j_max >= plan.pruned.rho * (1 - 1e-9)
     assert result.whole.pruned is None and not of_kind(result.whole.limits, "proved-unneeded")
@@ -491,7 +491,7 @@ def test_with_bench_crafts_offered_the_pruned_plan_is_the_plan_without_pruning(b
 
     assert_exact(result)
     assert not pruned.fell_back, pruned.why
-    assert {"Bench craft +# to maximum Life", "Remove Crafted Mods"} <= {priced.label for priced in pruned.used}
+    assert {BenchCraft(LIFE_CRAFT).label(bench.data), "Remove Crafted Mods"} <= {priced.label for priced in pruned.used}
     assert len(pruned.twins) + len(pruned.bounded) + len(pruned.inapplicable) > len(result.pruned.offers) / 2
 
 

@@ -130,7 +130,7 @@ def test_g12_a_search_run_whole_past_the_budget_says_so_and_stays_exact():
     limits = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9).limits
     (solved,) = [limit for limit in of_kind(limits, "how-solved") if limit.what == "The whole search was run"]
 
-    assert "no approximate level available" in solved.why
+    assert "no approximate answer was possible" in solved.why
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 
@@ -139,7 +139,7 @@ def test_g14_a_tree_of_groups_of_item_states_says_it_and_keeps_the_numbers_exact
 
     shown = only(make_plan(DATA, load_target(R12, DATA), price_file(), solver="packed").limits, "display")
 
-    assert shown.what == "The tree shows groups of item states" and "are one group" in shown.why
+    assert shown.what == "The tree shows groups of states" and "are one group" in shown.why
     assert shown.guarantee == "The odds, costs and percentiles are exact for the groups."
 
 
@@ -148,7 +148,7 @@ def test_g19_percentiles_the_memory_cannot_hold_are_a_limit_with_exact_odds_and_
 
     cut = only(make_plan(DATA, load_target(R12, DATA), price_file(), solver="packed").limits, "risk")
 
-    assert cut.what == "Not computed: p50, p90, CVaR" and cut.guarantee == "The odds, the mean and the variance are exact."
+    assert cut.what == "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth" and cut.guarantee == "The odds, the mean and the variance are exact."
 
 
 def test_g20_a_quantile_the_grid_cannot_reach_is_a_limit_and_a_reached_one_is_not():
@@ -161,7 +161,7 @@ def test_g20_a_quantile_the_grid_cannot_reach_is_a_limit_and_a_reached_one_is_no
     failing = SimpleNamespace(success_probability=estimate(0.5), p50=estimate(float("inf")), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
 
     (limit,) = risk_limits(unreached)
-    assert limit.what == "Not computed: p90, CVaR" and limit.guarantee == "The success chance and the mean cost are exact."
+    assert limit.what == "Not computed: the cost 9 runs in 10 stay under and the average of the worst tenth" and limit.guarantee == "The success chance and the mean cost are exact."
     assert risk_limits(reached) == () and risk_limits(failing) == () and risk_limits(None) == ()
 
 
@@ -306,7 +306,7 @@ def test_g20_a_plan_whose_p90_the_grid_does_not_reach_has_the_risk_limit_from_ma
 
     assert math.isinf(made.risk.p90.value) and made.risk.success_probability.value == 1.0  # the odds are 1: only the grid failed
     cut = only(made.limits, "risk")
-    assert cut.what == "Not computed: p50, p90, CVaR" and cut.guarantee == "The success chance and the mean cost are exact."
+    assert cut.what == "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth" and cut.guarantee == "The success chance and the mean cost are exact."
     assert limit_text(cut) in render_text(build_report(made, DATA))
 
 

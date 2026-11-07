@@ -57,7 +57,7 @@ def free_allowance(chain: Chain, free: Sequence[int]) -> tuple[float, int] | Non
     largest = max(chain.action[i].cost for i in free)
     paying = len(chain.finishing_states()) - len(free)
     if paying > PAID_STATES_LIMIT:
-        note(f"{paying:,} states pay, more than the {PAID_STATES_LIMIT:,} the count of free actions follows")
+        note(f"{paying:,} states cost something, more than the {PAID_STATES_LIMIT:,} the quicker method for free actions follows")
         return None
     bins = [0] * len(chain.states)
     for i in free:
@@ -70,7 +70,7 @@ def free_allowance(chain: Chain, free: Sequence[int]) -> tuple[float, int] | Non
     )
     visits = run.first_reaching(1.0 - FREE_TAIL + run.delta)
     if visits is None:
-        note(f"the count of free actions does not settle within {COUNT_BINS:,} steps")
+        note(f"the quicker method for free actions does not settle within {COUNT_BINS:,} steps")
         return None
     return largest, visits
 

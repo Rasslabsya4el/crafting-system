@@ -52,6 +52,7 @@ from .contract import Action
 __all__ = [
     "Kind",
     "catalog",
+    "catalog_kinds",
     "kind",
     "kinds",
     "register",
@@ -129,7 +130,19 @@ def catalog(
     kind is listed only when named). A `needs_strands` kind is listed only with `strands` or for an item that holds
     strands. The same action never appears twice.
     """
-    found: dict[Action, None] = {}
+    return tuple(catalog_kinds(data, item, planner_only=planner_only, names=names, strands=strands))
+
+
+def catalog_kinds(
+    data: GameData,
+    item: Item,
+    *,
+    planner_only: bool = False,
+    names: Collection[str] | None = None,
+    strands: bool = False,
+) -> dict[Action, str]:
+    """`catalog`, each action with the name of the kind that lists it (the first, when two kinds list the same action)."""
+    found: dict[Action, str] = {}
     for entry in kinds(planner_only=planner_only):
         if names is not None and entry.name not in names:
             continue
@@ -142,8 +155,8 @@ def catalog(
                 hash(action)
             except TypeError:
                 raise TypeError(f"{action!r} of the kind {entry.name!r} is not hashable: make an action a frozen dataclass") from None
-            found.setdefault(action)
-    return tuple(found)
+            found.setdefault(action, entry.name)
+    return found
 
 
 @contextmanager

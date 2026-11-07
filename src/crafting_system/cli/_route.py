@@ -268,8 +268,9 @@ class _Reader:
                 self.fail(
                     line,
                     path,
-                    f"{describe(label)} has no price: missing {', '.join(limit.names)}. "
-                    "Price it or remove the rule",
+                    f"{describe(label)} has no price: "
+                    + (f"missing {', '.join(limit.names)}" if limit.names else "no source lists a price for it")
+                    + ". Price it or remove the rule",
                 )
         near = close_matches(label, [*known, RESTART])
         hint = f"; did you mean {quoted(near[:1])}?" if near else ""

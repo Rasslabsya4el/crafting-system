@@ -299,7 +299,7 @@ def test_m7_the_guarantee_of_each_cause_is_true_of_the_report_it_is_attached_to(
     (denied,) = risk_limits(improper)
     assert "cannot finish" in denied.why and "exact" not in denied.guarantee and denied.guarantee.startswith("Only the bracket")
     assert improper.success_probability.low == 0.0 and improper.success_probability.high == 1.0 and math.isinf(improper.mean.value)
-    assert denied.what == "Not computed: mean, variance, p50, p90, CVaR"
+    assert denied.what == "Not computed: the mean cost, the variance, the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth"
 
 
 def test_m7_a_quantile_the_grid_did_compute_is_shown_and_only_an_infinite_one_gets_the_cause():
@@ -318,7 +318,7 @@ def test_m7_a_quantile_the_grid_did_compute_is_shown_and_only_an_infinite_one_ge
     assert _quantile_text(graded, graded.p50, 0.0, 1.0).startswith("40.00 Chaos")
     assert _quantile_text(graded, graded.p90, 0.0, 1.0) == NOT_COMPUTED["subcritical"]
     (limit,) = risk_limits(graded)
-    assert limit.what == "Not computed: mean, p90"  # p50 was computed and is not claimed lost
+    assert limit.what == "Not computed: the mean cost and the cost 9 runs in 10 stay under"  # p50 was computed and is not claimed lost
 
 
 def test_c26_the_mass_the_nested_run_drops_is_counted_and_is_far_below_the_rounding_allowance():

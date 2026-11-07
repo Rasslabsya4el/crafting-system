@@ -82,7 +82,7 @@ def r05():
     start = ab.compress(
         Item.build(data, base_id=BASE, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(FRACTURED, low, fractured=True),))
     )
-    # the label of an offer names it once: 141 ring crafts share 80 display texts ("Bench craft +# to maximum Life" is three of them)
+    # the label of an offer names it once: 141 ring crafts have 80 display texts without their ranges (the tiers of "+# to maximum Life" are three of them; the label has the range, #500)
     offers = [("essence", ESSENCE), ("remove crafted mods", RemoveCraftedMods()), *((f"craft:{craft.mod_id}", craft) for craft in crafts)]
     prices = {label: ESSENCE_CHAOS if offer is ESSENCE else sum(CHAOS[x.currency] * x.count for x in offer.cost(data)) for label, offer in offers}
     pooling = Coarsening.pooling_irrelevant(ab, None, start)

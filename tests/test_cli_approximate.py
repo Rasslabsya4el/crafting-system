@@ -166,7 +166,7 @@ def test_pooling_a_blocker_of_the_goal_craft_gives_a_gap_above_one_percent_and_t
     assert found.gap > 0.01 and not found.within_tolerance
     assert found.lower <= exact.mean_remaining <= found.upper  # still certified
     assert found.message.startswith(f"No level reaches 1%: the narrowest certified interval has a gap of {found.gap:.2%} ")
-    assert "run again with --exact (6,213 transitions, predicted at about 15 min)" in found.message
+    assert "run again and ask for it (6,213 possible moves between states, predicted at about 15 min)" in found.message
 
 
 def test_the_message_is_not_rounded_down_in_the_headline(approximate):
@@ -179,10 +179,10 @@ def test_the_message_is_not_rounded_down_in_the_headline(approximate):
     assert shown >= found.gap * 100 - 1e-9
 
 
-def test_a_gap_over_the_largest_exact_size_says_the_exact_run_is_not_offered(approximate):
+def test_a_gap_over_the_largest_exact_size_says_the_exact_run_is_not_available(approximate):
     found = climbed(approximate, candidate(approximate, [{COLD, MANA}]), transitions=22_994_524).approximation
 
-    assert "not offered" in found.message and "22,994,524 transitions" in found.message and "--exact" not in found.message
+    assert "not available" in found.message and "22,994,524 possible moves between states" in found.message and "ask for it" not in found.message
 
 
 def tail(coarse: Candidate, theta: float) -> Candidate:
@@ -260,7 +260,7 @@ def test_m3_a_skipped_tail_cut_is_kept_by_name_and_cause_and_becomes_a_limit_tha
     assert [name for name, _ in solved.skipped] == [skipped.level.name] and solved.skipped[0][1]  # the level and why it was skipped
     (limit,) = skipped_level_limits(solved.skipped)
     assert limit.kind == "how-solved" and limit.labels == (skipped.level.name,) and solved.skipped[0][1] in limit.reason()
-    assert limit.guarantee == "The stated gap is that of the level shown; a skipped level could only have narrowed it."
+    assert limit.guarantee == "The stated gap is that of the approximate answer shown; a skipped one could only have narrowed it."
     assert climbed(approximate, good).skipped == () and skipped_level_limits(()) == ()  # a ladder that skipped nothing says nothing
 
 
@@ -416,9 +416,9 @@ def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsy
     code, out = run(tmp_path, "--budget", "0", prices=price_file())
 
     text = capsys.readouterr().out
-    assert code == 0 and "no approximate level available" in text and "is run as it is" in text
+    assert code == 0 and "no approximate answer was possible" in text and "was run in full" in text
     solved = [limit for limit in read_json(out)["limits"] if limit["kind"] == "how-solved"]  # G12
-    assert read_json(out)["answer"] == {"approximate": False} and "no approximate level" in solved[0]["why"] and solved[0]["guarantee"]
+    assert read_json(out)["answer"] == {"approximate": False} and "no approximate answer was possible" in solved[0]["why"] and solved[0]["guarantee"]
 
 
 def test_a_gap_just_above_the_tolerance_never_prints_as_the_tolerance():

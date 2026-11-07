@@ -234,7 +234,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             Limit(
                 _limits.SOLVE,
                 "The search expanded only what could matter",
-                f"it looked at the actions of {info.expanded:,} of the {info.touched:,} item states it found and built {info.realized:,} of the "
+                f"it looked at the actions of {info.expanded:,} of the {info.touched:,} states it found and built {info.realized:,} of the "
                 f"{info.candidates:,} actions offered at them: an action it did not build costs more, even at its best case, than the one it kept",
                 **claim(
                     "the methods offered",
@@ -246,7 +246,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
         Limit(
             _limits.SOLVE,
             "The search was stopped",
-            f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} item states looked at; the plan restarts from the start item "
+            f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} states looked at; the plan restarts from the start item "
             "wherever the search had not looked",
             f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item. " + certificate_text(info),
         ),

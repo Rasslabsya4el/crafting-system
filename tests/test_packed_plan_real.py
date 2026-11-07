@@ -144,7 +144,7 @@ def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_say
     assert cut.risk.mean.value == pytest.approx(reference.risk.mean.value, rel=1e-12)
     assert cut.risk.variance.value == pytest.approx(reference.risk.variance.value, rel=1e-12)
     assert math.isinf(cut.risk.p90.value) and math.isinf(cut.risk.cvar.value)
-    assert only(cut.limits, "risk").what == "Not computed: p50, p90, CVaR" and notes(reference.limits) == []  # G19
+    assert only(cut.limits, "risk").what == "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth" and notes(reference.limits) == []  # G19
 
 
 def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(both, data):
