@@ -488,6 +488,31 @@ def read_records(folder: Path) -> dict[tuple[str, str, str], dict]:
     return found
 
 
+def short_stop(text: str) -> str:
+    """A stop reason in a few words: `cap 15 min`, `memory 13 GB`."""
+    found = re.search(r"cap of ([\d.]+) minutes", text)
+    if found and "memory" not in text:
+        return f"cap {found.group(1).removesuffix('.0')} min"
+    found = re.search(r"memory cap of ([\d,]+) MB", text)
+    return f"memory {int(found.group(1).replace(',', '')) // 1000} GB" if found else text[:40]
+
+
+def cell(record: Mapping | None) -> str:
+    """One job in a few words for the table: the mean and the sizes when it finished, where it was when it did not."""
+    if record is None:
+        return "missing"
+    if record.get("error"):
+        return "refused: " + ("no policy reaches the goal" if "no policy" in record["error"] else "the bound cannot be built (#507)" if "crafted-pattern bound" in record["error"] else record["error"][:60])
+    if not record.get("finished"):
+        alive = f"{record['live_states']:,} states alive" if record.get("live_states") is not None else ""
+        building = re.search(r"keys found ([\d,]+) expanded ([\d,]+)", " ".join(record.get("last_lines") or []))
+        if building:  # the envelope was still building its bound (the walk-free model of #497), which its net does not cover
+            alive = f"in the bound: {building.group(1)} keys found, {building.group(2)} expanded"
+        return f"stopped ({short_stop(str(record.get('stop')))}) {alive}; {round(record.get('seconds') or 0):,} s; {number(record.get('peak_mb'))} MB".replace(" ;", ";")
+    net = " (net stop, not shown best)" if record.get("exact") is False else ""
+    return f"{record['mean']:,.2f}{net}; {number(record.get('walked'))} known, {number(record.get('kept'))} kept; {round(record.get('seconds') or 0):,} s; {number(record.get('peak_mb'))} MB"
+
+
 def runs_of(labels: Sequence[str]) -> list[str]:
     """`labels` with each run of the same label written once, `Chaos Orb x7` for seven in a row."""
     out: list[str] = []
@@ -516,6 +541,12 @@ def build_summary(records: Mapping[tuple[str, str, str], dict], run_ids: str = "
     ]
     if run_ids:
         lines += ["", f"Runs: {run_ids}"]
+    lines += ["", "## the table: a route and a solver, the key kept, removed, and every kind named", ""]
+    compact = []
+    for route in ROUTES:
+        for solver in SOLVERS:
+            compact.append([route, solver, *(cell(records.get((route, variant, solver))) for variant in VARIANTS)])
+    lines += _table(["route", "solver", "kept", "removed", "all"], compact)
     lines += ["", "## every job", ""]
     rows = []
     for route in ROUTES:

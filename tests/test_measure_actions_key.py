@@ -128,6 +128,18 @@ def test_the_summary_tells_what_the_key_hid():
     assert "| J01 | kept | auto | missing |" in text
 
 
+def test_a_cell_says_where_a_job_stopped():
+    bound = record("R04", "all", "envelope", finished=False, stop="the cap of 20 minutes", live_states=29_688, seconds=1207.0,
+                   last_lines=["[ 1168.0 s, 4925 MB] keys found 4,786 expanded 257 kernels 951,697 members 848,620", "[ 1199.6 s, 4936 MB] stopping: counting the states alive"])  # fmt: skip
+    memory = record("R04", "removed", "auto", finished=False, stop="the memory cap of 13,000 MB (resident 13,008 MB)", live_states=15_149_665, last_lines=[])
+
+    assert "stopped (cap 20 min) in the bound: 4,786 keys found, 257 expanded; 1,207 s" in key.cell(bound)
+    assert key.cell(memory).startswith("stopped (memory 13 GB) 15,149,665 states alive")
+    assert key.cell(record("R04", "kept", "auto")).startswith("50.00; 100 known, 40 kept; 2 s; 300 MB")
+    assert key.cell(None) == "missing"
+    assert key.cell(record("R04", "removed", "envelope", finished=False, error="PlanError: no policy of the offered actions")) == "refused: no policy reaches the goal"
+
+
 def test_a_job_with_the_same_mean_and_first_action_says_same():
     records = {("J01", "kept", "auto"): record("J01", "kept", "auto"), ("J01", "removed", "auto"): record("J01", "removed", "auto", mean=50.0 + 1e-12)}
 
