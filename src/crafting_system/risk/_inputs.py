@@ -8,17 +8,29 @@ the total cost has a finite mean exactly when the spectral radius rho(M) is belo
 
 Solving. The dependency graph has an edge from s to every outcome and every input. Its strongly
 connected components (iterative Tarjan) come out dependencies first; each is solved with a dense
-`numpy.linalg.solve`, the already-solved values of the components below moved to the right-hand side.
+`numpy.linalg.solve` (`_linear.solve`: refined, and its componentwise backward error measured), the
+already-solved values of the components below moved to the right-hand side.
 
-Certificate. With V^ the computed solution, r = c - (I - M) V^ the residual and
-rounding_i = (terms_i + 3) eps (V^_i + (M V^)_i + c_i) the allowance for the float arithmetic that forms
+The system of record. Row s of I - M has the diagonal 1 - M_ss, and a state that stays with chance
+1 - 1e-13 has 1 - M_ss = 1e-13 +- 1e-16 there: a solve of that matrix is good to three digits and a residual
+formed from it has no digits left (tickets #642, #615). So each row is divided by its pivot
+`leave_s - copies_s`, the chance to leave s (the sum of its other chances, goals and lost mass included, a sum of
+positive terms) less the copies of s among its own inputs: P' = D^-1 (M - diag M) and c' = D^-1 c with D the pivots,
+(I - M) = D (I - P'), and a pivot at or below zero is a state that needs as much of itself as it yields. The chances
+are the data; the system of record is (I - P') V = c'.
+
+Certificate. With V^ the computed solution, r = c' - (I - P') V^ the residual and
+rounding_i = (terms_i + 3) eps (V^_i + (P' V^)_i + c'_i) the allowance for the float arithmetic that forms
 it (terms_i is the number of outcomes plus input copies of state i), let
-e = max_i (|r_i| + rounding_i) / c_i. The exact residual r' satisfies |r'| <= e c. If e < 1 and V^ > 0
-then (I - M) V^ = c - r' >= (1 - e) c > 0, so M V^ < V^ componentwise and the Collatz-Wielandt bound gives
-rho(M) < 1; then (I - M)^-1 >= 0 and |V - V^| = |(I - M)^-1 r'| <= e (I - M)^-1 c = e V, so
-V in [V^ / (1 + e), V^ / (1 - e)]. Otherwise (e >= 1, a non-positive or non-finite value, a singular
-component) there is no certified positive solution and `NotSubcritical` is raised. The returned error
-is e.
+e = max_i (|r_i| + rounding_i) / c'_i. The exact residual r' satisfies |r'| <= e c'. If e < 1 and V^ > 0
+then (I - P') V^ = c' - r' >= (1 - e) c' > 0, so P' V^ < V^ componentwise and the Collatz-Wielandt bound gives
+rho(P') < 1, hence rho(M) < 1 (I - M is D (I - P') with D positive); then (I - P')^-1 >= 0 and
+|V - V^| = |(I - P')^-1 r'| <= e (I - P')^-1 c' = e V, so V in [V^ / (1 + e), V^ / (1 - e)]. Otherwise (e >= 1, a
+non-positive or non-finite value, a singular component) there is no certified positive solution and
+`NotSubcritical` is raised. The returned error is e. It is the forward error, not a residual that might be
+large: a cost known to less than `_linear.REFUSED_ABOVE` is not shown (`Undecided`, a `NotSubcritical`
+that says the arithmetic, not the policy, could not decide), and one known to less than `_linear.SAID_ABOVE`
+is said by the report as a limit.
 
 Second moment. With m1 the mean, c the cost of the action at s, a_i the m1 of its i-th input copy
 and r = sum_j p_sj m1_j, the total of one step is X + T_next with X = c + sum_i A_i, all runs
@@ -31,9 +43,9 @@ second solve and rho the allowance for the float arithmetic building rhs^ the tr
 lies in m2 * [(1 - rho) / ((1 + e1)^2 (1 + e2)), (1 + rho) / ((1 - e1)^2 (1 - e2))]. The variance
 interval is [lo(m2) - hi(m1)^2, hi(m2) - lo(m1)^2] clipped at zero.
 
-Donor counts. The expected number of visits of every state is row 0 of (I - M)^-1: N solves
-(I - M)^T N = e_0, by the same components in the opposite order. The runs started at an input state y
-number sum_s N_s copies(s, y). With r' = e_0 - (I - M)^T N^ the error of N^ is
+Donor counts. The expected number of visits of every state is row 0 of (I - M)^-1 = row 0 of (I - P')^-1 D^-1: w solves
+(I - P')^T w = e_0 by the same components in the opposite order, and N = w / D. The runs started at an input state y
+number sum_s N_s copies(s, y). With r' = e_0 - (I - P')^T w^ (the same vector as e_0 - (I - M)^T N^) the error of N^ is
 (I - M)^-T r', of 1-norm at most kappa ||r'||_1, where kappa = ||(I - M)^-1 1||_inf <= max_i V_i / c_min
 (because c >= c_min 1 and V = (I - M)^-1 c) and V_i <= V^_i / (1 - e).
 """
@@ -46,6 +58,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from . import _linear
 from ._chain import Chain
 from ._moments import real_costs
 
@@ -56,6 +69,14 @@ MIN_COUNT_ROUNDING = 1e-12  # relative allowance for summing visits into a donor
 
 class NotSubcritical(Exception):
     """The system has no certified positive solution: the total cost has an infinite (or undecided) mean."""
+
+
+class Undecided(NotSubcritical):
+    """The arithmetic could not decide: the system has a solution (or may have), but it is known to less than `_linear.REFUSED_ABOVE`.
+
+    It is a `NotSubcritical` for the callers that only need to know there is no certified mean; the report tells it apart (the plan is not
+    one that starts more runs than it finishes, the calculation is the one that failed).
+    """
 
 
 def bracket(value: float, error: float) -> tuple[float, float]:
@@ -75,6 +96,9 @@ class _System:
     terms: tuple[int, ...]
     comps: tuple[tuple[int, ...], ...]
     comp_of: tuple[int, ...]
+    pivot: tuple[float, ...]  # the chance to leave each state less the copies of it among its own inputs (1 - M_ss, a sum of positive terms)
+    scaled_rows: tuple[tuple[tuple[int, float], ...], ...]  # P'[s, t] = M[s, t] / pivot[s] for t != s (empty where the pivot is not above zero)
+    scaled_cols: tuple[tuple[tuple[int, float], ...], ...]  # the same by columns: scaled_cols[t] = ((s, P'[s, t]), ...)
 
 
 def _system(chain: Chain) -> _System:
@@ -102,6 +126,16 @@ def _system(chain: Chain) -> _System:
             columns[j].append((i, coef))
     nodes = tuple(i for i in range(size) if expanded[i])
     comps, comp_of = _components(size, nodes, rows)
+    pivot = [1.0] * size
+    scaled: list[tuple[tuple[int, float], ...]] = [() for _ in range(size)]
+    scaled_columns: list[list[tuple[int, float]]] = [[] for _ in range(size)]
+    for i in nodes:
+        leave = math.fsum(p for j, p in chain.succ[i] if j != i) if chain.can_finish[i] else 1.0
+        pivot[i] = leave - sum(1 for y in chain.inputs[i] if y == i)
+        if pivot[i] > 0.0:
+            scaled[i] = tuple((j, coef / pivot[i]) for j, coef in rows[i] if j != i)
+            for j, coef in scaled[i]:
+                scaled_columns[j].append((i, coef))
     return _System(
         size,
         nodes,
@@ -110,6 +144,9 @@ def _system(chain: Chain) -> _System:
         tuple(terms),
         comps,
         comp_of,
+        tuple(pivot),
+        tuple(scaled),
+        tuple(tuple(c) for c in scaled_columns),
     )
 
 
@@ -175,64 +212,69 @@ def _sweep(
     order: Sequence[Sequence[int]],
     base: Sequence[float],
 ) -> list[float]:
-    """Solve x_j - sum_{(k, coef) in edges[j]} coef x_k = base[j], component by component in `order`."""
+    """Solve x_j - sum_{(k, coef) in edges[j]} coef x_k = base[j], component by component in `order`; `edges` have no entry on the diagonal.
+
+    A state alone in its component is one division-free sum of positive terms. A component is a dense system with a zero diagonal, solved and refined
+    by `_linear.solve`, whose componentwise backward error is measured: above `_linear.REFUSED_ABOVE` after the refinement the sweep raises `Undecided`.
+    """
     values = [0.0] * system.size
     for comp in order:
         if len(comp) == 1:
             j = comp[0]
-            own = 0.0
-            rest = [base[j]]
-            for k, coef in edges[j]:
-                if k == j:
-                    own += coef
-                else:
-                    rest.append(coef * values[k])
-            pivot = 1.0 - own
-            if pivot <= 0.0:
-                raise NotSubcritical(f"state {j} needs at least as much of itself as it yields")
-            values[j] = math.fsum(rest) / pivot
+            values[j] = math.fsum([base[j], *(coef * values[k] for k, coef in edges[j])])
             if not math.isfinite(values[j]):
                 raise NotSubcritical("a value is not finite")
             continue
         local = {j: k for k, j in enumerate(comp)}
-        matrix = np.eye(len(comp))
+        off = np.zeros((len(comp), len(comp)))
         rhs = np.empty(len(comp))
         for j in comp:
             row = local[j]
             rest = [base[j]]
             for k, coef in edges[j]:
                 if k in local:
-                    matrix[row, local[k]] -= coef
+                    off[row, local[k]] += coef
                 else:
                     rest.append(coef * values[k])
             rhs[row] = math.fsum(rest)
-        try:
-            with np.errstate(all="ignore"):
-                solution = np.linalg.solve(matrix, rhs)
-        except np.linalg.LinAlgError:
-            raise NotSubcritical("a component is singular") from None
+        found = _linear.solve(off, rhs)
+        if found is None:
+            raise NotSubcritical("a component is singular")
+        solution, error = found
         if not np.all(np.isfinite(solution)):
             raise NotSubcritical("a value is not finite")
+        if not error <= _linear.REFUSED_ABOVE:
+            raise Undecided(f"a component of {len(comp):,} states is solved only to a backward error of {error:.3g}, not {_linear.REFUSED_ABOVE:g}")
         for j, value in zip(comp, solution, strict=True):
             values[j] = float(value)
     return values
+
+
+def _pivots(system: _System) -> None:
+    for i in system.nodes:
+        if not system.pivot[i] > 0.0:
+            raise NotSubcritical(f"state {i} needs at least as much of itself as it yields")
 
 
 def _solve(system: _System, costs: Sequence[float]) -> tuple[list[float], float]:
     for i in system.nodes:
         if not (math.isfinite(costs[i]) and costs[i] > 0.0):
             raise ValueError(f"cost of state {i} must be finite and above zero, got {costs[i]!r}")
-    values = _sweep(system, system.rows, system.comps, costs)
+    _pivots(system)
+    scaled = [costs[i] / system.pivot[i] for i in range(system.size)]
+    values = _sweep(system, system.scaled_rows, system.comps, scaled)
     worst = 0.0
     for i in system.nodes:
-        ahead = math.fsum(coef * values[j] for j, coef in system.rows[i])
-        residual = costs[i] - values[i] + ahead
-        rounding = (system.terms[i] + 3) * EPS * (values[i] + ahead + costs[i])
-        worst = max(worst, (abs(residual) + rounding) / costs[i])
+        ahead = math.fsum(coef * values[j] for j, coef in system.scaled_rows[i])
+        residual = scaled[i] - values[i] + ahead
+        rounding = (system.terms[i] + 3) * EPS * (values[i] + ahead + scaled[i])
+        worst = max(worst, (abs(residual) + rounding) / scaled[i])
         if not values[i] > 0.0:
             raise NotSubcritical("a value is not positive")
     if not worst < 1.0:
         raise NotSubcritical("the residual is as large as the costs")
+    if not worst <= _linear.REFUSED_ABOVE:
+        raise Undecided(f"the costs are known only to a relative error of {worst:.3g}, not {_linear.REFUSED_ABOVE:g}")
     return values, worst
 
 
@@ -285,16 +327,18 @@ def expected_visits(chain: Chain, values: Sequence[float], error: float) -> tupl
     (infinite when `error` is 1 or more).
     """
     system = _proper_system(chain)
+    _pivots(system)
     base = [0.0] * system.size
     base[0] = 1.0
-    visits = _sweep(system, system.cols, tuple(reversed(system.comps)), base)
+    weights = _sweep(system, system.scaled_cols, tuple(reversed(system.comps)), base)  # (I - P')^T w = e_0
 
     l1 = 0.0
     for j in system.nodes:
-        terms = [visits[s] * coef for s, coef in system.cols[j]]
-        residual = base[j] - visits[j] + math.fsum(terms)
-        rounding = (len(terms) + 3) * EPS * (base[j] + abs(visits[j]) + math.fsum(abs(t) for t in terms))
+        terms = [weights[s] * coef for s, coef in system.scaled_cols[j]]
+        residual = base[j] - weights[j] + math.fsum(terms)
+        rounding = (len(terms) + 3) * EPS * (base[j] + abs(weights[j]) + math.fsum(abs(t) for t in terms))
         l1 += abs(residual) + rounding
+    visits = [weights[j] / system.pivot[j] for j in range(system.size)]  # N = w / pivot: the same r' as the unscaled system, formed without a cancellation
     costs = real_costs(chain)
     if error < 1.0:
         kappa = max(values[i] for i in system.nodes) / (1.0 - error) / min(costs[i] for i in system.nodes)

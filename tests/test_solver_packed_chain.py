@@ -249,3 +249,92 @@ def test_a_chain_of_one_state_and_of_none():
     ptr, col, weight = np.zeros(2, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0)
     assert pc.inverse_diagonal(1, ptr, col, weight, np.ones(1))[0].tolist() == [1.0]
     assert pc.inverse_diagonal(0, np.zeros(1, dtype=np.int64), col, weight, np.ones(0))[0].tolist() == []
+
+
+# --- ChainSolver: `(I - P) x = b` from the cycles of the chain (ticket #621) --------------------------------------------------------------------
+
+
+def chain_solver_inputs(dense, ptr, col, weight, *, pool: bool, leak=None):
+    """The arguments of `ChainSolver` for a chain: with `pool`, every row that two or more states share is given once (`shared`), as the policy evaluation gives a kernel."""
+    n = len(dense)
+    leave = leave_of(dense)
+    leak = np.maximum(0.0, 1.0 - dense.sum(axis=1)) if leak is None else leak
+    if not pool:
+        return n, ptr, col, weight, leave, leak, None, ()
+    shared_of = np.full(n, -1, dtype=np.int64)
+    shared = []
+    keep = np.ones(len(col), dtype=bool)
+    for g in pc._row_groups(ptr, col, weight, np.arange(n)):
+        if len(g) < 2:
+            continue
+        shared_of[g] = len(shared)
+        shared.append((col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]], float(leak[g[0]])))
+        for s in g:
+            keep[ptr[s] : ptr[s + 1]] = False
+    sizes = np.where(shared_of >= 0, 0, np.diff(ptr))
+    return n, np.concatenate(([0], np.cumsum(sizes))), col[keep], weight[keep], leave, leak, shared_of, tuple(shared)
+
+
+def dense_solution(dense, b):
+    """`x` with `x[s] = b[s] + sum over t != s of Q[s, t] / leave[s] x[t]`, the system of the policy evaluation, solved densely."""
+    off = dense.copy()
+    np.fill_diagonal(off, 0.0)
+    return np.linalg.solve(np.eye(len(dense)) - off / leave_of(dense)[:, None], b)
+
+
+@pytest.mark.parametrize("pool", [False, True])
+@pytest.mark.parametrize("limit", [1000, 3])
+@pytest.mark.parametrize("seed", range(6))
+def test_the_chain_solver_gives_the_dense_solution_with_the_rows_that_states_share_given_once_or_expanded(seed, limit, pool):
+    rng = np.random.default_rng(1200 + seed)
+    n = int(rng.integers(30, 80))
+    dense, ptr, col, weight = random_chain(rng, n, shared=3, shared_users=8, density=3, loops=True)
+    b = rng.random(n) + 0.1
+
+    solver = pc.ChainSolver(*chain_solver_inputs(dense, ptr, col, weight, pool=pool), invert_limit=limit)
+
+    assert solver.solve(b) == pytest.approx(dense_solution(dense, b), rel=1e-9)
+    assert (solver.q > 0) == (pool or limit < n)  # rows were cut when they were given as shared or a component was above the limit
+
+
+def test_the_chain_solver_puts_back_a_shared_row_even_when_every_component_is_small():
+    rng = np.random.default_rng(31)
+    n = 40
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=10, density=2, loops=False)
+    b = rng.random(n) + 0.1
+
+    solver = pc.ChainSolver(*chain_solver_inputs(dense, ptr, col, weight, pool=True))  # the default limit of 4,000: nothing is big
+
+    assert solver.q == 2 and solver.solve(b) == pytest.approx(dense_solution(dense, b), rel=1e-9)
+
+
+@pytest.mark.parametrize("power", [6, 10, 13])
+@pytest.mark.parametrize("limit", [1000, 3])
+def test_the_chain_solver_of_a_stiff_chain_is_as_good_as_the_exact_reference(power, limit):
+    """#615's stiff chain (every state stays with chance 1 - delta), whole and cut, against `N diag(leave) rhs` of the reference."""
+    for seed in range(8):
+        rng = np.random.default_rng(1300 + seed)
+        n = int(rng.integers(20, 50))
+        ptr, col, weight, leave, leak, exact = stiff_chain(rng, n, power)
+        rhs = rng.random(n) + 0.1
+        solver = pc.ChainSolver(n, ptr, col, weight, leave, leak, invert_limit=limit)
+        reference = exact @ (leave * rhs)
+
+        x = solver.solve(rhs)
+
+        assert x == pytest.approx(reference, rel=1e-9), (power, limit, seed)
+
+
+def test_a_shared_row_that_does_not_fit_the_memory_of_a_run_is_refused_by_the_cost_of_the_cycles_not_by_a_count_of_states(monkeypatch):
+    rng = np.random.default_rng(12)
+    n = 60
+    dense, ptr, col, weight = random_chain(rng, n, shared=3, shared_users=6, density=2, loops=True)
+    monkeypatch.setattr(pc, "WOODBURY_CELLS", 10)
+
+    with pytest.raises(pc.CyclesTooTangled, match="needs .* cells"):
+        pc.ChainSolver(*chain_solver_inputs(dense, ptr, col, weight, pool=True))
+
+
+def test_a_chain_solver_of_one_state():
+    one = pc.ChainSolver(1, np.zeros(2, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0), np.ones(1), np.ones(1))
+    assert one.solve(np.array([3.0])).tolist() == [3.0]

@@ -1,4 +1,4 @@
-"""The diagonal of the fundamental matrix of a chain from the cycles of the chain (the identities are exact; the numbers carry the rounding of dense inverses) (tickets #572 and #490).
+"""The diagonal of the fundamental matrix of a chain, and the solve of `(I - Q) x = b`, from the cycles of the chain (the identities are exact; the numbers carry the rounding of dense inverses) (tickets #572, #490 and #621).
 
 A chain with transient states and the chances `Q[s, t]` among them (the rest of each row leaks to a goal or to a state the run cannot finish
 from) has the fundamental matrix `N = (I - Q)^-1`: `N[s, t]` is the expected number of visits to `t` of a run that starts in `s`. The chance
@@ -22,11 +22,17 @@ its transpose) and one `q x q` inverse, however many states ask. When the compon
 Woodbury step is made. When a component stays big after the shared rows are cut, the most entered states of it are cut too (each its own
 row), until none is.
 
+The same pieces solve `(I - Q) x = b` for a right-hand side (`ChainSolver`, ticket #621): `x = y + A^-1 U M^-1 K y` with `y = A^-1 b` and
+`M = I - K A^-1 U`, which is `q + 2` solves with `B` and a `q x q` matrix and needs neither the diagonal nor the `wanted x q` blocks the diagonal
+needs. That is the exact fallback of the evaluation of a policy whose iteration did not converge (`_packed_solve.evaluate_policy`): the cost
+is the cycles of the chain, never a count of its states. A row that many states share can be given once (`shared`), so a policy of 800,000
+states whose rerolls are one kernel each is never expanded edge by edge.
+
 Nothing here knows the game. Uses numpy, so it is a `_packed*.py` file (ADR-0010 amended).
 """
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -40,7 +46,15 @@ WOODBURY_CELLS = 600_000_000  # the cells the Woodbury step may hold, all counte
 
 
 class CyclesTooTangled(ValueError):
-    """The cut rows of a chain are too many to put back within `WOODBURY_CELLS`: the chances that need them are not measured, never guessed."""
+    """The cut rows of a chain are too many to put back within `WOODBURY_CELLS`: the chances that need them are not measured, never guessed.
+
+    `rows` is how many distinct rows are cut, `cells` what putting them back needs and `allowed` what a run may hold: the cost of the method that
+    a limit is written from (`cli/_packed.evaluation_limits`).
+    """
+
+    def __init__(self, message: str, rows: int = 0, cells: int = 0, allowed: int = 0):
+        super().__init__(message)
+        self.rows, self.cells, self.allowed = rows, cells, allowed
 
 
 def components(n: int, ptr: np.ndarray, col: np.ndarray) -> tuple[np.ndarray, int]:
@@ -218,6 +232,91 @@ class Triangular:
         return out
 
 
+class ChainSolver:
+    """Solves `(I - P) x = b` for the chain of a policy, `P[s, t] = Q[s, t] / leave[s]` without the self-loops, by its cycles (module text).
+
+    `ptr`, `col`, `weight` hold the rows of the states that have their own row (`Q`, self-loops included, columns inside the chain only); a state that
+    takes a row many states share has an empty row there and `shared_of[s]` names it: `shared[g] = (columns, entries, leak)`, the row `K[g]` and the
+    chance it goes outside the chain. `leave[s]` is the chance to leave `s` (a sum of positive terms) and `leak[s]` the chance an own row goes outside
+    the chain; the rows of a state cut by `_cut_until_small` and of the shared groups are put back by the Woodbury step, none of them formed as `1 - p`.
+
+    Building it costs the components' inverses, `q` solves with the chain without its cut rows and one `q x q` inverse; `CyclesTooTangled` says so when
+    that does not fit in `WOODBURY_CELLS`. `solve(b)` then costs three solves with the chain. The answer carries the rounding of the dense inverses: the
+    caller measures its backward error and refines (`solve` of the residual) while it falls.
+    """
+
+    def __init__(
+        self,
+        n: int,
+        ptr: np.ndarray,
+        col: np.ndarray,
+        weight: np.ndarray,
+        leave: np.ndarray,
+        leak: np.ndarray,
+        shared_of: np.ndarray | None = None,
+        shared: Sequence[tuple[np.ndarray, np.ndarray, float]] = (),
+        invert_limit: int | None = None,
+        progress: Callable[[str], None] | None = None,
+    ):
+        limit = INVERT_LIMIT if invert_limit is None else invert_limit
+        say = progress or (lambda _text: None)
+        began = time.perf_counter()
+        self.n = n
+        row = np.repeat(np.arange(n), np.diff(ptr))
+        off = row != col
+        p_ptr = np.concatenate(([0], np.cumsum(np.bincount(row[off], minlength=n))))
+        p_col, p_weight = col[off], weight[off] / leave[row[off]]
+        pooled = np.zeros(n, dtype=bool) if shared_of is None else shared_of >= 0
+        cut = _cut_until_small(n, p_ptr, p_col, pooled, limit)
+        groups: list[np.ndarray] = []
+        rows: list[tuple[np.ndarray, np.ndarray]] = []
+        leaks: list[float] = []
+        if pooled.any():
+            members = np.flatnonzero(pooled)
+            by_group = members[np.argsort(shared_of[members], kind="stable")]
+            bounds = np.searchsorted(shared_of[by_group], np.arange(len(shared) + 1))
+            for g, (cols, vals, gone) in enumerate(shared):
+                groups.append(by_group[bounds[g] : bounds[g + 1]])
+                rows.append((cols, vals))
+                leaks.append(gone)
+        for g in _row_groups(ptr, col, weight, np.flatnonzero(cut & ~pooled)):
+            groups.append(np.array(g, dtype=np.int64))
+            rows.append((col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]))
+            leaks.append(float(leak[g[0]]))
+        new_ptr, new_col, new_weight = _without_rows(p_ptr, p_col, p_weight, cut)
+        label, count = components(n, new_ptr, new_col)
+        sizes = np.bincount(label, minlength=count)
+        say(f"cycles: {n:,} states, {int(cut.sum()):,} cut ({len(groups):,} distinct rows), {count:,} components, the biggest {int(sizes.max()) if count else 0:,} ({time.perf_counter() - began:.1f} s)")
+        q = len(groups)
+        cells = 3 * q * q + 6 * min(BLOCK_CELLS, n * q)  # M, its inverse and the inverse's workspace, and the blocks of a solve (see `_woodbury`)
+        if cells > WOODBURY_CELLS:
+            raise CyclesTooTangled(
+                f"putting back {q:,} distinct cut rows of {n:,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows",
+                q, cells, WOODBURY_CELLS,
+            )
+        self.base = Triangular(n, new_ptr, new_col, new_weight, label, count)
+        self.cut, self.leave = cut, leave
+        self.q, self.groups, self.rows = q, groups, rows
+        self.owner = np.full(n, -1, dtype=np.int64)
+        for g, members in enumerate(groups):
+            self.owner[members] = g
+        self.middle = None
+        if q:
+            r = np.where(cut, 1.0, 1.0 / leave)
+            m, _, _, _ = _correction(self.base, r, groups, rows, np.array(leaks), n, None, 0, say)
+            self.middle = np.linalg.inv(m)
+        say(f"cycles: built ({time.perf_counter() - began:.1f} s)")
+
+    def solve(self, b: np.ndarray) -> np.ndarray:
+        """`x` with `(I - P) x = b` (the rows of the cut states divided by their `leave` as well); `b` is `n`."""
+        y = self.base.solve(np.where(self.cut, self.leave * b, b))
+        if not self.q:
+            return y
+        z = np.array([vals @ y[cols] for cols, vals in self.rows])
+        w = self.middle @ z
+        return y + self.base.solve(np.where(self.owner >= 0, w[np.maximum(self.owner, 0)], 0.0))
+
+
 def inverse_diagonal(
     n: int,
     ptr: np.ndarray,
@@ -310,6 +409,12 @@ def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int) ->
     for members in _row_groups(ptr, col, weight, np.flatnonzero(big)):
         if len(members) > 1:
             cut[members] = True
+    return _cut_until_small(n, p_ptr, p_col, cut, limit)
+
+
+def _cut_until_small(n, p_ptr, p_col, cut: np.ndarray, limit: int) -> np.ndarray:
+    """`cut` with more states added, round after round, until no component of the chain without the rows of the cut states has more than `limit` states."""
+    cut = cut.copy()
     while True:
         new_ptr, new_col, _ = _without_rows(p_ptr, p_col, p_col, cut)
         label, count = components(n, new_ptr, new_col)
@@ -326,6 +431,42 @@ def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int) ->
             members = np.flatnonzero(label == c)
             order = members[np.argsort(-score[members], kind="stable")]
             cut[order[: max(1, len(members) // CUT_BATCH)]] = True
+
+
+def _correction(base: Triangular, r: np.ndarray, groups, rows, leaks: np.ndarray, n: int, wanted: np.ndarray | None, start: int, say):
+    """`(M, A^-1 U on the wanted states, K A^-1 on the wanted states, A^-1 U on the start)` with `M = I - K A^-1 U`, built block by block, term by term (see `_woodbury`).
+
+    `groups[a]` are the cut states that have the row `rows[a]` of `K` (columns, entries; self-loops included) and `leaks[a]` is that row's leak. The three
+    others are `None` when `wanted` is: a solve of `(I - Q) x = b` needs `M` alone.
+    """
+    q = len(groups)
+    block = max(1, BLOCK_CELLS // max(1, n))
+    m = np.zeros((q, q))  # I - K A^-1 U, term by term (see the text of `_woodbury`)
+    y_w = z_w = y_start = None
+    if wanted is not None:
+        y_w = np.zeros((len(wanted), q))  # A^-1 U on the wanted states
+        z_w = np.zeros((q, len(wanted)))  # K A^-1 on the wanted states
+        y_start = np.zeros(q)  # A^-1 U on the start
+    for lo in range(0, q, block):
+        hi = min(q, lo + block)
+        rhs = np.zeros((n, hi - lo))
+        for g in range(lo, hi):
+            rhs[groups[g], g - lo] = 1.0
+        y = base.solve(rhs * r[:, None])  # A^-1 = (I - P_B)^-1 diag(r)
+        say(f"cycles: solves {lo + 1:,} to {hi:,} of {q:,} done")
+        if wanted is not None:
+            y_w[:, lo:hi] = y[wanted]
+            y_start[lo:hi] = y[start]
+        for a, (cols, vals) in enumerate(rows):
+            m[a, lo:hi] = -(vals @ y[cols])
+            if lo <= a < hi:
+                m[a, a] = leaks[a] + float(np.sum(vals * (1.0 - y[cols, a - lo])))
+        if wanted is not None:
+            rhs = np.zeros((n, hi - lo))
+            for g in range(lo, hi):
+                np.add.at(rhs[:, g - lo], rows[g][0], rows[g][1])  # (a row may name a state twice: its entries add)
+            z_w[lo:hi, :] = (r[:, None] * base.solve_transposed(rhs))[wanted].T  # column a is A^-T of the row a of K, that is row a of K A^-1
+    return m, y_w, z_w, y_start
 
 
 def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak) -> tuple[np.ndarray, float]:
@@ -349,35 +490,16 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
     say(f"cycles: the chain without the cut rows has {count:,} components, the biggest {int(sizes.max()):,}; {q:,} distinct rows are cut")
     rows = [(col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]) for g in groups]  # the rows of K, self-loops included
     wanted = np.flatnonzero(big)
-    block = max(1, BLOCK_CELLS // max(1, n))
     # everything that is held at once: A^-1 U and K A^-1 on the wanted states, K A^-1 U and its inverse, the blocks of a solve (the right-hand
     # side, its scaled copy, the answer, the answer's copy and the gathers: six), and a chunk of the sum below
     cells = (2 * len(wanted) + 2 * q) * q + 6 * min(BLOCK_CELLS, n * q) + min(BLOCK_CELLS, len(wanted) * q)
     if cells > WOODBURY_CELLS:
         raise CyclesTooTangled(
-            f"putting back {q:,} distinct cut rows for {len(wanted):,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows"
+            f"putting back {q:,} distinct cut rows for {len(wanted):,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows",
+            q, cells, WOODBURY_CELLS,
         )
-    y_w = np.zeros((len(wanted), q))  # A^-1 U on the wanted states
-    m = np.zeros((q, q))  # I - K A^-1 U, term by term (see the text above)
-    z_w = np.zeros((q, len(wanted)))  # K A^-1 on the wanted states
-    y_start = np.zeros(q)  # A^-1 U on the start
-    for lo in range(0, q, block):
-        hi = min(q, lo + block)
-        rhs = np.zeros((n, hi - lo))
-        for g in range(lo, hi):
-            rhs[groups[g], g - lo] = 1.0
-        y = base.solve(rhs * r[:, None])  # A^-1 = (I - P_B)^-1 diag(r)
-        say(f"cycles: solves {lo + 1:,} to {hi:,} of {q:,} done")
-        y_w[:, lo:hi] = y[wanted]
-        y_start[lo:hi] = y[start]
-        for a, (cols, vals) in enumerate(rows):
-            m[a, lo:hi] = -(vals @ y[cols])
-            if lo <= a < hi:
-                m[a, a] = leak[groups[a][0]] + float(np.sum(vals * (1.0 - y[cols, a - lo])))
-        rhs = np.zeros((n, hi - lo))
-        for g in range(lo, hi):
-            np.add.at(rhs[:, g - lo], rows[g][0], rows[g][1])  # (a row may name a state twice: its entries add)
-        z_w[lo:hi, :] = (r[:, None] * base.solve_transposed(rhs))[wanted].T  # column a is A^-T of the row a of K, that is row a of K A^-1
+    leaks = np.array([leak[g[0]] for g in groups])
+    m, y_w, z_w, y_start = _correction(base, r, groups, rows, leaks, n, wanted, start, say)
     middle = np.linalg.inv(m)
     chunk = max(1, BLOCK_CELLS // max(1, q))  # the sum over a and b of y[w, a] middle[a, b] z[b, w], some states at a time: its first product is a chunk x q block
     for lo in range(0, len(wanted), chunk):

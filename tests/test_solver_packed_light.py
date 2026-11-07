@@ -23,6 +23,7 @@ import pytest
 
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 from crafting_system.solver import _packed_solve as ps
+from crafting_system.solver._packed_chain import CyclesTooTangled
 from crafting_system.solver._packed_solve import Certificate, Work, certify, evaluate_policy, lift_policy, proper_states, solve_graph
 
 EPS = sys.float_info.epsilon
@@ -404,6 +405,7 @@ def test_the_recurrence_residual_of_bicgstab_is_tiny_and_the_true_residual_is_no
     work = Work(graph)
     leave = work.nonself_sums(np.ones(work.n))
     seen = []
+    info = {}
     real_run = ps._bicgstab_run
 
     def spy(*arguments):
@@ -413,25 +415,29 @@ def test_the_recurrence_residual_of_bicgstab_is_tiny_and_the_true_residual_is_no
 
     ps._bicgstab_run, kept = spy, ps._bicgstab_run
     try:
-        values = evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, {})  # dense_limit 0: every policy by BiCGSTAB
+        values = evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, info)  # dense_limit 0: every policy by BiCGSTAB
     finally:
         ps._bicgstab_run = kept
-    dense = evaluate_policy(work, leave, policy, np.zeros(work.n), 10_000, 1e-13, {})
-
+    assert np.all(np.isfinite(values))
     claimed = [claim for *_, claim in seen]
     assert min(claimed) < 1e-10  # a run that the recurrence said had converged
-    assert values == pytest.approx(dense, rel=1e-6)  # and the values taken are the dense solve's: the true residual was measured, not believed
+    assert info["linear_residual"] <= 1e-10 or info["linear_backward_error"] <= 1e-10  # what was taken is good on one of the true measures, whatever the recurrence said
+    assert ("linear_cycles" in info) == (info.get("linear_residual_iterate", 0.0) > 1e-10)  # an iterate that was not good was replaced by the exact solve
 
 
-def test_a_policy_whose_true_residual_stays_large_is_never_returned_from_the_dense_fallback_range_either(monkeypatch):
-    graph, policy = random_policy_graph(DRIFTING_SEEDS[0])
-    work = Work(graph)
-    leave = work.nonself_sums(np.ones(work.n))
-    monkeypatch.setattr(ps, "DENSE_FALLBACK", 0)  # no dense solve to fall back on
+def tangled(*_arguments, **_keywords):
+    raise CyclesTooTangled("putting back 3 distinct cut rows of 5 states needs 123 cells, past the 100 the memory of a run allows")
+
+
+def test_a_policy_whose_true_residual_stays_large_is_never_returned_when_the_exact_solve_cannot_be_made(monkeypatch):
+    work, leave = prepared(LINE)
+    monkeypatch.setattr(ps, "policy_solver", tangled)  # the cycles do not fit in the memory of the run
     monkeypatch.setattr(ps, "_bicgstab", lambda matvec, b, x0, tol, limit: (x0 + 1e6, 0.5, 1))  # an iterate whose TRUE residual is 0.5
 
-    with pytest.raises(ConvergenceError, match="true residual"):
-        evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, {})
+    with pytest.raises(ConvergenceError, match="true residual") as refused:
+        evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 0, 1e-13, {})
+
+    assert "needs 123 cells" in str(refused.value)  # what it would have cost, from the method, not a count of states
 
 
 SKEW = np.array([[0.0, 1.0], [-1.0, 0.0]])  # v . A v = 0 for every v: the first step divides by zero, the method can make no progress
@@ -478,7 +484,8 @@ def test_a_policy_is_evaluated_by_a_dense_solve_up_to_the_dense_limit():
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 5, 1e-13, info)
 
     assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
-    assert info == {"linear_dense": 1}
+    assert info["linear_dense"] == 1 and "linear_iterations" not in info and "linear_cycles" not in info
+    assert info["linear_backward_error"] <= 1e-14  # measured, though no iteration was made
 
 
 def test_above_the_dense_limit_bicgstab_alone_solves_a_small_system_without_the_dense_fallback():
@@ -488,11 +495,11 @@ def test_above_the_dense_limit_bicgstab_alone_solves_a_small_system_without_the_
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
     assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-10)
-    assert "linear_dense" not in info  # the residual was below the fallback's 1e-10
+    assert "linear_cycles" not in info  # the residual was below the fallback's 1e-10
     assert 1 <= info["linear_iterations"] <= 10 and info["linear_residual"] < 1e-12  # a few steps; a broken recurrence runs to the stagnation limit of 400
 
 
-def test_the_dense_fallback_takes_over_when_bicgstab_cannot_reach_its_residual(monkeypatch):
+def test_the_exact_solve_by_the_cycles_takes_over_when_bicgstab_cannot_reach_its_residual(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)  # one step: not enough, whatever the restarts
@@ -500,69 +507,70 @@ def test_the_dense_fallback_takes_over_when_bicgstab_cannot_reach_its_residual(m
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
     assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
-    assert info["linear_dense"] == 1
+    assert info["linear_cycles"] == 1 and "linear_dense" not in info
     assert info["linear_iterations"] == 1 + ps.BICGSTAB_RESTARTS  # the first run and each restart stopped at its one step
 
 
-def test_after_the_dense_solve_replaces_an_iterate_the_residual_reported_is_that_of_the_values_taken(monkeypatch):
+def test_after_the_exact_solve_replaces_an_iterate_the_residual_reported_is_that_of_the_values_taken(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)  # one step: far from the answer
 
     evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert info["linear_dense"] == 1 and info["linear_residual_iterate"] > ps.DENSE_FALLBACK_RESIDUAL  # the iterate thrown away
-    assert info["linear_residual"] <= 1e-14  # the dense values taken: not the iterate's residual
+    assert info["linear_cycles"] == 1 and info["linear_residual_iterate"] > ps.DENSE_FALLBACK_RESIDUAL  # the iterate thrown away
+    assert info["linear_residual"] <= 1e-14 and info["linear_backward_error"] <= 1e-14  # the exact values taken: not the iterate's residual
 
 
-def test_a_policy_longer_than_the_dense_fallback_whose_true_residual_is_large_is_refused_not_returned(monkeypatch):
+def test_a_policy_whose_exact_solve_does_not_fit_and_whose_true_residual_is_large_is_refused_not_returned(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
-    monkeypatch.setattr(ps, "DENSE_FALLBACK", 4)  # five states in the policy
+    monkeypatch.setattr(ps, "policy_solver", tangled)
 
     with pytest.raises(ConvergenceError, match="true residual"):
         evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert "linear_dense" not in info and info["linear_residual"] > ps.ACCEPT_BOUND  # a garbage iterate is never handed to the policy improvement (#584)
+    assert "linear_cycles" not in info and info["linear_residual"] > ps.ACCEPT_BOUND  # a garbage iterate is never handed to the policy improvement (#584)
 
 
-def test_a_policy_longer_than_the_dense_fallback_keeps_an_iterate_whose_true_residual_is_small_and_says_it(monkeypatch):
+def test_a_policy_whose_exact_solve_does_not_fit_keeps_an_iterate_whose_true_residual_is_small_and_says_why(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
-    monkeypatch.setattr(ps, "DENSE_FALLBACK", 4)
+    monkeypatch.setattr(ps, "policy_solver", tangled)
     monkeypatch.setattr(ps, "ACCEPT_BOUND", 10.0)  # the residual after one step is below this
 
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert "linear_dense" not in info and info["linear_residual"] > ps.DENSE_FALLBACK_RESIDUAL  # the residual the caller sees is the true one
+    assert "linear_cycles" not in info and info["linear_residual"] > ps.DENSE_FALLBACK_RESIDUAL  # the residual the caller sees is the true one
+    assert info["linear_limit"]["states"] == 5 and "needs 123 cells" in info["linear_limit"]["why"]  # what remained, from the cost of the method
     assert np.all(np.isfinite(values))
 
 
-def test_the_dense_fallback_covers_a_policy_of_exactly_its_limit(monkeypatch):
+def test_no_count_of_states_decides_whether_a_stiff_evaluation_is_solved_or_refused(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
-    monkeypatch.setattr(ps, "DENSE_FALLBACK", 5)  # five states in the policy: at the limit
+    monkeypatch.setattr(ps, "DENSE_FALLBACK", 0)  # the old count (6,000), here zero: it is not read
 
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert info["linear_dense"] == 1 and values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
+    assert info["linear_cycles"] == 1 and values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
 
 
-def test_the_dense_fallback_is_used_when_the_residual_is_just_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
+def test_the_exact_solve_is_used_when_the_residual_is_just_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
     work, leave = prepared(LINE)
     policy = np.array([0, 1, 2, 3, 4, -1])
     monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
     seen = {}
     info = {}
     evaluate_policy(work, leave, policy, np.zeros(6), 4, 1e-13, info)
-    assert info["linear_dense"] == 1  # one step leaves a residual far above 1e-10
+    assert info["linear_cycles"] == 1  # one step leaves a residual far above 1e-10
     monkeypatch.setattr(ps, "DENSE_FALLBACK_RESIDUAL", 10.0)  # a residual below this is good enough
     info = {}
     evaluate_policy(work, leave, policy, np.zeros(6), 4, 1e-13, info)
-    assert "linear_dense" not in info
+    assert "linear_cycles" not in info
 
 
 def test_no_restart_is_made_when_the_first_run_reached_its_residual(monkeypatch):
@@ -621,6 +629,7 @@ def test_a_stiff_system_is_solved_to_the_exact_values():
 
 
 def test_the_dense_solve_is_refined_twice_and_each_correction_is_added_with_its_sign(monkeypatch):
+    monkeypatch.setattr(ps, "DENSE_FALLBACK_RESIDUAL", 1e-6)  # (a backward error of 1e-9 is good enough here: the exact solve by the cycles is not to take over)
     # A solver that returns (1 + d) times the true solution, d = 1e-3, whatever the BLAS: one solve leaves the error d, a correction
     # solved by the same (1 + d) solver makes it d^2 = 1e-6 and a second one d^3 = 1e-9. The values (10, 8, 6, 4, 2 of LINE) must be
     # within 1e-8 of the exact ones: no refinement (1e-3), one (1e-6) or a correction of the wrong sign (2e-3, 2e-6 ...) fail
@@ -880,14 +889,14 @@ def test_a_run_that_leaves_a_residual_up_to_ten_times_the_tolerance_is_not_start
     "residual,dense",
     [(0.5 * ps.DENSE_FALLBACK_RESIDUAL, False), (ps.DENSE_FALLBACK_RESIDUAL, False), (ps.DENSE_FALLBACK_RESIDUAL * (1 + 1e-9), True), (1e-3, True)],
 )
-def test_the_dense_fallback_is_made_for_a_residual_above_its_threshold_and_not_at_it(monkeypatch, residual, dense):
+def test_the_exact_solve_is_made_for_a_residual_above_its_threshold_and_not_at_it(monkeypatch, residual, dense):
     work, leave = prepared(LINE)
     stub_bicgstab(monkeypatch, residual)
     info = {}
 
     values = evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
 
-    assert ("linear_dense" in info) is dense
+    assert ("linear_cycles" in info) is dense
     assert (info["linear_residual"] <= 1e-14) if dense else (info["linear_residual"] == residual)  # the residual of the values taken
     if dense:
         assert info["linear_residual_iterate"] == residual
