@@ -23,8 +23,10 @@ with the run and the hashes of the target, route and price files they were compu
 stale: record them again); the CI run plays few plays and its 4 standard errors catch only a gross error. Only the mean is compared there, not the steps (the benchmark's
 route result is a lumped chain, not a policy of item states).
 
-The routes with gaps, R04 and R14 as the guides wrote them (`GAPPED`): the planner's chance of finishing (below 1 because a state has no rule, or the game refuses the rule's
-action) against the share of naive plays that finish; the mean of such a route is never, so it is not compared.
+The routes with gaps, R04 and R14 as the guides wrote them (`GAPPED`): a state has no rule, or the game refuses the rule's action, so the chance of finishing is below 1 and the
+mean of the route is never, so the mean is not compared. The planner's number for the chance (`success_probability.value`, which `benchmark` prints as "success") is the LOW END of a
+bracket from a cost grid whose horizon is 64 of the smallest costs when the policy is not proper (`risk/_evaluate.py`, its docstring), so it is a lower bound, and R14's
+is 0 although its own uses say about 10% of plays reach the last two crafts; the test therefore asks that the share of naive plays that finish is not below it (`tally.finishing_verdict`).
 
 The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (none now); a test makes it refuse each with a message that names the
 mechanic, and another makes the lists together hold every route file of `examples/routes/`.
