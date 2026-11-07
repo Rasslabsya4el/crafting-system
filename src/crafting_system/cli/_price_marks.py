@@ -68,7 +68,9 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
     (default: the plan's own, `Plan.mean_remaining`); a given route passes its own, which the plan's optimum does not bound. With `all_uses`
     the expected uses of every resource are solved, not only of those whose depth could matter (a report of what a plan buys).
     """
-    prices = plan.prices
+    prices = getattr(plan, "prices", None)
+    if prices is None:  # a stand-in plan of a test has no price file
+        return ()
     labels = _labels(plan, policy) if policy is not None else {}
     counts = _counts(plan, labels) if labels else {}
     names = [name for name in dict.fromkeys(counts) if name not in (CHAOS_ORB, DIVINE_ORB) and name in prices.prices]

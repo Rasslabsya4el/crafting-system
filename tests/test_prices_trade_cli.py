@@ -336,7 +336,8 @@ def test_a_hand_override_for_the_spec_name_means_no_request_and_the_override_win
     assert code == 0 and trade.requests == []
     assert "override" in capsys.readouterr().out
     assert prices_path.read_bytes() == before
-    assert load_prices(prices_path, overrides).prices[R12_KEY] == PriceEntry(7.0, "override")
+    entry = load_prices(prices_path, overrides).prices[R12_KEY]
+    assert (entry.chaos, entry.source, entry.provenance.kind) == (7.0, "override", "override")
 
 
 # -- fetch keeps the trade prices ------------------------------------------------------------------
