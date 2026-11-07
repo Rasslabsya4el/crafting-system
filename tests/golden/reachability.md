@@ -226,6 +226,5 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `enchantment` | cli/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
 | `sockets` | cli/_plan.py |  |
-| `start_sockets_assumed` | **nothing** |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
 
