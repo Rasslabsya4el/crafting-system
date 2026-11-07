@@ -353,10 +353,11 @@ MUTATIONS_HEAVY = [
     ("no multimod", Laws(multimod=False), "R14 with restart"),
     ("no metamod filter", Laws(metamod_filter=False), "R14 with restart"),
     ("an Annulment may remove the fractured mod", Laws(annul_spares_fractured=False), "R04 with restart"),
-    ("a metamod does not refuse an essence", Laws(metamod_refuses_rerolls=False), "R04 with restart"),
     ("no metamod filter", Laws(metamod_filter=False), "R04 with restart"),
-    ("a Fracturing Orb needs no four mods", Laws(fracture_needs_four=False), "R04 with restart"),
 ]
+# Not here, because the two routes never reach the case (the heavy run of this PR gave the same mean to the last digit with each turned off): `fracture_needs_four`
+# (the route annuls down to four mods and fractures there, so an item of fewer is never offered the orb) and `metamod_refuses_rerolls` (the rule of the essence asks for no crafted mod). Their mutation tests are the
+# units of `naive_crafter/test_naive_mechanics.py`, with an exact answer on a tiny ring, and a route that reached the case would need one more rule of the guide's.
 
 
 @pytest.mark.skipif(not HEAVY, reason="long: the heavy run judges these (NAIVE_HEAVY=1)")
