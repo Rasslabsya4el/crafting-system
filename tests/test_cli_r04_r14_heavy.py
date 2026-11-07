@@ -19,6 +19,7 @@ and the planner goes on to the packed solver (`make_plan`, ticket #70). The give
 its mean is finite; the guide's own route has gaps and is checked by `benchmark`, whose entry also holds the completed one.
 """
 
+import ast
 import contextlib
 import datetime
 import io
@@ -165,7 +166,7 @@ def test_benchmark_solves_the_route_and_compares_it_with_the_guides_route_as_wri
 
 
 @HEAVY
-def test_the_divergence_chances_of_the_planner_and_the_guide_are_exact_whatever_the_size_of_the_chain(bench):
+def test_benchmark_divergence_chances_of_the_planner_and_the_guide_are_exact_whatever_the_size_of_the_chain(bench):
     """#572: no chance of a divergence line is a bound, and none is left unmeasured but a state the guide's route cannot finish from."""
     for name in ("given_route", "completed_route"):
         block = bench[name]["divergences"]
@@ -183,3 +184,33 @@ def test_benchmark_records_the_published_odds(bench, route_id):
 
     assert len(odds) == (5 if route_id == "R04" else 6)
     assert [row["matches"] for row in odds if row["published"] in ("25%", "33%", "50%")] == [True] * (1 if route_id == "R04" else 2)
+
+
+def _bench_naming_slips(source):
+    """The test functions in `source` whose use of the `bench` fixture and the word "benchmark" in the name disagree (ticket #677)."""
+    slips = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
+            arguments = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+            takes_bench = any(argument.arg == "bench" for argument in arguments)
+            named = "benchmark" in node.name
+            if takes_bench != named:
+                slips.append(f"{node.name} (line {node.lineno}): takes bench={takes_bench}, has 'benchmark' in its name={named}")
+    return slips
+
+
+def test_every_bench_test_is_named_for_it_and_every_such_name_takes_bench():
+    """#677: a test that takes `bench` without "benchmark" in its name runs with the CLI job and plans the route a second time."""
+    assert _bench_naming_slips(Path(__file__).read_text(encoding="utf-8")) == []
+
+
+def test_the_name_check_flags_a_planted_bench_test_without_the_word():
+    planted = (
+        "def test_the_divergence(bench):\n    pass\n\ndef test_benchmark_ok(bench):\n    pass\n\n"
+        "def test_benchmark_without_bench():\n    pass\n\ndef test_plain():\n    pass\n"
+    )
+
+    assert _bench_naming_slips(planted) == [
+        "test_the_divergence (line 1): takes bench=True, has 'benchmark' in its name=False",
+        "test_benchmark_without_bench (line 7): takes bench=False, has 'benchmark' in its name=True",
+    ]
