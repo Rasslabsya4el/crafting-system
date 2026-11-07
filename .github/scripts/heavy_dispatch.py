@@ -48,13 +48,28 @@ CI_TIMEOUT_MINUTES = 45  # a CI job times out at 30 minutes; a run older than th
 SILENT_MINUTES = 30
 ACTIVE = ("queued", "in_progress")  # job statuses that hold or wait for a runner
 PENDING_RUN = ("pending", "waiting", "requested")  # run statuses before any job exists, e.g. held by a concurrency group
-POLL_SECONDS = 60
+# The 5,000 GitHub API calls an hour are shared by every agent and session of the owner. One waiting dispatcher costs
+# about 2 + 10 + N calls per look (N = runs in flight), so it looks every 3 minutes, and the processes on this PC share
+# one snapshot (SNAPSHOT_SECONDS) instead of each fetching its own (ticket #565).
+POLL_SECONDS = 180
+SNAPSHOT_SECONDS = 90  # a look within this long of the stored snapshot reuses it and calls nothing
+RATE_LIMIT_CAP_SECONDS = 3600  # the longest wait for a rate-limit reset
 STATE_DIR = Path(tempfile.gettempdir()) / "crafting-heavy-dispatch"  # shared by every session on this PC
 LOCK_STALE_SECONDS = 300
 LEDGER_HOURS = 7
 
 LOG_STAMP = r"^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}[:][0-9]{2}[:][0-9]{2})"  # [:] keeps the drive-letter scan quiet
 RUN_NAME = re.compile(r"^heavy (\d+)x (\S+) t(\d+)")
+
+
+def now() -> float:
+    """The clock of this script (seconds since the epoch); a seam so the tests can run it on a fake clock."""
+    return time.time()
+
+
+def pause(seconds: float) -> None:
+    """Every wait of this script goes through here, for the same reason."""
+    time.sleep(seconds)
 
 
 # ---- pure decisions (tested on recorded API responses) -------------------------------------------------------------
@@ -168,6 +183,22 @@ def find_repo() -> str:
     return found[1] if found else DEFAULT_REPO
 
 
+def wait_for_rate_limit(method: str, path: str, reset: str | None) -> None:
+    """The hourly limit is spent: sleep until X-RateLimit-Reset (at most an hour), say so in one line, and go on.
+    Retrying earlier only spends calls that are not there. A lock held by this process is kept fresh meanwhile, or
+    another session would take it over after LOCK_STALE_SECONDS."""
+    try:
+        wait = float(reset) - now() + 2  # 2 s past the reset: the clocks differ a little
+    except (TypeError, ValueError):
+        wait = 60.0  # no usable reset time: a minute, never a tight loop
+    wait = min(max(wait, 2.0), RATE_LIMIT_CAP_SECONDS)
+    print(f"{stamp()} GitHub API rate limit used up ({method} {path}); waiting {wait / 60:.0f} min until its reset", flush=True)
+    end = now() + wait
+    while now() < end:
+        pause(min(60.0, end - now()))
+        DispatchLock.keep_fresh()
+
+
 class Api:
     def __init__(self, repo: str, token: str):
         self.base = f"https://api.github.com/repos/{repo}"
@@ -179,7 +210,10 @@ class Api:
         request.add_header("Authorization", f"Bearer {self.token}")
         request.add_header("Accept", "application/vnd.github+json")
         request.add_header("X-GitHub-Api-Version", "2022-11-28")
-        for attempt in range(1, tries + 1):
+        attempt = 0
+        limited = 0  # waits for the rate limit so far; each ends past the reset time, so a third means something else is wrong
+        while True:
+            attempt += 1
             try:
                 with urllib.request.urlopen(request, timeout=60) as response:
                     raw = response.read()
@@ -187,12 +221,17 @@ class Api:
             except urllib.error.HTTPError as error:
                 if error.code == 404 and method == "GET":
                     return None
+                if error.code in (403, 429) and error.headers.get("X-RateLimit-Remaining") == "0" and limited < 3:
+                    limited += 1
+                    attempt -= 1  # a wait for the reset is not one of the failed tries
+                    wait_for_rate_limit(method, path, error.headers.get("X-RateLimit-Reset"))
+                    continue
                 if error.code < 500 and error.code != 429 or attempt == tries:
                     raise RuntimeError(f"{method} {path}: HTTP {error.code} {error.read()[:300]!r}") from None
             except (urllib.error.URLError, TimeoutError):
                 if attempt == tries:
                     raise
-            time.sleep(3 * attempt)
+            pause(3 * attempt)
 
     def variable(self, name: str, default: int) -> int:
         found = self.call(f"/actions/variables/{name}")
@@ -239,13 +278,58 @@ class Api:
         return parse_time(stamps[-1] + "Z") if stamps else None
 
 
+def fetch_raw(api: Api) -> dict:
+    """What the API says now, unprocessed: the two variables and every active run with its jobs."""
+    floor = api.variable("HEAVY_FLOOR", DEFAULT_FLOOR)
+    reserve = api.variable("CI_RESERVE", DEFAULT_RESERVE)
+    return {"floor": floor, "reserve": reserve, "runs": [{"run": run, "jobs": api.jobs(run["id"])} for run in api.active_runs()]}
+
+
+def occupancies(raw_runs: list[dict], ledger: dict[str, int]) -> list[tuple[dict, list[dict], dict]]:
+    """(run, jobs, occupancy) of raw {run, jobs} entries, counted with the ledger as it is now."""
+    return [(item["run"], item["jobs"], run_occupancy(item["run"], item["jobs"], ledger.get(str(item["run"]["id"]), 0))) for item in raw_runs]
+
+
 def snapshot(api: Api, ledger: dict[str, int]) -> list[tuple[dict, list[dict], dict]]:
-    """(run, jobs, occupancy) of every queued or running run of ci.yml and run.yml."""
-    seen = []
-    for run in api.active_runs():
-        jobs = api.jobs(run["id"])
-        seen.append((run, jobs, run_occupancy(run, jobs, ledger.get(str(run["id"]), 0))))
-    return seen
+    """(run, jobs, occupancy) of every queued or running run of ci.yml and run.yml, fetched live."""
+    return occupancies(fetch_raw(api)["runs"], ledger)
+
+
+def read_shared_snapshot() -> dict | None:
+    """The raw snapshot an earlier look on this PC stored, if it is younger than SNAPSHOT_SECONDS. Lock held."""
+    try:
+        stored = json.loads((STATE_DIR / "snapshot.json").read_text(encoding="utf-8"))
+        age = now() - stored["at"]
+        if 0 <= age < SNAPSHOT_SECONDS and {"floor", "reserve", "runs"} <= stored.keys():
+            return stored
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    return None
+
+
+def write_shared_snapshot(raw: dict, at: float) -> None:
+    """Store a raw snapshot for the next look. Lock held."""
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        part = STATE_DIR / f"snapshot.{os.getpid()}.tmp"
+        part.write_text(json.dumps({**raw, "at": at}), encoding="utf-8")
+        os.replace(part, STATE_DIR / "snapshot.json")
+    except OSError:
+        pass  # only a saving of calls is lost
+
+
+def drop_shared_snapshot() -> None:
+    """Delete the stored snapshot. Lock held."""
+    path = STATE_DIR / "snapshot.json"
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:  # cannot delete it (a sharing violation on Windows): make it too old to be used
+        try:
+            path.write_text(json.dumps({"at": 0}), encoding="utf-8")
+        except OSError:
+            pass
 
 
 # ---- state shared by the sessions on this PC -----------------------------------------------------------------------
@@ -257,7 +341,7 @@ def read_ledger() -> dict[str, int]:
         entries = json.loads((STATE_DIR / "ledger.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    cutoff = time.time() - LEDGER_HOURS * 3600
+    cutoff = now() - LEDGER_HOURS * 3600
     return {run_id: item["runners"] for run_id, item in entries.items() if item["at"] > cutoff}
 
 
@@ -269,7 +353,7 @@ def write_ledger(run_id: int, runners: int) -> None:
             entries = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             entries = {}
-        entries[str(run_id)] = {"runners": runners, "at": time.time()}
+        entries[str(run_id)] = {"runners": runners, "at": now()}
         path.write_text(json.dumps(entries), encoding="utf-8")
     except OSError:
         pass  # the ledger only covers a few minutes; the run name covers the same ground
@@ -284,23 +368,38 @@ class DispatchLock:
         self.path = STATE_DIR / "dispatch.lock"
         self.token = f"{os.getpid()}-{time.time_ns()}"
 
+    held: "DispatchLock | None" = None  # the lock this process holds now, if any
+
+    @classmethod
+    def keep_fresh(cls) -> None:
+        """Touch the held lock, so a long wait inside it is not taken for a dead owner."""
+        lock = cls.held
+        try:
+            if lock is not None and (lock.path / "owner").read_text(encoding="utf-8") == lock.token:
+                os.utime(lock.path)
+        except OSError:
+            pass
+
     def __enter__(self):
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         while True:
             try:
                 os.mkdir(self.path)
                 (self.path / "owner").write_text(self.token, encoding="utf-8")
+                DispatchLock.held = self
                 return self
             except OSError:  # FileExistsError, or PermissionError while another process removes it (Windows)
                 try:
-                    if time.time() - self.path.stat().st_mtime > LOCK_STALE_SECONDS:
+                    if now() - self.path.stat().st_mtime > LOCK_STALE_SECONDS:
                         shutil.rmtree(self.path, ignore_errors=True)
                         continue
                 except OSError:
                     pass
-                time.sleep(2)
+                pause(2)
 
     def __exit__(self, *exc):
+        if DispatchLock.held is self:
+            DispatchLock.held = None
         try:
             if (self.path / "owner").read_text(encoding="utf-8") == self.token:
                 shutil.rmtree(self.path, ignore_errors=True)
@@ -344,7 +443,7 @@ def cmd_run(api: Api, args) -> int:
             f"{args.min_runners} runners can never fit: the most heavy runs ever get is "
             f"{max(floor, TOTAL_RUNNERS - reserve)} (CI_RESERVE={reserve}, HEAVY_FLOOR={floor}). Ask for fewer."
         )
-    deadline = time.time() + args.max_wait * 60 if args.max_wait else None
+    deadline = now() + args.max_wait * 60 if args.max_wait else None
     while True:
         try:
             with DispatchLock():
@@ -358,21 +457,29 @@ def cmd_run(api: Api, args) -> int:
             print(f"{stamp()} {decided['line']} -> would start {decided['count']} runner(s); dry run: nothing dispatched")
             return 0
         line = decided["line"]
-        if deadline and time.time() > deadline:
+        if deadline and now() > deadline:
             print(f"{stamp()} {line} -> gave up after {args.max_wait} min of waiting", flush=True)
             return 2
         if args.no_wait:
             print(f"{stamp()} {line} -> does not fit now", flush=True)
             return 3
         print(f"{stamp()} {line} -> waiting", flush=True)
-        time.sleep(POLL_SECONDS)
+        pause(POLL_SECONDS)
 
 
 def decide(api: Api, args) -> dict:
-    """One look at the live counts: how many runners to start now (0 = wait) and the status line."""
-    floor = api.variable("HEAVY_FLOOR", DEFAULT_FLOOR)
-    reserve = api.variable("CI_RESERVE", DEFAULT_RESERVE)
-    seen = snapshot(api, read_ledger())
+    """One look at the counts: how many runners to start now (0 = wait) and the status line.
+
+    Call it with DispatchLock held. The raw snapshot is shared by the processes on this PC in STATE_DIR/snapshot.json:
+    a look within SNAPSHOT_SECONDS of it reuses it and calls nothing (ticket #565). Occupancy is counted from the raw
+    runs with the ledger as it is now. dispatch() drops the snapshot before the lock is released."""
+    raw = read_shared_snapshot()
+    if raw is None:
+        fetched_at = now()
+        raw = fetch_raw(api)
+        write_shared_snapshot(raw, fetched_at)
+    floor, reserve = raw["floor"], raw["reserve"]
+    seen = occupancies(raw["runs"], read_ledger())
     ci_jobs, heavy = totals([(run, occ) for run, _, occ in seen])
     budget = heavy_budget(floor, reserve, ci_jobs)
     count = runners_to_start(heavy, args.runners, args.min_runners, budget)
@@ -385,6 +492,15 @@ def decide(api: Api, args) -> dict:
 
 
 def dispatch(api: Api, args, count: int) -> int:
+    """Start the run. Called with the caller's DispatchLock held; the stored snapshot is dropped on every way out,
+    before that lock is released, so the next decision sees the run just started."""
+    try:
+        return start_run(api, args, count)
+    finally:
+        drop_shared_snapshot()
+
+
+def start_run(api: Api, args, count: int) -> int:
     before = {run["id"] for run in find_runs(api, args.ref)}
     started = dt.datetime.now(dt.timezone.utc)
     inputs = {
@@ -396,7 +512,7 @@ def dispatch(api: Api, args, count: int) -> int:
     api.call("/actions/workflows/run.yml/dispatches", "POST", {"ref": args.ref, "inputs": inputs})
     # From here the run exists: never raise, or the caller would dispatch it a second time.
     for _ in range(30):  # the run shows up within seconds; holding the lock until then keeps the next session honest
-        time.sleep(4)
+        pause(4)
         try:
             fresh = [run for run in find_runs(api, args.ref) if run["id"] not in before]
         except (RuntimeError, urllib.error.URLError, TimeoutError, OSError):

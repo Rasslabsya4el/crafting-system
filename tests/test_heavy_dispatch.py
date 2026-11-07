@@ -5,9 +5,12 @@ and four heavy runs, taken with the free plan's 20 runners all in use)."""
 
 import copy
 import datetime as dt
+import email.message
 import importlib.util
+import io
 import json
 import sys
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -29,14 +32,18 @@ class FakeApi:
         self.variables = {"HEAVY_FLOOR": 4, "CI_RESERVE": 4} if variables is None else variables
         self.dispatched = []
         self.on_poll = None  # called after every snapshot, to change the world between two polls
+        self.reads = 0  # API calls made to look at the world (variables, run lists, jobs)
 
     def variable(self, name, default):
+        self.reads += 1
         return self.variables.get(name, default)
 
     def active_runs(self):
+        self.reads += 1
         return [{k: v for k, v in run.items() if k != "jobs"} for run in self.runs]
 
     def jobs(self, run_id):
+        self.reads += 1
         jobs = next(run["jobs"] for run in self.runs if run["id"] == run_id)
         if self.on_poll:
             self.on_poll(self)
@@ -72,10 +79,33 @@ def heavy_run(run_id, runners, queued=0, running=0, title=None):
             "created_at": "2026-11-01T10:00:00Z", "run_started_at": "2026-11-01T10:00:00Z", "pull_requests": [], "jobs": jobs}
 
 
+class FakeClock:
+    """The script's own clock (heavy.now, heavy.pause): a wait moves it on and takes no real time."""
+
+    def __init__(self):
+        self.t = 1_800_000_000.0  # a fixed start: the tests never read the real clock
+        self.waits = []
+
+    def now(self):
+        return self.t
+
+    def pause(self, seconds):
+        self.waits.append(seconds)
+        self.t += seconds
+
+
 @pytest.fixture(autouse=True)
 def isolated(tmp_path, monkeypatch):
     monkeypatch.setattr(heavy, "STATE_DIR", tmp_path / "state")
-    monkeypatch.setattr(heavy.time, "sleep", lambda seconds: None)
+    clock = FakeClock()
+    monkeypatch.setattr(heavy, "now", clock.now)
+    monkeypatch.setattr(heavy, "pause", clock.pause)
+    return clock
+
+
+@pytest.fixture
+def clock(isolated):
+    return isolated
 
 
 def counts(api, ledger=None):
@@ -210,10 +240,8 @@ def test_heavy_runs_already_in_flight_use_up_the_budget():
     assert api.dispatched[0]["inputs"]["runners"] == "2"
 
 
-def test_gives_up_after_max_wait(monkeypatch):
+def test_gives_up_after_max_wait():
     api = FakeApi([ci_run(10, queued=16)])
-    clock = iter(range(0, 10_000, 4000))
-    monkeypatch.setattr(heavy.time, "time", lambda: next(clock))
     assert heavy.cmd_run(api, args(runners=8, max_wait=1)) == 2
     assert api.dispatched == []
 
@@ -345,3 +373,175 @@ def test_lock_is_released_only_by_its_owner(tmp_path):
         stolen.__exit__()  # not the owner: the lock stays
         assert (first.path / "owner").exists()
     assert not first.path.exists()
+
+
+# ---- the shared API limit (ticket #565) -----------------------------------------------------------------------------
+
+
+def look(api, runners=4):
+    """One decision the way cmd_run takes it: under the lock."""
+    with heavy.DispatchLock():
+        return heavy.decide(api, args(runners=runners))
+
+
+def test_two_decisions_30_seconds_apart_make_one_round_of_api_calls(clock):
+    api = FakeApi([ci_run(10, running=6), heavy_run(5, 4, running=4)])
+    first = look(api)
+    one_round = api.reads
+    assert one_round == 2 + 1 + 2  # two variables, one run list, the jobs of the two runs
+    clock.t += 30
+    second = look(api)
+    assert api.reads == one_round  # the second look called nothing
+    assert second == first
+
+
+def test_two_decisions_120_seconds_apart_make_two_rounds(clock):
+    api = FakeApi([ci_run(10, running=6)])
+    look(api)
+    one_round = api.reads
+    clock.t += 120
+    look(api)
+    assert api.reads == 2 * one_round
+
+
+def test_a_reused_snapshot_is_counted_with_the_ledger_as_it_is_now(clock):
+    named = heavy_run(2, 8)
+    named["display_title"] = "Run a command"  # no runners in the name: only the ledger says
+    named["jobs"] = [{"id": 1, "name": "plan", "status": "queued", "created_at": "2026-11-01T10:00:00Z", "started_at": None}]
+    api = FakeApi([named])
+    assert "heavy in flight 1," in look(api)["line"]
+    heavy.write_ledger(2, 5)  # the dispatcher learns the run's size between two looks
+    clock.t += 30
+    reads = api.reads
+    assert "heavy in flight 5," in look(api)["line"]
+    assert api.reads == reads
+
+
+def test_a_dispatch_between_two_decisions_makes_the_second_fetch_again(clock):
+    api = FakeApi([ci_run(10, running=2)])
+    look(api)
+    assert (heavy.STATE_DIR / "snapshot.json").exists()
+    with heavy.DispatchLock():
+        heavy.decide(api, args())
+        assert heavy.dispatch(api, args(), 4) == 0
+        assert not (heavy.STATE_DIR / "snapshot.json").exists()  # gone before the lock is released
+    reads = api.reads
+    clock.t += 5
+    api.runs.append(heavy_run(6, 4, running=4))  # the run just started
+    assert "heavy in flight 4," in look(api)["line"]
+    assert api.reads > reads
+
+
+def test_the_snapshot_is_dropped_even_when_the_dispatch_fails(clock):
+    api = FakeApi([])
+    look(api)
+    api.call = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("POST: HTTP 500"))
+    with heavy.DispatchLock():
+        with pytest.raises(RuntimeError):
+            heavy.dispatch(api, args(), 2)
+    assert not (heavy.STATE_DIR / "snapshot.json").exists()
+
+
+def test_a_broken_snapshot_file_is_fetched_again(clock):
+    api = FakeApi([])
+    look(api)
+    (heavy.STATE_DIR / "snapshot.json").write_text("{not json", encoding="utf-8")
+    reads = api.reads
+    look(api)
+    assert api.reads > reads
+
+
+def test_the_wait_loop_polls_every_three_minutes(clock):
+    assert heavy.POLL_SECONDS == 180
+    api = FakeApi([ci_run(10, queued=16)])
+    assert heavy.cmd_run(api, args(runners=8, max_wait=7)) == 2
+    assert api.dispatched == []
+    assert clock.waits.count(heavy.POLL_SECONDS) == 3  # looks at 0, 3 and 6 minutes; the look at 9 gives up
+
+
+def limited(reset, remaining="0", code=403):
+    headers = email.message.Message()
+    headers["X-RateLimit-Remaining"] = remaining
+    if reset is not None:
+        headers["X-RateLimit-Reset"] = str(int(reset))
+    return urllib.error.HTTPError("https://api.github.test/x", code, "rate limit", headers, io.BytesIO(b'{"message":"API rate limit exceeded"}'))
+
+
+class Reply:
+    def __init__(self, body):
+        self.body = body
+
+    def read(self):
+        return self.body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def serve(monkeypatch, *answers):
+    """urlopen answers one item of `answers` per call: an exception is raised, bytes are returned."""
+    seen = []
+
+    def urlopen(request, timeout=None):
+        seen.append(request.full_url)
+        answer = answers[len(seen) - 1]
+        if isinstance(answer, Exception):
+            raise answer
+        return Reply(answer)
+
+    monkeypatch.setattr(heavy.urllib.request, "urlopen", urlopen)
+    return seen
+
+
+@pytest.mark.parametrize("code", [403, 429])
+def test_a_rate_limit_refusal_waits_until_the_reset_and_goes_on(clock, monkeypatch, capsys, code):
+    reset = int(clock.t) + 600
+    seen = serve(monkeypatch, limited(reset, code=code), b'{"value": "7"}')
+    api = heavy.Api("o/r", "token")
+    assert api.variable("HEAVY_FLOOR", 4) == 7
+    assert len(seen) == 2  # one refused, one retried after the wait: no tight loop
+    assert reset <= clock.t <= reset + 5  # the fake clock stands at the reset time
+    assert all(wait <= 60 for wait in clock.waits) and len(clock.waits) <= 11  # slept in minutes, not in a spin
+    out = capsys.readouterr().out.strip().splitlines()
+    assert len(out) == 1 and "rate limit" in out[0]
+
+
+def test_the_rate_limit_wait_is_capped_at_an_hour(clock, monkeypatch):
+    start = clock.t
+    serve(monkeypatch, limited(start + 10 * 3600), b"{}")
+    heavy.Api("o/r", "token").call("/x")
+    assert start + 3600 <= clock.t <= start + 3600 + 5
+
+
+def test_a_refusal_without_a_reset_time_waits_a_minute_not_in_a_loop(clock, monkeypatch):
+    start = clock.t
+    serve(monkeypatch, limited(None), b"{}")
+    heavy.Api("o/r", "token").call("/x")
+    assert 59 <= clock.t - start <= 65
+
+
+def test_a_403_that_is_not_the_rate_limit_raises_at_once(clock, monkeypatch):
+    seen = serve(monkeypatch, limited(clock.t + 600, remaining="4999"))
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        heavy.Api("o/r", "token").call("/x")
+    assert len(seen) == 1 and clock.waits == []
+
+
+def test_a_limit_that_does_not_lift_gives_up_after_three_waits(clock, monkeypatch):
+    seen = serve(monkeypatch, *[limited(clock.t + 60)] * 4)
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        heavy.Api("o/r", "token").call("/x")
+    assert len(seen) == 4
+
+
+def test_a_rate_limit_wait_inside_the_lock_keeps_the_lock_fresh(clock, monkeypatch):
+    serve(monkeypatch, limited(clock.t + 1800), b"{}")
+    touched = []
+    real = heavy.DispatchLock.keep_fresh.__func__
+    monkeypatch.setattr(heavy.DispatchLock, "keep_fresh", classmethod(lambda cls: touched.append(cls.held) or real(cls)))
+    with heavy.DispatchLock() as lock:
+        heavy.Api("o/r", "token").call("/x")
+    assert len(touched) >= 25 and all(held is lock for held in touched)  # every minute of a 30 minute wait

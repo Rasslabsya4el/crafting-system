@@ -86,7 +86,7 @@ dispatcher, never `gh workflow run run.yml`:**
 
 (Use `../../scratch/uv-venv/Scripts/python.exe` or any Python 3.10+; the script is standard library only. It takes its
 token from `GH_TOKEN`, else `gh auth token`, else `git credential fill`.) The dispatcher waits on your PC, which costs
-no runner, polls every 60 seconds and prints one line per poll. It reads the live jobs of `ci.yml` and `run.yml` and
+no runner, polls every 3 minutes and prints one line per poll. It reads the jobs of `ci.yml` and `run.yml` and
 dispatches only while
 
     heavy_in_flight + requested <= HEAVY_BUDGET
@@ -102,6 +102,11 @@ With the defaults heavy runs may use 16 runners when no CI run is waiting, 8 whe
 `gh variable set HEAVY_FLOOR --body 6`); the next poll of every waiting dispatcher sees the new value. A heavy run that
 is queued or running counts against the budget from the moment it is dispatched, so two sessions cannot both take the
 same free runners (sessions on one PC also share a lock while they decide).
+
+The 5,000 GitHub API calls an hour are **one limit for every agent and session**: the dispatchers on one PC share a
+snapshot of the runs for 90 seconds (`snapshot.json` in the dispatcher's temp folder, read and written under that lock and
+dropped when a run is dispatched), and a dispatcher that meets the rate-limit refusal waits for its reset (at most an hour,
+one line printed) instead of retrying. Nobody should poll a run more often than every 4 minutes (ticket #565).
 
 Options of `run`:
 
