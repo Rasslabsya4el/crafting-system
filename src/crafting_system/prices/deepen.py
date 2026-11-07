@@ -7,7 +7,9 @@ depth in units, the other one in the entry's provenance (`other`), so the price 
 
 The order of preference is: a reading of the league being priced before one of an earlier league (a previous-league
 or Standard price is only ever kept when nothing of this league exists), then the greater depth; a reading with no
-recorded depth loses to one that has it. A hand price, a default and a trade price already in the file are never replaced.
+recorded depth loses to one that has it. The market rule of the trade prices (#355: at least `DEFAULT_MIN_LISTINGS` offers on
+the site) holds here too: a book of fewer offers is a mean of all of them, an outlier decides it, so it is kept beside the
+price (`other`) but replaces no price of this league; it is taken only where nothing of this league exists. A hand price, a default and a trade price already in the file are never replaced.
 Nothing here reads the clock or sends a request: `read(name)` is the caller's.
 """
 
@@ -18,7 +20,7 @@ from datetime import date
 from .price_file import PriceEntry, PriceFile
 from .provenance import EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, TRADE, WATCH, Provenance
 from .trade_exchange import DEFAULT_K, ExchangeReading
-from .trade_market import TRADE_SOURCE
+from .trade_market import DEFAULT_MIN_LISTINGS, TRADE_SOURCE
 
 REPLACEABLE = (EXCHANGE, HISTORY, WATCH, PREVIOUS_LEAGUE, STANDARD)  # the kinds a trade reading may replace
 EARLIER_LEAGUE = (PREVIOUS_LEAGUE, STANDARD)
@@ -36,6 +38,12 @@ def exchange_entry(reading: ExchangeReading, league: str, day: date, item_id: st
 
 def _depth(entry: PriceEntry) -> float | None:
     return entry.provenance.depth if entry.provenance is not None else None
+
+
+def _offers(entry: PriceEntry) -> int:
+    """The offers the site held when a trade entry was read (`detail["listings"]`); 0 when it says nothing."""
+    found = (entry.detail or {}).get("listings")
+    return found if isinstance(found, int) and not isinstance(found, bool) else 0
 
 
 def _rank(entry: PriceEntry, league: str) -> tuple[int, float]:
@@ -87,7 +95,9 @@ def deepen_with_trade(
         if current is None:
             prices[name] = found
             warnings.append(f"{name}: no poe.ninja price; the trade offers give {found.chaos:g} Chaos on {_depth(found):g} units")
-        elif _rank(found, price_file.league) > _rank(current, price_file.league):
+        elif _rank(found, price_file.league) > _rank(current, price_file.league) and (
+            _offers(found) >= DEFAULT_MIN_LISTINGS or _rank(current, price_file.league)[0] == 0
+        ):
             prices[name] = _with_other(found, current)
             warnings.append(f"{name}: the trade offers are deeper ({_depth(found):g} units, {found.chaos:g} Chaos) than {current.source} ({_depth(current)} units, {current.chaos:g} Chaos); taken")
         else:

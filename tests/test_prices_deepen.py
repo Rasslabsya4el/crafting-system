@@ -38,7 +38,7 @@ def file(**prices):
 
 
 def reading(chaos, depth):
-    return exchange_entry(ExchangeReading(chaos, depth, 5, 9, 9, 0), "Allflame", DAY, "x")
+    return exchange_entry(ExchangeReading(chaos, depth, 5, 12, 12, 0), "Allflame", DAY, "x")
 
 
 # --- reading the offers ------------------------------------------------------------------------------------------------
@@ -150,3 +150,28 @@ def test_a_hand_price_and_a_trade_price_already_in_the_file_are_never_replaced()
     got, _ = deepen_with_trade(start, ["Hand", "Bought"], lambda name: asked.append(name) or reading(1.0, 99.0))
 
     assert asked == [] and got.prices == start.prices
+
+
+def thin_book(chaos, depth):
+    """A book of fewer offers than the market rail: the mean is of all of them."""
+    return exchange_entry(ExchangeReading(chaos, depth, 5, 5, 5, 0), "Allflame", DAY, "x")
+
+
+def test_a_book_of_fewer_offers_than_the_market_rail_replaces_no_price_of_this_league():
+    """The Screaming Essence of Spite on 2026-11-07: five offers, 5, 10, 15, 35 Chaos and one Divine Orb, a mean of 110 against poe.ninja's 1."""
+    start = file(**{"Screaming Essence of Spite": ninja_entry(1.0, 6.7)})
+
+    got, warnings = deepen_with_trade(start, ["Screaming Essence of Spite"], lambda name: thin_book(110.6, 91.0))
+
+    entry = got.prices["Screaming Essence of Spite"]
+    assert (entry.chaos, entry.provenance.kind) == (1.0, EXCHANGE)
+    assert entry.provenance.other == {"kind": TRADE, "chaos": 110.6, "depth": 91.0}
+    assert "kept" in warnings[0]
+
+
+def test_a_thin_book_still_beats_a_previous_leagues_price_and_a_missing_price():
+    previous = file(Old=ninja_entry(0.34, 9e4, PREVIOUS_LEAGUE, "Mirage", "2026-06-13"))
+
+    got, _ = deepen_with_trade(previous, ["Old", "New"], lambda name: thin_book(8.8, 71.0))
+
+    assert got.prices["Old"].chaos == 8.8 and got.prices["New"].chaos == 8.8
