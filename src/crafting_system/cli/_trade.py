@@ -51,7 +51,6 @@ from crafting_system.prices.trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
 
 COMMAND = "python -m crafting_system.cli trade"
-DATA_FETCH_COMMAND = "python -m crafting_system.data fetch"
 
 
 def trade_main(
@@ -122,7 +121,7 @@ def _trade(
     try:
         game = data if data is not None else load_game_data(cache_dir=config.cache_dir)
     except DataError as error:
-        raise DataError(f"{error}; run `{DATA_FETCH_COMMAND}`") from error
+        raise DataError(f"{error}; fetch the game data first, then run this again") from error
     target = load_target(Path(target_file), game)
     if target.start is not StartKind.BOUGHT:
         raise ValueError(f"{target_file}: the target says `start: given`, so its start item has no price to fetch")

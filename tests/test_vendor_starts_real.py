@@ -167,7 +167,7 @@ def test_r12_with_recipe_starts_on_gives_the_same_plan_and_names_the_refused_rec
     assert code == 0
     assert document["totals"]["mean_cost"]["value"] == plan.risk.mean.value + plan.start_price.chaos
     assert [(each["recipe"], each["reason"]) for each in document["start_options"]["refused"]] == [("jewellery_chaos_resistance", NO_TARGET_MOD)]
-    assert "refused (no target mod): no requirement of the target asks for what these recipes make: jewellery_chaos_resistance" in printed
+    assert "refused (no target mod): no requirement of the target asks for what these recipes make: Ring or amulet with chaos resistance" in printed
 
 
 # --- the gem recipes ------------------------------------------------------------------------------------------------------------

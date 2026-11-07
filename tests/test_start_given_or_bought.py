@@ -91,7 +91,8 @@ def test_a_bought_start_item_with_no_price_is_refused_and_the_error_names_its_ke
 
     message = str(caught.value)
     assert repr(START) in message and "must have a price" in message
-    assert "python -m crafting_system.cli trade" in message and "--start-price" in message
+    assert "`trade` command" in message and "--start-price" in message  # what to do, in the words of the report (#586)
+    assert "python" not in message and ".toml" not in message
 
 
 def test_the_price_of_a_bought_start_item_is_read_under_the_key_computed_from_the_target(bought_target):

@@ -339,7 +339,7 @@ def test_a_key_that_is_not_in_the_price_file_is_an_error_that_names_the_key_and_
         resolve_start_price(DATA, target, prices(**{"R12 start amulet": 1.0}), None)
 
     assert start_price_key(DATA, target) in str(error.value)
-    assert "python -m crafting_system.cli trade" in str(error.value)
+    assert "`trade` command" in str(error.value) and "python" not in str(error.value)  # what to do, in the words of the report (#586)
 
 
 def test_a_price_typed_under_the_old_name_of_the_item_is_not_found():

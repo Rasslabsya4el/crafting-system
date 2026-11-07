@@ -8,10 +8,11 @@ changes the cheapest total, the cheapest total at each of its readings with thei
 
 import math
 
+from ._axes import axis_name, reading_pair, value_text
 from ._start_step import FirstStep
 from ._start_types import NO_TARGET_MOD, SOURCE_PLAIN, ConsideredStart, Reading, RefusedStart, StartChoice
 
-OFF_HOW = "`--no-recipe-starts`, or recipe_starts = false under [planner] in crafting.toml, turns recipe starts off"
+OFF_HOW = "the option `--no-recipe-starts`, or the recipe starts setting in the planner settings, turns recipe starts off"
 
 
 def money(chaos: float) -> str:
@@ -23,12 +24,15 @@ def _number(value: float) -> float | None:
 
 
 def reading_text(reading: Reading) -> str:
-    """A reading in words: `elemental_cap = wiki` (several axes joined with a comma, none as "no rule axis")."""
-    return ", ".join(f"{axis} = {value}" for axis, value in reading) or "no rule axis"
+    """A reading in words: `elemental recipe cap = the wiki's tier 3` (several axes joined with a comma, none as "no rule axis"),
+    each axis and value from the one table of `_axes`."""
+    return ", ".join(reading_pair(axis, value) for axis, value in reading) or "no rule axis"
 
 
 def _scope(axis: str | None, values: tuple[str, ...]) -> str:
-    return "" if axis is None else f" (only at {axis} = {', '.join(values)})"
+    if axis is None:
+        return ""
+    return f" (only at {axis_name(axis)} = {' or '.join(value_text(axis, value) for value in values)})"
 
 
 def _row(row: ConsideredStart) -> str:
@@ -48,8 +52,8 @@ def _row(row: ConsideredStart) -> str:
 
 
 def _refusal(refusal: RefusedStart) -> str:
-    steps = f", {refusal.steps} steps" if refusal.steps else ""
-    return f"  refused: {refusal.name} ({refusal.recipe}{steps}){_scope(refusal.axis, refusal.reading_values)}: {refusal.reason}: {refusal.detail}"
+    steps = f" ({refusal.steps} steps)" if refusal.steps else ""
+    return f"  refused: {refusal.name}{steps}{_scope(refusal.axis, refusal.reading_values)}: {refusal.reason}: {refusal.detail}"
 
 
 def _gives(text: str, note: str) -> str:
@@ -90,12 +94,12 @@ def start_lines(choice: StartChoice) -> list[str]:
     for refusal in choice.refused:
         if refusal.reason != NO_TARGET_MOD:
             lines.append(_refusal(refusal))
-    unasked = sorted({refusal.recipe for refusal in choice.refused if refusal.reason == NO_TARGET_MOD})
+    unasked = sorted({refusal.name for refusal in choice.refused if refusal.reason == NO_TARGET_MOD})
     if unasked:  # one line: a target asks for few of the recipes' mods, and a line for each would bury the others
         lines.append(f"  refused ({NO_TARGET_MOD}): no requirement of the target asks for what these recipes make: {', '.join(unasked)}")
     if choice.reading_matters:
         low, high = choice.total_range
-        lines.append("  Rule axis changes the cheapest total (ADR-0059); the plan is the first reading:")
+        lines.append("  A rule the sources leave open changes the cheapest total; the plan is the first reading:")
         for entry in choice.by_reading:
             label = next((row.candidate.label for row in choice.considered if row.candidate.key == entry.key), "no start reaches the goal")
             lines.append(f"    {reading_text(entry.reading)}: {money(entry.total)} Chaos ({label})")

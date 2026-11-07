@@ -359,6 +359,7 @@ def unresolved(risk, estimate) -> bool:
 
 
 PERCENTILE_WORDS = {
+    "success": "the success chance",
     "mean": "the mean cost",
     "variance": "the variance",
     "p50": "the median cost",
@@ -368,14 +369,17 @@ PERCENTILE_WORDS = {
 QUANTILES = ("p50", "p90", "CVaR")  # the three that need the percentile calculation
 
 
-def not_computed(*names: str) -> str:
-    """"Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth": the figures `names` (keys of `PERCENTILE_WORDS`)."""
+def figures(*names: str) -> str:
+    """"the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth": the figures `names` (keys of `PERCENTILE_WORDS`) in a list."""
     words = [PERCENTILE_WORDS[name] for name in names]
     if len(words) > 2:
-        listed = ", ".join(words[:-1]) + ", and " + words[-1]
-    else:
-        listed = " and ".join(words)
-    return f"Not computed: {listed}"
+        return ", ".join(words[:-1]) + ", and " + words[-1]
+    return " and ".join(words)
+
+
+def not_computed(*names: str) -> str:
+    """"Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth": the figures `names` (keys of `PERCENTILE_WORDS`)."""
+    return f"Not computed: {figures(*names)}"
 
 
 def risk_limits(risk) -> tuple[Limit, ...]:

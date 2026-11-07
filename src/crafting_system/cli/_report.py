@@ -406,7 +406,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if risk is None:
         lines.append(f"Run time: both solvers {plan.solve_seconds * 1000:.0f} ms")
     else:
-        lines.append(f"Run time: solver {plan.solve_seconds * 1000:.0f} ms, risk.evaluate {plan.risk_seconds * 1000:.1f} ms")
+        lines.append(f"Run time: solver {plan.solve_seconds * 1000:.0f} ms, risk figures {plan.risk_seconds * 1000:.1f} ms")
     if verification is not None:
         lines.append("")
         lines.extend(verification_lines(verification) if plan.approximation else _verification_lines(verification, plan))

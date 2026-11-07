@@ -335,7 +335,7 @@ def test_the_query_turns_the_setting_on_and_nothing_else_does():
     plain = item(roll("IncreasedLife1"))
 
     assert strand_setting(plain) is STRANDS_OFF and not STRANDS_OFF.on
-    assert strand_setting(plain, asked=True) == StrandSetting(True, "the setting memory_strands is on (`--strands` or crafting.toml)")
+    assert strand_setting(plain, asked=True) == StrandSetting(True, "asked for by `--strands` or in the planner settings")
     assert strand_setting(item(roll("IncreasedLife1"), memory_strands=1)).on
     assert not strand_setting(item(roll("IncreasedLife1"), memory_strands=0)).on
 
@@ -378,7 +378,7 @@ def test_asking_for_strands_is_refused_until_the_batch_builds_them(tmp_path, cap
 
     assert code == 1
     err = capsys.readouterr().err
-    assert "Memory Strands are on (the setting memory_strands is on" in err and "cannot plan yet" in err
+    assert "Memory Strands are on (asked for by `--strands` or in the planner settings)" in err and "cannot plan yet" in err
 
 
 def test_a_start_item_with_strands_is_refused_the_same_way_and_says_why(tmp_path, capsys):

@@ -126,7 +126,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | `axes` | an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading of it with the interval yet | no benchmark target |
 
 - `Abstraction(..., allow_inputs=False) in make_plan`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.
-- `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (the setting memory_strands is on (`--strands` or crafting.toml)), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
+- `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (asked for by `--strands` or in the planner settings), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
 - Targets that take a corrupted item (`allow_corrupted`, or a corrupted implicit): none; offers of a corrupting action over all entries: 0.
 - Fossil sets that use the Bloodstained Fossil (offered only when the target asks for a corrupted implicit): up to 2302 listed for one start item, 0 offered by any entry.
 

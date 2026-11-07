@@ -30,6 +30,7 @@ from crafting_system.simulator import SampledEstimate
 from crafting_system.solver import Action
 
 from ._approx import Approximation
+from ._limits import figures
 from ._plan import Plan
 from ._reach import policy_states
 from ._verify import CVAR_LEVEL, SIGMAS, Verification
@@ -38,7 +39,8 @@ SIMULATED = "simulated, not certified"
 CVAR_PERCENT = f"{CVAR_LEVEL:.0%}"
 CERTIFIED = "approximate (certified within {gap} of the exact mean)"
 UNCERTIFIED = "approximate (the certified gap is {gap}, above the {tolerance} tolerance)"
-NO_RISK = "not given for an approximate answer: the chain on blocks is not Markov and no exact chain of the policy is built"
+RISK_FIGURES = ("success", "p50", "p90", "CVaR")  # the keys of `_limits.PERCENTILE_WORDS` an approximate answer does not give
+NO_RISK = "an approximate answer solves merged groups of item states, so the spread of one whole run cannot be worked out exactly"
 
 
 def percent(value: float) -> str:
@@ -78,7 +80,7 @@ def marking_lines(approximation: Approximation | None, shift: float, divine: flo
 
 def risk_lines() -> list[str]:
     """What the result block says in place of the odds and the percentiles."""
-    return [f"  success, p50, p90, CVaR  {NO_RISK}"]
+    return [f"  Not given for an approximate answer: {figures(*RISK_FIGURES)} ({NO_RISK})"]
 
 
 def marking_document(approximation: Approximation | None, shift: float) -> dict:

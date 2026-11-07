@@ -289,6 +289,7 @@ CANDIDATE = {  # name -> (a statement with the internal form in it, the same thi
     "a workflow word, the main chat": ("The claim was settled by the main chat for now." + SRC, "The claim was settled by the planner's own choice for now." + SRC),
     "a base id in brackets": ("Penetrating Arrow Quiver [QuiverNew5] is bought as the start item." + SRC, "The Penetrating Arrow Quiver is bought as the start item." + SRC),
     "a snake_case token": ("The claim spend_law_uniform_everywhere says so." + SRC, "The claim says so in the memory strands post." + SRC),
+    "a snake_case token with one underscore": ("The cap is read at elemental_cap = coe for this recipe." + SRC, "The cap is read at the elemental recipe cap of Craft of Exile for this recipe." + SRC),
 }
 
 
@@ -341,6 +342,8 @@ def test_the_check_of_internal_names_fails_on_an_internal_name_and_passes_on_wor
         ("the owner's in-game list", "a workflow word"),
         ("#182", "a ticket number"),
         ("spend_law_uniform", "a snake_case token"),
+        ("elemental_cap", "a snake_case token"),
+        ("group_conflict", "a snake_case token"),
     ],
 )
 def test_every_form_of_an_internal_name_is_found_and_named(text, kind):

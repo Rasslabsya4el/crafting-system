@@ -116,7 +116,7 @@ def walk(
                             if _edges(builder, found, states) != {s: w for s, w in fresh.items()}:
                                 raise ValueError(
                                     f"two states share the kernel key of {priced.label!r} but not its kernel (checked at {state!r}): "
-                                    "`Abstraction.kernel_key` does not say enough for the packed walk"
+                                    "the key the model gives to tell its states apart does not say enough for the packed walk"
                                 )
                     if found is None:
                         try:
