@@ -138,6 +138,12 @@ class Plan:
             object.__setattr__(self, "limits", approximate_limits(self.limits))
 
     @property
+    def simulated_start(self) -> Item:
+        """The item a simulated craft starts from: the unopened listing when the start is a bought item whose mods are drawn (ADR-0064), else the target's own start item."""
+        listing = unopened_listing(self.abstraction.data, self.target.start_item) if self.start.flags.unopened else None
+        return listing or self.target.start_item
+
+    @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
         return self.solution.policy
 

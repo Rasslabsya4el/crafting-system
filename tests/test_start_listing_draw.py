@@ -237,3 +237,18 @@ def test_a_given_route_takes_the_draw_first_and_needs_no_rule_for_it():
     assert route.rules[0].do == DRAW_LABEL and result.gaps == ()
     assert result.risk.success_probability.value == pytest.approx(1.0)
     assert plan.solution.values[plan.start] <= result.risk.mean.value + 1e-9  # the solver is no dearer than the guide's Alteration spam
+
+
+# --- the simulator starts from the unopened listing ----------------------------------------------------------------------------------
+
+
+def test_a_simulated_craft_starts_from_the_listing_and_agrees_with_the_computed_mean():
+    from crafting_system.cli._verify import verify
+
+    data = MAGIC
+    aim = target(data)
+    plan = make_plan(data, aim, prices(start_price_key(data, aim)))
+
+    assert plan.simulated_start.unopened and not aim.start_item.unopened
+    check = verify(data, plan, runs=4000, seed=7)
+    assert check.agrees, check.reason
