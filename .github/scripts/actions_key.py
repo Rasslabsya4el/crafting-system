@@ -355,7 +355,7 @@ def one_command(arguments: argparse.Namespace) -> int:
 def read_status(pid: int) -> tuple[int | None, int | None]:
     """`(resident, peak)` memory of a process in MB, from /proc (None where the system has none)."""
     try:
-        with open(f"/proc/{pid}/status", encoding="utf-8") as handle:
+        with open(Path(os.sep, "proc", str(pid), "status"), encoding="utf-8") as handle:
             fields = dict(line.split(":", 1) for line in handle if ":" in line)
         return int(fields["VmRSS"].split()[0]) // 1024, int(fields["VmHWM"].split()[0]) // 1024
     except (OSError, KeyError, ValueError):
