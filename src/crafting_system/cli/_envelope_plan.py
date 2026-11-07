@@ -248,10 +248,64 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             "The search was stopped",
             f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} item states looked at; the plan restarts from the start item "
             "wherever the search had not looked",
-            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, and no plan costs less "
-            f"than {info.lower:,.2f}.",
+            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item. " + certificate_text(info),
         ),
     )
 
 
-__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "envelope_limits", "envelope_result", "route_incumbent"]
+def certificate_gap(info: EnvelopeInfo) -> float | None:
+    """The most the stop can have cost, `U / LB - 1`: how far the plan can be above the best possible cost. None when `LB` is not above zero."""
+    if not info.lower > 0.0 or not math.isfinite(info.upper):
+        return None
+    return max(info.upper / info.lower - 1.0, 0.0)
+
+
+def certificate_figures(lower: float, upper: float) -> tuple[str, str]:
+    """`LB` and `U` as printed: two decimals, and more only when two decimals would print them the same although `LB < U` (a nearly closed search)."""
+    for places in range(2, 13):
+        low, high = f"{lower:,.{places}f}", f"{upper:,.{places}f}"
+        if low != high or not lower < upper:
+            return low, high
+    return low, high
+
+
+def certificate_gap_text(gap: float) -> str:
+    """The gap as printed, always a percent: two decimals from 0.1% up, below that two significant digits ("0.000014%"), never a rounded 0."""
+    if gap == 0.0:
+        return "0%"
+    percent = gap * 100.0
+    if percent >= 0.1:
+        return f"{percent:.2f}%"
+    return f"{percent:.{1 - math.floor(math.log10(percent))}f}%"
+
+
+def certificate_text(info: EnvelopeInfo) -> str:
+    """What a stopped search still guarantees, next to the point answer (OR-11, OR-13): `[LB, U]`, the gap, the bound used and what it bounds.
+
+    The plan and its exact mean `U` stay the answer; the interval only says how far the stop could be from the best possible cost. `LB` is a
+    lower bound of the whole graph: the optimistic model of the crafted pattern (the walk-free bound), raised by the actions the search looked at,
+    and never above the best cost of any plan over every state the item can reach, expanded or not. It holds because the bound is sound by
+    construction (#497: the optimistic model costs no more than the real game at every key); the guard of the search (`BoundError`) checks the
+    bound only at the states it expanded, and at the tips only when a lower solve fails, so the text never says the guard verified `LB`.
+    """
+    gap = certificate_gap(info)
+    lower = min(max(info.lower, 0.0), info.upper)  # a rounding of LB just above U never prints [x, y] with x above y
+    low, high = certificate_figures(lower, info.upper)
+    head = (
+        f"The best possible cost lies in [{low}, {high}] Chaos after the start item: no way of crafting this item, including the ones the search "
+        f"did not look at, costs less than {low} on average. "
+    )
+    gap_text = (
+        f"The plan costs at most {certificate_gap_text(gap)} more than the best possible cost. "
+        if gap is not None
+        else "No gap can be stated: the lower figure is not above zero. "
+    )
+    bound = (
+        f"{low} comes from a simplified count of the item that tracks only its rarity, how many mods it has on each side, and its fractured and "
+        "crafted mods, which never prices a step above its true cost; the search raised it with the steps it did look at. It holds because of how "
+        "that count is built, not because it was checked on every item the crafting can reach: the search checks it only on the ones it looked at."
+    )
+    return head + gap_text + bound
+
+
+__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "certificate_figures", "certificate_gap", "certificate_gap_text", "certificate_text", "envelope_limits", "envelope_result", "route_incumbent"]

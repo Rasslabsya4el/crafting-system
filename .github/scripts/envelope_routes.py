@@ -29,7 +29,8 @@ import packed_routes as P  # noqa: E402  (the inputs of a route, the memory watc
 
 from crafting_system.cli import _packed, make_plan  # noqa: E402
 from crafting_system.cli._envelope import Net  # noqa: E402
-from crafting_system.cli._envelope_plan import route_incumbent  # noqa: E402
+from crafting_system.cli._envelope_plan import certificate_gap, route_incumbent  # noqa: E402
+from crafting_system.cli._limits import limit_text  # noqa: E402
 from crafting_system.cli._route import load_route  # noqa: E402
 
 ROOT = P.ROOT
@@ -73,6 +74,9 @@ def run_phase(phase: str, route: str, say, use_incumbent: bool, net_seconds: flo
             bound_keys=info.bound_keys, bound_seconds=round(info.bound_seconds, 1), first_upper=info.first_upper, incumbent=info.incumbent,
             search_peak_mb=info.peak_mb,
         )
+        if not info.exact:  # the certificate of a stopped search, as the report prints it (#499)
+            row["certificate"] = [limit_text(limit) for limit in plan.limits if limit.what.startswith("The search was stopped")]
+            row["gap"] = certificate_gap(info)
     say(f"{phase}: mean {row['mean']!r}, {row['states_known']:,} states known, {row['policy_states']:,} in the plan, {seconds:.0f} s, {row['peak_mb']} MB")
     return {"row": row, "policy": policy}
 
@@ -99,8 +103,12 @@ def compare(envelope: dict, full: dict) -> dict:
         "expanded_share_of_full": None if a.get("expanded") is None else a["expanded"] / b["states_known"],
         "touched_share_of_full": a["states_known"] / b["states_known"],
         "seconds_envelope": a["seconds"], "seconds_full": b["seconds"], "peak_mb_envelope": a["peak_mb"], "peak_mb_full": b["peak_mb"],
-        "exact": a.get("exact"), "lower": a.get("lower"), "upper": a.get("upper"),
+        "exact": a.get("exact"), "lower": a.get("lower"), "upper": a.get("upper"), "gap": a.get("gap"),
     }
+    if a.get("exact") is False:  # a stopped search: LB <= the exact mean of the full walk <= U (#499)
+        slack = 1e-9 * abs(b["mean"])
+        out["certificate_holds"] = a["lower"] <= b["mean"] + slack and b["mean"] <= a["upper"] + slack
+        out["certificate"] = a.get("certificate")
     return out
 
 
