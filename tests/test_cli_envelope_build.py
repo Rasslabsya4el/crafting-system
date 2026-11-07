@@ -12,6 +12,7 @@ which shares no code with the build.
 """
 
 import dataclasses
+from fractions import Fraction
 
 import pytest
 from coarse_support import abstraction
@@ -281,3 +282,44 @@ def test_the_distributions_are_primed_in_chunks_and_the_model_is_the_same(world,
     assert canonical(primed) == canonical(plain)
     assert calls and set(calls) <= {0, 1, 2, 3}  # chunks of at most 3 offers (the restart has no action: a chunk may hold fewer, or none)
     assert len(calls) >= 3 * len(primed.keys) // 2  # a chunk for each three offers of each key, about
+
+
+def test_a_float_kernel_is_the_exact_one_to_float_error_and_never_leaks_into_an_exact_kernel(world):
+    ab, start, offers, _, _, _ = world
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    chaos = offers[0].offer.action
+    exact = fresh.kernel(begin, chaos)
+    with fresh.approximate():
+        floats = fresh.kernel(begin, chaos)
+    assert set(floats) == set(exact)
+    assert any(isinstance(chance, float) for chance in floats.values())
+    for state, chance in exact.items():
+        assert float(floats[state]) == pytest.approx(float(chance), rel=1e-12)
+    again = fresh.kernel(begin, chaos)  # outside the block the caches are the exact ones
+    assert again == exact and all(isinstance(chance, Fraction) for chance in again.values()) and sum(again.values()) == 1
+
+
+def test_lowering_a_float_kernel_puts_every_chance_below_the_exact_one_and_the_rest_in_the_sink():
+    exact = {0: Fraction(1, 3), 1: Fraction(2, 3)}
+    floats = {0: 1 / 3 * (1 + 1e-13), 1: 2 / 3 * (1 + 1e-13)}  # above the exact, by more than the float error of the engine
+    lowered = _pattern._lowered(dict(floats))
+    assert all(lowered[k] < exact[k] for k in exact)
+    assert lowered[_pattern.SINK] > 0 and sum(lowered.values()) == 1
+    assert _pattern._lowered({0: Fraction(1, 3), 1: Fraction(2, 3)}) == {0: Fraction(1, 3), 1: Fraction(2, 3)}  # an exact kernel stays
+    with pytest.raises(RuntimeError, match="adds up to more than one"):
+        _pattern._lowered({0: 1.0 + 1e-3})
+
+
+def test_a_model_built_in_floats_is_below_the_exact_model_by_about_1e_9(world):
+    ab, start, offers, _, exact, whole = world
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    bound = pattern_lower_bound(fresh, begin, offers, approximate=True)
+    assert bound.complete and any(_pattern.SINK in successors for successors, _ in bound.model.kernels)
+    assert len(bound.value) == len(bound.model.keys) + 1 and bound.value[-1] == 0.0  # the sink last
+    assert 0.0 < (whole.start_value - bound.start_value) / whole.start_value < 1e-7
+    assert_lower_bound(bound, ab, exact)
+    other = abstraction()
+    plan = envelope_result(other, other.compress(START_ITEM), offers, bound=bound)  # the search on it still gives the full walk's mean
+    assert plan.solution.values[start] == pytest.approx(world[3].solution.values[start], rel=TOLERANCE)

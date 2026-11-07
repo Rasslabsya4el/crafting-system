@@ -93,7 +93,7 @@ def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floo
             made = built.get(kernel)
             if made is None:
                 successors, weights = model.kernels[kernel]
-                made = built[kernel] = builder.kernel(successors, weights)
+                made = built[kernel] = builder.kernel([n if successor < 0 else successor for successor in successors], weights)  # -1 is the sink
             builder.action(offer_index, offers[offer_index].cost, made)
         if floor is not None and not is_goal:
             cost = floor(key, was_built)
@@ -102,8 +102,7 @@ def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floo
                     sink = builder.kernel([n], [1])
                 builder.action(FAKE, max(cost, FLOOR_COST), sink)
         builder.close_state(is_goal)
-    if sink is not None:
-        builder.close_state(True)
+    builder.close_state(True)  # the sink: the last state, a goal; the floor action and the mass that an approximate kernel does not account for go to it
     return builder.build()
 
 
@@ -117,11 +116,15 @@ def pattern_lower_bound(
     max_keys: int | None = None,
     item=None,
     stop: Callable[[], str | None] | None = None,
+    approximate: bool | None = None,
 ) -> PatternBound:
     """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`.
 
     `item` (the start item) turns on the offers' floors when there are `MIN_OFFERS` offers or more: the model is then built on the offers that can
     matter (see the module text). `stop` is the net: it is asked while the model is built and returns the reason once one is reached.
+    `approximate` makes the kernels in floats, shrunk so that the model stays below the exact one (`build_pattern_model`); by default it is on exactly
+    when the offers' floors are, since a model of hundreds of offers is where the exact distributions cost the time (R08: 0.4 s each, 6.9 s with a
+    Fractured Fossil, 3,938 fossil sets), and a model of a few offers is built exactly as before.
     """
     say = progress or (lambda _text: None)
     all_offers = pattern_offers(priced)
@@ -137,7 +140,7 @@ def pattern_lower_bound(
             f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
             f"({phases['floors']:.1f} s)"
         )
-    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None)
+    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate)
     kept = None  # the last round that ran to its end: (model, value, error bound, order)
     adding = list(order)
     rounds = 0
@@ -160,7 +163,7 @@ def pattern_lower_bound(
         solved_at = time.perf_counter()
         phases["solve"] += solved_at - built
         n = len(model.keys)
-        value = np.asarray(solved.value[:n])
+        value = np.asarray(solved.value[: n + 1])  # the keys, and the sink last (a goal: 0)
         say(
             f"model {rounds}: {len(order):,} offers, {n:,} keys ({sum(model.expanded):,} expanded), {model.stats.kernels:,} kernels, start value "
             f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
@@ -170,7 +173,8 @@ def pattern_lower_bound(
         more = _binding(graph, solved, model, floors, outside)
         if not more:
             return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete")
-        say(f"model {rounds}: the floor action is the cheapest at some key; {len(more):,} offers more join the model")
+        names = ", ".join(priced[p].label for p in more[:2]) + (", ..." if len(more) > 2 else "")
+        say(f"model {rounds}: the floor action is the cheapest at some key; {len(more):,} offers more join the model ({names})")
         kept = (model, value, float(solved.error_bound), list(order))
         adding = more
         order = [*order, *more]
