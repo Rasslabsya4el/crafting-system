@@ -27,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packed_routes as P  # noqa: E402  (the inputs of a route, the memory watch)
 
-from crafting_system.cli import _packed, make_plan  # noqa: E402
+from crafting_system.cli import _envelope, _packed, make_plan  # noqa: E402
 from crafting_system.cli._envelope import Net  # noqa: E402
 from crafting_system.cli._envelope_plan import certificate_gap, route_incumbent  # noqa: E402
 from crafting_system.cli._limits import limit_text  # noqa: E402
@@ -81,6 +81,27 @@ def run_phase(phase: str, route: str, say, use_incumbent: bool, net_seconds: flo
     return {"row": row, "policy": policy}
 
 
+def spike_watch(thresholds_mb=(1500, 2500, 3500, 4500)) -> None:
+    """Print the main thread's stack the first time the resident memory passes each threshold (where does the peak come from?)."""
+    import os
+
+    main_id = threading.main_thread().ident
+    pending = list(thresholds_mb)
+    while pending:
+        time.sleep(0.2)
+        try:
+            with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
+                rss = int(next(line for line in handle if line.startswith("VmRSS")).split()[1]) // 1024
+        except OSError:
+            return
+        if rss >= pending[0]:
+            print(f"SPIKE {rss} MB (threshold {pending.pop(0)}), main thread:", flush=True)
+            import traceback
+
+            traceback.print_stack(sys._current_frames()[main_id], file=sys.stdout)
+            sys.stdout.flush()
+
+
 def compare(envelope: dict, full: dict) -> dict:
     """The envelope's plan against the full plan: the mean, and the label of the action at each state the envelope's plan reaches."""
     a, b = envelope["row"], full["row"]
@@ -123,10 +144,14 @@ def main() -> None:
     parser.add_argument("--incumbent", action="store_true")
     parser.add_argument("--net-seconds", type=float, help="stop the envelope search after this many seconds (the plan then states [LB, U])")
     parser.add_argument("--out")
+    parser.add_argument("--cold", action="store_true", help="start each round's solve from the cheapest path, as before #568 (for the comparison)")
     parser.add_argument("--profile", action="store_true", help="print the 40 most expensive functions (cumulative) after the run")
     arguments = parser.parse_args()
+    if arguments.cold:
+        _envelope.WARM_START = False
     faulthandler.dump_traceback_later(600, repeat=True, file=sys.stderr)
     threading.Thread(target=P.watch_memory, daemon=True).start()
+    threading.Thread(target=spike_watch, daemon=True).start()
     began = time.perf_counter()
 
     def say(line: str) -> None:

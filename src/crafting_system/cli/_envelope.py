@@ -47,6 +47,17 @@ search then asks the problem for the offers' bounds at every tip (no kernel is b
 the bound's doing is left as it is (a free action, or a cost ratio of 1e14 between the cheapest action and the values, cannot be certified even on a perfect
 bound; an improper policy of a stiff evaluation is a limit of the solver).
 
+**What a round costs, and the warm start (ticket #568).** The rounds are about the depth of the optimal policy (R04: 48), and each solves the whole lower graph.
+A round's graph differs from the last round's in the frontier only, so three things are carried over or shared instead of done again:
+
+* the kernels live in flat arrays (`Kernels`), every edge once, and a round's graph is a view of them: no second copy of the edges, no chances worked out again;
+* the solver sums each kernel once, however many states share it (`Work.shared_sums`, the products of `evaluate_policy`), with the chance of a node in its own
+  kernel (`_self_mass`, found when the kernel is realized) taken off the shared sum;
+* the solve starts from the last round's policy and values (`_warm`): a node keeps the action of the same tag, a new node is a tip and starts on its fake action.
+  The start is a guess and costs the answer nothing: `solver._packed_solve.warm_policy` proves it proper (every state reaches the goal with positive chance, which for a
+  finite chain is properness) or replaces it at the states that cannot finish by the cheapest path's action, and the policy iteration ends at the same fixed point
+  from any proper start. `SearchStats.solve_info` sums the solver's counts and seconds over the rounds (`warm_kept`, `warm_repaired`, matvecs, seconds of each stage).
+
 **Convergence.** Each round expands at least one tip or realizes at least one offer (a greedy fake action at an expanded node always realizes the
 first offer it stands for, even on a tie), and both are finite: the search ends, in at most as many rounds as the graph has (state, offer) pairs.
 In practice a round expands the whole frontier of the greedy policy, so the rounds are about the depth of the optimal policy. Within a round the
@@ -73,11 +84,13 @@ from typing import Protocol
 import numpy as np
 
 from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
-from crafting_system.solver._packed import BIG_TOTAL, assemble
+from crafting_system.solver._packed import BIG_TOTAL
 from crafting_system.solver._packed_solve import solve_graph
 
 FLOOR = 1e-200  # a fake action of bound 0 is carried at this cost: the certificate divides by the cheapest cost of a state (a rise of 1e-200 moves no cut)
 FAKE = -1  # the tag of a fake action (a tip's bound, or the least bound of the offers not realized yet)
+NO_ACTION = -2  # the tag of "no action" in the policy handed to the next round
+WARM_START = True  # each round's solve starts from the last round's policy and values (False: from the cheapest path, as the first round does; for measuring)
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
@@ -149,6 +162,7 @@ class SearchStats:
     expand_seconds: float = 0.0
     verified: int = 0
     peak_mb: float | None = None
+    solve_info: dict = field(default_factory=dict)  # the solver's counts and seconds, summed over the rounds
 
 
 @dataclass(frozen=True, eq=False)
@@ -189,6 +203,74 @@ def resident_mb() -> float | None:
         return None
 
 
+class Kernels:
+    """The kernels of the search in flat arrays: every edge is held once, as the packed graph holds it, and a round's graph is a view of them.
+
+    A kernel is the successors of an offer at a state and their chances; a round used to join them all into new arrays (and work the chances out of the weights
+    again), at a cost that grew with the graph and with a second copy of every edge in memory. Now `add` writes a kernel after the others, and `graph` hands
+    the solver slices (the extra kernel it is given is written past the end and not kept).
+    """
+
+    def __init__(self) -> None:
+        self.count = 0
+        self.edges = 0
+        self.ptr = np.zeros(1025, dtype=np.int64)
+        self.succ = np.zeros(4096, dtype=np.int32)
+        self.wt = np.zeros(4096, dtype=np.int64)  # zero for a big kernel, whose exact weights are in `big`
+        self.prob = np.zeros(4096)
+        self.big: dict[int, tuple[int, ...]] = {}
+
+    def _room(self, kernels: int, edges: int) -> None:
+        if kernels + 2 > len(self.ptr):
+            self.ptr = np.concatenate((self.ptr, np.zeros(len(self.ptr) // 2 + kernels, dtype=np.int64)))
+        if edges + 2 > len(self.succ):
+            grow = max(edges + 2 - len(self.succ), len(self.succ) // 2)
+            self.succ = np.concatenate((self.succ, np.zeros(grow, dtype=np.int32)))
+            self.wt = np.concatenate((self.wt, np.zeros(grow, dtype=np.int64)))
+            self.prob = np.concatenate((self.prob, np.zeros(grow)))
+
+    def add(self, successors: list[int], weights: list[int]) -> int:
+        size = len(weights)
+        total = 0
+        for w in weights:
+            total += w
+        self._room(self.count + 1, self.edges + size)
+        lo, hi = self.edges, self.edges + size
+        self.succ[lo:hi] = successors
+        if total >= BIG_TOTAL:
+            self.big[self.count] = tuple(int(w) for w in weights)
+            self.wt[lo:hi] = 0
+            self.prob[lo:hi] = [w / total for w in weights]  # exact big-integer ratios, rounded once
+        else:
+            self.wt[lo:hi] = weights
+            self.prob[lo:hi] = np.asarray(weights, dtype=np.float64) / float(total)
+        self.edges = hi
+        self.count += 1
+        self.ptr[self.count] = hi
+        return self.count - 1
+
+    def span(self, kernel: int) -> slice:
+        return slice(int(self.ptr[kernel]), int(self.ptr[kernel + 1]))
+
+    def weights(self, kernel: int) -> list[int] | tuple[int, ...]:
+        """The exact integer weights of a kernel."""
+        big = self.big.get(kernel)
+        return big if big is not None else [int(w) for w in self.wt[self.span(kernel)]]
+
+    def graph(self, goal, act_ptr, act_tag, act_cost, act_kernel, tail: tuple[int, int] | None = None) -> PackedGraph:
+        """The packed graph of these kernels. `tail` = (successor, weight) adds a last kernel of one edge (the fake action's to the goal node)."""
+        count, edges = self.count, self.edges
+        if tail is not None:
+            self._room(count + 1, edges + 1)
+            self.succ[edges], self.wt[edges], self.prob[edges] = tail[0], tail[1], 1.0
+            self.ptr[count + 1] = edges + 1
+            count, edges = count + 1, edges + 1
+        return PackedGraph(
+            goal=goal, act_ptr=act_ptr, act_tag=act_tag, act_cost=act_cost, act_kernel=act_kernel,
+            k_ptr=self.ptr[: count + 1], k_succ=self.succ[:edges], k_wt=self.wt[:edges], k_prob=self.prob[:edges], k_big=self.big,
+        )  # fmt: skip
+
+
 class Search[S]:
     """The envelope search of a `Problem`: see the module text."""
 
@@ -201,6 +283,7 @@ class Search[S]:
         progress: Callable[[str], None] | None = None,
         tolerance: float = 1e-10,
         guard: bool = True,
+        warm: bool | None = None,
     ) -> None:
         self.p = problem
         self.net = net or Net()
@@ -208,22 +291,23 @@ class Search[S]:
         self.say = progress or (lambda _text: None)
         self.tolerance = tolerance
         self.guard = guard  # False for the tests that plant a wrong bound and watch what it does
+        self.warm = WARM_START if warm is None else warm
         self.stats = SearchStats()
         self.states: list[S] = []
         self.index: dict[S, int] = {}
         self.goal = bytearray()
         self.expanded = bytearray()
         self.lb = np.zeros(1024)
-        self.rows: dict[int, list[tuple[int, float, int]]] = {}  # expanded node -> realized (position, cost, kernel)
+        self.rows: dict[int, list[tuple[int, float, int, float]]] = {}  # expanded node -> realized (position, cost, kernel, chance of the node itself in it)
         self.cands: dict[int, list[tuple[float, int]]] = {}  # expanded node -> offers not realized yet, the least `la` last
-        self.k_succ: list[np.ndarray] = []
-        self.k_wt: list = []  # int64 arrays, or a tuple of Python ints for a kernel whose weights add up to BIG_TOTAL or more
-        self.k_prob: list[np.ndarray] = []
+        self.kernels = Kernels()
         self.shared: dict[Hashable, int] = {}
         self.hits = 0
         self.values: np.ndarray | None = None  # the solved lower graph (node n_solved is the goal node)
+        self.tags: np.ndarray | None = None  # the tag (offer position, or FAKE) of the action the last solve chose at each node, NO_ACTION where none
         self.n_solved = 0
         self.restart_kernel: int | None = None
+        self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
         self._last_root: float | None = None
         self.intern(problem.start)
 
@@ -243,28 +327,21 @@ class Search[S]:
         return found
 
     def _store(self, successors: list[int], weights: list[int]) -> int:
-        total = 0
-        for w in weights:
-            total += w
-        if total >= BIG_TOTAL:
-            self.k_wt.append(tuple(int(w) for w in weights))
-            chance = np.array([w / total for w in weights])  # exact big-integer ratios, rounded once
-        else:
-            self.k_wt.append(np.asarray(weights, dtype=np.int64))
-            chance = np.asarray(weights, dtype=np.float64) / float(total)
-        self.k_succ.append(np.asarray(successors, dtype=np.int64))
-        self.k_prob.append(chance)
         self.stats.kernels += 1
-        return len(self.k_succ) - 1
+        return self.kernels.add(successors, weights)
 
     def _fresh_equal(self, state: S, position: int, kid: int) -> bool:
         weights = self.p.kernel(state, position)
-        got = {self.states[int(s)]: w for s, w in zip(self.k_succ[kid], self._exact_weights(kid))}
+        kernels = self.kernels
+        got = {self.states[int(t)]: w for t, w in zip(kernels.succ[kernels.span(kid)], kernels.weights(kid))}
         return got == dict(weights)
 
-    def _exact_weights(self, kid: int):
-        wt = self.k_wt[kid]
-        return wt if isinstance(wt, tuple) else [int(w) for w in wt]
+    def _self_mass(self, i: int, kid: int) -> float:
+        """The chance that kernel `kid` gives node `i` itself (0 if `i` is not among its successors): the solver takes it off a shared sum."""
+        kernels = self.kernels
+        at = kernels.span(kid)
+        hit = np.flatnonzero(kernels.succ[at] == i)
+        return float(kernels.prob[at][hit[0]]) if hit.size else 0.0
 
     def _kernel(self, i: int, position: int) -> int:
         """The kernel id of offer `position` at node `i`, built once for each distinct `kernel_key`. Raises `Refused`."""
@@ -329,12 +406,13 @@ class Search[S]:
         return out
 
     def _q(self, cost: float, kid: int) -> float:
-        return cost + float(self.k_prob[kid] @ self._value(self.k_succ[kid]))
+        at = self.kernels.span(kid)
+        return cost + float(self.kernels.prob[at] @ self._value(self.kernels.succ[at]))
 
     def realize(self, i: int, force: bool) -> None:
         """Realize the offers of node `i` whose lower bound is below the best realized lower cost (the first one regardless, with `force`)."""
         rows, cands = self.rows[i], self.cands[i]
-        best = min((self._q(c, kid) for _, c, kid in rows), default=math.inf)
+        best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
         while cands and (first or cands[-1][0] < best):
             first = False
@@ -344,7 +422,7 @@ class Search[S]:
             except Refused:
                 continue
             cost = self.p.cost(position)
-            rows.append((position, cost, kid))
+            rows.append((position, cost, kid, self._self_mass(i, kid)))
             self.stats.realized += 1
             best = min(best, self._q(cost, kid))
 
@@ -368,9 +446,9 @@ class Search[S]:
                 except Refused:
                     continue
                 cands.remove(held[0])
-                rows.append((position, self.p.cost(position), kid))
+                rows.append((position, self.p.cost(position), kid, self._self_mass(i, kid)))
                 self.stats.realized += 1
-                for j in self.k_succ[kid].tolist():
+                for j in self.kernels.succ[self.kernels.span(kid)].tolist():
                     if j not in seen:
                         seen.add(j)
                         queue.append(j)
@@ -381,7 +459,7 @@ class Search[S]:
 
     def _graph(self, mode: str) -> PackedGraph:
         """The packed graph over the nodes: `lower` (fakes, plus a goal node at the end), `upper` (restart at every node but the start) or
-        `exact` (realized actions only, tips are dead ends)."""
+        `exact` (realized actions only, tips are dead ends). `self.self_mass` is left holding the chance of each action's node in its kernel."""
         n = len(self.states)
         lower = mode == "lower"
         upper = mode == "upper" and self.p.restart is not None
@@ -401,17 +479,19 @@ class Search[S]:
         tags: list[int] = []
         costs: list[float] = []
         kernels: list[int] = []
+        selves: list[float] = []
         sizes = np.zeros(len(ids), dtype=np.int64)
-        fake_kernel = len(self.k_succ)
+        fake_kernel = self.kernels.count  # the kernel `Kernels.graph` appends for the fake actions
         restart = self.p.restart
         for slot, i in enumerate(ids.tolist()):
             rows = self.rows[i]
             made = 0
             if not goal[i]:
-                for position, cost, kid in rows:
+                for position, cost, kid, mass in rows:
                     tags.append(position)
                     costs.append(cost)
                     kernels.append(kid)
+                    selves.append(mass)
                     made += 1
                 if lower:
                     held = self.cands[i]
@@ -419,11 +499,13 @@ class Search[S]:
                         tags.append(FAKE)
                         costs.append(max(held[-1][0], FLOOR))
                         kernels.append(fake_kernel)
+                        selves.append(0.0)
                         made += 1
-                elif upper and i != 0 and not any(position == restart for position, _, _ in rows):
+                elif upper and i != 0 and not any(position == restart for position, _, _, _ in rows):
                     tags.append(restart)
                     costs.append(self.p.cost(restart))
                     kernels.append(self.restart_kernel)
+                    selves.append(0.0)
                     made += 1
             sizes[slot] = made
         counts[ids] = sizes
@@ -432,11 +514,13 @@ class Search[S]:
         act_tag = np.zeros(total, dtype=np.int32)
         act_cost = np.zeros(total)
         act_kernel = np.zeros(total, dtype=np.int32)
+        act_self = np.zeros(total)
         if len(tags):
             offsets = np.repeat(ptr[ids], sizes) + (np.arange(len(tags)) - np.repeat(np.cumsum(sizes) - sizes, sizes))
             act_tag[offsets] = tags
             act_cost[offsets] = costs
             act_kernel[offsets] = kernels
+            act_self[offsets] = selves
         tip_ids = np.flatnonzero(tip)
         if lower:
             tip_ids = tip_ids[np.isfinite(bound[tip_ids])]
@@ -446,19 +530,40 @@ class Search[S]:
             tip_ids = tip_ids[tip_ids != 0]
             at = ptr[tip_ids]
             act_tag[at], act_cost[at], act_kernel[at] = restart, self.p.cost(restart), self.restart_kernel
-        succ = list(self.k_succ)
-        wt = list(self.k_wt)
-        if lower:
-            succ.append(np.array([n], dtype=np.int64))
-            wt.append(np.array([1], dtype=np.int64))
+        self.self_mass = act_self
         goal_flags = np.concatenate((goal, [True])) if lower else goal
-        return assemble(goal_flags, ptr, act_tag, act_cost, act_kernel, succ, wt)
+        return self.kernels.graph(goal_flags, ptr, act_tag, act_cost, act_kernel, tail=(n, 1) if lower else None)
+
+    def _warm(self, graph: PackedGraph) -> tuple[np.ndarray, np.ndarray] | None:
+        """The start of the next solve: the last round's policy and values, carried to the nodes of `graph` (None in the first round).
+
+        A node keeps the action of the same tag it took (the offers realized stay; a fake action is the same tag whatever it costs now). A node the last
+        round did not know is a tip, whose one action is the fake. The policy is a guess: the solver proves it proper or replaces it
+        (`solver._packed_solve.warm_policy`), so it is no risk to the answer; it only saves the policy iteration from starting over. The values start
+        the first evaluation of the linear system: the last round's, the bound at a node it did not know.
+        """
+        if not self.warm or self.tags is None or self.values is None:
+            return None
+        nodes = graph.n
+        known = min(len(self.tags), nodes)
+        tag = np.full(nodes, FAKE, dtype=np.int32)
+        tag[:known] = self.tags[:known]
+        owner = graph.action_state()
+        found = np.flatnonzero(graph.act_tag == tag[owner])
+        policy = np.full(nodes, -1, dtype=np.int64)
+        policy[owner[found]] = found
+        value = np.zeros(nodes)
+        value[: len(self.states)] = self.lb[: len(self.states)]
+        carried = min(self.n_solved, len(self.states))
+        value[:carried] = np.where(np.isfinite(self.values[:carried]), self.values[:carried], value[:carried])
+        return policy, value
 
     def upper_value(self) -> float:
         """The value of the best executable policy of the graph now (restart at every tip): infinite when the start item is given and none closes."""
         if self.p.restart is None:
             return math.inf
-        core = solve_graph(self._graph("upper"), tolerance=self.tolerance)
+        graph = self._graph("upper")
+        core = solve_graph(graph, tolerance=self.tolerance, self_mass=self.self_mass)
         return float(core.value[0])
 
     # ---- the rounds ---------------------------------------------------------------------------------------------
@@ -491,13 +596,27 @@ class Search[S]:
             graph = self._graph("lower")
             self.stats.build_seconds += time.perf_counter() - mark
             mark = time.perf_counter()
+            info: dict = {}
+            warm = self._warm(graph)
             try:
-                core = solve_graph(graph, tolerance=self.tolerance)
+                if warm is None:
+                    core = solve_graph(graph, tolerance=self.tolerance, info=info, self_mass=self.self_mass)
+                else:
+                    core = solve_graph(
+                        graph, tolerance=self.tolerance, info=info, start_policy=warm[0], start_value=warm[1], self_mass=self.self_mass
+                    )
             except ConvergenceError:
                 if self.guard:
                     self._probe()  # a bound that is not consistent can leave the lower graph unsolvable: say so, with the fault found
                 raise
             self.stats.solve_seconds += time.perf_counter() - mark
+            for name, amount in info.items():
+                if isinstance(amount, str):
+                    name, amount = f"{name}_{amount}", 1
+                self.stats.solve_info[name] = self.stats.solve_info.get(name, 0) + amount
+            self.tags = np.full(graph.n, NO_ACTION, dtype=np.int32)
+            chosen = core.action >= 0
+            self.tags[chosen] = graph.act_tag[core.action[chosen]]
             self.values = core.value
             self.n_solved = len(self.states)
             self.stats.rounds += 1
@@ -524,6 +643,11 @@ class Search[S]:
             self.say(
                 f"round {self.stats.rounds}: L(root) {root!r}, {len(fake):,} tips of {len(acting):,} acting states, {len(self.states):,} known, "
                 f"{self.stats.expanded:,} expanded, {self.stats.realized:,} realized ({time.perf_counter() - began:.0f} s)"
+            )
+            self.say(
+                f"  totals: build {self.stats.build_seconds:.0f} s, solve {self.stats.solve_seconds:.0f} s, expand {self.stats.expand_seconds:.0f} s; "
+                f"this solve {time.perf_counter() - mark:.1f} s on {graph.n:,} nodes, {graph.num_actions:,} actions, {graph.num_edges:,} edges stored: "
+                + ", ".join(f"{name} {amount:.4g}" if isinstance(amount, float) else f"{name} {amount}" for name, amount in sorted(info.items()))
             )
             if not len(fake):
                 self.stats.touched = len(self.states)
