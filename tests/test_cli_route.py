@@ -118,7 +118,7 @@ def test_a_chaos_orb_route_costs_its_geometric_run_and_names_where_it_leaves_the
     assert divergence["description"] == document["states"][0]["description"]
     text = capsys.readouterr().out
     section = text[text.index("Given route") :]
-    assert "First divergence" in section and "S1" in section
+    assert "First divergence" in section and "step 2 (Harvest Reforge Lightning)" in section and "S1" not in section
     assert f"policy does {REFORGE}" in section and f"route does {CHAOS}" in section
     assert text.isascii()
 
@@ -169,7 +169,7 @@ def test_the_cli_reports_a_gap_with_its_state_and_a_mean_that_never_comes(tmp_pa
     assert gap["state"] == "S1" and "no rule" in gap["reason"] and gap["description"].startswith("rare;")
     text = capsys.readouterr().out
     section = text[text.index("Given route") :]
-    assert "never" in section and "Gaps" in section and "S1" in section and "no rule" in section
+    assert "never" in section and "Gaps" in section and "step 2 (Harvest Reforge Lightning)" in section and "no rule" in section
 
 
 def test_the_first_matching_rule_wins(plan):

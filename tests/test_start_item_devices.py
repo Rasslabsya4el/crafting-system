@@ -9,7 +9,7 @@ The condition of keeping them is that none of them reaches the route page or the
   `targets/floor.py` (the same item at a lower item level) and `cli/_starts.py` (the vendor-recipe start I7). No module of I8 to I12 builds a
   `Target` or replaces its start item (a scan of `src`, for I8, which only a real benchmark prints, and for the rest as a backstop).
 * **I7, in the output.** When a vendor recipe wins, the text's "Start item" line is the Normal base the recipe takes, the recipe is a step of
-  its own ("First step, before S1: Vendor recipe: ...") with its bill, and the Magic item it gives back is "You get back" and row 1 of the page.
+  its own ("Step 1: Vendor recipe: ...") with its bill, and the Magic item it gives back is "You get back" and row 1 of the page.
 * **I9 to I12, in the output.** A Normal start stays Normal (the empty rare probe, I12), a stated start mod is printed as written (the
   representative item of a state, I11), and no donor (I9, I10) appears in the page or the text.
 """
@@ -74,7 +74,7 @@ def test_a_plan_from_the_targets_own_item_prints_that_item_on_the_page_and_in_th
     assert plan.target.start_item is target.start_item
     text = render_text(build_report(plan, TOY), target_name="toy.yaml")
     assert "Start item: given: its cost is not counted, and the plan never buys another" in text.splitlines()
-    assert "First step, before S1" not in text and "vendor recipe" not in text
+    assert "Step 1: Vendor recipe" not in text and "vendor recipe" not in text
 
     row = build_section(route_input(plan), TOY).rows[0]
     assert row.title == "Start item (given)"
@@ -95,7 +95,7 @@ def test_a_plan_from_a_vendor_recipe_prints_the_base_it_takes_as_the_start_item_
     start_lines = [line for line in lines if line.startswith("Start item")]
     assert len(start_lines) == 1 and "vendor recipe" not in start_lines[0] and "Magic" not in start_lines[0]
     # the recipe is a step of its own, with its bill, and the product is "what you get back"
-    first = lines.index("First step, before S1: Vendor recipe: Boots with movement speed, 5 recipes in a row")
+    first = lines.index("Step 1: Vendor recipe: Boots with movement speed, 5 recipes in a row")
     assert lines[first - 1] == start_lines[0]
     assert any(line.startswith("  You get back: Magic Toy Boots") for line in lines[first:])
     assert "Start item: given: its cost is not counted, and the plan never buys another" not in lines
@@ -128,7 +128,7 @@ def test_the_empty_rare_probe_and_the_representative_items_do_not_make_a_normal_
     assert row.after.properties == ("Normal", "item level 86")
     assert all(slot.text == "empty" for slot in (*row.after.prefixes, *row.after.suffixes))  # not the "any mod or empty" of a rare
     text = render_text(build_report(plan, TOY), target_name="toy.yaml")
-    assert "Start item: given" in text and "Rare" not in text.split("Policy (S = a state")[0]
+    assert "Start item: given" in text and "Rare" not in text.split("Policy (one block")[0]
 
 
 def test_a_stated_start_mod_is_printed_as_the_file_wrote_it_not_as_a_representative_item_of_a_state():

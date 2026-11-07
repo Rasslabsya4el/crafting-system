@@ -311,18 +311,16 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 
-def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, monkeypatch):
-    from crafting_system.cli import _report, build_report
+def test_the_text_tree_has_a_block_for_each_step_and_none_for_each_state(exact):
+    """Ticket #488: the tree is made of the page's steps, so a long policy needs no cut (the old tree stopped after 1,000 states)."""
+    from crafting_system.cli import build_report
     from crafting_system.cli._report import render_text
 
     report = build_report(exact, DATA)
-    assert len(report.states) > 1
-    monkeypatch.setattr(_report, "MAX_TREE_STATES", 1)
-
     text = render_text(report)
 
-    assert "more states of the policy are not shown here" in text or "the tree stops after 1 states" in text
-    assert f"S1:" in text and f"S{len(report.states)}:" not in text
+    assert report.steps and len(report.steps) <= len(report.states)
+    assert text.count("\nStep ") == len(report.steps) and "S1:" not in text and "not shown" not in text
 
 
 def test_make_plan_without_a_budget_never_decides(target, exact):

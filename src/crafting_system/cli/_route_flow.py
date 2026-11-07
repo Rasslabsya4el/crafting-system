@@ -119,6 +119,19 @@ class Step[S]:
     weights: tuple[float, ...] = ()
     cost: float = 0.0
 
+    @property
+    def never_finishes(self) -> bool:
+        """Whether no run that enters the step can finish from it (its uses are infinite)."""
+        return self.uses is not None and math.isinf(self.uses)
+
+    @property
+    def step_cost(self) -> float | None:
+        """What the step costs in a run on average, uses times cost per use; None when it has no action, its uses are not solved, or it never finishes.
+
+        The one place this is computed: the route page and the text report both read it, so the buy plus the step costs add up to the mean the same way in both.
+        """
+        return None if self.uses is None or self.never_finishes else self.uses * self.cost
+
 
 @dataclass(frozen=True)
 class Flow[S]:

@@ -16,7 +16,9 @@ import numpy as np
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.cli import _plan, make_plan
+from report_steps_support import assert_report_is_the_page, blocks_of
+
+from crafting_system.cli import _plan, build_report, make_plan, render_text
 from crafting_system.cli._route_chain import chain_of_packed_policy
 from crafting_system.cli._route_flow import build_flow, flow_of
 from crafting_system.cli._route_view import build_section, route_input
@@ -87,6 +89,19 @@ def test_the_page_of_a_lumped_plan_says_what_the_item_states_do(lumped_plan, dat
     assert adding
     for row in adding:  # an orb that only adds a mod never takes one away
         assert not any(" lost" in line.text for field in row.fields if field.label == "On failure" for line in field.lines)
+
+
+def test_the_text_report_of_a_lumped_plan_has_the_steps_and_chances_of_the_page(lumped_plan, data):
+    """Ticket #488 on a plan whose report is made from the lumped chain (`route_input` takes the packed item chain): the same blocks as the page's rows.
+
+    The comparison flow is `build_flow` over the policy state by state, a way to the steps that does not go through the arrays of the chain.
+    """
+    report = build_report(lumped_plan, data)
+    text = render_text(report)
+
+    assert lumped_plan.lumped and len(report.states) < len(lumped_plan.policy)  # the JSON lists the blocks' shown members, the text the steps
+    assert_report_is_the_page(text, build_section(route_input(lumped_plan), data), lumped_plan)
+    assert 1 < len(blocks_of(text)) < len(report.states)  # a few blocks for the hundreds of states
 
 
 def test_the_tier_lines_and_uses_of_a_lumped_plan_are_those_of_the_plain_policy(plan, data, monkeypatch):
