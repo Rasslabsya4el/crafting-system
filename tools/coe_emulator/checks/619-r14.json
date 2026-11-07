@@ -1,0 +1,17 @@
+[
+  {"id": "619-as-craft-gems-weak-dot", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "rare", "influences": ["hunter"],
+   "mods": ["LocalIncreasedAttackSpeed5", "IntMasterItemGenerationCannotRollAttackAffixes", "LocalIncreaseSocketedGemLevel1", "PoisonDamagePrefixInfluence3"],
+   "actions": ["Orb of Annulment"], "repeats": 3000},
+  {"id": "619-as-multimod-craft-gems-weak-dot", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "rare", "influences": ["hunter"],
+   "mods": ["LocalIncreasedAttackSpeed5", "StrIntMasterItemGenerationCanHaveMultipleCraftedMods", "IntMasterItemGenerationCannotRollAttackAffixes", "LocalIncreaseSocketedGemLevel1", "PoisonDamagePrefixInfluence3"],
+   "actions": ["Orb of Annulment"], "repeats": 3000},
+  {"id": "619-control-as-gems-weak-dot-no-craft", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "rare", "influences": ["hunter"],
+   "mods": ["LocalIncreasedAttackSpeed5", "LocalIncreaseSocketedGemLevel1", "PoisonDamagePrefixInfluence3"],
+   "actions": ["Orb of Annulment"], "repeats": 3000},
+  {"id": "619-as-only-crafts", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "rare", "influences": ["hunter"],
+   "mods": ["LocalIncreasedAttackSpeed5"],
+   "actions": ["Bench craft Cannot roll Attack Modifiers", "Bench craft Can have up to 3 Crafted Modifiers"], "repeats": 10},
+  {"id": "619-as-craft-gems-top-dot-multimod-after", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "rare", "influences": ["hunter"],
+   "mods": ["LocalIncreasedAttackSpeed5", "IntMasterItemGenerationCannotRollAttackAffixes", "LocalIncreaseSocketedGemLevel1", "PoisonDamagePrefixInfluence4"],
+   "actions": ["Bench craft Can have up to 3 Crafted Modifiers"], "repeats": 10}
+]
