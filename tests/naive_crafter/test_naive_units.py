@@ -651,3 +651,37 @@ def test_runners_whose_exact_sides_differ_are_not_pooled(tmp_path):
 
     with pytest.raises(SystemExit, match="different exact sides"):
         command.merge_folder(tmp_path)
+
+
+# --- the rules a test can turn off (the mutations of the route tests) ---------------------------------------------------------------------
+
+
+def test_without_the_level_gate_a_mod_above_the_item_level_joins_the_pool():
+    pool = crafter(laws=Laws(level_gate=False), level=40).pool()
+
+    assert "PM" in pool.ids and "HIGH" in pool.ids and "PM" not in crafter(level=40).pool().ids
+
+
+def test_without_family_exclusion_an_item_can_hold_two_mods_of_one_group():
+    c = crafter(laws=Laws(family_exclusion=False))
+    rng = Random(31)
+    two_of_a_group = sum(
+        {"SC", "SC2"} <= {h.mod_id for h in c.chaos(Item("rare", held("PA", "PB", "SC", "SD")), rng).mods} for _ in range(4000)
+    )
+
+    assert two_of_a_group > 0
+    assert all(not {"SC", "SC2"} <= {h.mod_id for h in crafter().chaos(Item("rare", held("PA", "PB", "SC", "SD")), rng).mods} for _ in range(500))
+
+
+def test_with_a_side_chosen_first_a_single_mod_is_a_prefix_half_of_the_time_not_by_the_weight_of_the_side():
+    n = 20_000
+    rng = Random(32)
+
+    def prefix_share(c):
+        singles = [item for item in (c.transmute(Item("normal"), rng) for _ in range(n)) if len(item.mods) == 1]
+        return sum(c.book.side(item.mods[0].mod_id) == "prefix" for item in singles), len(singles)
+
+    hits, total = prefix_share(crafter(laws=Laws(one_pool=False)))
+    assert abs(z_of(hits, total, 0.5)) < Z
+    hits, total = prefix_share(crafter())
+    assert abs(z_of(hits, total, 5500 / 11500)) < Z  # one pool: the prefixes weigh 5,500 of 11,500

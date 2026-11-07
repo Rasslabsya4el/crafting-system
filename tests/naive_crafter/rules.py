@@ -4,7 +4,7 @@ A rule here is a published statement about the game and what the player does wit
 carry: where it came from (`kind`, `url`), the words of the source (`quote`), and the date it was checked. The quotes and dates were
 taken from the pages and the Craft of Exile code on the days given; the project's claim files hold the same quotes
 (`tests/naive_crafter/test_naive_sources.py` reads those files as plain YAML and checks that every quote here is one of theirs, so
-a quote cannot drift); this package reads nothing else of the planner.
+a quote cannot drift; the two rules marked `in_claims=False` were read first-hand in the local copy of the emulator, and their "quote" is the emulator's own notice text or a description of the place, because Craft of Exile's code is never quoted into this repository); this package reads nothing else of the planner.
 
 `kind` is the source kind of the registry: `wiki` (poewiki.net), `coe` (Craft of Exile's page or its code), `datamined` (the
 repoe-fork export), `experiment` (a large-sample measurement by players) or `owner`. OR-21: all of them count, and a source that
@@ -27,6 +27,7 @@ class Cite:
     date_checked: str
     patch: str = "3.29.3.3"
     approximate: bool = False
+    in_claims: bool = True  # False: the quote is not one of the claim files' (a notice text or a description of a place in Craft of Exile's code, never code)
 
 
 def _cite(*items: Cite) -> dict[str, Cite]:
@@ -110,11 +111,14 @@ RULES = _cite(
     ),
     Cite(
         "generation_weight_multiplier",
-        "The generation weights of a mod are an ordered list read first-match like the spawn weights; the value found multiplies the spawn weight by value/100.",
-        "coe",
+        "The generation weights of a mod are an ordered list read first-match like the spawn weights; the value found multiplies the spawn weight by value/100. "
+        "An owner decision of issue #28 (the official note only says that some weapon classes roll attack mods less often), not a statement of a first-hand source; "
+        "Craft of Exile's emulator builds its pool weights from its own tier weighting, not from this field of the export, and no first-hand text for the multiplier has been found.",
+        "owner",
         "https://github.com/Rasslabsya4el/crafting-system/issues/28",
         "`generation_weights` as a ×value/100 multiplier",
         "2026-10-31",
+        approximate=True,
     ),
     Cite(
         "draw_proportional_to_weight",
@@ -241,17 +245,23 @@ RULES = _cite(
         "dry_pool_leaves_fewer_mods",
         "When no mod can be added any more before the total is reached, the reroll stops and the item keeps the mods it has.",
         "coe",
-        "https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md",
-        "a dry pool leaves fewer mods",
-        "2026-10-31",
+        "https://www.craftofexile.com/packages/package.js",
+        "(a place, not a quote: the emulator's function that rolls one affix ends without adding a mod when the summed weight of the eligible pool is zero; "
+        "the local copy is in the git-ignored .claude/scratch/coe/site/packages/package.js, function poec_simRollAffix)",
+        "2026-11-07",
+        patch="3.29.0.3",
+        in_claims=False,
     ),
     Cite(
         "add_refused_when_no_legal_mod",
         "An add that has no legal mod (no open slot, or every candidate of an open side blocked) is refused and consumes nothing.",
         "coe",
-        "https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md",
-        "Augmentation, Regal, Exalted and the Harvest add are refused (no change, orb not consumed) when no legal mod fits the open slot.",
-        "2026-10-31",
+        "https://www.craftofexile.com/packages/package.js",
+        "Could not generate mod (the notice the emulator shows when a craft produces no mod; the item is left as it was; "
+        "the local copy is in the git-ignored .claude/scratch/coe/site/packages/package.js, function poec_simApplyCraftGO)",
+        "2026-11-07",
+        patch="3.29.0.3",
+        in_claims=False,
     ),
     Cite(
         "essence_forced_mod_by_item_class",

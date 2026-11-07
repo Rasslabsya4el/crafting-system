@@ -11,8 +11,10 @@ The scan reads the AST of every `.py` file under `tests/naive_crafter/` and fail
 - the dynamic ways around an import: the import machinery module, the `__import__` builtin, `exec`, `eval`, `spec_from_file_location`,
   `import_module`, whether imported, called, read as an attribute, or named as a string.
 
-The three shared modules are scanned too, with the rule they have for themselves (standard library, `yaml` and `independent`), so what the
-naive crafter reaches through them is planner-free as well: the guard does not trust their own guards to be run.
+The guard follows imports transitively (`walk`): it starts from every file of the package and every code file under `tests/independent/`, and
+every name that resolves to a file of `independent` or `oracle` (a `from independent import helper`, a relative import, whatever
+`goal_oracle` imports) puts that file in the queue, to be scanned on its own, never trusting another guard. A helper added later is
+scanned without anyone listing it. Tests plant an indirect import of the planner in a made-up tree and show the walk refuses it.
 
 The banned names and the planner's name are assembled from pieces here, so this file does not flag itself.
 """
@@ -112,13 +114,166 @@ def test_no_file_imports_the_planner_or_leaves_the_package_or_goes_around_an_imp
     assert banned == set()
 
 
-@pytest.mark.parametrize("path", SHARED_FILES, ids=lambda path: path.name)
-def test_the_shared_modules_it_reaches_are_planner_free_too(path):
-    roots, _, banned = scan_source(path.read_text(encoding="utf-8"), ("independent",))
+def dotted_imports(source: str, here: tuple[str, ...]) -> tuple[set[str], list[str]]:
+    """Every dotted name a source imports (a `from` adds the module and each name after it), and the relative imports that leave the folder.
 
-    assert PLANNER not in roots
-    assert roots <= ALLOWED_IN_SHARED, sorted(roots - ALLOWED_IN_SHARED)
-    assert banned == set()
+    `here` is the folder of the file as a package path, `("independent",)` for `tests/independent/ladder.py`. A relative import is resolved
+    against it; one that climbs above the top folder is a problem, not a name.
+    """
+    names: set[str] = set()
+    problems: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            names |= {alias.name for alias in node.names}
+        elif isinstance(node, ast.ImportFrom):
+            if node.level == 0:
+                base = node.module or ""
+            elif node.level - 1 >= len(here):
+                problems.append(f"a relative import of {node.level} dots leaves {'.'.join(here)}")
+                continue
+            else:
+                base = ".".join((*here[: len(here) - (node.level - 1)], *((node.module,) if node.module else ())))
+            names.add(base)
+            names |= {f"{base}.{alias.name}" if base else alias.name for alias in node.names}
+    return {name for name in names if name}, problems
+
+
+def module_file(name: str, tests_root: Path) -> Path | None:
+    """The file of a dotted name under `tests_root`: the longest prefix that is a module or a package (`from independent import helper` is `independent/helper.py`)."""
+    parts = name.split(".")
+    for size in range(len(parts), 0, -1):
+        base = tests_root.joinpath(*parts[:size])
+        if base.with_suffix(".py").is_file():
+            return base.with_suffix(".py")
+        if (base / "__init__.py").is_file():
+            return base / "__init__.py"
+    return None
+
+
+def walk(entries: list[Path], tests_root: Path = TESTS) -> tuple[set[Path], list[str]]:
+    """Follow the imports of `entries` through `independent` and `oracle` to every file they reach, and scan each one on its own.
+
+    Every file reached must import the standard library, `yaml`, `independent` or `oracle` only (the naive crafter's own package only
+    from the entries), nothing of the planner, no relative import out of its folder, and use none of the banned ways around an import.
+    A name that resolves to a file of a shared package puts that file in the queue, so a helper added later is scanned without anyone
+    listing it here. Returns the files reached (the entries included) and the problems, each naming the file.
+    """
+    reached: set[Path] = set()
+    problems: list[str] = []
+    queue = [path.resolve() for path in entries]
+    entry_set = set(queue)
+    while queue:
+        path = queue.pop()
+        if path in reached:
+            continue
+        reached.add(path)
+        source = path.read_text(encoding="utf-8")
+        here = path.parent.resolve().relative_to(tests_root.resolve()).parts
+        names, relative_problems = dotted_imports(source, here)
+        problems += [f"{path.name}: {problem}" for problem in relative_problems]
+        problems += [f"{path.name}: uses {name}" for name in sorted(scan_source(source, (PACKAGE_NAME,))[2])]
+        for name in sorted(names):
+            top = name.split(".")[0]
+            if top == PLANNER:
+                problems.append(f"{path.name}: imports the planner ({name})")
+            elif top in SHARED:
+                target = module_file(name, tests_root)
+                if target is None and name == top and (tests_root / top).is_dir():
+                    continue  # the bare package name of a `from package import module`: the module is its own name in the list
+                if target is None:
+                    problems.append(f"{path.name}: {name} is not a file under {tests_root.name}/")
+                else:
+                    queue.append(target.resolve())
+            elif top == PACKAGE_NAME:
+                if path not in entry_set:
+                    problems.append(f"{path.name}: reaches back into {PACKAGE_NAME} ({name})")
+            elif top not in ALLOWED_IN_SHARED and not (path in entry_set and path.name.startswith("test_") and top in ALLOWED_IN_TESTS):
+                problems.append(f"{path.name}: imports {top}")
+    return reached, problems
+
+
+def shared_entries(tests_root: Path = TESTS) -> list[Path]:
+    """The files the walk starts from: the whole package, and every code file (not a test) under `tests/independent/`."""
+    code = [path for path in sorted((tests_root / "independent").rglob("*.py")) if not path.name.startswith("test_")]
+    return [*sorted((tests_root / PACKAGE_NAME).rglob("*.py")), *code]
+
+
+def test_everything_the_player_reaches_is_planner_free_followed_through_every_import():
+    reached, problems = walk(shared_entries())
+    names = {path.name for path in reached}
+
+    assert problems == []
+    assert {"ladder.py", "export.py", "goal_oracle.py", "__init__.py"} <= names
+    assert {path.resolve() for path in SHARED_FILES} <= reached
+
+
+def test_the_walk_starts_from_every_code_file_of_the_independent_folder_and_the_whole_package():
+    entries = {path.name for path in shared_entries()}
+
+    assert {"ladder.py", "export.py", "__init__.py", "craft.py", "play.py", "test_naive_independence.py"} <= entries
+    assert "test_ladder_unit.py" not in entries
+
+
+def plant(root: Path, files: dict[str, str]) -> list[Path]:
+    """Write a made-up `tests/` tree and give back the entry files (the code under `independent/` and the package's)."""
+    for name, text in files.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text(text, encoding="utf-8")
+    return shared_entries(root)
+
+
+PLAY = "from independent import ladder\n"
+INDIRECT = [
+    # a helper that a shared file imports by name, which imports the planner
+    ({"independent/ladder.py": "from independent import helper\n", "independent/helper.py": f"import {PLANNER}\n", "naive_crafter/play.py": PLAY}, "imports the planner"),
+    # the same through a relative import
+    ({"independent/ladder.py": "from . import helper\n", "independent/helper.py": f"from {PLANNER}.items import tiers\n", "naive_crafter/play.py": PLAY}, "imports the planner"),
+    # two steps away, through the oracle, whose helper is a third-party package
+    (
+        {
+            "oracle/goal_oracle.py": "from independent import deeper\n",
+            "independent/deeper.py": "import numpy\n",
+            "independent/ladder.py": "",
+            "naive_crafter/play.py": "from oracle import goal_oracle\n",
+        },
+        "imports numpy",
+    ),
+    # a relative import that climbs out of the folder
+    ({"independent/ladder.py": "from .. import oracle\n", "naive_crafter/play.py": PLAY}, "leaves independent"),
+    # a way around an import in a file reached only through another
+    (
+        {"independent/ladder.py": "from independent import helper\n", "independent/helper.py": "name = 'x'\n" + "ex" + "ec" + "('import ' + name)\n", "naive_crafter/play.py": PLAY},
+        "uses " + "ex" + "ec",
+    ),
+    # a code file of independent/ that nothing imports yet is still scanned
+    ({"independent/ladder.py": "", "independent/unused.py": f"import {PLANNER}\n", "naive_crafter/play.py": PLAY}, "imports the planner"),
+]
+
+
+@pytest.mark.parametrize(("files", "wanted"), INDIRECT, ids=[wanted for _, wanted in INDIRECT])
+def test_the_walk_refuses_an_indirect_import_of_the_planner_or_of_anything_outside(tmp_path, files, wanted):
+    entries = plant(tmp_path, files)
+    _, problems = walk(entries, tmp_path)
+
+    assert any(wanted in problem for problem in problems), problems
+
+
+def test_the_walk_passes_a_clean_chain_and_follows_it_to_the_end(tmp_path):
+    entries = plant(
+        tmp_path,
+        {
+            "independent/__init__.py": "",
+            "independent/ladder.py": "import json\nfrom independent import helper\n",
+            "independent/helper.py": "import yaml\nfrom . import leaf\n",
+            "independent/leaf.py": "import re\n",
+            "oracle/goal_oracle.py": "from independent import ladder\n",
+            "naive_crafter/play.py": "from oracle import goal_oracle\n",
+        },
+    )
+    reached, problems = walk(entries, tmp_path)
+
+    assert problems == []
+    assert {path.name for path in reached} >= {"leaf.py", "helper.py", "goal_oracle.py"}
 
 
 # --- the scanner itself: each hole it must catch ---------------------------------------------------------------

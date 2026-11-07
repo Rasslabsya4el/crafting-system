@@ -17,7 +17,7 @@ Covered, because their steps are plain spam: R05 (Deafening Essence of Rage), R1
 makes the two lists together hold every route file of `examples/routes/`.
 
 R13 plays about 100,000 orb uses per finish (its mean is 12,000 Chaos), so the run of this file plays only `CI_RUNS` of it and its standard
-error is about a tenth of the mean; the real precision is a heavy run on GitHub through the dispatcher, which runs this file with
+error is about a quarter of the mean (one play has a standard deviation about equal to the mean), so 4 standard errors catch only an error of about two to three times, and R13 is checked by the heavy run, not by CI; the real precision is a heavy run on GitHub through the dispatcher, which runs this file with
 `NAIVE_RUNS` plays per runner, `NAIVE_SEED` (the runner's index) and `NAIVE_OUT` (a folder where each route leaves its tally), and
 `python -m naive_crafter merge <folder>` pools the runners and judges the pool (docs/ci.md). #576 changes the start of R13 and R14 (their
 targets); R13 is written here against main and stays valid when its mean moves, because the exact side is computed from the target as it is.
@@ -175,7 +175,7 @@ def test_the_planners_policy_takes_only_the_actions_the_route_file_names(played)
 def test_the_simulation_is_long_enough_to_say_something(played):
     """A standard error that is a fifth of the mean or more says nothing; the heavy run (NAIVE_RUNS) is for the longest route."""
     mean, se = played.tally.mean_se()
-    limit = 0.5 if played.route == "R13" else 0.1  # R13 is judged on its steps and its heavy run; the rest to a tenth
+    limit = 0.5 if played.route == "R13" else 0.1  # R13 is judged by its heavy run (CI plays 16, a quarter of the mean, 4 standard errors catch only a factor of 2 to 3); the rest to a tenth
 
     assert se <= limit * mean, f"{played.route}: {played.tally.n} plays give {mean:.5g} +- {se:.3g}"
 
@@ -195,6 +195,30 @@ def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with
 
     assert not verdict.agrees, str(verdict)
     assert verdict.distance > 10
+
+# The rules of the draw, each turned off in turn, and a cheap covered route that must leave the 4-standard-error line because of it. Measured at
+# 3,000 plays and seed 7 (distance in standard errors): no level gate moves R05 by 24 (R10 0.0, R11 1.6); no family exclusion moves R10 by 7.8
+# and R11 by 11 (R05 3.4); a side chosen first instead of one pool moves R11 by 14.5 (R10 0.1, R05 1.2). Each rule moves at least one cheap route,
+# so none is a rule the comparison cannot see; the routes that do not move are named so that nobody counts them as evidence for that rule.
+MUTATIONS = [
+    ("no level gate", Laws(level_gate=False), "R05"),
+    ("no family exclusion", Laws(family_exclusion=False), "R10"),
+    ("no family exclusion", Laws(family_exclusion=False), "R11"),
+    ("a side chosen first, not one pool", Laws(one_pool=False), "R11"),
+]
+
+
+@pytest.mark.parametrize(("played", "name", "laws"), [(route, name, laws) for name, laws, route in MUTATIONS], indirect=["played"])
+def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(played, name, laws):
+    stem, _ = COVERED[played.route]
+    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=laws)
+    judge = Judge(world)
+    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
+    verdict = t.verdict_on(f"{played.route} with {name}", played.exact_mean, wrong.mean_se())
+
+    assert not verdict.agrees, str(verdict)
+
 
 
 # --- the routes it cannot play -------------------------------------------------------------------------------

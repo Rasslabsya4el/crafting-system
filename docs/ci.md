@@ -191,7 +191,7 @@ and with `--skip-refused` a rule whose action the game refuses is skipped (for t
 `tests/naive_crafter/` plays a guide's route on concrete items by Monte Carlo, with rules written from the published mechanics and no import of
 the planner, and `tests/test_naive_crafter_routes.py` puts its mean (and the spend of each step) beside `risk.evaluate`'s mean of the given route within
 4 of its own standard errors. In CI each route plays a short run (R05, R10, R11: 3,000 plays; R13: 16, because one R13 play is about 100,000 orb uses and its mean
-is 12,000 Chaos, so its standard error there is a tenth of the mean). The real precision of R13 is this heavy run, which runs the same test file with
+is 12,000 Chaos, so its standard error there is about a quarter of the mean and 4 standard errors catch only an error of two to three times: in CI R13 is checked only for gross errors). The real precision of R13 is this heavy run, which runs the same test file with
 `NAIVE_RUNS` plays, `NAIVE_SEED` (the runner's index) and `NAIVE_OUT` (a folder for each route's tally) and then pools the tallies of all the runners:
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 2'

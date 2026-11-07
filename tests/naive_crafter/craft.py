@@ -49,10 +49,14 @@ class Item:
 
 @dataclass(frozen=True)
 class Laws:
-    """How many mods a reroll leaves, by weight: the rules `magic_mod_count` and `rare_mod_count`. A test may change them to see a wrong law fail."""
+    """How many mods a reroll leaves, by weight: the rules `magic_mod_count` and `rare_mod_count`. A test may change them, or turn a rule off, to see a wrong law fail."""
 
     magic: tuple[tuple[int, int], ...] = tuple(MAGIC_COUNTS.items())
     rare: tuple[tuple[int, int], ...] = tuple(RARE_COUNTS.items())
+    # three more rules a test can turn off, each to see a covered route disagree with the planner (rules `level_gate`, `family_exclusion`, `one_pool_for_both_sides`)
+    level_gate: bool = True
+    family_exclusion: bool = True
+    one_pool: bool = True  # False: a side is chosen first, with equal chance among the open sides, and the mod is drawn from that side
 
     def total(self, rarity: str, rng: Random) -> int:
         weights = self.magic if rarity == "magic" else self.rare
@@ -171,6 +175,8 @@ class Crafter:
 
     def pool(self, level_cap: int | None = None) -> Pool:
         cap = self.item_level if level_cap is None else min(level_cap, self.item_level)
+        if not self.laws.level_gate:
+            cap = 10**6
         if cap not in self._pools:
             self._pools[cap] = Pool(self.book, self.tags, self.domain, cap)
         return self._pools[cap]
@@ -199,15 +205,18 @@ class Crafter:
         """Add random mods until the item holds `total` (the kept ones included) or no mod is allowed any more."""
         room = CAPACITY[rarity]
         counts = self.side_counts(mods)
-        blocked = self.groups_of(mods)
+        blocked = self.groups_of(mods) if self.laws.family_exclusion else set()
         while len(mods) < total:
             closed = tuple(side for side in ("prefix", "suffix") if counts[side] >= room)
+            if not self.laws.one_pool and not closed:  # both sides open: choose the side first
+                closed = ("prefix",) if rng.random() < 0.5 else ("suffix",)
             mod_id = pool.draw(rng, blocked, closed)
             if mod_id is None:
                 return  # a dry pool leaves fewer mods
             self._add(mods, mod_id, rng)
             counts[self.book.side(mod_id)] += 1
-            blocked |= self.book.groups(mod_id)
+            if self.laws.family_exclusion:
+                blocked |= self.book.groups(mod_id)
 
     # -- the uses ---------------------------------------------------------------------------------------------
 
