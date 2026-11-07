@@ -179,3 +179,17 @@ def test_reaches_goal_is_the_fixed_point_of_the_policy_graph(seed):
             if any(reached[t] for t in graph.k_succ[graph.k_ptr[kernel] : graph.k_ptr[kernel + 1]].tolist()):
                 reached[s] = changed = True
     assert reaches_goal(Work(graph), policy).tolist() == reached.tolist()
+
+
+def test_a_state_without_a_given_action_takes_the_one_that_is_cheapest_under_the_given_values():
+    work, alive, effective = prepared(LOOP)
+    leave = work.nonself_sums(np.ones(4))
+    info: dict = {}
+    inside, ok, policy = warm_policy(work, alive, effective, np.array([-1, -1, -1, -1]), info, np.array(OPTIMUM), leave)
+    assert info["warm"] == "kept"
+    assert policy[:3].tolist() == [A0, B1, C0]
+    wrong = np.array([0.0, 0.0, 2.0, 0.0])  # values that make 0 -> 1 -> 0 look free: the guess is a closed class, and it is repaired
+    info = {}
+    inside, ok, policy = warm_policy(work, alive, effective, np.array([-1, -1, -1, -1]), info, wrong, leave)
+    assert info["warm"] == "repaired"
+    assert proper(LOOP, policy)

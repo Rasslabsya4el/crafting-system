@@ -27,6 +27,7 @@ The bound may exceed `tolerance` when the values are large next to the cheapest 
 import math
 import sys
 import time
+from time import perf_counter as _tick  # for the seconds in `info`: the clock the progress lines read is `time.perf_counter`, which a test replaces
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -41,6 +42,8 @@ INF = math.inf
 ACCEPT_BOUND = 1e-6  # a certified relative bound above this raises `ConvergenceError` (the rounding of long sums gives 5e-8 on R04, 7e-8 on S02)
 DENSE_LIMIT = 1500  # policies of at most this many states are evaluated by a dense solve, larger ones by BiCGSTAB
 CHUNK_EDGES = 4_000_000
+HEAVY_SELF = 0.5  # an action whose kernel puts more than this chance on its own state is summed edge by edge: taking the own term off a shared sum would lose digits
+SHARE_MIN = 64  # a kernel with fewer edges than this is summed edge by edge for the action too (nothing to save), as the own term of its shared sum would be a rounding
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,8 +82,10 @@ class PackedSolution:
 class Work:
     """Arrays derived once from a graph and shared by the passes."""
 
-    def __init__(self, graph: PackedGraph) -> None:
+    def __init__(self, graph: PackedGraph, self_mass: np.ndarray | None = None) -> None:
         self.g = graph
+        self._self_mass = self_mass
+        self._edgewise: np.ndarray | None = None
         self.n = graph.n
         self.A = graph.num_actions
         self.act_state = graph.action_state()
@@ -129,6 +134,67 @@ class Work:
             terms = g.k_prob[idx] * f[dst]
             terms[dst == np.repeat(self.act_state[a0:a1], sizes)] = 0.0
             out[a0:a1] = np.add.reduceat(terms, self.cum[a0:a1] - self.cum[a0])
+        return out
+
+
+    @property
+    def self_mass(self) -> np.ndarray:
+        """For every action: the chance that its kernel gives its own state (0 where the state is not among the successors). A caller that knows it from
+        building the kernels passes it to `Work`; otherwise it is found here, edge by edge, once."""
+        if self._self_mass is None:
+            out = np.zeros(self.A)
+            g = self.g
+            for a0, a1 in self.action_chunks():
+                sizes = self.asize[a0:a1]
+                idx = expand_ranges(g.k_ptr[g.act_kernel[a0:a1]], sizes)
+                own = g.k_succ[idx] == np.repeat(self.act_state[a0:a1], sizes)
+                out[a0:a1] = np.add.reduceat(np.where(own, g.k_prob[idx], 0.0), self.cum[a0:a1] - self.cum[a0])
+            self._self_mass = out
+        return self._self_mass
+
+    @property
+    def edgewise(self) -> np.ndarray:
+        """The actions whose sum over the successors other than the state is made edge by edge: the kernel puts more than `HEAVY_SELF` on the state, or
+        has fewer than `SHARE_MIN` edges and puts something on it. The sum of every other action is its kernel's, shared (less the own term if any)."""
+        if self._edgewise is None:
+            mass = self.self_mass
+            self._edgewise = (mass > 0.0) & ((mass > HEAVY_SELF) | (self.asize < SHARE_MIN)) if self.A else np.zeros(0, dtype=bool)
+        return self._edgewise
+
+    def edgewise_sums(self, actions: np.ndarray, f: np.ndarray) -> np.ndarray:
+        """`nonself_sums(f)` of the given actions only, in the order given."""
+        g = self.g
+        sizes_all = self.asize[actions]
+        cum = np.concatenate(([0], np.cumsum(sizes_all))).astype(np.int64)
+        out = np.empty(len(actions))
+        a0 = 0
+        while a0 < len(actions):
+            a1 = int(np.searchsorted(cum, cum[a0] + CHUNK_EDGES, side="right")) - 1
+            a1 = min(max(a1, a0 + 1), len(actions))
+            chosen = actions[a0:a1]
+            sizes = sizes_all[a0:a1]
+            idx = expand_ranges(g.k_ptr[g.act_kernel[chosen]], sizes)
+            dst = g.k_succ[idx]
+            terms = g.k_prob[idx] * f[dst]
+            terms[dst == np.repeat(self.act_state[chosen], sizes)] = 0.0
+            out[a0:a1] = np.add.reduceat(terms, cum[a0:a1] - cum[a0])
+            a0 = a1
+        return out
+
+    def shared_sums(self, f: np.ndarray) -> np.ndarray:
+        """`nonself_sums(f)` with each kernel summed once, however many actions share it (R04: a reroll's thousands of outcomes are one kernel for every
+        state of a key). An action whose kernel holds its own state has the own term taken off the shared sum, unless `edgewise` says to sum it as
+        `nonself_sums` does. Equal to `nonself_sums` to the rounding of the sums (the own term is at most `HEAVY_SELF` of the kernel)."""
+        if not self.A:
+            return np.empty(0)
+        out = kernel_sums(self.g, f)[self.g.act_kernel]
+        mass = self.self_mass
+        light = np.flatnonzero((mass > 0.0) & ~self.edgewise)
+        if len(light):
+            out[light] -= mass[light] * f[self.act_state[light]]
+        wise = np.flatnonzero(self.edgewise)
+        if len(wise):
+            out[wise] = self.edgewise_sums(wise, f)
         return out
 
 
@@ -231,22 +297,27 @@ def reaches_goal(work: Work, policy: np.ndarray) -> np.ndarray:
     return reached
 
 
-def warm_policy(work: Work, alive: np.ndarray, effective: np.ndarray, start: np.ndarray, info: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def warm_policy(
+    work: Work, alive: np.ndarray, effective: np.ndarray, start: np.ndarray, info: dict, value: np.ndarray | None = None, leave: np.ndarray | None = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """`(inside, ok, policy)` from a policy given for the states (an action index of this graph, or -1), proved proper on `inside`.
 
-    Properness of a policy is a finite Markov chain's: every state reaches the goal with certainty iff every state reaches it with positive chance
-    (otherwise some closed class holds no goal), and the policy's actions stay inside the set. So:
+    Where the given policy has no action for a state (or one of another state, or one that leaves the states with a proper policy), the action that is
+    cheapest under `value` is taken, if `value` is given: the last round's values name the action that the state is going to take far more often than the cheapest
+    path's does. That is a guess like the rest of the start. Then the policy is proved proper, as a finite Markov chain's properness is: every state reaches
+    the goal with certainty iff every state reaches it with positive chance (otherwise some closed class holds no goal), and the policy's actions stay inside the
+    set. So:
 
     1. The states `inside0` that have an alive action (and the goals) are the only candidates for Y, the set of states with a proper policy. If the
-       given policy, taken where its action stays inside `inside0`, reaches the goal from every one of them, it is proper on `inside0`, so
-       `inside0` is Y and no search for Y is needed. This is the case that a warm start is for.
-    2. Otherwise Y is found as `proper_states` finds it, and the given policy is kept at the states of Y that reach the goal under it with positive
-       chance; at every other state of Y (it reaches no goal, has no action given or a given one that leaves Y) the policy is replaced by the cheapest
-       path's, which lowers the path cost to the goal with positive chance at each step. The result is proper: a state that kept its action still
-       reaches the goal by the states that reach it (they all kept theirs); a replaced state follows the strictly falling cheapest-path costs until
-       it meets a state that kept its action or the goal. (The mix of two policies that is not proper is the one that is not checked: this one is.)
+       policy, taken where its action stays inside `inside0`, reaches the goal from every one of them, it is proper on `inside0`, so `inside0` is Y and no
+       search for Y is needed. This is the case that a warm start is for.
+    2. Otherwise Y is found as `proper_states` finds it, and the policy is kept at the states of Y that reach the goal under it with positive chance; at every
+       other state of Y the policy is replaced by the cheapest path's, which lowers the path cost to the goal with positive chance at each step. The result is
+       proper: a state that kept its action still reaches the goal by the states that reach it (they all kept theirs); a replaced state follows the strictly
+       falling cheapest-path costs until it meets a state that kept its action or the goal. (The mix of two policies that is not proper is the one that is not
+       checked: this one is.)
 
-    `info["warm"]` says which: "kept" (1), or "repaired" with `info["warm_replaced"]` the number of states whose action was replaced (2).
+    `info["warm"]` says which: "kept" (1), or "repaired" with `info["warm_replaced"]` the number of states whose action was not the guess (2).
     """
     g = work.g
     own = work.act_state
@@ -254,11 +325,19 @@ def warm_policy(work: Work, alive: np.ndarray, effective: np.ndarray, start: np.
     has_alive[own[alive]] = True
     asked = (start >= 0) & (start < work.A)
     asked[asked] = own[start[asked]] == np.flatnonzero(asked)  # an action of another state is no action of this one
+    sums = None if value is None or leave is None else work.shared_sums(np.where(np.isfinite(value), value, 0.0))
 
     def given(ok: np.ndarray, inside: np.ndarray) -> np.ndarray:
         kept = asked & inside & ~g.goal
         kept[kept] = ok[start[kept]]
-        return np.where(kept, start, -1)
+        policy = np.where(kept, start, -1)
+        if sums is not None and (inside & ~g.goal & (policy < 0)).any():
+            q = np.where(ok, (g.act_cost + sums) / np.where(alive, leave, 1.0), INF)
+            best = work.state_min(q)
+            cheapest_now = work.state_argmin(q, best)
+            cheapest_now[~np.isfinite(best) | ~inside | g.goal] = -1
+            policy = np.where(policy >= 0, policy, cheapest_now)
+        return policy
 
     inside = g.goal | has_alive
     ok = alive & ~kernel_any(g, ~inside)[g.act_kernel]
@@ -357,7 +436,13 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
 def evaluate_policy(
     work: Work, leave: np.ndarray, policy: np.ndarray, start: np.ndarray, dense_limit: int, tol: float, info: dict
 ) -> np.ndarray:
-    """The values of the proper `policy` (action index per state, -1 for the states outside): a full-length vector."""
+    """The values of the proper `policy` (action index per state, -1 for the states outside): a full-length vector.
+
+    The system is `x[s] - sum over t != s of (p[s, t] / leave[s]) x[t] = cost[s] / leave[s]`. A dense solve takes it as it is. For BiCGSTAB the product
+    `sum p[s, t] x[t]` is made once for each distinct kernel the policy uses, not once for each state (the states of one key share the kernel of a
+    reroll with its thousands of outcomes), less the own term for a state that is among its kernel's successors; the states `Work.edgewise` names,
+    whose own term is too large to take off a sum, keep their edges.
+    """
     g = work.g
     states = np.flatnonzero(policy >= 0)
     m = len(states)
@@ -365,17 +450,22 @@ def evaluate_policy(
     if m == 0:
         return values
     chosen = policy[states]
-    kernels = g.act_kernel[chosen]
-    sizes = work.ksize[kernels]
-    idx = expand_ranges(g.k_ptr[kernels], sizes)
-    dst = g.k_succ[idx]
-    weight = g.k_prob[idx] / np.repeat(leave[chosen], sizes)
-    weight[dst == np.repeat(states, sizes)] = 0.0
-    rhs = g.act_cost[chosen] / leave[chosen]
     position = np.full(work.n, m, dtype=np.int64)
     position[states] = np.arange(m)
-    column = position[dst]
+    rhs = g.act_cost[chosen] / leave[chosen]
+
+    def rows(picked: np.ndarray):
+        """For the policy's states `picked` (indexes into `states`): the edges each keeps, as (offsets, columns, weights)."""
+        kernels = g.act_kernel[chosen[picked]]
+        sizes = work.ksize[kernels]
+        idx = expand_ranges(g.k_ptr[kernels], sizes)
+        dst = g.k_succ[idx]
+        weight = g.k_prob[idx] / np.repeat(leave[chosen[picked]], sizes)
+        weight[dst == np.repeat(states[picked], sizes)] = 0.0
+        return np.concatenate(([0], np.cumsum(sizes)[:-1])), position[dst], weight, sizes
+
     def dense() -> np.ndarray:
+        _, column, weight, sizes = rows(np.arange(m))
         row = np.repeat(np.arange(m), sizes)
         inside = column < m
         matrix = np.bincount(row[inside] * m + column[inside], weights=weight[inside], minlength=m * m).reshape(m, m)
@@ -395,13 +485,29 @@ def evaluate_policy(
     if m <= dense_limit:
         solved = dense()
     else:
-        offsets = np.concatenate(([0], np.cumsum(sizes)[:-1]))
+        wise = work.edgewise[chosen]
+        by_edges = np.flatnonzero(wise)
+        shared = np.flatnonzero(~wise)
+        kernels, slot = np.unique(g.act_kernel[chosen[shared]], return_inverse=True)
+        sizes = work.ksize[kernels]
+        idx = expand_ranges(g.k_ptr[kernels], sizes)
+        shared_column = position[g.k_succ[idx]]
+        shared_prob = g.k_prob[idx]
+        shared_offsets = np.concatenate(([0], np.cumsum(sizes)[:-1]))
+        own = work.self_mass[chosen[shared]]
+        divisor = leave[chosen[shared]]
+        edge_offsets, edge_column, edge_weight, _ = rows(by_edges)
         extended = np.zeros(m + 1)
 
         def matvec(x: np.ndarray) -> np.ndarray:
             info["matvecs"] = info.get("matvecs", 0) + 1
             extended[:m] = x
-            return x - np.add.reduceat(weight * extended[column], offsets)
+            out = x.copy()
+            if len(shared):
+                out[shared] -= (np.add.reduceat(shared_prob * extended[shared_column], shared_offsets)[slot] - own * x[shared]) / divisor
+            if len(by_edges):
+                out[by_edges] -= np.add.reduceat(edge_weight * extended[edge_column], edge_offsets)
+            return out
 
         solved, residual, iterations = _bicgstab(matvec, rhs, start[states], tol, BICGSTAB_ITERATIONS)
         for _ in range(BICGSTAB_RESTARTS):  # a stalled run starts again from its best iterate with a fresh recurrence
@@ -410,8 +516,8 @@ def evaluate_policy(
             solved, residual, more = _bicgstab(matvec, rhs, solved, tol, BICGSTAB_ITERATIONS)
             iterations += more
         info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
-        info["policy_states"], info["policy_edges"] = m, len(weight)
         info["linear_residual"] = residual
+        info["policy_states"], info["policy_edges"], info["shared_edges"] = m, len(edge_weight), len(shared_prob)
         if residual > DENSE_FALLBACK_RESIDUAL and m <= DENSE_FALLBACK:  # a stiff system: the dense solve is slow but sure
             solved = dense()
     if not np.all(np.isfinite(solved)):
@@ -442,59 +548,62 @@ def solve_graph(
     info: dict | None = None,
     start_policy: np.ndarray | None = None,
     start_value: np.ndarray | None = None,
+    self_mass: np.ndarray | None = None,
 ) -> Core:
     """Policy iteration on `graph` itself (no merge): see the module docstring, steps 2 to 5.
 
     `start_policy` (an action index of the graph for each state, -1 where none) and `start_value` (a vector of values to start the first evaluation
     from) warm-start the iteration with those of a nearby graph, as the envelope search does round after round. The policy need not be proper on this
     graph: `warm_policy` keeps it where it is and replaces it where it is not, and proves the result proper. The answer does not depend on the start
-    (the same fixed point, to the certified error), only the work.
+    (the same fixed point, to the certified error), only the work. `self_mass[a]` is the chance that action `a`'s kernel gives the state of `a` (see
+    `Work.self_mass`), for a caller that knows it from building the kernels.
     """
     say = progress or (lambda _text: None)
     info = {} if info is None else info
     began = time.perf_counter()
-    work = Work(graph)
+    clock = _tick()
+    work = Work(graph, self_mass)
     n = work.n
-    info["seconds_work"] = time.perf_counter() - began
+    info["seconds_work"] = _tick() - clock
     if not work.A:  # nothing can be done anywhere: the goals cost nothing and the rest never finish
         solved = graph.goal.copy()
         return Core(np.where(solved, 0.0, INF), solved, np.full(n, -1, dtype=np.int64), Certificate(0.0, 1.0, 1.0, 0.0, True))
-    leave = work.nonself_sums(np.ones(n))
+    leave = work.shared_sums(np.ones(n))
     alive = leave > 0.0
     with np.errstate(divide="ignore"):
         effective = np.where(alive, graph.act_cost / np.where(alive, leave, 1.0), INF)
-    mark = time.perf_counter()
+    mark = _tick()
     if start_policy is None:
         inside, ok, distance, policy = proper_states(work, alive, effective)
         value = np.where(inside, np.where(np.isfinite(distance), distance, 0.0), 0.0)
     else:
-        inside, ok, policy = warm_policy(work, alive, effective, np.asarray(start_policy), info)
+        inside, ok, policy = warm_policy(work, alive, effective, np.asarray(start_policy), info, start_value, leave)
         value = np.zeros(n) if start_value is None else np.where(inside & np.isfinite(start_value), start_value, 0.0)
-    info["seconds_proper"] = time.perf_counter() - mark
+    info["seconds_proper"] = _tick() - mark
     say(f"proper states: {int(inside.sum()):,} of {n:,} ({time.perf_counter() - began:.1f} s)")
     terms = work.state_reduce(np.maximum, work.asize.astype(np.float64) + 1.0, 0.0)
     noise = (terms + 2.0) * EPS
     rounds = 0
     while rounds < max_rounds:
         rounds += 1
-        mark = time.perf_counter()
+        mark = _tick()
         value = evaluate_policy(work, leave, policy, value, dense_limit, 1e-13, info)
-        info["seconds_evaluate"] = info.get("seconds_evaluate", 0.0) + time.perf_counter() - mark
-        mark = time.perf_counter()
-        sums = work.nonself_sums(value)
+        info["seconds_evaluate"] = info.get("seconds_evaluate", 0.0) + _tick() - mark
+        mark = _tick()
+        sums = work.shared_sums(value)
         q = np.where(ok, (graph.act_cost + sums) / np.where(alive, leave, 1.0), INF)
         best = work.state_min(q)
         current = np.where(policy >= 0, q[np.maximum(policy, 0)], 0.0)
         better = (policy >= 0) & (best < current - noise * current)
         say(f"policy iteration {rounds}: {int(better.sum()):,} states improve ({time.perf_counter() - began:.1f} s)")
-        info["seconds_improve"] = info.get("seconds_improve", 0.0) + time.perf_counter() - mark
+        info["seconds_improve"] = info.get("seconds_improve", 0.0) + _tick() - mark
         if not better.any():
             break
         policy = np.where(better, work.state_argmin(q, best), policy)
     info["rounds"] = rounds
-    mark = time.perf_counter()
+    mark = _tick()
     certificate = certify(graph, value, inside, work)
-    info["seconds_certify"] = time.perf_counter() - mark
+    info["seconds_certify"] = _tick() - mark
     refinements = 0
     while not _settled(certificate, tolerance) and refinements < 3:
         refinements += 1
