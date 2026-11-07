@@ -78,6 +78,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_approx.py", "BlockModel._build", ("OutOfScopeError",), RECORDS, "a model gap in a block: written"),
     ("cli/_approx.py", "ExactModel.actions", ("NotApplicableError",), RECORDS, "a game refusal in an expanded state: silent"),
     ("cli/_approx.py", "ExactModel.actions", ("OutOfScopeError",), RECORDS, "a model gap in an expanded state: written"),
+    ("cli/_benchmark_use.py", "per_use_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the action cannot be used at the divergence state, for either reason: the row of the benchmark says so in the words of the refusal and goes on"),
     ("cli/_benchmark_use.py", "one_step_short", ("NotApplicableError", "OutOfScopeError"), EITHER, "a bench craft that cannot be used on this state is not a sure step to the target; nothing is left out of a plan and nothing is written"),
     ("cli/_bound_prune.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
     ("cli/_bound_prune.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),

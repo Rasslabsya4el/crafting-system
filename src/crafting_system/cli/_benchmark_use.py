@@ -66,6 +66,7 @@ def use_numbers(action: Action, priced: PricedOffer, is_goal: Callable, short: C
         "action": str(action.label),
         "chance": into / total if total else None,
         "short": None if near is None or not total else near / total,
+        "reach": (into + (near or 0)) / total if total else None,  # the one number: the item ends in the target, or is one certain bench craft away from it
         "cost": priced.cost,
         "parts": [{"resource": name, "count": count, "chaos": chaos, "source": source} for name, count, chaos, source in priced.parts],
         "other_items": len(action.extra_inputs),
@@ -74,18 +75,21 @@ def use_numbers(action: Action, priced: PricedOffer, is_goal: Callable, short: C
 
 
 def per_use_of(plan: Plan, state: CompressedState, label: str) -> dict:
-    """`use_numbers` of the offer called `label` used in `state`; `error` says why when it is not an offer of the plan.
+    """`use_numbers` of the offer called `label` used in `state`; `error` says why when it is not an offer of the plan or the game refuses it there.
 
-    Both actions of a divergence are legal in its state by construction (the planner's policy and the route's rule took them there), so the game's
-    refusal is not caught here: an action the game refuses in `state` is a caller's error and raises.
+    Both actions of a divergence are legal in its state when the planner's policy and the route's rule took them there, but a lumped view of a
+    packed plan can show a state where one is not: the row then says so in the words of the refusal, and the benchmark goes on.
     """
     priced = next((offer for offer in plan.offers if offer.label == label), None)
     if priced is None:
-        return no_numbers(label, "it is not an action the plan offers")
+        return no_numbers(label, "the plan does not offer it")
     steps = sure_steps(plan)
     short = (lambda successor: one_step_short(plan, successor, steps)) if steps else None
-    return use_numbers(offer_action(plan.abstraction, priced, state, plan.start), priced, plan.is_goal, short)
+    try:
+        return use_numbers(offer_action(plan.abstraction, priced, state, plan.start), priced, plan.is_goal, short)
+    except (NotApplicableError, OutOfScopeError) as problem:
+        return no_numbers(label, str(problem))
 
 
 def no_numbers(label: str, why: str) -> dict:
-    return {"action": label, "chance": None, "short": None, "cost": None, "parts": [], "other_items": 0, "error": why}
+    return {"action": label, "chance": None, "short": None, "reach": None, "cost": None, "parts": [], "other_items": 0, "error": why}

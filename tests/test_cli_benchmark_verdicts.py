@@ -214,13 +214,21 @@ def test_the_review_tolerance_is_read_from_the_config_like_the_review_line(tmp_p
     assert load_config(env={}, project_root=tmp_path / "no-file").benchmark_review_tolerance == 0.2
 
 
-@pytest.mark.parametrize("value", ["0", "-0.1", '"fifth"', "true", "nan"])
-def test_a_bad_review_tolerance_is_a_config_error_naming_the_key(tmp_path, value):
+@pytest.mark.parametrize("value", ["0", "-0.1", "1", "1.0", "1.5", "20", '"fifth"', "true", "nan"])
+def test_a_bad_review_tolerance_is_a_config_error_naming_the_key_and_the_range(tmp_path, value):
+    """0 or less is no tolerance; 1 or more never flags a drop (the ratio cannot fall below 0): both are refused with the range."""
     path = tmp_path / "crafting.toml"
     path.write_text(f"[benchmark]\nreview_tolerance = {value}\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match=r"crafting\.toml.*review_tolerance"):
+    with pytest.raises(ValueError, match=r"crafting\.toml.*review_tolerance.*above 0 and below 1"):
         load_config(env={}, project_root=tmp_path)
+
+
+def test_a_tolerance_just_inside_the_range_is_read(tmp_path):
+    path = tmp_path / "crafting.toml"
+    path.write_text("[benchmark]\nreview_tolerance = 0.999\n", encoding="utf-8")
+
+    assert load_config(env={}, project_root=tmp_path).benchmark_review_tolerance == 0.999
 
 
 def test_the_project_config_states_the_tolerance():
@@ -302,11 +310,13 @@ def test_one_use_of_a_toy_action_has_the_chances_and_the_cost_worked_by_hand():
     use = use_numbers(action, priced, lambda state: state == "goal", lambda state: state == "A")
 
     assert use["chance"] == pytest.approx(0.125) and use["short"] == pytest.approx(0.25) and use["cost"] == pytest.approx(1.59)
+    assert use["reach"] == pytest.approx(0.375)  # the one number: 1/8 + 2/8 = 3/8
     assert use["error"] is None and use["other_items"] == 0
     assert [(part["resource"], part["count"], part["chaos"]) for part in use["parts"]] == [
         ("Prismatic Fossil", 1, 0.2), ("Potent Alchemical Resonator", 1, 1.39)
     ]
-    assert use_numbers(action, priced, lambda state: state == "goal")["short"] is None  # a plan with no bench craft has no such reading
+    plain = use_numbers(action, priced, lambda state: state == "goal")
+    assert plain["short"] is None and plain["reach"] == pytest.approx(0.125)  # a plan with no bench craft has no such reading
 
 
 def test_the_row_tells_the_chance_and_the_cost_of_one_use_of_each_action_in_player_words():
@@ -322,7 +332,8 @@ def test_the_row_tells_the_chance_and_the_cost_of_one_use_of_each_action_in_play
     assert lines[0] == "    one use of each at the first divergence (S1):"
     assert lines[1] == (
         "      the planner's Fossils Prismatic Fossil: one use costs 1.59 Chaos (0.20 for 1 Prismatic Fossil + 1.39 for 1 Potent Alchemical Resonator),"
-        " ends in the target with chance 12.50% and one bench craft short of it with chance 25.00%"
+        " reaches the target with chance 37.50%: the item ends in the target, or is one certain bench craft away from it"
+        " (12.50% in the target itself, 25.00% one certain bench craft away)"
     )
     assert lines[2] == (
         "      the guide's Fossils Dense Fossil + Shuddering Fossil: one use costs 39.76 Chaos "
@@ -336,8 +347,42 @@ def test_an_action_the_plan_does_not_offer_says_why_instead_of_a_number(tiny):
 
     missing = per_use_of(plan, plan.start, "Fossils Prismatic Fossil")
 
-    assert missing["chance"] is None and missing["cost"] is None and "not an action the plan offers" in missing["error"]
-    assert "no numbers, it is not an action the plan offers" in per_use_lines({"state": "S1", "per_use": {"planner": missing, "guide": missing}}, "guide")[1]
+    assert missing["chance"] is None and missing["cost"] is None and missing["error"] == "the plan does not offer it"
+    row = per_use_lines({"state": "S1", "per_use": {"planner": missing, "guide": missing}}, "guide")[1]
+    assert row.endswith("Fossils Prismatic Fossil cannot be used there: the plan does not offer it")
+
+
+def test_an_action_the_game_refuses_at_the_state_says_so_in_the_words_of_the_refusal_and_the_row_goes_on(tiny, monkeypatch):
+    """The toy plan: the planner's Harvest reforge is refused at the first divergence, the guide's Chaos Orb is not. No crash, the other side keeps its numbers."""
+    import crafting_system.cli._benchmark_use as use_module
+    import crafting_system.cli._benchmark_divergence as divergence_module
+    from crafting_system.cli._report import number_states
+    from crafting_system.actions import NotApplicableError, OutOfScopeError
+
+    plan, result = tiny
+    divergence = result.divergence
+    real = use_module.offer_action
+
+    def refusing(abstraction, priced, state, start=None):
+        if priced.label == REFORGE:
+            raise NotApplicableError("the item is not rare, and a Harvest reforge needs a rare item")
+        return real(abstraction, priced, state, start)
+
+    monkeypatch.setattr(use_module, "offer_action", refusing)
+    first = divergence_module.first_divergence_of(plan, DATA, divergence, number_states(plan))
+    lines = per_use_lines(first, "guide")
+
+    assert first["per_use"]["planner"]["error"] == "the item is not rare, and a Harvest reforge needs a rare item"
+    assert first["per_use"]["planner"]["chance"] is None and first["per_use"]["guide"]["error"] is None
+    assert lines[1] == f"      the planner's {REFORGE} cannot be used there: the item is not rare, and a Harvest reforge needs a rare item"
+    assert lines[2].startswith(f"      the guide's {CHAOS}: one use costs 1.00 Chaos") and "NotApplicable" not in "\n".join(lines)
+
+    def out_of_scope(abstraction, priced, state, start=None):
+        raise OutOfScopeError("no admitted rule covers a cluster jewel")
+
+    monkeypatch.setattr(use_module, "offer_action", out_of_scope)
+    gap = per_use_of(plan, divergence.state, CHAOS)
+    assert gap["error"] == "no admitted rule covers a cluster jewel" and gap["reach"] is None
 
 
 def test_the_first_divergence_of_the_toy_route_carries_the_numbers_of_both_actions(tiny, tmp_path, capsys):
@@ -366,7 +411,7 @@ def test_the_benchmark_json_and_text_carry_the_numbers_at_the_first_divergence(t
     assert 0.0 < first["per_use"]["planner"]["chance"] < 1.0
     assert "one use of each at the first divergence" in text
     assert "the guide's Harvest Reforge Lightning: one use costs" in text and "ends in the target with chance" in text
-    assert "one bench craft short of it" not in text  # R12 offers no bench craft: the reading does not apply
+    assert "bench craft" not in text  # R12 offers no bench craft: the reading does not apply
 
 
 # --- the start boots of R08 and R09, on the real game data (#617, from #591 and #592) ----------------------
@@ -426,7 +471,8 @@ def test_the_row_of_the_start_boots_tells_both_numbers(boots):
 
     assert lines[1].startswith(
         "      the planner's Fossils Prismatic Fossil: one use costs 1.59 Chaos (1.39 for 1 Primitive Chaotic Resonator + 0.20 for 1 Prismatic Fossil), "
-        "ends in the target with chance 0."
+        "reaches the target with chance 2."
     )
-    assert "and one bench craft short of it with chance 2." in lines[1]
+    assert "reaches the target with chance 2." in lines[1] and "or is one certain bench craft away from it (0." in lines[1]
+    assert "reaches the target with chance 2." in lines[2] and "certain bench craft" in lines[2]
     assert f"the guide's {pair}: one use costs " in lines[2] and "Shuddering Fossil" in lines[2]
