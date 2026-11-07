@@ -146,7 +146,7 @@ def price_offers(
 def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer]) -> PricedOffer:
     """The draw that opens the bought listing `listing` (ADR-0064), priced as every action that consumes nothing is: the listing's price is the start price."""
     action = OpenListing(rarity)
-    paid = [entry.cost for entry in priced if entry.cost > 0]
+    paid = [entry.cost for entry in priced if entry.offer.resources and entry.cost > 0]  # the actions that cost something, not the free ones
     free_cost = DRAW_COST_SHARE * min(paid) if paid else FREE_ACTION_SHARE
     return PricedOffer(offer_of(action, action.label(data), data, listing, shares=False), free_cost, ())
 
