@@ -1,13 +1,24 @@
-# The route of R04 COMPLETED: r04-penetrating-quiver.yaml (the guide as written) plus one last rule that the guide does not have.
+# The route of R04 COMPLETED: r04-penetrating-quiver.yaml (the guide as written) plus the rules the guide does not have (ticket #599).
 #
-# The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, an
-# Annulment went somewhere the steps do not cover). r04-penetrating-quiver.yaml leaves those as gaps, so a run that reaches one never
-# finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own way out of its steps 3 and
-# 4), for every state no earlier rule covers, so that the route has a finite cost to compare with. It is the file's
-# reading, not the guide's. Everything else is the same as r04-penetrating-quiver.yaml. The simulation plays it with a rule skipped when the
-# game refuses its action, so a refused Exalted Orb falls through to the `restart` as well.
-
-# Given route for benchmark route R04: the Insanity-fractured additional-arrow Penetrating Arrow Quiver.
+# The guide has 13 gaps and they are all one place: the metamod "Cannot roll Attack Modifiers" is on the quiver, the Pierce is fractured, the
+# Strength and the arrow are there, and the prefixes are full of mods that are not the target's tiers (the two Exalted Orbs of its step 8 landed
+# on a tier below the top one, or the prefixes were full before them). The guide says its two Exalted Orbs "guarantee" the prefixes, which is
+# true of the families and not of the tiers (OR-4), so it has no word for what a player does next. A route with a gap never finishes, so the
+# benchmark compares the planner with this route instead: the guide plus what a player does there, and `restart` last.
+#
+# What this file adds (each marked "NOT IN THE GUIDE" below):
+#   a. The game refuses an essence while "Cannot roll Attack Modifiers" is on the quiver (the emulator's "Cannot be used on an item that has a
+#      metamod (other than multimod) on it", our metamods.essence_refused), so with the craft on and no prefix to fill the player removes the
+#      craft (Remove Crafted Mods, the guide's step 9, 0.37 Chaos) and is back at step 5 with the Pierce still fractured.
+#   b. The metamod is crafted only when a prefix is free (step 8 reads "the remaining prefixes"); with the prefixes full the player rerolls
+#      with the essence instead of paying for a craft that cannot be used.
+#   c. The last rule `restart` (buy the quiver again) catches what is left: a state with no fractured Pierce that the guide's steps 2 to 4 do
+#      not cover.
+# Before #599 this file had the last rule only: every gap bought a new quiver and lost a fractured Pierce (1,041 Chaos of Fracturing Orbs at
+# 1 in 4 on average), 297,863 Chaos in all against 209,294 with the additions. The guide's own rules below are unchanged except step 7's
+# open prefix (b).
+#
+# The guide's route file, as it stands in r04-penetrating-quiver.yaml:
 #
 # A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
 # at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
@@ -30,7 +41,7 @@
 # route annuls down to 4 and no further), so "4 or fewer" is "at least 2 slots free in all", which the rules
 # below write as the three ways to split 2 free slots over the two sides (the quiver has 3 prefixes, 3 suffixes).
 
-name: R04 completed with restart, PoE Vault guide
+name: R04 completed, PoE Vault guide
 skip_refused: true  # a rule whose action the game refuses at a state falls through to the next that matches (the last one restarts)
 
 rules:
@@ -55,7 +66,29 @@ rules:
           status: passing
     do: Exalted Orb
 
-  # Step 7: a suffix is free for the metamod, the Strength and the arrow are there.
+  # NOT IN THE GUIDE (a): the metamod is on and no prefix is free for an Exalted Orb (the prefixes are full, of the wrong tiers or of other mods): the game refuses
+  # an essence while "Cannot roll Attack Modifiers" is on the quiver, so take the craft off first (step 9 of the guide) and go back to step 5.
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: true
+    do: Remove Crafted Mods
+
+  # Step 7: a suffix is free for the metamod, the Strength and the arrow are there. NOT IN THE GUIDE (b): and a prefix is free for the Exalted Orbs of step 8.
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: Strength
+          status: passing
+        - family: AdditionalArrows
+          status: passing
+    do: Bench craft Cannot roll Attack Modifiers
+
+  # NOT IN THE GUIDE (b): a suffix is free, the Strength and the arrow are there, but no prefix is: the metamod would be wasted, reroll with the essence.
   - when:
       rarity: rare
       fractured: [{family: Pierce}]
@@ -66,7 +99,7 @@ rules:
           status: passing
         - family: AdditionalArrows
           status: passing
-    do: Bench craft Cannot roll Attack Modifiers
+    do: Deafening Essence of Rage
 
   # Step 6: no suffix free but the Strength and the arrow are there: an Orb of Annulment.
   - when:
@@ -142,5 +175,5 @@ rules:
         without: [{family: Pierce}]
     do: restart
 
-  # Not in the guide: any state no rule above covers: buy the start item again.
+  # NOT IN THE GUIDE (c): any state no rule above covers: buy the start item again.
   - do: restart

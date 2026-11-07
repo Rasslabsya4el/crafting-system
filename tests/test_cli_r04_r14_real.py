@@ -22,7 +22,7 @@ from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.cli._benchmark_outcomes import PublishedOutcome, published_outcomes
 from crafting_system.cli._decide import decide
 from crafting_system.cli._plan import _packed_note
-from crafting_system.cli._route_sim import simulate_route
+from crafting_system.cli._route_sim import route_policy, simulate_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -92,10 +92,47 @@ def test_the_guides_route_and_its_completed_form_are_read_against_the_offers(uns
     completed = load_route(ROOT / route_path.replace(".yaml", "-restart.yaml"), unsolved, data)
 
     same = [(rule.when, rule.do) for rule in as_written.rules]
-    assert [(rule.when, rule.do) for rule in completed.rules[: len(same)]] == same
-    assert len(completed.rules) == len(as_written.rules) + 1 and completed.rules[-1].do == "restart"
-    assert completed.rules[-1].when == When()  # the added rule catches every state the guide's rules do not
+    assert completed.rules[-1].do == "restart" and completed.rules[-1].when == When()  # the last rule catches every state the rules before it do not
     assert as_written.rules[-1].when != When()  # the guide's own rules do not: what they leave out is a gap
+    if route_id == "R14":
+        assert [(rule.when, rule.do) for rule in completed.rules[: len(same)]] == same
+        assert len(completed.rules) == len(as_written.rules) + 1
+        return
+    # R04 (ticket #599): a last `restart` alone bought a new quiver at every gap and lost the fractured Pierce (297,863 Chaos against the planner's 69,267).
+    # The guide's rules stay, in order, but for step 7, which also asks a free prefix; what is added is a Remove Crafted Mods, an essence and the restart.
+    every = [(rule.when, rule.do) for rule in completed.rules]
+    assert [pair for pair in every if pair in same] == [pair for pair in same if pair in every]  # the guide's rules that stayed keep their order
+    assert [pair[1] for pair in same if pair not in every] == ["Bench craft Cannot roll Attack Modifiers"]
+    assert sorted(pair[1] for pair in every if pair not in same) == [
+        "Bench craft Cannot roll Attack Modifiers", "Deafening Essence of Rage", "Remove Crafted Mods", "restart",
+    ]
+
+
+def test_the_completed_r04_keeps_the_fractured_pierce_where_the_guide_has_no_word(data, prices):
+    """Ticket #599: at the guide's 13 gaps (the metamod on, the prefixes full of the wrong tiers) a last `restart` bought a new quiver and lost the
+    fractured Pierce. A player takes the craft off (the game refuses an essence under it) and rerolls with the essence; and does not craft the metamod
+    when no prefix is free for the Exalted Orbs that follow it."""
+    from crafting_system.items import ExplicitMod, Item, Rarity
+
+    plan = make_plan(data, load_target(ROOT / ROUTES["R04"][0], data), prices, solve_it=False)
+    completed = load_route(ROOT / "examples/routes/r04-penetrating-quiver-restart.yaml", plan, data)
+    price = {priced.label: priced.cost for priced in plan.offers}
+    policy = route_policy(plan, completed, data, skip_refused=True)
+
+    def held(*mod_ids, fractured="AdditionalPierceEssence7"):
+        mods = tuple(
+            ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats), fractured=mod_id == fractured, crafted=data.mods[mod_id].domain == "crafted")
+            for mod_id in mod_ids
+        )
+        return Item.build(data, base_id="Metadata/Items/Quivers/QuiverNew5", item_level=81, rarity=Rarity.RARE, mods=mods)
+
+    metamod = "IntMasterItemGenerationCannotRollAttackAffixes"
+    core = ("AdditionalPierceEssence7", "StrengthEssence7_", "AdditionalArrowQuiver1_")
+    wrong_prefixes = ("IncreasedLife1", "DamageWithBowSkills1")  # the lowest tiers: the two Exalted Orbs landed, not on the target's tiers
+    assert policy(held(*core, metamod, *wrong_prefixes)).cost == price["Remove Crafted Mods"]  # the guide's gap; before: restart
+    assert policy(held(*core, *wrong_prefixes)).cost == price["Deafening Essence of Rage"]  # no prefix free: no metamod craft
+    assert policy(held(*core)).cost == price["Bench craft Cannot roll Attack Modifiers"]  # the guide's step 7, two prefixes free
+    assert price["restart"] not in {policy(held(*core, metamod, *wrong_prefixes)).cost, policy(held(*core, *wrong_prefixes)).cost}
 
 
 def test_the_published_odds_are_recomputed_from_the_actions(data, route_id):

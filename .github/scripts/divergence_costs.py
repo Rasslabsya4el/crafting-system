@@ -86,7 +86,10 @@ def hybrid_tools(plan, data):
             for target, weight in action.outcomes:
                 if target in index:
                     matrix[index[b], index[target]] -= weight / total
-        return float(np.linalg.solve(matrix, rhs)[index[lumped.start]])
+        try:
+            return float(np.linalg.solve(matrix, rhs)[index[lumped.start]])
+        except np.linalg.LinAlgError:
+            return float("inf")  # the policy loops among its blocks and never reaches a goal
 
     return actions_of, mean_of, walked
 
@@ -290,7 +293,15 @@ def hybrids(document, plan, data, root, routes, say, shift):
                 }
             )
             say(f"  adopt {key[1]} for {key[0]} at {len(members)} states {key[2]} crafted={key[3]}: mean {mean:,.2f} (saves {base - mean:,.2f})")
-        document["hybrids"][name] = {"base": base, "all_adopted": adopt(everything), "groups": rows}
+        pairs: dict = {}
+        for key, members in groups.items():
+            pairs.setdefault((key[0], key[1]), []).extend(members)
+        pair_rows = []
+        for (theirs, ours), members in sorted(pairs.items(), key=lambda kv: -len(kv[1])):
+            mean = adopt(members)
+            pair_rows.append({"route_action": theirs, "planner_action": ours, "states": len(members), "mean_if_adopted": mean, "saves": base - mean})
+            say(f"  PAIR adopt {ours} for {theirs} at {len(members)} states: mean {mean:,.2f} (saves {base - mean:,.2f})")
+        document["hybrids"][name] = {"base": base, "all_adopted": adopt(everything), "groups": rows, "pairs": pair_rows}
         say(f"  all adopted: {document['hybrids'][name]['all_adopted']:,.2f} (the planner's mean is {document['planner']['mean']:,.2f})")
 
 
