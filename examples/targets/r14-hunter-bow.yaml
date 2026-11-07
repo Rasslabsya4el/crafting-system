@@ -72,8 +72,9 @@ requirements:
 # Where the crafting starts (OR-4, #545, #576). The post's step 1 is "Alteration roll a Hunter Thicket Bow (ilvl 78+) for T1 attack speed"
 # (comments/1f6a963, Peuget's steps as quoted there; docs/research/2026-10-30-5-reference-routes.md, R14): an Orb of Alteration works on a
 # Magic item only, and the post names no Transmutation Orb (a Normal start plus one would be a step the guide does not give, OR-16), so the
-# start is a Magic Hunter Thicket Bow of the base, level and influence above. It is bought with any mods or none (OR-17): the post names
-# none of its mods, and an Alteration rerolls them all.
+# start is a Magic Hunter Thicket Bow of the base, level and influence above. It is bought, and the post names none of its mods: it is the
+# item the market sells (ADR-0064, OR-17), so it holds what an Orb of Alteration leaves on this base, 1 or 2 mods at their game weights (the
+# Hunter mods included), and the plan's first decision is made on each outcome of that draw.
 start_item:
   rarity: magic
 

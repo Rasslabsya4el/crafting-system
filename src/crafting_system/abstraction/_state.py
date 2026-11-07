@@ -15,17 +15,21 @@ def _state_without_hash(self) -> dict:
 
 @dataclass(frozen=True)
 class Flags:
-    """What the actions look at besides the mods: the rarity, corruption and influences."""
+    """What the actions look at besides the mods: the rarity, corruption and influences.
+
+    `unopened` is the bought listing whose mods are not drawn yet (`Item.unopened`): the one state where only the draw that opens it works.
+    """
 
     rarity: Rarity
     corrupted: bool
     influences: frozenset[Influence]
+    unopened: bool = False
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
-            value = hash((self.rarity, self.corrupted, self.influences))
+            value = hash((self.rarity, self.corrupted, self.influences, self.unopened))
             object.__setattr__(self, "_hash", value)
             return value
 
@@ -203,7 +207,7 @@ class CompressedState:
         except AttributeError:
             flags = self.flags
             value = (
-                (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences))),
+                (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences)), flags.unopened),
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.fractured),
                 tuple(int(entry) for entry in self.status),
                 tuple(slot.key for slot in self.slots),

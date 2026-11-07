@@ -12,7 +12,8 @@ from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
-from crafting_system.items import Side
+from crafting_system.actions import DRAW_LABEL, unopened_listing
+from crafting_system.items import Rarity, Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN, plain_base_names
 
@@ -156,6 +157,8 @@ def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
     The mods besides the fractured ones show only when the model tracks them (a bench action is offered):
     the crafted mods by their text, and the rest as a count per side ("junk: 1 prefix, 2 suffixes").
     """
+    if state.flags.unopened:  # the bought listing before its draw (ADR-0064): the rarity it will have, not the normal item the model holds
+        return f"the bought {plan.target.start_item.rarity.value} item, its mods not drawn yet"
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
         if entry.mod_id not in data.mods:  # held as its family type ("~n@attack"): the state does not say which mod it is
@@ -255,7 +258,8 @@ def _leaf_chance(plan: Plan, share: WeightShare) -> float | None:
     offer = next(p for p in plan.offers if p.label == share.action)
     leaf = plan.leaf_labels.index(share.leaf)
     try:
-        kernel = plan.abstraction.kernel(plan.start, offer.offer.action)
+        opened = plan.abstraction.compress(plan.target.start_item) if plan.start.flags.unopened else plan.start  # the line speaks of the item as the target states it
+        kernel = plan.abstraction.kernel(opened, offer.offer.action)
     except ValueError:  # a refusal of either family or a kernel that cannot be asked: the chance of one use is left out of the line
         return None
     return float(sum((c for state, c in kernel.items() if state.status[leaf] is Status.PASSING), Fraction(0)))
@@ -330,6 +334,23 @@ def free_action_lines(plan: Plan, risk) -> list[str]:
     ]
 
 
+def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
+    """The first draw of a bought item in player words (ADR-0064): it is the item the market sells, so it comes with mods. Empty for any other start."""
+    if data is None or not plan.start.flags.unopened:
+        return []
+    listing = unopened_listing(data, plan.target.start_item)
+    action = next(entry.offer.action for entry in plan.offers if entry.offer.action.opens_listing)
+    totals = action.outcomes(data, listing).totals
+    rarity = plan.target.start_item.rarity.value.capitalize()
+    orb = "an Orb of Alteration" if plan.target.start_item.rarity is Rarity.MAGIC else "an Orb of Alchemy"
+    counts = [f"{number} {'mod' if number == 1 else 'mods'} ({percent(float(share))})" for number, share in sorted(totals.items())]
+    return [
+        f"First draw, before S1: the bought {rarity} item is the one the market sells, so it comes with mods the target does not name. It holds "
+        f"{', '.join(counts[:-1]) + ' or ' + counts[-1] if len(counts) > 1 else counts[0]}, drawn the way {orb} draws them: from the mods its base can carry, "
+        "those of its influence included, at their game weights. The price above is the listing's; the plan picks its first move on each outcome."
+    ]
+
+
 def free_action_price(plan: Plan) -> float:
     """The price the planner gave the actions that consume nothing."""
     return max((entry.cost for entry in plan.offers if not entry.offer.resources), default=0.0)
@@ -378,6 +399,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"  {plan.start_price.taken_for}")
     if report.first_step is not None:
         lines.extend(first_step_lines(report.first_step))
+    lines.extend(listing_lines(plan, report.data))
     if plan.starts is not None:
         lines.extend(start_lines(plan.starts))
     lines.extend(limit_lines(plan))
@@ -395,7 +417,9 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         reach = "" if state.reach is None else f", reached with chance {percent(state.reach)}"
         lines.append(f"{pad}{state.id}: {state.description}")
         parts = " + ".join(f"{count} {resource}" for resource, count, _, _ in state.cost_parts)
-        if not state.cost_parts:  # an action that consumes nothing: it is given a negligible cost (ADR-0026)
+        if state.action == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price is the start price
+            lines.append(f"{pad}  do: {state.action} (free: the price of the listing was paid above)")
+        elif not state.cost_parts:  # an action that consumes nothing: it is given a negligible cost (ADR-0026)
             lines.append(f"{pad}  do: {state.action} (free; counted at {state.cost:.1g} Chaos so that every step has a positive cost)")
         else:
             lines.append(f"{pad}  do: {state.action} ({parts} = {money(state.cost)} Chaos each)")

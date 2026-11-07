@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import BLOCKING, OutOfScopeError, kinds
+from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
@@ -32,7 +32,7 @@ from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from . import _limits
 from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, listing_draw, offers_for, price_offers, split_usable
 from . import _packed
 from ._envelope import Net, NoPolicy
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
@@ -398,6 +398,9 @@ def make_plan(
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
+    listing = unopened_listing(data, target.start_item) if price_of_start.bought else None
+    if listing is not None:  # ADR-0064: the bought item is the one the market sells, so the plan opens with the draw of its mods
+        priced = (*priced, listing_draw(data, listing, target.start_item.rarity, priced))
     limits += unpriced_limits((drop.label, drop.missing, drop.kind) for drop in dropped)
     usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])
     kept = set(usable)
@@ -407,7 +410,7 @@ def make_plan(
     limits += start_limits(price_of_start)
     if price_of_start.bought:
         bought = price_of_start.name or "start item"
-        restart = Offer(RESTART, BuyStartItem(target.start_item), {bought: 1}, shares=False)
+        restart = Offer(RESTART, BuyStartItem(listing or target.start_item), {bought: 1}, shares=False)
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,)))
 
@@ -429,7 +432,7 @@ def make_plan(
         enchantment=target.start_item.enchantment,
         allow_inputs=False,
     )
-    start = abstraction.compress(target.start_item)
+    start = abstraction.compress(listing or target.start_item)
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))

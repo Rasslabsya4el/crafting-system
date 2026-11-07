@@ -13,10 +13,10 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, Axis, OpenListing, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import Item
+from crafting_system.items import Item, Rarity
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
 
 from . import _limits
@@ -24,6 +24,12 @@ from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
+# What the draw of a bought item's mods costs (ADR-0064), as a share of the cheapest offer that costs something. It is not free like an unveil
+# because it lies on every cycle of a restart: the certified error of a component is about (m + 2) * epsilon * value / g for its smallest constant
+# term g (`solver/_certify.py`), and a draw at 1e-6 of the cheapest orb gave R13 an error of 8.7e-4 and at 1e-2 of 1.3e-6, past the 1e-6 the
+# solvers accept. At 0.1 it is about 1.3e-7, and a plan's mean moves by 0.1 of the cheapest orb per draw (R13: 0.0016 Chaos of 6,568, 2.4e-7 of
+# it), which is inside the tolerance the solvers accept. The start price is the listing's price and is not changed.
+DRAW_COST_SHARE = 0.1
 
 
 @dataclass(frozen=True)
@@ -69,7 +75,7 @@ class DroppedOffer:
     kind: str = ""
 
 
-def offer_of(action: Action, label: str, data: GameData | None = None, item: Item | None = None, kind: str = "") -> Offer:
+def offer_of(action: Action, label: str, data: GameData | None = None, item: Item | None = None, kind: str = "", *, shares: bool | None = None) -> Offer:
     """The offer of `action` under `label`: its resources, and whether the report quotes a single-draw share (with its tag).
 
     `data` and `item` only matter to an action whose resources or additions depend on them (an essence, a bench craft).
@@ -77,7 +83,7 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     adds = action.adds(data, item)
     inputs = action.inputs(data, item) if data is not None else ()
     axes = action.rule_axes(data) if data is not None else ()
-    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes, kind=kind)
+    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw if shares is None else shares, inputs=inputs, axes=axes, kind=kind)
 
 
 def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
@@ -135,6 +141,14 @@ def price_offers(
         free_cost = FREE_ACTION_SHARE * min(paid) if paid else FREE_ACTION_SHARE
         priced = [replace(entry, cost=free_cost) if not entry.offer.resources else entry for entry in priced]
     return tuple(priced), tuple(dropped)
+
+
+def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer]) -> PricedOffer:
+    """The draw that opens the bought listing `listing` (ADR-0064), priced as every action that consumes nothing is: the listing's price is the start price."""
+    action = OpenListing(rarity)
+    paid = [entry.cost for entry in priced if entry.cost > 0]
+    free_cost = DRAW_COST_SHARE * min(paid) if paid else FREE_ACTION_SHARE
+    return PricedOffer(offer_of(action, action.label(data), data, listing, shares=False), free_cost, ())
 
 
 def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
