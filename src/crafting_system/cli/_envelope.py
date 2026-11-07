@@ -149,6 +149,7 @@ class SearchStats:
     expand_seconds: float = 0.0
     verified: int = 0
     peak_mb: float | None = None
+    solve_info: dict = field(default_factory=dict)  # the solver's counts and seconds, summed over the rounds
 
 
 @dataclass(frozen=True, eq=False)
@@ -491,13 +492,16 @@ class Search[S]:
             graph = self._graph("lower")
             self.stats.build_seconds += time.perf_counter() - mark
             mark = time.perf_counter()
+            info: dict = {}
             try:
-                core = solve_graph(graph, tolerance=self.tolerance)
+                core = solve_graph(graph, tolerance=self.tolerance, info=info)
             except ConvergenceError:
                 if self.guard:
                     self._probe()  # a bound that is not consistent can leave the lower graph unsolvable: say so, with the fault found
                 raise
             self.stats.solve_seconds += time.perf_counter() - mark
+            for name, amount in info.items():
+                self.stats.solve_info[name] = self.stats.solve_info.get(name, 0) + amount
             self.values = core.value
             self.n_solved = len(self.states)
             self.stats.rounds += 1
@@ -524,6 +528,11 @@ class Search[S]:
             self.say(
                 f"round {self.stats.rounds}: L(root) {root!r}, {len(fake):,} tips of {len(acting):,} acting states, {len(self.states):,} known, "
                 f"{self.stats.expanded:,} expanded, {self.stats.realized:,} realized ({time.perf_counter() - began:.0f} s)"
+            )
+            self.say(
+                f"  totals: build {self.stats.build_seconds:.0f} s, solve {self.stats.solve_seconds:.0f} s, expand {self.stats.expand_seconds:.0f} s; "
+                f"this solve {time.perf_counter() - mark:.1f} s on {graph.n:,} nodes, {graph.num_actions:,} actions, {graph.num_edges:,} edges stored: "
+                + ", ".join(f"{name} {amount:.4g}" if isinstance(amount, float) else f"{name} {amount:,}" for name, amount in sorted(info.items()))
             )
             if not len(fake):
                 self.stats.touched = len(self.states)

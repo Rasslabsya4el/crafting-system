@@ -321,6 +321,7 @@ def evaluate_policy(
         extended = np.zeros(m + 1)
 
         def matvec(x: np.ndarray) -> np.ndarray:
+            info["matvecs"] = info.get("matvecs", 0) + 1
             extended[:m] = x
             return x - np.add.reduceat(weight * extended[column], offsets)
 
@@ -331,6 +332,7 @@ def evaluate_policy(
             solved, residual, more = _bicgstab(matvec, rhs, solved, tol, BICGSTAB_ITERATIONS)
             iterations += more
         info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
+        info["policy_states"], info["policy_edges"] = m, len(weight)
         info["linear_residual"] = residual
         if residual > DENSE_FALLBACK_RESIDUAL and m <= DENSE_FALLBACK:  # a stiff system: the dense solve is slow but sure
             solved = dense()
@@ -367,6 +369,7 @@ def solve_graph(
     began = time.perf_counter()
     work = Work(graph)
     n = work.n
+    info["seconds_work"] = time.perf_counter() - began
     if not work.A:  # nothing can be done anywhere: the goals cost nothing and the rest never finish
         solved = graph.goal.copy()
         return Core(np.where(solved, 0.0, INF), solved, np.full(n, -1, dtype=np.int64), Certificate(0.0, 1.0, 1.0, 0.0, True))
@@ -374,7 +377,9 @@ def solve_graph(
     alive = leave > 0.0
     with np.errstate(divide="ignore"):
         effective = np.where(alive, graph.act_cost / np.where(alive, leave, 1.0), INF)
+    mark = time.perf_counter()
     inside, ok, distance, policy = proper_states(work, alive, effective)
+    info["seconds_proper"] = time.perf_counter() - mark
     say(f"proper states: {int(inside.sum()):,} of {n:,} ({time.perf_counter() - began:.1f} s)")
     value = np.where(inside, np.where(np.isfinite(distance), distance, 0.0), 0.0)
     terms = work.state_reduce(np.maximum, work.asize.astype(np.float64) + 1.0, 0.0)
@@ -382,18 +387,24 @@ def solve_graph(
     rounds = 0
     while rounds < max_rounds:
         rounds += 1
+        mark = time.perf_counter()
         value = evaluate_policy(work, leave, policy, value, dense_limit, 1e-13, info)
+        info["seconds_evaluate"] = info.get("seconds_evaluate", 0.0) + time.perf_counter() - mark
+        mark = time.perf_counter()
         sums = work.nonself_sums(value)
         q = np.where(ok, (graph.act_cost + sums) / np.where(alive, leave, 1.0), INF)
         best = work.state_min(q)
         current = np.where(policy >= 0, q[np.maximum(policy, 0)], 0.0)
         better = (policy >= 0) & (best < current - noise * current)
         say(f"policy iteration {rounds}: {int(better.sum()):,} states improve ({time.perf_counter() - began:.1f} s)")
+        info["seconds_improve"] = info.get("seconds_improve", 0.0) + time.perf_counter() - mark
         if not better.any():
             break
         policy = np.where(better, work.state_argmin(q, best), policy)
     info["rounds"] = rounds
+    mark = time.perf_counter()
     certificate = certify(graph, value, inside, work)
+    info["seconds_certify"] = time.perf_counter() - mark
     refinements = 0
     while not _settled(certificate, tolerance) and refinements < 3:
         refinements += 1
