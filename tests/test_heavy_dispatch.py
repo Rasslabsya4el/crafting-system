@@ -10,7 +10,6 @@ import importlib.util
 import io
 import json
 import sys
-import time
 import urllib.error
 from pathlib import Path
 
@@ -84,7 +83,7 @@ class FakeClock:
     """The script's own clock (heavy.now, heavy.pause): a wait moves it on and takes no real time."""
 
     def __init__(self):
-        self.t = time.time()  # real start, so file times (the lock's) stay comparable
+        self.t = 1_800_000_000.0  # a fixed start: the tests never read the real clock
         self.waits = []
 
     def now(self):
