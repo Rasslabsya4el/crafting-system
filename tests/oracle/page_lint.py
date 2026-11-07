@@ -17,6 +17,7 @@ What it reads on a page (the markup of the route page, learned from the page and
 The checks, one per rule that can be seen on a page. A check takes a `Page` and returns the list of faults it finds, each a
 `Fault` that names the rule (`or_id`), the check and the place. `lint(page)` runs every check of `CHECKS`.
 
+  OR-7   a price names its source and its marks  `check_price_source_shown`
   OR-13  a cut says what it still guarantees      `check_cut_guarantee`
   OR-14  a repeated card is a branch not cut      `check_no_repeated_card` (and `check_one_step_per_action`; the number and the size are #476's)
   OR-15  every mod line is in one format          `check_mod_format`, `check_bench_line_is_its_craft`, `check_group_printed_once`
@@ -658,6 +659,33 @@ def check_approximate_marked(page: Page) -> list[Fault]:
     return faults
 
 
+_SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price")
+_COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) [\d.,]+ c(?:\s|$)")
+_PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
+
+
+def check_price_source_shown(page: Page) -> list[Fault]:
+    """OR-7: the goal card's "Prices" names where each price came from: every line after the league line says its source (the exchange, the trade
+    site's instant buyout, a hand price, a previous league ...), a price of an earlier league or Standard says it is approximate, and every
+    resource of a step's "Cost per use" has such a line (R04's page printed "league Allflame, fetched 2026-10-31" and nothing else, #598)."""
+    faults = []
+    for route in page.routes:
+        lines = route.goal_lines("Prices")
+        priced = lines[1:]
+        for line in priced:
+            if not any(source in line.text for source in _SOURCES):
+                faults.append(_fault("OR-7", check_price_source_shown, "goal card, Prices", f"a price that does not name its source: {line.text[:100]}"))
+            elif ("previous league" in line.text or "Standard" in line.text) and "approximate:" not in line.text:
+                faults.append(_fault("OR-7", check_price_source_shown, "goal card, Prices", f"a price of an earlier league that is not marked approximate: {line.text[:100]}"))
+        named = {line.text.partition(": ")[0] for line in priced}
+        for step in route.steps:
+            for line in step.lines("Cost per use"):
+                found = _COST_LINE.match(line.text)
+                if found and found.group("name") not in _PLAIN_CURRENCY and found.group("name") not in named:
+                    faults.append(_fault("OR-7", check_price_source_shown, f"step {step.number} ({step.title})", f"{found.group('name')} is bought here and the goal card's Prices says nothing of its source"))
+    return faults
+
+
 _NO_PRICE = re.compile(r"\(no price for ([^)]*)\)", re.I)
 
 
@@ -972,6 +1000,7 @@ def _all_texts(route: Route) -> Iterator[tuple[str, str]]:
 # --- the lint ------------------------------------------------------------------------------------------------
 
 CHECKS: tuple[Callable[[Page], list[Fault]], ...] = (
+    check_price_source_shown,
     check_cut_guarantee,
     check_mod_format,
     check_bench_line_is_its_craft,

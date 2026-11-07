@@ -11,6 +11,7 @@ from crafting_system.prices.__main__ import main
 from crafting_system.prices.fetch import fetch_price_file
 from crafting_system.prices.http_json import SourceError
 from crafting_system.prices.ninja_items import StashLine, parse_stash_overview
+from dataclasses import replace
 
 BASE_TAG = {"category": "BaseType"}
 
@@ -165,8 +166,10 @@ def test_the_stash_overviews_are_asked_for_after_the_exchange_ones(ninja):
 def test_bases_are_priced_at_their_recorded_value(ninja):
     prices = fetch_price_file(ninja, NOW).price_file.prices
 
-    assert prices["Stygian Vise (ilvl 85)"] == PriceEntry(5.0, "poe.ninja", None, BASE_TAG)
-    assert prices["Stygian Vise (ilvl 85, Hunter)"] == PriceEntry(1262.0, "poe.ninja", None, BASE_TAG)
+    assert replace(prices["Stygian Vise (ilvl 85)"], provenance=None) == PriceEntry(5.0, "poe.ninja", None, BASE_TAG)
+    assert replace(prices["Stygian Vise (ilvl 85, Hunter)"], provenance=None) == PriceEntry(1262.0, "poe.ninja", None, BASE_TAG)
+    hunter = prices["Stygian Vise (ilvl 85, Hunter)"].provenance  # a stash line rests on its observations
+    assert (hunter.kind, hunter.depth_unit, hunter.depth) == ("ninja-stash", "observations", 85.0)
     assert prices["Stygian Vise (ilvl 85, Elder)"].chaos == 721.4
     assert prices["Stygian Vise (ilvl 85, Crusader)"].chaos == 1515.0
     assert prices["Vaal Regalia (ilvl 86)"].chaos == 10.0
@@ -177,7 +180,7 @@ def test_bases_are_priced_at_their_recorded_value(ninja):
 def test_beasts_are_priced_at_their_recorded_value(ninja):
     prices = fetch_price_file(ninja, NOW).price_file.prices
 
-    assert prices["Wild Bristle Matron"] == PriceEntry(139.0, "poe.ninja", None, {"category": "Beast"})
+    assert replace(prices["Wild Bristle Matron"], provenance=None) == PriceEntry(139.0, "poe.ninja", None, {"category": "Beast"})
     assert prices["Tunnelfiend"].chaos == 100.0
     assert prices["Vivid Vulture"].chaos == 88.1
 

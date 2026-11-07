@@ -26,6 +26,7 @@ from .poe_watch import poe_watch_stage
 from .previous_league import previous_league_stage
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile, missing_prices
 from .price_names import canonical_price_name, parse_base_price_name
+from .provenance import EXCHANGE, OBSERVATIONS, STASH, Provenance
 from .trade_pricing import current_trade_prices
 
 DEFAULT_STAGES: tuple[Stage, ...] = (ninja_history_stage, poe_watch_stage, previous_league_stage)
@@ -71,6 +72,7 @@ def fetch_price_file(
         raise ValueError("league must not be blank")
     fetched_at = now.astimezone(UTC).replace(microsecond=0)
     league = league if league is not None else _current_league(get_json)
+    day = fetched_at.date().isoformat()
     trade_covered = current_trade_prices(old_price_file, league, fetched_at.date())
     covered = {canonical_price_name(name) for name in overrides} | set(trade_covered)
     wanted_names = sorted({canonical_price_name(name) for name in wanted or ()} - covered)
@@ -87,7 +89,7 @@ def fetch_price_file(
             if line.thin:
                 thin_exchange.setdefault(line.name, line.details_id)
             else:
-                prices.setdefault(line.name, PriceEntry(line.chaos, SOURCE))
+                prices.setdefault(line.name, PriceEntry(line.chaos, SOURCE, None, None, _exchange_provenance(line.chaos, line.volume, league, day)))
     warnings: list[str] = []
     failed_stash: list[str] = []
     for kind in STASH_TYPES:
@@ -108,7 +110,8 @@ def fetch_price_file(
             if stash_line.count < MIN_COUNT:
                 thin_stash.setdefault(stash_line.key, stash_line)
             else:
-                prices.setdefault(stash_line.key, PriceEntry(stash_line.chaos, SOURCE, None, {"category": kind}))
+                observed = Provenance(STASH, league, day, float(stash_line.count), OBSERVATIONS)
+                prices.setdefault(stash_line.key, PriceEntry(stash_line.chaos, SOURCE, None, {"category": kind}, observed))
     for kind in failed_stash:
         kept = _kept_stash_prices(old_price_file, league, kind, prices)
         prices.update(kept)
@@ -139,6 +142,12 @@ def fetch_price_file(
 
     price_file = PriceFile(league, fetched_at, chaos_per_divine, prices)
     return FetchResult(price_file, warnings, missing_prices(wanted_names, prices), thin)
+
+
+def _exchange_provenance(chaos: float, volume: float | None, league: str, day: str) -> Provenance:
+    """The provenance of an exchange line: the units traded on the latest day are its Chaos volume over its price (#616)."""
+    depth = None if volume is None else volume / chaos
+    return Provenance(EXCHANGE, league, day, depth, "units")
 
 
 def _kept_stash_prices(

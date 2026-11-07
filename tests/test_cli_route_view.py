@@ -144,7 +144,7 @@ INPUTS = {
 
 @pytest.fixture(scope="module")
 def r12_plan():
-    return make_plan(DATA, load_target(R12, DATA), price_file())
+    return make_plan(DATA, load_target(R12, DATA), price_file(evidence=True))
 
 
 TWO_LEAVES = f"""\
@@ -184,7 +184,7 @@ rules:
 @pytest.fixture(scope="module")
 def two_leaf_plan():
     target = parse_target(TWO_LEAVES, DATA, source="two.yaml")
-    prices = price_file(start=None)
+    prices = price_file(start=None, evidence=True)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")  # the start item is priced under the key computed from the target
     return make_plan(DATA, target, prices)
 
@@ -246,7 +246,7 @@ def run_command(tmp_path: Path, *arguments: str, cache: Path | None = None):
     code = main(
         [str(R12), "--json", str(out), *arguments],
         data=DATA,
-        prices=price_file(),
+        prices=price_file(evidence=True),
         env={"CRAFTING_CACHE_DIR": str(cache)},
         today=TODAY,
     )

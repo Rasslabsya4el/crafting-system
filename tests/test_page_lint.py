@@ -49,7 +49,7 @@ def test_every_check_cites_its_rule_and_the_faults_it_finds_carry_it():
         match = re.match(r"\s*(OR-\d+|#\d+ and #\d+)", check.__doc__ or "")
         assert match, f"{check.__name__} does not open its docstring with the rule it keeps"
         assert pl.or_of(check) == match.group(1)
-    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (13, 14, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
+    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (7, 13, 14, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
     assert pl.or_of(pl.check_no_internal_names) == "#481 and #553"  # a decision of the main chat, not a rule of docs/owner-rules.md (which is not touched)
 
 
@@ -127,6 +127,24 @@ def fixtures(check, counter: dict[str, str], example: dict[str, str]) -> None:
     COUNTER[check.__name__] = counter
     EXAMPLE[check.__name__] = example
 
+
+AUG = step(1, "Orb of Augmentation", ("Accepts", "other mods: any"), ("Chance per use", "100%"))
+FOSSIL_STEP = step(1, "Fossil: Prismatic", ("Cost per use", "1 × Prismatic Fossil 5.87 c"))
+LEAGUE = "league Allflame, fetched 2026-11-07"
+FOSSIL_PRICE = "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07, 34 units behind it"
+fixtures(
+    pl.check_price_source_shown,
+    counter={
+        "R04: the Prices line is the league and a date, and a step buys a fossil": page(route(goal(("Prices", "league Allflame, fetched 2026-10-31")), FOSSIL_STEP)),
+        "a price that names no source": page(route(goal(("Prices", LEAGUE, "Prismatic Fossil: 5.87 Chaos")), FOSSIL_STEP)),
+        "a previous league's price with no mark": page(route(goal(("Prices", LEAGUE, "Shrieking Essence of Fear: 0.34 Chaos, poe.ninja, previous league, Mirage, 2026-06-13")), AUG)),
+    },
+    example={
+        "the price names its source and the step's resource is in the list": page(route(goal(("Prices", LEAGUE, FOSSIL_PRICE)), FOSSIL_STEP)),
+        "a previous league's price marked approximate": page(route(goal(("Prices", LEAGUE, "Shrieking Essence of Fear: 0.34 Chaos, poe.ninja, previous league, Mirage, 2026-06-13; approximate: previous league's price (Mirage, 2026-06-13)")), AUG)),
+        "a Chaos Orb has no price line": page(route(goal(("Prices", LEAGUE)), step(1, "Chaos Orb", ("Cost per use", "1 × Chaos Orb 1 c")))),
+    },
+)
 
 fixtures(
     pl.check_cut_guarantee,
