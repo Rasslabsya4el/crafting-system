@@ -2,7 +2,7 @@
 
 R08 and R09 are the fossil boots of the reference routes: rare Sorcerer Boots (Energy Shield) and rare Two-Toned Boots
 (Life) of item level 86, Fossils in a resonator until the boots hold the top tier of Energy Shield or Life and a
-Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`:
+Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-2026-11-07.json`:
 the other real routes' prices plus the poe.ninja fossil and resonator lines of 2026-11-01 (no Tangled Fossil line, so
 the sets with a Tangled Fossil are unpriced and left out) and the trade price of the start boots (a normal base of
 item level 86, the mean of the 5 cheapest instant-buyout listings, plus the Orb of Alchemy that makes it rare). These
@@ -28,7 +28,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
 RUNS = 200
 BUDGET = 60.0  # the plan is made as the command makes it by default: exact when the forecast fits, else approximate
 RATES = Rates(4e-5, 7e-6)  # injected (ADR-0023), so the decision does not depend on the machine

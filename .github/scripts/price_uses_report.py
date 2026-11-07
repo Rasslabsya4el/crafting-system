@@ -2,7 +2,8 @@
 
     python .github/scripts/price_uses_report.py ROUTES OUT_DIR [--prices FILE]
 
-ROUTES is a comma list of benchmark ids (R12,R10,...). For each route it makes the plan the benchmark makes (`make_plan`, or
+ROUTES is a comma list of benchmark ids (R12,R10,...), or `split`: the routes are dealt out to the dispatcher's runners (RUNNER_INDEX of
+RUNNER_COUNT, five runners: one for each group in `GROUPS`). For each route it makes the plan the benchmark makes (`make_plan`, or
 `plan_with_starts` for a route that starts from a vendor recipe), reads `price_uses` of the policy the report shows, and writes
 `OUT_DIR/price-uses-<ROUTE>.json`: the mean and, for each priced resource, its price, source, depth in units, the units the plan expects
 to buy and the marks the rule gives it. A line is printed per resource. Never run for R04 or R14 on a PC (docs/ci.md): use the dispatcher.
@@ -10,11 +11,13 @@ to buy and the marks the rule gives it. A line is printed per resource. Never ru
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
 PRICES = "tests/fixtures/prices/routes-allflame-2026-11-07.json"
+GROUPS = ("R12,R10,R11", "R05,R13", "R08,R09", "R04", "R14")  # what one runner takes; R04 and R14 hold hundreds of thousands of states each
 
 
 def main(argv: list[str]) -> int:
@@ -30,6 +33,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument("out")
     parser.add_argument("--prices", default=PRICES)
     args = parser.parse_args(argv)
+    if args.routes == "split":
+        index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
+        args.routes = ",".join(group for position, group in enumerate(GROUPS) if position % count == index - 1)
     root = find_project_root()
     config = load_config()
     data = load_game_data(cache_dir=config.cache_dir)
