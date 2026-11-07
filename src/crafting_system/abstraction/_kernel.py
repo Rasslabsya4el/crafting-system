@@ -2,6 +2,7 @@
 
 import math
 from collections import Counter, defaultdict, deque
+from contextlib import contextmanager
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
@@ -26,6 +27,7 @@ from crafting_system.actions import (
     build_pool,
     partners,
 )
+from crafting_system.actions.draw import floating
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -265,6 +267,27 @@ class Abstraction:
         self._unrolled: set[Hashable] = set()  # signatures of fracturing pools that hold no rollable mod
         self._kernels = 0
         self._hits = 0
+        self._approx: tuple[dict, dict, dict, dict] = ({}, {}, {}, {})  # the caches of the distributions made in floats (`approximate`)
+
+    @contextmanager
+    def approximate(self):
+        """Within the block the label distributions are made in floats, and cached apart from the exact ones (ticket #626).
+
+        A float distribution is the exact one to about 1e-13 (`actions.draw.floating`): enough for a lower bound that shrinks every chance and gives the mass that is
+        missing to a state that costs nothing (`abstraction._pattern`), and about 20 times faster to make. It must never reach an exact kernel, so the caches
+        it fills (`_cache`, `_expanded`, `_fractures`, `_input_kernels`) are a second set that this block swaps in for its length.
+        """
+        names = ("_cache", "_expanded", "_fractures", "_input_kernels")
+        saved = tuple(getattr(self, name) for name in names)
+        for name, apart in zip(names, self._approx):
+            setattr(self, name, apart)
+        try:
+            with floating():
+                yield
+        finally:
+            self._approx = tuple(getattr(self, name) for name in names)
+            for name, kept in zip(names, saved):
+                setattr(self, name, kept)
 
     @property
     def reading(self) -> Reading | None:

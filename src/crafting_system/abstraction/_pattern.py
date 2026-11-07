@@ -73,6 +73,7 @@ universe may miss that slot, and the members that hold it are not made (issue #5
 import time
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterator, Sequence
+from contextlib import nullcontext
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from fractions import Fraction
@@ -95,6 +96,8 @@ from ._state import CompressedState, Slot, best_of
 # member that is not a state of the route it says nothing about the states that are, and dropping the action from the key could put the bound
 # above the exact cost. The build refuses and says why. The clauses name the families themselves (`tests/test_cli_model_gaps.py` scans for them).
 
+SINK = -1  # the successor of the mass an approximate kernel does not account for: a state that costs nothing (the goal)
+SHRINK = Fraction(2**30 - 1, 2**30)  # every chance of a float kernel is taken this much lower; the float error is 1e-13, so no chance is above its exact one
 PRIME_FROM = 8  # a key that is given at least this many offers at once primes their distributions in a process pool, in chunks of ...
 PRIME_CHUNK = 32  # ... this many offers (the net is asked between two chunks)
 POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read, cheap beside one offer)
@@ -560,6 +563,7 @@ def build_pattern_model(
     progress=None,
     max_keys: int | None = None,
     stop: Callable[[], str | None] | None = None,
+    approximate: bool = False,
 ) -> PatternModel:
     """The optimistic model of the key from the start key, with no walk of the concrete graph.
 
@@ -574,8 +578,14 @@ def build_pattern_model(
     expanding is left a tip like the keys it had not reached: a tip has no actions in the model, which is not "the key has none", so the caller
     gives it a bound of its own (`_pattern_bound`, a floor action to the goal). If the universe had grown in that pass, the keys expanded before
     the growth lack the members that hold the new slot, so none of them is kept: every key is a tip.
+
+    With `approximate` the distributions behind the kernels are made in floats (`Abstraction.approximate`), which costs a twentieth of the time. A kernel
+    made so is not the exact one: each of its chances is shrunk by `SHRINK` (2^-30, above the float error of 1e-13, so no chance exceeds its exact value)
+    and the mass that is then missing is the chance of the state `SINK` (a successor of -1, a goal that costs nothing). The expected value of any
+    non-negative function of the successors is then at most the exact one, so a model built so is a lower bound of the model built exactly, and it differs
+    from it by about 1e-9 of a value.
     """
-    return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop).extend(offers)
+    return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop, approximate=approximate).extend(offers)
 
 
 class PatternBuilder:
@@ -598,7 +608,9 @@ class PatternBuilder:
         max_keys: int | None = None,
         stop=None,
         grow: bool = False,
+        approximate: bool = False,
     ) -> None:
+        self.approximate = approximate  # the kernels are made in floats, shrunk and completed with the sink (see `_lowered`): a lower bound of the exact model
         self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
         self.ab = abstraction
         self.start = start
@@ -679,6 +691,10 @@ class PatternBuilder:
 
     def _pass(self) -> str | None:
         """Expand every key for the offers it lacks; the reason a net ended it, or None when it ran to the end."""
+        with self.ab.approximate() if self.approximate else nullcontext():
+            return self._pass_keys()
+
+    def _pass_keys(self) -> str | None:
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
         last = polled = time.perf_counter()
         i = 0
@@ -793,6 +809,8 @@ class PatternBuilder:
                     for successor, chance in exact.items():
                         pattern.note(successor)
                         pushed[self._intern(successor)] += chance
+                    if self.approximate:
+                        pushed = _lowered(pushed)
                     kid = self.computed[ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
                 if kid not in seen:
                     seen.add(kid)
@@ -849,6 +867,24 @@ def _gap(offer: PatternOffer, key: PatternKey, gap: Exception) -> OutOfScopeErro
         "key (the exact model drops it only where the gap is), so it refuses the route instead of returning a bound that may be above the "
         "exact cost (OR-12, OR-13)."
     )
+
+
+def _lowered(pushed: dict[int, Fraction]) -> dict[int, Fraction]:
+    """A kernel made in floats as a kernel that is below the exact one: each chance shrunk by `SHRINK`, the mass that is missing given to `SINK`.
+
+    A kernel with no float in it (a deterministic result, or a draw made exactly) is the exact one and stays. The chances of a float kernel are
+    positive sums and products of at most a few dozen steps, each with a relative error of 2^-53, so each is within 1e-13 of its exact value and
+    `chance x SHRINK` is below the exact one; a total above one after the shrink would mean an error far above that, and is refused.
+    """
+    if not any(isinstance(chance, float) for chance in pushed.values()):
+        return pushed
+    lowered = {successor: Fraction(chance) * SHRINK for successor, chance in pushed.items()}
+    missing = 1 - sum(lowered.values(), Fraction(0))
+    if missing < 0:
+        raise RuntimeError(f"a float kernel adds up to more than one after its chances were shrunk by 2^-30 (by {float(-missing):.3g}): its error is far above the float error")
+    if missing:
+        lowered[SINK] = missing
+    return lowered
 
 
 def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]) -> int:
