@@ -259,3 +259,25 @@ def test_a_stopped_plan_the_solver_cannot_certify_is_a_refusal_with_the_lower_bo
     fresh = abstraction()
     with pytest.raises(NoPolicy, match=r"cannot be solved to a certified cost .*no plan costs less than [0-9]"):
         envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100))
+
+
+def test_the_distributions_are_primed_in_chunks_and_the_model_is_the_same(world, monkeypatch):
+    ab, start, offers, _, _, whole = world
+    all_offers = pattern_offers(offers)
+    plain = build_pattern_model(abstraction(), start, all_offers)
+    calls = []
+    fresh = abstraction()
+    real = type(fresh).prime
+
+    def recording(self, requests, **options):
+        requests = list(requests)
+        calls.append(len({id(action) for _, action in requests}))  # offers in the chunk
+        return real(self, requests, **options)
+
+    monkeypatch.setattr(type(fresh), "prime", recording)
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 2)
+    monkeypatch.setattr(_pattern, "PRIME_CHUNK", 3)
+    primed = build_pattern_model(fresh, start, all_offers)
+    assert canonical(primed) == canonical(plain)
+    assert calls and set(calls) <= {0, 1, 2, 3}  # chunks of at most 3 offers (the restart has no action: a chunk may hold fewer, or none)
+    assert len(calls) >= 3 * len(primed.keys) // 2  # a chunk for each three offers of each key, about
