@@ -729,3 +729,98 @@ def test_a_line_of_look_alike_states_with_one_action_is_one_step_whatever_its_le
     (step,) = flow.steps  # no refinement, no per-state fall-back: the label is the step
     assert len(step.states) == 300 and flow.measured
     assert step.uses == pytest.approx(2.0, rel=1e-6)  # state i is visited with chance 2^-i: the sum is 2
+
+
+def can_stop_or_finish(policy) -> set:
+    """The states of `policy` from which a run reaches the goal or a state with no action (so no closed loop that never ends)."""
+    found = {s for s, a in policy.items() if any(o.state == "goal" or o.state not in policy for o in a.outcomes)}
+    while True:
+        more = {s for s, a in policy.items() if s not in found and any(o.state in found for o in a.outcomes)}
+        if not more:
+            return found
+        found |= more
+
+
+def mixed_policies(seed: int, wanted: int):
+    """Random policies whose start can finish and that have a step with live and dead states, where `reach_probabilities` is well defined (nothing loops for ever)."""
+    rng = random.Random(seed)
+    found = 0
+    while found < wanted:
+        start, policy = random_policy(rng)
+        if start not in policy or set(policy) != can_stop_or_finish(policy):
+            continue
+        flow = build_flow(start, policy, is_goal)
+        if not flow.measured or evaluate(policy, start, is_goal).success_probability.value == 0.0:
+            continue
+        if any(step.action is not None and any(w == 0.0 for w in step.weights) and any(w > 0.0 for w in step.weights) for step in flow.steps):
+            found += 1
+            yield start, policy
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_a_step_with_live_and_dead_states_has_a_chance_of_being_entered_that_matches_the_older_dense_solve(monkeypatch, dense_limit):
+    """#620: a step of states that can finish and states that cannot had `reached = None`. With the whole step made absorbing it is one hitting solve."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = mixed = 0
+    for start, policy in mixed_policies(620, 120):
+        flow = build_flow(start, policy, is_goal)
+        assert flow.entered
+        for step in flow.steps[1:]:
+            if step.action is None:
+                continue
+            assert step.reached is not None, (start, step.states)
+            absorbing = {state: action for state, action in policy.items() if state not in set(step.states)}
+            chances = reach_probabilities(start, absorbing, is_goal)
+            expected = sum(chances.get(state, 0.0) for state in step.states)
+            assert step.reached == pytest.approx(expected, rel=1e-8, abs=1e-12), (start, step.states)
+            checked += 1
+            mixed += any(w == 0.0 for w in step.weights) and any(w > 0.0 for w in step.weights)
+    assert checked > 150 and mixed >= 60
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_no_step_with_an_action_lacks_the_chance_of_being_entered_while_the_start_can_finish(monkeypatch, dense_limit):
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    rng = random.Random(6200)
+    checked = 0
+    for _ in range(600):
+        start, policy = random_policy(rng)
+        if start not in policy:
+            continue
+        chain = _route_flow.chain_of_policy(start, policy, is_goal)
+        if not _route_flow._solved(chain).finishing[0]:
+            continue
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        assert all(step.reached is not None for step in flow.steps if step.action is not None)
+        checked += 1
+    assert checked > 100
+
+
+def test_a_mixed_step_is_entered_directly_from_a_state_that_can_finish_and_through_a_dead_state_of_another_step():
+    # x = {L, D}: L finishes, D goes to the gap G. S reaches L with 1/5 and D with 1/5, and E (action y, dead) with 1/5, which steps on to D with 1/2.
+    policy = {
+        "S": act("s", ("L", 1), ("D", 1), ("E", 1), ("goal", 2)),
+        "L": act("x", ("goal", 1)),
+        "D": act("x", ("G", 1)),
+        "E": act("y", ("D", 1), ("G", 1)),
+    }
+
+    flow = build_flow("S", policy, is_goal)
+
+    assert step_with(flow, "L") is step_with(flow, "D")
+    assert step_with(flow, "L").reached == pytest.approx(1 / 5 + 1 / 5 + 1 / 5 * 1 / 2)
+    assert step_with(flow, "E").reached == pytest.approx(1 / 5)
+
+
+def test_a_step_of_dead_states_is_entered_through_a_dead_state_of_another_step_too():
+    policy = {
+        "S": act("s", ("E", 1), ("goal", 1)),
+        "E": act("y", ("D", 1), ("G", 1)),
+        "D": act("x", ("G", 1)),
+    }
+
+    flow = build_flow("S", policy, is_goal)
+
+    assert step_with(flow, "E").reached == pytest.approx(1 / 2)
+    assert step_with(flow, "D").reached == pytest.approx(1 / 4)

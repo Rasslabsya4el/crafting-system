@@ -24,8 +24,10 @@ falls back to the dense solve for up to `DENSE_FALLBACK` states, else the flow i
 `Fraction`s of integer weights turned to float64 once (correctly rounded). From the same visits come the uses of a
 step (the sum of the visits of its states, so `sum(uses x cost)` is the mean cost of the policy) and, for a step with
 an action, the chance a run ever enters it: the chance of reaching a state of the step when the step's states
-absorb, one solve of the same kind for each step, whatever the size of the policy (ticket #490). A step with no
-action is entered with the chance of stepping into it from the visited states. A state from which no run can ever
+absorb, one solve of the same kind for each step, whatever the size of the policy (ticket #490). A step with dead
+states in it (no action, or a state from which no run can finish) is entered the same way, with the edges that lead
+into those states from the states that can finish, and from the dead states of other steps that go on to them, on the
+right-hand side (ticket #620): a step with an action has `reached = None` only where a solve did not settle. A state from which no run can ever
 reach a goal (it loops forever, or every way out ends in a state with no action) has no visits: a step whose states
 are all of that kind has `uses = inf` and the plain mean of its states as its chances; in a step that also has
 states that can finish, only those are counted.
@@ -721,11 +723,12 @@ def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> tuple[np.nda
     return None, why
 
 
-def _entry_chance(system: _System, absorbing: np.ndarray) -> float | None:
+def _entry_chance(system: _System, absorbing: np.ndarray, extra: np.ndarray | None = None) -> float | None:
     """The chance a run from the start ever reaches a state of `absorbing` (a mask over the positions; the start is not in it); None when the solve did not settle.
 
-    h(s) is that chance from s, the states of `absorbing` made to stop the run: h(s) = sum over u in `absorbing` of p(s, u) / leave(s) + sum over the
-    other states t of p(s, t) / leave(s) h(t), each self-loop divided out as in `_visits`.
+    h(s) is that chance from s, the states of `absorbing` made to stop the run: h(s) = sum over u in `absorbing` of p(s, u) / leave(s) + extra(s) + sum over the
+    other states t of p(s, t) / leave(s) h(t), each self-loop divided out as in `_visits`. `extra[s]` (over the positions, already divided by `leave`) is the
+    chance of getting from `s` into the step by a way that leaves the states that can finish (`_entered`): it makes a step that holds dead states a hitting problem too.
     """
     free = ~absorbing
     index = np.cumsum(free) - 1
@@ -734,10 +737,68 @@ def _entry_chance(system: _System, absorbing: np.ndarray) -> float | None:
     inner = edge & free[column]
     entering = edge & absorbing[column]
     b = np.bincount(index[row[entering]], weights=system.p[entering] / system.leave[row[entering]], minlength=int(free.sum()))
+    if extra is not None:
+        b = b + extra[free]
     h = _linear(int(free.sum()), index[row[inner]], index[column[inner]], system.p[inner] / system.leave[row[inner]], b)
     if h is None:
         return None
     return min(1.0, max(0.0, float(h[index[system.position[0]]])))
+
+
+@dataclass(frozen=True)
+class _Dead:
+    """What a run does once it has left the states that can finish for good: the edges among the other states (`row -> column`, chance `p`; `leave[s]`: the chance to leave `s` for another state) and the edges into them from the states that can finish (`out -> into`, chance `q`)."""
+
+    row: np.ndarray
+    column: np.ndarray
+    p: np.ndarray
+    leave: np.ndarray
+    out: np.ndarray
+    into: np.ndarray
+    q: np.ndarray
+
+
+def _dead_region(chain: Chain, src: np.ndarray, finishing: np.ndarray) -> _Dead:
+    """The states that cannot finish are closed: a run that steps into one never comes back to a state that can. Their edges are few next to the chain's."""
+    m, dst = chain.m, chain.dst
+    state = dst < m
+    dead = ~finishing[src] & state
+    live_to_dead = finishing[src] & state
+    live_to_dead[live_to_dead] = ~finishing[dst[live_to_dead]]
+    nonself = dead & (src != dst)
+    leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=m)
+    return _Dead(src[dead], dst[dead], chain.prob[dead], leave, src[live_to_dead], dst[live_to_dead], chain.prob[live_to_dead])
+
+
+def _dead_chances(m: int, dead: _Dead, target: np.ndarray) -> np.ndarray | None:
+    """For every state, the chance a run that is there ever reaches a state of `target` (a mask over states that cannot finish): 1 on `target`, the hitting chance on the dead states that can get there, 0 elsewhere. None when the solve did not settle.
+
+    A step that holds dead states is entered directly from a state that can finish, or by way of a dead state of another step that goes on to one of
+    its dead states; the second way is this hitting problem on the dead states alone (those that can reach `target`, found backwards).
+    """
+    chances = target.astype(float)
+    reach = target.copy()
+    while True:
+        fresh = np.zeros(m, dtype=bool)
+        fresh[dead.row[reach[dead.column]]] = True
+        fresh &= ~reach
+        if not fresh.any():
+            break
+        reach |= fresh
+    free = reach & ~target
+    if not free.any():
+        return chances
+    index = np.cumsum(free) - 1
+    edge = (dead.row != dead.column) & free[dead.row]
+    to_target = edge & target[dead.column]
+    to_free = edge & free[dead.column]
+    weight = dead.p / np.where(dead.leave[dead.row] > 0, dead.leave[dead.row], 1.0)
+    b = np.bincount(index[dead.row[to_target]], weights=weight[to_target], minlength=int(free.sum()))
+    h = _linear(int(free.sum()), index[dead.row[to_free]], index[dead.column[to_free]], weight[to_free], b)
+    if h is None:
+        return None
+    chances[free] = np.clip(h, 0.0, 1.0)
+    return chances
 
 
 def _entered(chain, step, nsteps, src, finishing, visits, system, inverse) -> tuple[list[float | None], int]:
@@ -746,13 +807,17 @@ def _entered(chain, step, nsteps, src, finishing, visits, system, inverse) -> tu
     For a step A of states that can finish, the first state of A a run meets is a with chance H(a), and the visits of N split by it:
     N[start, b] = sum over a in A of H(a) N[a, b], so H = N[start, A] N[A, A]^-1 and the chance is its sum, when N is at hand (`inverse`, up to
     `DENSE_LIMIT` states). Otherwise `_entry_chance` solves for the chance of reaching A with its states made absorbing, one solve for each
-    step. A step of states that cannot finish (a dead end, a gap) is entered from the states that can: its chance is the expected number of
-    such steps into it, since a run never comes back from it. A step that has both kinds of state is left unmeasured (None).
+    step. A step that holds states that cannot finish (a dead end, a gap, a loop that never ends) is entered from the states that can, and a run never
+    comes back from them: the chance of entering it is the chance of reaching one of its states, live or dead. With the whole step absorbing a step
+    that has both kinds is the same solve, with the edges from the states that can finish into its dead states (and into the dead states of other
+    steps that go on to them, `_dead_chances`) added to the right-hand side; a step of dead states alone is the sum of those edges weighted by the
+    expected visits of their sources (#620).
     """
     result: list[float | None] = [None] * nsteps
     result[0] = 1.0
     unsettled = 0
     m = chain.m
+    dead: _Dead | None = None
     for s in range(1, nsteps):
         members = np.flatnonzero(step == s)
         live = finishing[members]
@@ -776,9 +841,24 @@ def _entered(chain, step, nsteps, src, finishing, visits, system, inverse) -> tu
                 unsettled += 1
             else:
                 result[s] = value
-        elif not live.any():
-            into = np.zeros(m, dtype=bool)
-            into[members] = True
-            edge = (chain.dst < m) & into[np.minimum(chain.dst, m - 1)] & finishing[src]
-            result[s] = min(1.0, max(0.0, float(np.sum(visits[src[edge]] * chain.prob[edge]))))
+        else:
+            dead = dead or _dead_region(chain, src, finishing)
+            target = np.zeros(m, dtype=bool)
+            target[members[~live]] = True
+            chances = _dead_chances(m, dead, target)
+            if chances is None:
+                unsettled += 1
+                continue
+            weight = dead.q * chances[dead.into]  # each edge out of the states that can finish: the chance it gets into the step
+            if not live.any():
+                value: float | None = float(np.sum(visits[dead.out] * weight))
+            else:
+                absorbing = np.zeros(system.nt, dtype=bool)
+                absorbing[system.position[members[live]]] = True
+                extra = np.bincount(system.position[dead.out], weights=weight, minlength=system.nt) / system.leave
+                value = _entry_chance(system, absorbing, extra)
+            if value is None:
+                unsettled += 1
+            else:
+                result[s] = min(1.0, max(0.0, value))
     return result, unsettled
