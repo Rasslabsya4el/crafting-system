@@ -11,8 +11,10 @@ import pytest
 from crafting_system.solver import _packed_chain as pc
 
 
-def random_chain(rng, n, *, shared=0, shared_users=0, density=3, leak=0.2):
-    """`(dense P, ptr, col, weight)`: a random substochastic chain of `n` states with `shared` rows that `shared_users` states each take."""
+def random_chain(rng, n, *, shared=0, shared_users=0, density=3, leak=0.2, loops=False):
+    """`(dense Q, ptr, col, weight)`: a random substochastic chain of `n` states with `shared` rows that `shared_users` states each take.
+
+    With `loops` a row may hold a self-loop, and a shared row keeps the entry of a taker that is among its outcomes (so the rows stay identical)."""
     rows: list[dict[int, float]] = []
     kernels = []
     for _ in range(shared):
@@ -25,10 +27,10 @@ def random_chain(rng, n, *, shared=0, shared_users=0, density=3, leak=0.2):
     taken = {int(s): kernels[i % shared] for i, s in enumerate(taking)} if shared else {}
     for s in range(n):
         if s in taken:
-            row = {t: p for t, p in taken[s].items() if t != s}
+            row = {t: p for t, p in taken[s].items() if loops or t != s}
         else:
             width = int(rng.integers(1, density + 1))
-            targets = [t for t in rng.choice(n, size=width, replace=False).tolist() if t != s]
+            targets = [t for t in rng.choice(n, size=width, replace=False).tolist() if loops or t != s]
             weights = rng.random(len(targets))
             weights = weights / max(weights.sum(), 1e-12) * (1 - leak) * rng.random()
             row = dict(zip(targets, weights.tolist(), strict=True))
@@ -48,6 +50,11 @@ def random_chain(rng, n, *, shared=0, shared_users=0, density=3, leak=0.2):
 
 def inverse_of(dense):
     return np.linalg.inv(np.eye(len(dense)) - dense)
+
+
+def leave_of(dense):
+    """The chance to leave each state for any other: one minus its self-loop."""
+    return 1.0 - np.diag(dense)
 
 
 @pytest.mark.parametrize("seed", range(12))
@@ -83,9 +90,9 @@ def test_the_components_of_a_random_graph_are_the_ones_of_the_reachability_closu
 def test_a_chain_whose_components_are_small_gets_its_diagonal_without_a_cut(seed):
     rng = np.random.default_rng(200 + seed)
     n = int(rng.integers(5, 50))
-    dense, ptr, col, weight = random_chain(rng, n, density=3)
+    dense, ptr, col, weight = random_chain(rng, n, density=3, loops=True)
 
-    got, _ = pc.inverse_diagonal(n, ptr, col, weight)
+    got, _ = pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense))
 
     assert got == pytest.approx(np.diag(inverse_of(dense)), rel=1e-9)
 
@@ -94,9 +101,9 @@ def test_a_chain_whose_components_are_small_gets_its_diagonal_without_a_cut(seed
 def test_cutting_the_shared_rows_gives_the_same_diagonal_by_the_woodbury_identity(seed):
     rng = np.random.default_rng(300 + seed)
     n = int(rng.integers(20, 90))
-    dense, ptr, col, weight = random_chain(rng, n, shared=int(rng.integers(1, 4)), shared_users=int(rng.integers(3, 12)), density=2)
+    dense, ptr, col, weight = random_chain(rng, n, shared=int(rng.integers(1, 4)), shared_users=int(rng.integers(3, 12)), density=2, loops=True)
 
-    got, _ = pc.inverse_diagonal(n, ptr, col, weight, invert_limit=3)
+    got, _ = pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=3)
 
     assert got == pytest.approx(np.diag(inverse_of(dense)), rel=1e-8)
 
@@ -105,9 +112,9 @@ def test_cutting_the_shared_rows_gives_the_same_diagonal_by_the_woodbury_identit
 def test_a_component_that_stays_big_after_the_shared_rows_is_cut_state_by_state(seed):
     rng = np.random.default_rng(400 + seed)
     n = int(rng.integers(30, 80))
-    dense, ptr, col, weight = random_chain(rng, n, shared=1, shared_users=4, density=3)
+    dense, ptr, col, weight = random_chain(rng, n, shared=1, shared_users=4, density=3, loops=True)
 
-    got, _ = pc.inverse_diagonal(n, ptr, col, weight, invert_limit=2)
+    got, _ = pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=2)
 
     assert got == pytest.approx(np.diag(inverse_of(dense)), rel=1e-8)
 
@@ -115,10 +122,10 @@ def test_a_component_that_stays_big_after_the_shared_rows_is_cut_state_by_state(
 def test_a_block_of_solves_is_cut_into_pieces_without_changing_the_answer(monkeypatch):
     rng = np.random.default_rng(7)
     n = 60
-    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=8, density=3)
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=8, density=3, loops=True)
     monkeypatch.setattr(pc, "BLOCK_CELLS", 90)  # one column and a few edges at a time
 
-    got, _ = pc.inverse_diagonal(n, ptr, col, weight, invert_limit=3)
+    got, _ = pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=3)
 
     assert got == pytest.approx(np.diag(inverse_of(dense)), rel=1e-8)
 
@@ -127,14 +134,14 @@ def test_a_block_of_solves_is_cut_into_pieces_without_changing_the_answer(monkey
 def test_the_row_of_the_start_found_by_the_same_pieces_agrees_with_the_dense_row_and_a_wrong_row_shows(limit):
     rng = np.random.default_rng(9)
     n = 50
-    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=6, density=2)
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=6, density=2, loops=True)
     exact = inverse_of(dense)
     row = exact[0].copy()
 
-    _, fine = pc.inverse_diagonal(n, ptr, col, weight, invert_limit=limit, start=0, start_row=row)
+    _, fine = pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=limit, start=0, start_row=row)
     wrong = row.copy()
     wrong[np.argmax(row[1:]) + 1] *= 1.01
-    _, caught = pc.inverse_diagonal(n, ptr, col, weight, invert_limit=limit, start=0, start_row=wrong)
+    _, caught = pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=limit, start=0, start_row=wrong)
 
     assert fine < 1e-9
     assert caught > 1e-3
@@ -143,14 +150,14 @@ def test_the_row_of_the_start_found_by_the_same_pieces_agrees_with_the_dense_row
 def test_cut_rows_too_many_to_put_back_in_the_memory_allowed_are_refused_not_guessed(monkeypatch):
     rng = np.random.default_rng(11)
     n = 40
-    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=6, density=2)
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=6, density=2, loops=True)
     monkeypatch.setattr(pc, "WOODBURY_CELLS", 10)
 
     with pytest.raises(pc.CyclesTooTangled, match="cells"):
-        pc.inverse_diagonal(n, ptr, col, weight, invert_limit=3)
+        pc.inverse_diagonal(n, ptr, col, weight, leave_of(dense), invert_limit=3)
 
 
 def test_a_chain_of_one_state_and_of_none():
     ptr, col, weight = np.zeros(2, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0)
-    assert pc.inverse_diagonal(1, ptr, col, weight)[0].tolist() == [1.0]
-    assert pc.inverse_diagonal(0, np.zeros(1, dtype=np.int64), col, weight)[0].tolist() == []
+    assert pc.inverse_diagonal(1, ptr, col, weight, np.ones(1))[0].tolist() == [1.0]
+    assert pc.inverse_diagonal(0, np.zeros(1, dtype=np.int64), col, weight, np.ones(0))[0].tolist() == []

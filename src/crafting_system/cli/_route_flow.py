@@ -619,28 +619,26 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
 
 
 def _diagonal(chain: Chain, src: np.ndarray, done: _Solved, say) -> np.ndarray | None:
-    """N[s, s] of every state that can finish (by position), or None when the pieces do not agree with the visits.
+    """N[s, s] of every state that can finish (by position), or None when the pieces do not agree with the visits or cannot be put back.
 
-    N = (I - Q)^-1 = Nt D^-1 with D the chance to leave each state and Nt = (I - Pt)^-1 for Pt[s, t] = Q[s, t] / D[s] (no self-loop), so
-    N[s, s] = Nt[s, s] / D[s], and the row of the start in Nt is the visits times D.
+    The chain is Q on the states that can finish, self-loops included, with `leave` the chance to leave each state (`_system`); the cycles of the
+    chain give the diagonal of N = (I - Q)^-1 (`solver/_packed_chain.py`) and, from the same pieces, the row of the start, which must be the visits.
     """
     system = _system(chain, src, done.finishing)
     assert system is not None
-    keep = system.row != system.column
-    row, column, weight = system.row[keep], system.column[keep], system.p[keep] / system.leave[system.row[keep]]
-    ptr = np.searchsorted(row, np.arange(system.nt + 1))  # the edges are in the order of their states, which the positions keep
+    ptr = np.searchsorted(system.row, np.arange(system.nt + 1))  # the edges are in the order of their states, which the positions keep
     start = int(system.position[0])
     visits = done.visits[done.finishing]
     with np.errstate(all="ignore"):
         try:
-            diagonal, deviation = inverse_diagonal(system.nt, ptr, column, weight, start=start, start_row=visits * system.leave, progress=say)
+            diagonal, deviation = inverse_diagonal(system.nt, ptr, system.column, system.p, system.leave, start=start, start_row=visits, progress=say)
         except (np.linalg.LinAlgError, CyclesTooTangled) as error:  # not measured, never a guess: the benchmark line shows `?` and counts it
             say(f"visit chances: not measured ({error})")
             return None
         if not (deviation <= AGREE and np.all(np.isfinite(diagonal)) and np.all(diagonal >= 1.0 - 1e-9)):
             say(f"visit chances: the cycles of the chain and the visits disagree by {deviation:.3g}, no chance is shown")
             return None
-        return diagonal / system.leave
+        return diagonal
 
 
 def _entry_chance(system: _System, absorbing: np.ndarray) -> float | None:

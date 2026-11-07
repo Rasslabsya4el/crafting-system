@@ -1,9 +1,12 @@
 """The diagonal of the fundamental matrix of a chain, exactly, from the cycles of the chain (tickets #572 and #490).
 
-A chain with transient states and the chances `P[s, t]` among them (the rest of each row leaks to a goal or to a state the run cannot finish
-from) has the fundamental matrix `N = (I - P)^-1`: `N[s, t]` is the expected number of visits to `t` of a run that starts in `s`. The chance
+A chain with transient states and the chances `Q[s, t]` among them (the rest of each row leaks to a goal or to a state the run cannot finish
+from) has the fundamental matrix `N = (I - Q)^-1`: `N[s, t]` is the expected number of visits to `t` of a run that starts in `s`. The chance
 that a run from `s` ever visits `t` is `N[s, t] / N[t, t]`, so the visit chance of a state needs the diagonal of `N`, which a single sparse
 solve (one right-hand side) does not give, and one solve per state is too slow for thousands of states in a chain of 10^5.
+
+No `1 - p` is formed: each row is divided by the chance to leave its state (`leave[s] = 1 - Q[s, s]`, a sum of the other terms), which takes the
+self-loops out, and `P[s, t] = Q[s, t] / leave[s]` is what is solved with; N = (I - P)^-1 diag(1 / leave). The sentences below speak of `P`.
 
 What is exact and cheap is the structure of the cycles. `N[t, t]` only depends on the strongly connected component of `t`: a run that leaves
 it never comes back. A state in a component of its own (no cycle through it) has `N[t, t] = 1`; a small component is inverted whole. In a
@@ -219,15 +222,20 @@ def inverse_diagonal(
     ptr: np.ndarray,
     col: np.ndarray,
     weight: np.ndarray,
+    leave: np.ndarray,
     invert_limit: int | None = None,
     start: int = 0,
     start_row: np.ndarray | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> tuple[np.ndarray, float]:
-    """`(diagonal of N = (I - P)^-1, deviation)` for the chain `P` (CSR, no entries on the diagonal), exact up to the rounding of the dense inverses.
+    """`(diagonal of N = (I - Q)^-1, deviation)` for the chain `Q` (CSR, self-loops included), exact up to the rounding of the dense inverses.
 
-    `weight[e]` is `P[s, col[e]]` for the edges `e` of row `s` (`ptr`). A component of at most `invert_limit` states is inverted whole;
-    above that the rows that several states share are cut first and the Woodbury step of the module text is made.
+    `weight[e]` is `Q[s, col[e]]` for the edges `e` of row `s` (`ptr`); `leave[s]` is the chance to leave `s` for any other state (a goal, or a
+    state that cannot finish, too): `1 - Q[s, s]` with the sum made of positive terms, so that no `1 - p` is formed. The system is solved with each
+    row divided by `leave`, that is for `P[s, t] = Q[s, t] / leave[s]` without the self-loops, and the answer scaled back: N = (I - P)^-1 diag(1/leave).
+    A component of `P` of at most `invert_limit` states is inverted whole; above that the rows that several states share (compared as `Q` rows,
+    self-loop included, so a reroll that some of its takers are among the outcomes of is still one row) are cut first and the Woodbury step of the
+    module text is made.
 
     The check. When the row `start_row` of N for the state `start` is known from another method (a sparse solve whose true residual was
     measured), the same pieces give that row too, and `deviation` is the largest relative difference between the two over the states whose
@@ -237,17 +245,23 @@ def inverse_diagonal(
     limit = INVERT_LIMIT if invert_limit is None else invert_limit
     say = progress or (lambda _text: None)
     began = time.perf_counter()
-    label, count = components(n, ptr, col)
+    row = np.repeat(np.arange(n), np.diff(ptr))
+    off = row != col
+    p_ptr = np.concatenate(([0], np.cumsum(np.bincount(row[off], minlength=n))))
+    p_col, p_weight = col[off], weight[off] / leave[row[off]]
+    label, count = components(n, p_ptr, p_col)
     sizes = np.bincount(label, minlength=count)
     big = sizes[label] > limit
     say(f"cycles: {n:,} states, {count:,} components, the biggest {int(sizes.max()) if count else 0:,} ({time.perf_counter() - began:.1f} s)")
+    scale = 1.0 / leave
     if not big.any():
-        base = Triangular(n, ptr, col, weight, label, count)
+        base = Triangular(n, p_ptr, p_col, p_weight, label, count)
         say(f"cycles: every component inverted whole ({time.perf_counter() - began:.1f} s)")
-        return base.diagonal(), _deviation(base.solve_transposed(_unit(n, start)) if start_row is not None else None, start_row, np.arange(n))
-    cut = _cut_rows(n, ptr, col, weight, big, limit)
+        found = base.solve_transposed(_unit(n, start)) * scale if start_row is not None else None
+        return base.diagonal() * scale, _deviation(found, start_row, np.arange(n))
+    cut = _cut_rows(n, ptr, col, weight, p_ptr, p_col, big, limit)
     say(f"cycles: {int(cut.sum()):,} rows cut from {int(big.sum()):,} states in components above {limit:,} ({time.perf_counter() - began:.1f} s)")
-    return _woodbury(n, ptr, col, weight, cut, big, start, start_row, say)
+    return _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say)
 
 
 def _unit(n: int, at: int) -> np.ndarray:
@@ -261,8 +275,8 @@ def _deviation(computed: np.ndarray | None, expected: np.ndarray | None, states:
     if computed is None or expected is None or not len(states):
         return 0.0
     a, b = computed[states], expected[states]
-    scale = np.maximum(np.abs(b), 1e-9 * float(np.max(np.abs(b))))  # a state visited a billion times less than the likeliest is not a witness
-    return float(np.max(np.abs(a - b) / np.where(scale > 0, scale, 1.0)))
+    floor = np.maximum(np.abs(b), 1e-9 * float(np.max(np.abs(b))))  # a state visited a billion times less than the likeliest is not a witness
+    return float(np.max(np.abs(a - b) / np.where(floor > 0, floor, 1.0)))
 
 
 def _row_groups(ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, states: np.ndarray) -> list[list[int]]:
@@ -275,21 +289,21 @@ def _row_groups(ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, states: np
     return list(groups.values())
 
 
-def _without_rows(n: int, ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, cut: np.ndarray):
+def _without_rows(ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, cut: np.ndarray):
     """The chain with the rows of the states `cut` (a boolean mask) emptied: `(ptr, col, weight)`."""
     sizes = np.diff(ptr)
     keep = ~np.repeat(cut, sizes)
     return np.concatenate(([0], np.cumsum(np.where(cut, 0, sizes)))), col[keep], weight[keep]
 
 
-def _cut_rows(n: int, ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, big: np.ndarray, limit: int) -> np.ndarray:
+def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int) -> np.ndarray:
     """A boolean mask of states of the big components whose rows are cut so that no component of the rest has more than `limit` states."""
     cut = np.zeros(n, dtype=bool)
     for members in _row_groups(ptr, col, weight, np.flatnonzero(big)):
         if len(members) > 1:
             cut[members] = True
     while True:
-        new_ptr, new_col, _ = _without_rows(n, ptr, col, weight, cut)
+        new_ptr, new_col, _ = _without_rows(p_ptr, p_col, p_col, cut)
         label, count = components(n, new_ptr, new_col)
         sizes = np.bincount(label, minlength=count)
         over = np.flatnonzero(sizes > limit)
@@ -303,44 +317,39 @@ def _cut_rows(n: int, ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, big:
             cut[order[: max(1, -(-len(members) // (4 * limit)))]] = True
 
 
-def _woodbury(
-    n: int,
-    ptr: np.ndarray,
-    col: np.ndarray,
-    weight: np.ndarray,
-    cut: np.ndarray,
-    big: np.ndarray,
-    start: int,
-    start_row: np.ndarray | None,
-    say: Callable[[str], None],
-) -> tuple[np.ndarray, float]:
-    """`(diagonal, deviation)` of N for the chain with the rows `cut` put back: N_B on the small components, N_B + N_B U (I - K N_B U)^-1 K N_B on `big`."""
-    new_ptr, new_col, new_weight = _without_rows(n, ptr, col, weight, cut)
+def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say) -> tuple[np.ndarray, float]:
+    """`(diagonal, deviation)` of N = (I - Q)^-1 by cutting the rows `cut` of Q out and putting them back (module text).
+
+    With A = I - Q_B, where Q_B is Q with the rows `cut` emptied, A^-1 = (I - P_B)^-1 diag(r) with r = 1/leave on the rows kept and 1 on the rows cut
+    (a cut row of A is the unit row), and N = A^-1 + A^-1 U (I - K A^-1 U)^-1 K A^-1 on the states of the `big` components; elsewhere N is A^-1.
+    """
+    new_ptr, new_col, new_weight = _without_rows(p_ptr, p_col, p_weight, cut)
     label, count = components(n, new_ptr, new_col)
     sizes = np.bincount(label, minlength=count)
     base = Triangular(n, new_ptr, new_col, new_weight, label, count)
-    diagonal = base.diagonal()
+    r = np.where(cut, 1.0, scale)  # the rows of A: each divided by leave, a cut row not at all
+    diagonal = base.diagonal() * r  # A^-1[s, s]
     groups = _row_groups(ptr, col, weight, np.flatnonzero(cut))
     q = len(groups)
     say(f"cycles: the chain without the cut rows has {count:,} components, the biggest {int(sizes.max()):,}; {q:,} distinct rows are cut")
-    rows = [(col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]) for g in groups]  # the rows of K
+    rows = [(col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]) for g in groups]  # the rows of K, self-loops included
     wanted = np.flatnonzero(big)
-    cells = (2 * len(wanted) + 2 * q) * q  # N_B U and K N_B on the wanted states, K N_B U and its inverse
+    cells = (2 * len(wanted) + 2 * q) * q  # A^-1 U and K A^-1 on the wanted states, K A^-1 U and its inverse
     if cells > WOODBURY_CELLS:
         raise CyclesTooTangled(
             f"putting back {q:,} distinct cut rows for {len(wanted):,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows"
         )
     block = max(1, BLOCK_CELLS // max(1, n))
-    y_w = np.zeros((len(wanted), q))  # N_B U on the wanted states
-    t = np.zeros((q, q))  # K N_B U
-    z_w = np.zeros((q, len(wanted)))  # K N_B on the wanted states
-    y_start = np.zeros(q)  # N_B U on the start
+    y_w = np.zeros((len(wanted), q))  # A^-1 U on the wanted states
+    t = np.zeros((q, q))  # K A^-1 U
+    z_w = np.zeros((q, len(wanted)))  # K A^-1 on the wanted states
+    y_start = np.zeros(q)  # A^-1 U on the start
     for lo in range(0, q, block):
         hi = min(q, lo + block)
         rhs = np.zeros((n, hi - lo))
         for g in range(lo, hi):
             rhs[groups[g], g - lo] = 1.0
-        y = base.solve(rhs)
+        y = base.solve(rhs * r[:, None])  # A^-1 = (I - P_B)^-1 diag(r)
         say(f"cycles: solves {lo + 1:,} to {hi:,} of {q:,} done")
         y_w[:, lo:hi] = y[wanted]
         y_start[lo:hi] = y[start]
@@ -349,12 +358,12 @@ def _woodbury(
         rhs = np.zeros((n, hi - lo))
         for g in range(lo, hi):
             rhs[rows[g][0], g - lo] = rows[g][1]
-        z_w[lo:hi, :] = base.solve_transposed(rhs)[wanted].T  # column a is N_B^T of the row a of K, that is row a of K N_B
+        z_w[lo:hi, :] = (r[:, None] * base.solve_transposed(rhs))[wanted].T  # column a is A^-T of the row a of K, that is row a of K A^-1
     middle = np.linalg.inv(np.eye(q) - t)
     diagonal[wanted] += np.einsum("wa,ab,bw->w", y_w, middle, z_w, optimize=True)
     deviation = 0.0
     if start_row is not None:
-        row = base.solve_transposed(_unit(n, start))  # N_B[start, :]
+        row = r * base.solve_transposed(_unit(n, start))  # A^-1[start, :]
         row[wanted] += (y_start @ middle) @ z_w
         deviation = _deviation(row, start_row, wanted)
     return diagonal, deviation
