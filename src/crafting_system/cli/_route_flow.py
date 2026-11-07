@@ -27,8 +27,8 @@ an action, the chance a run ever enters it: the chance of reaching a state of th
 absorb, one solve of the same kind for each step, whatever the size of the policy (ticket #490). A step with dead
 states in it (no action, or a state from which no run can finish) is entered the same way, with the edges that lead
 into those states from the states that can finish, and from the dead states of other steps that go on to them, on the
-right-hand side (ticket #620): a step with an action has `reached = None` only where a solve did not settle. A state from which no run can ever
-reach a goal (it loops forever, or every way out ends in a state with no action) has no visits: a step whose states
+right-hand side (ticket #620): a step with an action has `reached = None` only where a solve did not settle.
+A state from which no run can ever reach a goal (it loops forever, or every way out ends in a state with no action) has no visits: a step whose states
 are all of that kind has `uses = inf` and the plain mean of its states as its chances; in a step that also has
 states that can finish, only those are counted.
 

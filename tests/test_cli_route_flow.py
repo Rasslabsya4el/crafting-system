@@ -766,9 +766,7 @@ def test_a_step_with_live_and_dead_states_has_a_chance_of_being_entered_that_mat
     for start, policy in mixed_policies(620, 120):
         flow = build_flow(start, policy, is_goal)
         assert flow.entered
-        for step in flow.steps[1:]:
-            if step.action is None:
-                continue
+        for step in flow.steps[1:]:  # the steps with no action too: a gap reached through a dead state
             assert step.reached is not None, (start, step.states)
             absorbing = {state: action for state, action in policy.items() if state not in set(step.states)}
             chances = reach_probabilities(start, absorbing, is_goal)
@@ -777,6 +775,69 @@ def test_a_step_with_live_and_dead_states_has_a_chance_of_being_entered_that_mat
             checked += 1
             mixed += any(w == 0.0 for w in step.weights) and any(w > 0.0 for w in step.weights)
     assert checked > 150 and mixed >= 60
+
+
+def exact_hit(policy, start, members) -> float:
+    """The chance of ever reaching a state of `members` from `start` by `Fraction` elimination, for any policy: closed loops that never end and gaps included.
+
+    Only the states that can reach `members` are unknowns (the others hold 0), so the system is not singular where a loop never ends.
+    """
+    if start in members:
+        return 1.0
+    reaching: set = set()
+    while True:
+        more = {
+            s for s, a in policy.items()
+            if s not in members and s not in reaching and any(o.state in members or o.state in reaching for o in a.outcomes if o.weight > 0)
+        }
+        if not more:
+            break
+        reaching |= more
+    if start not in reaching:
+        return 0.0
+    states = sorted(reaching)
+    index = {s: i for i, s in enumerate(states)}
+    n = len(states)
+    rows = [[Fraction(0)] * (n + 1) for _ in range(n)]
+    for s in states:
+        total = sum(o.weight for o in policy[s].outcomes)
+        rows[index[s]][index[s]] += 1
+        for o in policy[s].outcomes:
+            if o.state in members:
+                rows[index[s]][n] += Fraction(o.weight, total)
+            elif o.state in index:
+                rows[index[s]][index[o.state]] -= Fraction(o.weight, total)
+    for c in range(n):
+        pivot = next(r for r in range(c, n) if rows[r][c] != 0)
+        rows[c], rows[pivot] = rows[pivot], rows[c]
+        rows[c] = [v / rows[c][c] for v in rows[c]]
+        for r in range(n):
+            if r != c and rows[r][c] != 0:
+                rows[r] = [a - rows[r][c] * b for a, b in zip(rows[r], rows[c])]
+    return float(rows[index[start]][n])
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_the_chance_of_entering_any_step_of_any_random_policy_is_the_exact_hitting_chance(monkeypatch, dense_limit):
+    """#620: unfiltered random policies (gaps, loops that never end, a start that cannot finish): every step, with an action or not, against an exact elimination."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    rng = random.Random(6201)
+    checked = no_action = 0
+    for _ in range(500):
+        start, policy = random_policy(rng)
+        if start not in policy:
+            continue
+        chain = _route_flow.chain_of_policy(start, policy, is_goal)
+        if not _route_flow._solved(chain).finishing[0]:
+            continue  # nothing is a run's business when the start cannot finish
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        for step in flow.steps:
+            assert step.reached is not None, (start, step.states)
+            assert step.reached == pytest.approx(exact_hit(policy, start, set(step.states)), rel=1e-8, abs=1e-12), (start, step.states)
+            checked += 1
+            no_action += step.action is None
+    assert checked > 500 and no_action > 20
 
 
 @pytest.mark.parametrize("dense_limit", [1500, 0])
@@ -827,15 +888,24 @@ def test_a_step_of_dead_states_is_entered_through_a_dead_state_of_another_step_t
     assert step_with(flow, "D").reached == pytest.approx(1 / 4)
 
 
+def test_blocks_of_rows_hold_at_most_the_chunk_and_a_row_longer_than_it_is_a_block_of_its_own(monkeypatch):
+    monkeypatch.setattr(_route_flow, "CHUNK_EDGES", 5)
+
+    assert _route_flow._blocks(np.array([0, 10, 10, 12])) == [(0, 1), (1, 3)]  # row 0 has 10 edges: more than the chunk
+    assert _route_flow._blocks(np.array([0, 2, 4, 6, 8])) == [(0, 2), (2, 4)]
+    assert _route_flow._blocks(np.array([0])) == []
+
+
+@pytest.mark.parametrize("chunk", [5, 2, 1])  # 2 and 1: rows longer than the chunk, the block of one row
 @pytest.mark.parametrize("dense_limit", [1500, 0])
-def test_reading_the_chain_in_tiny_blocks_of_edges_gives_the_same_flow(monkeypatch, dense_limit):
+def test_reading_the_chain_in_tiny_blocks_of_edges_gives_the_same_flow(monkeypatch, dense_limit, chunk):
     """#595: the solves read the chain a block of `CHUNK_EDGES` edges at a time; the numbers do not depend on the size of the block."""
     monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
     checked = 0
     for start, policy in mixed_policies(595, 25):
         whole = build_flow(start, policy, is_goal)
         with monkeypatch.context() as small:
-            small.setattr(_route_flow, "CHUNK_EDGES", 5)
+            small.setattr(_route_flow, "CHUNK_EDGES", chunk)
             blocks = build_flow(start, policy, is_goal)
         assert blocks.measured and blocks.entered
         for a, b in zip(whole.steps, blocks.steps):
