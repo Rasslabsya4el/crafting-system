@@ -327,24 +327,40 @@ def hybrids(document, plan, data, root, routes, say, shift):
             return mean_of(c2, k2) + shift
 
         everything = [i for members in groups.values() for i in members]
+        planner_mean = adopt(everything)
+
+        def kept(members):
+            """The mean of the planner's policy everywhere but at `members`, where the route's action stays (the single-group adoption of a group whose
+            follow-up states the route does not know is infinite; this one never is, and it is what the route's action costs there, ticket #619)."""
+            left = set(members)
+            return adopt([i for i in everything if i not in left])
+
         rows = []
         for key, members in sorted(groups.items(), key=lambda kv: -len(kv[1])):
             mean = adopt(members)
+            held = kept(members)
             rows.append(
                 {
                     "route_action": key[0], "planner_action": key[1], "status": key[2], "crafted": key[3], "states": len(members),
-                    "mean_if_adopted": mean, "saves": base - mean, "example": describe_state(plan, data, walked.states[members[0]]),
+                    "mean_if_adopted": mean, "saves": base - mean, "mean_if_route_acts_here_only": held, "route_costs_here": held - planner_mean,
+                    "example": describe_state(plan, data, walked.states[members[0]]),
                 }
             )
-            say(f"  adopt {key[1]} for {key[0]} at {len(members)} states {key[2]} crafted={key[3]}: mean {mean:,.2f} (saves {base - mean:,.2f})")
+            say(f"  adopt {key[1]} for {key[0]} at {len(members)} states {key[2]} crafted={key[3]}: mean {mean:,.2f} (saves {base - mean:,.2f}); the route's action there alone on the planner's policy: {held:,.2f} (costs {held - planner_mean:,.2f})")
         pairs: dict = {}
         for key, members in groups.items():
             pairs.setdefault((key[0], key[1]), []).extend(members)
         pair_rows = []
         for (theirs, ours), members in sorted(pairs.items(), key=lambda kv: -len(kv[1])):
             mean = adopt(members)
-            pair_rows.append({"route_action": theirs, "planner_action": ours, "states": len(members), "mean_if_adopted": mean, "saves": base - mean})
-            say(f"  PAIR adopt {ours} for {theirs} at {len(members)} states: mean {mean:,.2f} (saves {base - mean:,.2f})")
+            held = kept(members)
+            pair_rows.append(
+                {
+                    "route_action": theirs, "planner_action": ours, "states": len(members), "mean_if_adopted": mean, "saves": base - mean,
+                    "mean_if_route_acts_here_only": held, "route_costs_here": held - planner_mean,
+                }
+            )
+            say(f"  PAIR adopt {ours} for {theirs} at {len(members)} states: mean {mean:,.2f} (saves {base - mean:,.2f}); the route's action there alone on the planner's policy: {held:,.2f} (costs {held - planner_mean:,.2f})")
         document["hybrids"][name] = {"base": base, "all_adopted": adopt(everything), "groups": rows, "pairs": pair_rows}
         say(f"  all adopted: {document['hybrids'][name]['all_adopted']:,.2f} (the planner's mean is {document['planner']['mean']:,.2f})")
 
