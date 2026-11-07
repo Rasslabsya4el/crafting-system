@@ -30,7 +30,8 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
 
     `stored` is the body kept in the price entry (`{"query": {...}}`). The stat ids are compared by their group (`fractured`, `implicit`,
     `explicit`, `pseudo`) and minimum, not by id: the stat list of the site is not needed to read a price. Wider means the stored search
-    also matched the item of the spec (a lower level, no base type, no minimum); another means it asked for a different rarity or influence.
+    also matched the item of the spec (a lower level, no base type, no minimum); another means it asked for a different rarity, influence
+    or corruption.
     """
     query = stored.get("query") if isinstance(stored.get("query"), Mapping) else stored
     parts: list[str] = []
@@ -49,6 +50,15 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
     level = _filters(query, "misc_filters").get("ilvl") or {}
     if (level.get("min"), level.get("max")) != (spec.item_level_min, spec.item_level_max):
         parts.append(_level_words(level.get("min"), level.get("max")))
+    stored_corrupted = (_filters(query, "misc_filters").get("corrupted") or {}).get("option")
+    if stored_corrupted is None:
+        parts.append("corrupted or not")
+    elif stored_corrupted == "true" and not spec.corrupted:
+        parts.append("corrupted")
+        another = True
+    elif stored_corrupted == "false" and spec.corrupted:
+        parts.append("not corrupted")
+        another = True
     ids = [found for group in query.get("stats") or [] for found in group.get("filters") or []]
     stored_stats = sorted(
         (str(found["id"]).split(".", 1)[0], (found.get("value") or {}).get("min")) for found in ids if not str(found["id"]).startswith("pseudo.")
