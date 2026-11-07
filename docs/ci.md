@@ -233,6 +233,16 @@ their relative difference. The goldens of `tests/test_packed_heavy.py` (R04, R14
 `CRAFTING_HEAVY=1 UPDATE_GOLDEN=1 ... pytest tests/test_packed_heavy.py` and are tied to the commit of `main` they were
 taken on.
 
+`.github/scripts/evaluation_probe.py --route r04|r14 --out DIR` plans the route the same way and records, for every evaluation of a policy
+(`solver/_packed_solve.evaluate_policy`), its seconds, the peak resident memory while it ran and the counters it left (iterations, true residual,
+backward error, and the exact solve by the cycles of the policy's chain when it was made); it writes `DIR/<route>.evaluation.json`. Run on two refs
+(`--ref main-with-the-probe` and `--ref my-branch`) it gives the time and memory of the evaluation before and after a change of the solve (#621).
+`--force-exact` makes the iteration give up at once so that every evaluation takes the exact solve by the cycles: what that fallback costs on the
+route's own policy (or, when the cycles do not fit in the memory of the run, the refusal that names what they would have cost):
+
+    $D --long --timeout-minutes 120 --command 'uv run --no-sync python -u .github/scripts/evaluation_probe.py --route r14 --out $OUT_DIR'
+    $D --command 'uv run --no-sync python -u .github/scripts/evaluation_probe.py --route r04 --force-exact --out $OUT_DIR'
+
 ### Counting a route's page (#465, #466)
 
 `.github/scripts/page_size.py` makes the plan of a route the way `packed_routes.py plan` does, draws the route page of the planner's own

@@ -14,6 +14,7 @@ class Estimate(NamedTuple):
 
 
 SUBCRITICAL = "subcritical"
+UNDECIDED = "undecided"
 UNORDERED = "unordered"
 IMPROPER = "improper"
 
@@ -32,7 +33,9 @@ class GridInfo:
     and the CVaR intervals are widened by `free_cvar_allowance` (E[E] / (1 - level), on each side); the intervals already contain them. Both are 0.0 when no action was free, and are not part of the `repr`, so a report without free actions reads as before.
 
     `cause` is why the quantiles are not computed when the grid is not the reason (M7): `SUBCRITICAL`, the policy starts more runs of its inputs than
-    it finishes (`_inputs.NotSubcritical`), so its cost has no finite mean; `IMPROPER`, a state it reaches cannot finish and its inputs depend on each
+    it finishes (`_inputs.NotSubcritical`), so its cost has no finite mean; `UNDECIDED`, the policy has a finite mean the arithmetic could not
+    certify to within `_linear.REFUSED_ABOVE` (`_inputs.Undecided`: the chances are so close to 1 that the digits are lost), so no cost is computed;
+    `IMPROPER`, a state it reaches cannot finish and its inputs depend on each
     other in a cycle, so no cost is computed; `UNORDERED`, the policy is proper but its inputs depend on each other in a cycle, so there is no order to
     run the distribution in (the mean and the variance are exact). Empty otherwise. `gave_up` holds the words of each faster method that
     reached a size limit and left the work to a slower one (`_gaveup`, C24, C25, C27). Neither is part of the `repr`.
