@@ -47,6 +47,7 @@ the caller (`loss`), which keeps this module free of the compressed state. Pure,
 """
 
 import math
+import time
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
@@ -67,6 +68,7 @@ ACCEPT_RESIDUAL = 1e-9  # the largest relative residual of the visits that is sh
 BICGSTAB_ITERATIONS = 4000
 BICGSTAB_RESTARTS = 3
 EXACT_RETURNS = 25  # above `ENTRY_STATES` states the chance that a state is visited needs a solve of its own: this many states (the most visited first) get one, the rest a bound (`reach_of`)
+EXACT_RETURN_EDGES = 5_000_000  # ... and only on a chain of at most this many edges: R04's policy has 18,696 states and about 28 million edges, where one solve took over two minutes (ticket #554, issue #572)
 _GOAL = -1  # the target "a goal state" while steps are numbered from 0
 
 
@@ -495,7 +497,7 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     finish, N is inverted and the answer is exact for every state. Above that the visits v(s) are known for every state and the
     chance is v(s) times the chance that a run which leaves s never comes back, which is one sparse solve per state with s made
     absorbing; it is made for the `EXACT_RETURNS` most visited states of `wanted`, and the others get the upper bound
-    v(s) (1 - the chance of a self-loop of s), marked not `exact`. The start is visited with chance 1.
+    v(s) (1 - the chance of a self-loop of s), marked not `exact`; a chain of more than `EXACT_RETURN_EDGES` edges gets bounds only. The start is visited with chance 1.
     """
     m = chain.m
     unknown = Reach(None, False)
@@ -504,7 +506,12 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     src = np.repeat(np.arange(m), np.diff(chain.ptr))
     dst = chain.dst
     finishing = _can_finish(m, src, dst, dst >= m, dst < m)
+    from . import _packed  # a measuring script sets `_packed.PROGRESS`; the library never does
+
+    began = time.perf_counter()
+    say = _packed.PROGRESS or (lambda _text: None)
     visits, solved, inverse, position = _visits(chain, src, finishing)
+    say(f"visit chances: the visits of {int(finishing.sum()):,} states that can finish solved ({time.perf_counter() - began:.1f} s)")
     found: dict[int, Reach] = {}
     sparse: list[int] = []
     for i in dict.fromkeys(wanted):
@@ -533,10 +540,11 @@ def _sparse_reach(chain: Chain, src: np.ndarray, finishing: np.ndarray, position
     leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=m)[finishing]  # a sum of positive terms
     stay = np.bincount(src[~nonself], weights=chain.prob[~nonself], minlength=m)  # the chance of a self-loop
     ordered = sorted(states, key=lambda i: -visits[i])
+    solving = len(dst) <= EXACT_RETURN_EDGES
     found: dict[int, Reach] = {}
     for rank, i in enumerate(ordered):
         bound = min(1.0, float(visits[i] * (1.0 - stay[i])))
-        returned = _escape(row, column, p, leave, nt, int(position[i])) if rank < EXACT_RETURNS else None
+        returned = _escape(row, column, p, leave, nt, int(position[i])) if solving and rank < EXACT_RETURNS else None
         found[i] = Reach(min(1.0, max(0.0, float(visits[i] * returned))), True) if returned is not None else Reach(bound, False)
     return found
 

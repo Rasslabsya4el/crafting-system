@@ -84,6 +84,17 @@ def test_a_state_past_the_solve_budget_gets_an_upper_bound_that_says_so(monkeypa
     assert 0.6 <= bound.chance <= 1.0
 
 
+def test_a_chain_with_too_many_edges_gets_bounds_only(monkeypatch):
+    policy, chain = hand_chain()
+    index = {state: i for i, state in enumerate(chain.states)}
+    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
+    monkeypatch.setattr(_route_flow, "EXACT_RETURN_EDGES", 2)  # the chain has more edges than this
+
+    (bound,) = reach_of(chain, [index["B"]])
+
+    assert not bound.exact and 0.6 <= bound.chance <= 1.0
+
+
 def test_the_chance_of_a_state_the_run_cannot_finish_from_is_not_measured():
     policy = {"S": act("s", ("A", 1), ("goal", 1)), "A": act("a", ("A", 1))}  # A loops for ever
     chain = chain_of_policy("S", policy, is_goal)
