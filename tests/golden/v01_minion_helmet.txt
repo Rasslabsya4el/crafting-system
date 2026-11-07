@@ -1,8 +1,8 @@
 Target: v01-minion-helmet.yaml
 Approximate inputs (claims that no other source settles):
-  vendor.gem_qualification_is_uncorrupted_skill_gems: The wiki names no rule for support, Awakened or corrupted gems and no other source says.
-  vendor.item_level_of_the_result_is_not_settled: The two wiki pages disagree in wording and no other source settles whether the flask or the gems lower the result's item level.
-  vendor.result_keeps_the_input_base_type: The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split.
+  Quality gems for a vendor recipe are counted as uncorrupted skill gems only, the narrowest reading. Source: the wiki asks for 'quality gems' with the tag and gives no rule for support, Awakened or corrupted gems.
+  A vendor recipe is taken to keep the item level of the input, but it is not settled whether the flask or the gems can lower the result's item level. Source: two wiki pages that disagree in wording; no other source settles it.
+  A vendor recipe is taken to keep the base type of the input item. Source: the wiki does not say whether the base type stays, and the one Reddit thread on it is split.
 Requirements: +1 to Level of all Minion Skill Gems; family IncreasedLife (top tier, not crafted)
 Prices: league Allflame, fetched 2026-10-31, 1 Divine = 372.20 Chaos
 Start item (Lion Pelt (ilvl 84), a Normal base): 2.00 Chaos [hand]; the recipe below uses it up
