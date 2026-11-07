@@ -512,17 +512,27 @@ def _made_at_the_vendor(step: Step) -> bool:
 def check_bought_item_not_empty(page: Page) -> list[Fault]:
     """OR-17: the item after a step that buys the start item is never drawn empty: a slot that is not the wanted mod reads "any mod or
     empty", not "empty" (the R10 page the owner rejected drew the bought boots empty). A step buys the start item when its title says
-    "Buy ...", or "Restart ..." (R14's step 11 is "Restart: buy Thicket Bow, normal, ... again"; a restart of R10, R11 or R12 buys the
-    Rare item with its fractured mod again, and an empty restart card is the same fault as an empty first card), or when it has a trade
-    search. A bought Normal base has no mods, so it is empty and nothing is hidden (R04 and R14 buy one). An item a vendor recipe makes
-    (V01) is not bought: its mods are all known."""
+    "Buy ...", or "Restart ..." (R14's "Restart: buy Thicket Bow, ... again"; a restart of R10, R11 or R12 buys the Rare item with its
+    fractured mod again, and an empty restart card is the same fault as an empty first card), or when it has a trade search. A bought
+    Normal base has no mods, so it is empty and nothing is hidden (R04 buys one). A bought Magic or Rare item (R14 since #607 buys a
+    Magic bow) has mods nobody knows, so none of its slots reads "empty". A restart buys the same item as the first purchase of the
+    route, so it shows as many mod slots as that card: a restart card with fewer slots hides the empty ones. An item a vendor recipe
+    makes (V01) is not bought: its mods are all known."""
     faults = []
     for route in page.routes:
+        first_count = None
         for step in route.steps:
-            if _gets_the_start_item(step) and not _made_at_the_vendor(step) and step.after is not None and step.after.rarity != "Normal":
-                empties = [slot for slot in step.after.slots if slot.tone == "empty"]
-                if empties:
-                    faults.append(_fault("OR-17", check_bought_item_not_empty, f"step {step.number} ({step.title})", f"the bought item is drawn with {len(empties)} empty slot(s)"))
+            if not _gets_the_start_item(step) or _made_at_the_vendor(step) or step.after is None or step.after.rarity == "Normal":
+                continue
+            where = f"step {step.number} ({step.title})"
+            empties = [slot for slot in step.after.slots if slot.tone == "empty"]
+            if empties:
+                faults.append(_fault("OR-17", check_bought_item_not_empty, where, f"the bought item is drawn with {len(empties)} empty slot(s)"))
+            count = sum(1 for slot in step.after.slots if slot.tone != "implicit")
+            if first_count is None:
+                first_count = (count, step.number)
+            elif count < first_count[0]:
+                faults.append(_fault("OR-17", check_bought_item_not_empty, where, f"the bought item is drawn with {count} mod slot(s) where step {first_count[1]} draws {first_count[0]}"))
     return faults
 
 
@@ -554,7 +564,12 @@ def check_no_repeated_card(page: Page) -> list[Fault]:
     `main` after #70, 12 since #466). They are held by the measured bound of `test_the_page_stays_under_the_size_set_from_the_measurement`
     (#476). What a page can show of the pruning is that its steps are distinct: a state that only differs by a detail the search does not
     track, or by its chance, is the same step (OR-18), so it is never a second card of the same action. `check_one_step_per_action`
-    asks it of the action, the goal and the accepts; this asks it of the action and the card it ends on."""
+    asks it of the action, the goal and the accepts; this asks it of the action and the card it ends on. What counts as a repeat: the
+    same title, the same card after the step and the same branch cards under it (`step.branches`, the cards for outcomes whose items
+    differ from the main one). The branches are in the key because they are part of what the step shows of its result: two steps that
+    land on different items are not two copies of one result, and calling them a repeat would be a guess about the search. A step split
+    only by its goal or accepts is caught by `check_one_step_per_action`.
+    """
     faults = []
     for route in page.routes:
         seen: dict[tuple, Step] = {}
@@ -703,7 +718,7 @@ def family_key(text: str) -> str:
 
 def asked_tiers(note: str) -> tuple[int, int] | None:
     """The tiers a note asks, as (best, worst) tier numbers: `T2` (2, 2), `T2 or better` (1, 2), `T1 to T3` (1, 3), `any tier` (1, no bound);
-    None for a note that asks no tier (`crafted`, `essence only`, `fractured`, none)."""
+    None for a note that asks no tier (`crafted`, `essence only`, `fractured`, none) or one the lint does not read (`tier too low, in some`: issue #667)."""
     found = _ASKED_TIER.match(note.strip())
     if not found:
         return None
@@ -727,7 +742,8 @@ def _goal_family(text: str) -> tuple[str, tuple[int, int]] | None:
 def _target_families(route: Route) -> dict[str, tuple[int, int]] | None:
     """The tiered mods the target wants, from the target item card on the goal row (the one place the page lists them): family -> tiers.
 
-    None when the card has a group ("at least 1 of 4"): one line stands for several families and the lint cannot take it apart."""
+    None when the card has a group ("at least 1 of 4"): one line stands for several families and the lint cannot take it apart
+    (so the family check is off for that route: issue #667)."""
     if route.target is None:
         return None
     found: dict[str, tuple[int, int]] = {}

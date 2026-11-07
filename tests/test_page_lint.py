@@ -178,6 +178,7 @@ TRADE = ("Trade", "Search on the trade site")
 RESTART_R10 = "Restart: buy Sorcerer Boots, item level 84, fractured 30% increased Movement Speed again"
 ESSENCE_STEP = step(2, "Shrieking Essence of Spite", ("Note", "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"), after=item())
 BOW = item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)
+MAGIC_BOW = item("Thicket Bow", "Magic")
 VENDOR_ITEM = item("Lion Pelt", "Magic", (slot("+1 to Level of all Minion Skill Gems", "m", "T2"), EMPTY), (EMPTY, EMPTY))
 VENDOR_STEP = step(1, "Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe", ("Recipe", "2 or more uncorrupted skill gems with the Minion tag"), ("Cost per use", "8 c"), after=VENDOR_ITEM)
 fixtures(
@@ -206,14 +207,17 @@ fixtures(
     counter={
         "R10 as the owner rejected it: the bought boots drawn empty": page(route(goal(), step(1, "Buy Sorcerer Boots, item level 84", after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), EMPTY, EMPTY), suffixes=(EMPTY, EMPTY, EMPTY))))),
         "R10, R11, R12: the restart buys the Rare boots with the fractured mod again and draws them empty": page(route(goal(), bought, ESSENCE_STEP, step(3, RESTART_R10, TRADE, ("Cost per use", "17 c"), after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), EMPTY, EMPTY), suffixes=(EMPTY, EMPTY, EMPTY))))),
+        "R10 restart drawn with 4 mod slots where the first card has 6: the empty ones are hidden": page(route(goal(), bought, ESSENCE_STEP, step(3, RESTART_R10, TRADE, after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), ANY, ANY), suffixes=(ANY,))))),
+        "R14 since #607: a bought Magic bow drawn with empty slots": page(route(goal(), step(1, "Buy Thicket Bow, magic, item level 78", after=item("Thicket Bow", "Magic", (EMPTY,) * 3, (EMPTY,) * 3)))),
         "a restart whose title does not say buy, found by its trade search": page(route(goal(), bought, step(2, "Restart: the start item again", TRADE, after=item("Sorcerer Boots", prefixes=(EMPTY, EMPTY, EMPTY))))),
         "a step that is not called Buy or Restart and has a trade search": page(route(goal(), step(1, "The start item", TRADE, after=item("Sorcerer Boots", prefixes=(EMPTY, EMPTY, EMPTY))))),
     },
     example={
         "R10 as accepted: any mod or empty for the rest": page(route(goal(), bought)),
-        "R04, R14: a bought Normal base has no mods to hide": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)))),
+        "R04: a bought Normal base has no mods to hide": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)))),
         "R10, R11, R12: the restart buys the Rare boots with the fractured mod again and draws them as the first card does": page(route(goal(), bought, ESSENCE_STEP, step(3, RESTART_R10, TRADE, ("Cost per use", "17 c"), after=BOUGHT_BOOTS))),
-        "R04, R14: Restart: buy Thicket Bow, normal, ... again, a Normal base": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=BOW), step(2, "Orb of Alchemy", after=item()), step(3, "Restart: buy Thicket Bow, normal, item level 78 again", TRADE, after=BOW))),
+        "R14 since #607: a bought Magic bow, its restart too, any mod or empty in every slot": page(route(goal(), step(1, "Buy Thicket Bow, magic, item level 78", after=MAGIC_BOW), step(2, "Orb of Alteration", after=item()), step(3, "Restart: buy Thicket Bow, magic, item level 78 again", TRADE, after=MAGIC_BOW))),
+        "R04: Restart: buy Thicket Bow, normal, ... again, a bought Normal base": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=BOW), step(2, "Orb of Alchemy", after=item()), step(3, "Restart: buy Thicket Bow, normal, item level 78 again", TRADE, after=BOW))),
         "V01: a restart that makes the start item at the vendor: made by a recipe, not bought, so its empty slots are empty": page(route(goal(), VENDOR_STEP, step(2, "Restart: make the start item at the vendor again", ("Cost per use", "8 c"), after=VENDOR_ITEM))),
     },
 )
