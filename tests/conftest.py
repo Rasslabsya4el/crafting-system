@@ -1,5 +1,6 @@
 """Shared pytest setup: the network guard of the price tests, and the split of the suite over CI jobs (#165)."""
 
+import importlib
 import os
 import socket
 from collections import defaultdict
@@ -13,6 +14,23 @@ os.environ.setdefault("CRAFTING_WORKERS", "1")  # ticket #250: the suite is seri
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 PRICE_TEST_FILES = "test_prices_*.py"
+
+
+@pytest.fixture(autouse=True)
+def fixed_clock(monkeypatch):
+    """Every place that defaults to the real clock reads `clock_support.FIXED_NOW` instead (ticket #542).
+
+    The committed price fixtures age with the calendar (`MAX_AGE_DAYS` = 7), so a test must not read the age against the day it runs
+    on. A test that passes `today` / `now` is unaffected. `CRAFTING_TEST_REAL_CLOCK=1` turns this off.
+    """
+    if os.environ.get("CRAFTING_TEST_REAL_CLOCK") == "1":
+        return
+    try:
+        import clock_support  # imported here: the tests that copy this conftest into a bare project have no such module
+    except ModuleNotFoundError:
+        return
+    for name in clock_support.CLOCK_READERS:
+        monkeypatch.setattr(importlib.import_module(name), "datetime", clock_support.FrozenDatetime)
 
 
 @pytest.fixture(autouse=True)
