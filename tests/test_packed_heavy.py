@@ -96,6 +96,18 @@ def test_the_value_is_certified_and_was_solved_packed(planned):
 
 
 @HEAVY
+def test_r14_opens_with_an_alteration_on_its_magic_bow_and_offers_no_transmutation(planned):
+    """#576: R14 starts from a Magic bow (the guide opens with Alteration, no Transmutation Orb is named), so the plan's first step is an Alteration."""
+    route, plan = planned
+    if route != "R14":
+        pytest.skip("only R14 is a Magic start")
+
+    assert plan.target.start_item.rarity.value == "magic"
+    assert plan.policy[plan.start].label == "Orb of Alteration"
+    assert "Orb of Transmutation" not in {offer.label for offer in plan.offers}
+
+
+@HEAVY
 def test_the_policy_reaches_the_goal_from_the_start(planned):
     _, plan = planned
     packed = plan.packed
