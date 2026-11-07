@@ -43,8 +43,7 @@ The natural ladder of a family on a base, worked out from the raw mods in `indep
 
 The other requirement kinds (ticket #416, read from the export and the owner's rules, not from the planner)
   * Influence is NOT judged (decided on #416 and #444). The target's `influence:` list is the influences on the base the
-    route starts from (`src/crafting_system/targets/__init__.py`: "absent means a fresh normal item of the base, level and
-    influence"; R08 line 34), a start input. Nothing in `docs/owner-rules.md` or an ADR makes it a condition on the finished
+    route starts from (the `start_item:` block states the item itself, `src/crafting_system/targets/__init__.py`; R08 line 34), a start input. Nothing in `docs/owner-rules.md` or an ADR makes it a condition on the finished
     item, so the oracle uses it only to find the mods that can spawn (the item's tags). Whether a target's influence must be
     bought or may be added mid-route is a start-item question of rebuild step 4.
   * Implicits (`implicits:`). An implicit mod is one of the mods an item of the base can hold as an implicit: the base's own

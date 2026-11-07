@@ -162,7 +162,7 @@ def test_a_mod_of_two_stats_is_refused():
 @pytest.mark.parametrize(
     ("start", "rarity"),
     [
-        ("", "normal"),  # no start_item block: a fresh normal item
+        ("", "normal"),  # the test helper states `rarity: normal` for a text with no start_item block (#545)
         ("start_item:\n  rarity: rare\n  mods: []\n", "rare"),  # R08 and R09: the target's rarity is kept, whatever a price file folds in
         ("start_item:\n  rarity: magic\n  mods: []\n", "magic"),
     ],

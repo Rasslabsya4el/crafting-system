@@ -80,6 +80,25 @@ def test_a_target_that_asks_for_sockets_with_a_start_item_of_sockets_any_holds_n
     assert "start_sockets_assumed" not in {field.name for field in dataclasses.fields(Target)}
 
 
+def test_a_start_item_sockets_key_with_no_value_is_refused_and_is_not_read_as_any():
+    message = refusal(f"{HEAD}sockets: {{count: 3}}\nstart_item:\n  rarity: normal\n  sockets:\n")
+
+    assert message.startswith("t.yaml:8: start_item.sockets: must be a mapping with `colours`, `count` and `links`, or the word any")
+    assert "got nothing (an empty value)" in message
+
+
+def test_a_start_item_sockets_key_with_no_value_is_refused_when_the_target_asks_for_none_too():
+    message = refusal(f"{HEAD}start_item:\n  rarity: normal\n  sockets:\n")
+
+    assert message.startswith("t.yaml:7: start_item.sockets: must be a mapping")
+
+
+def test_a_target_sockets_key_with_no_value_is_refused():
+    message = refusal(f"{HEAD}sockets:\nstart_item:\n  rarity: normal\n  sockets: any\n")
+
+    assert message.startswith("t.yaml:5: sockets: must be a mapping")
+
+
 def test_the_committed_targets_are_all_there():
     assert len(EXAMPLE_FILES) == 14
 

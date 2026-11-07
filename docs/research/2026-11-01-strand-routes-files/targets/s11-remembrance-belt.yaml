@@ -7,6 +7,11 @@
 
 base: Leather Belt
 item_level: 86
+# The start item (#545: the parser no longer makes one up). The post names no rarity for the belt it starts from. It is the start the planner always used for this research
+# route: a plain (Normal) item of the base above, with no mod.
+start_item:
+  rarity: normal
+
 start_price: Leather Belt (ilvl 86)
 
 # R13's kinds plus the Orb of Remembrance. The kind name is this file's proposal; B5-5 (#278) fixes it.

@@ -35,6 +35,11 @@ influence: []
 # Research variant of ticket #312: the start is the NORMAL boots and the Orb of Alchemy is a planner action (as in
 # the first version of PR #247, which did not finish in 60 minutes). No `start_item`, so the start is a normal item.
 
+# The start item (#545: the parser no longer makes one up). The route Alchemy-rolls the boots, so it starts from a Normal pair. It is the start the planner always used for this research
+# route: a plain (Normal) item of the base above, with no mod.
+start_item:
+  rarity: normal
+
 # The name the start item has in the price file, which is what it costs to get: the `name` of
 # examples/buy/r08-start-boots.yaml. The planner buys it again whenever the route restarts.
 start_price: R08 start boots

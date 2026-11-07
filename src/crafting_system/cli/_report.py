@@ -307,7 +307,12 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         f"1 Divine = {divine:,.2f} Chaos"
     )
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
-    if plan.start_price.given:  # OR-6: nothing is paid for it, so no number is printed
+    if report.first_step is not None:
+        # a start made at a vendor: the start item is what the recipe takes (the Normal base), and the recipe is a step of its own (below);
+        # the item it gives back is never printed as the start item (#545, I7)
+        base = report.first_step.hand[0]
+        lines.append(f"Start item ({base.what}): {money(base.chaos)} Chaos [{base.price_source}]; the recipe below uses it up")
+    elif plan.start_price.given:  # OR-6: nothing is paid for it, so no number is printed
         lines.append(f"Start item: {plan.start_price.source}")
     else:
         lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
