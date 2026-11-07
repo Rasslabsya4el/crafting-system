@@ -1,17 +1,18 @@
 """Run `benchmark --heavy` on some of the benchmark routes only, so that a heavy run can split the routes over its runners (ticket #554).
 
-    python .github/scripts/benchmark_routes.py R12,R10,R11 OUT_DIR
+    python .github/scripts/benchmark_routes.py R12,R10,R11 OUT_DIR [PRICE_FILE]
 
 writes `OUT_DIR/benchmark.json` for those routes and prints the summary, as `python -m crafting_system.cli benchmark --heavy` does for all
 of them. A CI checkout has no price file of its own, so the routes with the plain start item are priced from the committed snapshot of
-the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-10-31.json`, as `measure_routes.py` does) and a route that starts from a
+the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-11-07.json`, as `measure_routes.py` does; the optional third argument names another
+price file from the project root, to put two snapshots side by side, #616) and a route that starts from a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`.
 """
 
 import sys
 from pathlib import Path
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"
+PRICES = "tests/fixtures/prices/routes-allflame-2026-11-07.json"
 
 
 def main(argv: list[str]) -> int:
@@ -31,7 +32,7 @@ def main(argv: list[str]) -> int:
     out = Path(argv[1])
     code = 0
     for folder, group, prices in (
-        (out, [bench for bench in chosen if bench.start is None], load_price_file(find_project_root() / PRICES)),
+        (out, [bench for bench in chosen if bench.start is None], load_price_file(find_project_root() / (argv[2] if len(argv) > 2 else PRICES))),
         (out / "start", [bench for bench in chosen if bench.start is not None], None),
     ):
         if group:

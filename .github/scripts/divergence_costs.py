@@ -21,7 +21,7 @@ import sys
 import time
 from pathlib import Path
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"
+PRICES = "tests/fixtures/prices/routes-allflame-2026-11-07.json"
 
 
 def hybrid_tools(plan, data):
