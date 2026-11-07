@@ -27,6 +27,7 @@ from types import SimpleNamespace
 import pytest
 import yaml
 from abstraction_support import real_game_data
+from start_support import with_start
 from test_strand_routes import STRAND_ACTIONS, without_strand_words
 
 from crafting_system.cli import _plan, make_plan
@@ -97,7 +98,7 @@ def no_solve(monkeypatch):
 @pytest.mark.parametrize("stem", CHECKED)
 def test_the_route_without_its_strand_rules_is_read_against_the_offers_of_its_target(stem, data, no_solve):
     target = parse_target(
-        without_strand_words((FILES / "targets" / f"{stem}.yaml").read_text(encoding="utf-8")),
+        with_start(without_strand_words((FILES / "targets" / f"{stem}.yaml").read_text(encoding="utf-8"))),
         data,
         source=stem,
     )

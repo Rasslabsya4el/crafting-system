@@ -43,6 +43,8 @@ item_level: 84
 actions: [transmutation-orb, alteration-orb]
 requirements:
   - family: MaximumLifeIncreasePercent
+start_item:
+  rarity: normal
 start: given
 """
 

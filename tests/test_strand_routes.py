@@ -22,6 +22,7 @@ from pathlib import Path
 import pytest
 import yaml
 from abstraction_support import real_game_data
+from start_support import with_start
 
 from crafting_system.cli._route import REFUSED_KEYS, RESTART, RULE_KEYS, TOP_KEYS, WHEN_KEYS
 from crafting_system.prices.trade_query import load_buy_spec
@@ -225,7 +226,7 @@ def without_strand_words(text: str) -> str:
 
 def test_each_target_is_read_by_the_target_loader_on_the_real_dump(stem):
     data = real_game_data()
-    text = without_strand_words((S_TARGETS / f"{stem}.yaml").read_text(encoding="utf-8"))
+    text = with_start(without_strand_words((S_TARGETS / f"{stem}.yaml").read_text(encoding="utf-8")))  # S01, S02, S11 predate #545: a plain item
     assert parse_target(text, data, source=f"{stem}.yaml").requirements
 
 
