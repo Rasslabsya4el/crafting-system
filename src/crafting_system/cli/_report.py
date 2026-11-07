@@ -204,9 +204,7 @@ def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]
             continue
         mod = _fractured_mod_shown(plan, data, entry.mod_id)
         parts.append(f"fractured {_without_ranges(mod.text or mod.name)}")
-    for label, status in zip(plan.leaf_labels, state.status):
-        verb = {Status.PASSING: "has", Status.BELOW: "too weak:", Status.ABSENT: "lacks"}[status]
-        parts.append(f"{verb} {label}")
+    parts.extend(_requirement_parts(plan, state))
     for slot in state.slots:
         if slot.crafted:
             mod = data.mods.get(slot.kind)
@@ -221,6 +219,47 @@ def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]
     if state.offer:  # in the order of Pick 1, 2, 3 (ADR-0026): without it "Pick 2" names nothing
         offered = [_without_ranges(data.mods[entry.mod_id].text or data.mods[entry.mod_id].name) for entry in state.offer]
         parts.append("unveil offer: " + " | ".join(f"{number}. {text}" for number, text in enumerate(offered, 1)))
+    return parts
+
+
+_VERB = {Status.PASSING: "has", Status.BELOW: "too weak:", Status.ABSENT: "lacks"}
+
+
+def _requirement_parts(plan: Plan, state: CompressedState) -> list[str]:
+    """What each requirement of the target stands at: "has / too weak: / lacks" for a plain one, one entry for a whole k-of-n group (OR-15, #644).
+
+    A member of a group is a leaf of the target, but it is not required on its own: an item that has the Life mod of "1 of 4: Life or a resistance"
+    does not lack the three resistances. A group says what is met (with its k and n, as the page words a group) and, when it is not met yet, how
+    many more it lacks and which members could still be. Without the target's requirements (a stand-in plan) every leaf is plain.
+    """
+    leaves = iter(zip(plan.leaf_labels, state.status))
+    requirements = getattr(getattr(plan, "target", None), "requirements", None)
+    if requirements is None:
+        return [f"{_VERB[status]} {label}" for label, status in leaves]
+
+    def member(node) -> tuple[str, Status]:
+        if not isinstance(node, KOfN):
+            return next(leaves)
+        found = [member(each) for each in node.of]
+        met = sum(status is Status.PASSING for _, status in found)
+        label = f"at least {node.at_least} of {len(node.of)} of: " + ", ".join(text for text, _ in found)
+        return label, Status.PASSING if met >= node.at_least else Status.ABSENT
+
+    parts: list[str] = []
+    for requirement in requirements:
+        if not isinstance(requirement, KOfN):
+            label, status = next(leaves)
+            parts.append(f"{_VERB[status]} {label}")
+            continue
+        found = [member(each) for each in requirement.of]
+        met = [text for text, status in found if status is Status.PASSING]
+        wanted = f"the group needs {requirement.at_least} of {len(found)}"
+        if met:
+            parts.append(f"has {', '.join(met)} ({wanted})")
+        parts.extend(f"too weak: {text}" for text, status in found if status is Status.BELOW)
+        if len(met) < requirement.at_least:
+            missing = [text for text, status in found if status is not Status.PASSING]
+            parts.append(f"lacks {requirement.at_least - len(met)} of: {', '.join(missing)}" + ("" if met else f" ({wanted})"))
     return parts
 
 
