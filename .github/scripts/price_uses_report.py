@@ -16,6 +16,8 @@ import sys
 import time
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "src"))
 PRICES = "tests/fixtures/prices/routes-allflame-2026-11-07.json"
 GROUPS = ("R12,R10,R11", "R05,R13", "R08,R09", "R04", "R14")  # what one runner takes; R04 and R14 hold hundreds of thousands of states each
 

@@ -118,17 +118,17 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         if composite is not None:
             chaos += alchemy
             sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
-        taken_for = other_item(spec, stored)
+        taken_for = None if composite is not None else other_item(spec, stored)  # a composite is a normal base the plan makes rare: its search is the item by design
         item = WIDER if (taken_for is not None or composite == WIDER) else EXACT
         for_item = taken_for if taken_for is not None else ("any of the bases that share this name on the trade site" if composite == WIDER else None)
         exact_listings = exact_price = None
-        if item == WIDER and taken_for is not None:
+        if taken_for is not None:
             filters = [resolve_buy_mod(mod, list(data.mods.values()), stats) for mod in spec.mods]
             exact_body = build_query(spec, filters, None).body()
             exact_total, exact_rows = _listings(client, league, exact_body, cache / "trade" / f"{query_hash(league, exact_body)}.json", now)
             exact = priced_rows(exact_rows, spec, new)
             exact_listings = exact_total
-            exact_price = statistics.fmean(exact) if exact else None
+            exact_price = statistics.fmean(exact[:DEFAULT_K]) if exact else None  # the mean of the cheapest few, as every trade price (OR-8)
         depth = float(len(cheapest))
         provenance = Provenance(TRADE, league, day.isoformat(), depth, "units", len(cheapest), item, for_item, exact_listings, exact_price)
         detail = {"league": league, "date": day.isoformat(), "listings": total, "used": len(cheapest), "usable": len(prices), "k": DEFAULT_K, "query_hash": digest, "query": stored}
@@ -168,6 +168,7 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--cache", required=True, help="a folder for the trade site's stat list and answers")
     parser.add_argument("--league", default="Allflame")
+    parser.add_argument("--starts-only", action="store_true", help="read OUT, ask the start items again and write OUT: no poe.ninja and no bulk-exchange request")
     parser.add_argument("--resume", action="store_true", help="skip the poe.ninja step: read the file this run wrote after it (OUT.stage1)")
     parser.add_argument("--below", type=float, default=100.0, help="read the trade offers of every name with fewer units than this behind its price")
     args = parser.parse_args()
@@ -187,6 +188,15 @@ def main() -> int:
     ids = static_ids(trade_client(5).data_static())
     wanted = wanted_names(old, ids)
     stage1 = Path(args.out + ".stage1")
+    if args.starts_only:
+        new = load_price_file(Path(args.out))
+        now = datetime.now(UTC)
+        starts, notes = reread_start_items(old, new, cache, now, data, targets)
+        for note in notes:
+            print("  start:", note)
+        write_price_file(Path(args.out), PriceFile(new.league, new.fetched_at, new.chaos_per_divine, {**new.prices, **starts}, new.markets, new.ninja))
+        print(f"wrote {args.out}: {len(starts)} start items asked again")
+        return 0
     if args.resume:
         new = load_price_file(stage1)
         now = new.fetched_at
