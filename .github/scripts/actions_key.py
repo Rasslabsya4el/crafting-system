@@ -4,6 +4,7 @@
     python .github/scripts/actions_key.py batch   --index I --count N --out DIR      run the jobs of runner I (the dispatcher's RUNNER_INDEX / RUNNER_COUNT)
     python .github/scripts/actions_key.py jobs    --jobs R08-kept-envelope,... --cap-minutes N --out DIR      named jobs under one cap
     python .github/scripts/actions_key.py one     --route R04 --variant removed --solver envelope --out DIR [--net-seconds S --memory-mb M]
+    python .github/scripts/actions_key.py probe   --routes J01,V01 --index I --count N --out DIR      one more kind added to the key, one at a time
     python .github/scripts/actions_key.py summary --dir DIR --out DIR2               writes DIR2/summary.md
 
 Seven targets carry an `actions:` key (J01, R04, R08, R09, R13, R14, V01). OR-5 says a target never restricts the actions, so the key goes.
@@ -13,6 +14,8 @@ A job is one route in one `variant` planned by one `solver`:
 * `removed`: the key deleted from a copy of the target's text (the committed file is never written), which is what the product does for a target
   without the key: every kind it offers by default, the `opt_in` kinds (Exalted Orb, Annulment, Fracturing, the fossil sets) not among them;
 * `all`: the key replaced, in the same copy, by every kind the planner can use (the `opt_in` ones too), which is what OR-5 asks for.
+
+A fourth variant, `plus=KIND`, is for `probe`: the committed key with one more kind added, to find which kind makes a small route explode.
 
 Solvers: `auto` is `make_plan`'s default (with 40 priced offers or more the bound pruning on the object solver, below that the walk on packed
 arrays), `envelope` is `make_plan(solver="envelope")` (the exact branch and bound, ADR-0063). Each job runs in a child process with a wall-clock
@@ -96,17 +99,31 @@ def bins_for(count: int, jobs: Sequence[tuple[str, str, str]] | None = None, lim
 KEY = re.compile(r"(?m)^actions:[^\n]*\n(?:[ \t]+(?:-|#)[^\n]*\n)*")  # the key and, for a list on the next lines, its items
 
 
+def key_names(text: str) -> list[str]:
+    """The names in the `actions:` key of a target's text, whether it is written as a flow list or as lines."""
+    found = KEY.search(text)
+    if found is None:
+        return []
+    block = re.sub(r"(?m)#.*$", "", found.group(0)).removeprefix("actions:").strip()
+    if block.startswith("["):
+        return [name.strip() for name in block.strip("[]").split(",") if name.strip()]
+    return [line.strip().removeprefix("-").strip() for line in block.splitlines() if line.strip()]
+
+
 def with_variant(text: str, variant: str, kinds: Sequence[str] = ()) -> str:
     """`text` of a target with its `actions:` key kept, removed, or replaced by `kinds` (every kind the planner can use for `all`).
 
     Raises `ValueError` when the text has no key or still has one after the change: a variant that did not change anything is not a measurement.
     """
-    if variant not in VARIANTS:
-        raise ValueError(f"variant must be one of {', '.join(VARIANTS)}, got {variant!r}")
+    if variant not in VARIANTS and not variant.startswith("plus="):
+        raise ValueError(f"variant must be one of {', '.join(VARIANTS)} or plus=KIND, got {variant!r}")
     if variant == "kept":
         return text
     if len(KEY.findall(text)) != 1:
         raise ValueError("the target must have exactly one top-level `actions:` key")
+    if variant.startswith("plus="):
+        names = [*key_names(text), variant.removeprefix("plus=")]
+        return KEY.sub(lambda _found: "actions: [" + ", ".join(names) + "]\n", text, count=1)
     if variant == "removed":
         changed = KEY.sub("", text, count=1)
     else:
@@ -432,6 +449,27 @@ def variants_of(text: str) -> tuple[str, ...]:
     return chosen
 
 
+def probe_jobs(routes: Sequence[str], text_of: Callable[[str], str] | None = None) -> list[tuple[str, str, str]]:
+    """The probes: for each route, each kind the planner can use that its key does not name, added to the key alone, under each solver."""
+    from_file = text_of or (lambda route: target_path(route).read_bytes().decode("utf-8-sig"))
+    kinds_all = every_kind()
+    jobs = []
+    for route in routes:
+        named = set(key_names(from_file(route)))
+        jobs += [(route, f"plus={kind}", solver) for kind in kinds_all if kind not in named for solver in SOLVERS]
+    return jobs
+
+
+def probe_command(arguments: argparse.Namespace) -> int:
+    """Run this runner's share of the probes, each under `--cap-seconds`."""
+    routes = [name for name in arguments.routes.split(",") if name]
+    mine = probe_jobs(routes)[arguments.index - 1 :: arguments.count]
+    print(f"runner {arguments.index} of {arguments.count}: {len(mine)} probes", flush=True)
+    for route, variant, solver in mine:
+        print(say_job(run_job(route, variant, solver, Path(arguments.out), cap=arguments.cap_seconds / 60)), flush=True)
+    return 0
+
+
 def jobs_command(arguments: argparse.Namespace) -> int:
     """Run the named jobs one after the other on this runner, each under `--cap-minutes` (a second look at jobs the caps of `batch` stopped)."""
     for name in arguments.jobs.split(","):
@@ -593,6 +631,19 @@ def build_summary(records: Mapping[tuple[str, str, str], dict], run_ids: str = "
                 same_first = "same" if base.get("start_label") == record.get("start_label") else f"{base.get('start_label')} to {record.get('start_label')}"
                 changes.append([route, solver, variant, same_mean, same_first, ", ".join(sorted(set(record.get("labels_used") or {}) - set(base.get("labels_used") or {})))[:160]])
     lines += _table(["route", "solver", "key", "mean", "start action", "offers the plan newly uses"], changes)
+    probes = sorted((r for r in records.values() if r["variant"].startswith("plus=")), key=lambda r: (r["route"], r["variant"], r["solver"]))
+    if probes:
+        lines += ["", "## one kind added to the key of a small route (the probes)", ""]
+        base = {(r["route"], r["solver"]): r for r in records.values() if r["variant"] == "kept"}
+        rows = []
+        for r in probes:
+            kept = base.get((r["route"], r["solver"]))
+            gap = ""
+            if r.get("finished") and kept is not None and kept.get("finished") and relative(kept["mean"], r["mean"]) > 1e-9:
+                gap = f"mean {kept['mean']:,.4f} to {r['mean']:,.4f}"
+            rows.append([r["route"], r["variant"].removeprefix("plus="), r["solver"], cell(r), gap])
+        lines += _table(["route", "kind added", "solver", "result", "the mean moves"], rows)
+    records = {key: record for key, record in records.items() if not record["variant"].startswith("plus=")}
     stopped = [r for r in records.values() if not r.get("finished") and not r.get("error")]
     if stopped:
         lines += ["", "## where the stopped jobs were", ""]
@@ -625,6 +676,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     batch.add_argument("--variants", default=",".join(VARIANTS), help="comma separated variants to run (default all); the runners are dealt only these")
     batch.add_argument("--no-limit", action="store_true", help="deal the jobs over the runners even when one passes the minutes a runner may take")
     batch.set_defaults(handler=batch_command)
+    probe = commands.add_parser("probe", help="add one kind at a time to the committed key of small routes")
+    probe.add_argument("--routes", default="J01,V01", help="comma separated routes (default J01,V01)")
+    probe.add_argument("--index", type=int, required=True, help="RUNNER_INDEX, 1..count")
+    probe.add_argument("--count", type=int, required=True, help="RUNNER_COUNT")
+    probe.add_argument("--cap-seconds", type=float, default=45, help="the wall-clock cap of each probe")
+    probe.add_argument("--out", required=True)
+    probe.set_defaults(handler=probe_command)
     jobs = commands.add_parser("jobs", help="run the named jobs here, each under one cap")
     jobs.add_argument("--jobs", required=True, help="comma separated ROUTE-VARIANT-SOLVER names")
     jobs.add_argument("--cap-minutes", type=float, required=True, help="the wall-clock cap of each job (the runner's own limit is 60 minutes in all)")
@@ -632,7 +690,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     jobs.set_defaults(handler=jobs_command)
     one = commands.add_parser("one", help="run one job in this process (the child of `batch`)")
     one.add_argument("--route", required=True, choices=ROUTES)
-    one.add_argument("--variant", required=True, choices=VARIANTS)
+    one.add_argument("--variant", required=True, help="kept, removed, all, or plus=KIND")
     one.add_argument("--solver", required=True, choices=SOLVERS)
     one.add_argument("--out", required=True)
     one.add_argument("--net-seconds", type=float, help="the envelope's own time net")

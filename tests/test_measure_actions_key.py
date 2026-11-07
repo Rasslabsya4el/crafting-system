@@ -140,6 +140,41 @@ def test_a_cell_says_where_a_job_stopped():
     assert key.cell(record("R04", "removed", "envelope", finished=False, error="PlanError: no policy of the offered actions")) == "refused: no policy reaches the goal"
 
 
+def test_the_names_of_a_key_are_read_from_a_list_and_from_lines_and_a_probe_adds_one():
+    assert key.key_names(text_of("v01-minion-helmet")) == ["transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb"]
+    assert key.key_names(text_of("r13-life-resist-belt"))[0] == "transmutation-orb"
+    assert key.key_names(text_of("r04-penetrating-quiver"))[:2] == ["Essence of Insanity", "Deafening Essence of Rage"]
+    assert key.key_names(text_of("r12-lightning-amulet")) == []
+
+    probed = key.with_variant(text_of("j01-cobalt-life-attack-speed"), "plus=divine-orb")
+
+    assert [line for line in probed.splitlines() if line.startswith("actions:")] == ["actions: [chaos-orb, divine-orb]"]
+
+
+def test_the_probes_add_each_kind_the_key_does_not_name_under_each_solver():
+    text = "base: x\nactions: [chaos-orb, bench-craft]\n"
+
+    jobs = key.probe_jobs(["J01"], lambda _route: text)
+
+    kinds_added = {variant.removeprefix("plus=") for _route, variant, _solver in jobs}
+    assert "chaos-orb" not in kinds_added and "bench-craft" not in kinds_added and "divine-orb" in kinds_added
+    assert {solver for _route, _variant, solver in jobs} == set(key.SOLVERS)
+    assert len(jobs) == len(kinds_added) * len(key.SOLVERS)
+
+
+def test_the_summary_lists_the_probes_beside_the_kept_mean():
+    records = {
+        ("J01", "kept", "auto"): record("J01", "kept", "auto"),
+        ("J01", "plus=divine-orb", "auto"): record("J01", "plus=divine-orb", "auto", finished=False, stop="the memory cap of 13,000 MB (resident 13,014 MB)", live_states=17_598_901),
+        ("J01", "plus=essence", "auto"): record("J01", "plus=essence", "auto", mean=40.0),
+    }
+
+    text = key.build_summary(records)
+
+    assert "| J01 | divine-orb | auto | stopped (memory 13 GB) 17,598,901 states alive" in text
+    assert "| J01 | essence | auto | 40.00; 100 known, 40 kept; 2 s; 300 MB | mean 50.0000 to 40.0000 |" in text
+
+
 def test_a_job_with_the_same_mean_and_first_action_says_same():
     records = {("J01", "kept", "auto"): record("J01", "kept", "auto"), ("J01", "removed", "auto"): record("J01", "removed", "auto", mean=50.0 + 1e-12)}
 

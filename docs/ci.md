@@ -245,6 +245,10 @@ on one runner of the first, and `summary` joins the records of the three into th
     $D --runners 5 --command 'uv run --no-sync python -u .github/scripts/actions_key.py batch --variants all --index $RUNNER_INDEX --count $RUNNER_COUNT --out $OUT_DIR/jobs'
     python .github/scripts/actions_key.py summary --dir DOWNLOADED_ARTIFACTS --out OUT --runs 'run IDs'
 
+A job the caps stopped is looked at again with more time: `actions_key.py jobs --jobs R08-kept-envelope --cap-minutes 52 --out DIR` (one runner each, up to the runner's 60 minutes).
+`actions_key.py probe --routes J01,V01 --index $RUNNER_INDEX --count $RUNNER_COUNT --out DIR` adds the kinds the key does not name to the key of a small route one at a time
+(45 seconds each, both solvers), which names the kind that makes a graph of 8 states explode.
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some
