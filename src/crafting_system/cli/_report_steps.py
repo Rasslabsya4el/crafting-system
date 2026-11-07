@@ -9,8 +9,6 @@ This module is the only reader of `_route_view` that `_report` needs. `_route_vi
 module when it is called and not at the top.
 """
 
-import math
-
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
 
@@ -41,11 +39,10 @@ def _step(view: _View, step) -> ReportStep:
     item = _shared_parts(plan, data, step.states)
     if step.action is None:
         return ReportStep(number, "No action", items, item, reason=step.reason or "", acts=False, reached=step.reached)
-    never = step.uses is not None and math.isinf(step.uses)
     return ReportStep(
         number, _ascii(view.title(step.action)), items, item,
         cost_parts=plan.offer_of(step.action).parts, cost=step.cost,
-        uses=step.uses, step_cost=None if step.uses is None or never else step.uses * step.cost, never=never, reached=step.reached,
+        uses=step.uses, step_cost=step.step_cost, never=step.never_finishes, reached=step.reached,
         outcomes=tuple(StepOutcome(edge.chance, _outcome(view, step, edge)) for edge in step.edges),
     )  # fmt: skip
 

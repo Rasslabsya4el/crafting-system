@@ -650,8 +650,8 @@ class _View:
         goal = self.gains(step, moving)
         if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
-        never = step.uses is not None and math.isinf(step.uses)
-        step_cost = None if step.uses is None or never else step.uses * step.cost
+        never = step.never_finishes
+        step_cost = step.step_cost
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [count(step.uses)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"

@@ -5,6 +5,7 @@ and the arrow the line had just named, so a reader took them for two more mods (
 is now the mods no requirement of the line names.
 """
 
+import itertools
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -123,8 +124,53 @@ def test_r05_an_item_with_none_of_the_group_lacks_one_of_the_four_and_says_so_on
     assert lacks.startswith("lacks 1 of: ") and lacks.count(",") == 3 and lacks.endswith("(the group needs 1 of 4)")
 
 
-def test_a_group_that_is_not_met_and_has_a_weak_member_says_so():
+def test_a_weak_member_of_a_group_that_is_not_met_is_said_once_among_those_still_to_find():
     data, plan = r05_plan()
     text = describe_state(plan, data, r05_state(plan, [BELOW, ABSENT, ABSENT, ABSENT]))
 
-    assert "too weak: " in text and "lacks 1 of: " in text and text.count("lacks") == 1
+    assert "too weak: " not in text and text.count("(held, too weak)") == 1  # not "too weak: Z; lacks 1 of: Z, W"
+    (lacks,) = [part for part in text.split("; ") if part.startswith("lacks")]
+    assert lacks.startswith("lacks 1 of: ") and "(held, too weak)" in lacks
+
+
+def test_a_weak_member_of_a_group_that_is_met_is_still_said():
+    data, plan = r05_plan()
+    text = describe_state(plan, data, r05_state(plan, [PASSING, BELOW, ABSENT, ABSENT]))
+
+    assert "lacks" not in text and text.count("too weak: ") == 1  # the item holds it, and its mod is not counted as another one
+
+
+# a nested group: X, and 2 of [Y, 1 of [Z, W]]
+NESTED = ("leafX", "leafY", "leafZ", "leafW")
+
+
+def nested_plan():
+    leaf = [SimpleNamespace(mod_ids=frozenset()) for _ in NESTED]
+    inner = KOfN(1, (leaf[2], leaf[3]))
+    return SimpleNamespace(leaf_labels=NESTED, target=SimpleNamespace(requirements=(leaf[0], KOfN(2, (leaf[1], inner)))))
+
+
+def test_a_weak_member_inside_a_nested_group_is_said_where_it_is_listed():
+    state = item((PASSING, PASSING, BELOW, ABSENT), [])
+
+    text = describe_state(nested_plan(), None, state)
+
+    assert "has leafX" in text and "has leafY (the group needs 2 of 2)" in text
+    assert "lacks 1 of: at least 1 of 2 of: leafZ (held, too weak), leafW" in text
+
+
+def test_the_mod_of_a_weak_member_inside_a_nested_group_is_not_counted_as_another_mod():
+    state = item((PASSING, PASSING, BELOW, ABSENT), [slot(Side.SUFFIX, ABSENT, ABSENT, BELOW, ABSENT), slot(Side.PREFIX, ABSENT, ABSENT, ABSENT, ABSENT)])
+
+    text = describe_state(nested_plan(), None, state)
+
+    assert text.endswith("other mods: 1 prefix")  # the suffix is the weak Z, which the line says
+
+
+def test_a_leaf_that_is_held_is_on_the_line_once_and_no_leaf_is_said_twice_at_any_standing():
+    """All 81 standings of the four leaves of the nested group."""
+    for standing in itertools.product((ABSENT, BELOW, PASSING), repeat=4):
+        text = describe_state(nested_plan(), None, item(standing, []))
+        for label, status in zip(NESTED, standing):
+            assert text.count(label) <= 1, (standing, label, text)
+            assert status is ABSENT or text.count(label) == 1, (standing, label, text)
