@@ -73,7 +73,7 @@ JARGON = {  # a word a player does not use; the figures are said as `_limits.PER
     "a bare success chance": re.compile(r"(?<![Tt]he )\bsuccess chance\b"),  # `PERCENTILE_WORDS` says "the success chance"; the page card's field label "Success chance" is a label, not a row
 }
 JARGON_OWNED_BY_557 = {"_approx.py", "_bound_prune.py"}  # the causes written there ("the solver could not certify its values") are the open issue #557
-FOR_A_PROGRAMMER = ("solver must be one of ", "risk: p50 ", ", p90 ")  # the error about the library argument `solver=` and the progress line of a heavy run: not read by a player
+FOR_A_PROGRAMMER = ("solver must be one of ", "risk: p50 ")  # the error about the library argument `solver=` and the progress line of a heavy run: not read by a player
 
 
 def declared_options() -> set[str]:
@@ -90,8 +90,8 @@ OPTIONS = declared_options()
 
 
 def reading_lines(text: str) -> list[str]:
-    """The lines of a report a player reads, but not the header `Target: <file>`, which echoes the name of the player's own file."""
-    return [line for line in text.splitlines() if not line.startswith("Target: ")]
+    """The lines of a report a player reads, but not the headers `Target: <file>` and `Given route: <name> (<file>)`, which echo the name of the player's own file."""
+    return [line for line in text.splitlines() if not line.startswith(("Target: ", "Given route: "))]
 
 
 def faults_in(text: str, options: set[str] = OPTIONS) -> list[str]:
@@ -103,10 +103,23 @@ def faults_in(text: str, options: set[str] = OPTIONS) -> list[str]:
     return faults
 
 
+PLACEHOLDER = "{}"  # what stands for a value in an f-string read as one sentence
+
+
 def sentences_of(path: Path) -> list[tuple[int, str]]:
-    """(line, text) of each string constant of the file with two words or more, but no docstring and no program name."""
-    tree = ast.parse(path.read_text(encoding="utf-8"))
+    """(line, text) of each string of the file with two words or more, but no docstring and no program name."""
+    return sentences_in(path.read_text(encoding="utf-8"))
+
+
+def sentences_in(source: str) -> list[tuple[int, str]]:
+    """The sentences of Python source: each string constant, and each f-string read as ONE sentence with `PLACEHOLDER` for every value.
+
+    An f-string is not read by its literal fragments: `f"  p90   {value}"` and `f"{value} p90"` would each have one fragment of a single word,
+    and the two-word rule would pass them, though a player reads two words in each.
+    """
+    tree = ast.parse(source)
     left_out: set[int] = set()
+    joined: list[ast.JoinedStr] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) and node.body:
             first = node.body[0]
@@ -117,11 +130,20 @@ def sentences_of(path: Path) -> list[tuple[int, str]]:
                 left_out |= {id(child) for child in ast.walk(annotation)}
         if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == PROGRAM_NAME for target in node.targets):
             left_out |= {id(child) for child in ast.walk(node.value)}
-    return [
+        if isinstance(node, ast.JoinedStr):
+            joined.append(node)
+    found = []
+    for node in joined:
+        if id(node) in left_out:
+            continue
+        found.append((node.lineno, "".join(part.value if isinstance(part, ast.Constant) else PLACEHOLDER for part in node.values)))
+        left_out |= {id(child) for child in ast.walk(node)}  # its fragments are read as part of the whole
+    found += [
         (node.lineno, node.value)
         for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in left_out and len(node.value.split()) >= 2
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in left_out
     ]
+    return sorted((line, text) for line, text in found if len(text.split()) >= 2)
 
 
 READ = sorted(path for path in CLI.glob("*.py") if path.name not in NOT_READ and not path.name.startswith(NOT_READ_PREFIX))
@@ -170,6 +192,31 @@ def test_the_rule_lets_a_player_read_an_option_and_the_words_of_the_report(text)
     assert faults_in(text) == [], text
 
 
+@pytest.mark.parametrize(
+    ("source", "kind"),
+    [
+        ('lines.append(f"  p90             {value}")', "jargon: p90"),
+        ('lines.append(f"{value} p90")', "jargon: p90"),
+        ('lines.append(f"  success chance  {value}")', "jargon: a bare success chance"),
+        ('lines.append(f"Run time: solver {ms} ms")', "jargon: solver"),
+        ('lines.append(f"{ms} ms by the solver")', "jargon: solver"),
+        ('lines.append(f"{count} items, see ADR-0023")', "an ADR number"),
+        ('lines.append(f"  simulated CVaR {level} {value}")', "jargon: CVaR"),
+    ],
+)
+def test_an_f_string_is_read_as_one_sentence_so_a_short_fragment_cannot_hide(source, kind):
+    sentences = sentences_in(source)
+
+    assert sentences, source  # the two-word rule keeps it
+    assert any(fault.startswith(kind) for _, text in sentences for fault in faults_in(text)), source
+
+
+def test_a_docstring_a_one_word_string_and_a_plain_f_string_are_not_sentences():
+    source = 'def f(x):\n    """p90 solver."""\n    a = "p90"\n    b = f"{x}"\n    c = f"{x} stay under"\n    return a, b, c\n'
+
+    assert [text for _, text in sentences_in(source)] == ["{} stay under"]
+
+
 def test_the_options_are_read_from_the_code():
     assert {"--exact", "--start-price", "--route", "--strands", "--no-recipe-starts", "--verify", "--budget", "--help"} <= OPTIONS
 
@@ -204,8 +251,48 @@ def wand_prices():
     return prices(base=None, flask=None, **{"Toy_Wand_(ilvl_86)": BASE_PRICE, "Ruby_Flask": FLASK_PRICE})
 
 
+def other_surfaces(tmp_path_factory) -> dict[str, str]:
+    """The three texts that the plain R12 plan does not print: the `--verify` block of an approximate answer, the given-route block and the
+    free-action note. Each is made by the plan of the test that owns it, so that the jargon list reads what a player reads."""
+    from coarse_support import DATA as COARSE
+    from items_support import DATA as ITEMS_DATA
+    from test_cli_approximate import OFFERS, PRICES, RATES, TARGET
+    from test_cli_approximate_inputs import lookup, toy_plan
+    from test_cli_free_actions import DATA as VEIL_DATA
+    from test_cli_free_actions import price_file as veil_prices
+    from test_cli_free_actions import veil_target
+
+    from crafting_system.abstraction import Coarsening
+    from crafting_system.cli import _marking
+    from crafting_system.cli._route import Route, RouteResult
+    from crafting_system.cli._route_report import render_route_text
+    from crafting_system.targets import parse_target
+
+    target = parse_target(TARGET, COARSE, source="t.yaml")
+    exact = make_plan(COARSE, target, PRICES, offers=OFFERS)
+    forecast = exact.abstraction.estimate([exact.start], [offer.action for offer in OFFERS])
+    pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
+    budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
+    approximate = make_plan(COARSE, target, PRICES, offers=OFFERS, budget=budget, rates=RATES)
+    approximate_check = verify(COARSE, approximate, runs=300, seed=7)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(_marking, "rule_by_id", lookup)  # the toy rules, as the autouse fixture of the test that owns the plan does
+        planner = toy_plan("Marked Chaos")
+        other = toy_plan("Untaken Chaos")  # the given route takes the other action
+        result = RouteResult(dict(other.policy), other.risk, (), None, 0.0)
+        route_text = render_route_text(build_report(planner, ITEMS_DATA), Route("Toy route", "toy.yaml", ()), result, ITEMS_DATA, file_name="toy.yaml")
+
+    veil = make_plan(VEIL_DATA, veil_target(tmp_path_factory.mktemp("veil")), veil_prices(Veiled_Chaos_Orb=5.0))
+    return {
+        "approximate answer with --verify": render_text(build_report(approximate, COARSE), approximate_check),
+        "given route": route_text,
+        "plan with free actions": render_text(build_report(veil, VEIL_DATA)),
+    }
+
+
 @pytest.fixture(scope="module")
-def texts() -> dict[str, str]:
+def texts(tmp_path_factory) -> dict[str, str]:
     """The text of real plans: the R12 plan (no start options), and the toy wand whose elemental cap changes the cheapest total."""
     plan = make_plan(DATA, load_target(R12, DATA), price_file())
     capped = plan_with_starts(TOY, toy_target(WAND_TARGET), wand_prices())
@@ -218,6 +305,7 @@ def texts() -> dict[str, str]:
         "toy wand with a cap that matters": render_text(build_report(capped, TOY)),
         "toy boots, no requirement the recipe serves": render_text(build_report(no_speed, TOY)),
         "toy boots, a cap below the asked tier": render_text(build_report(too_low, TOY)),
+        **other_surfaces(tmp_path_factory),
     }
 
 
@@ -227,6 +315,9 @@ def test_the_text_of_real_plans_holds_no_internal_name(texts):
     assert "refused (no target mod): no requirement of the target asks for what these recipes make: Boots with movement speed" in texts["toy boots, no requirement the recipe serves"]
     assert "refused: Boots with movement speed: " in texts["toy boots, a cap below the asked tier"]
     assert "Verification by simulation" in texts["R12 plan with --verify"] and "Run time: working out the plan took" in texts["R12 plan"]
+    assert "Verification by simulation, not certified" in texts["approximate answer with --verify"]  # the block of `_marking.verification_lines`
+    assert "Given route: Toy route" in texts["given route"] and "(policy " in texts["given route"]  # the block of `_route_report`
+    assert "free actions are counted at" in texts["plan with free actions"]  # the note of `_report.free_action_lines`
     for where, text in texts.items():
         for number, line in enumerate(reading_lines(text), 1):
             assert faults_in(line) == [], f"{where}, line {number}: {line!r}"

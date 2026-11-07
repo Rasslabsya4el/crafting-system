@@ -323,7 +323,7 @@ def free_action_lines(plan: Plan, risk) -> list[str]:
     if risk.grid.free_tail <= 0.0:
         return []
     return [
-        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the budget steps of the risk figures:",
+        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and added up apart from the other costs when the risk figures are worked out:",
         f"   {figures('p50', 'p90')} hold to within {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e},",
         f"   and {PERCENTILE_WORDS['CVaR']} to within {money_small(risk.grid.free_cvar_allowance)} Chaos;",
         f"   the error bound of the plan's cost is {plan.solution.error_bound:.1e}, relative)",
