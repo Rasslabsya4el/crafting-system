@@ -159,7 +159,7 @@ def test_the_model_on_part_of_the_offers_is_a_lower_bound_and_equals_the_whole_a
 def test_the_floor_action_alone_is_a_lower_bound_whatever_part_of_the_offers_the_model_holds(world, floors_on, monkeypatch):
     """Cut the growth off: the model holds only its first offers, and the floor action stands for all the others. It must stay a lower bound (weaker)."""
     ab, start, offers, _, exact, whole = world
-    monkeypatch.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: [])
+    monkeypatch.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: ([], {}))
     fresh = abstraction()
     bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
     assert bound.rounds == 1 and bound.positions == (0, 6)
@@ -219,7 +219,7 @@ def test_a_round_stopped_while_offers_join_leaves_the_round_before_as_the_bound(
     monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
     asked = []
     with monkeypatch.context() as inner:
-        inner.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: [])  # no growth: the questions of the first round alone
+        inner.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: ([], {}))  # no growth: the questions of the first round alone
         fresh = abstraction()
         pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=lambda: asked.append(1) or None)
     first_round = len(asked)

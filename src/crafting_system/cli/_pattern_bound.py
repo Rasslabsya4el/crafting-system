@@ -170,11 +170,12 @@ def pattern_lower_bound(
         )
         if model.stopped is not None or floors is None or not outside:
             return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, "model" if model.stopped else "complete")
-        more = _binding(graph, solved, model, floors, outside)
+        more, limits = _binding(graph, solved, model, floors, outside)
         if not more:
             return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete")
-        names = ", ".join(priced[p].label for p in more[:2]) + (", ..." if len(more) > 2 else "")
-        say(f"model {rounds}: the floor action is the cheapest at some key; {len(more):,} offers more join the model ({names})")
+        names = ", ".join(f"{priced[p].label} (cost {priced[p].cost:.3g})" for p in more[:2]) + (", ..." if len(more) > 2 else "")
+        said = ", ".join(f"{name} {limits[k]:.4g}" for k, name in ((OUTSIDE, "outside E"), (INSIDE, "inside E"), (OTHER, "other shape")) if limits[k] is not None)
+        say(f"model {rounds}: the floor action is the cheapest at some key (largest model value there: {said}); {len(more):,} offers more join the model: {names}")
         kept = (model, value, float(solved.error_bound), list(order))
         adding = more
         order = [*order, *more]
@@ -205,7 +206,7 @@ def _floor_of(floors: OfferFloors, outside: list[int], priced: Sequence[PricedOf
     return floor
 
 
-def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int]) -> list[int]:
+def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int]) -> tuple[list[int], dict[int, float | None]]:
     """The offers outside the model that could lower the value of a key where the floor action is the cheapest, the least floors first.
 
     At a key whose floor action is cheaper than every action of the model, the value is the floor and not the model's own; an offer outside the model
@@ -226,7 +227,7 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
     np.minimum.at(fake, owner[~real], q[~real])
     binding = fake < best * (1.0 - BINDING)
     if not binding[: len(model.keys)].any():
-        return []
+        return [], {OTHER: None, INSIDE: None, OUTSIDE: None}
     limit: dict[int, float | None] = {OTHER: None, INSIDE: None, OUTSIDE: None}
     for k in np.flatnonzero(binding[: len(model.keys)]).tolist():
         key = model.keys[k]
@@ -241,7 +242,7 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
         if low is not None:
             found.append((low, position))
     found.sort()
-    return [position for _, position in found]
+    return [position for _, position in found], limit
 
 
 __all__ = ["PatternBound", "pack_pattern_model", "pattern_lower_bound", "pattern_offers"]
