@@ -327,7 +327,7 @@ ISSUE_NO_LIMITS, ISSUE_GROUP, ISSUE_UNPRICED, ISSUE_NAMES = 550, 551, 552, 553  
 
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it
     **{(name, "check_cut_guarantee"): ISSUE_NO_LIMITS for name in ("approximate_conflict", "bench_craft", "branch", "essence", "interval_tiny", "remove_crafted_then_chaos", "unveil_offer")},
-    ("real_r05", "check_group_printed_once"): ISSUE_GROUP,
+    **{(name, "check_group_printed_once"): ISSUE_GROUP for name in ("real_r05", "real_r11")},
     **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
     **{(name, "check_no_internal_names"): ISSUE_NAMES for name in ("given_route_differs", "interval_tiny", "r12_fixture", "r12_fixture_given_route", "v01_minion_helmet")},
 }
