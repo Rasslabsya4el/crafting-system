@@ -88,7 +88,7 @@ def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
     assert sound.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
     factor = 1.0 + 9.0 * (np.arange(len(bound.value)) % 4 == 1)
     wrong = dataclasses.replace(bound, value=bound.value * factor)
-    with pytest.raises(BoundError, match="fell"):  # the guard sees this bound fall as the search looks further ...
+    with pytest.raises(BoundError, match="lower bound"):  # the guard sees this bound is not consistent as the search looks further ...
         envelope_result(abstraction, start, priced, bound=wrong)
     planted = envelope_result(abstraction, start, priced, bound=wrong, guard=False)  # ... and with the guard off the comparison with the full walk is what catches it
     assert abs(planted.solution.values[start] - exact) > 1e-3 * exact, "the planted bound did not change the answer: the comparison cannot fail"

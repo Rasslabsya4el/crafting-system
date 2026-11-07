@@ -33,6 +33,7 @@ def run(seed: int, alpha: float, planted: float = 0.0, **options):
     graph = random_graph(seed, SIZE)
     value, _ = dense_optimum(graph)
     problem = ExplicitProblem(graph, value, alpha, planted)
+    options.setdefault("guard", not planted)  # the controls plant a wrong bound and watch what it does; `test_cli_envelope_guard.py` has the guard on
     search = Search(problem, **options)
     return graph, value, problem, search.run()
 

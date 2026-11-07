@@ -115,7 +115,7 @@ def test_a_bound_planted_above_the_exact_cost_is_caught(world):
 
 
 def test_a_bound_that_falls_as_the_search_looks_further_is_refused(world):
-    """A planted bound that is not consistent shows as a fall of the lower bound from one round to the next; the search refuses to answer on it."""
+    """A planted bound that is not consistent shows as a state above its offers or a fall of the lower bound from one round to the next; the search refuses to answer on it."""
     _, _, _, _, bound = world
     rng = np.random.default_rng(377)
     refused = 0
@@ -124,7 +124,7 @@ def test_a_bound_that_falls_as_the_search_looks_further_is_refused(world):
         try:
             fresh(world, bound=dataclasses.replace(bound, value=bound.value * (1.0 + raised)))
         except BoundError as error:
-            assert "fell" in str(error)
+            assert "fell" in str(error) or "not consistent" in str(error)
             refused += 1
     assert refused >= 5, refused
     fresh(world)  # the sound bound is not refused
