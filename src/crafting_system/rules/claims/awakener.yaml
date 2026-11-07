@@ -68,6 +68,8 @@ rules:
     quote: "the two merged mods cannot share the same ModGroup"
     approximate: true
     approximate_reason: "The wiki and Craft of Exile disagree on which of two same-group mods survives, and no 3.29 game sample exists (in-game list #182, check 1)."
+    page_statement: "When the two mods an Awakener's Orb keeps belong to one mod group, only one of them stays on the result; which one is not settled."
+    page_source: "the wiki and Craft of Exile disagree, and no 3.29 game sample exists"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -78,6 +80,8 @@ rules:
     quote: "one will be discarded at random"
     approximate: true
     approximate_reason: "The wiki gives no odds and Craft of Exile keeps the receiver's mod; the donor reading stands for the wiki's random choice at its other end (in-game list #182, check 1)."
+    page_statement: "When two kept mods share a mod group, the wiki says one of them is dropped at random, and gives no odds."
+    page_source: "the wiki"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -88,6 +92,8 @@ rules:
     quote: "useaffixes.push(jQuery.parseJSON(JSON.stringify(woke.m1)));if(!mconflict){useaffixes.push("
     approximate: true
     approximate_reason: "The wiki (oldid 1697721) says one of two exclusive mods is discarded at random; only the game settles it (in-game list #182, check 1)."
+    page_statement: "When two kept mods share a mod group, the mod of the receiving item stays and the donor's is dropped."
+    page_source: "Craft of Exile's emulator kept it in 1000 of 1000 tries; the wiki says the choice is random"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -106,6 +112,8 @@ rules:
     quote: "poec_simRollAffix(null,null,null,fossil,noaffix-prmods"
     approximate: true
     approximate_reason: "Only Craft of Exile's code says the kept mods count inside the total of 4, 5 or 6; the wiki is silent and the owner chose it (grill B3)."
+    page_statement: "The mods an Awakener's Orb keeps count inside the total of 4, 5 or 6 mods of the new item."
+    page_source: "Craft of Exile's code only; the wiki is silent"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -134,6 +142,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "One 2020 Reddit report relayed by the GPT researcher and not opened by me, from before the 3.10 rule, and it does not say which item was the receiver."
+    page_statement: "One player report says that when two same-group curse mods met on a Ring through an Awakener's Orb, only one of them remained; it does not say which item received."
+    page_source: "one Reddit report from 2020, from before the 3.10 rule change"
 
   - id: awakener.cost
     statement: One use of an Awakener's Orb consumes one Awakener's Orb item; the value maps its price-file name (the item's name in the game data) to the number of items. The orb is drop-restricted, so its price comes from the market.

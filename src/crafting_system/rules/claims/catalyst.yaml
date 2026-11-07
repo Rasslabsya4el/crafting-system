@@ -45,6 +45,8 @@ rules:
     quote: "The maximum quality is 20%."
     approximate: true
     approximate_reason: "No source describes a catalyst whose gain passes 20; the cap at 20 is the reading of the stated maximum (open point O-06)."
+    page_statement: "A catalyst never lifts an item's quality above 20%, even when its gain would pass it."
+    page_source: "the stated maximum; no source describes the overflow"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -79,6 +81,8 @@ rules:
     quote: "function poec_simApplyCatMod(val,mod){if(mod!=1){if(val-Math.floor(val)!=0){return Math.floor(((val*100)*mod))/100}else{return Math.floor(val*mod)}}else{return val}}"
     approximate: true
     approximate_reason: "Only Craft of Exile's code and one GGG example (whose fraction .4 does not separate rounding down from rounding to nearest) support rounding down; no in-game check exists (open point O-08)."
+    page_statement: "A catalyst-scaled value is rounded down."
+    page_source: "Craft of Exile's code and one example from the game's makers; no in-game check"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -126,6 +130,8 @@ rules:
     quote: "Adds quality that enhances Prefix modifiers on a ring, amulet or belt"
     approximate: true
     approximate_reason: "No source says whether a Sinistral or Dextral Catalyst also scales an implicit; it is taken as not (open point O-07)."
+    page_statement: "A Sinistral Catalyst boosts only the prefix mods and a Dextral Catalyst only the suffix mods; implicits are not boosted."
+    page_source: "the wiki; it does not say whether implicits are scaled"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -142,6 +148,8 @@ rules:
     quote: "max(1, min(30*e^(-1/30*ilvl) - 3/10, 20))"
     approximate: true
     approximate_reason: "The wiki's table equals the formula, but no player sample confirms that the gain is rounded at random by its fraction (open point O-05)."
+    page_statement: "The quality a catalyst adds follows the wiki's formula by item level, and a fractional gain is rounded up or down at random by its fraction."
+    page_source: "the wiki's table matches the formula; no player sample confirms the random rounding"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 

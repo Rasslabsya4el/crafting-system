@@ -20,6 +20,8 @@ rules:
     quote: "numOfAffixes={...,2:{3:{\"s\":0,\"e\":0.65},4:{\"s\":0.65,\"e\":1}}"
     approximate: true
     approximate_reason: "The wiki says three to four mods for an Alchemy on a jewel; only Craft of Exile's code gives the 65% to 35% ratio."
+    page_statement: "A Chaos Orb or an Orb of Alchemy on a jewel gives 3 mods with chance 65% and 4 mods with chance 35%."
+    page_source: "the wiki says three to four mods; only Craft of Exile's code gives the 65% to 35% split"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
     value: {3: 65, 4: 35}
@@ -64,6 +66,8 @@ rules:
     quote: "name_bgroup: Jewels, max_affix: 4, is_fossil: 1, is_ess: 0, is_craftable: 0"
     approximate: true
     approximate_reason: "Only Craft of Exile's data says that fossils work on jewels; the wiki does not say."
+    page_statement: "Fossils used in a resonator work on a rare jewel."
+    page_source: "Craft of Exile's data only; the wiki does not say"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -90,5 +94,7 @@ rules:
     quote: "the emulator fractures one in 400/400 (refused below 4 mods); it has no jewel exception"
     approximate: true
     approximate_reason: "Only Craft of Exile's emulator says that a jewel can be fractured; no other source says either way."
+    page_statement: "A Fracturing Orb, and a Fractured Fossil, work on a rare jewel that has four mods."
+    page_source: "Craft of Exile's emulator only; no other source says either way"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01

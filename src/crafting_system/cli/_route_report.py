@@ -6,6 +6,7 @@ gives it (`S1`, ...); a gap on a state the policy never reaches has no such id a
 
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
+from crafting_system.targets import plain_base_names
 
 from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
 from ._report import UNRESOLVED, Report, _estimate, _shifted, describe_state, interval, percent, unresolved
@@ -57,7 +58,7 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
             lines.append(f"  {ids[gap.state]}: {describe_state(plan, data, gap.state)}")
             lines.append(f"      {gap.reason}")
     lines.append(f"Route run time: risk.evaluate and route build {result.seconds * 1000:.1f} ms")
-    return "\n".join(lines) + "\n"
+    return plain_base_names(data, "\n".join(lines) + "\n")  # a base by its game name, never its id (#553, #604)
 
 
 def _interval(estimate, shift: float, divine: float, risk) -> str:

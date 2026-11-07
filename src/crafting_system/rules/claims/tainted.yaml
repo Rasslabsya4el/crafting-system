@@ -39,6 +39,8 @@ rules:
     value: {add: 0.5, remove: 0.5}
     approximate: true
     approximate_reason: "the wiki cites a community test of unknown size; the odds changed in 3.19.0 and 3.19.1"
+    page_statement: "A Tainted Jeweller's Orb adds or removes one socket with equal chance, and the sockets it adds are white."
+    page_source: "a community test cited by the wiki, of unknown size; the odds changed in 3.19"
 
   - id: tainted.fusing_even_split
     statement: "A Tainted Orb of Fusing adds or removes one link of the largest linked group with 50% each (the wiki cites a direct community test, sample size unknown; the odds were changed in 3.19.0 and 3.19.1)."
@@ -50,6 +52,8 @@ rules:
     value: {add: 0.5, remove: 0.5}
     approximate: true
     approximate_reason: "the wiki cites a community test of unknown size; the odds changed in 3.19.0 and 3.19.1"
+    page_statement: "A Tainted Orb of Fusing adds or removes one link of the largest linked group with equal chance."
+    page_source: "a community test cited by the wiki, of unknown size; the odds changed in 3.19"
 
   - id: tainted.chromatic_forces_non_white
     statement: "Tainted Chromatic Orbs ignore attribute requirements and, since 3.29.0, force at least one non-white socket; quality raises the chance of more. The colour chances are not published (no sample size exists)."

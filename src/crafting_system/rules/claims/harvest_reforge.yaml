@@ -58,6 +58,8 @@ rules:
     quote: "no valid tags in the mod pool to roll for the selected item, the craft cannot be used"
     approximate: true
     approximate_reason: "No source says whether a tagged reforge is refused when the tag has mods only on a full or locked side; the refusal is read from the wiki sentence about the mod pool."
+    page_statement: "A tagged Harvest reforge is refused when no mod with the chosen tag fits a free slot of the item, for instance when the only free slots are on a side with no such mod."
+    page_source: "the wiki's sentence about the mod pool; no source says what happens with a full or locked side"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 

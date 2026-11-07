@@ -14,6 +14,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The wiki says other low-level bases with a smaller inventory size have exceptions and names only the Gnarled Branch, so the class table is a default; Path of Building's per-base limit is only a test oracle (ADR-0046)."
+    page_statement: "The most sockets an item can have follows its type: 3 for one-handed weapons and shields, 4 for boots, helmets and gloves, 6 for body armours and two-handed weapons."
+    page_source: "the wiki, which says some low-level bases have unnamed exceptions"
     value:
       by_class:
         Body Armour: 6
@@ -133,6 +135,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The data show the forced socket's colour flatter than the natural weights and nothing explains it; the plan follows Siveran's code and the owner's standing rule, the flatter reading is the second number (ADR-0047)."
+    page_statement: "The colour of the socket a Chromatic Orb forces is drawn with the same weights as a natural socket."
+    page_source: "Siveran's calculator; game data shows a flatter colour split that nothing explains"
     value: {second_reading_natural_third: 1, second_reading_natural_over: 3, second_reading_uniform_third: 2, second_reading_uniform_over: 3}
 
   - id: sockets.chromatic_one_socket_always_coloured
@@ -152,6 +156,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The owner's belief and a line of Siveran's commit log (repeat prevention) are the only sources; the data cannot test it (in-game list #182)."
+    page_statement: "A Chromatic Orb cannot return the colours the item already has."
+    page_source: "the owner's belief and a line of Siveran's calculator history; the game data cannot test it"
 
   - id: sockets.chromatic_ignores_requirement_mods
     statement: The colour weights of the Chromatic Orb use the requirements of the item as the finish starts, and ignore mods that change the requirements (the finish is solved before the mods are known and such mods are rare).
@@ -162,6 +168,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "A modelling choice of the design (ADR-0047), not a measured rule: a local mod that changes the requirements changes the real weights."
+    page_statement: "The colour weights of a Chromatic Orb use the item's requirements as the finish starts and ignore mods that change them."
+    page_source: "the planner's own modelling choice, not a measured rule"
 
   - id: sockets.chromatic_not_sold_by_vendors
     statement: Chromatic Orbs are no longer sold by town vendors for Jeweller's Orbs; the vendor price of a Chromatic Orb is gone.
@@ -198,6 +206,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "No measurement of the Jeweller's Orb exists; that it rolls from the item-generation weights is an inference, and the older 2014 table disagrees on 1 to 3 sockets (ADR-0047)."
+    page_statement: "A Jeweller's Orb rolls the number of sockets with the item-generation weights, 50, 120, 100, 30, 5 and 1 for one to six sockets."
+    page_source: "the wiki's weights; no measurement of the orb exists and a 2014 table disagrees on one to three sockets"
     value:
       six_or_three: [50, 120, 100, 30, 5, 1]
       four: [100, 90, 80, 30]
@@ -212,6 +222,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "A 2014 staff statement about item generation, not about the Jeweller's Orb, with the staff's own warning that the authoritative numbers are server-only; kept as the second number beside the plan (ADR-0047)."
+    page_statement: "A second reading of the Jeweller's Orb socket odds uses the weights 100, 90, 80, 30, 5 and 1 for one to six sockets."
+    page_source: "a 2014 statement by a Grinding Gear Games staff member about item generation, not about the orb"
     value:
       six_or_three: [100, 90, 80, 30, 5, 1]
 
@@ -224,6 +236,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "No source says how the 1% per 1% enters the Jeweller's weights; the model leaves quality out, which can only overstate the cost."
+    page_statement: "Quality above 20% has no effect on a Jeweller's Orb or an Orb of Fusing in the planner."
+    page_source: "the wiki says each 1% of quality improves the result by 1% without saying how"
 
   - id: sockets.quality_one_percent_per_percent
     statement: Each 1% of item quality improves the result of an Orb of Fusing or a Jeweller's Orb by 1%; quality is not consumed. Which weights the 1% multiplies is not stated (the model does not use it for the Jeweller's Orb, sockets.jeweller_ignores_quality). For the Chromatic Orb the factor on the non-white chance in Siveran's fitted formula is (1 + min(quality, 30) / 100); that it is the same rule as for Jeweller's and Fusing is an analogy.
@@ -250,6 +264,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The owner's answer covers adding sockets only; the removal rule and the bench count craft's use of it are the main chat's reading (in-game list #182)."
+    page_statement: "When a craft lowers the socket count, the last sockets are removed and the first ones keep their colours."
+    page_source: "the owner's answer, which covers adding sockets only"
 
   - id: sockets.omen_of_the_jeweller_max_sockets
     statement: Omen of the Jeweller makes the next Jeweller's Orb roll the maximum number of sockets for the item's base type and item level.
@@ -286,6 +302,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "One 2017 dataset of 100,000 orbs on 20%-quality items, fitted by its author; nothing says the odds changed, nothing confirms it, and no table exists for other quality values (ADR-0047)."
+    page_statement: "An Orb of Fusing links sockets in groups whose size is drawn from a fitted table of weights, measured at 20% quality."
+    page_source: "one 2017 dataset of 100,000 orbs on 20%-quality items; no table for other quality"
     value:
       at_quality: 20
       parts_of_100000: [17818, 34818, 26766, 19672, 826, 100]
@@ -327,6 +345,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "No source says which sockets the bench link craft links; the first N is the reading of the design (ADR-0047)."
+    page_statement: "The bench craft for N links links the first N sockets into one group and leaves the rest unlinked."
+    page_source: "the planner's own reading; no source says which sockets are linked"
 
   - id: sockets.bench_colour_cost
     statement: "The bench colour crafts guarantee at least two, three or four non-white sockets for 5, 20 or 75 Chromatic Orbs; the red, green and blue crafts no longer exist. The value maps the minimum to the number of Chromatic Orbs."
@@ -346,6 +366,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Nothing in the sources says how the bench rolls the colours beyond the minimum; a conditioned Chromatic roll is the simplest reading (in-game list #182)."
+    page_statement: "A bench craft for at least 2, 3 or 4 non-white sockets is a Chromatic roll limited to results with at least that many non-white sockets."
+    page_source: "the simplest reading; nothing says how the bench rolls beyond the minimum"
 
   - id: sockets.bench_on_corrupted_costs_vaal
     statement: A socket-changing bench craft also works on a corrupted item, for one extra Vaal Orb per orb of the craft's cost. (A corrupted item is refused by the socket actions here; the crafts that cost Vaal Orbs are batch B4's.)
@@ -374,6 +396,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The mechanism of the Omen is not documented; the conditioned roll is the simplest reading (ADR-0047)."
+    page_statement: "An Omen of Trichromatism makes the next Chromatic Orb a roll limited to results with at least one red, one green and one blue socket."
+    page_source: "the simplest reading; the mechanism of the Omen is not documented"
 
   - id: sockets.omen_of_trichromatism_below_three_sockets
     statement: The Omen of Trichromatism on an item with fewer than three sockets is not offered (the owner expects the game to refuse it).
@@ -384,6 +408,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "The owner does not know and expects an error; the check goes on the owner's in-game list #182."
+    page_statement: "An Omen of Trichromatism is not offered on an item with fewer than three sockets."
+    page_source: "the owner expects the game to refuse it; not checked in the game"
 
   - id: sockets.binding_links_existing_sockets
     statement: An Orb of Binding links the sockets the item already has and never adds sockets (a two-socket item becomes two-linked).
@@ -402,6 +428,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The wiki page contradicts itself on whether Binding adds sockets (the owner's play says it does not); the loss above four and the colours of the survivors are the wiki's only (ADR-0048)."
+    page_statement: "An Orb of Binding gives up to four linked sockets; on an item with more, the extra sockets are lost and the survivors keep their colours."
+    page_source: "the wiki, whose page contradicts itself on whether Binding adds sockets"
 
   - id: sockets.black_morrigan_max_links_and_sockets
     statement: "Two beast recipes with The Black Mórrígan modify an item to have the maximum possible links (with Craicic Sand Spitter) or the maximum possible number of sockets (with Craicic Shield Crab). What 'maximum possible' respects (item level, base type) is not documented."
@@ -420,6 +448,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "No source but the owner's answer; the research found the recipes unverified, and the narrower reading of the Sand Spitter (link only the sockets present) is on the owner's in-game list #182 (ADR-0048)."
+    page_statement: "The Black Mórrígan recipes give the most sockets the item type allows; old sockets keep their colours and links, new ones are white and unlinked."
+    page_source: "the owner's answer; the recipes themselves are unverified"
 
   # --- the price names of the colour and quality kinds (ticket #229, B6 S3) ---
 

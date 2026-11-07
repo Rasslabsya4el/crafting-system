@@ -158,7 +158,7 @@ def test_the_dust_and_gold_prices_are_named_with_their_source(tiny):
     text = render_text(report)
     assert "Thaumaturgic Dust at 100,000 per Chaos Orb [default]" in text
     assert "Gold at 500 Chaos Orbs per million [default]" in text
-    assert "hand price in price_overrides.toml" in text
+    assert "a hand price replaces it" in text
 
 
 def test_a_plan_with_the_smallest_worst_case_elsewhere_names_that_route():
@@ -207,7 +207,8 @@ def test_the_json_names_the_claims_alpha_the_count_table_and_the_cost_rule_with_
 def test_the_text_lists_the_same_claims_with_their_spread(tiny):
     _, _, _, report = tiny
     text = render_text(report)
-    assert "recombinator.selection_weighted_formula_unknown: Fitted on 40 + 28 observations" in text
+    assert "Which eligible mods a recombination picks depends on their weight" in text and "selection_weighted_formula_unknown" not in text  # a statement, not the id (#604)
+    assert "Source: a fit to 68 player observations with weights from 250 to 1500" in text
     assert "spread: the planner is run at 1; its cost is read at 0.4, 0.7, 1, 1.3, 1.6" in text
     assert "spread: the planner uses 100,000; reports range from 25,000 to 250,000 (Thaumaturgic Dust per combine)" in text
     assert "spread: the planner uses 12,000; reports range from 8,000 to 20,000 (Gold per combine)" in text

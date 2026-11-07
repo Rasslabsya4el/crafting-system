@@ -207,10 +207,8 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 # judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
 # a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
 
-KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault
-    ("R04", "check_no_internal_names"): 553,  # "Penetrating Arrow Quiver [QuiverNew5]" in step 1 and step 5; no rule says yet (decision issue)
-}
-JUDGES = (*page_lint.CHECKS, page_lint.check_no_internal_names)
+KNOWN_REAL: dict[tuple[str, str], int] = {}  # (route, check) -> the issue that holds the fault; none since #553 (R04's "[QuiverNew5]" is said in words)
+JUDGES = page_lint.CHECKS  # `check_no_internal_names` is one of them
 
 
 @pytest.fixture(scope="module")

@@ -233,7 +233,7 @@ def test_a_poe_ninja_base_line_of_a_name_two_different_bases_share_does_not_pric
     assert refusal.reason == NO_PRICE
     assert refusal.detail == (
         f"the price of {BOOTS_NAME} is refused: it comes from poe.ninja, whose line has a name and no base id, and the name 'Toy Boots' "
-        "belongs to 2 bases (ToyBoots1, ToyBoots2) that differ in item class, so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
+        "belongs to 2 bases that differ in item class, so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
     )
 
 
@@ -388,7 +388,8 @@ def test_the_report_and_the_json_say_what_the_plan_started_from():
     assert chosen["total_chaos"] == pytest.approx(document["totals"]["mean_cost"]["value"])
     assert options["approximate_claims"] == [ITEM_LEVEL_CLAIM, BASE_TYPE_CLAIM]
     assert {each["claim"] for each in document["approximate_inputs"]} == {ITEM_LEVEL_CLAIM, BASE_TYPE_CLAIM}
-    assert "vendor.result_keeps_the_input_base_type" in text and "Approximate inputs" in text
+    assert "Approximate inputs" in text and "vendor.result_keeps_the_input_base_type" not in text  # the text names the claim in words, not by its id (#604)
+    assert "A vendor recipe is taken to keep the base type of the input item. Source: the wiki does not say" in text
 
 
 def test_dear_goods_leave_the_plain_start_the_winner_and_the_recipe_is_listed_as_planned():
@@ -581,7 +582,8 @@ def test_the_answer_shows_the_cheapest_total_at_each_reading_of_the_cap_and_thei
     assert ELEMENTAL_CLAIM in choice.claims
     text = render_text(build_report(plan, TOY))
     assert "elemental_cap = wiki: " in text and "elemental_cap = coe: " in text and "Cheapest total over the readings:" in text
-    assert f"only at elemental_cap = coe" in text and "vendor.weapon_elemental_damage_tier_up" in text
+    assert f"only at elemental_cap = coe" in text and ELEMENTAL_CLAIM not in text
+    assert "A weapon with a Ruby, Sapphire or Topaz Flask and an Orb of Augmentation gets its elemental damage mod one tier higher" in text  # the statement, not the id (#604)
     document = document_of(plan)["start_options"]
     assert document["reading_matters"] and document["total_range_chaos"]["low"] == pytest.approx(low)
     assert [(each["reading"], each["chosen"]) for each in document["by_reading"]] == [

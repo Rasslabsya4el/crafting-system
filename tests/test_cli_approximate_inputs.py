@@ -8,8 +8,10 @@ table of the toy rules. The plan is made by hand like `route_view_support.hand_i
 import dataclasses
 import datetime
 import json
+from html import escape
 
 import pytest
+from oracle import page_lint
 from items_support import DATA, roll
 from route_view_support import ACTIONS, BELT, COLD_REQ, FRACTURED_COLD, LEVEL, LIFE, PRICES, START_NAME, belt
 
@@ -21,6 +23,8 @@ from crafting_system.cli._marking import (
     approximate_inputs,
     approximate_inputs_document,
     approximate_lines,
+    approximate_page_line,
+    approximate_page_lines,
 )
 from crafting_system.cli._plan import Plan, StartPrice, leaf_labels, offer_action
 from crafting_system.cli._report import Report, build_report, policy_document, render_text
@@ -29,7 +33,7 @@ from crafting_system.cli._route_report import render_route_text, route_document
 from crafting_system.cli._route_view import RouteInput, build_section, route_input
 from crafting_system.prices import CHAOS_ORB
 from crafting_system.risk import evaluate
-from crafting_system.rules import Rule, SourceKind, get_rule, rule_by_id
+from crafting_system.rules import Rule, SourceKind, get_rule, load_registry, rule_by_id
 from crafting_system.solver import Solution
 from crafting_system.targets import StartKind, Target
 
@@ -47,17 +51,20 @@ def make_rule(rule_id: str, **marks) -> Rule:
     )
 
 
-TOY_MARKED = make_rule("toy.marked", approximate=True, approximate_reason="only Craft of Exile's code gives the count")
+TOY_WORDS = {"page_statement": "Only Craft of Exile's code gives the count.", "page_source": "Craft of Exile's code only"}
+UNTAKEN_WORDS = {"page_statement": "The chance is a fit to a sample of player results.", "page_source": "one player sample"}
+TOY_MARKED = make_rule("toy.marked", approximate=True, approximate_reason="only Craft of Exile's code gives the count", **TOY_WORDS)
 TOY_PLAIN = make_rule("toy.plain")
 UNTAKEN_REASON = "a fit to a sample"
 RULES = {
     TOY_MARKED.id: TOY_MARKED,
     TOY_PLAIN.id: TOY_PLAIN,
-    "toy.untaken": make_rule("toy.untaken", approximate=True, approximate_reason=UNTAKEN_REASON),
+    "toy.untaken": make_rule("toy.untaken", approximate=True, approximate_reason=UNTAKEN_REASON, **UNTAKEN_WORDS),
 }  # the module constants above are what MarkedChaos reads; the third rule only an override names
 
-MARKED_LINE = "toy.marked: only Craft of Exile's code gives the count"
-UNTAKEN_LINE = f"toy.untaken: {UNTAKEN_REASON}"
+MARKED_LINE = "Only Craft of Exile's code gives the count. Source: Craft of Exile's code only."  # the page and the text report print the
+UNTAKEN_LINE = "The chance is a fit to a sample of player results. Source: one player sample."  # statement and the source, never the id (#553, #481)
+PAGE_LINE = MARKED_LINE
 
 
 @dataclasses.dataclass(frozen=True)
@@ -119,8 +126,8 @@ def toy_plan(label: str, offers=OFFERS) -> Plan:
     )  # fmt: skip
 
 
-MARKED = ApproximateInput("toy.marked", "only Craft of Exile's code gives the count")
-UNTAKEN = ApproximateInput("toy.untaken", UNTAKEN_REASON)
+MARKED = ApproximateInput("toy.marked", "only Craft of Exile's code gives the count", None, "", *TOY_WORDS.values())
+UNTAKEN = ApproximateInput("toy.untaken", UNTAKEN_REASON, None, "", *UNTAKEN_WORDS.values())
 
 
 def test_the_policy_lists_only_the_marked_claims_its_actions_read():
@@ -244,7 +251,7 @@ def fields_of(inp: RouteInput) -> dict[str, list[str]]:
 def test_the_goal_card_of_the_page_has_an_approximate_inputs_field_between_success_and_prices():
     fields = fields_of(route_input(toy_plan("Marked Chaos")))
 
-    assert fields["Approximate inputs"] == [MARKED_LINE]
+    assert fields["Approximate inputs"] == [PAGE_LINE]
     labels = list(fields)
     assert labels.index("Approximate inputs") == labels.index("Prices") - 1
     assert labels.index("9 runs in 10") < labels.index("Approximate inputs")
@@ -262,7 +269,7 @@ def test_the_planner_and_a_given_route_each_list_their_own_inputs_on_the_page():
     other = toy_plan("Untaken Chaos")
     given_inp = dataclasses.replace(planner, label="Given route: toy", policy=other.policy)
 
-    assert fields_of(planner)["Approximate inputs"] == [MARKED_LINE]
+    assert fields_of(planner)["Approximate inputs"] == [PAGE_LINE]
     assert fields_of(given_inp)["Approximate inputs"] == [UNTAKEN_LINE]
 
 
@@ -275,12 +282,58 @@ def test_a_goal_card_with_no_marked_claim_has_no_such_field(monkeypatch):
 def test_a_claim_marked_in_the_registry_reaches_the_report_through_a_real_action(monkeypatch):
     real = get_rule("chaos_orb.cost")
     reason = "a toy mark on a real claim"
-    marked = dataclasses.replace(real, approximate=True, approximate_reason=reason)
+    marked = dataclasses.replace(real, approximate=True, approximate_reason=reason, page_statement="A toy mark on a real claim.", page_source="a test")
     monkeypatch.setattr(_marking, "rule_by_id", lambda rule_id: marked if rule_id == real.id else rule_by_id(rule_id))
     plan = toy_plan("Chaos Orb", (Offer("Chaos Orb", ChaosOrb(), {CHAOS_ORB: 1}),))
     report = build_report(plan, DATA)
 
-    assert report.approximate_inputs == (ApproximateInput("chaos_orb.cost", reason),)
-    assert f"  chaos_orb.cost: {reason}" in render_text(report).splitlines()
+    assert report.approximate_inputs == (ApproximateInput("chaos_orb.cost", reason, None, "", "A toy mark on a real claim.", "a test"),)
+    assert "  A toy mark on a real claim. Source: a test." in render_text(report).splitlines()
+    assert "chaos_orb.cost" not in render_text(report) and reason not in render_text(report)  # the text report names no id and no reason (#604)
     assert policy_document(report)["approximate_inputs"] == [{"claim": "chaos_orb.cost", "reason": reason}]
-    assert fields_of(route_input(plan))["Approximate inputs"] == [f"chaos_orb.cost: {reason}"]
+    assert fields_of(route_input(plan))["Approximate inputs"] == ["A toy mark on a real claim. Source: a test."]
+
+
+# -- a person reads the statement and the source, never the id or the reason (#553, #481, #604, #605) -------------------------
+
+
+def test_the_page_line_of_an_input_is_its_statement_its_source_and_its_spread_and_never_its_id_or_its_reason():
+    spread = ApproximateInput("recombinator.count_table", "internal reason", {"kind": "alternative_table"}, "the guide's table is used", "The table is measured.", "a player guide")
+
+    assert approximate_page_line(MARKED) == MARKED_LINE
+    assert approximate_page_line(spread) == "The table is measured. Source: a player guide. Spread: the guide's table is used."
+    assert "toy.marked" not in approximate_page_line(MARKED) and MARKED.reason not in approximate_page_line(MARKED)
+
+
+def test_two_inputs_that_say_the_same_to_a_person_are_printed_once_on_the_page_and_in_the_text():
+    twin = dataclasses.replace(MARKED, claim="toy.twin", reason="another reason")
+
+    assert approximate_page_lines((MARKED, twin, UNTAKEN)) == [MARKED_LINE, UNTAKEN_LINE]
+    assert approximate_lines((MARKED, twin, UNTAKEN)) == [
+        "Approximate inputs (claims that no other source settles):",
+        f"  {MARKED_LINE}",
+        f"  {UNTAKEN_LINE}",
+    ]
+
+
+HTML = (
+    '<html><body><main><h1>t</h1><section id="policy"><div class="rw"><div class="cd tg"><h3>Route goal</h3><div class="f">'
+    '<div class="k">Approximate inputs</div><div class="vl ml"><div>%s</div></div></div></div></div><div class="rw"><div class="cd" id="s1"><h3>1. Regal Orb</h3>'
+    '<div class="f"><div class="k">Cost per use</div><div class="v ml"><div>1 c</div></div></div></div></div></section></main></body></html>'
+)
+
+
+def test_the_page_line_of_every_approximate_claim_of_the_registry_says_what_and_from_where_and_names_no_internal_thing():
+    """Each claim marked approximate, as a page prints it (with its spread where it has one): the lint's check of the sources and of
+    internal names finds nothing, and a person reads more than a name (the lint's own check of the line holds OR-23 again)."""
+    marked = [rule for rule in load_registry().values() if rule.approximate]
+    assert len(marked) > 100
+
+    faults = []
+    for rule in marked:
+        spread = _marking.claim_interval(rule)
+        item = ApproximateInput(rule.id, rule.approximate_reason, *(spread or (None, "")), rule.page_statement, rule.page_source)
+        shown = page_lint.read_page(HTML % escape(approximate_page_line(item)))
+        faults += [f"{rule.id}: {fault}" for fault in page_lint.check_no_internal_names(shown)]
+        faults += [f"{rule.id}: {fault}" for fault in page_lint.check_approximate_marked(shown)]
+    assert faults == []

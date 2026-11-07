@@ -147,7 +147,7 @@ from .model import (
     Target,
 )
 from .parse import parse_target_text
-from .start_buy import StartBuyError, base_line_name, buy_spec_of, is_name_only_source, ninja_line_name, shared_name_refusal, start_price_key
+from .start_buy import StartBuyError, base_in_words, base_line_name, buy_spec_of, is_name_only_source, ninja_line_name, plain_base_names, shared_name_refusal, start_price_key
 
 __all__ = [
     "Condition",
@@ -167,6 +167,7 @@ __all__ = [
     "StartKind",
     "Target",
     "TargetError",
+    "base_in_words",
     "base_line_name",
     "is_name_only_source",
     "buy_spec_of",
@@ -176,6 +177,7 @@ __all__ = [
     "load_target",
     "ninja_line_name",
     "parse_target",
+    "plain_base_names",
     "refusal_at",
     "shared_name_refusal",
     "start_price_key",

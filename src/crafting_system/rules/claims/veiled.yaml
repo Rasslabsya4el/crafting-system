@@ -46,6 +46,8 @@ rules:
       prmods++}}
     approximate: true
     approximate_reason: "Only Craft of Exile's code says that the veiled mod counts inside the drawn total of 4, 5 or 6 mods; the wiki does not."
+    page_statement: "In a Veiled Chaos Orb reroll, the veiled mod counts inside the total of 4, 5 or 6 mods."
+    page_source: "Craft of Exile's code only; the wiki does not say"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -56,6 +58,8 @@ rules:
     quote: 'if(veiltype===!1){var rolled=poec_rand(0,2,!0);if(rolled==1){veiltype="prefix"}else{veiltype="suffix"}}'
     approximate: true
     approximate_reason: "Only Craft of Exile's code says that the veil ignores a side lock that has room; the wiki's metamod table has no row for the Veiled Chaos Orb."
+    page_statement: "In a Veiled Chaos Orb reroll the veiled mod goes to the only side with room, or to either side with equal chance, even if a side is locked."
+    page_source: "Craft of Exile's code only; the wiki's table has no row for this orb"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -66,6 +70,8 @@ rules:
     quote: 'if((hasveiled.prefix&&haslock.prefix)||(hasveiled.suffix&&haslock.suffix)||hasfrac){var errtxt="Could not generate mod (Can''t use while veiled affix is present)"'
     approximate: true
     approximate_reason: "Only Craft of Exile's code refuses the Veiled Chaos Orb when a veiled mod would be kept; the wiki says nothing for this orb."
+    page_statement: "A Veiled Chaos Orb is refused when a veiled mod sits on a locked side or is fractured."
+    page_source: "Craft of Exile's code only; the wiki says nothing for this orb"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -84,6 +90,8 @@ rules:
     quote: "Veiled Exalted on an item with an unveiled mod: **refused**, as far as the owner knows (V-02 settled)."
     approximate: true
     approximate_reason: "The owner knows it only as far as he remembers it, and the wiki does not say whether an already unveiled mod counts as a veiled one."
+    page_statement: "A Veiled Exalted Orb is refused on an item that holds a mod unveiled from the veiled pool."
+    page_source: "the owner's memory; the wiki does not say whether an unveiled mod counts as veiled"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -102,6 +110,8 @@ rules:
     quote: "var losuf=usecmaxaffgrp.suffix-useiaffbt.suffix;var lopre=usecmaxaffgrp.prefix-useiaffbt.prefix;var loaff=losuf+lopre;if(loaff>1){var rolled=99;var veiltype=null;"
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives the side of the veil after the removal and says that a side lock is not consulted."
+    page_statement: "After its removal, a Veiled Exalted Orb places the veiled mod on the only side with room, or on either side with equal chance, even if a side is locked."
+    page_source: "Craft of Exile's code only"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 

@@ -227,7 +227,7 @@ class IntervalAnswer:
                 words = f"{price.chaos_each:g} Chaos Orbs each"
             lines.append(f"{price.name} at {words} [{price.source}]")
         if any(price.source == "default" for price in self.prices):
-            lines.append("a default price is a guess, not a market price: set yours with a hand price in price_overrides.toml")
+            lines.append("a default price is a guess, not a market price: a hand price replaces it")
         return lines
 
     def text_lines(self, divine: float) -> list[str]:
