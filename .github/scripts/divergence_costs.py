@@ -16,6 +16,7 @@ of millions of edges. Never run on a PC: the plan of R04 takes about 5 minutes a
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -116,7 +117,8 @@ def main(argv: list[str]) -> int:
     root = find_project_root()
     data = load_game_data()
     target = load_target(root / bench.target, data)
-    plan = make_plan(data, target, load_price_file(root / PRICES))
+    start = os.environ.get("START_PRICE")  # a start price in Chaos for this run instead of the price file's (the file is not changed): the planner is solved at it
+    plan = make_plan(data, target, load_price_file(root / PRICES), start_price=float(start) if start else None)
     shift = plan.start_price.chaos
     say(f"planned: mean {plan.mean_remaining + shift:,.2f} with the start price {shift}")
 
