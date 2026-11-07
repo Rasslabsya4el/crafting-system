@@ -455,6 +455,16 @@ The key of a state that the crafted-pattern bound tells states apart by: the fla
 The value of the optimistic model of the pattern key: a lower bound on the exact cost of every state that has the key (99.5% of the exact cost on R04, 98.1% on R14, 99.99% with the tags, 100% on S02). Built from the abstraction alone, with no walk, by offering in each key the kernels of the members an action class stands for (one member, the lightest and the heaviest junk of each class, or every member; the argument for each is in the module). It is the `LB` of the certificate `[LB, U]` (#499) and the bound of the envelope search (#377).
 _Avoid_: pattern database (the research name), heuristic
 
+**Envelope search**:
+The exact branch-and-bound of OR-12 (`make_plan(solver="envelope")`, `cli/_envelope.py`, ticket #377): it expands a state only when the greedy policy of the lower graph reaches it, and builds the kernel of an action at a state only when its lower bound (the pattern bound of that offer at the state's key) is below the best action built there. It stops when that policy reaches no state it has not expanded; the mean of the policy is then the lower graph's own value, so it is pinned (`LB = UB`) and equal to the full walk's. Nothing is cut by a tolerance or a chance; a time, state or memory net may end it, and then the plan says it is not shown to be the best.
+_Avoid_: iLAO*, A* (the research names), pruning (a cut that guesses)
+
+**Lower graph**:
+The graph the envelope search solves each round: every known state is a node; an expanded node has the actions built so far and one fake action, at the least lower bound of the actions not built, to the goal; a tip (known, not expanded) has one fake action at its pattern bound. Its value is at most the exact value, and rises as fake actions are replaced by real ones.
+
+**Tip**:
+A state the envelope search knows (it is a successor of a built action) and has not expanded: no action of it is looked at yet, and the lower graph stands in for it with its pattern bound.
+
 **Approximate answer**:
 A policy with the interval between the optimistic and the pessimistic value, marked as approximate; given when the exact state would not fit in about a minute.
 _Avoid_: estimate, heuristic answer

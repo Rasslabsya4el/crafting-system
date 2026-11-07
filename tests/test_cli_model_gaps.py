@@ -87,6 +87,11 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_offers.py", "_roll_limit_can_matter", ("NotApplicableError", "OutOfScopeError"), EITHER, "a pool that cannot be built is no proof the mod is out of reach, so the orb stays and nothing is left out"),
     ("cli/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_packed.py", "walk", ("OutOfScopeError",), RECORDS, "a model gap: written"),
+    ("cli/_envelope_plan.py", "CraftingProblem.kernel_key", ("NotApplicableError",), RECORDS, "a game refusal: silent (the search leaves the offer out of the state, as the walk does)"),
+    ("cli/_envelope_plan.py", "CraftingProblem.kernel_key", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`, the offer is left out of the state"),
+    ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
+    ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
+    ("cli/_plan.py", "make_plan", ("OutOfScopeError", "NoPolicy", "BoundError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, or the bound fell; the text becomes the `PlanError`"),
     ("cli/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
     ("cli/_prune.py", "solver_actions", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
@@ -196,7 +201,7 @@ def test_a_clause_that_leaves_an_action_out_of_a_plan_writes_the_gap_and_keeps_t
         by_place.setdefault((file, function), []).append((caught, node))
     records = {(file, function) for file, function, _, family, _ in CLAUSES if family == RECORDS}
 
-    assert len(records) == 6  # keyed_offers, solver_actions, the packed walk, the donors, the block model and the exact model
+    assert len(records) == 8  # keyed_offers, solver_actions, the packed walk, the donors, the block model, the exact model and the two of the envelope search
     for place in records:
         game, gap = [(caught, node) for caught, node in by_place[place] if len(caught) == 1]
         assert game[0] == ("NotApplicableError",) and gap[0] == ("OutOfScopeError",), place

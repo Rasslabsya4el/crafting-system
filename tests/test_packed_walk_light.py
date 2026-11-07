@@ -704,7 +704,7 @@ def edges_of(walked):
 def test_an_unknown_solver_name_is_refused_and_the_known_ones_are_not(world):
     ab, start, _, _ = world
 
-    with pytest.raises(ValueError, match="solver must be one of auto, object, packed, got 'fast'"):
+    with pytest.raises(ValueError, match="solver must be one of auto, object, packed, envelope, got 'fast'"):
         _packed.packed_result(ab, start, make_offers(), solver="fast")
 
 
