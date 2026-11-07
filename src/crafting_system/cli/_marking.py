@@ -40,7 +40,7 @@ CVAR_PERCENT = f"{CVAR_LEVEL:.0%}"
 CERTIFIED = "approximate (certified within {gap} of the exact mean)"
 UNCERTIFIED = "approximate (the certified gap is {gap}, above the {tolerance} tolerance)"
 RISK_FIGURES = ("success", "p50", "p90", "CVaR")  # the keys of `_limits.PERCENTILE_WORDS` an approximate answer does not give
-NO_RISK ="an approximate answer solves merged groups of item states, so the spread of one whole run cannot be worked out exactly"
+NO_RISK = "an approximate answer solves merged groups of item states, so the spread of one whole run cannot be worked out exactly"
 
 
 def percent(value: float) -> str:

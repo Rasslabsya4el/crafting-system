@@ -50,7 +50,7 @@ AXIS_WORDS: dict[str, AxisWords] = {
     ),
     "elemental_cap": AxisWords(
         "elemental recipe cap",
-        "the highest tier the vendor recipes that raise an elemental damage mod reach",
+        "the best tier the vendor recipes that raise an elemental damage mod can reach (tier 1 is the best)",
         {"wiki": "the wiki's tier 3", "coe": "Craft of Exile's tier 2"},
     ),
 }

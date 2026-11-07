@@ -18,6 +18,13 @@ claim id, a file name, a ticket or ADR number, a workflow word, a base id, a sna
 * a command line option that the command does not have. A command line option is a thing the player types, so a sentence may name it
   (`--exact`, `--start-price`), but only an option that some `add_argument` of the `cli` package declares: the option is read from the code.
 
+**What this test does not read yet.** The texts of exceptions raised below `cli/` and shown to a person, as the cause in a limit ("Left
+out where the model has no rule") or as `Error: {error}` (`cli/_main.py`), are not read, because they are written outside the package this
+test scans. Two open issues own them: #557 for the causes written in `actions/` and `abstraction/` (they still hold "ADR-0023",
+"(ticket #212)", "(grill B2)" and a game mod id, as on `tests/golden/real_r10.html`), and #632 for the errors of `data`, `targets`,
+`prices` and `config`. The benchmark command is #631, and the short figure names `p50`, `p90` and `CVaR` are #633. The header
+`Target: <file>` is not read: it echoes the name of the player's own file.
+
 The axis table (`cli/_axes.py`) has its own test below: every rule axis the code defines has words, and so has each of its values.
 """
 
