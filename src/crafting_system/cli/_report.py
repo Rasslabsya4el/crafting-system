@@ -199,7 +199,7 @@ def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]
     "has ..." or "too weak: ..." part of the same line already names is not counted again (ticket #613).
     """
     if state.flags.unopened:  # the bought listing before its draw (ADR-0064): the rarity it will have, not the normal item the model holds
-        return f"the bought {plan.target.start_item.rarity.value} item, its mods not drawn yet"
+        return [f"the bought {plan.target.start_item.rarity.value} item, its mods not drawn yet"]
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
         if entry.mod_id not in data.mods:  # held as its family type ("~n@attack"): the state does not say which mod it is
@@ -575,7 +575,9 @@ def _step_lines(step: ReportStep) -> list[str]:
         lines.append("  (the chances below are the mixture of theirs)")
     if step.acts:
         parts = " + ".join(f"{count} {resource}" for resource, count, _, _ in step.cost_parts)
-        if not step.cost_parts:  # an action that consumes nothing: the solver is given a negligible cost (ADR-0026)
+        if step.title == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price is paid in step 1 and again by each restart
+            lines.append(f"  cost per use: free, the price of the listing is paid in step 1 and by each restart (counted at {step.cost:.1g} Chaos so that every step has a positive cost)")
+        elif not step.cost_parts:  # an action that consumes nothing: the solver is given a negligible cost (ADR-0026)
             lines.append(f"  cost per use: free (counted at {step.cost:.1g} Chaos so that every step has a positive cost)")
         else:
             lines.append(f"  cost per use: {parts} = {money(step.cost)} Chaos")
