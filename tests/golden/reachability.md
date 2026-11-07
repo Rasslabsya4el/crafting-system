@@ -204,8 +204,8 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `takes_inputs` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
-| the interval driver (ticket #220) | `build_interval_answer` | `cli/_interval.py` | nothing | **no** | PRES-15 |
-| the interval driver (ticket #220) | `with_interval` | `cli/_report.py` | nothing | **no** | PRES-15 |
+| the interval driver (wiring: ticket #589) | `build_interval_answer` | `cli/_interval.py` | nothing | **no** | PRES-15 |
+| the interval driver (wiring: ticket #589) | `with_interval` | `cli/_report.py` | nothing | **no** | PRES-15 |
 
 ## 6. Target keys
 
