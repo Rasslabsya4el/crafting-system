@@ -207,7 +207,11 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 # judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
 # a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
 
-KNOWN_REAL: dict[tuple[str, str], int] = {}  # (route, check) -> the issue that holds the fault; none since #553 (R04's "[QuiverNew5]" is said in words)
+KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault; R04's "[QuiverNew5]" is said in words since #553
+    # found by #598 on the page after #607: the bought Magic bow (step 1 and the restart row) is drawn with empty slots, not "any mod or empty"
+    # (`start_card()` in `cli/_route_view.py` fills a non-Rare item with EMPTY). #640 changes the bought start model and removes this mark.
+    ("R14", "check_bought_item_not_empty"): 640,
+}
 JUDGES = page_lint.CHECKS  # `check_no_internal_names` is one of them
 
 
