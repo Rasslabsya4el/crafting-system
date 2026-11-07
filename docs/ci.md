@@ -106,7 +106,11 @@ same free runners (sessions on one PC also share a lock while they decide).
 The 5,000 GitHub API calls an hour are **one limit for every agent and session**: the dispatchers on one PC share a
 snapshot of the runs for 90 seconds (`snapshot.json` in the dispatcher's temp folder, read and written under that lock and
 dropped when a run is dispatched), and a dispatcher that meets the rate-limit refusal waits for its reset (at most an hour,
-one line printed) instead of retrying. Nobody should poll a run more often than every 4 minutes (ticket #565).
+one line printed) instead of retrying; for GitHub's secondary limit (a refusal with `Retry-After`) it waits that many
+seconds, at most 10 minutes (`RETRY_AFTER_CAP_SECONDS`). Nobody should poll a run more often than every 4 minutes
+(tickets #565, #567). A run started by something else (a CI push, an integration dispatch by the main chat) can be
+seen up to `SNAPSHOT_SECONDS` (90 seconds) late; the cost is runners queued on GitHub, not a failure. A dispatcher
+waiting for the PC's lock obeys `--max-wait` and `--no-wait` too, and prints who holds the lock and since when.
 
 Options of `run`:
 

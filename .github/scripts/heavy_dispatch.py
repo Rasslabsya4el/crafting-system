@@ -54,6 +54,7 @@ PENDING_RUN = ("pending", "waiting", "requested")  # run statuses before any job
 POLL_SECONDS = 180
 SNAPSHOT_SECONDS = 90  # a look within this long of the stored snapshot reuses it and calls nothing
 RATE_LIMIT_CAP_SECONDS = 3600  # the longest wait for a rate-limit reset
+RETRY_AFTER_CAP_SECONDS = 600  # the longest wait for GitHub's secondary limit (its Retry-After is normally 60 s)
 STATE_DIR = Path(tempfile.gettempdir()) / "crafting-heavy-dispatch"  # shared by every session on this PC
 LOCK_STALE_SECONDS = 300
 LEDGER_HOURS = 7
@@ -183,20 +184,37 @@ def find_repo() -> str:
     return found[1] if found else DEFAULT_REPO
 
 
+def sleep_keeping_lock(wait: float) -> None:
+    """Sleep `wait` seconds in steps of a minute, touching the lock this process holds after each step, or another
+    session would take it over after LOCK_STALE_SECONDS."""
+    end = now() + wait
+    while now() < end:
+        pause(min(60.0, end - now()))
+        DispatchLock.keep_fresh()
+
+
 def wait_for_rate_limit(method: str, path: str, reset: str | None) -> None:
     """The hourly limit is spent: sleep until X-RateLimit-Reset (at most an hour), say so in one line, and go on.
-    Retrying earlier only spends calls that are not there. A lock held by this process is kept fresh meanwhile, or
-    another session would take it over after LOCK_STALE_SECONDS."""
+    Retrying earlier only spends calls that are not there."""
     try:
         wait = float(reset) - now() + 2  # 2 s past the reset: the clocks differ a little
     except (TypeError, ValueError):
         wait = 60.0  # no usable reset time: a minute, never a tight loop
     wait = min(max(wait, 2.0), RATE_LIMIT_CAP_SECONDS)
     print(f"{stamp()} GitHub API rate limit used up ({method} {path}); waiting {wait / 60:.0f} min until its reset", flush=True)
-    end = now() + wait
-    while now() < end:
-        pause(min(60.0, end - now()))
-        DispatchLock.keep_fresh()
+    sleep_keeping_lock(wait)
+
+
+def wait_for_secondary_limit(method: str, path: str, retry_after: str | None) -> None:
+    """GitHub's secondary limit (too many calls close together): a refusal with Retry-After seconds and requests still
+    left in the hour. Sleep that long (at most RETRY_AFTER_CAP_SECONDS), say so in one line, and go on."""
+    try:
+        wait = float(retry_after)
+    except (TypeError, ValueError):
+        wait = 60.0  # a date, or nothing usable: a minute
+    wait = min(max(wait, 1.0), RETRY_AFTER_CAP_SECONDS)
+    print(f"{stamp()} GitHub secondary rate limit ({method} {path}); waiting {wait:.0f} s as Retry-After says", flush=True)
+    sleep_keeping_lock(wait)
 
 
 class Api:
@@ -221,11 +239,17 @@ class Api:
             except urllib.error.HTTPError as error:
                 if error.code == 404 and method == "GET":
                     return None
-                if error.code in (403, 429) and error.headers.get("X-RateLimit-Remaining") == "0" and limited < 3:
-                    limited += 1
-                    attempt -= 1  # a wait for the reset is not one of the failed tries
-                    wait_for_rate_limit(method, path, error.headers.get("X-RateLimit-Reset"))
-                    continue
+                if error.code in (403, 429) and limited < 3:
+                    if error.headers.get("X-RateLimit-Remaining") == "0":  # the hourly limit
+                        limited += 1
+                        attempt -= 1  # a wait for the reset is not one of the failed tries
+                        wait_for_rate_limit(method, path, error.headers.get("X-RateLimit-Reset"))
+                        continue
+                    if error.headers.get("Retry-After") is not None:  # the secondary limit
+                        limited += 1
+                        attempt -= 1
+                        wait_for_secondary_limit(method, path, error.headers.get("Retry-After"))
+                        continue
                 if error.code < 500 and error.code != 429 or attempt == tries:
                     raise RuntimeError(f"{method} {path}: HTTP {error.code} {error.read()[:300]!r}") from None
             except (urllib.error.URLError, TimeoutError):
@@ -359,14 +383,32 @@ def write_ledger(run_id: int, runners: int) -> None:
         pass  # the ledger only covers a few minutes; the run name covers the same ground
 
 
+class LockBusy(Exception):
+    """The dispatch lock is held by another session and this one may not wait for it (--no-wait), or has waited as
+    long as --max-wait allows. The message names the holder."""
+
+
+def touch(path: Path) -> None:
+    """Set the modification time of `path` to this script's clock. The lock's age is read against the same clock
+    (now() - mtime), so the two always agree: in production both are the real time, in the tests both are the fake."""
+    moment = now()
+    os.utime(path, (moment, moment))
+
+
 class DispatchLock:
     """Two sessions on this PC must not both see free runners and both dispatch: one holds this lock from the
     decision until its run shows up in the API. The lock is a directory in the PC's temp folder; it belongs to the
-    process that made it (a token file inside) and is taken over only when older than LOCK_STALE_SECONDS."""
+    process that made it (a token file inside) and is taken over only when older than LOCK_STALE_SECONDS.
 
-    def __init__(self):
+    A second session waits for it, but not past `deadline` (--max-wait) and not at all with `no_wait` (--no-wait): it
+    raises LockBusy then. While it waits it prints one line saying who holds the lock and since when."""
+
+    def __init__(self, no_wait: bool = False, deadline: float | None = None, what: str = ""):
         self.path = STATE_DIR / "dispatch.lock"
         self.token = f"{os.getpid()}-{time.time_ns()}"
+        self.no_wait = no_wait
+        self.deadline = deadline
+        self.what = what
 
     held: "DispatchLock | None" = None  # the lock this process holds now, if any
 
@@ -376,16 +418,36 @@ class DispatchLock:
         lock = cls.held
         try:
             if lock is not None and (lock.path / "owner").read_text(encoding="utf-8") == lock.token:
-                os.utime(lock.path)
+                touch(lock.path)
         except OSError:
             pass
 
+    def holder(self) -> str:
+        """Who holds the lock now and since when, for the one line a waiting session prints."""
+        try:
+            info = json.loads((self.path / "info").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            info = {}
+        since = info.get("at")
+        if since is None:
+            try:
+                since = self.path.stat().st_mtime
+            except OSError:
+                pass
+        who = f"process {info['pid']}" if info.get("pid") else "another process"
+        who += f" ({info['what']})" if info.get("what") else ""
+        when = f" since {dt.datetime.fromtimestamp(since).strftime('%H:%M:%S')}" if since is not None else ""
+        return f"dispatch lock held by {who}{when}"
+
     def __enter__(self):
         STATE_DIR.mkdir(parents=True, exist_ok=True)
+        told = False
         while True:
             try:
                 os.mkdir(self.path)
                 (self.path / "owner").write_text(self.token, encoding="utf-8")
+                (self.path / "info").write_text(json.dumps({"pid": os.getpid(), "at": now(), "what": self.what}), encoding="utf-8")
+                touch(self.path)  # last: writing the files above moves the directory's time by the file system's clock
                 DispatchLock.held = self
                 return self
             except OSError:  # FileExistsError, or PermissionError while another process removes it (Windows)
@@ -395,6 +457,11 @@ class DispatchLock:
                         continue
                 except OSError:
                     pass
+                if self.no_wait or (self.deadline is not None and now() >= self.deadline):
+                    raise LockBusy(self.holder()) from None
+                if not told:
+                    print(f"{stamp()} {self.holder()} -> waiting for it", flush=True)
+                    told = True
                 pause(2)
 
     def __exit__(self, *exc):
@@ -446,11 +513,17 @@ def cmd_run(api: Api, args) -> int:
     deadline = now() + args.max_wait * 60 if args.max_wait else None
     while True:
         try:
-            with DispatchLock():
+            with DispatchLock(no_wait=args.no_wait, deadline=deadline, what=f"run on {args.ref}"):
                 decided = decide(api, args)
                 if decided["count"] and not args.dry_run:
                     print(f"{stamp()} {decided['line']} -> starting {decided['count']} runner(s)", flush=True)
                     return dispatch(api, args, decided["count"])
+        except LockBusy as busy:  # another session holds the lock and we may not wait for it, or have waited enough
+            if args.no_wait:
+                print(f"{stamp()} {busy} -> does not fit now", flush=True)
+                return 3
+            print(f"{stamp()} gave up after {args.max_wait} min of waiting for the dispatch lock", flush=True)
+            return 2
         except (RuntimeError, urllib.error.URLError, TimeoutError, OSError) as error:
             decided = {"count": 0, "line": f"GitHub API error ({str(error)[:120]}), will retry"}
         if decided["count"]:
@@ -539,9 +612,9 @@ def minutes_since(stamp_text: str | None, now: dt.datetime) -> float:
 
 def cmd_status(api: Api, args) -> int:
     now = dt.datetime.now(dt.timezone.utc)
-    floor = api.variable("HEAVY_FLOOR", DEFAULT_FLOOR)
-    reserve = api.variable("CI_RESERVE", DEFAULT_RESERVE)
-    seen = snapshot(api, read_ledger())
+    raw = fetch_raw(api)  # reads the two variables once, with the runs
+    floor, reserve = raw["floor"], raw["reserve"]
+    seen = occupancies(raw["runs"], read_ledger())
     ci_jobs, heavy = totals([(run, occ) for run, _, occ in seen])
     budget = heavy_budget(floor, reserve, ci_jobs)
     in_use = sum(occ["running"] for _, _, occ in seen)
