@@ -22,7 +22,8 @@ from math import sqrt
 from random import Random
 
 from .craft import Crafter, Held, Item, Refused
-from .world import ORBS
+from .fossils import FossilSet
+from .world import FOSSIL_SEPARATOR, FOSSILS, ORBS
 
 ALPHA = 0.01  # the chance of one false alarm anywhere in the module when the two agree
 MIN_EXPECTED = 30
@@ -45,8 +46,11 @@ def item_of(crafter: Crafter, record: dict, seed: int = 0) -> Item:
     return Item(record["rarity"], mods)
 
 
-def use_of(crafter: Crafter, label: str, essences: dict):
-    """A function `(item, rng) -> item` that applies the action named `label`."""
+def use_of(crafter: Crafter, label: str, essences: dict, fossil_records: dict | None = None):
+    """A function `(item, rng) -> item` that applies the action named `label` (`fossil_records`: the export's fossils by name, for a `Fossils A + B` label)."""
+    if label.startswith(FOSSILS):
+        fossils = FossilSet(tuple(label[len(FOSSILS):].split(FOSSIL_SEPARATOR)), fossil_records or {})
+        return lambda item, rng: crafter.fossil(item, rng, fossils)
     if label in ORBS:
         return {
             "Orb of Transmutation": crafter.transmute,
@@ -54,6 +58,9 @@ def use_of(crafter: Crafter, label: str, essences: dict):
             "Orb of Augmentation": crafter.augment,
             "Regal Orb": crafter.regal,
             "Chaos Orb": crafter.chaos,
+            "Exalted Orb": crafter.exalt,
+            "Orb of Annulment": crafter.annul,
+            "Fracturing Orb": crafter.fracture,
         }[label]
     found = [record for record in essences.values() if record.get("name") == label]
     if len(found) != 1:
@@ -61,9 +68,11 @@ def use_of(crafter: Crafter, label: str, essences: dict):
     return lambda item, rng: crafter.essence(item, rng, found[0])
 
 
-def count_applications(crafter: Crafter, item: Item, label: str, essences: dict, applied: int, seed: int) -> Frequencies:
+def count_applications(
+    crafter: Crafter, item: Item, label: str, essences: dict, applied: int, seed: int, fossil_records: dict | None = None
+) -> Frequencies:
     """Apply the action `applied` times to `item` and count the finished items that hold each mod and have each shape."""
-    use = use_of(crafter, label, essences)
+    use = use_of(crafter, label, essences, fossil_records)
     rng = Random(seed)
     mods: Counter = Counter()
     shapes: Counter = Counter()

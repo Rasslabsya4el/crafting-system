@@ -11,10 +11,23 @@ route file on concrete items by Monte Carlo with rules written from the publishe
 
 A disagreement is a failing test that names the step. Nothing is widened to pass.
 
-Covered, because their steps are plain spam: R05 (Deafening Essence of Rage), R10 (Shrieking Essence of Spite and a bench craft), R11
-(Shrieking Essence of Loathing), R13 (Orbs of Alteration and Regal on a bought Magic belt since #576, a restart, a bench craft). The others are listed in
-`NOT_COVERED` with the mechanic each lacks; a test makes the naive crafter refuse each of them with a message that names it, and another
-makes the two lists together hold every route file of `examples/routes/`.
+Covered with an exact planner side computed in the test: R05 (Deafening Essence of Rage), R08 and R09 (two fossils in a Chaotic resonator, a bench craft; #608), R10
+(Shrieking Essence of Spite and a bench craft), R11 (Shrieking Essence of Loathing), R12 (the Harvest reforge of Lightning; #609), R13 (Orbs of Alteration and Regal on a
+bought Magic belt since #576, a restart, a bench craft).
+
+Covered with the planner's mean from the benchmark's heavy run (#610): R04 with restart (the Insanity and Rage essences, the Fracturing, Annulment and Exalted Orbs, the
+metamod `Cannot roll Attack Modifiers`, Remove Crafted Mods) and R14 with restart (Alteration and Regal on a Magic Hunter bow, a restart, the metamods `Can have up to 3
+Crafted Modifiers` and `Cannot roll Attack Modifiers`, the Exalted and Annulment Orbs, three bench crafts). The planner's side of these two is a solve of 177,242 and 816,153
+states (`benchmark`: about 10 and 35 minutes on a runner), so the test reads the numbers the benchmark wrote, recorded in `tests/fixtures/naive_crafter/benchmark_means.json`
+with the run and the hashes of the target, route and price files they were computed from. A heavy run (`NAIVE_HEAVY=1`) fails when a hash differs (the recorded numbers are
+stale: record them again); the CI run plays few plays and its 4 standard errors catch only a gross error. Only the mean is compared there, not the steps (the benchmark's
+route result is a lumped chain, not a policy of item states).
+
+The routes with gaps, R04 and R14 as the guides wrote them (`GAPPED`): the planner's chance of finishing (below 1 because a state has no rule, or the game refuses the rule's
+action) against the share of naive plays that finish; the mean of such a route is never, so it is not compared.
+
+The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (none now); a test makes it refuse each with a message that names the
+mechanic, and another makes the lists together hold every route file of `examples/routes/`.
 
 R13 plays about 100,000 orb uses per finish (its mean is 12,000 Chaos), so the run of this file plays only `CI_RUNS` of it and its standard
 error is about a quarter of the mean (one play has a standard deviation about equal to the mean), so 4 standard errors catch only an error of about two to three times, and R13 is checked by the heavy run, not by CI; the real precision is a heavy run on GitHub through the dispatcher, which runs this file with
@@ -28,6 +41,7 @@ is traced to a rule, not patched per case), OR-29 (an open disagreement is a str
 Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it.
 """
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass
@@ -55,21 +69,27 @@ ROUTES = ROOT / "examples" / "routes"
 #            route id: (target and route file stem, plays in this file's run)
 COVERED = {
     "R05": ("r05-strength-ring", 3000),
+    "R08": ("r08-energy-shield-boots", 3000),
+    "R09": ("r09-life-boots", 3000),
     "R10": ("r10-fractured-boots", 3000),
     "R11": ("r11-reservation-helmet", 3000),
+    "R12": ("r12-lightning-amulet", 3000),
     "R13": ("r13-life-resist-belt", 16),
 }
-# the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it); filed as issues (OR-29):
-# fossils (R08, R09) #608, the Harvest reforge (R12) #609, Exalted, Annulment, Fracturing, metamods and Remove Crafted Mods (R04, R14) #610
-NOT_COVERED = {
-    "R04": ("r04-penetrating-quiver", ("Exalted Orb", "metamods", "Orb of Annulment", "Fracturing Orb")),
-    "R04 with restart": ("r04-penetrating-quiver-restart", ("Exalted Orb", "metamods", "Orb of Annulment", "Fracturing Orb")),
-    "R08": ("r08-energy-shield-boots", ("fossils",)),
-    "R09": ("r09-life-boots", ("fossils",)),
-    "R12": ("r12-lightning-amulet", ("Harvest reforge",)),
-    "R14": ("r14-hunter-bow", ("Exalted Orb", "metamods", "Orb of Annulment", "Remove Crafted Mods")),
-    "R14 with restart": ("r14-hunter-bow-restart", ("Exalted Orb", "metamods", "Orb of Annulment", "Remove Crafted Mods")),
+# the planner's mean of these two comes from the benchmark's heavy run (see the module docstring); plays in CI
+BENCHMARKED = {
+    "R04 with restart": ("r04-penetrating-quiver-restart", 12),
+    "R14 with restart": ("r14-hunter-bow-restart", 100),
 }
+# the routes as the guides wrote them: a state has no rule or the game refuses the rule's action, so the route finishes with a chance below 1; plays in CI
+GAPPED = {
+    "R04": ("r04-penetrating-quiver", 300),
+    "R14": ("r14-hunter-bow", 300),
+}
+# the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it); filed as issues (OR-29). None now.
+NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {}
+RECORDED = ROOT / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
+HEAVY = bool(os.environ.get("NAIVE_HEAVY"))
 RUNS_OVERRIDE = int(os.environ["NAIVE_RUNS"]) if os.environ.get("NAIVE_RUNS") else None
 SEED = int(os.environ.get("NAIVE_SEED", "0"))
 OUT = Path(os.environ["NAIVE_OUT"]) if os.environ.get("NAIVE_OUT") else None
@@ -138,8 +158,66 @@ def played(request) -> Played:
     if OUT is not None:
         OUT.mkdir(parents=True, exist_ok=True)
         document = {"route": route_id, "exact_mean": result.risk.mean.value, "exact_spend": spend, "seed": SEED, "tally": tally.to_dict()}
-        (OUT / f"naive-{route_id}-{SEED}.json").write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
+        (OUT / f"naive-{route_id.replace(' ', '_')}-{SEED}.json").write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
     return Played(route_id, result.risk.mean.value, spend, tally)
+
+
+def sha256_of(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()  # line ends as in the repository, so a Windows checkout hashes the same
+
+
+def inputs_of(stem: str) -> dict[str, str]:
+    """The hashes of the files a benchmark number is computed from: the target, the route and the price file."""
+    return {
+        "target": sha256_of(TARGETS / f"{stem.removesuffix('-restart')}.yaml"),
+        "route": sha256_of(ROUTES / f"{stem}.yaml"),
+        "prices": sha256_of(PRICES),
+    }
+
+
+def recorded_for(route_id: str) -> dict:
+    """The benchmark's numbers for a route (`benchmark_means.json`, written from a heavy run's `benchmark.json`)."""
+    if not RECORDED.is_file():
+        pytest.skip("tests/fixtures/naive_crafter/benchmark_means.json is not there yet")
+    return json.loads(RECORDED.read_text(encoding="utf-8"))["routes"][route_id]
+
+
+def play_world(stem: str, laws: Laws | None = None):
+    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS, laws=laws)
+    judge = Judge(world)
+    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    return Player(world, route, judge)
+
+
+def leave_tally(route_id: str, document: dict) -> None:
+    """Write the tally of a heavy run's runner for `python -m naive_crafter merge`."""
+    if OUT is not None:
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / f"naive-{route_id.replace(' ', '_')}-{SEED}.json").write_text(json.dumps({"route": route_id, "seed": SEED, **document}, sort_keys=True), encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def benchmarked(request) -> Played:
+    """A route whose planner mean is the benchmark's: the recorded number, and the naive tally."""
+    route_id = request.param
+    stem, plays = BENCHMARKED[route_id]
+    real_game_data()
+    recorded = recorded_for(route_id)
+    tally = t.simulate(play_world(stem), RUNS_OVERRIDE or plays, seed=555 * 1000 + SEED)
+    leave_tally(route_id, {"exact_mean": recorded["mean"], "exact_spend": {}, "tally": tally.to_dict()})
+    return Played(route_id, recorded["mean"], {}, tally)
+
+
+@pytest.fixture(scope="module")
+def gapped(request) -> tuple[str, float, t.Tally]:
+    """A route with gaps: the planner's chance of finishing (the benchmark's), and the naive tally with its stuck plays."""
+    route_id = request.param
+    stem, plays = GAPPED[route_id]
+    real_game_data()
+    recorded = recorded_for(route_id)
+    tally = t.simulate_finishing(play_world(stem), RUNS_OVERRIDE or plays, seed=555 * 1000 + SEED)
+    leave_tally(route_id, {"exact_success": recorded["success"], "tally": tally.to_dict()})
+    return route_id, recorded["success"], tally
 
 
 # --- the route's mean ---------------------------------------------------------------------------------------
@@ -150,6 +228,38 @@ def test_the_naive_mean_is_the_planners_mean_of_the_given_route(played):
     verdict = t.verdict_on(f"{played.route}, the mean cost of the given route", played.exact_mean, played.tally.mean_se())
 
     assert verdict.agrees, str(verdict)
+
+
+@pytest.mark.parametrize("benchmarked", list(BENCHMARKED), indirect=True)
+def test_the_naive_mean_is_the_benchmarks_mean_of_the_completed_route(benchmarked):
+    verdict = t.verdict_on(f"{benchmarked.route}, the mean cost of the given route (the benchmark's)", benchmarked.exact_mean, benchmarked.tally.mean_se())
+
+    assert verdict.agrees, str(verdict)
+
+
+@pytest.mark.parametrize("gapped", list(GAPPED), indirect=True)
+def test_the_share_of_plays_that_finish_is_the_planners_chance_of_finishing(gapped):
+    route_id, exact, tally = gapped
+    finished, total = tally.finishing()
+    verdict = t.finishing_verdict(f"{route_id} as the guide wrote it, the chance of finishing", exact, finished, total)
+
+    assert verdict.agrees, str(verdict)
+
+
+@pytest.mark.skipif(not HEAVY, reason="the hashes are judged in a heavy run (NAIVE_HEAVY=1); a price change makes a CI run's recorded numbers old without making them wrong enough to see")
+@pytest.mark.parametrize("route_id", [*BENCHMARKED, *GAPPED])
+def test_the_recorded_benchmark_is_of_the_files_as_they_are(route_id):
+    stem = {**BENCHMARKED, **GAPPED}[route_id][0]
+
+    assert recorded_for(route_id)["inputs"] == inputs_of(stem), "the recorded benchmark numbers are of other files: run the benchmark again and record them"
+
+
+@pytest.mark.parametrize("benchmarked", list(BENCHMARKED), indirect=True)
+def test_the_benchmarked_simulation_is_long_enough_to_say_something(benchmarked):
+    mean, se = benchmarked.tally.mean_se()
+    limit = 0.05 if HEAVY else 0.5  # a play of these has a standard deviation about equal to its mean: CI catches only a gross error, the heavy run a few per cent
+
+    assert se <= limit * mean, f"{benchmarked.route}: {benchmarked.tally.n} plays give {mean:.5g} +- {se:.3g}"
 
 
 # --- each step of the route ---------------------------------------------------------------------------------
@@ -205,6 +315,12 @@ MUTATIONS = [
     ("no family exclusion", Laws(family_exclusion=False), "R10"),
     ("no family exclusion", Laws(family_exclusion=False), "R11"),
     ("a side chosen first, not one pool", Laws(one_pool=False), "R11"),
+    # the laws of #608 and #609. R09 does not move when the block is off (0.66 standard errors at 3,000 plays and seed 7: the blocked Defence mods are few next to the boosted
+    # Life ones), so the block is shown by R08 and by `test_naive_mechanics.py`, and R09 is not counted as evidence for it.
+    ("no fossil boost", Laws(fossil_boost=False), "R08"),
+    ("no fossil boost", Laws(fossil_boost=False), "R09"),
+    ("no fossil block", Laws(fossil_block=False), "R08"),
+    ("no Harvest guarantee", Laws(harvest_guarantee=False), "R12"),
 ]
 
 
@@ -216,6 +332,7 @@ def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(play
     route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
     wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
     verdict = t.verdict_on(f"{played.route} with {name}", played.exact_mean, wrong.mean_se())
+    print(verdict)  # the distance, shown with -rP
 
     assert not verdict.agrees, str(verdict)
 
@@ -226,7 +343,7 @@ def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(play
 
 def test_the_covered_and_the_listed_routes_are_every_route_file():
     stems = {path.stem for path in ROUTES.glob("*.yaml")}
-    listed = {stem for stem, _ in COVERED.values()} | {stem for stem, _ in NOT_COVERED.values()}
+    listed = {stem for group in (COVERED, BENCHMARKED, GAPPED, NOT_COVERED) for stem, *_ in group.values()}
 
     assert stems == listed
 

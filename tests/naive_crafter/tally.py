@@ -28,6 +28,14 @@ class Tally:
     total_sq: float = 0.0
     spend: dict[str, list[float]] = field(default_factory=dict)  # label -> [sum, sum of squares]
     uses: dict[str, int] = field(default_factory=dict)
+    stuck: int = 0  # plays that ended at a gap of the route (only a route with gaps has any); `n` counts the plays that finished
+
+    def add_stuck(self) -> None:
+        self.stuck += 1
+
+    def finishing(self) -> tuple[int, int]:
+        """(plays that met the target, plays in all)."""
+        return self.n, self.n + self.stuck
 
     def add(self, play: Play) -> None:
         self.n += 1
@@ -41,7 +49,7 @@ class Tally:
             self.uses[label] = self.uses.get(label, 0) + count
 
     def merge(self, other: "Tally") -> "Tally":
-        merged = Tally(self.n + other.n, self.total + other.total, self.total_sq + other.total_sq)
+        merged = Tally(self.n + other.n, self.total + other.total, self.total_sq + other.total_sq, stuck=self.stuck + other.stuck)
         for source in (self.spend, other.spend):
             for label, (spent, squares) in source.items():
                 pair = merged.spend.setdefault(label, [0.0, 0.0])
@@ -73,11 +81,13 @@ class Tally:
         return self.uses.get(label, 0) / self.n if self.n else 0.0
 
     def to_dict(self) -> dict:
-        return {"n": self.n, "total": self.total, "total_sq": self.total_sq, "spend": self.spend, "uses": self.uses}
+        return {"n": self.n, "total": self.total, "total_sq": self.total_sq, "spend": self.spend, "uses": self.uses, "stuck": self.stuck}
 
     @classmethod
     def from_dict(cls, document: dict) -> "Tally":
-        return cls(document["n"], document["total"], document["total_sq"], {k: list(v) for k, v in document["spend"].items()}, dict(document["uses"]))
+        return cls(
+            document["n"], document["total"], document["total_sq"], {k: list(v) for k, v in document["spend"].items()}, dict(document["uses"]), document.get("stuck", 0)
+        )
 
     def dumps(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True)
@@ -90,6 +100,29 @@ def simulate(player: Player, runs: int, seed: int, max_uses: int | None = None) 
     for _ in range(runs):
         tally.add(player.play(rng) if max_uses is None else player.play(rng, max_uses))
     return tally
+
+
+def simulate_finishing(player: Player, runs: int, seed: int, max_uses: int | None = None) -> Tally:
+    """`runs` plays of a route that may have gaps: a play that ends at a gap is counted as stuck, one that meets the target is added."""
+    rng = Random(seed)
+    tally = Tally()
+    for _ in range(runs):
+        play, gap = player.try_play(rng) if max_uses is None else player.try_play(rng, max_uses)
+        if gap is None:
+            tally.add(play)
+        else:
+            tally.add_stuck()
+    return tally
+
+
+def finishing_verdict(name: str, exact: float, finished: int, total: int, k: float = K) -> "Verdict":
+    """The chance that a play of a route with gaps meets the target: the planner's (exact) against the share of plays that finished, within `k` binomial standard errors.
+
+    A chance of exactly 0 or 1 has no spread: then the share must be exactly that. The estimate's `se` is the binomial one at the exact chance.
+    """
+    share = finished / total if total else 0.0
+    spread = math.sqrt(exact * (1 - exact) / total) if total else math.inf
+    return Verdict(name, exact, share, spread, k)
 
 
 @dataclass(frozen=True)

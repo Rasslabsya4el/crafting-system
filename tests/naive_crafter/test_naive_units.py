@@ -590,10 +590,10 @@ def test_a_route_file_that_cannot_be_read_says_where(route, message):
 
 
 def test_an_action_the_player_does_not_have_is_refused_when_the_route_is_read_and_named():
-    for label, mechanic in (("Exalted Orb", "Exalted Orb"), ("Fossils Dense Fossil", "fossils"), ("Harvest Reforge Fire", "Harvest"), ("Mystery", "does not know")):
+    for label, mechanic in (("Harvest Reforge more likely", "more or less likely"), ("Fossils Dense Fossil", "no fossil of this name"), ("Mystery", "does not know")):
         with pytest.raises(Exception, match=mechanic):
             player(f"rules:\n  - do: {label}\n")
-    assert lacking("rules:\n  - do: Exalted Orb\n  - do: Regal Orb\n", world()).keys() == {"Exalted Orb"}
+    assert lacking("rules:\n  - do: Mystery\n  - do: Regal Orb\n", world()).keys() == {"Mystery"}
 
 
 def test_a_name_with_no_price_is_an_error_and_a_given_start_item_has_no_restart():
