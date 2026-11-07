@@ -1,22 +1,41 @@
-"""The crafted-pattern lower bound of a plan, solved (ticket #497, research #376, ADR-0063 point 3).
+"""The crafted-pattern lower bound of a plan, solved (ticket #497, research #376, ADR-0063 point 3; the build's net and its offers, ticket #626).
 
 `pattern_lower_bound` builds the optimistic model of the key from the `Abstraction` and the priced offers (`abstraction._pattern`, no walk of
 the concrete graph), solves it on the packed solver, and returns the value of every key. The value of a key is at most the exact cost of
 every concrete state that has it (`lower` allows for the solver's certified error), so `lower` of the start key is a lower bound of the
 cost of the whole graph: the `LB` of the certificate `[LB, U]` (#499) and the bound of the envelope search (#377).
+
+**Which offers the model builds (#626).** The kernel of an offer is an exact distribution, and a fossil set's takes seconds. With many offers
+(`item` given) the model is built on a subset `S` of them and carries, at every key, one more action: a *floor action* to the goal whose cost is the
+least floor (`_offer_floor`) of the offers outside `S` at that key. Every action outside `S` costs at least that at the key, so the model is still
+a lower bound of the model on all offers, whatever `S` is. `S` starts with the restart, the bench crafts and the rerolls of least cost / pbar, and
+grows by the offers that could lower the value of a key where the floor action was the cheapest (`_binding`), until it is not the cheapest anywhere:
+then the model equals the model on all offers at every key it holds, which is the certificate of `_bound_prune` held in the model of the key.
+
+**The net (OR-12, OR-13).** The build is asked for its `stop` between two offers, so a key of thousands of offers is no longer one step. A build that
+stops leaves the keys it did not expand as tips, each with a floor action of the least floor of *all* the offers at that key, and the model is
+solved as it is: its value is still a lower bound, weaker where the build did not reach. `PatternBound.stopped` says why and `PatternBound.phase` says
+which phase it was in.
 """
 
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.abstraction._pattern import PatternModel, PatternOffer, PatternStats, build_pattern_model
+from crafting_system.abstraction._pattern import PatternKey, PatternModel, PatternOffer, PatternStats, build_pattern_model
 from crafting_system.solver import PackedBuilder, solve_packed
 
+from ._offer_floor import OfferFloors
 from ._offers import BuyStartItem, PricedOffer
+
+FAKE = -1  # the tag of the floor action
+FLOOR_COST = 1e-200  # a floor action of cost 0 is carried at this cost, as the envelope search carries a fake action
+BINDING = 1e-12  # relative: the floor action is "the cheapest" at a key when it is below the model's best by more than this
+MIN_OFFERS = 40  # fewer priced offers than this are all built (nothing to gain; `_plan.MIN_OFFERS_TO_PRUNE`)
+FIRST_BATCH = 16  # the offers that join the model in a round, at least (the doubling of the model's size is the other bound)
 
 
 @dataclass(frozen=True)
@@ -29,6 +48,12 @@ class PatternBound:
     error_bound: float  # the solver's certified relative error: the exact value of the model lies in `[value (1 - e), value (1 + e)]`
     build_seconds: float
     solve_seconds: float
+    positions: tuple[int, ...] = ()  # the position in the offers given of each offer of the model
+    floors: OfferFloors | None = None  # the floors of the offers (None unless the model was built on a subset of many offers)
+    rounds: int = 1  # models built (more than one when the offers grew)
+    stopped: str | None = None  # the net that ended the build, None for a complete model
+    phase: str = "complete"  # where the build was when it stopped: "floors", "model" (expanding keys), "solve"
+    seconds_by_phase: dict = field(default_factory=dict, compare=False)
 
     @property
     def lower(self) -> float:
@@ -38,6 +63,10 @@ class PatternBound:
     @property
     def stats(self) -> PatternStats:
         return self.model.stats
+
+    @property
+    def complete(self) -> bool:
+        return self.stopped is None
 
     def value_of(self, pattern, state: CompressedState) -> float:
         """The value of the key of a concrete state (`pattern` is the `Pattern` the model was built with, or any with the same `tags`)."""
@@ -49,18 +78,33 @@ def pattern_offers(priced: Sequence[PricedOffer]) -> list[PatternOffer]:
     return [PatternOffer(p.label, None if isinstance(p.offer.action, BuyStartItem) else p.offer.action, p.cost) for p in priced]
 
 
-def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer]):
-    """The packed graph of the model: state `k` is key `k`, an action's tag is its offer number."""
+def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floor: Callable[[PatternKey, bool], float | None] | None = None):
+    """The packed graph of the model: state `k` is key `k`, an action's tag is its offer number.
+
+    `floor(key, expanded)` is the cost of the floor action of a key (None for none): an action with tag `FAKE` to one more goal state, the last. A key that
+    was not expanded (a tip) has no other action.
+    """
     builder = PackedBuilder()
     built: dict[int, int] = {}
-    for row, is_goal in zip(model.actions, model.goal):
+    expanded = model.expanded or [True] * len(model.keys)
+    n = len(model.keys)
+    sink = None
+    for key, row, is_goal, was_built in zip(model.keys, model.actions, model.goal, expanded):
         for offer_index, kernel in row:
             made = built.get(kernel)
             if made is None:
                 successors, weights = model.kernels[kernel]
                 made = built[kernel] = builder.kernel(successors, weights)
             builder.action(offer_index, offers[offer_index].cost, made)
+        if floor is not None and not is_goal:
+            cost = floor(key, was_built)
+            if cost is not None:
+                if sink is None:
+                    sink = builder.kernel([n], [1])
+                builder.action(FAKE, max(cost, FLOOR_COST), sink)
         builder.close_state(is_goal)
+    if sink is not None:
+        builder.close_state(True)
     return builder.build()
 
 
@@ -72,17 +116,116 @@ def pattern_lower_bound(
     tags: bool | None = None,
     progress: Callable[[str], None] | None = None,
     max_keys: int | None = None,
+    item=None,
+    stop: Callable[[], str | None] | None = None,
 ) -> PatternBound:
-    """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`."""
-    offers = pattern_offers(priced)
+    """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`.
+
+    `item` (the start item) turns on the offers' floors when there are `MIN_OFFERS` offers or more: the model is then built on the offers that can
+    matter (see the module text). `stop` is the net: it is asked while the model is built and returns the reason once one is reached.
+    """
+    say = progress or (lambda _text: None)
+    all_offers = pattern_offers(priced)
     began = time.perf_counter()
-    model = build_pattern_model(abstraction, start, offers, tags=tags, progress=progress, max_keys=max_keys)
-    built = time.perf_counter()
-    if progress is not None:
-        progress(f"model built: {model.stats}")
-    graph = pack_pattern_model(model, offers)
-    solved = solve_packed(graph, progress=progress)
-    return PatternBound(model, solved.value, float(solved.value[0]), float(solved.error_bound), built - began, time.perf_counter() - built)
+    phases: dict[str, float] = {}
+    floors = None
+    positions: list[int] = list(range(len(priced)))
+    if item is not None and len(priced) >= MIN_OFFERS:
+        floors = OfferFloors(abstraction, start, priced, item)
+        positions = floors.initial()
+        phases["floors"] = time.perf_counter() - began
+        say(f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(positions):,} of {len(priced):,} offers ({phases['floors']:.1f} s)")
+    rounds = 0
+    solve_seconds = 0.0
+    while True:
+        rounds += 1
+        mark = time.perf_counter()
+        model = build_pattern_model(abstraction, start, [all_offers[p] for p in positions], tags=tags, progress=say, max_keys=max_keys, stop=stop)
+        built = time.perf_counter()
+        phases["model"] = phases.get("model", 0.0) + built - mark
+        say(f"model {rounds} built on {len(positions):,} offers{' (stopped: ' + model.stopped + ')' if model.stopped else ''}: {model.stats}")
+        inside = set(positions)
+        outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
+        floor = _floor_of(floors, positions, outside, priced) if floors is not None else _tip_floor(priced)
+        graph = pack_pattern_model(model, [all_offers[p] for p in positions], floor)
+        solved = solve_packed(graph, progress=say)
+        solve_seconds += time.perf_counter() - built
+        phases["solve"] = phases.get("solve", 0.0) + time.perf_counter() - built
+        if model.stopped is not None or floors is None or not outside:
+            break
+        more = _binding(graph, solved, model, floors, outside, positions)
+        if not more:
+            break
+        say(f"model {rounds}: the floor action is the cheapest at some key; {len(more):,} offers more join the model")
+        positions = sorted({*positions, *more})
+    n = len(model.keys)
+    stopped = model.stopped
+    phase = "complete" if stopped is None else "model"
+    return PatternBound(
+        model, np.asarray(solved.value[:n]), float(solved.value[0]), float(solved.error_bound), time.perf_counter() - began - solve_seconds, solve_seconds,
+        tuple(positions), floors, rounds, stopped, phase, phases,
+    )  # fmt: skip
+
+
+def _tip_floor(priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], float | None]:
+    """The floor action of a build without offers' floors: only a tip has one, at the cost of the cheapest offer (any action costs that or more)."""
+    cheapest = min((p.cost for p in priced), default=0.0)
+    return lambda _key, expanded: None if expanded else cheapest
+
+
+def _floor_of(floors: OfferFloors, positions: list[int], outside: list[int], priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], float | None]:
+    """The floor action of a key: the least floor of the offers outside the model there, or of all the offers when the key is a tip."""
+    names = range(len(priced))
+    table = {
+        True: (floors.floor(outside, True), floors.floor(names, True)),
+        False: (floors.floor(outside, False), floors.floor(names, False)),
+    }
+
+    def floor(key: PatternKey, expanded: bool) -> float | None:
+        shaped = floors.shaped(key.flags, key.fractured, key.status)
+        cost = table[shaped][0 if expanded else 1]
+        return None if cost == float("inf") else cost
+
+    return floor
+
+
+def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int], positions: list[int]) -> list[int]:
+    """The offers outside the model that could lower the value of a key where the floor action is the cheapest, the least floors first.
+
+    At a key whose floor action is cheaper than every action of the model, the value is the floor and not the model's own; an offer outside the model
+    whose floor there is not above the model's best could lower it. The offers asked for are those of the least floors, at least `FIRST_BATCH` and at
+    most as many as the model has (so the number of rounds is logarithmic). Nothing is returned when the floor action is the cheapest nowhere.
+    """
+    value = np.asarray(solved.value, dtype=np.float64)
+    n = graph.n
+    contribution = graph.k_prob * value[graph.k_succ]
+    expect = np.add.reduceat(contribution, graph.k_ptr[:-1]) if len(contribution) else np.zeros(0)
+    q = graph.act_cost + expect[graph.act_kernel]
+    owner = graph.action_state()
+    real = graph.act_tag != FAKE
+    best = np.full(n, np.inf)
+    np.minimum.at(best, owner[real], q[real])
+    fake = np.full(n, np.inf)
+    np.minimum.at(fake, owner[~real], q[~real])
+    binding = fake < best * (1.0 - BINDING)
+    if not binding[: len(model.keys)].any():
+        return []
+    limit = {True: None, False: None}
+    for k in np.flatnonzero(binding[: len(model.keys)]).tolist():
+        key = model.keys[k]
+        if not model.expanded[k]:
+            continue
+        shaped = floors.shaped(key.flags, key.fractured, key.status)
+        bound = float(best[k])
+        limit[shaped] = bound if limit[shaped] is None else max(limit[shaped], bound)
+    found: list[tuple[float, int]] = []
+    for position in outside:
+        low = floors.needed(position, limit[True], limit[False])
+        if low is not None:
+            found.append((low, position))
+    found.sort()
+    take = max(FIRST_BATCH, len(positions))
+    return [position for _, position in found[:take]]
 
 
 __all__ = ["PatternBound", "pack_pattern_model", "pattern_lower_bound", "pattern_offers"]

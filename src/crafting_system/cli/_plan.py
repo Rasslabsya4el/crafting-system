@@ -480,7 +480,9 @@ def make_plan(
             limits += (twins_limit(twins),)  # G17: the packed path leaves out the dearer twins, as the bound pruning does
         if solver == "envelope":
             try:
-                packed = envelope_result(abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net)
+                packed = envelope_result(
+                    abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net, item=target.start_item if many else None
+                )
             except (OutOfScopeError, NoPolicy, BoundError) as error:
                 raise PlanError(f"the envelope search cannot answer this target: {error}") from error
             limits += envelope_limits(packed.info["envelope"])
