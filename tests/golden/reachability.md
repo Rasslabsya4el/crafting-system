@@ -178,7 +178,7 @@ Code that takes a never-read setting by its own name:
 
 ## 5. Built modules
 
-The public names of the modules the audit says are built and not wired. *Referenced by* lists the other modules of `src/` that name it (tests are not counted); *Planning path* says whether `main`, `make_plan` or `plan_with_starts` reaches it through such references.
+The public names of the modules the audit says are built and not wired (of a module the command does use, only the names that are built and not wired). *Referenced by* lists the other modules of `src/` that name it (tests are not counted); *Planning path* says whether `main`, `make_plan` or `plan_with_starts` reaches it through such references.
 
 | Built module | Name | In | Referenced by | Planning path | Audit |
 |---|---|---|---|---|---|
@@ -204,6 +204,8 @@ The public names of the modules the audit says are built and not wired. *Referen
 | the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `takes_inputs` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
+| the interval driver (wiring: ticket #589) | `build_interval_answer` | `cli/_interval.py` | nothing | **no** | PRES-15 |
+| the interval driver (wiring: ticket #589) | `with_interval` | `cli/_report.py` | nothing | **no** | PRES-15 |
 
 ## 6. Target keys
 
