@@ -128,7 +128,7 @@ def test_the_text_marks_the_answer_and_gives_no_risk_numbers(approximate):
     assert "Blocks solved: " in text
     assert "  Not given for an approximate answer: the success chance, the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth (" in text
     assert "p90   " not in text and "success chance  " not in text
-    assert "Run time: both solvers" in text
+    assert "Run time: working out the plan took" in text
 
 
 def test_the_json_marks_the_answer_and_holds_the_interval(approximate, exact):

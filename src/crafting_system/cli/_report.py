@@ -17,7 +17,7 @@ from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN, plain_base_names
 
 from ._interval import IntervalAnswer
-from ._limits import HEADING, limit_document, limit_text, ordered, unresolved
+from ._limits import HEADING, PERCENTILE_WORDS, figures, limit_document, limit_text, ordered, unresolved
 from ._marking import (
     ApproximateInput,
     approximate_inputs,
@@ -38,10 +38,12 @@ from ._start_report import first_step_document, first_step_lines, start_document
 from ._start_step import FirstStep, first_step
 from ._verify import SIGMAS, Verification
 
-FORMAT = "crafting-system-policy/2"
+FORMAT = "crafting-system-policy/3"  # /3: `requirements` keeps the k-of-n groups (ticket #630); /2 listed every leaf flat
 GOAL = "goal"
 DEAD_END = "dead end"
 MAX_TREE_DEPTH = 40
+RESULT_ROWS = ("success", "mean", "p50", "p90")  # the rows of the result block, as the keys of `PERCENTILE_WORDS` name them
+ROW_WIDTH = max(len(PERCENTILE_WORDS[name]) for name in RESULT_ROWS) + 2  # a row says its figure in words, then the value in this column
 MAX_TREE_STATES = 1_000  # the text tree stops here (R14's policy has 14,742 groups of states, 22 MB of text); the JSON policy and the route page hold all (ticket #70)
 
 
@@ -102,21 +104,22 @@ def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
     return list(zip(plan.leaf_labels, leaves))
 
 
-def requirements_text(plan: Plan) -> str:
-    """The requirements of the target as one line: the plain ones, then each k-of-n group once as "at least k of n of: a (prefix); b (suffix)".
+def requirements_parts(plan: Plan) -> tuple[list[str], list[dict]]:
+    """The requirements of the target kept as the target holds them: (the plain ones, each group once).
 
-    The words are the ones of the page's group heading (`_route_card.Group`), and a member says its side in words as it does there (OR-15). Reading
-    the leaves as a flat list would say that every member of a group is required.
+    A group is `{"at_least": k, "of": [member, ...]}` and a member is `{"requirement": label, "side": "prefix" | "suffix"}` or, for a group in a
+    group, a group. The side is said in words as the page's cards say it (OR-15). `plan.leaf_labels` lists the members of a group as plain
+    leaves, so reading it as the requirements says that every member is required (#551, #630).
     """
     labels = iter(plan.leaf_labels)
     sides = iter(leaf_sides(plan.abstraction.data, plan.target))
     plain: list[str] = []
-    groups: list[str] = []
+    groups: list[dict] = []
 
-    def member(node) -> str:
+    def member(node) -> dict:
         if isinstance(node, KOfN):
-            return f"at least {node.at_least} of {len(node.of)} of: " + "; ".join(f"({member(each)})" if isinstance(each, KOfN) else member(each) for each in node.of)
-        return f"{next(labels)} ({next(sides).value})"
+            return {"at_least": node.at_least, "of": [member(each) for each in node.of]}
+        return {"requirement": next(labels), "side": next(sides).value}
 
     for requirement in plan.target.requirements:
         if isinstance(requirement, KOfN):
@@ -124,7 +127,27 @@ def requirements_text(plan: Plan) -> str:
         else:
             plain.append(next(labels))
             next(sides)
-    return "; ".join([*plain, *groups])
+    return plain, groups
+
+
+def requirements_text(plan: Plan) -> str:
+    """The requirements of the target as one line: the plain ones, then each k-of-n group once as "at least k of n of: a (prefix); b (suffix)".
+
+    The words are the ones of the page's group heading (`_route_card.Group`), and a member says its side in words as it does there (OR-15).
+    """
+
+    def group_text(group: dict) -> str:
+        members = "; ".join(f"({group_text(each)})" if "of" in each else f"{each['requirement']} ({each['side']})" for each in group["of"])
+        return f"at least {group['at_least']} of {len(group['of'])} of: {members}"
+
+    plain, groups = requirements_parts(plan)
+    return "; ".join([*plain, *(group_text(group) for group in groups)])
+
+
+def requirements_document(plan: Plan) -> dict:
+    """The JSON `requirements`: `{"plain": [label, ...], "groups": [{"at_least": k, "of": [member, ...]}, ...]}` (schema `crafting-system-policy/3`)."""
+    plain, groups = requirements_parts(plan)
+    return {"plain": plain, "groups": groups}
 
 
 def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
@@ -274,6 +297,11 @@ NOT_COMPUTED = {
 }
 
 
+def _row(name: str, value: str) -> str:
+    """One row of the result block: the figure in the words of `PERCENTILE_WORDS`, then its value."""
+    return f"  {PERCENTILE_WORDS[name]:<{ROW_WIDTH}}{value}"
+
+
 def _quantile_text(risk, estimate: Estimate, shift: float, divine: float) -> str:
     if risk.grid.cause and math.isinf(estimate.value):  # its own cause (M7), not the grid's; a quantile the grid did compute is shown
         return NOT_COMPUTED[risk.grid.cause]
@@ -285,18 +313,20 @@ def _shifted(estimate: Estimate, shift: float) -> Estimate:
 
 
 def free_action_lines(plan: Plan, risk) -> list[str]:
-    """What the percentiles hold to when the plan has free actions (ticket #349): they are counted apart from the grid, and the bound is stated.
+    """What the cost figures hold to when the plan has free actions (ticket #349): they are counted apart from the grid, and the bound is stated.
 
-    The free actions are priced at an epsilon so that the solver sees a positive cost; the risk run counts them at that price but not on its
-    grid, so every percentile is certified to within `free_allowance` Chaos, except with chance `free_tail`, and the CVaR to within `free_cvar_allowance`. The solver's own
-    certified error (a relative figure) is given with it. Empty for a plan without free actions.
+    The free actions are priced at an epsilon so that every step has a positive cost; the risk run counts them at that price but not on its
+    grid, so the median cost and the cost 9 runs in 10 stay under are certified to within `free_allowance` Chaos, except with chance `free_tail`,
+    and the average of the worst tenth to within `free_cvar_allowance`. The plan's own certified error (a relative figure) is given with it.
+    Empty for a plan without free actions. The words are those of `PERCENTILE_WORDS` (#633).
     """
     if risk.grid.free_tail <= 0.0:
         return []
     return [
-        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the percentile grid: the percentiles hold to within",
-        f"   {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e}, and the CVaR to within {money_small(risk.grid.free_cvar_allowance)} Chaos;",
-        f"   the solver's error bound is {plan.solution.error_bound:.1e}, relative)",
+        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the budget steps of the risk figures:",
+        f"   {figures('p50', 'p90')} hold to within {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e},",
+        f"   and {PERCENTILE_WORDS['CVaR']} to within {money_small(risk.grid.free_cvar_allowance)} Chaos;",
+        f"   the error bound of the plan's cost is {plan.solution.error_bound:.1e}, relative)",
     ]
 
 
@@ -365,8 +395,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         reach = "" if state.reach is None else f", reached with chance {percent(state.reach)}"
         lines.append(f"{pad}{state.id}: {state.description}")
         parts = " + ".join(f"{count} {resource}" for resource, count, _, _ in state.cost_parts)
-        if not state.cost_parts:  # an action that consumes nothing: the solver is given a negligible cost (ADR-0026)
-            lines.append(f"{pad}  do: {state.action} (free; counted at {state.cost:.1g} Chaos so that the solver sees a positive cost)")
+        if not state.cost_parts:  # an action that consumes nothing: it is given a negligible cost (ADR-0026)
+            lines.append(f"{pad}  do: {state.action} (free; counted at {state.cost:.1g} Chaos so that every step has a positive cost)")
         else:
             lines.append(f"{pad}  do: {state.action} ({parts} = {money(state.cost)} Chaos each)")
         lines.append(f"{pad}  expected cost from here {money(state.remaining)} Chaos{reach}")
@@ -407,18 +437,18 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines.append("Result")
     if risk is None:
         mean = Estimate(plan.mean_remaining + shift, plan.approximation.lower + shift, plan.approximation.upper + shift)
-        lines.append(f"  mean cost       {interval(mean, divine)} (the policy's certified cost; see Answer)")
+        lines.append(_row("mean", f"{interval(mean, divine)} (the policy's certified cost; see Answer)"))
         lines.extend(risk_lines())
         lines.append(f"  (the start item, {money(shift)} Chaos, is included)")
     else:
-        lines.append(f"  success chance  {percent(risk.success_probability.value)}")
-        lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
-        lines.append(f"  p50             {_quantile_text(risk, risk.p50, shift, divine)}")
-        lines.append(f"  p90             {_quantile_text(risk, risk.p90, shift, divine)}")
+        lines.append(_row("success", percent(risk.success_probability.value)))
+        lines.append(_row("mean", interval(_shifted(risk.mean, shift), divine)))
+        lines.append(_row("p50", _quantile_text(risk, risk.p50, shift, divine)))
+        lines.append(_row("p90", _quantile_text(risk, risk.p90, shift, divine)))
         lines.extend(free_action_lines(plan, risk))
         got = "making it at the vendor" if report.first_step is not None else "buying it"
         lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after {got} is")
-        lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
+        lines.append(f"   {money(plan.mean_remaining)} Chaos as the plan counts it and {money(risk.mean.value)} as the risk figures count it)")
     if report.shares:
         lines.append("")
         lines.append("Single-draw weight shares on the start item, next to the chance of one use")
@@ -430,9 +460,9 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
             lines.append(f"  {share.action}: {share.leaf}: {weight}{suffix}")
     lines.append("")
     if risk is None:
-        lines.append(f"Run time: both solvers {plan.solve_seconds * 1000:.0f} ms")
+        lines.append(f"Run time: working out the plan took {plan.solve_seconds * 1000:.0f} ms")
     else:
-        lines.append(f"Run time: solver {plan.solve_seconds * 1000:.0f} ms, risk figures {plan.risk_seconds * 1000:.1f} ms")
+        lines.append(f"Run time: working out the plan took {plan.solve_seconds * 1000:.0f} ms, the risk figures {plan.risk_seconds * 1000:.1f} ms")
     if verification is not None:
         lines.append("")
         lines.extend(verification_lines(verification) if plan.approximation else _verification_lines(verification, plan))
@@ -455,7 +485,7 @@ def _verification_lines(check: Verification, plan: Plan) -> list[str]:
         f"  simulated mean cost {money(cost.value)} Chaos, {report.confidence:.0%} interval "
         f"{money(cost.low)} to {money(cost.high)} (normal approximation)",
         f"  computed mean cost  {money(check.computed_mean)} Chaos ({check.computed_mean / divine:.3g} Divine)",
-        f"  simulated p90       {money(p90.value)} Chaos, interval {money(p90.low)} to {money(p90.high)} "
+        f"  {PERCENTILE_WORDS['p90']}: simulated {money(p90.value)} Chaos, interval {money(p90.low)} to {money(p90.high)} "
         f"(simulated, not certified); computed {computed_p90}",
         f"  detectable error    a mean off by more than {check.detectable_error:.1%} is rejected "
         f"({SIGMAS:g} standard errors); a smaller error passes; more --runs see smaller ones",
@@ -539,7 +569,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         **({"interval": report.interval.document()} if report.interval is not None else {}),
         "target": target_name,
-        "requirements": list(plan.leaf_labels),
+        "requirements": requirements_document(plan),
         "prices": {
             "league": plan.prices.league,
             "fetched_at": plan.prices.fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ"),

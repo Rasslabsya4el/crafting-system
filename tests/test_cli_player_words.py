@@ -15,6 +15,9 @@ the next new sentence is read without anyone listing it:
 claim id, a file name, a ticket or ADR number, a workflow word, a base id, a snake_case token of even one underscore) and none of these:
 
 * a module path or a program (`python -m crafting_system.cli trade`): the player is told the command by its name (the `trade` command);
+* a statistics or program word (`JARGON`): `p50`, `p90`, `CVaR`, `solver`, `percentile`, `quantile`, and a figure's label that is not the
+  words of `cli/_limits.py` `PERCENTILE_WORDS` ("the success chance", "the median cost", "the cost 9 runs in 10 stay under", "the average of
+  the worst tenth"), so that a figure is said as one table says it (ticket #633);
 * a command line option that the command does not have. A command line option is a thing the player types, so a sentence may name it
   (`--exact`, `--start-price`), but only an option that some `add_argument` of the `cli` package declares: the option is read from the code.
 
@@ -22,7 +25,7 @@ claim id, a file name, a ticket or ADR number, a workflow word, a base id, a sna
 out where the model has no rule") or as `Error: {error}` (`cli/_main.py`), are not read, because they are written outside the package this
 test scans. Two open issues own them: #557 for the causes written in `actions/` and `abstraction/` (they still hold "ADR-0023",
 "(ticket #212)", "(grill B2)" and a game mod id, as on `tests/golden/real_r10.html`), and #632 for the errors of `data`, `targets`,
-`prices` and `config`. The benchmark command is #631, and the short figure names `p50`, `p90` and `CVaR` are #633. The header
+`prices` and `config`. The benchmark command is #631. The header
 `Target: <file>` is not read: it echoes the name of the player's own file.
 
 The axis table (`cli/_axes.py`) has its own test below: every rule axis the code defines has words, and so has each of its values.
@@ -46,6 +49,7 @@ from crafting_system.actions.contract import Axis
 from crafting_system.cli import build_report, make_plan, plan_with_starts, render_text
 from crafting_system.cli._axes import AXIS_WORDS, AxisWords, axis_name, axis_what, reading_pair, value_text
 from crafting_system.cli._plan import PlanError, resolve_start_price
+from crafting_system.cli._verify import verify
 from crafting_system.items.vendor_recipes import RECIPES
 from crafting_system.targets import load_target
 
@@ -59,6 +63,17 @@ PROGRAM_NAME = "COMMAND"  # the constant that holds the program name for `argpar
 
 OPTION = re.compile(r"(?<![\w-])--[a-z][a-z0-9-]*")
 PROGRAM = re.compile(r"\bpython\b|\bpip\b|\buv\b", re.IGNORECASE)
+JARGON = {  # a word a player does not use; the figures are said as `_limits.PERCENTILE_WORDS` says them
+    "p50": re.compile(r"\bp50\b"),
+    "p90": re.compile(r"\bp90\b"),
+    "CVaR": re.compile(r"\bCVaR\b", re.IGNORECASE),
+    "solver": re.compile(r"\bsolvers?\b", re.IGNORECASE),
+    "percentile": re.compile(r"\bpercentiles?\b", re.IGNORECASE),
+    "quantile": re.compile(r"\bquantiles?\b", re.IGNORECASE),
+    "a bare success chance": re.compile(r"(?<![Tt]he )\bsuccess chance\b"),  # `PERCENTILE_WORDS` says "the success chance"; the page card's field label "Success chance" is a label, not a row
+}
+JARGON_OWNED_BY_557 = {"_approx.py", "_bound_prune.py"}  # the causes written there ("the solver could not certify its values") are the open issue #557
+FOR_A_PROGRAMMER = ("solver must be one of ", "risk: p50 ", ", p90 ")  # the error about the library argument `solver=` and the progress line of a heavy run: not read by a player
 
 
 def declared_options() -> set[str]:
@@ -84,6 +99,7 @@ def faults_in(text: str, options: set[str] = OPTIONS) -> list[str]:
     faults = [f"{kind}: {found}" for kind, found in page_lint.internal_names_in(text)]
     faults += [f"an option the command does not have: {option}" for option in OPTION.findall(text) if option not in options]
     faults += [f"a program name: {word}" for word in PROGRAM.findall(text)]
+    faults += [f"jargon: {name}" for name, pattern in JARGON.items() if pattern.search(text)]
     return faults
 
 
@@ -124,6 +140,13 @@ READ = sorted(path for path in CLI.glob("*.py") if path.name not in NOT_READ and
         ("the setting recipe_starts of crafting.toml", "a snake_case token"),
         ("run again with --no-such-option", "an option the command does not have"),
         ("the bound fell (see #509)", "a ticket number"),
+        ("  p50             597.04 Chaos (1.6 Divine)", "jargon: p50"),
+        ("  p90             1,984.76 Chaos", "jargon: p90"),
+        ("simulated CVaR 90% 2,000 Chaos", "jargon: CVaR"),
+        ("Run time: solver 12 ms, risk figures 0.3 ms", "jargon: solver"),
+        ("Run time: both solvers 12 ms", "jargon: solver"),
+        ("the percentiles hold to within 1 Chaos", "jargon: percentile"),
+        ("  success chance  100%", "jargon: a bare success chance"),
     ],
 )
 def test_the_rule_finds_what_it_is_meant_to_find(text, kind):
@@ -138,6 +161,9 @@ def test_the_rule_finds_what_it_is_meant_to_find(text, kind):
         "Price it on the trade site with the `trade` command",
         "an elemental recipe cap = the wiki's tier 3",
         "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth",
+        "  the success chance                100%",
+        "  the cost 9 runs in 10 stay under  1,984.76 Chaos (5.33 Divine), certified 1,980.82 to 1,988.70",
+        "Run time: working out the plan took 12 ms, the risk figures 0.3 ms",
     ],
 )
 def test_the_rule_lets_a_player_read_an_option_and_the_words_of_the_report(text):
@@ -165,7 +191,10 @@ def test_the_reading_finds_the_sentences_it_is_meant_to_read():
 @pytest.mark.parametrize("path", READ, ids=lambda path: path.name)
 def test_no_sentence_of_the_code_holds_an_internal_name(path):
     for line, text in sentences_of(path):
-        assert faults_in(text) == [], f"{path.name}:{line}: {text!r}"
+        faults = faults_in(text)
+        if path.name in JARGON_OWNED_BY_557 or text.startswith(FOR_A_PROGRAMMER):
+            faults = [fault for fault in faults if not fault.startswith("jargon")]
+        assert faults == [], f"{path.name}:{line}: {text!r}"
 
 
 # --- every sentence a run writes -----------------------------------------------------------------------------------------------
@@ -182,8 +211,10 @@ def texts() -> dict[str, str]:
     capped = plan_with_starts(TOY, toy_target(WAND_TARGET), wand_prices())
     no_speed = plan_with_starts(TOY, toy_target(BOOTS_TARGET.replace("  - family: MovementVelocity\n    min_tier: 2\n", "")), prices())
     too_low = plan_with_starts(TOY, toy_target(BOOTS_TARGET.replace("min_tier: 2", "min_tier: 1")), prices())
+    check = verify(DATA, plan, runs=300, seed=7)
     return {
         "R12 plan": render_text(build_report(plan, DATA)),
+        "R12 plan with --verify": render_text(build_report(plan, DATA), check),
         "toy wand with a cap that matters": render_text(build_report(capped, TOY)),
         "toy boots, no requirement the recipe serves": render_text(build_report(no_speed, TOY)),
         "toy boots, a cap below the asked tier": render_text(build_report(too_low, TOY)),
@@ -195,9 +226,20 @@ def test_the_text_of_real_plans_holds_no_internal_name(texts):
     assert "Cheapest total over the readings" in texts["toy wand with a cap that matters"]
     assert "refused (no target mod): no requirement of the target asks for what these recipes make: Boots with movement speed" in texts["toy boots, no requirement the recipe serves"]
     assert "refused: Boots with movement speed: " in texts["toy boots, a cap below the asked tier"]
+    assert "Verification by simulation" in texts["R12 plan with --verify"] and "Run time: working out the plan took" in texts["R12 plan"]
     for where, text in texts.items():
         for number, line in enumerate(reading_lines(text), 1):
             assert faults_in(line) == [], f"{where}, line {number}: {line!r}"
+
+
+def test_the_result_block_and_the_verification_say_each_figure_as_the_table_does(texts):
+    from crafting_system.cli._limits import PERCENTILE_WORDS
+
+    text, verified = texts["R12 plan"], texts["R12 plan with --verify"]
+    for name in ("success", "mean", "p50", "p90"):
+        assert any(line.startswith(f"  {PERCENTILE_WORDS[name]} ") for line in text.splitlines()), name
+    assert f"  {PERCENTILE_WORDS['p90']}: simulated " in verified
+    assert "Run time: working out the plan took " in text
 
 
 def test_the_start_options_say_the_rule_axis_in_words(texts):
