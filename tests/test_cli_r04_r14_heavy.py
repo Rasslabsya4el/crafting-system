@@ -87,14 +87,14 @@ def test_the_default_budget_run_reaches_the_packed_solver_and_says_so(cli, route
 
 
 @HEAVY
-def test_the_plan_of_r14_opens_with_an_alteration_and_no_step_is_a_transmutation(cli, route_id):
+def test_the_plan_of_r14_does_not_open_with_a_transmutation_and_has_no_such_step(cli, route_id):
     """#576: R14's start is a Magic bow (the guide opens with Alteration and names no Transmutation Orb), so the first step is not one."""
     if route_id != "R14":
         pytest.skip("R04 starts Normal: its first step is an Essence of Insanity")
     _, document, _ = cli
     first = next(state for state in document["states"] if state["id"] == document["start"]["state"])
 
-    assert first["action"] == "Orb of Alteration"
+    assert first["action"] in {"Orb of Alteration", "Orb of Augmentation"}
     assert "Orb of Transmutation" not in {state["action"] for state in document["states"]}
 
 

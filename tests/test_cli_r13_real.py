@@ -123,12 +123,12 @@ def test_the_solver_is_no_dearer_than_the_guides_given_route(plan, data):
     assert plan.risk.mean.value <= result.risk.mean.value * (1 + 1e-9)
 
 
-def test_the_policy_starts_with_an_alteration_and_no_transmutation_is_offered(plan, data):
-    """#576: the guide's first step is "Alt spam for T1 Life and a resist"; a Transmutation Orb it never names is not a step of the plan."""
+def test_the_policy_does_not_open_with_a_transmutation_and_none_is_offered(plan, data):
+    """#576: the guide opens with "Alt spam for T1 Life and a resist" on a Magic belt; a Transmutation Orb it never names is not a step of the plan."""
     report = build_report(plan, data)
 
     first = next(state for state in report.states if report.ids[plan.start] == state.id)
-    assert first.action == "Orb of Alteration"
+    assert first.action in {"Orb of Alteration", "Orb of Augmentation"}  # the bought belt is Magic with no mod: the cheapest way on is an Augmentation, the Alterations follow
     assert "Orb of Transmutation" not in {priced.label for priced in plan.offers}
     assert "Orb of Transmutation" not in {state.action for state in report.states}
 
