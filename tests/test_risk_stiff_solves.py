@@ -235,12 +235,10 @@ def test_a_cycle_so_stiff_that_the_mean_is_known_to_less_than_one_in_a_hundred_i
     start, policy = ring(10**power)
     chain = chain_of(start, policy)
 
-    with pytest.raises(_inputs.NotSubcritical):
+    with pytest.raises(_inputs.NotSubcritical):  # (`Undecided` at 1e13; at 1e16 the check fails altogether, as it did before)
         _inputs.solve_costs(chain, _inputs.real_costs(chain))
-    risk = evaluate(policy, start, is_done, resolve_quantiles=False)
-
-    assert risk.grid.cause in (UNDECIDED, "subcritical")
-    assert math.isinf(risk.mean.value)
+    with pytest.raises(_inputs.NotSubcritical):
+        _inputs.mean_and_variance(chain)
 
 
 def test_the_refusal_at_one_in_a_hundred_is_an_undecided_not_a_policy_that_needs_more_than_it_makes():
@@ -252,6 +250,12 @@ def test_the_refusal_at_one_in_a_hundred_is_an_undecided_not_a_policy_that_needs
     risk = evaluate(policy, start, is_done, resolve_quantiles=False)
 
     assert risk.grid.cause == UNDECIDED and math.isinf(risk.mean.value)
+    from crafting_system.cli._limits import risk_limits
+    from crafting_system.cli._report import NOT_COMPUTED
+
+    (limit,) = risk_limits(risk)  # the reader is told it is the arithmetic, not the plan, that could not decide
+    assert "close to 1" in limit.why and "more runs of its inputs" not in limit.why and limit.what.startswith("Not computed")
+    assert "arithmetic" in NOT_COMPUTED[UNDECIDED] and "more runs" not in NOT_COMPUTED[UNDECIDED]
 
 
 def test_the_visits_of_the_coarse_grid_are_refused_with_none_when_their_bound_is_above_one_in_a_hundred():
