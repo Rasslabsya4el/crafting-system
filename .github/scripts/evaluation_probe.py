@@ -3,7 +3,7 @@
     python .github/scripts/evaluation_probe.py --route r04|r14 --out DIR [--force-exact]
 
 Plans the route as `packed_routes.py plan` does and wraps `solver/_packed_solve.evaluate_policy`: for each call it notes the seconds and the
-resident memory before, the peak while it ran (a thread reads `/proc/self/status` every 0.2 seconds) and the `info` counters it left (iterations,
+resident memory before, the peak while it ran (a thread reads the resident memory of the process every 0.2 seconds) and the `info` counters it left (iterations,
 residual, backward error, the exact solve by the cycles of the chain when it was made). The file `DIR/<route>.evaluation.json` holds the calls and
 their totals, so that the same route can be measured on two refs and the two files compared (the memory of the whole plan is in `peak_mb`).
 
@@ -16,6 +16,7 @@ Never run on a PC for R04 or R14. Run by `.github/scripts/heavy_dispatch.py`.
 
 import argparse
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -28,7 +29,7 @@ import packed_routes  # noqa: E402  (this folder is on the path when the script 
 
 def resident_mb() -> int:
     try:
-        with open("/proc/self/status", encoding="utf-8") as handle:
+        with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
             return int(next(line for line in handle if line.startswith("VmRSS")).split()[1]) // 1024
     except (OSError, StopIteration):
         return 0

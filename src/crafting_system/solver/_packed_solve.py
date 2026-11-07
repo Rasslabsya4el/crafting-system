@@ -664,7 +664,7 @@ def evaluate_policy(
             info["linear_cut_rows"] = solver.q
             info["seconds_cycles"] = info.get("seconds_cycles", 0.0) + _tick() - began
         except (CyclesTooTangled, MemoryError, np.linalg.LinAlgError) as stopped:
-            exact, exact_error, reason = None, INF, (str(stopped) or type(stopped).__name__)
+            exact, exact_error, reason = None, INF, (str(stopped) or "the memory of the run, or a block of the chain that is singular in floats, stopped it")
             cost = {"rows": stopped.rows, "cells": stopped.cells, "allowed": stopped.allowed} if isinstance(stopped, CyclesTooTangled) else {}
         accepted = False
         if exact is not None and (exact_error <= DENSE_FALLBACK_RESIDUAL or reach_of(exact, exact_error) < reach):
