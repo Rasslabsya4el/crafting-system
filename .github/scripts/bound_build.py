@@ -1,10 +1,10 @@
 """Where the bound's build spends its time (ticket #626): a sampler of the stack and a timer around the stages of the build, for one route and variant.
 
-    python .github/scripts/bound_build.py profile --route R08 --variant kept|all [--cap-minutes N] [--out DIR]
+    python .github/scripts/bound_build.py profile --route R08 --variant kept|all [--cap-minutes N] [--out DIR] [--search]
 
 Builds the bound alone (`pattern_lower_bound`, the call `envelope_result` makes first) in the process it runs in, with a sampler of the main thread's stack
 (the time inside each function of the product, by the call stacks, every 0.2 s) and a timer around the named stages of the build. It reads the same inputs
-as `make_plan` (`actions_key.plan_of_job`) and ends at the end of the build, or at the cap with the tables printed. Writes `profile-ROUTE-VARIANT.txt` and
+as `make_plan` (`actions_key.plan_of_job`) and ends at the end of the build (with `--search`, at the end of the plan), or at the cap with the tables printed. Writes `profile-ROUTE-VARIANT.txt` and
 `.json` into `--out`. The planning of whole routes under the net is `actions_key.py` (`jobs`).
 
 Never run on a PC for a real route (docs/ci.md): run by `.github/scripts/heavy_dispatch.py`.
@@ -181,6 +181,8 @@ def profile_command(arguments: argparse.Namespace) -> int:
             abstract_edges=stats.abstract_edges, universe_growth=stats.universe_growth,
         )
         say(f"the build ends: {stats}")
+        if arguments.search:
+            return bound  # the search runs on, under the same sampler, to the end of the plan or the cap
         raise Stop
 
     _envelope_plan.pattern_lower_bound = hooked
@@ -203,6 +205,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     profile.add_argument("--variant", default="kept", choices=("kept", "all"))
     profile.add_argument("--cap-minutes", type=float, default=30)
     profile.add_argument("--out", default="out")
+    profile.add_argument("--search", action="store_true", help="go on through the search after the build (the sampler covers the whole plan)")
     profile.set_defaults(run=profile_command)
     arguments = parser.parse_args(argv)
     return arguments.run(arguments)
