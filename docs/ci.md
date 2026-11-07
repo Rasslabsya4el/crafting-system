@@ -186,6 +186,21 @@ and with `--skip-refused` a rule whose action the game refuses is skipped (for t
 
     $D --runners 4 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; 3) R=R08,R09,R13;; 4) R=R12,R10,R11,R05,V01;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
 
+### The naive crafter's long simulation (#555)
+
+`tests/naive_crafter/` plays a guide's route on concrete items by Monte Carlo, with rules written from the published mechanics and no import of
+the planner, and `tests/test_naive_crafter_routes.py` puts its mean (and the spend of each step) beside `risk.evaluate`'s mean of the given route within
+4 of its own standard errors. In CI each route plays a short run (R05, R10, R11: 3,000 plays; R13: 16, because one R13 play is about 100,000 orb uses and its mean
+is 12,000 Chaos, so its standard error there is a tenth of the mean). The real precision of R13 is this heavy run, which runs the same test file with
+`NAIVE_RUNS` plays, `NAIVE_SEED` (the runner's index) and `NAIVE_OUT` (a folder for each route's tally) and then pools the tallies of all the runners:
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 8'
+    $D --command 'case $RUNNER_INDEX in [1-5]) R=R13; N=1000;; 6) R=R05; N=30000;; 7) R=R10; N=30000;; 8) R=R11; N=30000;; esac; NAIVE_RUNS=$N NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR uv run --no-sync pytest -q -p no:cacheprovider -k $R tests/test_naive_crafter_routes.py'
+    gh run download <run id> --dir results
+    PYTHONPATH=tests python -m naive_crafter merge results        # pools the runners of a route, judges the pool, exits 1 on a disagreement
+
+An R13 play takes about 1.6 seconds, so 1,000 plays are about 30 minutes on one runner.
+
 ### R04 and R14 end to end (#70)
 
 Since the packed solver the two routes are planned by the CLI itself: with the default budget the decision finds no approximate level
