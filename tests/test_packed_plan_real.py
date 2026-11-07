@@ -10,6 +10,7 @@ R04, R14 and S02 are in `test_packed_heavy.py`.
 These tests need the cached dump and skip cleanly without it.
 """
 
+import math
 from pathlib import Path
 
 import pytest
@@ -161,7 +162,10 @@ def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(bot
     assert len(by_graph.gaps) == len(by_object.gaps)
     if not by_object.gaps:
         assert by_graph.risk.mean.value == pytest.approx(by_object.risk.mean.value, rel=1e-6)
-        assert by_graph.risk.p90.value == pytest.approx(by_object.risk.p90.value, rel=1e-6)
+        if math.isfinite(by_object.risk.p90.value):
+            assert by_graph.risk.p90.value == pytest.approx(by_object.risk.p90.value, rel=1e-6)
+        else:  # the object read leaves p90 unresolved when its grid has no coarse step (R13 since #576: no 0.0058 Chaos Transmutation to set the scale, #622); the graph read resolves it
+            assert math.isfinite(by_graph.risk.p90.value) and by_graph.risk.p90.value > by_graph.risk.mean.value
     assert (by_graph.divergence is None) == (by_object.divergence is None)
     if by_object.divergence is not None:
         assert by_graph.divergence.route_action == by_object.divergence.route_action
