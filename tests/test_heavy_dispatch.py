@@ -9,6 +9,7 @@ import email.message
 import importlib.util
 import io
 import json
+import os
 import sys
 import urllib.error
 from pathlib import Path
@@ -33,9 +34,11 @@ class FakeApi:
         self.dispatched = []
         self.on_poll = None  # called after every snapshot, to change the world between two polls
         self.reads = 0  # API calls made to look at the world (variables, run lists, jobs)
+        self.variable_reads = []  # the name of every variable read
 
     def variable(self, name, default):
         self.reads += 1
+        self.variable_reads.append(name)
         return self.variables.get(name, default)
 
     def active_runs(self):
@@ -545,3 +548,152 @@ def test_a_rate_limit_wait_inside_the_lock_keeps_the_lock_fresh(clock, monkeypat
     with heavy.DispatchLock() as lock:
         heavy.Api("o/r", "token").call("/x")
     assert len(touched) >= 25 and all(held is lock for held in touched)  # every minute of a 30 minute wait
+
+
+# ---- the secondary rate limit (ticket #567) -------------------------------------------------------------------------
+
+
+def secondary(retry_after, code=403, remaining=None):
+    """The secondary limit: a refusal with Retry-After and (unlike the hourly limit) no X-RateLimit-Remaining: 0."""
+    headers = email.message.Message()
+    if retry_after is not None:
+        headers["Retry-After"] = str(retry_after)
+    if remaining is not None:
+        headers["X-RateLimit-Remaining"] = remaining
+    return urllib.error.HTTPError("https://api.github.test/x", code, "secondary", headers, io.BytesIO(b'{"message":"You have exceeded a secondary rate limit"}'))
+
+
+def test_a_secondary_limit_waits_retry_after_and_goes_on(clock, monkeypatch, capsys):
+    start = clock.t
+    seen = serve(monkeypatch, secondary(60), b'{"value": "7"}')
+    assert heavy.Api("o/r", "token").variable("HEAVY_FLOOR", 4) == 7
+    assert len(seen) == 2  # one refused, one retried after the wait
+    assert 60 <= clock.t - start <= 65  # the Retry-After seconds, not POLL_SECONDS
+    out = capsys.readouterr().out.strip().splitlines()
+    assert len(out) == 1 and "secondary" in out[0] and "60" in out[0]
+
+
+def test_a_secondary_limit_wait_is_capped(clock, monkeypatch):
+    start = clock.t
+    serve(monkeypatch, secondary(10 * 3600), b"{}")
+    heavy.Api("o/r", "token").call("/x")
+    assert heavy.RETRY_AFTER_CAP_SECONDS < 3600
+    assert start + heavy.RETRY_AFTER_CAP_SECONDS <= clock.t <= start + heavy.RETRY_AFTER_CAP_SECONDS + 5
+
+
+def test_a_429_with_retry_after_is_waited_out_too(clock, monkeypatch):
+    start = clock.t
+    seen = serve(monkeypatch, secondary(30, code=429), b"{}")
+    heavy.Api("o/r", "token").call("/x")
+    assert len(seen) == 2 and 30 <= clock.t - start <= 35
+
+
+def test_a_secondary_limit_that_does_not_lift_gives_up_after_three_waits(clock, monkeypatch):
+    seen = serve(monkeypatch, *[secondary(5)] * 4)
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        heavy.Api("o/r", "token").call("/x")
+    assert len(seen) == 4
+
+
+def test_a_403_with_remaining_requests_and_no_retry_after_is_still_a_plain_refusal(clock, monkeypatch):
+    seen = serve(monkeypatch, secondary(None, remaining="4999"))
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        heavy.Api("o/r", "token").call("/x")
+    assert len(seen) == 1 and clock.waits == []
+
+
+# ---- the lock stays fresh in a long wait (ticket #567) ---------------------------------------------------------------
+# The lock directory's mtime is set from heavy.now(), the script's own clock, never from the file system's: a real
+# mtime is months away from the fake clock, so a test could not tell a fresh lock from a stale one.
+
+
+def test_a_long_rate_limit_wait_keeps_the_lock_younger_than_stale_and_nobody_takes_it_over(clock, monkeypatch):
+    serve(monkeypatch, limited(clock.t + 1800), b"{}")  # a 30 minute wait: six times LOCK_STALE_SECONDS
+    real_pause = heavy.pause
+    ages = []
+    lock_path = []
+
+    def watching_pause(seconds):
+        real_pause(seconds)
+        # the first wait step is the first look: keep_fresh runs after each pause, so the age here is at most one step
+        ages.append(clock.t - lock_path[0].stat().st_mtime)
+        with pytest.raises(heavy.LockBusy):  # a second session does not find the lock stale, so it cannot take it
+            with heavy.DispatchLock(no_wait=True):
+                pass
+
+    monkeypatch.setattr(heavy, "pause", watching_pause)
+    with heavy.DispatchLock() as lock:
+        lock_path.append(lock.path)
+        heavy.Api("o/r", "token").call("/x")
+        assert (lock.path / "owner").read_text(encoding="utf-8") == lock.token  # still the first session's
+    assert ages and max(ages) < heavy.LOCK_STALE_SECONDS
+    assert len(ages) >= 25  # it was waited out in minutes, and the check ran at every one
+
+
+def test_a_lock_nobody_keeps_fresh_is_taken_over_after_the_stale_time(clock):
+    abandoned = heavy.DispatchLock()
+    abandoned.__enter__()
+    heavy.DispatchLock.held = None  # its process is gone
+    clock.t += heavy.LOCK_STALE_SECONDS - 1
+    with pytest.raises(heavy.LockBusy):
+        heavy.DispatchLock(no_wait=True).__enter__()
+    clock.t += 2
+    with heavy.DispatchLock(no_wait=True) as taker:
+        assert (taker.path / "owner").read_text(encoding="utf-8") == taker.token
+
+
+# ---- the lock wait honours --max-wait and --no-wait (ticket #567) -----------------------------------------------------
+
+
+def test_no_wait_does_not_wait_for_a_held_lock_and_names_the_holder(clock, capsys):
+    api = FakeApi([])
+    with heavy.DispatchLock(what="run on other-branch"):
+        before = clock.t
+        assert heavy.cmd_run(api, args(runners=2, no_wait=True)) == 3
+        assert clock.t == before and clock.waits == []  # no sleeping
+    assert api.dispatched == [] and api.reads == 2  # only the two variables, read before the lock
+    out = capsys.readouterr().out.strip().splitlines()
+    assert len(out) == 1
+    assert "lock held by" in out[0] and f"process {os.getpid()}" in out[0] and "run on other-branch" in out[0] and "since" in out[0]
+
+
+def test_max_wait_ends_the_wait_for_a_held_lock(clock, capsys):
+    api = FakeApi([])
+    with heavy.DispatchLock(what="run on other-branch"):
+        start = clock.t
+        assert heavy.cmd_run(api, args(runners=2, max_wait=2)) == 2
+        assert 120 <= clock.t - start < 125  # two minutes, not the LOCK_STALE_SECONDS the holder is allowed
+    assert api.dispatched == [] and api.reads == 2  # only the two variables, read before the lock
+    out = capsys.readouterr().out.splitlines()
+    assert sum("lock held by" in line for line in out) == 1  # said once, not at every look
+    assert "gave up after 2 min" in out[-1]
+
+
+def test_the_lock_wait_goes_on_when_the_holder_lets_go(clock, monkeypatch, capsys):
+    api = FakeApi([])
+    holder = heavy.DispatchLock(what="run on other-branch")
+    holder.__enter__()
+    heavy.DispatchLock.held = None  # this test plays two processes
+    real_pause = heavy.pause
+    pauses = []
+
+    def pause_then_release(seconds):
+        real_pause(seconds)
+        pauses.append(seconds)
+        if len(pauses) == 3:
+            holder.__exit__()
+
+    monkeypatch.setattr(heavy, "pause", pause_then_release)
+    assert heavy.cmd_run(api, args(runners=2, max_wait=10)) == 0
+    assert len(api.dispatched) == 1
+    assert sum("lock held by" in line for line in capsys.readouterr().out.splitlines()) == 1
+
+
+# ---- status reads the variables once (ticket #567) --------------------------------------------------------------------
+
+
+def test_status_reads_each_variable_once(capsys):
+    api = FakeApi(SNAPSHOT["runs"])
+    assert heavy.cmd_status(api, type("S", (), {"no_logs": True})()) == 0
+    assert sorted(api.variable_reads) == ["CI_RESERVE", "HEAVY_FLOOR"]
+    assert "Heavy budget 4 = max(HEAVY_FLOOR=4, 20 - CI_RESERVE=4 - CI jobs 41)" in capsys.readouterr().out
