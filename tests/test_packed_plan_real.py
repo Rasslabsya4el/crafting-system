@@ -82,6 +82,31 @@ def test_the_packed_policy_reaches_the_goal_and_is_greedy_on_its_own_values(both
         assert value == pytest.approx(packed.solution.values[state], rel=1e-8)
 
 
+def test_every_policy_evaluated_by_bicgstab_gives_the_values_of_the_dense_solve_with_a_true_residual_that_small(both, data, monkeypatch):
+    """#584: R13 and R05 with `dense_limit` lowered to 0 (their merged policies have 13 states or fewer), so that BiCGSTAB runs on every evaluation: the values are the dense solve's, and the residual the solver reports is the true one."""
+    route, _, dense = both
+    if route not in ("R13", "R05"):
+        pytest.skip("R13 and R05 are the routes of the ticket")
+    infos = []
+    real = _packed.solve_packed
+
+    def lowered(graph, **keywords):
+        solved = real(graph, dense_limit=0, **keywords)
+        infos.append(solved.info)
+        return solved
+
+    monkeypatch.setattr(_packed, "solve_packed", lowered)
+    target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[route]}.yaml", data)
+
+    iterated = make_plan(data, target, load_price_file(PRICES), solver="packed")
+
+    iterated_infos = [info for info in infos if info.get("linear_iterations", 0) > 0]
+    assert iterated_infos or route == "R05"  # BiCGSTAB did run (R05's policy is one state that the start already solves, with no step of its own)
+    assert all(info["linear_residual"] <= 1e-10 for info in iterated_infos)  # the true relative residual of the last evaluation of each solve
+    assert iterated.mean_remaining == pytest.approx(dense.mean_remaining, rel=1e-9)
+    assert all(iterated.solution.values[state] == pytest.approx(value, rel=1e-8) for state, value in dense.solution.values.items())
+
+
 def test_the_risk_on_the_merged_chain_agrees_with_the_mean(both):
     _, reference, packed = both
 

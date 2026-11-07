@@ -153,6 +153,19 @@ def test_benchmark_solves_the_route_and_compares_it_with_the_guides_route_as_wri
 
 
 @HEAVY
+def test_the_divergence_chances_of_the_planner_and_the_guide_are_exact_whatever_the_size_of_the_chain(bench):
+    """#572: no chance of a divergence line is a bound, and none is left unmeasured but a state the guide's route cannot finish from."""
+    for name in ("given_route", "completed_route"):
+        block = bench[name]["divergences"]
+        assert block["count"] > 0
+        for row in block["shown"]:
+            assert "planner_chance_exact" not in row and row["planner_chance"] is not None  # the planner's policy finishes from every state of its main line
+            assert 0.0 <= row["planner_chance"] <= 1.0 and (row["route_chance"] is None or 0.0 <= row["route_chance"] <= 1.0)
+        if block["more"] is not None:
+            assert block["more"]["planner_unmeasured"] == 0
+
+
+@HEAVY
 def test_benchmark_records_the_published_odds(bench, route_id):
     odds = bench["published_odds"]
 
