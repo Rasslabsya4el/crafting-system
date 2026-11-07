@@ -13,7 +13,7 @@ benchmark route with a given route now carries:
 
 The lines are sorted by the larger of the two chances; lines past `SHOWN` are counted, with the sum of their chances under each policy
 (a sum over states, so a run that visits two of them is counted twice), never dropped in silence. A chance that is not measured is None
-(a state from which the route cannot finish), and one that is only an upper bound says so (`exact` false).
+(a state from which the route cannot finish); every other is the exact chance, whatever the size of the chain (ticket #572).
 """
 
 import time
@@ -72,9 +72,7 @@ def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
             "count": len(rest),
             "planner_chance": sum(row["planner_chance"] or 0.0 for row in rest),
             "route_chance": sum(row["route_chance"] or 0.0 for row in rest),
-            # the sums count a chance that is not measured as 0 and a bound as the number it is: these say how much of each sum is that
-            "planner_chance_exact": all(row["planner_chance_exact"] for row in rest if row["planner_chance"] is not None),
-            "route_chance_exact": all(row["route_chance_exact"] for row in rest if row["route_chance"] is not None),
+            # the sums count a chance that is not measured as 0: these say how many are left out of each sum
             "planner_unmeasured": sum(row["planner_chance"] is None for row in rest),
             "route_unmeasured": sum(row["route_chance"] is None for row in rest),
         }
@@ -105,20 +103,16 @@ def _row(plan: Plan, data: GameData, ids: dict, divergence: Divergence, planner:
         "solver_action": divergence.solver_action,
         "route_action": divergence.route_action,
         "planner_chance": planner.chance,
-        "planner_chance_exact": planner.exact,
         "route_chance": route.chance,
-        "route_chance_exact": route.exact,
     }
 
 
 # --- the words ----------------------------------------------------------------------------------
 
 
-def chance_text(chance: float | None, exact: bool = True) -> str:
-    """A chance for a line: `?` when not measured, `at most` when only an upper bound."""
-    if chance is None:
-        return "?"
-    return percent(chance) if exact else "at most " + percent(chance)
+def chance_text(chance: float | None) -> str:
+    """A chance for a line: `?` when not measured."""
+    return "?" if chance is None else percent(chance)
 
 
 def _one_line(text: str) -> str:
@@ -146,8 +140,8 @@ def divergence_lines(block: dict) -> list[str]:
         name = row["state"] or "a state"
         lines.append(
             f"    {name}: {_one_line(row['description'])}: the guide does {row['route_action']}, the planner does {row['solver_action']}"
-            f" (the planner visits it with chance {chance_text(row['planner_chance'], row['planner_chance_exact'])},"
-            f" the guide with chance {chance_text(row['route_chance'], row['route_chance_exact'])})"
+            f" (the planner visits it with chance {chance_text(row['planner_chance'])},"
+            f" the guide with chance {chance_text(row['route_chance'])})"
         )
     more = block["more"]
     if more is not None:
@@ -159,8 +153,8 @@ def divergence_lines(block: dict) -> list[str]:
 
 
 def _more_text(more: dict, side: str) -> str:
-    """One sum of the hidden rows: `at most` when any of its chances is a bound, and how many states are left out of it because their chance is not measured."""
-    text = ("" if more.get(f"{side}_chance_exact", True) else "at most ") + _sum_text(more[f"{side}_chance"])
+    """One sum of the hidden rows, and how many states are left out of it because their chance is not measured."""
+    text = _sum_text(more[f"{side}_chance"])
     unmeasured = more.get(f"{side}_unmeasured", 0)
     return f"{text} (and {unmeasured} not measured, left out)" if unmeasured else text
 

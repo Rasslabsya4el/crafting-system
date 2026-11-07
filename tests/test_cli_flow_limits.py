@@ -6,7 +6,8 @@ guarantee that says what the page then cannot promise:
 
 * the visits could not be solved to a relative residual of 1e-9 (a chance per use lost in the float, or a sparse solve that did not converge):
   the page leaves out how often a step is used and what it costs, and a step that joins states shows their plain mean;
-* the policy has more than `ENTRY_STATES` states that can finish: the share of runs that ever enter a step is left out.
+* the solve of the share of runs that ever enter a step did not settle: that share is left out of the steps it applies to (no size of policy
+  is a reason, since #490).
 
 A test per source, as in `tests/test_cli_limits.py`: each fails when `Plan` stops writing the limit. Then the three surfaces, and a given route's
 own section.
@@ -35,8 +36,8 @@ def unsolvable(monkeypatch):
     solved = _route_flow._visits
 
     def stuck(*arguments):
-        visits, _, _, position = solved(*arguments)
-        return visits * 0.0, False, None, position
+        visits, _, _ = solved(*arguments)
+        return visits * 0.0, False, None
 
     monkeypatch.setattr(_route_flow, "_visits", stuck)
 
@@ -61,13 +62,27 @@ def test_visits_that_could_not_be_solved_are_a_limit_that_says_what_the_page_the
     assert "relative residual" not in limit.guarantee  # the guarantee is in player words
 
 
-def test_a_policy_with_more_states_than_the_entry_limit_is_a_limit_that_keeps_every_other_number(monkeypatch):
-    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 0)
+def test_a_solve_of_the_share_of_runs_that_enter_a_step_that_does_not_settle_is_a_limit_that_keeps_every_other_number(monkeypatch):
+    from crafting_system.solver import Action, Outcome
 
-    limit = only(made().limits, STEPS)
+    def act(label, *outcomes):
+        return Action(label, 1.0, tuple(Outcome(state, weight) for state, weight in outcomes))
 
-    assert limit.what == "How often a run enters a step is not shown" and "made only up to 0 states" in limit.why
+    policy = {"S": act("s", ("S", 1), ("B", 1), ("goal", 1)), "B": act("b", ("S", 1), ("goal", 2))}  # two steps, both can finish
+    chain = _route_flow.chain_of_policy("S", policy, lambda state: state == "goal")
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 0)  # no inverse of N: one solve for each step
+    monkeypatch.setattr(_route_flow, "_entry_chance", lambda system, absorbing: None)
+
+    (limit,) = _route_flow.flow_limits(chain)
+
+    assert limit.what == "How often a run enters a step is not shown" and "did not settle for" in limit.why
     assert "only the share of runs that ever enter a step is missing" in limit.guarantee and limit.approximate
+
+
+def test_no_size_of_policy_is_a_limit_of_the_share_of_runs_that_enter_a_step(monkeypatch):
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 0)  # every solve by the iteration, as for a policy of tens of thousands of states
+
+    assert not of_kind(made().limits, STEPS)
 
 
 def test_the_text_the_json_and_the_page_show_the_limit_in_the_same_words(unsolvable):

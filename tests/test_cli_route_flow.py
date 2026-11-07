@@ -487,6 +487,29 @@ def test_landing_in_a_step_that_restarts_or_has_no_action_is_a_failure_and_a_res
     assert [(edge.kind, edge.to) for edge in step_with(flow, "T").edges] == [("failure", 1)]
 
 
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_the_chance_of_entering_a_step_is_the_same_by_the_inverse_and_by_one_solve_per_step_and_matches_the_older_dense_solve(monkeypatch, dense_limit):
+    """#490: a policy above the (lowered) dense limit has the chance of entering each step, equal to an independent computation.
+
+    The independent one: make the step's states dead ends (a run stops at the first of them), then the chance of ever visiting a state of the step is
+    the sum of the visit chances `reach_probabilities` (the older dense solve of the text report) gives its states.
+    """
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    checked = 0
+    for start, policy in finishing_policies(490, 150):
+        flow = build_flow(start, policy, is_goal)
+        assert flow.measured and flow.entered
+        for step in flow.steps[1:]:
+            if step.reached is None or step.action is None:
+                continue
+            absorbing = {state: action for state, action in policy.items() if state not in set(step.states)}
+            chances = reach_probabilities(start, absorbing, is_goal)
+            expected = sum(chances.get(state, 0.0) for state in step.states)
+            assert step.reached == pytest.approx(expected, rel=1e-8, abs=1e-12), (start, step.states)
+            checked += 1
+    assert checked > 100
+
+
 def test_the_chance_of_entering_a_step_that_joins_states_is_one_chance_not_the_sum_of_theirs():
     # S reaches A with 1/4, and A always goes on to B; A and B share the action x, so the run enters the step once.
     policy = {
@@ -571,7 +594,8 @@ def test_the_uses_of_a_chain_of_steps_add_up_to_the_mean_cost():
     assert sum(step.uses * step.action.cost for step in flow.steps) == pytest.approx(evaluate(policy, 0, is_goal).mean.value)
 
 
-def test_a_chain_of_more_steps_than_the_old_cap_is_still_solved():
+def test_a_chain_of_more_steps_than_the_old_cap_is_still_solved(monkeypatch):
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 2000)  # one inverse for the 1,599 steps' entry chances, not 1,599 solves (this test is about the cap)
     policy = chain(1600)  # 1,600 steps: the old cap was 1,500 and left the uses and the costs out
 
     flow = build_flow(0, policy, is_goal)
@@ -588,15 +612,27 @@ def test_no_silent_limit_is_left_in_the_module():
     assert not hasattr(_route_flow, "MAX_STEPS") and not hasattr(_route_flow, "REFINE_WORK")
 
 
-def test_a_chance_per_use_too_small_for_floats_leaves_the_flow_unmeasured_instead_of_failing():
-    policy = {"A": act("a", ("A", 10**17 - 1), ("goal", 1))}
+def test_a_chance_per_use_too_small_for_one_minus_p_in_floats_is_still_solved_because_no_one_minus_p_is_formed():
+    policy = {"A": act("a", ("A", 10**17 - 1), ("goal", 1))}  # 1 - 1e-17 is 1.0 in floats: the inverse of I - Q is singular
 
     flow = build_flow("A", policy, is_goal)
 
-    assert not flow.measured
+    assert flow.measured and flow.entered
     (step,) = flow.steps
-    assert step.uses is None and step.reached == 1.0 and not flow.entered
+    assert step.uses == pytest.approx(1e17, rel=1e-9) and step.reached == 1.0  # one in 1e17 leaves: 1e17 uses, as the closed form says
     assert [(edge.kind, edge.to) for edge in step.edges] == [("goal", None), ("again", 1)]
+
+
+def test_a_flow_whose_visits_no_solve_reaches_stays_unmeasured_instead_of_failing(monkeypatch):
+    monkeypatch.setattr(_route_flow, "_linear", lambda *arguments: None)
+    monkeypatch.setattr(_route_flow, "ACCEPT_RESIDUAL", -1.0)  # the dense inverse of the small chain is no longer accepted either
+    policy = {"A": act("a", ("A", 1), ("goal", 1))}
+
+    flow = build_flow("A", policy, is_goal)
+
+    assert not flow.measured and not flow.entered
+    (step,) = flow.steps
+    assert step.uses is None and step.reached == 1.0
 
 
 def line(length: int) -> dict[int, Action]:

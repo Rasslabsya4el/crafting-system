@@ -366,16 +366,30 @@ DENSE_FALLBACK_RESIDUAL = 1e-10
 
 
 def _bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.ndarray, tol: float, max_iter: int):
-    """BiCGSTAB for `matvec(x) = b`: returns `(x, relative residual, iterations)`; the best iterate seen."""
+    """BiCGSTAB for `matvec(x) = b`: returns `(x, relative residual, iterations)`.
+
+    The residual returned is the TRUE one, `|b - A x| / |b|` of the iterate returned, made by one more product. The residual of the
+    method's own recurrence is not that: on a stiff system it drifts from the true one, can be 1e-21 while the iterate is wrong by
+    a factor of 1e16 (tickets #584 and #600), and so it only decides when the method stops. The iterate returned is the better, by
+    the true residual, of the best the recurrence saw and the start `x0` (whose residual is true: it is `b - A x0`). Every caller
+    reads this number and nothing else; it is the one place a solve is checked.
+    """
     with np.errstate(all="ignore"):
-        return _bicgstab_run(matvec, b, x0, tol, max_iter)
+        x, iterations, first, _ = _bicgstab_run(matvec, b, x0, tol, max_iter)
+        bnorm = max(float(np.linalg.norm(b)), 1e-300)
+        true = float(np.linalg.norm(b - matvec(x)))
+        if not true <= first:  # the recurrence ended on an iterate worse than the start (or not a number)
+            x, true = x0.copy(), first
+        return x, true / bnorm, iterations
 
 
 def _bicgstab_run(matvec, b, x0, tol, max_iter):
+    """`(best iterate by the recurrence, iterations, true norm of b - A x0, the relative residual the recurrence claims for that iterate)`."""
     x = x0.copy()
     r = b - matvec(x)
     bnorm = max(float(np.linalg.norm(b)), 1e-300)
     rnorm = float(np.linalg.norm(r))
+    first = rnorm
     best_x, best = x.copy(), rnorm
     r_hat = r.copy()
     rho = alpha = omega = 1.0
@@ -430,7 +444,22 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
         rnorm = float(np.linalg.norm(r))
         if rnorm < best:
             best_x, best = x.copy(), rnorm
-    return best_x, best / bnorm, it
+    return best_x, it, first, best / bnorm
+
+
+def bicgstab_checked(matvec, b: np.ndarray, x0: np.ndarray, tol: float):
+    """BiCGSTAB with restarts: `(x, true relative residual, iterations)` (the module text of `_bicgstab` says which residual).
+
+    A run that stalls, or stops on a recurrence residual that is not the true one, starts again from its best iterate with a fresh
+    recurrence (`b - A x` made anew), at most `BICGSTAB_RESTARTS` times, until the true residual is within 10 `tol`.
+    """
+    x, residual, iterations = _bicgstab(matvec, b, x0, tol, BICGSTAB_ITERATIONS)
+    for _ in range(BICGSTAB_RESTARTS):
+        if residual <= 10 * tol:
+            break
+        x, residual, more = _bicgstab(matvec, b, x, tol, BICGSTAB_ITERATIONS)
+        iterations += more
+    return x, residual, iterations
 
 
 def evaluate_policy(
@@ -509,17 +538,20 @@ def evaluate_policy(
                 out[by_edges] -= np.add.reduceat(edge_weight * extended[edge_column], edge_offsets)
             return out
 
-        solved, residual, iterations = _bicgstab(matvec, rhs, start[states], tol, BICGSTAB_ITERATIONS)
-        for _ in range(BICGSTAB_RESTARTS):  # a stalled run starts again from its best iterate with a fresh recurrence
-            if residual <= 10 * tol:
-                break
-            solved, residual, more = _bicgstab(matvec, rhs, solved, tol, BICGSTAB_ITERATIONS)
-            iterations += more
+        solved, residual, iterations = bicgstab_checked(matvec, rhs, start[states], tol)
         info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
-        info["linear_residual"] = residual
+        info["linear_residual"] = residual  # the true one, |rhs - A x| / |rhs| of the values taken (or of the iterate the dense solve replaces)
         info["policy_states"], info["policy_edges"], info["shared_edges"] = m, len(edge_weight), len(shared_prob)
-        if residual > DENSE_FALLBACK_RESIDUAL and m <= DENSE_FALLBACK:  # a stiff system: the dense solve is slow but sure
-            solved = dense()
+        if not residual <= DENSE_FALLBACK_RESIDUAL:  # a stiff system: the dense solve is slow but sure
+            if m > DENSE_FALLBACK and not residual <= ACCEPT_BOUND:  # a stop-and-say-so rail: a residual this large is not a value the certificate could accept
+                raise ConvergenceError(
+                    f"the evaluation of a policy of {m:,} states did not reach a true residual of {ACCEPT_BOUND:g} (it is {residual:.3g}) "
+                    f"and the dense solve is made only up to {DENSE_FALLBACK:,} states",
+                    INF,
+                )
+            if m <= DENSE_FALLBACK:
+                solved = dense()
+                info["linear_replaced"] = info.get("linear_replaced", 0) + 1
     if not np.all(np.isfinite(solved)):
         raise ConvergenceError("the evaluation of a policy did not give finite values", INF)
     values[states] = solved

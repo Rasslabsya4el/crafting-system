@@ -20,7 +20,7 @@ from packed_routes import inputs, peak_mb, watch_memory
 
 from crafting_system.cli import _packed, make_plan
 from crafting_system.cli._route_chain import chain_of_plan
-from crafting_system.cli._route_flow import _can_finish, _visits
+from crafting_system.cli._route_flow import _can_finish, _solved
 
 
 def components(m: int, s: np.ndarray, d: np.ndarray, nodes: np.ndarray):
@@ -139,7 +139,8 @@ def main() -> None:
     dst = chain.dst
     finishing = _can_finish(m, src, dst, dst >= m, dst < m)
     say(f"chain: {m:,} states, {len(dst):,} edges, {int(finishing.sum()):,} can finish")
-    visits, solved, _, _ = _visits(chain, src, finishing)
+    done = _solved(chain)
+    visits, solved = done.visits, done.solved
     say(f"visits solved: {solved}; sum of visits x cost {float((visits * chain.cost).sum()):.4f}, plan mean {plan.mean_remaining:.4f}")
     inside = finishing[src] & (dst < m) & finishing[np.minimum(dst, m - 1)]
     s, d = src[inside], dst[inside]
