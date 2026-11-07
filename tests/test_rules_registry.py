@@ -76,7 +76,12 @@ def claims_dir(root: Path, files: dict[str, str | list[dict]]) -> Path:
     return folder
 
 
+PAGE = {"page_statement": "Only Craft of Exile's code gives this count.", "page_source": "Craft of Exile's code only"}
+
+
 def load_entry(tmp_path: Path, **changes) -> Mapping[str, Rule]:
+    if changes.get("approximate") is True:  # an approximate claim also carries its words for the page (#553); a test of another field need not repeat them
+        changes = {**{key: value for key, value in PAGE.items() if key not in changes}, **changes}
     return load_registry(claims_dir(tmp_path, {"fam.yaml": [valid_entry(**changes)]}))
 
 
@@ -427,6 +432,34 @@ def test_an_approximate_claim_loads_with_its_flag_and_reason(tmp_path):
 
     assert rule.approximate is True
     assert rule.approximate_reason == REASON
+    assert (rule.page_statement, rule.page_source) == (PAGE["page_statement"], PAGE["page_source"])
+
+
+@pytest.mark.parametrize(
+    ("changes", "words"),
+    [
+        ({"page_statement": MISSING}, "needs a page_statement"),
+        ({"page_source": MISSING}, "needs a page_source"),
+        ({"page_statement": ""}, "page_statement must be a non-empty string"),
+        ({"page_source": "   "}, "page_source must be a non-empty string"),
+        ({"page_statement": 5}, "page_statement must be a non-empty string"),
+        ({"page_statement": "first line\nsecond line"}, "page_statement must be one line"),
+        ({"page_source": "first line\nsecond line"}, "page_source must be one line"),
+    ],
+)
+def test_an_approximate_claim_without_its_words_for_the_page_is_rejected_naming_the_claim(tmp_path, changes, words):
+    entry = valid_entry(approximate=True, approximate_reason=REASON, **{**PAGE, **changes})
+
+    with pytest.raises(RegistryError) as raised:
+        load_registry(claims_dir(tmp_path, {"fam.yaml": [entry]}))
+
+    assert "fam.thing" in str(raised.value) and words in str(raised.value)
+
+
+@pytest.mark.parametrize("field", ["page_statement", "page_source"])
+def test_the_words_for_the_page_are_refused_on_a_claim_that_is_not_approximate(tmp_path, field):
+    with pytest.raises(RegistryError, match=f"{field} is allowed only with approximate: true"):
+        load_registry(claims_dir(tmp_path, {"fam.yaml": [valid_entry(**{field: PAGE[field]})]}))
 
 
 @pytest.mark.parametrize(

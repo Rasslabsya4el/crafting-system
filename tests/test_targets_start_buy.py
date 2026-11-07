@@ -17,7 +17,7 @@ from crafting_system.cli._plan import PlanError, resolve_start_price
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.prices.trade_query import BuyMod, BuySpec, TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
-from crafting_system.targets import StartBuyError, buy_spec_of, parse_target, start_price_key
+from crafting_system.targets import StartBuyError, base_in_words, buy_spec_of, parse_target, plain_base_names, start_price_key
 from crafting_system.targets.start_buy import (
     TRADE_CATEGORY,
     differences_between_same_name_bases,
@@ -425,7 +425,7 @@ def test_a_price_taken_for_another_rarity_and_with_no_base_type_says_both():
 
     found = resolve_start_price(DATA, target, prices, None)
 
-    assert found.taken_for == "price taken for another item (rarity nonunique, any accessory.amulet base)"
+    assert found.taken_for == "price taken for another item (rarity nonunique, any amulet base)"
 
 
 def test_a_lower_minimum_is_a_wider_item_and_a_price_with_no_stored_search_has_no_line():
@@ -564,7 +564,7 @@ def test_a_poe_ninja_price_is_refused_for_a_shared_name_when_the_bases_differ_in
 
     assert str(error.value) == (
         "the price of the start item 'Paua Amulet [Amulet1], item level 84-100, fractured +(42-45)% to Lightning Resistance' is refused: "
-        f"it comes from poe.ninja, whose line has a name and no base id, and the name 'Paua Amulet' belongs to 2 bases (Amulet1, Amulet1Twin) that differ in {differ}, "
+        f"it comes from poe.ninja, whose line has a name and no base id, and the name 'Paua Amulet' belongs to 2 bases that differ in {differ}, "
         "so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
     )
 
@@ -600,3 +600,52 @@ def test_the_price_given_on_the_command_line_is_kept_for_a_shared_name_that_diff
     data, target = shared_amulet(**DIFFERENT_IMPLICIT)
 
     assert resolve_start_price(data, target, ninja_prices(data, target), 3.0).chaos == 3.0
+
+
+# -- the page names a base by its game name, never its id (#553, #481) -------------------------------------------------------
+
+
+def test_two_bases_of_one_name_are_told_apart_in_words_by_class_then_implicit_then_pool():
+    assert base_in_words(DATA, AMULET) == ""
+    data, _ = shared_amulet(**DIFFERENT_CLASS)
+    assert base_in_words(data, TWIN) == "item class Ring" and base_in_words(data, AMULET) == "item class Amulet"
+    data, _ = shared_amulet(**DIFFERENT_IMPLICIT)
+    assert base_in_words(data, TWIN) == "the implicit +(25-40) to maximum Life"
+    assert base_in_words(data, AMULET) == "the implicit (20-30)% increased Mana Regeneration Rate"
+    data, _ = shared_amulet(**DIFFERENT_MOD_TAGS)
+    assert base_in_words(data, TWIN) == "a different pool of mods"
+    data, _ = shared_amulet(**DIFFERENT_CLASS, **DIFFERENT_IMPLICIT)
+    assert base_in_words(data, TWIN) == "item class Ring, the implicit +(25-40) to maximum Life"
+
+
+@pytest.mark.parametrize("fields", [{}, LEGACY_TAG], ids=["identical twin", "twin with a tag no mod reads"])
+def test_two_bases_that_play_alike_are_said_to_play_alike_and_not_told_by_an_id(fields):
+    data, _ = shared_amulet(**fields)
+
+    assert base_in_words(data, AMULET) == base_in_words(data, TWIN) == "one of 2 bases of this name that play alike"
+
+
+def test_the_price_name_of_a_shared_base_is_said_in_words_for_the_page_and_keeps_its_id_in_the_key():
+    data, target = shared_amulet(**DIFFERENT_IMPLICIT)
+    key = start_price_key(data, target)
+
+    assert key.startswith("Paua Amulet [Amulet1], ")  # the key of the price file and the JSON is not changed
+    shown = plain_base_names(data, key)
+    assert shown.startswith("Paua Amulet (the implicit (20-30)% increased Mana Regeneration Rate), item level 84-100")
+    assert "[" not in shown and "Amulet1" not in shown
+
+
+def test_the_vendor_line_of_a_shared_base_is_said_in_words_and_a_bracket_that_is_no_base_is_left():
+    data, _ = shared_amulet(**LEGACY_TAG)
+
+    assert plain_base_names(data, "Paua Amulet [Amulet1] (ilvl 86)") == "Paua Amulet (one of 2 bases of this name that play alike) (ilvl 86)"
+    assert plain_base_names(data, "Lion Pelt (ilvl 84)") == "Lion Pelt (ilvl 84)"
+    assert plain_base_names(data, "an item [not a base]") == "an item [not a base]"
+    assert plain_base_names(DATA, "Paua Amulet [Amulet1], item level 84") == "Paua Amulet [Amulet1], item level 84"  # a name one base has has no id to say
+    assert plain_base_names(DATA, "price [default]") == "price [default]"
+
+
+def test_an_item_class_is_named_without_an_article_so_no_a_or_an_is_guessed():
+    data, _ = shared_amulet(item_class="One Hand Sword")
+
+    assert base_in_words(data, TWIN) == "item class One Hand Sword"  # not "an one hand sword" (the Energy Blade bases)

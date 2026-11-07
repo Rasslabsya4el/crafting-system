@@ -92,6 +92,8 @@ rules:
       3: 72
   approximate: true
   approximate_reason: Player measurements (the 3.25 guide, 217 to 424 events per row, largely the same in 3.26); the wiki rounds the same table differently.
+  page_statement: "How many mods a recombination keeps on a side depends only on how many mods the two inputs hold on that side together; the planner uses the guide's table."
+  page_source: "a player guide's measurements in 3.25 (217 to 424 events per row), largely the same in 3.26"
 - id: recombinator.count_table_wiki
   statement: The wiki's estimate of the same table, rounded differently; the action reads it as a second table for a sensitivity run.
   source_kind: wiki
@@ -122,6 +124,8 @@ rules:
       3: 70
   approximate: true
   approximate_reason: Player measurements (the 3.25 guide, 217 to 424 events per row, largely the same in 3.26); the wiki rounds the same table differently.
+  page_statement: "The wiki gives the same table of kept mods per side, rounded differently; the planner reads it as a second table to see how much the difference matters."
+  page_source: "the wiki's rounding of the same player measurements"
 - id: recombinator.output_capped_by_chosen_base
   statement: The output holds at most the chosen base's affix cap per side (3 and 3 on an ordinary rare) even if the pool is larger.
   source_kind: wiki
@@ -153,6 +157,8 @@ rules:
   value: 0.5
   approximate: true
   approximate_reason: Measured in 3.25 only; 3.26 reports it no longer holds when a side holds only exclusive mods, and no number says what it is then.
+  page_statement: "A recombination fills the prefixes or the suffixes first with equal chance."
+  page_source: "measured in 3.25; 3.26 reports it no longer holds when one side holds only exclusive mods"
 - id: recombinator.nnn_needs_native_base
   statement: A mod that needs a specific base (influenced, attribute-bound, base-type-bound) counts in the pool but cannot appear if the chosen base is not native to it. A fractured mod counts only if its own base is chosen.
   source_kind: wiki
@@ -205,6 +211,8 @@ rules:
     - 1.6
   approximate: true
   approximate_reason: Fitted on 40 + 28 observations, weights 250 to 1500; weights below 250 extrapolated; no source gives the formula.
+  page_statement: "Which eligible mods a recombination picks depends on their weight, a higher weight being more likely, but the formula is not published; the planner fits one."
+  page_source: "a fit to 68 player observations with weights from 250 to 1500; no source gives the formula"
 - id: recombinator.rarer_mods_note_3_25_1
   statement: Patch 3.25.1 raised the chance of rarer mods against the earlier rule; it does not say rarer mods are kept more often than common ones.
   source_kind: official
@@ -266,6 +274,8 @@ rules:
   date_checked: 2026-10-31
   approximate: true
   approximate_reason: "One anecdote from a thread the moderators removed as misinformation; it contradicts the 50/50 base rule and is more likely bad luck than a rule change."
+  page_statement: "One report says a recombination of a very low-weight mod against heavier ones always returned the heavier base in 3.27, as if weights had begun to matter."
+  page_source: "one anecdote from a thread the moderators removed as misinformation"
 - id: recombinator.weights_as_proportional_shares
   statement: In 3.26 the guide's author computes recombination odds with spawn weights as proportional shares ("if we assume the weights are not modified in any way") and says the odds for low-weight mods fall below the equal-chance figure.
   source_kind: owner
@@ -334,6 +344,8 @@ rules:
   date_checked: 2026-11-01
   approximate: true
   approximate_reason: Only Craft of Exile's code (the stale Sentinel recombinator) gives the rule; it matches the guide's 1p/1s results.
+  page_statement: "A recombination gives a normal item with no mod, a magic item with at most one mod per side, and a rare item when a side holds two or more."
+  page_source: "Craft of Exile's code, which matches the guide's results"
 - id: recombinator.exclusive_mod_weight
   statement: An exclusive mod (crafted, essence-only or any mod its own input could not roll) is drawn as if its weight were 1000, the figure the guide's author computes with.
   source_kind: owner
@@ -344,3 +356,5 @@ rules:
   value: 1000
   approximate: true
   approximate_reason: The game data gives crafted and special mods weight 0 and only the guide author's assumption of 1000 gives a draw weight.
+  page_statement: "An exclusive mod (crafted, essence-only, or one its own input could not roll) is drawn as if its weight were 1000."
+  page_source: "the guide author's assumption; the game data gives such mods weight 0"

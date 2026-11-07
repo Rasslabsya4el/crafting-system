@@ -27,6 +27,8 @@ rules:
     quote: "can be used to re-roll the values of all random explicit modifiers on a piece of equipment"
     approximate: true
     approximate_reason: "No source states whether a Divine Orb rerolls the value of a crafted mod; the wiki says it rerolls the explicit modifiers and a crafted mod is one."
+    page_statement: "A Divine Orb rerolls the values of a crafted (bench) mod like those of any other mod."
+    page_source: "the wiki says it rerolls the explicit mods; no source says whether a crafted mod counts"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -37,6 +39,8 @@ rules:
     quote: "the actual value of the stat in the cases where minimum and maximum are not the same will be randomized within with equal chances"
     approximate: true
     approximate_reason: "No source says whether the stats of a hybrid mod roll independently; the model assumes they do."
+    page_statement: "The two stats of a hybrid mod are rolled independently of each other when a Divine Orb rerolls it."
+    page_source: "the wiki states equal chances for each stat; nothing says whether hybrid stats are linked"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 

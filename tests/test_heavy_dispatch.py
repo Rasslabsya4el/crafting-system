@@ -642,6 +642,66 @@ def test_a_lock_nobody_keeps_fresh_is_taken_over_after_the_stale_time(clock):
         assert (taker.path / "owner").read_text(encoding="utf-8") == taker.token
 
 
+# ---- a half-made lock, and a slow call inside the lock (ticket #581) -------------------------------------------------
+
+
+def test_a_failing_touch_after_the_mkdir_removes_the_lock_and_raises_the_error_not_lockbusy(clock, monkeypatch):
+    def broken_touch(path):
+        raise OSError("disk error")
+
+    monkeypatch.setattr(heavy, "touch", broken_touch)
+    with pytest.raises(OSError, match="disk error") as raised:
+        heavy.DispatchLock(no_wait=True).__enter__()
+    assert not isinstance(raised.value, heavy.LockBusy)
+    assert not (heavy.STATE_DIR / "dispatch.lock").exists() and heavy.DispatchLock.held is None
+    assert clock.waits == []  # it did not wait on its own half-made lock
+    monkeypatch.undo()
+    with heavy.DispatchLock(no_wait=True):  # and the next taker finds a free lock
+        pass
+
+
+def test_a_failing_info_write_after_the_mkdir_removes_the_lock_and_raises_the_error_not_lockbusy(clock, monkeypatch):
+    real_write = Path.write_text
+
+    def failing_write(self, text, *rest, **keywords):
+        if self.name == "info":
+            raise OSError("disk full")
+        return real_write(self, text, *rest, **keywords)
+
+    monkeypatch.setattr(Path, "write_text", failing_write)
+    with pytest.raises(OSError, match="disk full") as raised:
+        heavy.DispatchLock().__enter__()
+    assert not isinstance(raised.value, heavy.LockBusy)
+    assert not (heavy.STATE_DIR / "dispatch.lock").exists() and heavy.DispatchLock.held is None
+    assert clock.waits == []
+
+
+def test_slow_api_calls_inside_the_lock_keep_it_fresh_so_a_second_taker_cannot_take_it_over(clock, monkeypatch):
+    slow = 200  # seconds per call: one call is under LOCK_STALE_SECONDS, a decision of several calls is far over it
+    assert slow < heavy.LOCK_STALE_SECONDS
+    ages = []
+    path = []
+
+    def slow_urlopen(request, timeout=None):
+        ages.append(clock.t - path[0].stat().st_mtime)  # how old the lock is as this call starts
+        with pytest.raises(heavy.LockBusy):  # a second session finds it fresh
+            with heavy.DispatchLock(no_wait=True):
+                pass
+        clock.t += slow
+        return Reply(b'{"value": "4", "workflow_runs": []}')
+
+    monkeypatch.setattr(heavy.urllib.request, "urlopen", slow_urlopen)
+    api = heavy.Api("o/r", "token")
+    start = clock.t
+    with heavy.DispatchLock() as lock:
+        path.append(lock.path)
+        decided = heavy.decide(api, args(runners=2))  # variables and run lists: well over LOCK_STALE_SECONDS in all
+        assert clock.t - start > 2 * heavy.LOCK_STALE_SECONDS
+        assert (lock.path / "owner").read_text(encoding="utf-8") == lock.token  # still the first session's
+    assert decided["count"] == 2
+    assert len(ages) > 4 and max(ages) <= slow
+
+
 # ---- the lock wait honours --max-wait and --no-wait (ticket #567) -----------------------------------------------------
 
 

@@ -53,6 +53,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "No source lists which modifiers a damage swap accepts and Craft of Exile has no damage swap, so the stat set is the main chat's choice."
+    page_statement: "The list of mods that a Harvest damage swap accepts as a source is the planner's own choice."
+    page_source: "no source lists them, and Craft of Exile has no damage swap"
     value: ["X_damage_+%", "local_minimum_added_X_damage", "spell_minimum_added_X_damage", "attack_minimum_added_X_damage"]
 
   - id: harvest_swap.damage_swap_excludes_crit_multiplier
@@ -80,6 +82,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "No source but Craft of Exile's code (package.js); the uniform choice among sources is read from it, not verified in the game for 3.29."
+    page_statement: "When several mods of the item qualify for a Harvest swap, the swap changes one of them chosen equally."
+    page_source: "Craft of Exile's code only; not checked in the game for 3.29"
 
   - id: harvest_swap.refused_without_source
     statement: "A swap is refused, and nothing is consumed, when no modifier of the item qualifies as a source."
@@ -98,6 +102,8 @@ rules:
     date_checked: 2026-10-31
     approximate: true
     approximate_reason: "The wiki table gives the side-lock rule for the resistance swap only; for the damage swap it is taken by analogy, not verified."
+    page_statement: "A Harvest damage swap does not take a mod from a side that is locked by Prefixes or Suffixes Cannot Be Changed, as the resistance swap does not."
+    page_source: "the wiki's table for the resistance swap; the damage swap is taken by analogy"
 
   - id: harvest_swap.fractured_and_crafted_mods_not_swapped
     statement: "A fractured modifier is not a source (it cannot be changed). APPROXIMATE (ADR-0028) for the crafted ones: an ordinary crafted (bench) modifier is not a source either, because it has no tier to keep; the main chat's choice, no source says."
@@ -108,6 +114,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "That a fractured modifier is no source is documented; that an ordinary crafted (bench) modifier is no source either is the main chat's choice, no source says."
+    page_statement: "A Harvest swap does not take a fractured mod, and the planner also does not take a crafted (bench) mod, which has no tier to keep."
+    page_source: "the wiki for fractured mods; the crafted case is the planner's own choice"
 
   - id: harvest_swap.refused_on_corrupted
     statement: "A corrupted item takes no swap."

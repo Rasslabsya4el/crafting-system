@@ -31,6 +31,8 @@ CONFLICT_ODDS = make_rule(
     "conflict.odds",
     approximate=True,
     approximate_reason="the odds are a fit to a sample of 525 uses; no other source gives them",
+    page_statement="The odds are a fit to a sample of 525 uses.",
+    page_source="one player sample; no other source gives them",
 )
 
 
@@ -56,7 +58,8 @@ def test_golden_a_route_whose_action_reads_an_approximate_claim_names_it_on_the_
     html = render_page(Page("Test page", (build_section(route_input(plan), DATA, anchor="policy"),)))
 
     assert "Approximate inputs" in html
-    assert "conflict.odds: the odds are a fit to a sample of 525 uses" in html
+    assert "The odds are a fit to a sample of 525 uses. Source: one player sample; no other source gives them." in html
+    assert "conflict.odds" not in html  # the page names the claim by its statement and its source, not its id (#553)
     assert_golden("approximate_conflict", html)
 
 

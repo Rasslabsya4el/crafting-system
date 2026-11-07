@@ -166,6 +166,8 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Three sources agree (the sheet's tier counts, the sheet's pool weights, Craft of Exile's totals); no first-party statement."
+    page_statement: "Mods whose game id marks them as Battle Royale copies are left out of every mod pool, because the game does not roll them."
+    page_source: "a player sheet's tier counts and pool weights and Craft of Exile's totals agree; no official statement"
     value:
       id_marker: Royale
       excluded_ids:

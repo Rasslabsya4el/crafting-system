@@ -159,6 +159,8 @@ rules:
     quote: "Allows an item to foresee the result of the next Currency item used on it"
     approximate: true
     approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    page_statement: "A Hinekora's Lock shows the result of the next Orb of Transmutation used on the item."
+    page_source: "the Lock's own item text; no source names this currency"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -169,6 +171,8 @@ rules:
     quote: "Allows an item to foresee the result of the next Currency item used on it"
     approximate: true
     approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    page_statement: "A Hinekora's Lock shows the result of the next Orb of Alteration used on the item."
+    page_source: "the Lock's own item text; no source names this currency"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -179,6 +183,8 @@ rules:
     quote: "Allows an item to foresee the result of the next Currency item used on it"
     approximate: true
     approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    page_statement: "A Hinekora's Lock shows the result of the next Orb of Augmentation used on the item."
+    page_source: "the Lock's own item text; no source names this currency"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -189,6 +195,8 @@ rules:
     quote: "Allows an item to foresee the result of the next Currency item used on it"
     approximate: true
     approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    page_statement: "A Hinekora's Lock shows the result of the next Orb of Alchemy used on the item."
+    page_source: "the Lock's own item text; no source names this currency"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -199,6 +207,8 @@ rules:
     quote: "Allows an item to foresee the result of the next Currency item used on it"
     approximate: true
     approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    page_statement: "A Hinekora's Lock shows the result of the next Orb of Scouring used on the item."
+    page_source: "the Lock's own item text; no source names this currency"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -209,6 +219,8 @@ rules:
     quote: "Allows an item to foresee the result of the next Currency item used on it"
     approximate: true
     approximate_reason: "Only the Lock's item text covers the Vaal Orb; Maxroll named it in 3.22 (2023-09-12), the 3.23.0 note removed only the Altar of Corruption and no later note changes it, but 3.29 itself is not stated."
+    page_statement: "A Hinekora's Lock shows the result of the next Vaal Orb used on the item."
+    page_source: "a Maxroll guide of 2023 and the Lock's item text; no patch note since changes it, but 3.29 itself does not state it"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 

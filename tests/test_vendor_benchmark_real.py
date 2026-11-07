@@ -138,7 +138,8 @@ def test_the_report_names_the_base_and_the_gems_with_their_counts_the_item_back_
     assert text.isascii()
     assert any(line.startswith("Start item (") and "a Normal base)" in line for line in lines)  # the start is the Normal base the recipe takes, not the helmet it gives back
     assert "Start item (Helmet with +1" not in text
-    assert "vendor.gem_qualification_is_uncorrupted_skill_gems" in text  # the approximate claim of the gem rule is listed with the answer
+    assert "Quality gems for a vendor recipe are counted as uncorrupted skill gems only" in text  # the approximate claim of the gem rule is listed with the answer, in words (#604)
+    assert "vendor.gem_qualification_is_uncorrupted_skill_gems" not in text
 
 
 def test_the_first_step_is_built_from_the_chosen_candidate_alone(plan, data):

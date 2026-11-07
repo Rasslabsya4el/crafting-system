@@ -19,6 +19,8 @@ rules:
     date_checked: 2026-11-02
     approximate: true
     approximate_reason: "PoEDB lists three oils for an amulet; no admitted source gives the count for a ring, so three is used for both, which can only overstate a ring's burn. Clear Oil is taken as the cheapest oil because it is the first of the oil tiers."
+    page_statement: "Re-anointing a ring or an amulet is priced at three Clear Oils; the count for a ring is taken from the amulet's."
+    page_source: "the PoEDB list for an amulet; no source gives the count for a ring"
     value: {Clear Oil: 3}
 
   - id: burn.chromatic_socket_assumption
@@ -30,3 +32,5 @@ rules:
     date_checked: 2026-11-02
     approximate: true
     approximate_reason: "A modelling choice of the design (ADR-0056), not a measured rule: an item that states no sockets may really have none to colour, and the burn's price would then be unneeded."
+    page_statement: "A start item that states no sockets is taken to have one white socket when a Chromatic Orb's burn is priced."
+    page_source: "the planner's own assumption, not a measured rule"

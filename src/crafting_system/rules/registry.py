@@ -25,6 +25,17 @@ A claim may carry two optional fields beyond its provenance (ADR-0028):
 nothing); it marks a claim that no other source settles, and every answer that reads it names it.
 `approximate_reason` is a non-empty one-line string, required with `approximate: true` and refused
 without it. They are the model's uncertainty, not the certified gap of ADR-0023.
+
+An approximate claim also carries what a page says of it to a person who is not a developer (#553, #481):
+
+    page_statement: "A Blessed Orb rolls each implicit value uniformly over its range."
+    page_source: "Craft of Exile's code only"
+
+`page_statement` is one sentence in a player's words that says what is approximate; `page_source` is
+the kind of evidence in plain words. Both are non-empty one-line strings, required with
+`approximate: true` and refused without it. The page prints "statement Source: source."; the
+`approximate_reason` stays as written, for the people who maintain the claim, and goes to the JSON only.
+No ticket, ADR, workflow word, file name, dotted id or snake_case token belongs in either (a test holds it).
 """
 
 import re
@@ -187,12 +198,14 @@ class Rule:
     history: tuple[HistoryEntry, ...] = ()
     approximate: bool = False
     approximate_reason: str = ""
+    page_statement: str = ""  # what the page says is approximate, in a player's words (#553)
+    page_source: str = ""  # the kind of evidence, in plain words (#553)
 
 
 REQUIRED_FIELDS = (
     "id", "statement", "source_kind", "url", "quote", "patch_verified", "date_checked",
 )  # fmt: skip
-ALLOWED_FIELDS = (*REQUIRED_FIELDS, "value", "history", "approximate", "approximate_reason")
+ALLOWED_FIELDS = (*REQUIRED_FIELDS, "value", "history", "approximate", "approximate_reason", "page_statement", "page_source")
 HISTORY_REQUIRED_FIELDS = ("held_until", "source_kind", "url", "quote")
 HISTORY_FIELDS = (*HISTORY_REQUIRED_FIELDS, "statement", "value")
 
@@ -276,8 +289,9 @@ def _statement_marker(statement: object) -> str | None:
 def _check_approximate(entry: dict) -> str | None:
     """The problem with the `approximate` / `approximate_reason` pair of a claim, or None."""
     if "approximate" not in entry:
-        if "approximate_reason" in entry:
-            return "approximate_reason is allowed only with approximate: true"
+        for field in ("approximate_reason", "page_statement", "page_source"):
+            if field in entry:
+                return f"{field} is allowed only with approximate: true"
         marker = _statement_marker(entry.get("statement"))
         if marker is not None:
             return (
@@ -294,6 +308,14 @@ def _check_approximate(entry: dict) -> str | None:
         return "approximate_reason must be a non-empty string"
     if "\n" in reason or "\r" in reason:
         return "approximate_reason must be one line, with no newline"
+    for field in ("page_statement", "page_source"):
+        if field not in entry:
+            return f"approximate: true needs a {field}, said in a player's words for the page (#553)"
+        text = entry[field]
+        if not isinstance(text, str) or not text.strip():
+            return f"{field} must be a non-empty string"
+        if "\n" in text or "\r" in text:
+            return f"{field} must be one line, with no newline"
     return None
 
 

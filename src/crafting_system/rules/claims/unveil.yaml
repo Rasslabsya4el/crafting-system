@@ -36,6 +36,8 @@ rules:
     quote: 'let unveilModsNumber=3; ... for(var zy=0;zy<varr[k].mgrp.length;zy++){for(var zw=0;zw<chosengrp.length;zw++){if(varr[k].mgrp[zy]==chosengrp[zw]){mconflict=!0}}}'
     approximate: true
     approximate_reason: "Only Craft of Exile's code gives the draw (without replacement, one mod per family, the families of the item removed); the wiki says only that three options are shown. The code compares every modgroup of a mod (its data holds 13 hybrid generic mods with 2 or 3 modgroups), so the model counts every family; the research counted the first one only (wand Minion attack and cast speed 0.194 against 0.1996)."
+    page_statement: "An unveil offers up to three mods drawn by weight, no two of the same family, and none of a family the item already holds."
+    page_source: "Craft of Exile's code only; the wiki says only that three options are shown"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -54,6 +56,8 @@ rules:
     quote: "Unveil offer: **the same three mods after closing and reopening** (V-03 settled: the offer is drawn once; no free re-peek; R24's loop pays per veil)."
     approximate: true
     approximate_reason: "The owner knows that closing and reopening shows the same offer; whether a block crafted after the peek redraws it is unknown, and the model never redraws."
+    page_statement: "The offer of an unveil is drawn once and stays the same when the window is closed and opened again; whether a craft after the peek redraws it is unknown."
+    page_source: "the owner knows the same offer shows again; the rest is the planner's assumption"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
@@ -64,5 +68,7 @@ rules:
     quote: "Mechanics no source settles follow Craft of Exile, marked approximate (evidence rule, #28): ... no offer filter (V-06), no item-level gate (OPEN-04, V-04)."
     approximate: true
     approximate_reason: "No source documents whether Cannot roll Attack/Caster Modifiers or the item level touch the offer; the grill follows Craft of Exile, which applies neither."
+    page_statement: "The offer of an unveil is not filtered by Cannot roll Attack or Caster Modifiers, and no item level gates it."
+    page_source: "no source documents either; the planner follows Craft of Exile"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
