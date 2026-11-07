@@ -177,10 +177,10 @@ BENCHMARKS = (
                 (PIERCE, STRENGTH, ARROW, NO_ATTACK), ADDS, (), "100%",
                 fractured=(PIERCE,), crafted=(NO_ATTACK,), families=("IncreasedLife", "DamageWithWeaponTypeSkill"),
             ),
-            PublishedOutcome(  # the same Exalted Orb read at the target's tiers (owner rule: an unstated tier is the top tier)
+            PublishedOutcome(  # the same Exalted Orb read at the target's tiers (OR-1): the guide's 100% is of the family, so no number is published (#599)
                 "Exalted Orb", "adds the TOP tier of Maximum Life or of Increased Damage with Bow Skills (the target's tiers)",
                 "the quiver with the Pierce fractured, the Strength, the arrow and \"Cannot roll Attack Modifiers\"",
-                (PIERCE, STRENGTH, ARROW, NO_ATTACK), ADDS, (LIFE_TOP, BOW_TOP), "100%",
+                (PIERCE, STRENGTH, ARROW, NO_ATTACK), ADDS, (LIFE_TOP, BOW_TOP), None,
                 fractured=(PIERCE,), crafted=(NO_ATTACK,),
             ),
             PublishedOutcome(  # the second forced Exalted Orb: Maximum Life is already on the quiver
@@ -192,7 +192,7 @@ BENCHMARKS = (
             PublishedOutcome(
                 "Exalted Orb", "adds the TOP tier of Increased Damage with Bow Skills (the second Exalted Orb, the target's tier)",
                 "the quiver of the row above with Maximum Life added",
-                (PIERCE, STRENGTH, ARROW, NO_ATTACK, LIFE_TOP), ADDS, (BOW_TOP,), "100%",
+                (PIERCE, STRENGTH, ARROW, NO_ATTACK, LIFE_TOP), ADDS, (BOW_TOP,), None,
                 fractured=(PIERCE,), crafted=(NO_ATTACK,),
             ),
         ),
@@ -219,10 +219,10 @@ BENCHMARKS = (
                 "the bow with the Attack Speed, \"Can have up to 3 Crafted Modifiers\" and \"Cannot roll Attack Modifiers\"",
                 (SPEED, MULTIMOD, NO_ATTACK), ADDS, (GEMS, *DOT_TIERS), "100%", crafted=(MULTIMOD, NO_ATTACK),
             ),
-            PublishedOutcome(  # the same Exalted Orb read at the target's tiers (owner rule: an unstated tier is the top tier)
+            PublishedOutcome(  # the same Exalted Orb read at the target's tiers (OR-1): the guide's 100% is of the family, so no number is published (#599)
                 "Exalted Orb", "adds +1 to Level of Socketed Gems or the TOP tier of Chaos Damage over Time (the target's tiers)",
                 "the bow with the Attack Speed, \"Can have up to 3 Crafted Modifiers\" and \"Cannot roll Attack Modifiers\"",
-                (SPEED, MULTIMOD, NO_ATTACK), ADDS, (GEMS, DOT), "100%", crafted=(MULTIMOD, NO_ATTACK),
+                (SPEED, MULTIMOD, NO_ATTACK), ADDS, (GEMS, DOT), None, crafted=(MULTIMOD, NO_ATTACK),
             ),
             PublishedOutcome(  # the second forced Exalted Orb: +1 gems is already on the bow
                 "Exalted Orb", "adds Chaos Damage over Time (the second forced Exalted Orb), any tier",
@@ -232,7 +232,7 @@ BENCHMARKS = (
             PublishedOutcome(
                 "Exalted Orb", "adds the TOP tier of Chaos Damage over Time (the second Exalted Orb, the target's tier)",
                 "the bow of the rows above with +1 to Level of Socketed Gems added",
-                (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, (DOT,), "100%", crafted=(MULTIMOD, NO_ATTACK),
+                (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, (DOT,), None, crafted=(MULTIMOD, NO_ATTACK),
             ),
         ),
         heavy="the exact graph has 816,153 states: the packed solver takes about 32 minutes and 9 GB, and no approximate level exists for a route with metamods (ticket #70)",
@@ -619,6 +619,9 @@ def render_summary(document: dict) -> str:
             lines.append("  given route, completed with a restart  " + _summary_line(completed) + f", {completed['gaps']} gap(s)")
             lines.extend(_review_summary("completed route", completed))
         for odds in entry["published_odds"]:
+            if odds["published"] is None:  # no number to check: our chance at the target's tiers, beside the guide's family-level row above it
+                lines.append(f"  our odds {odds['computed']} ({odds['on']}): {odds['requirement']}; the guide publishes no number for this reading")
+                continue
             verdict = "matches" if odds["matches"] else "DIFFERS"
             lines.append(f"  published odds {odds['published']} ({odds['on']}): computed {odds['computed']}, {verdict}")
         if entry["solver_not_dearer"] is not None:

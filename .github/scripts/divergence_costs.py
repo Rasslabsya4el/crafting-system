@@ -58,7 +58,7 @@ def main(argv: list[str]) -> int:
                 table.append({"step": step.number, "action": None, "reason": step.reason, "states": len(step.states)})
                 continue
             for state, weight in zip(step.states, step.weights):
-                by_state[state] = (weight, step.cost)
+                by_state[state] = (weight, step.cost, step.action.label)
             uses = step.uses
             table.append(
                 {
@@ -80,6 +80,21 @@ def main(argv: list[str]) -> int:
         "routes": {},
     }
     ids = number_states(plan)
+
+    def top_states(by_state: dict, per_action: int = 6) -> dict:
+        """The states that carry most of each action, with their expected visits and description."""
+        found: dict = {}
+        for state, (weight, price, label) in by_state.items():
+            found.setdefault(label, []).append((weight * price, weight, state))
+        return {
+            label: [
+                {"state": ids.get(state), "visits": weight, "carried": carried, "description": describe_state(plan, data, state)}
+                for carried, weight, state in sorted(rows, key=lambda row: -row[0])[:per_action]
+            ]
+            for label, rows in found.items()
+        }
+
+    document["planner"]["top_states"] = top_states(planner_visits)
     routes = [("guide", bench.route), ("completed", bench.completed), *[(Path(p).name, p) for p in argv[2:]]]
     for name, path in routes:
         if path is None:
@@ -99,8 +114,8 @@ def main(argv: list[str]) -> int:
         pairs: dict = {}
         rows = []
         for divergence in result.divergences:
-            pv, pc = planner_visits.get(divergence.state, (0.0, 0.0))
-            rv, rc = route_visits.get(divergence.state, (0.0, 0.0))
+            pv, pc, _ = planner_visits.get(divergence.state, (0.0, 0.0, ""))
+            rv, rc, _ = route_visits.get(divergence.state, (0.0, 0.0, ""))
             rows.append(
                 {
                     "state": ids.get(divergence.state),
@@ -125,6 +140,11 @@ def main(argv: list[str]) -> int:
             {"route_action": a, "planner_action": b, "states": v[0], "planner_visits": v[1], "route_visits": v[2], "planner_carried": v[3], "route_carried": v[4]}
             for (a, b), v in sorted(pairs.items(), key=lambda kv: -(kv[1][3] + kv[1][4]))
         ]
+        entry["top_states"] = top_states(route_visits)
+        entry["gap_states"] = [
+            {"state": ids.get(gap.state), "reason": gap.reason, "visits_in_completed": None, "description": describe_state(plan, data, gap.state)}
+            for gap in result.gaps
+        ]
         document["routes"][name] = entry
         say(f"route {name}: mean {entry['mean']}, success {entry['success']}, {entry['gaps']} gap(s), {entry['divergences']} divergences")
         for line in route_table:
@@ -132,8 +152,16 @@ def main(argv: list[str]) -> int:
                 say(f"    {line['action']}: uses {line['uses']:.4g} x {line['price']:.4g} = {line['carried']:,.1f}")
         for pair in entry["divergence_pairs"]:
             say(f"    pair guide {pair['route_action']} / planner {pair['planner_action']}: {pair['states']} states, planner carries {pair['planner_carried']:,.1f}, route carries {pair['route_carried']:,.1f}")
+        for label, found in entry["top_states"].items():
+            for row in found[:6]:
+                say(f"    top {label}: {row['state']} visits {row['visits']:.4g} carried {row['carried']:,.1f}: {row['description']}")
+        for gap in entry["gap_states"]:
+            say(f"    gap {gap['state']}: {gap['reason']}: {gap['description']}")
         for row in rows[:12]:
             say(f"    {row['state']}: {row['description']}: guide {row['route_action']}, planner {row['planner_action']}, visits {row['planner_visits']:.4g} / {row['route_visits']:.4g}")
+    for label, found in document["planner"]["top_states"].items():
+        for row in found[:6]:
+            say(f"planner top {label}: {row['state']} visits {row['visits']:.4g} carried {row['carried']:,.1f}: {row['description']}")
     for line in planner_table:
         if line.get("carried"):
             say(f"planner {line['action']}: uses {line['uses']:.4g} x {line['price']:.4g} = {line['carried']:,.1f}")

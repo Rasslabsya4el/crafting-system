@@ -107,19 +107,42 @@ def test_the_published_odds_are_recomputed_from_the_actions(data, route_id):
         assert rows == [
             ("Fracturing Orb", "25%", "25%", True),  # the guide's 1 in 4
             ("Exalted Orb", "100%", "100%", True),  # the two prefixes are the only ones the metamod leaves, at any tier
-            ("Exalted Orb", "100%", "13%", False),  # ... but at the top tier of each (the owner's reading) it is 2 in 15
+            ("Exalted Orb", None, "13%", None),  # ... at the top tier of each (OR-1) it is 2 in 15: the guide's 100% is of the family, so no number is published
             ("Exalted Orb", "100%", "100%", True),  # the second one: Life is on, the Bow Skills damage is the only prefix left
-            ("Exalted Orb", "100%", "20%", False),  # ... at its top tier, 1 in 5
+            ("Exalted Orb", None, "20%", None),  # ... at its top tier, 1 in 5: no number published
         ]
     else:
         assert rows == [
             ("Orb of Annulment", "33%", "33%", True),  # 3 mods: 1 in 3
             ("Orb of Annulment", "50%", "50%", True),  # 2 mods: 1 in 2
             ("Exalted Orb", "100%", "100%", True),  # gems or Chaos Damage over Time, at any tier
-            ("Exalted Orb", "100%", "55%", False),  # ... at the top tier of the damage it is 11 in 20
+            ("Exalted Orb", None, "55%", None),  # ... at the top tier of the damage it is 11 in 20: no number published
             ("Exalted Orb", "100%", "100%", True),  # the second one: +1 gems is on, Chaos Damage over Time is the only prefix left
-            ("Exalted Orb", "100%", "10%", False),  # ... at its top tier, 1 in 10
+            ("Exalted Orb", None, "10%", None),  # ... at its top tier, 1 in 10: no number published
         ]
+
+
+def test_no_benchmark_route_writes_one_published_number_on_two_rows_of_the_same_item():
+    """The root of #599, checked on every route: the same figure on two rows of one (action, item) means one of the rows reads another event."""
+    for bench in BENCHMARKS:
+        seen = [(odds.action, odds.on, odds.published) for odds in bench.outcomes if odds.published is not None]
+        assert len(seen) == len(set(seen)), bench.id
+
+
+def test_a_published_number_stands_on_one_row_and_a_reading_without_one_is_not_a_difference(data, prices, route_id):
+    """Ticket #599: the guide's 100% for "two Exalted Orbs guarantee the prefixes" is of the family (OR-4). It was also written on the row for
+    the top tier of the same Exalted Orb, so the summary printed "DIFFERS" for 13% and 20% (R04), 55% and 10% (R14) against a number
+    nobody published. A number belongs to one (action, item) row; a reading with no number is shown as our odds and is no difference."""
+    bench = next(bench for bench in BENCHMARKS if bench.id == route_id)
+    entry, _ = run_route(bench, data, find_project_root(), load_config({}), prices, None)
+    tiers = [row for row in entry["published_odds"] if row["published"] is None]
+    assert len(tiers) == 2 and all(row["matches"] is None for row in tiers)
+
+    from crafting_system.cli._benchmark import render_summary
+
+    machine = {"os": "test", "cpu_count": 1, "python": "3", "commit": "0" * 12}
+    text = render_summary({"machine": machine, "routes": [entry]})
+    assert text.count("DIFFERS") == 0 and text.count("our odds") == 2 and text.count("the guide publishes no number") == 2
 
 
 def test_benchmark_checks_the_odds_and_leaves_the_heavy_route_unsolved(data, prices, route_id):
