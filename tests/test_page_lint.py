@@ -49,7 +49,7 @@ def test_every_check_cites_its_rule_and_the_faults_it_finds_carry_it():
         match = re.match(r"\s*(OR-\d+|#\d+ and #\d+)", check.__doc__ or "")
         assert match, f"{check.__name__} does not open its docstring with the rule it keeps"
         assert pl.or_of(check) == match.group(1)
-    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (13, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
+    assert {pl.or_of(check) for check in pl.CHECKS} <= {*(f"OR-{n}" for n in (13, 14, 15, 16, 17, 18, 19, 20, 23, 31)), "#481 and #553"}
     assert pl.or_of(pl.check_no_internal_names) == "#481 and #553"  # a decision of the main chat, not a rule of docs/owner-rules.md (which is not touched)
 
 
@@ -172,7 +172,15 @@ fixtures(
     },
 )
 
-bought = step(1, "Buy Sorcerer Boots, item level 84", ("Cost per use", "17 c"), after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), ANY, ANY)))
+BOUGHT_BOOTS = item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), ANY, ANY))
+bought = step(1, "Buy Sorcerer Boots, item level 84", ("Cost per use", "17 c"), after=BOUGHT_BOOTS)
+TRADE = ("Trade", "Search on the trade site")
+RESTART_R10 = "Restart: buy Sorcerer Boots, item level 84, fractured 30% increased Movement Speed again"
+ESSENCE_STEP = step(2, "Shrieking Essence of Spite", ("Note", "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"), after=item())
+BOW = item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)
+MAGIC_BOW = item("Thicket Bow", "Magic")
+VENDOR_ITEM = item("Lion Pelt", "Magic", (slot("+1 to Level of all Minion Skill Gems", "m", "T2"), EMPTY), (EMPTY, EMPTY))
+VENDOR_STEP = step(1, "Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe", ("Recipe", "2 or more uncorrupted skill gems with the Minion tag"), ("Cost per use", "8 c"), after=VENDOR_ITEM)
 fixtures(
     pl.check_no_hidden_step,
     counter={
@@ -196,12 +204,38 @@ fixtures(
 
 fixtures(
     pl.check_bought_item_not_empty,
-    counter={"R10 as the owner rejected it: the bought boots drawn empty": page(route(goal(), step(1, "Buy Sorcerer Boots, item level 84", after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), EMPTY, EMPTY), suffixes=(EMPTY, EMPTY, EMPTY)))))},
+    counter={
+        "R10 as the owner rejected it: the bought boots drawn empty": page(route(goal(), step(1, "Buy Sorcerer Boots, item level 84", after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), EMPTY, EMPTY), suffixes=(EMPTY, EMPTY, EMPTY))))),
+        "R10, R11, R12: the restart buys the Rare boots with the fractured mod again and draws them empty": page(route(goal(), bought, ESSENCE_STEP, step(3, RESTART_R10, TRADE, ("Cost per use", "17 c"), after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), EMPTY, EMPTY), suffixes=(EMPTY, EMPTY, EMPTY))))),
+        "R10 restart drawn with 4 mod slots where the first card has 6: the empty ones are hidden": page(route(goal(), bought, ESSENCE_STEP, step(3, RESTART_R10, TRADE, after=item("Sorcerer Boots", prefixes=(slot("30% increased Movement Speed", "w", "T2"), ANY, ANY), suffixes=(ANY,))))),
+        "R14 since #607: a bought Magic bow drawn with empty slots": page(route(goal(), step(1, "Buy Thicket Bow, magic, item level 78", after=item("Thicket Bow", "Magic", (EMPTY,) * 3, (EMPTY,) * 3)))),
+        "a restart whose title does not say buy, found by its trade search": page(route(goal(), bought, step(2, "Restart: the start item again", TRADE, after=item("Sorcerer Boots", prefixes=(EMPTY, EMPTY, EMPTY))))),
+        "a step that is not called Buy or Restart and has a trade search": page(route(goal(), step(1, "The start item", TRADE, after=item("Sorcerer Boots", prefixes=(EMPTY, EMPTY, EMPTY))))),
+    },
     example={
         "R10 as accepted: any mod or empty for the rest": page(route(goal(), bought)),
-        "R04, R14: a bought Normal base has no mods to hide": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)))),
+        "R04: a bought Normal base has no mods to hide": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)))),
+        "R10, R11, R12: the restart buys the Rare boots with the fractured mod again and draws them as the first card does": page(route(goal(), bought, ESSENCE_STEP, step(3, RESTART_R10, TRADE, ("Cost per use", "17 c"), after=BOUGHT_BOOTS))),
+        "R14 since #607: a bought Magic bow, its restart too, any mod or empty in every slot": page(route(goal(), step(1, "Buy Thicket Bow, magic, item level 78", after=MAGIC_BOW), step(2, "Orb of Alteration", after=item()), step(3, "Restart: buy Thicket Bow, magic, item level 78 again", TRADE, after=MAGIC_BOW))),
+        "R04: Restart: buy Thicket Bow, normal, ... again, a bought Normal base": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=BOW), step(2, "Orb of Alchemy", after=item()), step(3, "Restart: buy Thicket Bow, normal, item level 78 again", TRADE, after=BOW))),
+        "V01: a restart that makes the start item at the vendor: made by a recipe, not bought, so its empty slots are empty": page(route(goal(), VENDOR_STEP, step(2, "Restart: make the start item at the vendor again", ("Cost per use", "8 c"), after=VENDOR_ITEM))),
     },
 )
+
+
+def test_a_restart_of_a_real_page_that_buys_a_fractured_rare_item_passes_and_fails_when_it_is_drawn_empty():
+    """The golden `restart_fractured` is a real page (R12's plan shape: a bought Rare amulet with a fractured mod, a restart in the policy)."""
+    html = (ROOT / "tests" / "golden" / "restart_fractured.html").read_text(encoding="utf-8")
+    read = pl.read_page(html)
+    restarts = [s for s in read.routes[0].steps if s.title.startswith("Restart: buy")]
+    assert len(restarts) == 1 and "fractured" in restarts[0].title and restarts[0].after.rarity == "Rare"
+    assert any("fractured" in slot_.marks for slot_ in restarts[0].after.slots)  # the fractured mod is on the restart card
+    assert pl.check_bought_item_not_empty(read) == []
+    head, tail = html.split("3. Restart", 1)
+    emptied = tail.replace('<div class="s a">any mod or empty</div>', '<div class="s e">empty</div>')
+    assert emptied != tail
+    faults = pl.check_bought_item_not_empty(pl.read_page(head + "3. Restart" + emptied))
+    assert [fault.where for fault in faults] == [f"step 3 ({restarts[0].title})"]  # the restart, and not the first card, which is still drawn right
 
 regal = ("Regal Orb", ("Goal", "+(130-144) to maximum Life · T1"), ("Accepts", "other mods: any"))
 fixtures(
@@ -209,6 +243,28 @@ fixtures(
     counter={"V01 before #466: the Regal states, one row each, with their own chances": page(route(goal(), step(1, regal[0], *regal[1:], ("Chance per use", "≈0.88%")), step(2, regal[0], *regal[1:], ("Chance per use", "≈0.95%"))))},
     example={"V01: 3 player actions, 3 steps": page(route(goal(), *TWO_ACTIONS, step(3, "Restart: make the start item at the vendor again", ("Cost per use", "8 c"))))},
 )
+
+RESTART_BOW = "Restart: buy Thicket Bow, normal, item level 78 again"
+R14_BEFORE_70 = [step(number, RESTART_BOW, TRADE, ("On failure", f"the start item bought again ({number}%)"), after=BOW) for number in range(3, 8)]
+fixtures(
+    pl.check_no_repeated_card,
+    counter={
+        "R14 before #70: the same Restart card again and again, each with its own chance": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=BOW), step(2, "Orb of Alchemy", after=item()), *R14_BEFORE_70)),
+        "the same action ending on the same card, split by its goal and its accepts": page(route(goal(), step(1, "Chaos Orb", ("Goal", "+# to maximum Life · T1"), ("Accepts", "other mods: any"), after=item()), step(2, "Chaos Orb", ("Goal", "+# to maximum Life · T1"), ("Accepts", "4 or 5 mods"), after=item()))),
+    },
+    example={
+        "R14 since #466: the Restart card once": page(route(goal(), step(1, "Buy Thicket Bow, normal, item level 78", after=BOW), step(2, "Orb of Alchemy", after=item()), step(3, RESTART_BOW, TRADE, after=BOW))),
+        "one action twice, on two cards: the second Exalted Orb meets the item the first made": page(route(goal(), step(1, "Exalted Orb", ("Goal", "+(130-144) to maximum Life · T1"), after=item(prefixes=(LIFE, ANY, ANY))), step(2, "Exalted Orb", ("Goal", "+1 to Level of all Minion Skill Gems · T2"), after=item(prefixes=(LIFE, slot("+# to Level of all Minion Skill Gems", "m", "T2"), ANY))))),
+    },
+)
+
+
+def test_the_counter_example_of_or_14_is_found_by_both_the_check_of_the_repeated_card_and_the_check_of_one_step_per_action():
+    html = COUNTER["check_no_repeated_card"]["R14 before #70: the same Restart card again and again, each with its own chance"]
+    read = pl.read_page(html)
+    assert len(pl.check_no_repeated_card(read)) == len(R14_BEFORE_70) - 1
+    assert len(pl.check_one_step_per_action(read)) == len(R14_BEFORE_70) - 1
+
 
 shared = step(1, "Orb of Augmentation", ("Accepts", "other mods: any"), ("Chance per use", "100%"))
 differs = step(2, "Chaos Orb", ("Chance per use", "≈3.1%"))
@@ -259,6 +315,31 @@ fixtures(
     example={"no action is dropped for a price": page(route(goal(), shared))},
 )
 
+R10_TARGET = item("Sorcerer Boots", prefixes=(slot("+# to maximum Life", "w", "any tier"), ANY, ANY), suffixes=(slot("+(43-50) to Intelligence", "w", "T2"), ANY, ANY), target=True)
+R10_ESSENCE = step(
+    1,
+    "Shrieking Essence of Spite",
+    ("Goal", "+(43-50) to Intelligence · T2", "+# to maximum Life · any tier"),
+    ("Chance per use", "the target: ≈7.7%"),
+    ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target", "+# to maximum Life: T1 to T9 ≈10% each · none ≈10% · every tier is the target"),
+    ("Note", "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"),
+)
+R05_LIFE_LINE = "+# to maximum Life: T1 ≈2.7% (target) · T2 to T8 ≈2.7% each · none ≈78%"  # the lines of the R05 golden, step 2
+R05_FIRE_LINE = "+#% to Fire Resistance: T2 ≈1% (target) · T3 to T8 ≈1% each · none ≈93%"
+R05_TARGET = item(
+    "Amethyst Ring",
+    prefixes=(slot("+(100-114) to maximum Life", "w", "T1"), ANY, ANY),
+    suffixes=(slot("+(42-45)% to Fire Resistance", "w", "T2"), slot("+(51-58) to Strength", "w", "essence only"), ANY),
+    target=True,
+)
+R05_ESSENCE = step(
+    1,
+    "Deafening Essence of Rage",
+    ("Goal", "+(51-58) to Strength · essence only", "+(100-114) to maximum Life · T1", "+(42-45)% to Fire Resistance · T2"),
+    ("Chance per use", "the target: ≈5.8%"),
+    ("Tier chances", R05_LIFE_LINE, R05_FIRE_LINE),
+)
+
 fixtures(
     pl.check_tier_lines,
     counter={
@@ -267,18 +348,32 @@ fixtures(
         "the target's tier is not marked": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% · T2 to T3 ≈10% each · none ≈70%")))),
         "no none": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈50% (target) · T2 50%")))),
         "a gap in the tiers": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈50% (target) · T3 ≈20% · none ≈30%")))),
+        "a line marks T3 while the Goal of its step says T1": page(route(goal(), step(1, "Regal Orb", ("Goal", "+(130-144) to maximum Life · T1"), ("Tier chances", "+# to maximum Life: T1 ≈10% · T2 ≈20% · T3 ≈10% (target) · none ≈60%")))),
+        "R10, R11: Life asked at any tier and only T1 to T4 marked as the target": page(route(goal(target=R10_TARGET), step(1, "Shrieking Essence of Spite", ("Goal", "+# to maximum Life · any tier"), ("Tier chances", "+# to maximum Life: T1 to T4 ≈10% each (target) · T5 to T9 ≈10% each · none ≈10%")))),
+        "a line marks another tier than the target card when its step has no Goal line for the family": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% · T2 ≈10% (target) · T3 to T4 ≈10% each · none ≈60%")))),
+        "a tier line of a family the target does not want": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
     },
     example={
         "V01: the target's tier apart, the rest joined": page(route(goal(), *TWO_ACTIONS)),
-        "R10: every tier is the target": page(route(goal(), step(1, "Shrieking Essence of Spite", ("Note", "reforges a rare, no Scouring first"), ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
+        "R10: every tier is the target": page(route(goal(target=R10_TARGET), step(1, "Shrieking Essence of Spite", ("Note", "reforges a rare, no Scouring first"), ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
+        "R10: Life asked at any tier and every shown tier marked, beside Intelligence at T2": page(route(goal(target=R10_TARGET), R10_ESSENCE)),
+        "R05: the Goal asks T1 of Life and T2 of a resistance, and the line marks those tiers": page(route(goal(target=R05_TARGET), R05_ESSENCE)),
+        "a Goal that asks T2 or better marks T1 and T2": page(route(goal(), step(1, "Regal Orb", ("Goal", "+# to maximum Life · T2 or better"), ("Tier chances", "+# to maximum Life: T1 and T2 ≈10% each (target) · T3 to T5 ≈10% each · none ≈50%")))),
     },
 )
 
 fixtures(
     pl.check_tier_step_has_tier_line,
-    counter={"R04: the Exalted Orb has a goal and a chance and only that": page(route(goal(), step(1, "Exalted Orb", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "13%"))))},
+    counter={
+        "R04: the Exalted Orb has a goal and a chance and only that": page(route(goal(), step(1, "Exalted Orb", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "13%")))),
+        "R05: the step can add Life and a resistance and prints the line of Life only": page(route(goal(target=R05_TARGET), step(1, "Deafening Essence of Rage", ("Goal", "+(100-114) to maximum Life · T1", "+(42-45)% to Fire Resistance · T2"), ("Chance per use", "the target: ≈5.8%"), ("Tier chances", R05_LIFE_LINE)))),
+        "a Goal at any tier asks a line too": page(route(goal(), step(1, "Chaos Orb", ("Goal", "+# to maximum Life · any tier"), ("Chance per use", "≈28%")))),
+        "R10: the line of the Intelligence is there and the line of Life is not": page(route(goal(target=R10_TARGET), step(1, "Shrieking Essence of Spite", ("Goal", "+(43-50) to Intelligence · T2", "+# to maximum Life · any tier"), ("Chance per use", "≈7.7%"), ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
+    },
     example={
         "the step shows the chance of each tier": page(route(goal(), *TWO_ACTIONS)),
+        "R05: one line for each of the two families, and none for the essence-only Strength": page(route(goal(target=R05_TARGET), R05_ESSENCE)),
+        "R10: one line for each of Intelligence and Life": page(route(goal(target=R10_TARGET), R10_ESSENCE)),
         "an Annulment or a Fracturing Orb adds no mod, so no tier to show": page(route(goal(), step(1, "Orb of Annulment", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "≈25%")), step(2, "Fracturing Orb", ("Goal", "+# to maximum Life · T1"), ("Chance per use", "≈25%")))),
         "a bench craft has no chance to show": page(route(goal(), step(1, "Benchcraft: +# to maximum Life", ("Goal", "+# to maximum Life · crafted"), ("Cost per use", "1 c"), after=item(suffixes=(slot("+# to maximum Life", "c", "crafted"), ANY, ANY))))),
     },
@@ -381,10 +476,12 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
+ISSUE_ROLL_MINIMUM = 643  # found by #598: Life "any tier" with a roll minimum marks only some tiers as the target on the R10 and R11 pages
 ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other two, are fixed: no golden page is a known fault of their checks)
 
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it
     **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
+    **{(name, "check_tier_lines"): ISSUE_ROLL_MINIMUM for name in ("real_r10", "real_r11")},
 }
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
 

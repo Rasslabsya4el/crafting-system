@@ -207,7 +207,9 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 # judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
 # a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
 
-KNOWN_REAL: dict[tuple[str, str], int] = {}  # (route, check) -> the issue that holds the fault; none since #553 (R04's "[QuiverNew5]" is said in words)
+KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault; R04's "[QuiverNew5]" is said in words since #553
+    ("R14", "check_tier_step_has_tier_line"): 651,  # found by #598: step 4 (Orb of Augmentation) aims at +1 to Level of Socketed Gems and prints no line for it
+}
 JUDGES = page_lint.CHECKS  # `check_no_internal_names` is one of them
 
 

@@ -18,6 +18,7 @@ The checks, one per rule that can be seen on a page. A check takes a `Page` and 
 `Fault` that names the rule (`or_id`), the check and the place. `lint(page)` runs every check of `CHECKS`.
 
   OR-13  a cut says what it still guarantees      `check_cut_guarantee`
+  OR-14  a repeated card is a branch not cut      `check_no_repeated_card` (and `check_one_step_per_action`; the number and the size are #476's)
   OR-15  every mod line is in one format          `check_mod_format`, `check_bench_line_is_its_craft`, `check_group_printed_once`
   OR-16  every in-game step is shown              `check_no_hidden_step`
   OR-17  the bought item's other mods             `check_bought_item_not_empty`
@@ -494,17 +495,44 @@ def check_no_hidden_step(page: Page) -> list[Fault]:
 # --- OR-17: the bought item's other mods ---------------------------------------------------------------------
 
 
+_GETS_THE_START_ITEM = re.compile(r"^(?:Buy|Restart)\b|\b(?:buy|buys|bought)\b", re.I)  # "Buy X", "Restart: buy X again", "Restart: the start item again"
+_MADE_AT_THE_VENDOR = re.compile(r"\bvendor\b|^Vendor recipe", re.I)
+
+
+def _gets_the_start_item(step: Step) -> bool:
+    """The step buys the start item or goes back to it: by its title, or by its text (a trade search is a purchase)."""
+    return bool(_GETS_THE_START_ITEM.search(step.title)) or step.has("Trade")
+
+
+def _made_at_the_vendor(step: Step) -> bool:
+    """A vendor recipe makes the item, it does not buy it: every mod of the made item is known, so an empty slot of it is empty."""
+    return bool(_MADE_AT_THE_VENDOR.search(step.title)) or step.has("Recipe") or step.has("Hand the vendor")
+
+
 def check_bought_item_not_empty(page: Page) -> list[Fault]:
-    """OR-17: the item after a "Buy ..." step is never drawn empty: a slot that is not the wanted mod reads "any mod or empty",
-    not "empty" (the R10 page the owner rejected drew the bought boots empty). A bought Normal base has no mods, so it is empty
-    and nothing is hidden (R04 and R14 buy one)."""
+    """OR-17: the item after a step that buys the start item is never drawn empty: a slot that is not the wanted mod reads "any mod or
+    empty", not "empty" (the R10 page the owner rejected drew the bought boots empty). A step buys the start item when its title says
+    "Buy ...", or "Restart ..." (R14's "Restart: buy Thicket Bow, ... again"; a restart of R10, R11 or R12 buys the Rare item with its
+    fractured mod again, and an empty restart card is the same fault as an empty first card), or when it has a trade search. A bought
+    Normal base has no mods, so it is empty and nothing is hidden (R04 buys one). A bought Magic or Rare item (R14 since #607 buys a
+    Magic bow) has mods nobody knows, so none of its slots reads "empty". A restart buys the same item as the first purchase of the
+    route, so it shows as many mod slots as that card: a restart card with fewer slots hides the empty ones. An item a vendor recipe
+    makes (V01) is not bought: its mods are all known."""
     faults = []
     for route in page.routes:
+        first_count = None
         for step in route.steps:
-            if re.match(r"Buy\b", step.title) and step.after is not None and step.after.rarity != "Normal":
-                empties = [slot for slot in step.after.slots if slot.tone == "empty"]
-                if empties:
-                    faults.append(_fault("OR-17", check_bought_item_not_empty, f"step {step.number} ({step.title})", f"the bought item is drawn with {len(empties)} empty slot(s)"))
+            if not _gets_the_start_item(step) or _made_at_the_vendor(step) or step.after is None or step.after.rarity == "Normal":
+                continue
+            where = f"step {step.number} ({step.title})"
+            empties = [slot for slot in step.after.slots if slot.tone == "empty"]
+            if empties:
+                faults.append(_fault("OR-17", check_bought_item_not_empty, where, f"the bought item is drawn with {len(empties)} empty slot(s)"))
+            count = sum(1 for slot in step.after.slots if slot.tone != "implicit")
+            if first_count is None:
+                first_count = (count, step.number)
+            elif count < first_count[0]:
+                faults.append(_fault("OR-17", check_bought_item_not_empty, where, f"the bought item is drawn with {count} mod slot(s) where step {first_count[1]} draws {first_count[0]}"))
     return faults
 
 
@@ -521,6 +549,36 @@ def check_one_step_per_action(page: Page) -> list[Fault]:
             key = (step.title, tuple(line.text for line in step.lines("Goal")), tuple(line.text for line in step.lines("Accepts")))
             if key in seen:
                 faults.append(_fault("OR-18", check_one_step_per_action, f"step {step.number} ({step.title})", f"same action, goal and accepts as step {seen[key].number}"))
+            else:
+                seen[key] = step
+    return faults
+
+
+# --- OR-14: a branch that repeats another is cut -------------------------------------------------------------
+
+
+def check_no_repeated_card(page: Page) -> list[Fault]:
+    """OR-14: no two steps of a route are the same action ending on the same card, whatever their chances, goal or accepts say (R14's
+    page had 87,272 steps, 65,433 of them the same Restart card). OR-14's other words, the number and the size of the steps, cannot be
+    a rule of the lint: any number a lint set would be a cut-off (OR-12), and a page's numbers are measurements (R14: 14,742 steps on
+    `main` after #70, 12 since #466). They are held by the measured bound of `test_the_page_stays_under_the_size_set_from_the_measurement`
+    (#476). What a page can show of the pruning is that its steps are distinct: a state that only differs by a detail the search does not
+    track, or by its chance, is the same step (OR-18), so it is never a second card of the same action. `check_one_step_per_action`
+    asks it of the action, the goal and the accepts; this asks it of the action and the card it ends on. What counts as a repeat: the
+    same title, the same card after the step and the same branch cards under it (`step.branches`, the cards for outcomes whose items
+    differ from the main one). The branches are in the key because they are part of what the step shows of its result: two steps that
+    land on different items are not two copies of one result, and calling them a repeat would be a guess about the search. A step split
+    only by its goal or accepts is caught by `check_one_step_per_action`.
+    """
+    faults = []
+    for route in page.routes:
+        seen: dict[tuple, Step] = {}
+        for step in route.steps:
+            if step.after is None:
+                continue
+            key = (step.title, step.after, step.branches)
+            if key in seen:
+                faults.append(_fault("OR-14", check_no_repeated_card, f"step {step.number} ({step.title})", f"the same action ending on the same card as step {seen[key].number}"))
             else:
                 seen[key] = step
     return faults
@@ -646,12 +704,73 @@ def parse_tier_line(text: str) -> tuple[str, list[dict], dict | None, bool] | No
     return family.strip(), parts, none, every
 
 
+# The tier a mod line asks of a mod, and the family it stands for. A mod line reads `+(130-144) to maximum Life · T1` on a goal line and
+# a target card, `+# to maximum Life` in a tier line: the same family once the ranges are `#`.
+_RANGE_IN_TEXT = re.compile(r"\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)")
+_ASKED_TIER = re.compile(r"^(?:T(?P<better>\d+) or better|T(?P<lo>\d+) to T(?P<hi>\d+)|T(?P<one>\d+)|(?P<any>any tier))\b")
+_NO_BOUND = 10**6
+
+
+def family_key(text: str) -> str:
+    """The family of a mod line or of a tier line's name: its text before any note, the ranges as `#`."""
+    return _squash(_RANGE_IN_TEXT.sub("#", text.split(" · ")[0]))
+
+
+def asked_tiers(note: str) -> tuple[int, int] | None:
+    """The tiers a note asks, as (best, worst) tier numbers: `T2` (2, 2), `T2 or better` (1, 2), `T1 to T3` (1, 3), `any tier` (1, no bound);
+    None for a note that asks no tier (`crafted`, `essence only`, `fractured`, none) or one the lint does not read (`tier too low, in some`: issue #667)."""
+    found = _ASKED_TIER.match(note.strip())
+    if not found:
+        return None
+    if found["any"]:
+        return 1, _NO_BOUND
+    if found["better"]:
+        return 1, int(found["better"])
+    if found["lo"]:
+        return int(found["lo"]), int(found["hi"])
+    return int(found["one"]), int(found["one"])
+
+
+def _goal_family(text: str) -> tuple[str, tuple[int, int]] | None:
+    """The family and the tiers a `Goal` line or a goal card line asks; None when it is not a tiered mod (a crafted mod, an essence-only one)."""
+    if " · " not in text:
+        return None
+    asked = asked_tiers(text.split(" · ", 1)[1])
+    return None if asked is None else (family_key(text), asked)
+
+
+def _target_families(route: Route) -> dict[str, tuple[int, int]] | None:
+    """The tiered mods the target wants, from the target item card on the goal row (the one place the page lists them): family -> tiers.
+
+    None when the card has a group ("at least 1 of 4"): one line stands for several families and the lint cannot take it apart
+    (so the family check is off for that route: issue #667)."""
+    if route.target is None:
+        return None
+    found: dict[str, tuple[int, int]] = {}
+    for slot in route.target.slots:
+        if slot.tone != "wanted":
+            continue
+        if "at least" in slot.note:
+            return None
+        asked = asked_tiers(slot.note)
+        if asked is not None:
+            key = family_key(slot.text)
+            best, worst = found.get(key, asked)
+            found[key] = (min(best, asked[0]), max(worst, asked[1]))
+    return found
+
+
 def check_tier_lines(page: Page) -> list[Fault]:
     """OR-31: each line of "Tier chances" lists the tiers of one family in order and with no gap, joins runs of equal chances
     ("T2 to T10 1.4% each") and never a target tier with one that is not, marks the target tier "(target)" (or says "every tier is the
-    target"), ends with "none", and its chances sum to 1 within the rounding of the page."""
+    target"), ends with "none", and its chances sum to 1 within the rounding of the page. Two more, from the rule's words "a family the
+    target wants" and "with the target's tier marked": the family of a line is one the target wants (the target card of the goal row lists
+    them; a card with a group, "at least 1 of 4", is not taken apart), and the tiers marked "(target)" are exactly the shown tiers the
+    tier of the step's "Goal" line for that family asks (the target card's tier when the step has no Goal line for it): a line that marks
+    T3 while the Goal says T1 is a fault."""
     faults = []
     for route in page.routes:
+        wanted = _target_families(route)
         for step in route.steps:
             for line in step.lines("Tier chances"):
                 where = f"step {step.number} ({step.title})"
@@ -689,7 +808,30 @@ def check_tier_lines(page: Page) -> list[Fault]:
                         faults.append(_fault("OR-31", check_tier_lines, where, f"{family}: T{left['last']} and T{right['first']} have one chance and are not joined"))
                 if abs(total - 100.0) > slack + 1e-6:
                     faults.append(_fault("OR-31", check_tier_lines, where, f"{family}: the chances sum to {total:.2f}%, not 100%"))
+                key = family_key(family)
+                if wanted is not None and key not in wanted:
+                    faults.append(_fault("OR-31", check_tier_lines, where, f"{family}: a family the target does not want (the target card lists {sorted(wanted)})"))
+                asked = _tier_asked_at(route, step, key)
+                if asked is not None:
+                    shown = {tier for part in parts for tier in range(part["first"], part["last"] + 1)}
+                    marked = shown if every else {tier for part in parts if part["target"] for tier in range(part["first"], part["last"] + 1)}
+                    right = {tier for tier in shown if asked[0] <= tier <= asked[1]}
+                    if marked != right:
+                        faults.append(_fault("OR-31", check_tier_lines, where, f"{family}: marked as the target {_tiers_text(marked)} where the Goal asks {_tiers_text(right) or 'a tier the line does not show'}"))
     return faults
+
+
+def _tiers_text(tiers: set[int]) -> str:
+    return ", ".join(f"T{tier}" for tier in sorted(tiers)) or "no tier"
+
+
+def _tier_asked_at(route: Route, step: Step, key: str) -> tuple[int, int] | None:
+    """The tiers the target asks of a family at a step: the step's "Goal" line for it, else the target card's line for it; None when neither does."""
+    asked = [found[1] for line in step.lines("Goal") if (found := _goal_family(line.text)) is not None and found[0] == key]
+    if asked:
+        return min(best for best, _ in asked), max(worst for _, worst in asked)
+    wanted = _target_families(route)
+    return None if wanted is None else wanted.get(key)
 
 
 _ADDS_NO_TIERED_MOD = re.compile(r"^(Orb of Annulment|Annulment Orb|Orb of Fracturing|Fracturing Orb|Orb of Scouring|Scouring Orb|Bench ?craft|Restart|Remove)", re.I)
@@ -697,17 +839,27 @@ _ADDS_NO_TIERED_MOD = re.compile(r"^(Orb of Annulment|Annulment Orb|Orb of Fract
 
 def check_tier_step_has_tier_line(page: Page) -> list[Fault]:
     """OR-31: a step that names a goal mod and draws it by chance (a "Chance per use") shows "Tier chances", not only whether the
-    requirement is met (R04's check of the published odds gave two numbers). The rule is about a step that can add a mod of a wanted
-    family, so an action that adds no mod to spawn by tier (an Annulment, a Fracturing Orb, a Scouring Orb, a bench craft, a restart)
-    is not asked for one."""
+    requirement is met (R04's check of the published odds gave two numbers), and shows a tier line for each family it can add: a step
+    whose "Goal" names two tiered families (R05's essence: Life and three resistances) prints a line for each, and one line for one of
+    them is a fault. The families a step can add are the tiered mods of its "Goal" lines (a tier or "any tier" in the note; a crafted
+    mod or an essence-only one has no tier to show). The rule is about a step that can add a mod of a wanted family, so an action that
+    adds no mod to spawn by tier (an Annulment, a Fracturing Orb, a Scouring Orb, a bench craft, a restart) is not asked for one."""
     faults = []
     for route in page.routes:
         for step in route.steps:
-            if _ADDS_NO_TIERED_MOD.match(step.title):
+            if _ADDS_NO_TIERED_MOD.match(step.title) or not step.has("Chance per use"):
                 continue
-            wants = [line for line in step.lines("Goal") if "crafted" not in line.text and re.search(r"\bT\d+\b", line.text)]
-            if wants and step.has("Chance per use") and not step.has("Tier chances"):
-                faults.append(_fault("OR-31", check_tier_step_has_tier_line, f"step {step.number} ({step.title})", "the step can add a wanted mod and shows no 'Tier chances'"))
+            wants = {found[0]: line.text for line in step.lines("Goal") if (found := _goal_family(line.text)) is not None}
+            if not wants:
+                continue
+            where = f"step {step.number} ({step.title})"
+            if not step.has("Tier chances"):
+                faults.append(_fault("OR-31", check_tier_step_has_tier_line, where, "the step can add a wanted mod and shows no 'Tier chances'"))
+                continue
+            shown = {family_key(parsed[0]) for line in step.lines("Tier chances") if (parsed := parse_tier_line(line.text)) is not None}
+            for key, text in wants.items():
+                if key not in shown:
+                    faults.append(_fault("OR-31", check_tier_step_has_tier_line, where, f"the step can add {text!r} and prints no tier line for that family"))
     return faults
 
 
@@ -777,6 +929,7 @@ CHECKS: tuple[Callable[[Page], list[Fault]], ...] = (
     check_no_hidden_step,
     check_bought_item_not_empty,
     check_one_step_per_action,
+    check_no_repeated_card,
     check_route_not_twice,
     check_no_range,
     check_approximate_marked,
