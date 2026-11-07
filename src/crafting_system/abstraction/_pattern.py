@@ -95,6 +95,8 @@ from ._state import CompressedState, Slot, best_of
 # member that is not a state of the route it says nothing about the states that are, and dropping the action from the key could put the bound
 # above the exact cost. The build refuses and says why. The clauses name the families themselves (`tests/test_cli_model_gaps.py` scans for them).
 
+PRIME_FROM = 8  # a key that is given at least this many offers at once primes their distributions in a process pool, in chunks of ...
+PRIME_CHUNK = 32  # ... this many offers (the net is asked between two chunks)
 POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read, cheap beside one offer)
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
@@ -711,6 +713,25 @@ class PatternBuilder:
         self.done = len(offers)
         return None
 
+    def _prime(self, key: PatternKey, lo: int, hi: int, by_mode: dict) -> None:
+        """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
+
+        The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
+        one after the other. Nothing is built here and nothing changes in the answer; with one worker, or no `fork`, this does nothing. A chunk is
+        at most `PRIME_CHUNK` offers so that the net is asked between chunks.
+        """
+        requests = []
+        for offer in self.offers[lo:hi]:
+            if offer.action is None:
+                continue
+            mode = self.pattern.mode_of(offer.action, key)
+            members = by_mode.get(mode)
+            if members is None:
+                members = by_mode[mode] = self.pattern.members(key, mode)
+                self.stats.members += len(members)
+            requests.extend((member, offer.action) for member in members)
+        self.ab.prime(requests)
+
     def _offers_of_key(self, i: int, first: int, tick) -> None:
         """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
@@ -720,6 +741,8 @@ class PatternBuilder:
         for oi in range(first, len(offers)):
             offer = offers[oi]
             tick(oi)
+            if (oi - first) % PRIME_CHUNK == 0 and len(offers) - first >= PRIME_FROM:
+                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), by_mode)
             if offer.action is None:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
