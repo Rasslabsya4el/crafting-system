@@ -202,6 +202,22 @@ is 12,000 Chaos, so its standard error there is about a quarter of the mean and 
 An R13 play takes about 1.6 seconds, so 1,000 plays are about 30 minutes on one runner; the three cheap routes at 30,000 plays take a few minutes
 together. More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of the other sections) give R13 a smaller standard error.
 
+Since #608 to #610 it plays R08 and R09 (fossils), R12 (the Harvest reforge) and R04 and R14 (Exalted, Annulment and Fracturing Orbs, metamods, Remove Crafted Mods).
+R08, R09 and R12 are cheap like R05 (about 1 ms to 2 ms a play). R04 and R14 are heavy on both sides: a play takes about 0.5 s (R04, mean about 200,000 Chaos) and 0.06 s (R14, mean about 13,000
+Chaos), and their planner side is a solve of 177,242 and 816,153 states. Their mean is therefore not computed in the test but read from
+`tests/fixtures/naive_crafter/benchmark_means.json`, which holds the `completed_route` mean (and the guide's own `success`) that `benchmark` wrote, with the run id, the
+commit and the sha256 of the target, route and price files it was computed from. To record it again (after a change to a target, a route, the prices or the planner):
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch'
+    $D --runners 2 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
+    gh run download <run id> --dir results       # then copy each route's completed_route.mean and given_route.success into the json, with the run id and the file hashes
+
+The long simulation of these two then runs on many runners, each its own `NAIVE_SEED`, with `NAIVE_HEAVY=1` (which also fails when a recorded hash is old):
+
+    $D --runners 16 --command 'export NAIVE_HEAVY=1 NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR; NAIVE_RUNS=3000 uv run --no-sync pytest -q -p no:cacheprovider -k "R04 or R14" tests/test_naive_crafter_routes.py'
+    gh run download <run id> --dir results
+    PYTHONPATH=tests python -m naive_crafter merge results
+
 ### R04 and R14 end to end (#70)
 
 Since the packed solver the two routes are planned by the CLI itself: with the default budget the decision finds no approximate level

@@ -6,7 +6,8 @@ same start item, 60,000 times, and the chance that the finished item holds each 
 by the statistic of `frequencies.py` (a pooled two-sample z, Bonferroni-corrected over the whole module, `ALPHA` = 0.01, no percentage threshold).
 A cell that fails is a disagreement between the naive crafter and the emulator and is filed as an issue (OR-29), never hidden by a wider limit.
 
-The cases not played are the two fossil cases: a fossil changes the weights of the pool, which this player does not have.
+The two fossil cases (a Dense and a Shuddering Fossil on R08's boots, a Pristine and a Shuddering Fossil on R09's) are played too since #608: the fossils
+change the weights of the pool by the tags of the mods, and the recorded counts say whether the tags of the export are the emulator's.
 
 The seeds are fixed, so a run repeats. Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it. Rules: OR-21 (the emulator is one source among
 others), OR-22 (the rules of the crafter carry their sources), OR-29.
@@ -19,10 +20,11 @@ import pytest
 from independent import export as shared_export
 from naive_crafter import frequencies as f
 from naive_crafter.craft import Crafter, Laws
+from naive_crafter.fossils import read_fossils
 
 RECORDED = json.loads((Path(__file__).resolve().parents[1] / "fixtures" / "coe_recorded" / "b1_core.json").read_text(encoding="utf-8"))
 CASES = RECORDED["cases"]
-NOT_PLAYED = {name: "fossils" for name, case in CASES.items() if case["action"].startswith("Fossils")}
+NOT_PLAYED: dict[str, str] = {}
 PLAYED = [name for name in CASES if name not in NOT_PLAYED]
 APPLICATIONS = 60_000
 
@@ -44,7 +46,7 @@ def count(raw, name: str, laws: Laws | None = None, applications: int = APPLICAT
     case = CASES[name]
     crafter = crafter_of(raw, case, laws)
     seed = 555_000 + list(CASES).index(name)
-    return f.count_applications(crafter, f.item_of(crafter, case["item"]), case["action"], raw.essences, applications, seed)
+    return f.count_applications(crafter, f.item_of(crafter, case["item"]), case["action"], raw.essences, applications, seed, read_fossils(raw.source))
 
 
 @pytest.fixture(scope="module")
@@ -62,8 +64,8 @@ def tested(cells):
     return sum(cell.testable for per_case in cells.values() for cell in per_case)
 
 
-def test_the_cases_not_played_are_the_fossil_ones_and_nothing_else_is_left_out():
-    assert NOT_PLAYED == {"fossil-r08-boots": "fossils", "fossil-r09-boots": "fossils"}
+def test_every_recorded_case_is_played_and_nothing_is_left_out():
+    assert NOT_PLAYED == {}
     assert set(PLAYED) == {
         "alteration-r13-belt",
         "augmentation-r13-belt",
@@ -73,6 +75,8 @@ def test_the_cases_not_played_are_the_fossil_ones_and_nothing_else_is_left_out()
         "essence-r05-ring",
         "essence-r10-boots",
         "essence-r11-helmet",
+        "fossil-r08-boots",
+        "fossil-r09-boots",
         "regal-r13-belt",
     }
 

@@ -4,7 +4,8 @@
 
 `tests/test_naive_crafter_routes.py` run with `NAIVE_RUNS`, `NAIVE_SEED` and `NAIVE_OUT` leaves one `naive-<route>-<seed>.json` per
 route and runner: the exact mean and the exact spend of each step (from `risk.evaluate`'s side, the same on every runner) and the tally of that
-runner's plays. This reads every such file under the folder (a downloaded run keeps one sub-folder per runner), adds the tallies of a route,
+runner's plays (for R04 and R14 the exact mean is the benchmark's, recorded in `tests/fixtures/naive_crafter/benchmark_means.json`; for the two guides' own routes, which have gaps, the chance
+of finishing). This reads every such file under the folder (a downloaded run keeps one sub-folder per runner), adds the tallies of a route,
 and prints the verdict on the mean and on each step with the pooled standard error (`tally.verdict_on`, 4 standard errors). It exits 1 when
 any verdict disagrees, so a long simulation fails the way a short one does. It imports nothing of the planner.
 """
@@ -27,6 +28,16 @@ def merge_folder(folder: Path, route: str | None = None) -> tuple[list[t.Verdict
     verdicts: list[t.Verdict] = []
     plays: dict[str, int] = {}
     for name, found in sorted(documents.items()):
+        if "exact_success" in found[0]:  # a route with gaps: the chance of finishing, not a mean
+            if any(d["exact_success"] != found[0]["exact_success"] for d in found):
+                raise SystemExit(f"{name}: the runners recorded different chances of finishing, so their tallies are not of one thing")
+            pooled = t.Tally()
+            for document in found:
+                pooled = pooled.merge(t.Tally.from_dict(document["tally"]))
+            finished, total = pooled.finishing()
+            plays[name] = total
+            verdicts.append(t.finishing_verdict(f"{name}, the chance of finishing ({total} plays)", found[0]["exact_success"], finished, total))
+            continue
         exact_mean, exact_spend = found[0]["exact_mean"], found[0]["exact_spend"]
         if any(abs(d["exact_mean"] - exact_mean) > 1e-9 * max(1.0, abs(exact_mean)) or d["exact_spend"].keys() != exact_spend.keys() for d in found):
             raise SystemExit(f"{name}: the runners computed different exact sides, so their tallies are not of one thing")
@@ -45,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     merge = commands.add_parser("merge", help="pool the tallies of a long simulation and judge the pool")
     merge.add_argument("folder", type=Path)
-    merge.add_argument("--route", default=None, help="only this route id (R05, R10, R11, R13)")
+    merge.add_argument("--route", default=None, help="only this route id (R05, R08, R09, R10, R11, R12, R13, 'R04 with restart', 'R14 with restart', R04, R14)")
     arguments = parser.parse_args(argv)
     verdicts, plays = merge_folder(arguments.folder, arguments.route)
     if not verdicts:
