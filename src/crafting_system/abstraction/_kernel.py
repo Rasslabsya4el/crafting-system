@@ -1206,6 +1206,19 @@ class Abstraction:
             implicits.extend(entry for entry in base_implicits(self.data, self.data.base_items[self.base_id]) if entry.mod_id not in self._base_named)
         return tuple(implicits)
 
+    def release_prepared(self, *, keep_erased: bool = False) -> None:
+        """Drop what `_prepare` cached (a pool for each state, so a long walk must not keep it).
+
+        With `keep_erased` the entries of items that hold no ordinary mod stay: an action that erases the junk is prepared on the item of its flags, fractured
+        and crafted mods alone, and every key of the pattern model that shares them finds the same entry (ticket #626: a build that clears the cache at each
+        key prepares a fossil set again at each of them). There is one such entry for an action and a set of flags, fractured and crafted mods.
+        """
+        if not keep_erased:
+            self._prepared_by.clear()
+            return
+        for key in [key for key in self._prepared_by if any(not slot.crafted for slot in key[3])]:
+            del self._prepared_by[key]
+
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
         """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
         prepared = self._prepare(state, action)

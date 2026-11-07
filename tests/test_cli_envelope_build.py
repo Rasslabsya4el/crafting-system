@@ -21,7 +21,8 @@ from test_packed_walk_light import START_ITEM, make_offers
 from crafting_system.abstraction import _pattern
 from crafting_system.abstraction._pattern import Pattern, PatternBuilder, build_pattern_model
 from crafting_system.cli import _packed, _pattern_bound
-from crafting_system.cli._envelope import Net
+from crafting_system.cli import _envelope
+from crafting_system.cli._envelope import Net, NoPolicy
 from crafting_system.cli import _envelope_plan
 from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.cli._limits import limit_text
@@ -222,3 +223,26 @@ def test_a_round_stopped_while_offers_join_leaves_the_round_before_as_the_bound(
     assert bound.stopped == "the test net" and bound.phase == "growth"
     assert bound.rounds == 1 and bound.positions == (0, 6) and bound.model.stopped is None and all(bound.model.expanded)
     assert_lower_bound(bound, ab, exact)
+
+
+def test_the_net_of_the_search_is_asked_inside_a_round_that_expands_many_states(world, monkeypatch):
+    ab, start, offers, full, _, _ = world
+    exact = full.solution.values[start]
+    outcomes = {}
+    for poll in (1e9, 0.0):  # never inside a round (the net is asked between two rounds), and after every state
+        monkeypatch.setattr(_envelope, "POLL_SECONDS", poll)
+        fresh = abstraction()
+        outcomes[poll] = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100)).info["envelope"]
+    between, inside = outcomes[1e9], outcomes[0.0]
+    assert not between.exact and not inside.exact and "limit is 100" in inside.stopped
+    assert inside.expanded < between.expanded  # the round that went over the limit was cut where the limit was passed, not at its end
+    for info in (between, inside):
+        assert info.lower <= exact * (1 + TOLERANCE) <= info.upper * (1 + 2 * TOLERANCE)
+
+
+def test_a_search_stopped_before_a_plan_exists_says_the_lower_bound_it_reached(world):
+    ab, start, offers, _, _, _ = world
+    fresh = abstraction()
+    given = [offer for offer in offers if offer.label != "restart"]  # no restart: no plan can be executed before the greedy policy closes
+    with pytest.raises(NoPolicy, match=r"no plan costs less than [0-9]"):
+        envelope_result(fresh, fresh.compress(START_ITEM), given, net=Net(states=12))
