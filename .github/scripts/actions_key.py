@@ -2,6 +2,7 @@
 
     python .github/scripts/actions_key.py plan    --count N                          which jobs each of N runners takes
     python .github/scripts/actions_key.py batch   --index I --count N --out DIR      run the jobs of runner I (the dispatcher's RUNNER_INDEX / RUNNER_COUNT)
+    python .github/scripts/actions_key.py jobs    --jobs R08-kept-envelope,... --cap-minutes N --out DIR      named jobs under one cap
     python .github/scripts/actions_key.py one     --route R04 --variant removed --solver envelope --out DIR [--net-seconds S --memory-mb M]
     python .github/scripts/actions_key.py summary --dir DIR --out DIR2               writes DIR2/summary.md
 
@@ -431,6 +432,16 @@ def variants_of(text: str) -> tuple[str, ...]:
     return chosen
 
 
+def jobs_command(arguments: argparse.Namespace) -> int:
+    """Run the named jobs one after the other on this runner, each under `--cap-minutes` (a second look at jobs the caps of `batch` stopped)."""
+    for name in arguments.jobs.split(","):
+        route, variant, solver = name.split("-")
+        if (route, variant, solver) not in all_jobs():
+            raise SystemExit(f"{name!r} is no job; a job is ROUTE-VARIANT-SOLVER, such as R08-kept-envelope")
+        print(say_job(run_job(route, variant, solver, Path(arguments.out), cap=arguments.cap_minutes)), flush=True)
+    return 0
+
+
 def plan_command(arguments: argparse.Namespace) -> int:
     for number, mine in enumerate(bins_for(arguments.count, all_jobs(variants_of(arguments.variants)), limit=None), 1):
         total = sum(cap_minutes(route, variant) for route, variant, _ in mine)
@@ -583,6 +594,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     batch.add_argument("--variants", default=",".join(VARIANTS), help="comma separated variants to run (default all); the runners are dealt only these")
     batch.add_argument("--no-limit", action="store_true", help="deal the jobs over the runners even when one passes the minutes a runner may take")
     batch.set_defaults(handler=batch_command)
+    jobs = commands.add_parser("jobs", help="run the named jobs here, each under one cap")
+    jobs.add_argument("--jobs", required=True, help="comma separated ROUTE-VARIANT-SOLVER names")
+    jobs.add_argument("--cap-minutes", type=float, required=True, help="the wall-clock cap of each job (the runner's own limit is 60 minutes in all)")
+    jobs.add_argument("--out", required=True)
+    jobs.set_defaults(handler=jobs_command)
     one = commands.add_parser("one", help="run one job in this process (the child of `batch`)")
     one.add_argument("--route", required=True, choices=ROUTES)
     one.add_argument("--variant", required=True, choices=VARIANTS)
