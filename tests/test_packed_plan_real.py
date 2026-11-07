@@ -10,7 +10,6 @@ R04, R14 and S02 are in `test_packed_heavy.py`.
 These tests need the cached dump and skip cleanly without it.
 """
 
-import math
 from pathlib import Path
 
 import pytest
@@ -148,6 +147,30 @@ def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_say
     assert only(cut.limits, "risk").what == "Not computed: the median cost, the cost 9 runs in 10 stay under, and the average of the worst tenth" and notes(reference.limits) == []  # G19
 
 
+def test_a_given_routes_p90_read_on_the_packed_graph_equals_the_object_evaluation(both, data, request):
+    """Ticket #70, the percentile half of the test above. R13 fails it since the Magic start of #576 (PR #607): see #622."""
+    from crafting_system.cli import evaluate_route, load_route
+
+    route_id, reference, packed = both
+    if route_id == "R13":
+        request.applymarker(
+            pytest.mark.xfail(
+                strict=True,
+                raises=AssertionError,
+                reason="#622: the object read of R13's given route leaves p90 unresolved (infinite) where the packed read gives about 28,429; it fails loudly the day #622 is fixed, delete this mark then",
+            )
+        )
+    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
+
+    by_object = evaluate_route(reference, load_route(route_path, reference, data), data)
+    by_graph = evaluate_route(packed, load_route(route_path, packed, data), data)
+
+    assert len(by_graph.gaps) == len(by_object.gaps)
+    if by_object.gaps:
+        pytest.skip("a route with a gap never finishes with certainty: it has no p90 to compare")
+    assert by_graph.risk.p90.value == pytest.approx(by_object.risk.p90.value, rel=1e-6)
+
+
 def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(both, data):
     """Ticket #70: `evaluate_route` on a packed plan reads the route in the walked graph; same mean, quantiles, gaps and first divergence."""
     from crafting_system.cli import evaluate_route, load_route
@@ -162,10 +185,6 @@ def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(bot
     assert len(by_graph.gaps) == len(by_object.gaps)
     if not by_object.gaps:
         assert by_graph.risk.mean.value == pytest.approx(by_object.risk.mean.value, rel=1e-6)
-        if math.isfinite(by_object.risk.p90.value):
-            assert by_graph.risk.p90.value == pytest.approx(by_object.risk.p90.value, rel=1e-6)
-        else:  # the object read leaves p90 unresolved when its grid has no coarse step (R13 since #576: no 0.0058 Chaos Transmutation to set the scale, #622); the graph read resolves it
-            assert math.isfinite(by_graph.risk.p90.value) and by_graph.risk.p90.value > by_graph.risk.mean.value
     assert (by_graph.divergence is None) == (by_object.divergence is None)
     if by_object.divergence is not None:
         assert by_graph.divergence.route_action == by_object.divergence.route_action

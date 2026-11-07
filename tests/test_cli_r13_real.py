@@ -15,7 +15,9 @@ ticket #190 resolves it with a certified interval, and the p90 `--verify` simula
 the mean itself); the PR records the 20-run check.
 """
 
+import contextlib
 import datetime
+import io
 import math
 from pathlib import Path
 
@@ -133,19 +135,26 @@ def test_the_policy_does_not_open_with_a_transmutation_and_none_is_offered(plan,
     assert "Orb of Transmutation" not in {state.action for state in report.states}
 
 
-def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, capsys):
-    out = tmp_path / "policy.json"
+@pytest.fixture(scope="module")
+def command(tmp_path_factory, data):
+    """(exit code, JSON document, printed text) of the CLI on R13 with `--verify` and the guide's route: one run, shared by the tests below."""
+    out = tmp_path_factory.mktemp("r13") / "policy.json"
+    printed = io.StringIO()
+    with contextlib.redirect_stdout(printed):
+        code = main(
+            [str(TARGET), "--json", str(out), "--verify", "--runs", str(RUNS), "--route", str(ROUTE)],
+            data=data,
+            prices=load_price_file(PRICES),
+            env={},
+            today=datetime.date(2026, 11, 1),
+        )
+    return code, read_json(out), printed.getvalue()
 
-    code = main(
-        [str(TARGET), "--json", str(out), "--verify", "--runs", str(RUNS), "--route", str(ROUTE)],
-        data=data,
-        prices=load_price_file(PRICES),
-        env={},
-        today=datetime.date(2026, 11, 1),
-    )
+
+def test_the_command_returns_the_policy_and_verify_agrees(command):
+    code, document, text = command
 
     assert code == 0
-    document = read_json(out)
     totals = document["totals"]
     assert totals["success_probability"]["value"] == pytest.approx(1.0)
     assert totals["mean_cost"]["value"] > BELT_PRICE
@@ -156,6 +165,15 @@ def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, capsys
     assert document["given_route"]["gaps"] == []
     assert totals["mean_cost"]["value"] <= document["given_route"]["mean_cost"]["value"] * (1 + 1e-9)
     assert document["states"]
-    text = capsys.readouterr().out
-    # the plan's own quantiles are resolved (above); the guide's route reads "not computed" for its percentiles since the Magic start (#622: the object risk read of the route finds no grid)
     assert "simulated, not certified" in text
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="#622: since the Magic start of #576 (PR #607) the object risk read of R13's given route leaves its percentiles unresolved (about 480 s, then 'not computed'); it fails loudly the day #622 is fixed, delete this mark then",
+)
+def test_the_given_routes_percentiles_are_resolved_in_the_printed_report(command):
+    _, _, text = command
+
+    assert "far above its cheapest step" not in text

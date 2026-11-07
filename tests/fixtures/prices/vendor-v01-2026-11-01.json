@@ -960,7 +960,7 @@
         "query_hash": "0c8292aec6aca6eec1c1e19559b01b9b10ad8274aadd17b75c65ec95b5c1cd37",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time; a STAND-IN for a wider item (OR-7): priced for a Hunter bow of item level 78 or more, any non-unique rarity (searched 2026-11-01); the exact item (magic, item level 78 to 79) has 0 listings (searched 2026-11-07), and 2 at item level 78 or more, issue #601",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time; a STAND-IN for a wider item (OR-7): priced for a Hunter bow of item level 78 or more, any non-unique rarity (searched 2026-11-01); the exact item (magic, item level 78 to 79) has 0 listings (searched 2026-11-07), and 2 at item level 78 or more with no top bound, both priced at 2 Divine Orbs = 744.4 Chaos at 372.2 Chaos per Divine (instant buyout, listed 2026-09-13 and 2026-09-14; searched 2026-11-07), issue #601",
       "source": "trade-api"
     },
     "Two-Toned Boots [BootsAtlas1], item level 86-100": {
