@@ -251,7 +251,7 @@ def test_the_text_and_the_json_of_a_veil_plan_show_the_percentiles_and_state_the
     totals = policy_document(report)["totals"]
 
     assert math.isfinite(plan.risk.p90.high) and "far above its cheapest step" not in text
-    assert "free actions are counted at 5e-06 Chaos each" in text and "the percentiles hold to within" in text and "and the CVaR to within" in text
+    assert "free actions are counted at 5e-06 Chaos each" in text and "the median cost and the cost 9 runs in 10 stay under hold to within" in text and "and the average of the worst tenth to within" in text
     assert totals["quantiles_resolved"] is True
     assert totals["free_action_allowance"] == pytest.approx(plan.risk.grid.free_allowance) and totals["free_action_tail"] == 1e-9
     assert totals["free_action_cost"] == pytest.approx(5e-6) and totals["free_action_cvar_allowance"] > 0.0

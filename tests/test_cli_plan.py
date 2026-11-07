@@ -88,7 +88,7 @@ def test_the_text_tree_shows_the_main_line_the_miss_the_odds_the_mean_and_p90(tm
     assert "do: Harvest Reforge Lightning (50 Primal Crystallised Lifeforce = 0.50 Chaos each)" in text
     assert f"{q * 100:.2f}%  goal reached" in text
     assert "nothing gained, back to S1" in text
-    assert "mean cost" in text and "p90" in text and "Divine" in text
+    assert "the mean cost" in text and "the cost 9 runs in 10 stay under" in text and "Divine" in text
     assert "risk figures" in text and "JSON policy written to" in text
     assert text.isascii()
 

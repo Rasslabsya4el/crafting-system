@@ -23,7 +23,7 @@ from limits_support import labels_of, only
 from route_view_support import alike_key, assert_golden
 
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
-from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, make_plan, verify
+from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, make_plan, policy_document, verify
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_view import build_section, route_input, write_route_page
@@ -90,6 +90,22 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
     # only some essences that no source prices (poe.ninja, poe.watch, an earlier league) are dropped, and the
     # Harvest reforges whose lifeforce the fixture price file lacks (it holds the Primal lifeforce only)
     assert {label for label in labels_of(plan.limits, "unpriced") if not label.startswith("Harvest Reforge")} <= UNPRICED_ESSENCES
+
+
+def test_the_json_policy_keeps_the_group_of_the_target(solved, data):
+    """`policy_document(...)["requirements"]` of the real plan (ticket #630): R05 asks for 1 of 4 (Life or one resistance), not for all four."""
+    route_id, _, target, plan = solved
+
+    requirements = policy_document(build_report(plan, data))["requirements"]
+
+    groups = [node for node in target.requirements if isinstance(node, KOfN)]
+    assert len(requirements["groups"]) == len(groups)
+    assert len(requirements["plain"]) == len(target.requirements) - len(groups)
+    if route_id == "R05":
+        [group] = requirements["groups"]
+        assert group["at_least"] == 1 and len(group["of"]) == 4
+        assert sorted(member["side"] for member in group["of"]) == ["prefix", "suffix", "suffix", "suffix"]  # Life, then the three resistances
+        assert not any("IncreasedLife" in label or "Resistance" in label for label in requirements["plain"])
 
 
 def test_verify_agrees_with_the_computed_mean(solved, data):

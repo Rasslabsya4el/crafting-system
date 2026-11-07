@@ -136,13 +136,13 @@ def test_the_text_shows_no_p90_or_cvar_that_looks_certified(command, budget, cap
     text = capsys.readouterr().out
     assert code == 0
     assert "Verification by simulation, not certified (1,500 runs, seed 7" in text
-    assert "simulated p90" in text and "simulated CVaR 90%" in text
+    assert "the cost 9 runs in 10 stay under: simulated " in text and "the average of the worst tenth: simulated " in text
     assert "AGREES: the simulated mean is consistent with the certified interval" in text
-    assert "AGREES with the computed mean" not in text and "computed p90" not in text
+    assert "AGREES with the computed mean" not in text and "; computed " not in text
     for line in text.splitlines():
         if line.startswith("JSON policy written to"):
             continue  # a path that holds the test's name
-        if "p90" in line or "CVaR" in line:
+        if ("9 runs in 10" in line or "worst tenth" in line) and not line.lstrip().startswith("Not given"):  # that line says the figures are not given at all
             assert "simulated" in line and "not certified" in line, line
     assert text.isascii()
 
@@ -168,7 +168,7 @@ def test_the_document_is_strict_json(approximate, check):
 
     json.dumps(document, allow_nan=False)
     assert document["answer"] == policy_document(build_report(approximate, DATA))["answer"]  # the marking is the same with and without
-    assert render_text(build_report(approximate, DATA), check).count(SIMULATED) == 3  # the mean, the p90 and the CVaR
+    assert render_text(build_report(approximate, DATA), check).count(SIMULATED) == 3  # the mean, the cost 9 runs in 10 stay under and the average of the worst tenth
 
 
 def test_the_command_exits_with_2_when_a_bound_is_wrong(command, budget, monkeypatch, capsys):

@@ -183,8 +183,8 @@ def test_the_percentiles_a_slower_method_gave_are_a_limit_that_marks_the_unreach
 
     (limit,) = risk_limits(risk)
 
-    assert limit.what == "Percentiles by a slower method" and limit.why == gave_up.gave_up[0]
-    assert limit.guarantee == "Each percentile shown is certified by the method that finished; one it could not reach is marked as not computed."
+    assert limit.what == "Cost figures by a slower method" and limit.why == gave_up.gave_up[0]
+    assert limit.guarantee == "Each cost figure shown is certified by the method that finished; one it could not reach is marked as not computed."
     assert risk_limits(plan.risk) == ()
 
 

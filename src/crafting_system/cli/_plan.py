@@ -607,7 +607,7 @@ def lumped_limit(item_states: int, shown: int) -> Limit:
         "The tree shows groups of states",
         f"the plan passes through {item_states:,} states and the tree shows {shown:,} groups of them: states that cost the same and lead on to "
         "the same groups with the same chances are one group, shown by one of its members",
-        "The odds, costs and percentiles are exact for the groups.",
+        "The odds and every cost figure are exact for the groups.",
     )
 
 
@@ -651,8 +651,8 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
             Limit(
                 _limits.RISK,
                 _limits.not_computed(*_limits.QUANTILES),
-                f"the plan can lead from one state to another in {moves:,} ways, more than the {RISK_QUANTILE_TRANSITIONS:,} the percentile "
-                "calculation can hold in memory",
+                f"the plan can lead from one state to another in {moves:,} ways, more than the {RISK_QUANTILE_TRANSITIONS:,} the calculation "
+                "of the cost figures can hold in memory",
                 "The odds, the mean and the variance are exact.",
             ),
         )

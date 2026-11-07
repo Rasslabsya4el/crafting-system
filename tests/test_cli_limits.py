@@ -14,7 +14,7 @@ One test per source of a limit, by the row of the fact base (`docs/research/2026
   `test_g14_*`. G19 percentiles not computed: `test_g19_*` and `test_packed_plan_real.py`. G20 a quantile the grid cannot reach: `test_g20_*`.
 * P1 a given start item, P3 no restart for it: `test_p1_*`, `test_p3_*`.
 
-Then what the three surfaces show: the text report, the JSON `crafting-system-policy/2` and the goal card of the route page.
+Then what the three surfaces show: the text report, the JSON `crafting-system-policy/3` and the goal card of the route page.
 """
 
 import dataclasses
@@ -140,7 +140,7 @@ def test_g14_a_tree_of_groups_of_item_states_says_it_and_keeps_the_numbers_exact
     shown = only(make_plan(DATA, load_target(R12, DATA), price_file(), solver="packed").limits, "display")
 
     assert shown.what == "The tree shows groups of states" and "are one group" in shown.why
-    assert shown.guarantee == "The odds, costs and percentiles are exact for the groups."
+    assert shown.guarantee == "The odds and every cost figure are exact for the groups."
 
 
 def test_g19_percentiles_the_memory_cannot_hold_are_a_limit_with_exact_odds_and_mean(monkeypatch):
@@ -249,7 +249,7 @@ def test_the_text_report_the_json_and_the_page_show_the_same_records(plan):
     document = policy_document(report)
     page = render_page(Page("x", (build_section(route_input(plan), DATA),)))
 
-    assert document["format"] == "crafting-system-policy/2"
+    assert document["format"] == "crafting-system-policy/3"
     assert not {"note", "dropped_actions", "left_out_actions"} & set(document)
     assert [entry["kind"] for entry in document["limits"]] == [limit.kind for limit in sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind))]
     for limit in plan.limits:
@@ -286,7 +286,7 @@ def test_the_json_limit_is_the_record_with_every_field(plan, tmp_path):
     for entry in document["limits"]:
         assert set(entry) == {"kind", "what", "why", "guarantee", "count", "labels", "names"}
         assert entry["count"] == len(entry["labels"]) and entry["guarantee"]
-    assert document["format"] == "crafting-system-policy/2"
+    assert document["format"] == "crafting-system-policy/3"
 
 
 # --- G20 on a real plan: through `make_plan` and through `add_risk` -------------------------------------------------

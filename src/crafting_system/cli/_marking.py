@@ -30,13 +30,12 @@ from crafting_system.simulator import SampledEstimate
 from crafting_system.solver import Action
 
 from ._approx import Approximation
-from ._limits import figures
+from ._limits import PERCENTILE_WORDS, figures
 from ._plan import Plan
 from ._reach import policy_states
 from ._verify import CVAR_LEVEL, SIGMAS, Verification
 
 SIMULATED = "simulated, not certified"
-CVAR_PERCENT = f"{CVAR_LEVEL:.0%}"
 CERTIFIED = "approximate (certified within {gap} of the exact mean)"
 UNCERTIFIED = "approximate (the certified gap is {gap}, above the {tolerance} tolerance)"
 RISK_FIGURES = ("success", "p50", "p90", "CVaR")  # the keys of `_limits.PERCENTILE_WORDS` an approximate answer does not give
@@ -276,7 +275,7 @@ def _shown(estimate: SampledEstimate) -> str:
 
 
 def verification_lines(check: Verification) -> list[str]:
-    """The text of `--verify` for an approximate answer: every p90 and CVaR number carries the words `SIMULATED`."""
+    """The text of `--verify` for an approximate answer: every number of the cost 9 runs in 10 stay under and of the average of the worst tenth carries the words `SIMULATED`."""
     report = check.report
     cost = report.cost
     lower, upper = check.bounds
@@ -291,8 +290,8 @@ def verification_lines(check: Verification) -> list[str]:
         f"  simulated mean cost {_chaos(cost.value)} Chaos, {report.confidence:.0%} interval {_chaos(cost.low)} to {_chaos(cost.high)} "
         f"(normal approximation), {SIMULATED}",
         f"  certified interval for the exact mean {_chaos(lower)} to {_chaos(upper)} Chaos",
-        f"  simulated p90 {_shown(check.p90)} ({SIMULATED})",
-        f"  simulated CVaR {CVAR_PERCENT} {_shown(check.cvar)} ({SIMULATED})",
+        f"  {PERCENTILE_WORDS['p90']}: simulated {_shown(check.p90)} ({SIMULATED})",
+        f"  {PERCENTILE_WORDS['CVaR']}: simulated {_shown(check.cvar)} ({SIMULATED})",
         f"  detectable error    a mean off by more than {check.detectable_error:.1%} is rejected "
         f"({SIGMAS:g} standard errors); a smaller error passes; more --runs see smaller ones",
         f"  successes {report.successes:,} of {report.runs:,}, mean uses per run {report.mean_steps:.1f}",

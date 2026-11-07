@@ -9,7 +9,7 @@ from crafting_system.data import GameData
 from crafting_system.targets import plain_base_names
 
 from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
-from ._report import UNRESOLVED, Report, _estimate, _shifted, describe_state, interval, percent, unresolved
+from ._report import ROW_WIDTH, UNRESOLVED, Report, _estimate, _row, _shifted, describe_state, interval, percent, unresolved
 from ._route import Route, RouteResult
 
 
@@ -35,11 +35,11 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
     lines = [
         f"Given route: {name}",
         "  (the route is evaluated as a fixed policy at the same prices; the start item is included)",
-        f"  success chance  {percent(risk.success_probability.value)}   (policy {percent(solver.success_probability.value)})",
+        _row("success", f"{percent(risk.success_probability.value)}   (policy {percent(solver.success_probability.value)})"),
     ]
-    for label, given, found in (("mean cost", risk.mean, solver.mean), ("p50", risk.p50, solver.p50), ("p90", risk.p90, solver.p90)):
-        lines.append(f"  {label:<15} {_interval(given, shift, divine, risk)}")
-        lines.append(f"  {'':<15} (policy {_interval(found, shift, divine, solver)})")
+    for name, given, found in (("mean", risk.mean, solver.mean), ("p50", risk.p50, solver.p50), ("p90", risk.p90, solver.p90)):  # the words of `PERCENTILE_WORDS` (#633)
+        lines.append(_row(name, _interval(given, shift, divine, risk)))
+        lines.append(f"  {'':<{ROW_WIDTH}}(policy {_interval(found, shift, divine, solver)})")
     lines.extend(approximate_lines(approximate_inputs(plan, result.policy, data)))
     lines.append("")
     divergence = result.divergence

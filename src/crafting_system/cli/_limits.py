@@ -2,7 +2,7 @@
 
 A `Limit` is one thing the answer does not cover and what it still guarantees: a kind of action that was not offered,
 offers dropped for lack of a price, an offer proved not needed, a given start item, a percentile the grid could not reach.
-`Plan.limits` holds them all, and the text report, the JSON policy (`crafting-system-policy/2`) and the route page's goal card
+`Plan.limits` holds them all, and the text report, the JSON policy (`crafting-system-policy/3`) and the route page's goal card
 show the same records in the same words, so no surface keeps a second copy.
 
 The fields:
@@ -418,7 +418,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
             Limit(
                 RISK,
                 not_computed(*cut),
-                "the cost of the whole craft is far above its cheapest step, so the percentile calculation cannot reach them"
+                "the cost of the whole craft is far above its cheapest step, so the calculation of these figures cannot reach them"
                 + (f"; the faster methods gave up first: {'; '.join(risk.grid.gave_up)}" if risk.grid.gave_up else ""),
                 "The success chance and the mean cost are exact.",
             )
@@ -427,9 +427,9 @@ def risk_limits(risk) -> tuple[Limit, ...]:
         found.append(
             Limit(
                 RISK,
-                "Percentiles by a slower method",
+                "Cost figures by a slower method",
                 "; ".join(risk.grid.gave_up),
-                "Each percentile shown is certified by the method that finished; one it could not reach is marked as not computed.",
+                "Each cost figure shown is certified by the method that finished; one it could not reach is marked as not computed.",
             )
         )
     return tuple(found)
