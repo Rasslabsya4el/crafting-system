@@ -429,3 +429,37 @@ def test_a_lower_minimum_is_a_wider_item_and_a_price_with_no_stored_search_has_n
     assert resolve_start_price(DATA, target, prices, None).taken_for == "price taken for a wider item (a lower minimum)"
     plain = PriceFile("Allflame", prices_date(), 400.0, {start_price_key(DATA, target): PriceEntry(2.0, "poe.ninja")})
     assert resolve_start_price(DATA, target, plain, None).taken_for is None
+
+
+CORRUPTED_RESIST = FRACTURED_RESIST.replace("start: bought\n", "start: bought\nallow_corrupted: true\n").replace(
+    "      fractured: true\n", "      fractured: true\n  corrupted: true\n"
+)
+
+
+def test_a_price_whose_stored_search_has_no_corruption_filter_was_taken_for_a_wider_item():
+    def change(query):
+        del query["filters"]["misc_filters"]["filters"]["corrupted"]
+
+    target, prices = wider_prices(change)
+
+    found = resolve_start_price(DATA, target, prices, None)
+
+    assert found.taken_for == "price taken for a wider item (corrupted or not)"
+    assert found.chaos == 7.5
+
+
+def test_a_price_taken_for_corrupted_items_says_it_was_taken_for_another_item_that_is_corrupted():
+    def change(query):
+        query["filters"]["misc_filters"]["filters"]["corrupted"] = {"option": "true"}
+
+    target, prices = wider_prices(change)
+
+    assert resolve_start_price(DATA, target, prices, None).taken_for == "price taken for another item (corrupted)"
+
+
+def test_a_corrupted_start_item_priced_by_a_search_for_uncorrupted_items_says_it_was_taken_for_another_item_not_corrupted():
+    target = target_at(76, CORRUPTED_RESIST)
+    _, prices = wider_prices(lambda query: None)
+
+    assert buy_spec_of(DATA, target).corrupted is True
+    assert resolve_start_price(DATA, target, prices, None).taken_for == "price taken for another item (not corrupted)"
