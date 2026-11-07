@@ -27,6 +27,7 @@ from crafting_system.cli import _envelope_plan
 from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.cli._limits import limit_text
 from crafting_system.cli._offer_floor import OfferFloors
+from crafting_system.solver import ConvergenceError
 from crafting_system.cli._pattern_bound import pattern_lower_bound, pattern_offers
 
 TOLERANCE = 1e-9
@@ -246,3 +247,15 @@ def test_a_search_stopped_before_a_plan_exists_says_the_lower_bound_it_reached(w
     given = [offer for offer in offers if offer.label != "restart"]  # no restart: no plan can be executed before the greedy policy closes
     with pytest.raises(NoPolicy, match=r"no plan costs less than [0-9]"):
         envelope_result(fresh, fresh.compress(START_ITEM), given, net=Net(states=12))
+
+
+def test_a_stopped_plan_the_solver_cannot_certify_is_a_refusal_with_the_lower_bound(world, monkeypatch):
+    ab, start, offers, _, _, _ = world
+
+    def uncertified(self):
+        raise ConvergenceError("the policy iteration on 533,666 states certifies only a relative bound of 2.07e-06", 2.07e-06)
+
+    monkeypatch.setattr(_envelope.Search, "upper_value", uncertified)
+    fresh = abstraction()
+    with pytest.raises(NoPolicy, match=r"cannot be solved to a certified cost .*no plan costs less than [0-9]"):
+        envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100))
