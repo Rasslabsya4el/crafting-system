@@ -1,0 +1,11 @@
+[
+  {"id": "619-as-craft-exalt", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "rare", "influences": ["hunter"],
+   "mods": ["LocalIncreasedAttackSpeed5", "IntMasterItemGenerationCannotRollAttackAffixes"],
+   "actions": ["Exalted Orb"], "repeats": 2000},
+  {"id": "619-magic-gems-augment", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "magic", "influences": ["hunter"],
+   "mods": ["LocalIncreaseSocketedGemLevel1"],
+   "actions": ["Orb of Augmentation"], "repeats": 2000},
+  {"id": "619-magic-junk-augment", "base": "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16", "item_level": 78, "rarity": "magic", "influences": ["hunter"],
+   "mods": ["LocalIncreasedPhysicalDamagePercent1"],
+   "actions": ["Orb of Augmentation"], "repeats": 2000}
+]

@@ -5,7 +5,7 @@
 Plans the benchmark route (the packed solver), reads its completed route (`BenchmarkRoute.completed`) on the walked graph and lists every
 state where a `restart` that the guide does not have fires while an action of the guide's own rules is legal: the restart throws away progress
 the guide's loop could keep (`cli/_route_completion.py`). Prints each loss (the state, the line of the added rule, the legal actions) and writes
-`OUT_DIR/completion.json`. Exit code 0 when there is none, 1 when there is one. R04 must pass; R14 fails until #619.
+`OUT_DIR/completion.json`. Exit code 0 when there is none, 1 when there is one. R04 and R14 must pass (R14 since #619).
 
 Never run on a PC: the plan of R04 takes about 10 minutes and 6 GB, R14's about 40 minutes and 9 GB. Run by `.github/scripts/heavy_dispatch.py`
 (R14 with `--long`).
