@@ -260,6 +260,25 @@ def certificate_gap(info: EnvelopeInfo) -> float | None:
     return max(info.upper / info.lower - 1.0, 0.0)
 
 
+def certificate_figures(lower: float, upper: float) -> tuple[str, str]:
+    """`LB` and `U` as printed: two decimals, and more only when two decimals would print them the same although `LB < U` (a nearly closed search)."""
+    for places in range(2, 13):
+        low, high = f"{lower:,.{places}f}", f"{upper:,.{places}f}"
+        if low != high or not lower < upper:
+            return low, high
+    return low, high
+
+
+def certificate_gap_text(gap: float) -> str:
+    """The gap as printed: a percent with two decimals from 0.1% up, below that two significant digits as a plain ratio ("1.4e-7"), never a rounded 0."""
+    if gap == 0.0:
+        return "0"
+    if gap >= 1e-3:
+        return f"{gap:.2%}"
+    mantissa, exponent = f"{gap:.1e}".split("e")
+    return f"{mantissa}e{int(exponent)}"
+
+
 def certificate_text(info: EnvelopeInfo) -> str:
     """What a stopped search still guarantees, next to the point answer (OR-11, OR-13): `[LB, U]`, the gap, the bound used and what it bounds.
 
@@ -271,9 +290,10 @@ def certificate_text(info: EnvelopeInfo) -> str:
     """
     gap = certificate_gap(info)
     lower = max(info.lower, 0.0)
-    head = f"The best possible cost lies in [{lower:,.2f}, {info.upper:,.2f}] Chaos after the start item. "
+    low, high = certificate_figures(lower, info.upper)
+    head = f"The best possible cost lies in [{low}, {high}] Chaos after the start item. "
     gap_text = (
-        f"The stop can have cost at most {gap:.2%} (the plan's cost over the lower end, less one). " if gap is not None else "No gap can be stated: the lower end is not above zero. "
+        f"The stop can have cost at most {certificate_gap_text(gap)} (the plan's cost over the lower end, less one). " if gap is not None else "No gap can be stated: the lower end is not above zero. "
     )
     bound = (
         "The lower end is a lower bound of the best cost over the whole graph of the item, not only the part the search looked at. It holds because "
@@ -284,4 +304,4 @@ def certificate_text(info: EnvelopeInfo) -> str:
     return head + gap_text + bound
 
 
-__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "certificate_gap", "certificate_text", "envelope_limits", "envelope_result", "route_incumbent"]
+__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "certificate_figures", "certificate_gap", "certificate_gap_text", "certificate_text", "envelope_limits", "envelope_result", "route_incumbent"]

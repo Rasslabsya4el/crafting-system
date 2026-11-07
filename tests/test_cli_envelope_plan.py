@@ -23,7 +23,7 @@ from test_cli_approximate import TARGET as APPROX_TARGET
 
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
 from crafting_system.cli._envelope import Net
-from crafting_system.cli._envelope_plan import EnvelopeInfo, certificate_gap, certificate_text
+from crafting_system.cli._envelope_plan import EnvelopeInfo, certificate_gap, certificate_gap_text, certificate_text
 from crafting_system.cli._limits import SHOWN_LABELS, SOLVE, limit_text
 from crafting_system.cli._plan import PlanError
 from crafting_system.cli._route_html import render_page
@@ -124,6 +124,18 @@ def test_a_finished_search_prints_no_certificate(both):
     _, envelope = both
     (cut,) = search_limit(envelope)
     assert "[" not in limit_text(cut) and "best possible cost" not in limit_text(cut) and "exact" in cut.guarantee
+
+
+def test_a_nearly_closed_stop_prints_figures_that_differ_and_a_gap_that_is_not_zero():
+    """The R14 case (run 42331454969: LB 5784.48786466286, U 5784.4886922212545, gap 1.4e-7): two decimals and a percent printed
+    "[5,784.49, 5,784.49]" and "0.00%", which reads as a proved plan."""
+    info = EnvelopeInfo(False, "the time limit of 25 seconds was reached", 5784.48786466286, 5784.4886922212545, 8, 93884, 91531, 99106, 296729, 0, True, None, 1969, 12.8, 40.6, None)
+    text = certificate_text(info)
+    print(text.split(" The lower end")[0])
+    assert "[5,784.49, 5,784.49]" not in text and "[5,784.488, 5,784.489]" in text
+    assert "at most 1.4e-7 " in text and "0.00%" not in text
+    assert certificate_gap_text(1.4306511020301116e-07) == "1.4e-7" and certificate_gap_text(0.0) == "0"
+    assert certificate_gap_text(0.003681416052256692) == "0.37%" and certificate_gap_text(0.3206) == "32.06%"  # R04 and R05 keep their format
 
 
 def test_the_gap_is_not_stated_when_the_lower_end_is_not_above_zero():
