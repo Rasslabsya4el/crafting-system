@@ -6,6 +6,11 @@ Speed 1/3 of the time", "two Exalted Orbs force the two prefixes". Each is check
 guide describes: the action's own `outcomes` give the chance, which is formatted to the decimals the guide gives and
 compared with it. A difference is recorded, not hidden (the planner's rules for the metamods can differ from what a
 guide claims, ticket #68); `benchmark` never fails a route over it.
+
+A row whose `published` is None is not a check: the guide publishes no number for that reading, and the row only shows OUR chance
+(ticket #599). R04's and R14's "two Exalted Orbs guarantee the two prefixes" is a number about the FAMILY (100%); the same Exalted
+Orb read at the target's tiers (OR-1, OR-4) has no published number, and 13% beside the guide's 100% is two different events, not a
+difference between our model and the guide.
 """
 
 from collections.abc import Iterable
@@ -31,7 +36,7 @@ class PublishedOutcome:
 
     `held` are the mod ids the item holds (rolled at the low end of every range), `fractured` and `crafted` those of
     them that are fractured or crafted. `requirement` says the event in words, `published` is the guide's text with as
-    many decimals as it gives ("25%", "33%").
+    many decimals as it gives ("25%", "33%"); None when the guide gives no number for this reading (see the module text).
     """
 
     action: str
@@ -40,7 +45,7 @@ class PublishedOutcome:
     held: tuple[str, ...]
     event: str
     mod_ids: tuple[str, ...]
-    published: str
+    published: str | None
     fractured: tuple[str, ...] = ()
     crafted: tuple[str, ...] = ()
     families: tuple[str, ...] = ()  # every mod of these families counts as well as `mod_ids`
@@ -91,7 +96,7 @@ def published_outcomes(data: GameData, target: Target, published: Iterable[Publi
             raise ValueError(f"the published odds name the action {odds.action!r}, which the target does not offer")
         action: Action = offers[odds.action]
         share = chance_of(data, action.outcomes(data, item_of(data, target, odds)), odds.event, odds.mod_ids, odds.families)
-        decimals = len(odds.published.rstrip("%").partition(".")[2])
+        decimals = 0 if odds.published is None else len(odds.published.rstrip("%").partition(".")[2])
         computed = f"{float(share) * 100:.{decimals}f}%"
         found.append(
             {
@@ -100,7 +105,7 @@ def published_outcomes(data: GameData, target: Target, published: Iterable[Publi
                 "on": odds.on,
                 "published": odds.published,
                 "computed": computed,
-                "matches": computed == odds.published,
+                "matches": None if odds.published is None else computed == odds.published,
                 "wanted_weight": None,
                 "candidate_weight": None,
                 "share": float(share),

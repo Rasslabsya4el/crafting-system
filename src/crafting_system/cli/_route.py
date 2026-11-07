@@ -26,6 +26,15 @@ when a bench action is offered (the other mods are then kept as slots); without 
 covers (or where the game refuses the rule's action) is a GAP: it has no policy entry, so the route
 never finishes from there, which `risk.evaluate` reports as a success chance below 1 and an infinite
 mean. Errors are worded `<file>:<line>: <key path>: <problem>`, as the target loader's are.
+
+A COMPLETED ROUTE (tickets #599, #628). A guide with a gap never finishes, so the benchmark also evaluates the guide completed (`BenchmarkRoute.completed`, the
+file `<route>-restart.yaml`): the guide's rules, in order, plus rules the guide does not have, each marked "NOT IN THE GUIDE" in the file with its reason, and
+`skip_refused: true`. What it may add is one rule: it fills a gap of the guide with the guide's own loop plus the actions the game forces to make that
+loop legal; it never takes the planner's own move; and it never restarts where the guide's loop could keep the progress. The last clause is checked
+(`_route_completion.py`): wherever a rule the guide does not have fires a `restart`, every action the guide's rules name must be refused by the game
+there. `tests/test_route_completion.py` runs the check on hand-built items of every completed route in `examples/routes/`; `.github/scripts/completion_check.py`
+runs it on every state the route reaches (R04 and R14, a heavy run). A guide rule that must change to keep the loop from cycling (R04's step 7 asks a free
+prefix, or craft and remove would repeat for ever) is named in the file's header with the guide's own words.
 """
 
 import time

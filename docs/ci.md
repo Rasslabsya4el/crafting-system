@@ -243,6 +243,29 @@ measured, before and after a change of the page: run it on two refs and compare 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
     $D --long --timeout-minutes 120 --command 'uv run --no-sync python .github/scripts/page_size.py --route r14 --out $OUT_DIR'
 
+### Where a route's cost sits (#599)
+
+`.github/scripts/divergence_costs.py R04 OUT_DIR [EXTRA_ROUTE.yaml ...]` plans a benchmark route (R04 takes about 10 minutes on a runner),
+then for the planner, the guide as written, its completed form and each extra route file writes `OUT_DIR/costs.json` and prints: the uses and
+the Chaos carried by each action (they add up to the mean), every divergence of the planner's main line with the expected visits of the state
+under each side and what each carries (the whole list that `benchmark.json` cuts to ten), the gaps of the guide, and, for each route, its mean
+when it takes the planner's action in the states of one group of divergences (and of one pair of actions, and of all of them, which must give the
+planner's own mean). The visits are the exact row of `(I - Q)^-1` (OR-20), not the bounds `reach_of` gives on R04's chain of 28 million edges.
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
+    $D --command 'uv run --no-sync python .github/scripts/divergence_costs.py R04 $OUT_DIR/costs examples/routes/my-trial.yaml 2>&1 | tee $OUT_DIR/costs.log'
+
+### The rule of a completed route on every state (#599, #628)
+
+`.github/scripts/completion_check.py R04 OUT_DIR` plans the route, reads its completed route on the walked graph and lists every state where a `restart` that
+the guide does not have fires while an action of the guide's own rules is legal (`cli/_route_completion.py`, the rule in `cli/_route.py`). Exit code 0: none.
+The small, hand-built version of the same check runs in CI (`tests/test_route_completion.py`). R04 takes about 10 minutes, R14 about 40 (`--long`); R14 is
+expected to fail until #619.
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
+    $D --command 'uv run --no-sync python .github/scripts/completion_check.py R04 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'
+    $D --long --timeout-minutes 120 --command 'uv run --no-sync python .github/scripts/completion_check.py R14 $OUT_DIR/completion 2>&1 | tee $OUT_DIR/completion.log'
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some

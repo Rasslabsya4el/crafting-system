@@ -9,7 +9,7 @@ at the same state), the states expanded, the time and the peak memory of each. `
 whose two runs do not fit in one runner's hour (R14): each writes `<route>.<phase>.json` with a digest of its policy, and `compare` joins two such
 files. States are compared by a digest of their `repr`, so set `PYTHONHASHSEED=0` in the command when the two phases run in two processes.
 
-`--incumbent` gives the search the route `examples/routes/<route>-restart.yaml` (the guide's route completed with a restart) as the incumbent whose
+`--incumbent` gives the search the route `examples/routes/<route>-restart.yaml` (the guide's completed route, `cli/_route.py`) as the incumbent whose
 policy is the first upper bound; R04 and R14 have one. The risk (percentiles) is not computed: it is not what is compared.
 
 Never run on a PC for R04 and R14: they walk for minutes to half an hour. Run by `.github/scripts/heavy_dispatch.py` (docs/ci.md).
@@ -42,7 +42,7 @@ def digest(state) -> str:
 
 
 def incumbent_of(route: str, data, target, prices, start_price):
-    """The guide's route completed with a restart, read against an unsolved plan of the target."""
+    """The guide's completed route, read against an unsolved plan of the target."""
     path = ROOT / "examples" / "routes" / f"{P.TARGETS[route]}-restart.yaml"
     plan = make_plan(data, target, prices, start_price=start_price, solve_it=False)
     return route_incumbent(load_route(path, plan, data), data)

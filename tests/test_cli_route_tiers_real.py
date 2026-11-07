@@ -88,7 +88,7 @@ def test_the_first_exalted_orb_gives_life_and_bow_damage_a_tier_each_and_their_t
 ):
     _, _, found = published
     row = found[2]  # "adds the TOP tier of Life or of Bow damage": 13% of one use
-    assert row["published"] == "100%" and row["computed"] == "13%"
+    assert row["published"] is None and row["computed"] == "13%"  # the guide's 100% is of the family (row 1); nobody published a number for the top tier (#599)
 
     lines = by_text(tier_lines(plan.abstraction, exalted.offer.action, [first], [1.0]))
 

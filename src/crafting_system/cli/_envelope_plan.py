@@ -142,7 +142,7 @@ def route_incumbent(route, data) -> Callable[[CompressedState], list[str]]:
     """A given route as the incumbent of the search: at a state, the labels of the offers its matching rules name, in order.
 
     The search realizes the first that the game allows, so a route that says `skip_refused` falls through to its next rule as `evaluate_route` does;
-    where none matches or none applies the incumbent restarts (the route "completed with a restart"). A label the search does not offer (a twin
+    where none matches or none applies the incumbent restarts (the "completed route", `cli/_route.py`). A label the search does not offer (a twin
     left out, say) is passed over.
     """
 

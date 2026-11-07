@@ -97,6 +97,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_prune.py", "solver_actions", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_prune.py", "solver_actions", ("OutOfScopeError",), RECORDS, "a model gap: written"),
     ("cli/_route.py", "_decide", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route's rule cannot be used here, and the line says why"),
+    ("cli/_route_completion.py", "losses_at_item.refused", ("NotApplicableError", "OutOfScopeError"), EITHER, "the action cannot be used on this item, for either reason: the check of a completed route counts it as refused"),
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route has no action here; the gap line says the game refuses it or the walk left it out"),
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "that offer is not a twin here"),
     ("cli/_route_sim.py", "route_policy.policy", ("NotApplicableError", "OutOfScopeError"), EITHER, "the rule's action cannot be used on this item: a gap of the route"),

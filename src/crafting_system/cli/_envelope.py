@@ -20,7 +20,7 @@ bound is consistent: it solves the model's own Bellman equation, and a concrete 
 and no realized action beats it, or while its lower bound `la` is below the best realized `Q_L`. An offer whose `la` exceeds `V*(s)` is therefore
 never realized: the optimal action has `Q_L <= Q* = V*(s)`, so it is cheaper than that offer at every round. This is the cut of ADR-0063 point 4
 ("an action is not expanded when its cost with lower bounds exceeds the best action's cost with upper bounds"), made with the upper bound
-`U >= V*` replaced by the stronger `V*` it stands for; the upper bound of an executable policy (the given route completed with a restart, or the
+`U >= V*` replaced by the stronger `V*` it stands for; the upper bound of an executable policy (the completed route of the guide, or the
 restart at every tip) does not move the cut. It is what a stop returns (below). A state is expanded only when the greedy policy of the lower graph
 reaches it. Nothing is cut by a number: no tolerance, no lumping by chance.
 
@@ -67,7 +67,7 @@ lowered by what the solver cannot certify.
 
 **The upper bound, and the stop-and-say-so net.** `U` is the value of a policy that can be executed: the realized actions plus, at every state
 but the start, the restart (buy the start item again) when the start item is bought. A tip then restarts (its upper bound is the start price plus
-the start value, a fixed point of the same graph), and a given route, completed with a restart, is the same policy with its actions realized first
+the start value, a fixed point of the same graph), and a given route, completed (`cli/_route.py`), is the same policy with its actions realized first
 (`incumbent`). A start that is given has no restart: a tip has no executable action, and `U` is infinite until the greedy policy closes, which says
 so. A time, memory or state net (`Net`) ends the search between rounds; the answer is then the best executable policy and `exact` is False.
 """
