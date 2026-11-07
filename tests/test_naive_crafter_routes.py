@@ -19,8 +19,8 @@ Covered with the planner's mean from the benchmark's heavy run (#610): R04 with 
 metamod `Cannot roll Attack Modifiers`, Remove Crafted Mods) and R14 with restart (Alteration and Regal on a Magic Hunter bow, a restart, the metamods `Can have up to 3
 Crafted Modifiers` and `Cannot roll Attack Modifiers`, the Exalted and Annulment Orbs, three bench crafts). The planner's side of these two is a solve of 177,242 and 816,153
 states (`benchmark`: about 10 and 35 minutes on a runner), so the test reads the numbers the benchmark wrote, recorded in `tests/fixtures/naive_crafter/benchmark_means.json`
-with the run and the hashes of the target, route and price files they were computed from. A heavy run (`NAIVE_HEAVY=1`) fails when a hash differs (the recorded numbers are
-stale: record them again); the CI run plays few plays and its 4 standard errors catch only a gross error. Only the mean is compared there, not the steps (the benchmark's
+with the run and what they were computed from (the hashes of the target and route files and the cost of each action of the route at the price file). A heavy run
+(`NAIVE_HEAVY=1`) fails when one differs (the recorded numbers are stale: record them again); the CI run plays few plays and its 4 standard errors catch only a gross error. Only the mean is compared there, not the steps (the benchmark's
 route result is a lumped chain, not a policy of item states).
 
 The routes with gaps, R04 and R14 as the guides wrote them (`GAPPED`): a state has no rule, or the game refuses the rule's action, so the chance of finishing is below 1 and the
@@ -168,12 +168,16 @@ def sha256_of(path: Path) -> str:
     return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()  # line ends as in the repository, so a Windows checkout hashes the same
 
 
-def inputs_of(stem: str) -> dict[str, str]:
-    """The hashes of the files a benchmark number is computed from: the target, the route and the price file."""
+def inputs_of(stem: str) -> dict:
+    """What a benchmark number is computed from: the hashes of the target and the route file, and what one use of each action of the route costs at the price file.
+
+    The costs, not the hash of the whole price file: the file moves for the prices of other routes, which changes nothing here.
+    """
+    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS)
     return {
         "target": sha256_of(TARGETS / f"{stem.removesuffix('-restart')}.yaml"),
         "route": sha256_of(ROUTES / f"{stem}.yaml"),
-        "prices": sha256_of(PRICES),
+        "costs": {label: round(world.action(label).cost, 9) for label in route_labels(stem)},
     }
 
 
@@ -248,12 +252,13 @@ def test_the_share_of_plays_that_finish_is_the_planners_chance_of_finishing(gapp
     assert verdict.agrees, str(verdict)
 
 
-@pytest.mark.skipif(not HEAVY, reason="the hashes are judged in a heavy run (NAIVE_HEAVY=1); a price change makes a CI run's recorded numbers old without making them wrong enough to see")
+@pytest.mark.skipif(not HEAVY, reason="the inputs are judged in a heavy run (NAIVE_HEAVY=1); a price change makes a CI run's recorded numbers old without making them wrong enough to see")
 @pytest.mark.parametrize("route_id", [*BENCHMARKED, *GAPPED])
 def test_the_recorded_benchmark_is_of_the_files_as_they_are(route_id):
     stem = {**BENCHMARKED, **GAPPED}[route_id][0]
 
-    assert recorded_for(route_id)["inputs"] == inputs_of(stem), "the recorded benchmark numbers are of other files: run the benchmark again and record them"
+    real_game_data()
+    assert recorded_for(route_id)["inputs"] == inputs_of(stem), "the recorded benchmark numbers are of other files or prices: run the benchmark again and record them"
 
 
 @pytest.mark.parametrize("benchmarked", list(BENCHMARKED), indirect=True)

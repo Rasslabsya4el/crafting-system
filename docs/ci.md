@@ -206,11 +206,11 @@ Since #608 to #610 it plays R08 and R09 (fossils), R12 (the Harvest reforge) and
 R08, R09 and R12 are cheap like R05 (about 1 ms to 2 ms a play). R04 and R14 are heavy on both sides: a play takes about 0.5 s (R04, mean about 200,000 Chaos) and 0.06 s (R14, mean about 13,000
 Chaos), and their planner side is a solve of 177,242 and 816,153 states. Their mean is therefore not computed in the test but read from
 `tests/fixtures/naive_crafter/benchmark_means.json`, which holds the `completed_route` mean (and the guide's own `success`) that `benchmark` wrote, with the run id, the
-commit and the sha256 of the target, route and price files it was computed from. To record it again (after a change to a target, a route, the prices or the planner):
+commit and what it was computed from (the sha256 of the target and route files and the cost of one use of each action of the route at the price file). To record it again (after a change to a target, a route, the prices or the planner):
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch'
     $D --runners 2 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
-    gh run download <run id> --dir results       # then copy each route's completed_route.mean and given_route.success into the json, with the run id and the file hashes
+    gh run download <run id> --dir results       # then copy each route's completed_route.mean and given_route.success into the json, with the run id and the inputs (see its provenance)
 
 The long simulation of these two then runs on many runners, each its own `NAIVE_SEED`, with `NAIVE_HEAVY=1` (which also fails when a recorded hash is old):
 
