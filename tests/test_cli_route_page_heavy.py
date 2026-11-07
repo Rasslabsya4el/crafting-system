@@ -209,7 +209,6 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 
 KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault
     ("R04", "check_no_internal_names"): 553,  # "Penetrating Arrow Quiver [QuiverNew5]" in step 1 and step 5; no rule says yet (decision issue)
-    ("R14", "check_no_hidden_step"): 569,  # step 12: a Normal card is Rare after a bench craft
 }
 JUDGES = (*page_lint.CHECKS, page_lint.check_no_internal_names)
 

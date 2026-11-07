@@ -173,6 +173,14 @@ fixtures(
     },
     example={
         "Alchemy between the Normal boots and the fossil": page(route(goal(), step(1, "Buy Sorcerer Boots", after=item("Boots", "Normal", (ANY,) * 3, (ANY,) * 3)), step(2, "Orb of Alchemy", after=item()), step(3, "Fossil: Pristine", after=item()))),
+        "R14: a row that follows the step linking to it, not the restart above it": page(
+            route(
+                goal(),
+                step(1, "Orb of Alchemy", ("Chance per use", "the target: ≈99.6%"), after=item()).replace("<div>the target: ≈99.6%</div>", '<div><a href="#s3">the target: ≈99.6%</a></div>'),
+                step(2, "Restart: buy Thicket Bow again", after=item("Thicket Bow", "Normal", (EMPTY,) * 3, (EMPTY,) * 3)),
+                step(3, "Benchcraft: +# to maximum Life", after=item(suffixes=(slot("+# to maximum Life", "c", "crafted"), ANY, ANY))),
+            )
+        ),
         "R10: the essence step notes that it reforges a rare without a Scouring Orb": page(route(goal(), bought, step(2, "Shrieking Essence of Spite", ("Note", "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"), after=item()))),
     },
 )

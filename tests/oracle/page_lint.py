@@ -447,24 +447,34 @@ _MAKES_RARE = re.compile(r"(Alchemy|Essence|Buy|recipe|Restart|Recombinator)", r
 
 
 def check_no_hidden_step(page: Page) -> list[Fault]:
-    """OR-16: a step the player does in the game is on the page. The item before a step is the item after the step above it, so a
-    page hides a step when (a) an action the game allows on a Rare item only follows a Normal or Magic card, (b) a Normal card is a
+    """OR-16: a step the player does in the game is on the page. The item before a step is the item after each step that links to it
+    (a page is a graph: a restart goes back to step 2, a branch to a later row); a step with no link to it follows the row above.
+    A page hides a step when (a) an action the game allows on a Rare item only follows Normal or Magic cards, (b) a Normal card is a
     Rare one after a step that does not make an item rare (R08 and R09: the Alchemy between the bought boots and the fossil is on no
-    page), or (c) an essence is used on a Rare card and no note says that it reforges the rare with no Scouring Orb."""
+    page), or (c) an essence is used on Rare cards and no note says that it reforges the rare with no Scouring Orb. Each is judged
+    when every card the step can follow says so."""
     faults = []
     for route in page.routes:
-        before = None
+        links: dict[str, list[Step]] = {}
         for step in route.steps:
+            for _, lines in step.fields:
+                for line in lines:
+                    if line.href.startswith("#") and step not in links.setdefault(line.href[1:], []):
+                        links[line.href[1:]].append(step)
+        for index, step in enumerate(route.steps):
             where = f"step {step.number} ({step.title})"
-            if before is not None and before.rarity in ("Normal", "Magic") and _RARE_ONLY.match(step.title):
-                faults.append(_fault("OR-16", check_no_hidden_step, where, f"{step.title!r} needs a Rare item and the card above is {before.rarity}: a step is missing between"))
-            if before is not None and before.rarity == "Normal" and step.after is not None and step.after.rarity == "Rare" and not _MAKES_RARE.search(step.title):
+            before = [source.after for source in links.get(step.anchor, []) if source is not step and source.after is not None]
+            if not before and index > 0 and route.steps[index - 1].after is not None:
+                before = [route.steps[index - 1].after]
+            rarities = {card.rarity for card in before}
+            if before and rarities <= {"Normal", "Magic"} and _RARE_ONLY.match(step.title):
+                faults.append(_fault("OR-16", check_no_hidden_step, where, f"{step.title!r} needs a Rare item and the card above is {sorted(rarities)}: a step is missing between"))
+            if before and rarities == {"Normal"} and step.after is not None and step.after.rarity == "Rare" and not _MAKES_RARE.search(step.title):
                 faults.append(_fault("OR-16", check_no_hidden_step, where, f"a Normal item becomes Rare by {step.title!r}: the step that makes it rare is missing"))
-            if re.search(r"Essence", step.title) and before is not None and before.rarity == "Rare":
+            if re.search(r"Essence", step.title) and before and rarities == {"Rare"}:
                 note = " ".join(line.text.lower() for line in step.lines("Note"))
                 if "scouring" not in note and "reforge" not in note:
                     faults.append(_fault("OR-16", check_no_hidden_step, where, "an essence on a rare item with no note that it reforges the rare with no Scouring Orb"))
-            before = step.after
     return faults
 
 
