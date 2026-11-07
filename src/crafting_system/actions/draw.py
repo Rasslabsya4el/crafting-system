@@ -26,8 +26,8 @@ when their parts have the same sides and the same weights per label, as one-side
 
 import random
 from collections import defaultdict
-from contextlib import contextmanager
 from collections.abc import Callable, Hashable, Iterable, Mapping
+from contextlib import contextmanager
 from fractions import Fraction
 from functools import cache
 
@@ -41,6 +41,7 @@ from .pool import PoolFamily, PoolMod
 
 __all__ = [
     "Outcome",
+    "floating",
     "guaranteed_candidates",
 ]
 

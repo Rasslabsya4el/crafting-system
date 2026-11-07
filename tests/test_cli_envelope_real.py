@@ -86,7 +86,7 @@ def test_the_envelope_expands_fewer_states_than_the_walk_and_says_which_cut_ran(
 def stopped(data, both):
     """(route id, the full walk's exact mean, the plan of a search that a state net stopped).
 
-    R05 needs no help: its search does not close before the net. R13's start is bought, so a restart exists, but restarting at every tip never reaches the goal: until the
+    R05 needs no help: its search does not close before the net (60 states known: two rounds). R13's start is bought, so a restart exists, but restarting at every tip never reaches the goal: until the
     search has closed a chain to it, U is infinite and a stop is an error (#582). So it is given the guide's completed route as the
     first executable policy, and the net stops it after the first round.
     """
@@ -98,7 +98,7 @@ def stopped(data, both):
         unsolved = make_plan(data, target, prices, solve_it=False)
         options["incumbent"] = route_incumbent(load_route(ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml", unsolved, data), data)
     else:
-        options["net"] = Net(states=5)
+        options["net"] = Net(states=60)  # 5 stops after one expansion: with the offers' floors the first offers it builds reach no goal, so no plan exists yet (#626)
     return route, full.mean_remaining, make_plan(data, target, prices, solver="envelope", with_risk=False, **options)
 
 
