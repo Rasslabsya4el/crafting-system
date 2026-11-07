@@ -46,7 +46,7 @@ OFFERS = {
         DRAW_LABEL,  # the bought Magic bow is the item the market sells (ADR-0064): the plan opens with the draw of its mods
     },
 }
-START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api", 13.0)}
+START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 3.7), "R14": ("Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api", 9.8)}
 
 
 @pytest.fixture(scope="module")

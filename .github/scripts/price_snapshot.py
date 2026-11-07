@@ -196,7 +196,7 @@ def quiver_standins(new: PriceFile, ninja_get, league: str, day: str) -> dict[st
         f"the cheapest normal Penetrating Arrow Quiver line of item level {QUIVER_LEVEL} or more with at least {QUIVER_MIN_OBSERVATIONS} observations (item level {level})",
         0, None,
     )  # fmt: skip
-    entry = PriceEntry(line.chaos, "poe.ninja", f"poe.ninja BaseType overview, {league}, {day}: item level {level}, {line.count} observations", {"category": "BaseType"}, provenance)
+    entry = PriceEntry(line.chaos, "poe.ninja", f"poe.ninja BaseType overview, {league}, {day}: the cheapest normal line of item level {QUIVER_LEVEL} or more with at least {QUIVER_MIN_OBSERVATIONS} observations (item level {level}, {line.count} observations)", {"category": "BaseType"}, provenance)
     return {QUIVER_KEY: entry, QUIVER_ALIAS: entry}
 
 
