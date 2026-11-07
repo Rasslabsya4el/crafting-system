@@ -199,7 +199,9 @@ def test_lines_past_the_cap_are_counted_with_their_chances_not_dropped(tiny, mon
     assert block["more"]["planner_chance"] == pytest.approx(sum(row["planner_chance"] for row in rest))
     assert block["more"]["route_chance"] == pytest.approx(sum(row["route_chance"] for row in rest))
     text = "\n".join(divergence_lines(block))
-    assert "and 2 more" in text and text.isascii()
+    assert "and 2 more, visited" in text and "summed over the states" in text and text.isascii()
+    one = {"count": 1, "shown": [{**block["shown"][0], "description": "rare; lacks a\nb\nc"}], "more": None}
+    assert "lacks a / b / c" in "\n".join(divergence_lines(one))  # a mod that reads on several lines stays on one line
 
 
 def divergences_of_all(plan, result):

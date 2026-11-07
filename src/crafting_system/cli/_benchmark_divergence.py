@@ -107,6 +107,16 @@ def chance_text(chance: float | None, exact: bool = True) -> str:
     return percent(chance) if exact else "at most " + percent(chance)
 
 
+def _one_line(text: str) -> str:
+    """A description on one line: a mod that reads on several lines in the game (a bench mod) is joined with ` / `."""
+    return " / ".join(part.strip() for part in text.splitlines() if part.strip())
+
+
+def _sum_text(total: float) -> str:
+    """A sum of chances, which may pass 1: a plain number, not a percentage capped at 100%."""
+    return f"{total:.4g}"
+
+
 def divergence_lines(block: dict) -> list[str]:
     """The lines of one route's divergences: the count, one line to a state, and the rest counted with their chances."""
     count = block["count"]
@@ -116,14 +126,15 @@ def divergence_lines(block: dict) -> list[str]:
     for row in block["shown"]:
         name = row["state"] or "a state"
         lines.append(
-            f"    {name}: {row['description']}: the guide does {row['route_action']}, the planner does {row['solver_action']}"
+            f"    {name}: {_one_line(row['description'])}: the guide does {row['route_action']}, the planner does {row['solver_action']}"
             f" (the planner visits it with chance {chance_text(row['planner_chance'], row['planner_chance_exact'])},"
             f" the guide with chance {chance_text(row['route_chance'], row['route_chance_exact'])})"
         )
     more = block["more"]
     if more is not None:
         lines.append(
-            f"    and {more['count']} more, {percent(more['planner_chance'])} of the planner's visits and {percent(more['route_chance'])} of the guide's in all"
+            f"    and {more['count']} more, visited {_sum_text(more['planner_chance'])} times by the planner and {_sum_text(more['route_chance'])} times by the guide, "
+            "summed over the states (a run that visits two of them counts twice)"
         )
     return lines
 
