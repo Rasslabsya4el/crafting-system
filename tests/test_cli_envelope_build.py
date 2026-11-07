@@ -19,7 +19,7 @@ from pattern_support import exact_values
 from test_packed_walk_light import START_ITEM, make_offers
 
 from crafting_system.abstraction import _pattern
-from crafting_system.abstraction._pattern import Pattern
+from crafting_system.abstraction._pattern import Pattern, PatternBuilder, build_pattern_model
 from crafting_system.cli import _packed, _pattern_bound
 from crafting_system.cli._envelope import Net
 from crafting_system.cli import _envelope_plan
@@ -181,3 +181,44 @@ def test_a_tip_keeps_every_offer_as_a_candidate_at_its_floor(world):
     assert labels == {position for position, priced in enumerate(offers) if not (priced.label == "restart" and begin == problem.start)}
     least = min(low for low, _ in problem.candidates(begin))
     assert problem.lower(begin) <= least * (1 + 1e-12)  # consistent: the bound of the state is at most the least of its offers'
+
+
+def canonical(model):
+    """The model as a table that does not depend on the numbering of keys or kernels: key -> set of (offer index, ((successor key, weight), ...))."""
+    table = {}
+    for key, row, built in zip(model.keys, model.actions, model.expanded):
+        table[key] = (
+            built,
+            {(oi, tuple(sorted((model.keys[s], w) for s, w in zip(*model.kernels[kid])))) for oi, kid in row},
+        )
+    return table
+
+
+def test_a_model_grown_by_offers_is_the_model_built_on_all_of_them_at_once(world):
+    ab, start, offers, _, _, _ = world
+    all_offers = pattern_offers(offers)
+    whole = build_pattern_model(abstraction(), start, all_offers)
+    builder = PatternBuilder(abstraction(), start)
+    builder.extend(all_offers[:2])
+    first = builder.extend(all_offers[2:5])
+    grown = builder.extend(all_offers[5:])
+    assert canonical(grown) == canonical(whole)
+    assert len(first.keys) <= len(grown.keys) and first.stopped is None
+    assert all(len(a) <= len(b) for a, b in zip(first.actions, grown.actions))  # a snapshot stays what it was when the builder went on
+    assert grown.stats.kernels == whole.stats.kernels  # each distinct kernel once, however the offers came
+
+
+def test_a_round_stopped_while_offers_join_leaves_the_round_before_as_the_bound(world, floors_on, monkeypatch):
+    ab, start, offers, _, exact, whole = world
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
+    asked = []
+    with monkeypatch.context() as inner:
+        inner.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: [])  # no growth: the questions of the first round alone
+        fresh = abstraction()
+        pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=lambda: asked.append(1) or None)
+    first_round = len(asked)
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=counting_stop(first_round + 4))
+    assert bound.stopped == "the test net" and bound.phase == "growth"
+    assert bound.rounds == 1 and bound.positions == (0, 6) and bound.model.stopped is None and all(bound.model.expanded)
+    assert_lower_bound(bound, ab, exact)

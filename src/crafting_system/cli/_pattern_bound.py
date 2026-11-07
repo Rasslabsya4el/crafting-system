@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.abstraction._pattern import PatternKey, PatternModel, PatternOffer, PatternStats, build_pattern_model
+from crafting_system.abstraction._pattern import PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats
 from crafting_system.solver import PackedBuilder, solve_packed
 
 from ._offer_floor import OfferFloors
@@ -35,7 +35,6 @@ FAKE = -1  # the tag of the floor action
 FLOOR_COST = 1e-200  # a floor action of cost 0 is carried at this cost, as the envelope search carries a fake action
 BINDING = 1e-12  # relative: the floor action is "the cheapest" at a key when it is below the model's best by more than this
 MIN_OFFERS = 40  # fewer priced offers than this are all built (nothing to gain; `_plan.MIN_OFFERS_TO_PRUNE`)
-FIRST_BATCH = 16  # the offers that join the model in a round, at least (the doubling of the model's size is the other bound)
 
 
 @dataclass(frozen=True)
@@ -127,43 +126,60 @@ def pattern_lower_bound(
     say = progress or (lambda _text: None)
     all_offers = pattern_offers(priced)
     began = time.perf_counter()
-    phases: dict[str, float] = {}
+    phases: dict[str, float] = {"floors": 0.0, "model": 0.0, "solve": 0.0}
     floors = None
-    positions: list[int] = list(range(len(priced)))
+    order: list[int] = list(range(len(priced)))  # the offers of the model, in the order they joined: offer j of the model is `priced[order[j]]`
     if item is not None and len(priced) >= MIN_OFFERS:
         floors = OfferFloors(abstraction, start, priced, item)
-        positions = floors.initial()
+        order = floors.initial()
         phases["floors"] = time.perf_counter() - began
-        say(f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(positions):,} of {len(priced):,} offers ({phases['floors']:.1f} s)")
+        say(
+            f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
+            f"({phases['floors']:.1f} s)"
+        )
+    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop)
+    kept = None  # the last round that ran to its end: (model, value, error bound, order)
+    adding = list(order)
     rounds = 0
-    solve_seconds = 0.0
     while True:
         rounds += 1
         mark = time.perf_counter()
-        model = build_pattern_model(abstraction, start, [all_offers[p] for p in positions], tags=tags, progress=say, max_keys=max_keys, stop=stop)
+        model = builder.extend([all_offers[p] for p in adding])
         built = time.perf_counter()
-        phases["model"] = phases.get("model", 0.0) + built - mark
-        say(f"model {rounds} built on {len(positions):,} offers{' (stopped: ' + model.stopped + ')' if model.stopped else ''}: {model.stats}")
-        inside = set(positions)
+        phases["model"] += built - mark
+        if model.stopped is not None and kept is not None:  # the round that was growing the model did not end: the round before stands
+            reason = model.stopped
+            say(f"model {rounds}: stopped while {len(adding):,} offers were joining ({reason}); the model of round {rounds - 1} stands")
+            model, value, error, order = kept
+            return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth")
+        inside = set(order)
         outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
-        floor = _floor_of(floors, positions, outside, priced) if floors is not None else _tip_floor(priced)
-        graph = pack_pattern_model(model, [all_offers[p] for p in positions], floor)
-        solved = solve_packed(graph, progress=say)
-        solve_seconds += time.perf_counter() - built
-        phases["solve"] = phases.get("solve", 0.0) + time.perf_counter() - built
+        floor = _floor_of(floors, outside, priced) if floors is not None else _tip_floor(priced)
+        graph = pack_pattern_model(model, [all_offers[p] for p in order], floor)
+        solved = solve_packed(graph, progress=None)
+        solved_at = time.perf_counter()
+        phases["solve"] += solved_at - built
+        n = len(model.keys)
+        value = np.asarray(solved.value[:n])
+        say(
+            f"model {rounds}: {len(order):,} offers, {n:,} keys ({sum(model.expanded):,} expanded), {model.stats.kernels:,} kernels, start value "
+            f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
+        )
         if model.stopped is not None or floors is None or not outside:
-            break
-        more = _binding(graph, solved, model, floors, outside, positions)
+            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, "model" if model.stopped else "complete")
+        more = _binding(graph, solved, model, floors, outside)
         if not more:
-            break
+            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete")
         say(f"model {rounds}: the floor action is the cheapest at some key; {len(more):,} offers more join the model")
-        positions = sorted({*positions, *more})
-    n = len(model.keys)
-    stopped = model.stopped
-    phase = "complete" if stopped is None else "model"
+        kept = (model, value, float(solved.error_bound), list(order))
+        adding = more
+        order = [*order, *more]
+
+
+def _bound(model, value, error, phases, began, order, floors, rounds, stopped, phase) -> PatternBound:
+    solve = phases["solve"]
     return PatternBound(
-        model, np.asarray(solved.value[:n]), float(solved.value[0]), float(solved.error_bound), time.perf_counter() - began - solve_seconds, solve_seconds,
-        tuple(positions), floors, rounds, stopped, phase, phases,
+        model, value, float(value[0]), error, time.perf_counter() - began - solve, solve, tuple(order), floors, rounds, stopped, phase, dict(phases)
     )  # fmt: skip
 
 
@@ -173,7 +189,7 @@ def _tip_floor(priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], fl
     return lambda _key, expanded: None if expanded else cheapest
 
 
-def _floor_of(floors: OfferFloors, positions: list[int], outside: list[int], priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], float | None]:
+def _floor_of(floors: OfferFloors, outside: list[int], priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], float | None]:
     """The floor action of a key: the least floor of the offers outside the model there, or of all the offers when the key is a tip."""
     names = range(len(priced))
     table = {
@@ -189,12 +205,13 @@ def _floor_of(floors: OfferFloors, positions: list[int], outside: list[int], pri
     return floor
 
 
-def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int], positions: list[int]) -> list[int]:
+def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int]) -> list[int]:
     """The offers outside the model that could lower the value of a key where the floor action is the cheapest, the least floors first.
 
     At a key whose floor action is cheaper than every action of the model, the value is the floor and not the model's own; an offer outside the model
-    whose floor there is not above the model's best could lower it. The offers asked for are those of the least floors, at least `FIRST_BATCH` and at
-    most as many as the model has (so the number of rounds is logarithmic). Nothing is returned when the floor action is the cheapest nowhere.
+    whose floor there is not above the model's best could lower it. All of them are returned: adding them costs the offers' own kernels, once each
+    (`PatternBuilder` builds only what they add), and a round for each few would cost a solve and a pass over the offers for nothing. Nothing is
+    returned when the floor action is the cheapest nowhere.
     """
     value = np.asarray(solved.value, dtype=np.float64)
     n = graph.n
@@ -224,8 +241,7 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
         if low is not None:
             found.append((low, position))
     found.sort()
-    take = max(FIRST_BATCH, len(positions))
-    return [position for _, position in found[:take]]
+    return [position for _, position in found]
 
 
 __all__ = ["PatternBound", "pack_pattern_model", "pattern_lower_bound", "pattern_offers"]
