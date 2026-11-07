@@ -115,14 +115,18 @@ def simulate_finishing(player: Player, runs: int, seed: int, max_uses: int | Non
     return tally
 
 
-def finishing_verdict(name: str, exact: float, finished: int, total: int, k: float = K) -> "Verdict":
-    """The chance that a play of a route with gaps meets the target: the planner's (exact) against the share of plays that finished, within `k` binomial standard errors.
+def finishing_verdict(name: str, bound: float, finished: int, total: int, k: float = K) -> "Verdict":
+    """The chance that a play of a route with gaps meets the target, against the planner's number, which is a LOWER BOUND.
 
-    A chance of exactly 0 or 1 has no spread: then the share must be exactly that. The estimate's `se` is the binomial one at the exact chance.
+    `risk.evaluate` of a route with a reachable gap (`_evaluate.py`: the chain is not proper) runs a grid of costs and reports as the success
+    probability the mass that reached the goal inside the grid, `Estimate(absorbed, absorbed, max(absorbed, absorbed + unresolved))`, and the benchmark prints its
+    `value`, the lower end. So the share of naive plays that finished must not be below the planner's number by more than `k` binomial
+    standard errors at that number; above it is allowed (and is what a 0 means: nothing was absorbed inside the grid).
     """
     share = finished / total if total else 0.0
-    spread = math.sqrt(exact * (1 - exact) / total) if total else math.inf
-    return Verdict(name, exact, share, spread, k)
+    spread = math.sqrt(bound * (1 - bound) / total) if total and 0 < bound < 1 else 0.0
+    estimate = share if share < bound else bound  # a share above the bound agrees with it
+    return Verdict(f"{name} (the planner's {bound:.4g} is a lower bound; {finished} of {total} plays finished, {share:.4g})", bound, estimate, spread, k)
 
 
 @dataclass(frozen=True)

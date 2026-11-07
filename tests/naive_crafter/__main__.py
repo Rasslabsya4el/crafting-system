@@ -11,7 +11,7 @@ tally, with no exact side (that is the benchmark's, recorded in `tests/fixtures/
 
 `merge` reads every such file under the folder (a downloaded run keeps one sub-folder per runner), adds the tallies of a route,
 and prints the verdict on the mean and on each step with the pooled standard error (`tally.verdict_on`, 4 standard errors); for a route with gaps the chance of finishing
-(`tally.finishing_verdict`). It exits 1 when any verdict disagrees (or a mutation survives), so a long simulation fails the way a short one does. It imports nothing of the planner.
+(`tally.finishing_verdict`: the planner's number is a lower bound). It exits 1 when any verdict disagrees (or a mutation survives), so a long simulation fails the way a short one does. It imports nothing of the planner.
 """
 
 import argparse
