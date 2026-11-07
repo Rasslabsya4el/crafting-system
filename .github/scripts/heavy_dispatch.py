@@ -232,6 +232,7 @@ class Api:
         limited = 0  # waits for the rate limit so far; each ends past the reset time, so a third means something else is wrong
         while True:
             attempt += 1
+            DispatchLock.keep_fresh()  # before and after every try (the finally below): a slow call inside the lock must not make it stale
             try:
                 with urllib.request.urlopen(request, timeout=60) as response:
                     raw = response.read()
@@ -255,6 +256,8 @@ class Api:
             except (urllib.error.URLError, TimeoutError):
                 if attempt == tries:
                     raise
+            finally:
+                DispatchLock.keep_fresh()
             pause(3 * attempt)
 
     def variable(self, name: str, default: int) -> int:
@@ -445,11 +448,6 @@ class DispatchLock:
         while True:
             try:
                 os.mkdir(self.path)
-                (self.path / "owner").write_text(self.token, encoding="utf-8")
-                (self.path / "info").write_text(json.dumps({"pid": os.getpid(), "at": now(), "what": self.what}), encoding="utf-8")
-                touch(self.path)  # last: writing the files above moves the directory's time by the file system's clock
-                DispatchLock.held = self
-                return self
             except OSError:  # FileExistsError, or PermissionError while another process removes it (Windows)
                 try:
                     if now() - self.path.stat().st_mtime > LOCK_STALE_SECONDS:
@@ -463,6 +461,18 @@ class DispatchLock:
                     print(f"{stamp()} {self.holder()} -> waiting for it", flush=True)
                     told = True
                 pause(2)
+                continue
+            # The directory is ours now. A failure from here on is not a busy lock: take the half-made lock away, so
+            # this session does not wait on it until it goes stale, and raise the error itself.
+            try:
+                (self.path / "owner").write_text(self.token, encoding="utf-8")
+                (self.path / "info").write_text(json.dumps({"pid": os.getpid(), "at": now(), "what": self.what}), encoding="utf-8")
+                touch(self.path)  # last: writing the files above moves the directory's time by the file system's clock
+            except BaseException:
+                shutil.rmtree(self.path, ignore_errors=True)
+                raise
+            DispatchLock.held = self
+            return self
 
     def __exit__(self, *exc):
         if DispatchLock.held is self:
