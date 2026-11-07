@@ -202,7 +202,7 @@ def test_each_test_target_asks_what_the_base_target_asks_and_the_start_strands_m
         # a target never asks for strands: no requirement names them
         assert "strand" not in yaml.safe_dump(target["requirements"]).lower()
         if not strands:
-            assert "start_item" not in target and target["start_price"] and base["start"] == "bought"  # the research file keeps its typed price name; the example target computes its own
+            assert target["start_item"] == {"rarity": "normal"} and target["start_price"] and base["start"] == "bought"  # a plain item since #545 wrote it down; the research file keeps its typed price name; the example target computes its own
             assert "remembrance-orb" in target["actions"]
             continue
         assert target["start_item"]["memory_strands"] == strands

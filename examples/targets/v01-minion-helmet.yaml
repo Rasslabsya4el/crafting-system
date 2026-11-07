@@ -51,8 +51,12 @@ requirements:
   - family: IncreasedLife
     not_crafted: true
 
-# Where the crafting starts when no recipe is used: a Normal Lion Pelt (no `start_item` means a fresh Normal item
-# of the base and level above). The planner also tries the start items a vendor recipe can make.
+# Where the crafting starts when no recipe is used (OR-4, #545): the ticket's words are "crafted from a Normal base with the four basic
+# orbs" (#331), so a Normal Lion Pelt of the base and level above. The planner also tries the start items a vendor recipe can make
+# (modelling devices, never the start item shown as the player's).
+start_item:
+  rarity: normal
+
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
 start: bought

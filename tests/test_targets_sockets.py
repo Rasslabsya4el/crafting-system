@@ -86,48 +86,49 @@ def test_the_colours_may_fill_the_whole_group_and_the_group_the_whole_count():
     assert parse("sockets: {count: 3, links: 3, colours: {R: 1, G: 1, B: 1}}\n", base="Rusted Sword").sockets.coloured == 3
 
 
-def test_a_target_with_sockets_and_a_start_item_that_states_none_assumes_one_white_unlinked_socket():
-    target = parse(SIX_LINK)
+def test_a_target_with_sockets_and_a_start_item_that_states_none_is_refused_and_no_socket_is_assumed():
+    message = parse_error(SIX_LINK, start_sockets=None)
 
-    assert target.start_item.sockets == Sockets((WHITE,), (1,))
-    assert target.start_sockets_assumed is True
-
-
-def test_a_start_item_that_states_other_things_but_no_sockets_still_gets_the_assumed_socket():
-    target = parse("sockets: {count: 3}\nstart_item:\n  quality: {percent: 10}\n")
-
-    assert target.start_item.sockets == Sockets((WHITE,), (1,))
-    assert target.start_item.quality == PlainQuality(10)
-    assert target.start_sockets_assumed is True
+    assert_error(message, 6, "start_item.sockets", "the target asks for sockets", "state its own", "`sockets: any`", "no socket is assumed")
 
 
-def test_a_start_item_that_states_sockets_keeps_them_and_nothing_is_assumed():
+def test_a_start_item_that_states_other_things_but_no_sockets_is_refused_too():
+    message = parse_error("sockets: {count: 3}\nstart_item:\n  quality: {percent: 10}\n", start_sockets=None)
+
+    assert_error(message, 6, "start_item.sockets", "the target asks for sockets", "`sockets: any`")
+
+
+def test_a_start_item_that_says_sockets_any_holds_no_sockets_and_none_is_assumed():
+    target = parse(SIX_LINK + start_sockets("any"), start_sockets=None)
+
+    assert target.sockets == SocketRequirement(6, 6, 2, 2, 2)
+    assert target.start_item.sockets is None
+
+
+def test_a_start_item_that_states_sockets_keeps_them():
     target = parse(SIX_LINK + start_sockets("{colours: [R, G, B, W], links: [3, 1]}"))
 
     assert target.start_item.sockets == Sockets((RED, GREEN, BLUE, WHITE), (3, 1))
-    assert target.start_sockets_assumed is False
 
 
-def test_a_target_without_sockets_creates_none_and_assumes_none():
+def test_a_target_without_sockets_creates_none():
     target = parse("start_item:\n  rarity: normal\n")
 
     assert target.sockets is None
     assert target.start_item.sockets is None
-    assert target.start_sockets_assumed is False
 
 
-def test_a_target_with_no_start_item_and_no_sockets_creates_none():
+def test_a_target_with_no_sockets_asked_and_none_stated_holds_none():
     target = parse("")
 
-    assert (target.sockets, target.start_item.sockets, target.start_sockets_assumed) == (None, None, False)
+    assert (target.sockets, target.start_item.sockets) == (None, None)
 
 
-def test_a_start_item_with_sockets_under_a_target_without_sockets_keeps_them_and_assumes_none():
+def test_a_start_item_with_sockets_under_a_target_without_sockets_keeps_them():
     target = parse(start_sockets("{count: 2}"))
 
     assert target.sockets is None
     assert target.start_item.sockets == Sockets((WHITE, WHITE), (1, 1))
-    assert target.start_sockets_assumed is False
 
 
 def test_the_socket_requirement_adds_nothing_to_the_mod_requirements():
@@ -324,7 +325,7 @@ def test_jewellery_is_refused_before_any_number_of_the_sockets_is_judged(keys):
 def test_a_corrupted_start_item_is_refused_on_the_sockets_key_when_the_target_allows_corruption():
     message = parse_error("allow_corrupted: true\nstart_item:\n  corrupted: true\nsockets: {count: 3}\n")
 
-    assert_error(message, 8, "sockets", "corrupted item takes no socket orb", "`start_item.corrupted`")
+    assert_error(message, 10, "sockets", "corrupted item takes no socket orb", "`start_item.corrupted`")
 
 
 def test_the_line_of_a_corrupted_refusal_is_the_sockets_key_wherever_it_stands():
@@ -900,8 +901,8 @@ def test_the_target_is_not_met_by_an_item_with_no_sockets_at_all():
     assert target.is_met_by(fixture_item(roll("IncreasedLife3"))) is False
 
 
-def test_the_assumed_start_item_does_not_meet_a_socket_target_of_two_sockets():
-    target = parse("sockets: {count: 2}\n")
+def test_a_start_item_of_one_socket_does_not_meet_a_socket_target_of_two_sockets():
+    target = parse("sockets: {count: 2}\n" + start_sockets("{count: 1}"))
 
     assert target.start_item.sockets.count == 1
     assert not target.sockets.is_met_by(target.start_item)

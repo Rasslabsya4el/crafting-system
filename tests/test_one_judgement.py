@@ -67,6 +67,7 @@ DATA = _data()
 
 def target(requirement: str, *, level: int = 84):
     text = f"base: Paua Amulet\nitem_level: {level}\nstart: given\nrequirements:\n" + textwrap.indent(textwrap.dedent(requirement), "  ")
+    text += "start_item:\n  rarity: normal\n"
     return parse_target(text, DATA, source="t.yaml")
 
 

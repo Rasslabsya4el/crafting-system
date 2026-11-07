@@ -9,8 +9,8 @@ and the planner refuses a target with sockets until S5 attaches the finish. The 
 are ticket #229 (S3), Binding and the beast recipes #232 (S6).
 
 **The sockets of the item** are `Item.sockets` (ADR-0046): one colour per socket in socket order and the link groups as their sizes in the same
-order, so a link group is a contiguous run. An item that states no sockets is refused as out of scope (`OutOfScopeError`): the one white socket
-is assumed only for a target that names sockets (`Target.start_sockets_assumed`), and the planner will give the item its sockets before it asks.
+order, so a link group is a contiguous run. An item that states no sockets is refused as out of scope (`OutOfScopeError`): a target that names sockets must state its start
+item's sockets or say `sockets: any` (no socket is assumed, #545), and the planner will give the item its sockets before it asks.
 
 **Refusals**, which spend nothing and name the reason: `NotApplicableError` for a corrupted item (the Tainted orbs and the bench crafts that cost
 Vaal Orbs are B4's, ADR-0046), for jewellery and any class with no socket table, and for a use that does nothing the game allows (a Jeweller's Orb at
@@ -147,7 +147,7 @@ def _accept(data: GameData, item: Item, what: str) -> tuple[Sockets, int]:
         raise NotApplicableError(f"a {what} works on a weapon or armour, and {item_class} takes no sockets")
     if item.sockets is None:
         raise OutOfScopeError(
-            f"the item states no sockets, so a {what} has nothing to change; the one white socket is assumed only for a target that names sockets (ADR-0046)"
+            f"the item states no sockets, so a {what} has nothing to change; a target that names sockets states its start item's sockets (ADR-0046, #545)"
         )
     if has_abyssal_socket(data, item.base_id, tuple(entry.mod_id for entry in (*item.mods, *item.implicits))):
         raise OutOfScopeError("the item holds an Abyssal Socket, and no admitted rule says how an Abyssal Socket counts toward the sockets (ADR-0045)")

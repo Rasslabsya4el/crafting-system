@@ -39,7 +39,7 @@ requirements:
   - family: LightningResistance
     min_tier: any
 
-# Where the crafting starts. Leave this block out to start from a fresh white (normal) item.
+# Where the crafting starts. The block and its `rarity` are required (#545); a plain item is `rarity: normal`.
 # Here the route starts from an amulet that already has Lightning Resistance fractured.
 start_item:
   rarity: rare

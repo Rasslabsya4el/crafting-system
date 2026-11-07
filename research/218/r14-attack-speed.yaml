@@ -13,4 +13,9 @@ requirements:
   - family: IncreasedAttackSpeed
     min_tier: 1
     not_crafted: true
+# The start item (#545: the parser no longer makes one up). The post names no rarity for the bow it starts from. It is the start the planner always used for this research
+# route: a plain (Normal) item of the base above, with no mod.
+start_item:
+  rarity: normal
+
 start_price: Thicket Bow (ilvl 78, Hunter)

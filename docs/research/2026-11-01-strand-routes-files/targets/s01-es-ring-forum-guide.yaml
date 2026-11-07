@@ -18,6 +18,11 @@ influence: [crusader, warlord]
 # `remembrance-orb` and `unravelling-orb` are this file's proposal). The fossil set is opt-in, so it is named here.
 actions: [remembrance-orb, transmutation-orb, regal-orb, fossil-set, harvest-reforge, bench-craft, unravelling-orb]
 
+# The start item (#545: the parser no longer makes one up). The forum guide names no rarity for the bought ring. It is the start the planner always used for this research
+# route: a plain (Normal) item of the base above, with no mod.
+start_item:
+  rarity: normal
+
 # The name of the buy spec docs/research/2026-11-01-strand-routes-files/buy/s01-start-ring.yaml, which is what the dual-influence ring costs.
 start_price: S01 start ring
 

@@ -10,6 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from start_support import with_start
 from targets_support import DATA, parse
 
 from crafting_system.cli._plan import PlanError, resolve_start_price
@@ -33,6 +34,7 @@ start: bought
 requirements:
   - family: IncreasedLife
 start_item:
+  rarity: rare
   mods:
     - mod: LightningResist7
       values: [43]
@@ -41,7 +43,7 @@ start_item:
 
 
 def target_at(level: int, tail: str, *, base: str = "Paua Amulet", data=DATA):
-    return parse_target(f"base: {base}\nitem_level: {level}\n{tail}", data, source="t.yaml")
+    return parse_target(with_start(f"base: {base}\nitem_level: {level}\n{tail}"), data, source="t.yaml")
 
 
 # -- the category -----------------------------------------------------------------------------------------------
@@ -160,7 +162,7 @@ def test_a_mod_of_two_stats_is_refused():
 @pytest.mark.parametrize(
     ("start", "rarity"),
     [
-        ("", "normal"),  # no start_item block: a fresh normal item
+        ("", "normal"),  # the test helper states `rarity: normal` for a text with no start_item block (#545)
         ("start_item:\n  rarity: rare\n  mods: []\n", "rare"),  # R08 and R09: the target's rarity is kept, whatever a price file folds in
         ("start_item:\n  rarity: magic\n  mods: []\n", "magic"),
     ],

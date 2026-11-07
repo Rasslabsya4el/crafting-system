@@ -53,8 +53,8 @@ Keys (unknown keys are errors, with a close-match hint):
                             # no downside). An enchant with a rider or a downside is named by its own text or id.
                             # The extra crafted slot ("Can have 1 additional Crafted Modifier") can be reached only by a
                             # start item that already holds it; no orb is planned for it (ADR-0053).
-    start_item:             # optional; absent means a fresh normal item of the base, level and influence
-      rarity: rare          # normal, magic or rare; default rare when mods are given, else normal
+    start_item:             # required (#545): the item you hold or buy; nothing is made up for a missing block
+      rarity: rare          # required: normal, magic or rare; never guessed from the mods listed
       corrupted: false      # optional
       mods:                 # optional; each mod by its game-data id, its values and whether it is fractured; its tier is the game data's (OR-3)
         - mod: LightningResist2
@@ -68,7 +68,8 @@ Keys (unknown keys are errors, with a close-match hint):
       quality:              # optional: catalyst quality of the start item, `type` and `percent` (0 to 20); on a weapon or armour
         type: intrinsic     # the plain quality, `percent` alone (0 to 30, a random drop reaches 30)
         percent: 20
-      sockets:              # optional (ADR-0046): a weapon or armour; at least one of the three keys
+      sockets:              # (ADR-0046) a weapon or armour; at least one of the three keys. Required when the target asks for sockets:
+                            # state them here, or write `sockets: any` when the guide does not say (no socket is assumed)
         colours: [R, G, B, W]   # one colour per socket in socket order: W, R, G or B (or white, red, green, blue)
         count: 4            # the number of sockets; all white when `colours` is left out; must agree with `colours`
         links: [3, 1]       # link group sizes in socket order, adding up to the sockets; default: no links
@@ -88,8 +89,8 @@ Keys (unknown keys are errors, with a close-match hint):
     allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
                             # and without a `corrupted: true` implicit, a corrupted item is never a goal
 
-Sockets (ADR-0046): a start item that states no sockets gets one white, unlinked socket when the target names `sockets:` (and none
-otherwise); `Target.start_sockets_assumed` says so. A socket target is refused on jewellery and other classes with no socket
+Sockets (ADR-0046, #545): a target that names `sockets:` must state its start item's sockets (`start_item.sockets`) or say
+`sockets: any` there; no socket is assumed. A socket target is refused on jewellery and other classes with no socket
 table, with a count, link size or colour total above the class maximum of the base (naming it), with links above count or colours
 above links, on a corrupted start item and on an item with an Abyssal Socket (a start mod or implicit, or a requirement that can
 give one). `Target.is_met_by` checks the sockets, the planner does not plan them yet.

@@ -172,9 +172,9 @@ Code that takes a never-read setting by its own name:
 - `price_source`: parameter `price_source` of `cli/_starts.py: plan_with_starts`: 2 referrer(s) outside its module, 1 pass the parameter
 - `price_gap_percent`: parameter `price_gap_percent` of `cli/_starts.py: plan_with_starts`: 2 referrer(s) outside its module, 1 pass the parameter
 
-- `price_source`: reads of an attribute with the same name on a receiver of unknown type, not counted: cli._main: main, cli._start_report: first_step_document, cli._start_report: first_step_lines, cli._starts: _plan_candidate.
+- `price_source`: reads of an attribute with the same name on a receiver of unknown type, not counted: cli._main: main, cli._report: render_text, cli._start_report: first_step_document, cli._start_report: first_step_lines, cli._starts: _plan_candidate.
 - `price_gap_percent`: reads of an attribute with the same name on a receiver of unknown type, not counted: prices.price_source: SourcedPrice.document, prices.price_source: SourcedPrice.lines.
-- `--price-source`: reads of an attribute with the same name on a receiver of unknown type, not counted: cli._main: main, cli._start_report: first_step_document, cli._start_report: first_step_lines, cli._starts: _plan_candidate.
+- `--price-source`: reads of an attribute with the same name on a receiver of unknown type, not counted: cli._main: main, cli._report: render_text, cli._start_report: first_step_document, cli._start_report: first_step_lines, cli._starts: _plan_candidate.
 
 ## 5. Built modules
 
@@ -226,6 +226,5 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `enchantment` | cli/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
 | `sockets` | cli/_plan.py |  |
-| `start_sockets_assumed` | **nothing** |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
 

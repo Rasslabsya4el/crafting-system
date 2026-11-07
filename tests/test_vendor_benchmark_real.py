@@ -136,7 +136,8 @@ def test_the_report_names_the_base_and_the_gems_with_their_counts_the_item_back_
     assert lines[first + 6] == "  You get back: Magic Lion Pelt, item level 84, with only +1 to Level of all Minion Skill Gems, T2 (the recipe wipes every other mod)"
     assert lines[first + 7] == f"  Start price: {BASE_PRICE + GEMS_PRICE:,.2f} Chaos = the goods above; a restart makes the item again at this price"
     assert text.isascii()
-    assert f"Start item (Helmet with +1 to Minion Skill Gems (vendor recipe)): {BASE_PRICE + GEMS_PRICE:,.2f} Chaos" in text
+    assert any(line.startswith("Start item (") and "a Normal base)" in line for line in lines)  # the start is the Normal base the recipe takes, not the helmet it gives back
+    assert "Start item (Helmet with +1" not in text
     assert "vendor.gem_qualification_is_uncorrupted_skill_gems" in text  # the approximate claim of the gem rule is listed with the answer
 
 

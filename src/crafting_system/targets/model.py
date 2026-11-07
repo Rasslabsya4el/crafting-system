@@ -269,8 +269,8 @@ Condition = Node | ImplicitRequirement | QualityRequirement | PlainQualityRequir
 class Target:
     """The item the owner wants, and where a query starts from.
 
-    `requirements` are all required at once, then `implicits` and `quality` when given. `start_item` is a fresh normal item of the base, item
-    level and influences unless the file gave one. `price_file` is the path as resolved against the
+    `requirements` are all required at once, then `implicits` and `quality` when given. `start_item` is the item the file describes
+    (required, with its `rarity`, #545): nothing is made up for it. `price_file` is the path as resolved against the
     target file's folder; it is not read or checked here. `start` says how the start item is had (OR-6, #505): `given` (its cost is not
     counted and the plan never buys another) or `bought` (it must have a price under the key computed from the target, `start_buy.py`,
     #474, and a restart buys it again). The file must say which, and so must a `Target` built in code: the field has no default, because a target built without it would silently be given. `actions` names the
@@ -280,8 +280,8 @@ class Target:
     `allow_corrupted` lets the goal be a corrupted item that has no corrupted implicit (ADR-0036); a target that asks for a
     corrupted implicit (`asks_corrupted`) takes a corrupted item too, and any other target is never met by one.
     `quality` is the catalyst quality of a ring, amulet or belt or the plain quality of a weapon or armour (ADR-0049).
-    `sockets` is the socket requirement (ADR-0046) or None; `start_sockets_assumed` says the start item stated no sockets and
-    got the one white, unlinked socket a target with sockets assumes, so that a report can say so.
+    `sockets` is the socket requirement (ADR-0046) or None. A target with sockets states its start item's sockets or says
+    `sockets: any` there; no socket is assumed (#545).
     `item_level_floor` is the author's word on how far the planner may plan below `item_level` (ADR-0061, `floor.py`): a stated
     lowest level. (The statement that the tiers written are the top tiers of `item_level`, `tiers_top_at_item_level`, is gone:
     that is OR-1 for every leaf with no `min_tier`, ticket #457.)
@@ -300,7 +300,6 @@ class Target:
     enchantment: EnchantmentRequirement | None = None
     allow_corrupted: bool = False
     sockets: SocketRequirement | None = None
-    start_sockets_assumed: bool = False
     item_level_floor: int | None = None
 
     @property

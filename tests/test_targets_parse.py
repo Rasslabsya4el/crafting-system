@@ -13,6 +13,8 @@ def test_a_minimal_target_resolves_the_base_and_fills_the_defaults():
         """
         requirements:
           - stat: "+1 to Level of all Lightning Skill Gems"
+        start_item:
+          rarity: normal
         """
     )
 
@@ -67,6 +69,8 @@ def test_influences_are_case_insensitive_and_go_onto_the_start_item():
         influence: [Shaper, ELDER]
         requirements:
           - family: LightningResistance
+        start_item:
+          rarity: normal
         """
     )
 
@@ -137,6 +141,7 @@ def test_the_start_item_is_built_from_its_mods():
         requirements:
           - family: LightningResistance
         start_item:
+          rarity: rare
           mods:
             - mod: LightningResist2
               values: 14

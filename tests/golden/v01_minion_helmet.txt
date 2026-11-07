@@ -5,7 +5,7 @@ Approximate inputs (claims that no other source settles):
   vendor.result_keeps_the_input_base_type: The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split.
 Requirements: +1 to Level of all Minion Skill Gems; family IncreasedLife (top tier, not crafted)
 Prices: league Allflame, fetched 2026-10-31, 1 Divine = 372.20 Chaos
-Start item (Helmet with +1 to Minion Skill Gems (vendor recipe)): 8.00 Chaos [vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)]
+Start item (Lion Pelt (ilvl 84), a Normal base): 2.00 Chaos [hand]; the recipe below uses it up
 First step, before S1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe
   You hand the vendor:
     1 Lion Pelt (ilvl 84), a Normal base: 2.00 Chaos [hand]

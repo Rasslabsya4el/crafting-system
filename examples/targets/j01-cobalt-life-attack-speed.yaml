@@ -14,7 +14,7 @@ base: Cobalt Jewel
 item_level: 84
 
 # The jewel to start from: a rare one with no mod, which is what you hold after you scour a rare jewel.
-# Chaos Orbs reroll it. Without this block the crafting starts from a fresh white jewel.
+# Chaos Orbs reroll it. The block is required (#545): nothing is made up for a missing one.
 start_item:
   rarity: rare
 

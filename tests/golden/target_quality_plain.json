@@ -60,6 +60,5 @@
   "enchantment": null,
   "allow_corrupted": false,
   "sockets": null,
-  "start_sockets_assumed": false,
   "item_level_floor": null
 }

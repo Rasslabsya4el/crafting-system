@@ -124,7 +124,7 @@ What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft
 _Avoid_: the owner's reading (it is the guide's words that win)
 
 **Start item**:
-The concrete item a query starts from; by default a fresh normal base. A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6.
+The concrete item a query starts from. Every target file states it (`start_item:` with its `rarity:`), and the parser makes up none (#545). A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6.
 
 **Vendor recipe**:
 One of five recipes (boots movement speed, weapon flat damage, jewellery chaos resistance, a spell-gem weapon, a minion helmet) that turn a Normal base and cheap goods into a Magic item with one chosen mod. It is a start-item source chosen outside the solver: the planner plans the plain start item and each recipe-made one and keeps the cheapest total (ADR-0059).

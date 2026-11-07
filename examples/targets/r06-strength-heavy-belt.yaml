@@ -21,7 +21,7 @@
 #     higher. Make sure it is uncorrupted" (step 1), so it accepts either influence and any rarity. A belt carries one of the two
 #     here (`influence: [hunter, elder]` would be a belt with both, another item), so this file takes Hunter and does not make up
 #     a rule for choosing. For Elder, write `influence: [elder]` and, for the Attributes line, the Elder mod
-#     (PercentageAllAttributesUberElder2). The start is a Normal belt (the file has no `start_item`): the guide does not say its
+#     (PercentageAllAttributesUberElder2). The start is a Normal belt (`start_item:` below): the guide does not say its
 #     mods, and the first Deafening Essence of Rage rerolls whatever the bought belt holds (the bought belt's other mods read "any
 #     mod or empty", OR-17). The guide's "any rarity" is not written: whether a Normal influenced belt exists to buy, and what
 #     rarity the start should have, is issue #515; the item level window is #483 and #445.
@@ -92,6 +92,12 @@ implicits:
 quality:
   type: intrinsic
   min_percent: 20
+
+# Where the crafting starts (OR-4, #545). The guide's step 1 reads "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt": it names
+# no rarity and no mod of the bought belt, so the start is a Normal belt of the base above (the influence is the `influence:` line). The
+# guide's "any rarity" is not written; whether a Normal influenced belt exists to buy is issue #515.
+start_item:
+  rarity: normal
 
 # How the start item is had (OR-6): bought. The guide's step 1 reads "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt"
 # (docs/research/2026-10-30-5-reference-routes.md). Its buy spec, trade query and price key are computed from this file (base,

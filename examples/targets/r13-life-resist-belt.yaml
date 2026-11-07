@@ -15,7 +15,11 @@ base: Leather Belt
 # The item level of the belt, a whole number from 1 to 100.
 item_level: 86
 
-# No start_item block: the crafting starts from a fresh white (normal) Leather Belt.
+# Where the crafting starts (OR-4, #545). The post's first step is "Alt spam for T1 Life and a resist" (thread pq4owv, u/Fabere's "Rule 10"):
+# it names no rarity and no mod of the belt it starts from, so the start is a plain white (Normal) Leather Belt; the first Transmutation
+# Orb makes it Magic for the Alterations.
+start_item:
+  rarity: normal
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
