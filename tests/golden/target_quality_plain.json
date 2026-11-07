@@ -47,7 +47,8 @@
     "enchantment": null,
     "memory_strands": 0,
     "sockets": null,
-    "imprints": []
+    "imprints": [],
+    "unopened": false
   },
   "start": "given",
   "price_file": null,
