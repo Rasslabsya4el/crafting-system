@@ -81,7 +81,6 @@ def spike_watch(thresholds_mb=(1500, 2500, 3500, 4500)) -> None:
     """Print the main thread's stack the first time the resident memory passes each threshold (where does the peak come from?)."""
     import os
 
-    frames = {thread.ident: thread for thread in threading.enumerate()}
     main_id = threading.main_thread().ident
     pending = list(thresholds_mb)
     while pending:
@@ -97,7 +96,6 @@ def spike_watch(thresholds_mb=(1500, 2500, 3500, 4500)) -> None:
 
             traceback.print_stack(sys._current_frames()[main_id], file=sys.stdout)
             sys.stdout.flush()
-    del frames
 
 
 def compare(envelope: dict, full: dict) -> dict:
