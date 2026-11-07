@@ -61,7 +61,7 @@ NOT_READ_PREFIX = "_benchmark"  # the benchmark command is a developer's tool; i
 PROGRAM_NAME = "COMMAND"  # the constant that holds the program name for `argparse`'s usage line
 
 LEAF_LABEL_LEAK = ", mod "  # `leaf_labels` writes ", mod <id>" into the `Requirements:` line and the state lines (issue #649): the game-id pattern is not asked of a mod written so, on those lines only
-LEAF_LABEL_LINES = re.compile(r"Requirements: |S\d+: |  .* = [0-9.,]+%; chance of one use")  # the lines that carry a leaf label: the requirements, a state ("S1: rare; ... lacks <leaf>; has <leaf>") and a chance line of the odds table
+LEAF_LABEL_LINES = re.compile(r"Requirements: |S\d+: |  the item: |  [0-9,]+ items take this action; what they all share: |  .* = [0-9.,]+%; chance of one use")  # the lines that carry a leaf label: the requirements, an item of a step ("  the item: rare; ... lacks <leaf>; has <leaf>"; the JSON state "S1: ..." too) and a chance line of the odds table
 
 
 def leaked_by_a_leaf_label(line: str, fault: str) -> bool:
