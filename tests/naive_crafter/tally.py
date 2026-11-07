@@ -115,18 +115,18 @@ def simulate_finishing(player: Player, runs: int, seed: int, max_uses: int | Non
     return tally
 
 
-def finishing_verdict(name: str, bound: float, finished: int, total: int, k: float = K) -> "Verdict":
-    """The chance that a play of a route with gaps meets the target, against the planner's number, which is a LOWER BOUND.
+def finishing_verdict(name: str, low: float, finished: int, total: int, k: float = K, high: float = 1.0) -> "Verdict":
+    """The chance that a play of a route with gaps meets the target, against the planner's bracket `[low, high]`.
 
-    `risk.evaluate` of a route with a reachable gap (`_evaluate.py`: the chain is not proper) runs a grid of costs and reports as the success
-    probability the mass that reached the goal inside the grid, `Estimate(absorbed, absorbed, max(absorbed, absorbed + unresolved))`, and the benchmark prints its
-    `value`, the lower end. So the share of naive plays that finished must not be below the planner's number by more than `k` binomial
-    standard errors at that number; above it is allowed (and is what a 0 means: nothing was absorbed inside the grid).
+    `risk.evaluate` of a route with a reachable gap (`_evaluate.py`: the chain is not proper) runs a grid of costs and reports the success probability as a bracket,
+    `Estimate(absorbed, absorbed, max(absorbed, absorbed + unresolved))`; the benchmark prints the `value`, the low end (issue #683). So the share of naive plays
+    that finished must lie inside the bracket, widened by `k` binomial standard errors taken at the end it is outside of; inside it, it agrees.
     """
     share = finished / total if total else 0.0
-    spread = math.sqrt(bound * (1 - bound) / total) if total and 0 < bound < 1 else 0.0
-    estimate = share if share < bound else bound  # a share above the bound agrees with it
-    return Verdict(f"{name} (the planner's {bound:.4g} is a lower bound; {finished} of {total} plays finished, {share:.4g})", bound, estimate, spread, k)
+    bound = low if share < low else high if share > high else None
+    spread = math.sqrt(bound * (1 - bound) / total) if bound is not None and total and 0 < bound < 1 else 0.0
+    text = f"{name} (the planner's bracket is [{low:.4g}, {high:.4g}]; {finished} of {total} plays finished, {share:.4g})"
+    return Verdict(text, share if bound is None else bound, share, spread, k)
 
 
 @dataclass(frozen=True)

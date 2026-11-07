@@ -102,13 +102,14 @@ def _sum(found: list[dict]) -> t.Tally:
 
 def _finishing(name: str, label: str, found: list[dict], numbers: dict) -> t.Verdict:
     """The verdict on the chance of finishing of a route with gaps: the exact one from the files or the recorded benchmark."""
-    exact = found[0].get("exact_success", numbers.get(name, {}).get("success"))
-    if exact is None:
+    recorded = numbers.get(name, {})
+    low = found[0].get("exact_success", recorded.get("success_low"))
+    if low is None:
         raise SystemExit(f"{name}: no recorded chance of finishing (give --recorded)")
-    if any(d.get("exact_success", exact) != exact for d in found):
+    if any(d.get("exact_success", low) != low for d in found):
         raise SystemExit(f"{name}: the runners recorded different chances of finishing, so their tallies are not of one thing")
     finished, total = _sum(found).finishing()
-    return t.finishing_verdict(f"{label}, the chance of finishing ({total} plays)", exact, finished, total)
+    return t.finishing_verdict(f"{label}, the chance of finishing ({total} plays)", low, finished, total, high=recorded.get("success_high", 1.0))
 
 
 def merge_folder(folder: Path, route: str | None = None, recorded: Path | None = None) -> tuple[list[t.Verdict], dict[str, int]]:
@@ -132,7 +133,7 @@ def merge_folder(folder: Path, route: str | None = None, recorded: Path | None =
         else:
             if name not in numbers:
                 raise SystemExit(f"{name}: no recorded mean (give --recorded)")
-            exact_mean, exact_spend = numbers[name]["mean"], {}
+            exact_mean, exact_spend = numbers[name]["mean_without_start"], {}
         plays[name] = pooled.n
         verdicts.append(t.verdict_on(f"{name}, the mean cost of the given route ({pooled.n} plays)", exact_mean, pooled.mean_se()))
         for label, spent in exact_spend.items():
@@ -157,7 +158,7 @@ def merge_mutants(folder: Path, route: str | None = None, recorded: Path | None 
         else:
             if name not in numbers:
                 raise SystemExit(f"{name}: no recorded mean (give --recorded)")
-            verdict = t.verdict_on(f"{label}, the mean cost ({pooled.n} plays)", numbers[name]["mean"], pooled.mean_se())
+            verdict = t.verdict_on(f"{label}, the mean cost ({pooled.n} plays)", numbers[name]["mean_without_start"], pooled.mean_se())
             found_all.append((label, not verdict.agrees, str(verdict)))
     return found_all
 

@@ -1,13 +1,14 @@
 {
  "provenance": {
-  "R04": "GitHub run 42395491917 (heavy run of .github/scripts/benchmark_routes.py R04 on the branch claude/634-617-verdicts, commit 786a5c540ad8573e41e51c1f44557de4cf55e24b, 2026-11-07): benchmark.json routes[0].given_route and .completed_route. The target and the two route files are the same at that commit and now; the price file moved for the start items of R13 and R14 only, so the price of every action of R04 is the same. A benchmark run on main would replace it (the command is in docs/ci.md, section The naive crafter's long simulation).",
-  "R14": "GitHub run 42395636328 (heavy run of divergence_costs.py R14 on main, commit ddd23d91373aacfe00c16e6b0096d18462c7ebed, 2026-11-07): 'route guide: mean inf, success 0.0, 1 gap(s)' and 'route completed: mean 13125.571850205819, success 1.0, 0 gap(s)'. The target, the two route files and the price of every action of the route are the same at that commit and now (checked by hash and by cost).",
-  "inputs": "sha256 of the target and route files (line ends as in the repository) and the cost of one use of each action of the route at the price file; a heavy run (NAIVE_HEAVY=1) fails when they differ",
-  "success": "the success of a route as written is the LOW END of the planner's bracket (risk/_evaluate.py), so it is a lower bound (issue #683)",
-  "what": "the planner side of R04 and R14 for tests/test_naive_crafter_routes.py: the mean of the completed route (the route file with a restart) and the success value of the guide's route as written, from heavy runs of the benchmark's pipeline; a solve of 177,242 and 816,153 states, too long for a test"
+  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy runs 42418412453 and 42418953644 on the branch of PR #665, commit 0140d11a, 2026-11-07) and `write`; docs/ci.md",
+  "inputs": "sha256 of the target and route files (line ends as in the repository) and the cost of one use of each action of the route at the price file; pin is the game-data version. A quick test in every CI run fails when they differ; it does not see a change of the planner's code (issue #692)",
+  "mean_without_start": "risk.mean.value of the completed route. `benchmark` prints mean + start price (_benchmark._totals), so mean_with_start = mean_without_start + start_price is recorded beside it and a test checks the sum",
+  "success": "success_value is what the planner prints (the low end of its bracket, issue #683); success_low and success_high are its bracket; naive_heavy is the share of naive plays that finished in heavy run 42410566176 (python -m naive_crafter play)",
+  "what": "the planner side of R04 and R14 for tests/test_naive_crafter_routes.py: the mean of the completed route (the route file with a restart) WITHOUT the price of the bought start item, and the bracket of the success of the guide's route as written; a solve of 177,242 and 816,153 states, too long for a test"
  },
  "routes": {
   "R04": {
+   "commit": "0140d11a9028389bf88c85d6b998f75bbd2a987e",
    "gaps": 13,
    "inputs": {
     "costs": {
@@ -22,11 +23,24 @@
     "route": "0914f23b1b1db1320074a85d14f05310fd292a3d7370d9bc627165b5feda53b0",
     "target": "724ef091ef9f78b5e9954ce55b5c8c98c55148da71bea081531ebf38ed342d07"
    },
-   "mean": null,
+   "naive_heavy": {
+    "commit": "712e5e02b7cf8d90ab8ec24f2c862a58fa47697c",
+    "finished": 158,
+    "plays": 10315,
+    "run": "42410566176",
+    "seconds": 100,
+    "seed": 23
+   },
+   "pin": "3.29.3.3",
+   "run": "42418412453 (R04), 42418953644 (R14)",
    "stem": "r04-penetrating-quiver",
-   "success": 0.002945945214113695
+   "success_high": 0.7648211298332358,
+   "success_low": 0.002945945214113695,
+   "success_value": 0.002945945214113695
   },
   "R04 with restart": {
+   "commit": "0140d11a9028389bf88c85d6b998f75bbd2a987e",
+   "gaps": 0,
    "inputs": {
     "costs": {
      "Bench craft Cannot roll Attack Modifiers": 372.2,
@@ -41,13 +55,18 @@
     "route": "4f6c0229e2688042115ba3bfe428cb8156b166f30f14135e31dd500b5b5c2c84",
     "target": "724ef091ef9f78b5e9954ce55b5c8c98c55148da71bea081531ebf38ed342d07"
    },
-   "mean": 209293.56539101215,
-   "p50": 145745.82,
-   "p90": 480358.72,
+   "mean_with_start": 209293.56539100502,
+   "mean_without_start": 209284.56539100502,
+   "pin": "3.29.3.3",
+   "run": "42418412453 (R04), 42418953644 (R14)",
+   "start_price": 9.0,
    "stem": "r04-penetrating-quiver-restart",
-   "success": 1.0
+   "success_high": 1.0,
+   "success_low": 1.0,
+   "success_value": 1.0
   },
   "R14": {
+   "commit": "0140d11a9028389bf88c85d6b998f75bbd2a987e",
    "gaps": 1,
    "inputs": {
     "costs": {
@@ -65,11 +84,24 @@
     "route": "b334c25cac3511890735a44b29887625abfefea9ba49f37bdb9c156aa4b773c5",
     "target": "6192dbf7c3672d2e261131a1a605c12a29860dcd411bab0e4bf5ea7236e1a17c"
    },
-   "mean": null,
+   "naive_heavy": {
+    "commit": "712e5e02b7cf8d90ab8ec24f2c862a58fa47697c",
+    "finished": 2444,
+    "plays": 24016,
+    "run": "42410566176",
+    "seconds": 100,
+    "seed": 13
+   },
+   "pin": "3.29.3.3",
+   "run": "42418412453 (R04), 42418953644 (R14)",
    "stem": "r14-hunter-bow",
-   "success": 0.0
+   "success_high": 1.0,
+   "success_low": 0.0,
+   "success_value": 0.0
   },
   "R14 with restart": {
+   "commit": "0140d11a9028389bf88c85d6b998f75bbd2a987e",
+   "gaps": 0,
    "inputs": {
     "costs": {
      "Bench craft +(18-20)% to Chaos Damage over Time Multiplier": 4.0,
@@ -86,9 +118,15 @@
     "route": "cd90be46872db93c8f06276473d2debf0b3b0c9109b53f400d6e259e14b65bfb",
     "target": "6192dbf7c3672d2e261131a1a605c12a29860dcd411bab0e4bf5ea7236e1a17c"
    },
-   "mean": 13125.571850205819,
+   "mean_with_start": 13125.571850205819,
+   "mean_without_start": 13112.571850205819,
+   "pin": "3.29.3.3",
+   "run": "42418412453 (R04), 42418953644 (R14)",
+   "start_price": 13.0,
    "stem": "r14-hunter-bow-restart",
-   "success": 1.0
+   "success_high": 1.0,
+   "success_low": 1.0,
+   "success_value": 1.0
   }
  }
 }

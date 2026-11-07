@@ -655,7 +655,7 @@ def test_a_long_route_is_judged_against_the_recorded_numbers_a_route_with_gaps_b
     p = exact_chance_of_sc_on_a_magic_item()
     exact = exact_mean_of_the_spam(p)
     recorded = tmp_path / "recorded.json"
-    recorded.write_text(json.dumps({"routes": {"LONG": {"mean": exact}, "GAPPED": {"success": 0.5}}}), encoding="utf-8")
+    recorded.write_text(json.dumps({"routes": {"LONG": {"mean_without_start": exact}, "GAPPED": {"success_low": 0.5}}}), encoding="utf-8")
     good = t.simulate(player(), 3000, seed=50)
     write_long(tmp_path / "a", "LONG", good, kind="mean", off=[])
     write_long(tmp_path / "a", "LONG", t.simulate(player(), 3000, seed=51, ), kind="mean", off=["one_pool"], seed=2)  # the same law: survives

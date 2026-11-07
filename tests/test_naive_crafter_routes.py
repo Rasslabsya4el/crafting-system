@@ -18,15 +18,19 @@ bought Magic belt since #576, a restart, a bench craft).
 Covered with the planner's mean from the benchmark's heavy run (#610): R04 with restart (the Insanity and Rage essences, the Fracturing, Annulment and Exalted Orbs, the
 metamod `Cannot roll Attack Modifiers`, Remove Crafted Mods) and R14 with restart (Alteration and Regal on a Magic Hunter bow, a restart, the metamods `Can have up to 3
 Crafted Modifiers` and `Cannot roll Attack Modifiers`, the Exalted and Annulment Orbs, three bench crafts). The planner's side of these two is a solve of 177,242 and 816,153
-states (`benchmark`: about 10 and 35 minutes on a runner), so the test reads the numbers the benchmark wrote, recorded in `tests/fixtures/naive_crafter/benchmark_means.json`
-with the run and what they were computed from (the hashes of the target and route files and the cost of each action of the route at the price file). A heavy run
-(`NAIVE_HEAVY=1`) fails when one differs (the recorded numbers are stale: record them again); the CI run plays few plays and its 4 standard errors catch only a gross error. Only the mean is compared there, not the steps (the benchmark's
-route result is a lumped chain, not a policy of item states).
+states (`benchmark`: about 10 and 35 minutes on a runner), so the test reads the numbers a heavy run of `tests/naive_planner_side.py` wrote, recorded in
+`tests/fixtures/naive_crafter/benchmark_means.json` with the run, the game-data pin and what they were computed from (the hashes of the target and route files and the cost of
+each action of the route at the price file). The mean is recorded WITHOUT the price of the bought start item (`mean_without_start`), as the naive mean is: `benchmark` prints
+`mean + start price`, so the record keeps `mean_with_start` and `start_price` beside it and a test checks that they add up. A quick test in every CI run fails when the route or
+target hash, an action cost or the pin differs from the record (the numbers are stale: record them again); it does not see a change of the planner's code (issue filed in the PR).
+The mean comparison itself plays few plays in CI and its 4 standard errors catch only a gross error; the heavy run (`NAIVE_HEAVY=1`) plays enough for a few per cent. Only the mean
+is compared there, not the steps (the planner's route result is a lumped chain, not a policy of item states).
 
 The routes with gaps, R04 and R14 as the guides wrote them (`GAPPED`): a state has no rule, or the game refuses the rule's action, so the chance of finishing is below 1 and the
 mean of the route is never, so the mean is not compared. The planner's number for the chance (`success_probability.value`, which `benchmark` prints as "success") is the LOW END of a
-bracket from a cost grid whose horizon is 64 of the smallest costs when the policy is not proper (`risk/_evaluate.py`, its docstring), so it is a lower bound, and R14's
-is 0 although its own uses say about 10% of plays reach the last two crafts; the test therefore asks that the share of naive plays that finish is not below it (`tally.finishing_verdict`).
+bracket `(low, high)` from a cost grid whose horizon is 64 of the smallest costs when the policy is not proper (`risk/_evaluate.py`, its docstring), and R14's is 0 although its
+own uses say about 10% of plays reach the last two crafts (issue #683). The tests: the share of naive plays that finish lies inside the recorded bracket (widened by K standard
+errors), the share of the recorded heavy run too, and a strict xfail tied to #683 says that the planner's printed value equals the heavy share (it flips when the fix is recorded).
 
 The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (none now); a test makes it refuse each with a message that names the
 mechanic, and another makes the lists together hold every route file of `examples/routes/`.
@@ -43,7 +47,6 @@ is traced to a rule, not patched per case), OR-29 (an open disagreement is a str
 Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it.
 """
 
-import hashlib
 import json
 import os
 from dataclasses import dataclass
@@ -57,6 +60,7 @@ from naive_crafter import tally as t
 from naive_crafter.craft import Laws, Unsupported
 from naive_crafter.play import Gap, Judge, Player, lacking, read_route
 from naive_crafter.world import load_world
+from naive_planner_side import data_pin, inputs_of
 
 from crafting_system.cli import evaluate_route, load_route, make_plan
 from crafting_system.prices import load_price_file
@@ -85,8 +89,8 @@ BENCHMARKED = {
 }
 # the routes as the guides wrote them: a state has no rule or the game refuses the rule's action, so the route finishes with a chance below 1; plays in CI
 GAPPED = {
-    "R04": ("r04-penetrating-quiver", 300),
-    "R14": ("r14-hunter-bow", 300),
+    "R04": ("r04-penetrating-quiver", 2000),
+    "R14": ("r14-hunter-bow", 2000),
 }
 # the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it); filed as issues (OR-29). None now.
 NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {}
@@ -164,23 +168,6 @@ def played(request) -> Played:
     return Played(route_id, result.risk.mean.value, spend, tally)
 
 
-def sha256_of(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()  # line ends as in the repository, so a Windows checkout hashes the same
-
-
-def inputs_of(stem: str) -> dict:
-    """What a benchmark number is computed from: the hashes of the target and the route file, and what one use of each action of the route costs at the price file.
-
-    The costs, not the hash of the whole price file: the file moves for the prices of other routes, which changes nothing here.
-    """
-    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS)
-    return {
-        "target": sha256_of(TARGETS / f"{stem.removesuffix('-restart')}.yaml"),
-        "route": sha256_of(ROUTES / f"{stem}.yaml"),
-        "costs": {label: round(world.action(label).cost, 9) for label in route_labels(stem)},
-    }
-
-
 def recorded_for(route_id: str) -> dict:
     """The benchmark's numbers for a route (`benchmark_means.json`, written from a heavy run's `benchmark.json`)."""
     if not RECORDED.is_file():
@@ -210,20 +197,20 @@ def benchmarked(request) -> Played:
     real_game_data()
     recorded = recorded_for(route_id)
     tally = t.simulate(play_world(stem), RUNS_OVERRIDE or plays, seed=555 * 1000 + SEED)
-    leave_tally(route_id, {"exact_mean": recorded["mean"], "exact_spend": {}, "tally": tally.to_dict()})
-    return Played(route_id, recorded["mean"], {}, tally)
+    leave_tally(route_id, {"exact_mean": recorded["mean_without_start"], "exact_spend": {}, "tally": tally.to_dict()})
+    return Played(route_id, recorded["mean_without_start"], {}, tally)
 
 
 @pytest.fixture(scope="module")
-def gapped(request) -> tuple[str, float, t.Tally]:
-    """A route with gaps: the planner's chance of finishing (the benchmark's), and the naive tally with its stuck plays."""
+def gapped(request) -> tuple[str, dict, t.Tally]:
+    """A route with gaps: the planner's recorded bracket of the chance of finishing, and the naive tally with its stuck plays."""
     route_id = request.param
     stem, plays = GAPPED[route_id]
     real_game_data()
     recorded = recorded_for(route_id)
     tally = t.simulate_finishing(play_world(stem), RUNS_OVERRIDE or plays, seed=555 * 1000 + SEED)
-    leave_tally(route_id, {"exact_success": recorded["success"], "tally": tally.to_dict()})
-    return route_id, recorded["success"], tally
+    leave_tally(route_id, {"exact_success": recorded["success_low"], "tally": tally.to_dict()})
+    return route_id, recorded, tally
 
 
 # --- the route's mean ---------------------------------------------------------------------------------------
@@ -244,21 +231,62 @@ def test_the_naive_mean_is_the_benchmarks_mean_of_the_completed_route(benchmarke
 
 
 @pytest.mark.parametrize("gapped", list(GAPPED), indirect=True)
-def test_the_share_of_plays_that_finish_is_the_planners_chance_of_finishing(gapped):
-    route_id, exact, tally = gapped
+def test_the_share_of_plays_that_finish_lies_inside_the_planners_bracket(gapped):
+    """The bracket is the planner's own `(low, high)` of its success probability (`risk/_evaluate.py`); the share is widened by K standard errors at the end it is outside of."""
+    route_id, recorded, tally = gapped
     finished, total = tally.finishing()
-    verdict = t.finishing_verdict(f"{route_id} as the guide wrote it, the chance of finishing", exact, finished, total)
+    verdict = t.finishing_verdict(f"{route_id} as the guide wrote it, the chance of finishing", recorded["success_low"], finished, total, high=recorded["success_high"])
 
     assert verdict.agrees, str(verdict)
 
 
-@pytest.mark.skipif(not HEAVY, reason="the inputs are judged in a heavy run (NAIVE_HEAVY=1); a price change makes a CI run's recorded numbers old without making them wrong enough to see")
+@pytest.mark.parametrize("route_id", list(GAPPED))
+def test_the_naive_share_recorded_from_the_heavy_run_lies_inside_the_planners_bracket(route_id):
+    recorded = recorded_for(route_id)
+    heavy = recorded["naive_heavy"]
+    verdict = t.finishing_verdict(
+        f"{route_id}, the heavy run {heavy['run']}", recorded["success_low"], heavy["finished"], heavy["plays"], high=recorded["success_high"]
+    )
+
+    assert verdict.agrees, str(verdict)
+
+
+@pytest.mark.xfail(strict=True, reason="#683: the planner prints the low end of its bracket as the success chance (0% for R14, whose own uses say about 10%); it flips when the fix is recorded")
+@pytest.mark.parametrize("route_id", list(GAPPED))
+def test_the_planners_printed_success_chance_is_the_naive_share(route_id):
+    """The planner's printed success (`success_value`, recorded from its run) against the share of the heavy naive run, within K standard errors of that share."""
+    recorded = recorded_for(route_id)
+    heavy = recorded["naive_heavy"]
+    share = heavy["finished"] / heavy["plays"]
+    spread = (share * (1 - share) / heavy["plays"]) ** 0.5
+    verdict = t.verdict_on(f"{route_id} as written, the planner's printed success", share, (recorded["success_value"], spread))
+
+    assert verdict.agrees, str(verdict)
+
+
+@pytest.mark.parametrize("route_id", list(BENCHMARKED))
+def test_a_recorded_mean_is_without_the_start_price_as_the_naive_mean_is(route_id):
+    """`benchmark` prints `mean + start price`; the naive mean leaves the first purchase out. The record keeps both and the start price, and they must add up."""
+    recorded = recorded_for(route_id)
+
+    assert "mean" not in recorded, "name the field: mean_without_start"
+    assert recorded["start_price"] > 0
+    assert recorded["mean_with_start"] - recorded["start_price"] == pytest.approx(recorded["mean_without_start"], rel=1e-9)
+    assert recorded["inputs"]["costs"]["restart"] == pytest.approx(recorded["start_price"], rel=1e-9), "the start price is the price of a restart in this route"
+
+
 @pytest.mark.parametrize("route_id", [*BENCHMARKED, *GAPPED])
-def test_the_recorded_benchmark_is_of_the_files_as_they_are(route_id):
+def test_the_recorded_planner_numbers_are_of_the_game_data_pin_as_it_is(route_id):
+    assert recorded_for(route_id)["pin"] == data_pin(), "the game data moved: record the planner side again"
+
+
+@pytest.mark.parametrize("route_id", [*BENCHMARKED, *GAPPED])
+def test_the_recorded_planner_numbers_are_of_the_files_and_prices_as_they_are(route_id):
+    """Quick, so it runs in every CI run: the route file and the target by hash, and what one use of each action of the route costs. It does not see a change of the planner's code."""
     stem = {**BENCHMARKED, **GAPPED}[route_id][0]
 
     real_game_data()
-    assert recorded_for(route_id)["inputs"] == inputs_of(stem), "the recorded benchmark numbers are of other files or prices: run the benchmark again and record them"
+    assert recorded_for(route_id)["inputs"] == inputs_of(stem), "the recorded planner numbers are of other files or prices: record them again (docs/ci.md)"
 
 
 @pytest.mark.parametrize("benchmarked", list(BENCHMARKED), indirect=True)

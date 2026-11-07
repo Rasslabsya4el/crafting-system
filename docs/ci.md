@@ -205,14 +205,21 @@ together. More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of 
 Since #608 to #610 it plays R08 and R09 (fossils), R12 (the Harvest reforge) and R04 and R14 (Exalted, Annulment and Fracturing Orbs, metamods, Remove Crafted Mods).
 R08, R09 and R12 are cheap like R05 (about 1 ms to 2 ms a play). R04 and R14 are heavy on both sides: a play takes about 0.5 s (R04, mean about 200,000 Chaos) and 0.06 s (R14, mean about 13,000
 Chaos), and their planner side is a solve of 177,242 and 816,153 states. Their mean is therefore not computed in the test but read from
-`tests/fixtures/naive_crafter/benchmark_means.json`, which holds the `completed_route` mean (and the guide's own `success`) that `benchmark` wrote, with the run id, the
-commit and what it was computed from (the sha256 of the target and route files and the cost of one use of each action of the route at the price file). To record it again (after a change to a target, a route, the prices or the planner):
+`tests/fixtures/naive_crafter/benchmark_means.json`, which `tests/naive_planner_side.py` writes: for each route the mean of the completed route (the route file with a restart)
+WITHOUT the price of the bought start item (`mean_without_start`, as the naive mean is; `benchmark` prints `mean + start price`, so never copy `completed_route.mean` from its
+JSON), the start price and `mean_with_start` beside it, the bracket `(success_low, success_high)` and the printed `success_value` of the guide's route as written (issue #683),
+the run id, the commit, the game-data pin and what they were computed from (the sha256 of the target and route files and the cost of one use of each action of the route at the
+price file). A quick test in every CI run fails when one of these differs from the files as they are; it does not see a change of the planner's code, so record again after one.
+To record it again (R04 about 10 minutes, R14 about 45 on a runner):
 
-    D='python .github/scripts/heavy_dispatch.py run --ref my-branch'
-    $D --runners 2 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
-    gh run download <run id> --dir results       # then copy each route's completed_route.mean and given_route.success into the json, with the run id and the inputs (see its provenance)
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 2'
+    $D --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; esac; PYTHONPATH=tests:src uv run --no-sync python -u tests/naive_planner_side.py plan $R $OUT_DIR'
+    gh run download <run id> --dir results
+    PYTHONPATH=tests:src python tests/naive_planner_side.py write results --run <run id> --commit <sha of the run>
 
-The long simulation of these two then runs on many runners, each its own `NAIVE_SEED`, with `NAIVE_HEAVY=1` (which also fails when a recorded hash is old):
+(`write` keeps the naive shares of the heavy run recorded under `naive_heavy`; update them from `python -m naive_crafter merge` when the long simulation is run again.)
+
+The long simulation of these two then runs on many runners, each its own `NAIVE_SEED`, with `NAIVE_HEAVY=1` (which also plays enough for the mean tests and runs the mutation tests of the two routes):
 
     $D --runners 16 --command 'export NAIVE_HEAVY=1 NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR; NAIVE_RUNS=3000 uv run --no-sync pytest -q -p no:cacheprovider -k "R04 or R14" tests/test_naive_crafter_routes.py'
     gh run download <run id> --dir results
