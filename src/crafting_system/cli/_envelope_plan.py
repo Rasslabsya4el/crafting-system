@@ -270,13 +270,13 @@ def certificate_figures(lower: float, upper: float) -> tuple[str, str]:
 
 
 def certificate_gap_text(gap: float) -> str:
-    """The gap as printed: a percent with two decimals from 0.1% up, below that two significant digits as a plain ratio ("1.4e-7"), never a rounded 0."""
+    """The gap as printed, always a percent: two decimals from 0.1% up, below that two significant digits ("0.000014%"), never a rounded 0."""
     if gap == 0.0:
-        return "0"
-    if gap >= 1e-3:
-        return f"{gap:.2%}"
-    mantissa, exponent = f"{gap:.1e}".split("e")
-    return f"{mantissa}e{int(exponent)}"
+        return "0%"
+    percent = gap * 100.0
+    if percent >= 0.1:
+        return f"{percent:.2f}%"
+    return f"{percent:.{1 - math.floor(math.log10(percent))}f}%"
 
 
 def certificate_text(info: EnvelopeInfo) -> str:
@@ -296,7 +296,7 @@ def certificate_text(info: EnvelopeInfo) -> str:
         f"did not look at, costs less than {low} on average. "
     )
     gap_text = (
-        f"The plan costs at most {certificate_gap_text(gap)} more than that best possible cost (its cost over {low}, less one). "
+        f"The plan costs at most {certificate_gap_text(gap)} more than the best possible cost. "
         if gap is not None
         else "No gap can be stated: the lower figure is not above zero. "
     )

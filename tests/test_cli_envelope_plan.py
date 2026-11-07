@@ -135,9 +135,9 @@ def test_a_nearly_closed_stop_prints_figures_that_differ_and_a_gap_that_is_not_z
     text = certificate_text(info)
     print(text.split(" The lower end")[0])
     assert "[5,784.49, 5,784.49]" not in text and "[5,784.488, 5,784.489]" in text
-    assert "at most 1.4e-7 more" in text and "0.00%" not in text
-    assert certificate_gap_text(1.4306511020301116e-07) == "1.4e-7" and certificate_gap_text(0.0) == "0"
-    assert certificate_gap_text(0.003681416052256692) == "0.37%" and certificate_gap_text(0.3206) == "32.06%"  # R04 and R05 keep their format
+    assert "at most 0.000014% more than the best possible cost." in text and "less one" not in text and "0.00%" not in text
+    assert certificate_gap_text(1.4306511020301116e-07) == "0.000014%" and certificate_gap_text(0.0) == "0%"
+    assert certificate_gap_text(0.003681416052256692) == "0.37%" and certificate_gap_text(0.0005) == "0.050%" and certificate_gap_text(0.3206) == "32.06%"  # R04 and R05 keep their format
 
 
 def test_a_lower_figure_rounded_just_above_the_plan_is_clipped_to_it():
