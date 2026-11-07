@@ -746,7 +746,10 @@ class Action(ABC):
         The compressed state averages such an action over the names its inputs could hold, so it needs the same action with other donors. The
         other settings of the action (a count table, a price) stay as they are.
         """
-        raise OutOfScopeError(f"{type(self).__name__} cannot be used with other inputs than its own")
+        raise OutOfScopeError(
+            "this action cannot be used with other inputs than its own",
+            detail=f"{type(self).__name__} cannot be used with other inputs than its own",
+        )
 
     def imprint_move(self) -> ImprintMove | None:
         """How the action moves the imprints of the item (`ImprintMove`); None, the default, for an action that does not make or use one.
@@ -837,8 +840,11 @@ def _guarding_strands(outcomes: Callable) -> Callable:
         use = self.strand_use(data)
         if use is None:
             raise OutOfScopeError(
-                f"{self.label(data)} has not declared what it does with Memory Strands (ADR-0041), and the item holds {count}; "
-                "an action that the strand table does not know is not modelled on a stranded item"
+                f"{self.label(data)} has no rule in the model for what it does with Memory Strands, and the item holds {count}: an action that the model does not know is not modelled on a stranded item",
+                detail=(
+                    f"{self.label(data)} has not declared what it does with Memory Strands (ADR-0041), and the item holds {count}; "
+                    "an action that the strand table does not know is not modelled on a stranded item"
+                ),
             )
         result = outcomes(self, data, item, *args, **kwargs)
         if isinstance(result, Spent):  # the guard of a superclass already ran (same law), or the action returns another action's result:

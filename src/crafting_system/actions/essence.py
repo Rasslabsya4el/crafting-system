@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from crafting_system.data import Essence, GameData, conflicts
 from crafting_system.items import Item, Rarity, Side, UnknownBaseError, capacity
+from crafting_system.items.words import mod_words
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -89,7 +90,8 @@ class ApplyEssence(Action):
         refuse_blocking_metamod(data, item, "an essence")
         if essence.name == DESOLATION_IS_NOT_A_B1_ACTION.value:
             raise OutOfScopeError(
-                f"{essence.name} is not a B1 action: it has no ordinary source in 3.29, so it is not modelled"
+                f"{essence.name} is not modelled: it has no ordinary source in 3.29",
+                detail=f"{essence.name} is not a B1 action: it has no ordinary source in 3.29, so it is not modelled",
             )
         normal_only = essence.level <= NORMAL_ONLY_UP_TO_LEVEL.value
         if item.rarity is Rarity.RARE and normal_only:
@@ -110,8 +112,11 @@ class ApplyEssence(Action):
         used = sum(1 for entry in item.fractured_mods if data.mods[entry.mod_id].generation_type == side.value)
         if used >= capacity(data, item.base_id, Rarity.RARE).of(side):
             raise OutOfScopeError(
-                f"the fractured mods fill every {side.value} slot, so the forced mod {forced.id} "
-                "has no slot; no admitted rule says what the game does then"
+                f"the fractured mods fill every {side.value} slot, so the forced mod ({mod_words(forced)}) has no slot; the model has no rule for what the game does then",
+                detail=(
+                    f"the fractured mods fill every {side.value} slot, so the forced mod {forced.id} "
+                    "has no slot; no admitted rule says what the game does then"
+                ),
             )
         max_level = None
         if normal_only:

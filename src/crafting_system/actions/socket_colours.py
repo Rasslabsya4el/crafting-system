@@ -192,7 +192,10 @@ def _roll_of(data: GameData, item: Item, sockets: Sockets, reading: Reading | No
     """The roll of a Chromatic Orb (`forced_rule`) or of the bench on `item`: its odds by item level and plain quality, its colours by the base's requirements."""
     requirements = data.base_items[item.base_id].attribute_requirements
     if not any(requirements):
-        raise OutOfScopeError("the base asks for no attribute, and no admitted rule weights the colours of its sockets (ADR-0047)")
+        raise OutOfScopeError(
+            "the base asks for no attribute, and the model has no rule for the colours of its sockets",
+            detail="the base asks for no attribute, and no admitted rule weights the colours of its sockets (ADR-0047)",
+        )
     weights = colour_weights(requirements)
     forced = None
     if forced_rule:

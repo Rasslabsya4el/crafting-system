@@ -143,17 +143,24 @@ def _refuse_out_of_scope_veil(data: GameData, item: Item) -> None:
     """Raise `OutOfScopeError` for an item with a signature placeholder or with two (grill B2: out of v1)."""
     held = _placeholders(data, item)
     if len(held) > 1:
-        raise OutOfScopeError("the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)")
+        raise OutOfScopeError(
+            "the item holds two veiled placeholders: a start item with a double veil is not modelled",
+            detail="the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)",
+        )
     if held and held[0].mod_id not in GENERIC_PLACEHOLDERS:
         raise OutOfScopeError(
-            f"the item holds the signature placeholder {held[0].mod_id}; only the generic VeiledPrefix and VeiledSuffix are modelled (grill B2)"
+            "the item holds a veiled mod of a particular kind: only the plain veiled prefix and suffix are modelled",
+            detail=f"the item holds the signature placeholder {held[0].mod_id}; only the generic VeiledPrefix and VeiledSuffix are modelled (grill B2)",
         )
 
 
 def _placeholder_mod(data: GameData, side: Side) -> Mod:
     mod = data.mods.get(PLACEHOLDER_IDS[side])
     if mod is None:
-        raise OutOfScopeError(f"the game data has no generic veiled {side.value} placeholder {PLACEHOLDER_IDS[side]}")
+        raise OutOfScopeError(
+            f"the game data has no generic veiled {side.value} placeholder",
+            detail=f"the game data has no generic veiled {side.value} placeholder {PLACEHOLDER_IDS[side]}",
+        )
     return mod
 
 

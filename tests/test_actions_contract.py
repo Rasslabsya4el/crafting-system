@@ -90,7 +90,7 @@ def test_exactly_the_kinds_of_the_b1_table_declare_their_strand_use_and_every_ot
         use = action.strand_use(CONTRACT_DATA)
         (declared if use is not None else refused).add(kind)
         if use is None:
-            with pytest.raises(OutOfScopeError, match="has not declared"):
+            with pytest.raises(OutOfScopeError, match="has no rule in the model for what it does with Memory Strands"):
                 action.outcomes_under(CONTRACT_DATA, ITEMS[item])
     assert declared >= B1_KINDS_THAT_DECLARE_STRAND_USE & {kind for kind, _, _ in PAIRS}  # a family added since declares its own rows (its own tests)
     assert refused.isdisjoint(declared) and refused  # the veiled, Eldritch, influence, beast and Harvest add/remove kinds wait for their tickets
@@ -215,5 +215,5 @@ def test_a_wrong_block_invariance_claim_is_caught():
 
 
 def test_a_claim_of_block_invariance_by_an_action_that_reads_every_family_is_refused():
-    with pytest.raises(AssertionError, match="reads every family"):
+    with pytest.raises(AssertionError, match="reads every mod family"):
         check_block_invariance(InvariantAndReadsEveryFamily())

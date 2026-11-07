@@ -96,7 +96,7 @@ def test_r09_asks_the_top_movement_speed_which_the_recipe_cannot_reach_and_says_
     assert found.candidates == ()
     (refusal,) = found.refused
     assert refusal.reason == CAP_BELOW_ASKED and refusal.recipe == "boots_movement_speed"
-    assert "tier 2 from the top (MovementVelocity5" in refusal.detail and "tier 1 or better" in refusal.detail
+    assert "tier 2 from the top (" in refusal.detail and "MovementVelocity5" not in refusal.detail and "tier 1 or better" in refusal.detail  # the mod is said by its text (#557)
 
 
 def test_r10_asks_the_30_percent_boots_so_the_recipe_start_is_an_option_priced_by_its_goods(data):

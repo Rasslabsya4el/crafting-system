@@ -23,6 +23,7 @@ ticket #129). A tail cut needs a coarse model for its leaves, so `decide` builds
 own forecast fits and gives it that level's forecast; with no coarse level that fits there is no tail cut.
 """
 
+import logging
 import time
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
@@ -43,6 +44,8 @@ from crafting_system.solver import Action as SolverAction
 from crafting_system.solver import ConvergenceError, Outcome, TabularModel, solve
 
 from ._offers import BuyStartItem, PricedOffer
+
+log = logging.getLogger(__name__)  # what a developer needs behind a sentence of the answer (#557); no text of the answer carries it
 
 BUDGET_SECONDS = 60.0  # "about a minute" (#81 Q2)
 TOLERANCE = 0.01  # the owner's tolerance: a certified gap of at most 1%
@@ -255,7 +258,8 @@ def measure_solve_rate(
     try:
         solve(model, [start])
     except (ConvergenceError, ValueError) as failed:
-        return SOLVE_RATE_FALLBACK, f"the timing run did not finish ({failed})"
+        log.info("the timing run did not finish: %s", failed)
+        return SOLVE_RATE_FALLBACK, "the timing run did not finish"
     return (clock() - began) / edges, ""
 
 

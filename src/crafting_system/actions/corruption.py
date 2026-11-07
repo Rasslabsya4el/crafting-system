@@ -49,6 +49,7 @@ from fractions import Fraction
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, is_corrupted_implicit
 from crafting_system.items.implicits import corrupted_pool_domain
+from crafting_system.items.words import base_words
 from crafting_system.rules import get_rule
 
 from .bloodstained import ImplicitDraw
@@ -184,8 +185,11 @@ class VaalOrb(Action):
         pool = corrupted_implicit_pool(data, item.base_id, item.item_level)
         if not pool.mods:
             raise OutOfScopeError(
-                f"the corrupted implicit pool of {item.base_id} is empty at item level {item.item_level}, and no admitted rule says "
-                "what a Vaal Orb does when it has no implicit to add"
+                f"the corrupted implicit pool of {base_words(data, item.base_id)} is empty at item level {item.item_level}, and the model has no rule for what a Vaal Orb does when it has no implicit to add",
+                detail=(
+                    f"the corrupted implicit pool of {item.base_id} is empty at item level {item.item_level}, and no admitted rule says "
+                    "what a Vaal Orb does when it has no implicit to add"
+                ),
             )
         base = data.base_items[item.base_id]
         jewel = corrupted_pool_domain(base) != EQUIPMENT_DOMAIN

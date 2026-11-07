@@ -298,7 +298,7 @@ def test_cluster_and_timeless_jewels_are_out_of_scope():
     cluster = next(base for base in data.base_items.values() if base.domain == "affliction_jewel")
     for base in (timeless, cluster):
         item = Item.build(data, base_id=base.id, item_level=84, rarity=Rarity.RARE)
-        with pytest.raises(OutOfScopeError, match="not checked"):
+        with pytest.raises(OutOfScopeError, match="does not check"):
             VaalOrb().outcomes(data, item)
         assert VaalOrb() not in catalog(data, item)
 

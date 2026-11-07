@@ -218,10 +218,12 @@ def test_a_tailoring_orb_refuses_what_is_not_a_body_armour_and_names_the_class()
 
 
 def test_the_orbs_refuse_a_corrupted_item_as_out_of_scope_and_name_the_claim():
-    with pytest.raises(OutOfScopeError, match="corrupted.*Tailoring Orb.*enchantment.mirrored_and_corruption"):
+    with pytest.raises(OutOfScopeError, match="corrupted.*Tailoring Orb") as refused:
         TailoringOrb().outcomes(DATA, body(corrupted=True))
-    with pytest.raises(OutOfScopeError, match="corrupted.*Tempering Orb.*enchantment.mirrored_and_corruption"):
+    assert "enchantment.mirrored_and_corruption" in refused.value.detail  # the claim is the developer's detail, not the player's sentence
+    with pytest.raises(OutOfScopeError, match="corrupted.*Tempering Orb") as refused:
         TemperingOrb().outcomes(DATA, sword(corrupted=True))
+    assert "enchantment.mirrored_and_corruption" in refused.value.detail
     # a corrupted item that already holds an enchantment keeps it (the claim) and is still refused
     with pytest.raises(OutOfScopeError):
         TailoringOrb().outcomes(DATA, body(enchantment=LIFE, corrupted=True))
@@ -236,12 +238,14 @@ def test_a_mirrored_item_is_not_in_the_item_model_so_the_refusal_waits_for_the_f
 def test_a_pool_enchant_with_no_weight_in_the_claim_is_out_of_scope_and_named():
     stray = dataclasses.replace(DATA.mods[LIFE], id="ArmourEnchantmentHeistNotInTheSample1")
     data = dataclasses.replace(DATA, mods={**DATA.mods, stray.id: stray})
-    with pytest.raises(OutOfScopeError, match="body_armour_weight_classes gives the body armour enchant ArmourEnchantmentHeistNotInTheSample1 no weight"):
+    with pytest.raises(OutOfScopeError, match="no weight for the body armour enchantment") as refused:
         TailoringOrb().outcomes(data, body())
+    assert "body_armour_weight_classes gives the body armour enchant ArmourEnchantmentHeistNotInTheSample1 no weight" in refused.value.detail
     weapon = dataclasses.replace(DATA.mods[WEAPON_CRITICAL], id="WeaponEnchantmentHeistNotInTheSample1")
     data = dataclasses.replace(DATA, mods={**DATA.mods, weapon.id: weapon})
-    with pytest.raises(OutOfScopeError, match="weapon_weights_depend_on_tag gives the weapon enchant WeaponEnchantmentHeistNotInTheSample1 no weight"):
+    with pytest.raises(OutOfScopeError, match="no weight for the weapon enchantment") as refused:
         TemperingOrb().outcomes(data, sword())
+    assert "weapon_weights_depend_on_tag gives the weapon enchant WeaponEnchantmentHeistNotInTheSample1 no weight" in refused.value.detail
 
 
 def test_a_game_data_without_enchants_has_no_pool():

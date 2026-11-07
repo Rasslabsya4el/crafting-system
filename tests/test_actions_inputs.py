@@ -167,12 +167,13 @@ def test_the_planner_does_not_price_a_donor_as_free(items):
     # the graft's kernel is exact, but the donor it consumes costs something the plan would leave out: the planner refuses it
     start = items["rare_junk"]
     ab = Abstraction(CONTRACT_DATA, GOAL_PAIR, start.base_id, start.item_level, [ToyGraft(with_axis=False)], allow_inputs=False)
-    with pytest.raises(OutOfScopeError, match="#212"):
+    with pytest.raises(OutOfScopeError, match="consumes other items") as refused:
         ab.kernel(ab.compress(start), ToyGraft(with_axis=False))
+    assert "#212" in refused.value.detail and "#212" not in str(refused.value)  # the ticket is the developer's detail
     prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.0001, "test")})
     plan = make_plan(CONTRACT_DATA, load_target(R12, CONTRACT_DATA), prices, offers=_offers_with(ToyGraft(with_axis=False)))
     assert "Toy Graft" in [priced.label for priced in plan.offers]
-    with pytest.raises(OutOfScopeError, match="#212"):  # the plan's own abstraction refuses it wherever the game takes it
+    with pytest.raises(OutOfScopeError, match="consumes other items"):  # the plan's own abstraction refuses it wherever the game takes it
         plan.abstraction.kernel(plan.start, ToyGraft(with_axis=False))
     assert plan.abstraction.inputs(plan.start, ToyGraft(with_axis=False)) == (Need(donor_start(), donor_want()),)  # but can be asked what it needs
 

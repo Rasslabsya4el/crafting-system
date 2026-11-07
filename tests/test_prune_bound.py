@@ -347,7 +347,7 @@ def test_a_fractured_fossil_set_in_the_model_moves_the_item_to_another_shape_and
         patch.setattr(_plan, "PRUNE_BOUND", False)
         whole = make_plan(world.data, target, prices, offers=offers)
 
-    assert found.fell_back and "shape" in found.why
+    assert found.fell_back and "kind of item" in found.why
     assert found.solution.values[start] == pytest.approx(whole.mean_remaining, rel=1e-9)
     assert len(found.used) == len(priced) - len(found.twins)
 

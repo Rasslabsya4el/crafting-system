@@ -217,7 +217,7 @@ def test_a_metamod_is_out_of_scope_for_a_state_built_without_metamods_although_t
     ab = abstraction()
     CHAOS.outcomes(SMALL, item)  # the action models the metamod (ticket #68) ...
 
-    with pytest.raises(OutOfScopeError, match="metamods=True"):  # ... a state built with metamods=False refuses to compress it (ticket #69)
+    with pytest.raises(OutOfScopeError, match="lock or an Attack or Caster metamod"):  # ... a state built with metamods=False refuses to compress it (ticket #69)
         ab.compress(item)
 
 

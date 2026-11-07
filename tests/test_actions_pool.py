@@ -111,7 +111,7 @@ def test_a_candidate_with_two_families_is_out_of_scope():
     two = dataclasses.replace(mod, families=("IncreasedLife", "SomethingElse"))
     data = dataclasses.replace(DATA, mods={**DATA.mods, mod.id: two})
 
-    with pytest.raises(OutOfScopeError, match="IncreasedLife1.*2 families"):
+    with pytest.raises(OutOfScopeError, match="2 families"):
         build_pool(data, amulet())
 
 

@@ -124,8 +124,11 @@ def _refuse_unchecked(base: BaseItem) -> None:
     else:
         return
     raise OutOfScopeError(
-        f"{base.name} is a {kind}: its corrupted implicit pool is not checked against the game data, "
-        "so no pool is given (ADR-0037)"
+        f"{base.name} is a {kind}: the model does not check its corrupted implicit pool against the game data, so it gives none",
+        detail=(
+            f"{base.name} is a {kind}: its corrupted implicit pool is not checked against the game data, "
+            "so no pool is given (ADR-0037)"
+        ),
     )
 
 

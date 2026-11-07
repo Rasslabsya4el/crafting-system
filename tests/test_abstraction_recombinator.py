@@ -232,7 +232,7 @@ def test_a_refusal_that_depends_on_where_the_names_lie_is_refused_as_out_of_scop
     given, donor = item(J1, rarity=Rarity.MAGIC), item(J1, rarity=Rarity.MAGIC)  # the action's own donor and the representative of the item share RJ1
     action = NeedsOverlap(donor)
     ab = Abstraction(WORLD, GOAL, BOOTS, LEVEL, [action])
-    with pytest.raises(OutOfScopeError, match="some placements of the names"):
+    with pytest.raises(OutOfScopeError, match="some placements of the mods"):
         ab.kernel(ab.compress(given), action)
 
 

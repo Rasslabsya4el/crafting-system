@@ -33,6 +33,7 @@ from datetime import date
 
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, tier_table
+from crafting_system.items.words import mod_words_of
 from crafting_system.items.vendor_recipes import RECIPES, GemInput, Recipe, RecipeStep
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
@@ -240,7 +241,7 @@ def _examine(
         refusals.append(
             _Refusal(
                 ITEM_LEVEL_TOO_LOW,
-                f"step {step.number} gives {step.mod_id}, which needs item level {step.required_level}; the target's item level is {target.item_level}",
+                f"step {step.number} gives {mod_words_of(data, step.mod_id)}, which needs item level {step.required_level}; the target's item level is {target.item_level}",
             )
         )  # fmt: skip
     elif straddles:
@@ -248,7 +249,7 @@ def _examine(
         refusals.append(
             _Refusal(
                 ROLL_NOT_GUARANTEED,
-                f"step {step.number} ({step.mod_id}) rolls inside its range and the target's roll limit lies inside that range, "
+                f"step {step.number} ({mod_words_of(data, step.mod_id)}) rolls inside its range and the target's roll limit lies inside that range, "
                 "so the recipe does not promise it",
             )
         )  # fmt: skip
@@ -257,16 +258,16 @@ def _examine(
         refusals.append(
             _Refusal(
                 ROLL_NOT_GUARANTEED,
-                f"the target's roll limit is above every roll of step {step.number} ({step.mod_id}), the last step that has the mod and tier it asks",
+                f"the target's roll limit is above every roll of step {step.number} ({mod_words_of(data, step.mod_id)}), the last step that has the mod and tier it asks",
             )
         )  # fmt: skip
     elif len(cannot_spawn) == len(steps):
-        refusals.append(_Refusal(MOD_CANNOT_SPAWN, f"the mods of this recipe ({last.mod_id} and the others) cannot spawn on this base"))
+        refusals.append(_Refusal(MOD_CANNOT_SPAWN, f"the mods of this recipe ({mod_words_of(data, last.mod_id)} and the others) cannot spawn on this base"))
     else:
         refusals.append(
             _Refusal(
                 CAP_BELOW_ASKED,
-                f"the recipe stops at tier {last.tier_from_top} from the top ({last.mod_id}, step {last.number}); the target asks {'; '.join(asked)}",
+                f"the recipe stops at tier {last.tier_from_top} from the top ({mod_words_of(data, last.mod_id)}, step {last.number}); the target asks {'; '.join(asked)}",
             )
         )  # fmt: skip
     return _Examined((), tuple(refusals))

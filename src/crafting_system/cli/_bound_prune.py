@@ -77,6 +77,7 @@ LBQ compared after the same factor; J is raised by its certified error bound.
 """
 
 import heapq
+import logging
 import math
 import time
 from collections.abc import Callable, Iterable, Sequence
@@ -99,6 +100,8 @@ from crafting_system.items import Item
 from crafting_system.solver import ConvergenceError, Solution, solve
 
 from ._offers import BuyStartItem, PricedOffer
+
+log = logging.getLogger(__name__)  # what a developer needs behind a sentence of the answer (#557); no text of the answer carries it
 
 ZERO, ONE = Fraction(0), Fraction(1)
 
@@ -362,14 +365,15 @@ def _run(
             solution = solve_on(offers)
         except ConvergenceError as problem:
             mark(f"solve {spent}")
-            return fallback(f"the solver could not converge on the reduced model ({problem})", spent)
+            log.info("the reduced model did not converge: %s", problem)
+            return fallback("the search on the smaller set of actions did not settle", spent)
         mark(f"solve {spent} ({len(offers)} offers, {len(solution.values)} states)")
         non_goal = [state for state in solution.values if not abstraction.is_goal(state)]
         moved = [state for state in non_goal if state.flags != start.flags or state.fractured != start.fractured]
         if moved:
-            return fallback("an offer moves the item to another shape (flags or fractured mods)", spent)
+            return fallback("an action of the smaller set changes what kind of item it is (its flags or fractured mods)", spent)
         if not _finite(solution.error_bound):
-            return fallback("the solver could not certify its values", spent)
+            return fallback("the values found on the smaller set could not be proved exact", spent)
         infinite = any(not _finite(solution.values[state]) for state in non_goal)
         j_max = max((solution.values[s] for s in non_goal if _finite(solution.values[s])), default=0.0)
         bound = j_max * (1 + max(solution.error_bound, 1e-9)) + 1e-9
@@ -407,11 +411,11 @@ def _run(
                 solution, tuple(offers), tuple(twins), bounded, spent, rho, j_max, False, "", refused, tuple(phases)
             )
         if not failing:  # an infinite value with every offer already in S: the full model has the same dead state
-            return fallback("a reachable state has no proper policy", spent)
+            return fallback("a state the search can reach has no plan that finishes", spent)
         failing.sort(key=lambda pair: (pair[0], pair[1].index))
         last = spent == rounds - 1
         inside.update(entry.index for _, entry in (failing if last else failing[:PER_ROUND]))
-    return fallback(f"the certificate did not close within {rounds} rounds", spent)
+    return fallback(f"the proof that the smaller set is enough did not finish in {rounds} rounds", spent)
 
 
 def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:

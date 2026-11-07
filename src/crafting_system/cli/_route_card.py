@@ -72,6 +72,7 @@ from crafting_system.items import (
     memory_strands_line,
     tier_table,
 )
+from crafting_system.items.words import mod_text as mod_text_of
 from crafting_system.targets import ImplicitRequirement, KOfN, Target
 
 Tone = Literal["wanted", "mod", "crafted", "any", "empty", "implicit"]
@@ -84,8 +85,6 @@ GRADE_NAMES = {1: "Lesser", 2: "Greater", 3: "Grand", 4: "Exceptional", 5: "Exqu
 SIDE_NAMES = {EldritchSide.EXARCH: "searing exarch", EldritchSide.EATER: "eater of worlds"}
 _NUMBER = r"\d+(?:\.\d+)?"
 _RANGE = re.compile(rf"\(\s*(-?{_NUMBER})\s*-\s*(-?{_NUMBER})\s*\)")
-_LINK_WITH_LABEL = re.compile(r"\[[^\]|]*\|([^\]]*)\]")
-_LINK = re.compile(r"\[([^\]|]*)\]")
 _RARITY_ORDER = (Rarity.NORMAL, Rarity.MAGIC, Rarity.RARE)
 
 
@@ -137,21 +136,8 @@ EMPTY = Slot("empty", "empty")
 # --- the text of a mod ----------------------------------------------------------------------------------
 
 
-def _clean(text: str) -> str:
-    text = _LINK.sub(r"\1", _LINK_WITH_LABEL.sub(r"\1", text))
-    return " / ".join(line.strip() for line in text.split("\n"))
-
-
 def _hashes(text: str) -> str:
     return _RANGE.sub("#", text)
-
-
-def _own_text(mod: Mod) -> str:
-    if mod.text:
-        return _clean(mod.text)
-    if mod.name:
-        return mod.name
-    return f"veiled {mod.generation_type}" if mod.domain == VEILED_DOMAIN else mod.id  # a placeholder has no text
 
 
 def _factor(text_low: float, text_high: float, stat_low: int, stat_high: int) -> float | None:
@@ -175,7 +161,7 @@ def mod_text(mod: Mod, values: Sequence[int] | None = None) -> str:
     stat rolls is replaced by the rolled value, scaled the way the text shows it. A range that cannot be
     matched to a stat stays as it is. Raises `ValueError` when `values` does not have one entry per stat.
     """
-    text = _own_text(mod)
+    text = mod_text_of(mod)
     if values is None:
         return text
     if len(values) != len(mod.stats):
@@ -306,11 +292,11 @@ def _leaf_slot(
         known.sort(key=lambda mod_id: (data.mods[mod_id].domain not in {base_domain, CRAFTED_DOMAIN}, mod_id))
         mod = data.mods[known[0]]
         note = "crafted" if mod.domain == CRAFTED_DOMAIN else "essence only" if mod.is_essence_only else _tier_note(tiers, [known[0]])
-        return Side(mod.generation_type), _own_text(mod), note
+        return Side(mod.generation_type), mod_text_of(mod), note
     side = Side(data.mods[candidates[0]].generation_type)
     if len(candidates) == 1:
-        return side, _own_text(data.mods[candidates[0]]), _tier_note(tiers, candidates)
-    texts = list(dict.fromkeys(_hashes(_own_text(data.mods[mod_id])) for mod_id in candidates))
+        return side, mod_text_of(data.mods[candidates[0]]), _tier_note(tiers, candidates)
+    texts = list(dict.fromkeys(_hashes(mod_text_of(data.mods[mod_id])) for mod_id in candidates))
     limited = tier_ok is not None and any(mod_id not in tier_ok for mod_id in spawning)  # the leaf's tier limit left some spawning mod out
     return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier, limited)
 
@@ -418,7 +404,7 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
 
 def _wanted_implicit(data: GameData, wish: ImplicitRequirement) -> Slot:
     """An implicit requirement: the texts of its mods with `#` for the ranges, then the grade and rolls asked for."""
-    texts = dict.fromkeys(_hashes(_own_text(data.mods[mod_id])) for mod_id in sorted(wish.mod_ids))
+    texts = dict.fromkeys(_hashes(mod_text_of(data.mods[mod_id])) for mod_id in sorted(wish.mod_ids))
     grade = f"grade {wish.min_grade} or better" if wish.min_grade is not None else ""
     rolls = [f"roll {roll} or more" for roll in wish.min_roll or () if roll is not None]
     return Slot(" or ".join(texts), "wanted", (), _note(grade, *rolls))
@@ -499,7 +485,7 @@ class _StateReader:
         else:  # the texts of the tiers, as the target card writes a leaf drawn from several mods
             stands_for.sort(key=lambda other: (self.tiers[other], other))
             mod = self.data.mods[stands_for[0]]
-            text = " or ".join(dict.fromkeys(_hashes(_own_text(self.data.mods[other])) for other in stands_for))
+            text = " or ".join(dict.fromkeys(_hashes(mod_text_of(self.data.mods[other])) for other in stands_for))
             note = _tier_note(self.tiers, stands_for)
         tone: Tone = "wanted" if Status.PASSING in contribution else "mod"
         return Side(mod.generation_type), Slot(text, tone, ("fractured", *_marks(mod)), note)
@@ -528,7 +514,7 @@ class _StateReader:
         ordered = sorted(family, key=lambda mod: (self.tiers[mod.id], mod.id))
         if len(ordered) == 1:
             return Slot(mod_text(ordered[0]), "mod", _marks(ordered[0]), _tier_note(self.tiers, [ordered[0].id]))
-        text = " or ".join(dict.fromkeys(_hashes(_own_text(mod)) for mod in ordered))
+        text = " or ".join(dict.fromkeys(_hashes(mod_text_of(mod)) for mod in ordered))
         return Slot(text, "mod", _marks(ordered[0]), _tier_note(self.tiers, [mod.id for mod in ordered]))
 
     def read(self, state: CompressedState) -> _Rows:

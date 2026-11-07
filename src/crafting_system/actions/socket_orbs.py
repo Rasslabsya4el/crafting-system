@@ -147,10 +147,14 @@ def _accept(data: GameData, item: Item, what: str) -> tuple[Sockets, int]:
         raise NotApplicableError(f"a {what} works on a weapon or armour, and {item_class} takes no sockets")
     if item.sockets is None:
         raise OutOfScopeError(
-            f"the item states no sockets, so a {what} has nothing to change; a target that names sockets states its start item's sockets (ADR-0046, #545)"
+            f"the item states no sockets, so a {what} has nothing to change; a target that names sockets states the sockets of its start item",
+            detail=f"the item states no sockets, so a {what} has nothing to change; a target that names sockets states its start item's sockets (ADR-0046, #545)",
         )
     if has_abyssal_socket(data, item.base_id, tuple(entry.mod_id for entry in (*item.mods, *item.implicits))):
-        raise OutOfScopeError("the item holds an Abyssal Socket, and no admitted rule says how an Abyssal Socket counts toward the sockets (ADR-0045)")
+        raise OutOfScopeError(
+            "the item holds an Abyssal Socket, and the model has no rule for how an Abyssal Socket counts toward the sockets",
+            detail="the item holds an Abyssal Socket, and no admitted rule says how an Abyssal Socket counts toward the sockets (ADR-0045)",
+        )
     return item.sockets, most
 
 
@@ -336,8 +340,11 @@ class OrbOfFusing(Action):
         percent = item.quality.percent if isinstance(item.quality, PlainQuality) else 0
         if percent < FUSING_MIN_QUALITY and not self.omen:
             raise OutOfScopeError(
-                f"the item has {percent}% quality; the only table of the Orb of Fusing is the one for {FUSING_MIN_QUALITY}% quality, "
-                "so it is offered from there (below it the finish buys quality first, ADR-0049)"
+                f"the item has {percent}% quality; the only table of the Orb of Fusing is the one for {FUSING_MIN_QUALITY}% quality, so it is offered from there (below it the finish buys quality first)",
+                detail=(
+                    f"the item has {percent}% quality; the only table of the Orb of Fusing is the one for {FUSING_MIN_QUALITY}% quality, "
+                    "so it is offered from there (below it the finish buys quality first, ADR-0049)"
+                ),
             )
         if self.omen:
             return _outcomes(data, item, {Sockets(sockets.colours, (sockets.count,)): ONE})

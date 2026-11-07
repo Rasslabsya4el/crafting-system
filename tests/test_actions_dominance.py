@@ -127,8 +127,9 @@ def test_a_top_tier_mod_with_no_known_elevated_version_is_out_of_scope_not_guess
     item = helmet(roll(P3, 1), roll(S1, 2), influences=frozenset({SHAPER}))
     with pytest.raises(OutOfScopeError, match="Elevated"):
         OrbOfDominance().outcomes(DATA, item)  # the committed mapping is for the real export, not for the fixture's
-    with pytest.raises(OutOfScopeError, match=P3):
+    with pytest.raises(OutOfScopeError, match="Elevated") as refused:
         OrbOfDominance(elevated=((S2, S2_MAVEN),)).outcomes(DATA, item)
+    assert P3 in refused.value.detail and P3 not in str(refused.value)  # the id is the developer's detail
     assert OrbOfDominance(elevated=((P3, P3_MAVEN),)).outcomes(DATA, item)
 
 

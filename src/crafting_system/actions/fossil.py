@@ -55,6 +55,7 @@ from itertools import combinations
 
 from crafting_system.data import Fossil, GameData, Mod, conflicts
 from crafting_system.items import Item, Rarity, Side, UnknownBaseError, capacity, effective_weight
+from crafting_system.items.words import mod_words
 from crafting_system.rules import get_rule
 
 from .bloodstained import CLAIM_IDS as BLOODSTAINED_CLAIM_IDS
@@ -377,8 +378,11 @@ def _check_set(records: list[Fossil]) -> None:
     ]
     if len(forcing) > 1:
         raise OutOfScopeError(
-            "two fossils that each force a mod (Hollow and Glyphic) are in one resonator; "
-            "no admitted rule says how the game counts them"
+            "two fossils that each force a mod (Hollow and Glyphic) are in one resonator, and the model has no rule for how the game counts them",
+            detail=(
+                "two fossils that each force a mod (Hollow and Glyphic) are in one resonator; "
+                "no admitted rule says how the game counts them"
+            ),
         )
 
 
@@ -531,8 +535,11 @@ def _check_forced(data: GameData, item: Item, forced: Mod, name: str) -> None:
     used = sum(1 for entry in item.fractured_mods if data.mods[entry.mod_id].generation_type == side.value)
     if used >= capacity(data, item.base_id, Rarity.RARE).of(side):
         raise OutOfScopeError(
-            f"the fractured mods fill every {side.value} slot, so the forced mod {forced.id} "
-            "has no slot; no admitted rule says what the game does then"
+            f"the fractured mods fill every {side.value} slot, so the forced mod ({mod_words(forced)}) has no slot; the model has no rule for what the game does then",
+            detail=(
+                f"the fractured mods fill every {side.value} slot, so the forced mod {forced.id} "
+                "has no slot; no admitted rule says what the game does then"
+            ),
         )
 
 

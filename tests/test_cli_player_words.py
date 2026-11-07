@@ -23,9 +23,8 @@ claim id, a file name, a ticket or ADR number, a workflow word, a base id, a sna
 
 **What this test does not read yet.** The texts of exceptions raised below `cli/` and shown to a person, as the cause in a limit ("Left
 out where the model has no rule") or as `Error: {error}` (`cli/_main.py`), are not read, because they are written outside the package this
-test scans. Two open issues own them: #557 for the causes written in `actions/` and `abstraction/` (they still hold "ADR-0023",
-"(ticket #212)", "(grill B2)" and a game mod id, as on `tests/golden/real_r10.html`), and #632 for the errors of `data`, `targets`,
-`prices` and `config`. The benchmark command is #631. The header
+test scans. The causes written in `actions/` and `abstraction/` are read by `tests/test_cause_words.py` (by the syntax tree of their raise
+sites, #557); #632 owns the errors of `data`, `targets`, `prices` and `config`. The benchmark command is #631. The header
 `Target: <file>` is not read: it echoes the name of the player's own file.
 
 The axis table (`cli/_axes.py`) has its own test below: every rule axis the code defines has words, and so has each of its values.
@@ -61,6 +60,14 @@ NOT_READ = {"_route_html.py"}  # the page's CSS and script: the page lint reads 
 NOT_READ_PREFIX = "_benchmark"  # the benchmark command is a developer's tool; its words are filed as an issue (OR-29)
 PROGRAM_NAME = "COMMAND"  # the constant that holds the program name for `argparse`'s usage line
 
+LEAF_LABEL_LEAK = ", mod "  # `leaf_labels` writes ", mod <id>" into the `Requirements:` line and the state lines (issue #649): the game-id pattern is not asked of a mod written so
+
+
+def leaked_by_a_leaf_label(line: str, fault: str) -> bool:
+    """Whether `fault` is the game id of a mod that `leaf_labels` writes after ", mod " (issue #649)."""
+    return fault.startswith("a game mod id: ") and f"{LEAF_LABEL_LEAK}{fault.removeprefix('a game mod id: ')}" in line
+
+
 OPTION = re.compile(r"(?<![\w-])--[a-z][a-z0-9-]*")
 PROGRAM = re.compile(r"\bpython\b|\bpip\b|\buv\b", re.IGNORECASE)
 JARGON = {  # a word a player does not use; the figures are said as `_limits.PERCENTILE_WORDS` says them
@@ -72,7 +79,6 @@ JARGON = {  # a word a player does not use; the figures are said as `_limits.PER
     "quantile": re.compile(r"\bquantiles?\b", re.IGNORECASE),
     "a bare success chance": re.compile(r"(?<![Tt]he )\bsuccess chance\b"),  # `PERCENTILE_WORDS` says "the success chance"; the page card's field label "Success chance" is a label, not a row
 }
-JARGON_OWNED_BY_557 = {"_approx.py", "_bound_prune.py"}  # the causes written there ("the solver could not certify its values") are the open issue #557
 FOR_A_PROGRAMMER = ("solver must be one of ", "risk: p50 ")  # the error about the library argument `solver=` and the progress line of a heavy run: not read by a player
 
 
@@ -239,7 +245,7 @@ def test_the_reading_finds_the_sentences_it_is_meant_to_read():
 def test_no_sentence_of_the_code_holds_an_internal_name(path):
     for line, text in sentences_of(path):
         faults = faults_in(text)
-        if path.name in JARGON_OWNED_BY_557 or text.startswith(FOR_A_PROGRAMMER):
+        if text.startswith(FOR_A_PROGRAMMER):
             faults = [fault for fault in faults if not fault.startswith("jargon")]
         assert faults == [], f"{path.name}:{line}: {text!r}"
 
@@ -320,7 +326,13 @@ def test_the_text_of_real_plans_holds_no_internal_name(texts):
     assert "free actions are counted at" in texts["plan with free actions"]  # the note of `_report.free_action_lines`
     for where, text in texts.items():
         for number, line in enumerate(reading_lines(text), 1):
-            assert faults_in(line) == [], f"{where}, line {number}: {line!r}"
+            faults = [fault for fault in faults_in(line) if not leaked_by_a_leaf_label(line, fault)]
+            assert faults == [], f"{where}, line {number}: {line!r}"
+
+
+def test_the_requirements_leak_is_still_there_so_its_exemption_is_still_needed(texts):
+    leaks = [line for line in reading_lines(texts["R12 plan"]) if any(leaked_by_a_leaf_label(line, fault) for fault in faults_in(line))]
+    assert leaks, "fixed: delete LEAF_LABEL_LEAK and leaked_by_a_leaf_label (issue #649)"
 
 
 def test_the_result_block_and_the_verification_say_each_figure_as_the_table_does(texts):

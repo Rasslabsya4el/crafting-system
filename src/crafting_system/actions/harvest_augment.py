@@ -25,6 +25,7 @@ from fractions import Fraction
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import ExplicitMod, Item, Rarity
+from crafting_system.items.words import mod_words_of
 from crafting_system.rules import Rule, get_rule
 
 from .catalog import kind
@@ -146,7 +147,7 @@ class HarvestAddRemove(Action):
         if item.influences:
             raise NotApplicableError("the item is influenced, and an influenced item takes no Harvest add and remove craft")
         refuse_unmodelled(
-            data, item, "the add and remove crafts are admitted for regular items only, so this craft on a jewel is not modelled yet"
+            data, item, "the add and remove crafts are modelled for regular items only, so this craft on a jewel is not modelled yet"
         )
         tag = TAGGED_RARE_REFORGE_EXISTS.value[self.craft]
         candidates = [
@@ -231,7 +232,7 @@ def _swap_outcomes(data: GameData, item: Item, source: str, target: str, source_
         raise NotApplicableError("a Harvest swap works on a magic or rare item only, and this item is normal")
     if item.corrupted:
         raise NotApplicableError("the item is corrupted, and a corrupted item takes no Harvest swap")
-    refuse_unmodelled(data, item, "the swap crafts are admitted for regular items only, so this craft on a jewel is not modelled yet")
+    refuse_unmodelled(data, item, "the swap crafts are modelled for regular items only, so this craft on a jewel is not modelled yet")
     tiers = tiers_of(data, item)
     locked = locked_sides(data, item)
     wanted = {template.replace("X", source) for template in source_stats.value}
@@ -255,7 +256,10 @@ def _swap_outcomes(data: GameData, item: Item, source: str, target: str, source_
         ]
         if len(found) > 1:
             names = ", ".join(sorted(other.id for other in found))
-            raise OutOfScopeError(f"the swap of {entry.mod_id} to {target} is ambiguous: tier {tier} has several {target} mods ({names})")
+            raise OutOfScopeError(
+                f"the swap of {mod_words_of(data, entry.mod_id)} to {target} is ambiguous: tier {tier} has several {target} mods",
+                detail=f"the swap of {entry.mod_id} to {target} is ambiguous: tier {tier} has several {target} mods ({names})",
+            )
         if not found:
             continue
         with_target += 1

@@ -35,6 +35,7 @@ from functools import cached_property
 from crafting_system.data import GameData, Mod
 from crafting_system.items import ImplicitMod, Item
 from crafting_system.items.implicits import BASE_GRADE
+from crafting_system.items.words import base_words
 from crafting_system.rules import get_rule
 
 from .corrupted_pool import CorruptedImplicitPool, corrupted_implicit_pool
@@ -101,8 +102,11 @@ class ImplicitDraw:
         pool = corrupted_implicit_pool(data, item.base_id, item.item_level)
         if not pool.mods:
             raise OutOfScopeError(
-                f"the corrupted implicit pool of {item.base_id} is empty at item level {item.item_level}, and no admitted rule says "
-                "what a Bloodstained Fossil does when it has no implicit to add"
+                f"the corrupted implicit pool of {base_words(data, item.base_id)} is empty at item level {item.item_level}, and the model has no rule for what a Bloodstained Fossil does when it has no implicit to add",
+                detail=(
+                    f"the corrupted implicit pool of {item.base_id} is empty at item level {item.item_level}, and no admitted rule says "
+                    "what a Bloodstained Fossil does when it has no implicit to add"
+                ),
             )
         return cls(data, pool, item.implicits, replaces_all)
 

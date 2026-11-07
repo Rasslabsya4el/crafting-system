@@ -16,6 +16,7 @@ The bounds are of the cost still to pay from the start item (`Plan.mean_remainin
 the start item is added by whoever prints them.
 """
 
+import logging
 import time
 from collections import defaultdict
 from collections.abc import Callable, Iterable
@@ -38,6 +39,11 @@ from crafting_system.solver import (
 
 from ._decide import TOLERANCE, Candidate, Decision, exact_offer
 from ._offers import BuyStartItem, PricedOffer
+
+log = logging.getLogger(__name__)  # what a developer needs behind a sentence of the answer (#557); no text of the answer carries it
+
+NO_PLAN_TO_FOLLOW = "it gave no plan to follow"
+DID_NOT_SETTLE = "its values did not settle"
 
 
 @dataclass(frozen=True)
@@ -302,7 +308,7 @@ def climb(
 
     def guard() -> None:
         if allowed is not None and clock() - began > allowed:
-            raise LevelTimeout(f"the levels used the {allowed:.0f} s they are allowed (ten times the budget)")
+            raise LevelTimeout(f"the approximate answers used the {allowed:.0f} s they are allowed (ten times the budget)")
 
     models = Models(start, offers, guard)
     best: Solved | None = None
@@ -315,12 +321,13 @@ def climb(
             stopped = str(timeout)
             break
         except BlockHoldsMetamod as held:
-            stopped = stopped or f"a block holds a metamod ({held})"
+            stopped = stopped or str(held)
             continue  # this level cannot bound the route; the next may pool differently
         except (NoPolicyError, ConvergenceError) as failed:
             if candidate.level.kind != "tail":
                 raise
-            skipped.append((candidate.level.name, str(failed) or "no reason was given"))
+            log.info("the level %s was skipped: %s", candidate.level.name, failed)
+            skipped.append((candidate.level.name, NO_PLAN_TO_FOLLOW if isinstance(failed, NoPolicyError) else DID_NOT_SETTLE))
             continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved

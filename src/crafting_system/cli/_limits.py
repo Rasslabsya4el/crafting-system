@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 NOT_NAMED = "kinds-not-named"
 OPT_IN = "kinds-opt-in"
@@ -129,6 +129,7 @@ class Limit:
     labels: tuple[str, ...] = ()
     names: tuple[str, ...] = ()
     approximate: str = ""  # the guarantee when the answer is approximate; required when `guarantee` claims the cheapest plan (see `claim`)
+    detail: tuple[str, ...] = field(default=(), repr=False)  # the developer's text behind the causes in `names` (ids, ADR and ticket numbers): the JSON carries it, no text does (#557); left out of the repr so that the fingerprints of the limits (`b1_unchanged_142.json`) are those of a limit without it
 
     def __post_init__(self) -> None:
         if not self.guarantee.strip():
@@ -196,7 +197,7 @@ def more_labels(limit: Limit, shown: int = SHOWN_LABELS) -> tuple[str, ...]:
 
 def limit_document(limit: Limit) -> dict:
     """The JSON form of a limit: every label."""
-    return {
+    document = {
         "kind": limit.kind,
         "what": limit.what,
         "why": limit.reason(),
@@ -205,6 +206,9 @@ def limit_document(limit: Limit) -> dict:
         "labels": list(limit.labels),
         "names": list(limit.names),
     }
+    if limit.detail:
+        document["detail"] = list(limit.detail)
+    return document
 
 
 def ordered(limits: Iterable[Limit]) -> list[Limit]:
@@ -299,6 +303,7 @@ def model_gap_limits(gaps: Iterable) -> tuple[Limit, ...]:
     others = [gap for gap in gaps if not gap.consumes_inputs]
     if others:
         causes = tuple(dict.fromkeys(gap.cause for gap in others))
+        details = tuple(dict.fromkeys(gap.detail for gap in others if gap.detail and gap.detail != gap.cause))
         shown = causes[:SHOWN_CAUSES] + ((f"{len(causes) - SHOWN_CAUSES} more causes",) if len(causes) > SHOWN_CAUSES else ())
         found.append(
             Limit(
@@ -307,6 +312,7 @@ def model_gap_limits(gaps: Iterable) -> tuple[Limit, ...]:
                 "the model has no rule for them there, so they are not offered there: {names}",
                 labels=tuple(f"{gap.label} in {_states(gap.states, gap.blocks)}" for gap in others),
                 names=shown,
+                detail=details,
                 **claim("the actions the model can apply in each state", "An action the model has no rule for could make it cheaper."),
             )
         )

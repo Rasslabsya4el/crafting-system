@@ -26,6 +26,7 @@ class Gap:
     cause: str
     consumes_inputs: bool
     blocks: bool = False  # `states` counts the blocks of a coarse level (groups of states), not item states
+    detail: str = ""  # the developer's text of the first refusal (ids, ADR and ticket numbers): the JSON answer carries it, the text never (#557)
 
 
 class ModelGaps:
@@ -33,20 +34,25 @@ class ModelGaps:
 
     def __init__(self) -> None:
         self._states: dict[tuple[str, bool], set[Hashable]] = {}
-        self._cause: dict[tuple[str, bool], tuple[str, bool]] = {}
+        self._cause: dict[tuple[str, bool], tuple[str, bool, str]] = {}
 
     def note(self, label: str, state: Hashable, refusal: OutOfScopeError, *, block: bool = False) -> None:
         """Write that the model had no rule for the action `label` in `state`; with `block` the state is a block of a coarse level."""
         key = (label, block)
         self._states.setdefault(key, set()).add(state)
-        self._cause.setdefault(key, (str(refusal), isinstance(refusal, ConsumesInputsError)))
+        detail = getattr(refusal, "detail", "")
+        self._cause.setdefault(key, (str(refusal), isinstance(refusal, ConsumesInputsError), "" if detail == str(refusal) else detail))
 
     def __bool__(self) -> bool:
         return bool(self._states)
 
     def entries(self) -> tuple[Gap, ...]:
         """One `Gap` per action, in the order the actions first met a gap."""
-        return tuple(Gap(label, len(states), *self._cause[(label, block)], block) for (label, block), states in self._states.items())
+        found = []
+        for (label, block), states in self._states.items():
+            cause, consumes, detail = self._cause[(label, block)]
+            found.append(Gap(label, len(states), cause, consumes, block, detail))
+        return tuple(found)
 
 
 PRUNED_CORRUPTING = "corrupting"

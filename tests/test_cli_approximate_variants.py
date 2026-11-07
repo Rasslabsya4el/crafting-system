@@ -187,8 +187,8 @@ def test_annulment_and_the_three_additions_have_a_coarse_level_and_an_action_wit
 
     regal = coarse_refusal(TYPED, [ANNUL, ADDITIONS[0], UndeclaredRegal()])
     annulment = coarse_refusal(TYPED, [UndeclaredAnnulment(), *ADDITIONS])
-    assert regal is not None and regal.startswith("Regal Orb is not declared block-invariant and declares no variants")
-    assert annulment is not None and annulment.startswith("Orb of Annulment is not declared block-invariant and declares no variants")
+    assert regal is not None and regal.startswith("Regal Orb cannot be grouped for an approximate answer: the model has not shown yet that its result does not depend on which mods the item holds")
+    assert annulment is not None and annulment.startswith("Orb of Annulment cannot be grouped for an approximate answer: the model has not shown yet that its result does not depend on which mods the item holds")
 
 
 def with_undeclared(exact):
@@ -204,7 +204,7 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_exact_when_small_a
     decision = decide(ab, start, priced(offers), 0.0, RATES)
 
     assert decision.action == "exact" and decision.levels == ()
-    assert decision.message.startswith("no approximate answer was possible (Regal Orb is not declared block-invariant")
+    assert decision.message.startswith("no approximate answer was possible (Regal Orb cannot be grouped for an approximate answer")
 
 
 def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_exact_run_is_beyond_what_was_run(exact, monkeypatch):
@@ -212,9 +212,9 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_e
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
     decision = decide(ab, start, priced(offers), 0.0, RATES)
-    assert decision.action == "refused" and "no approximate answer was possible (Regal Orb is not declared block-invariant" in decision.message
+    assert decision.action == "refused" and "no approximate answer was possible (Regal Orb cannot be grouped for an approximate answer" in decision.message
 
-    with pytest.raises(PlanError, match=r"no approximate answer was possible \(Regal Orb is not declared block-invariant"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible \(Regal Orb cannot be grouped for an approximate answer"):
         make_plan(DATA, exact.target, PRICES, offers=offers, budget=0.0, rates=RATES, solver="object")  # (the packed solver answers it, ticket #70)
 
 
@@ -386,7 +386,7 @@ def test_the_levels_stop_when_the_time_they_are_allowed_is_spent_and_nothing_fin
     decision = dataclasses.replace(decide(exact.abstraction, exact.start, exact.offers, budget, RATES), budget=1.0)
     ticks = iter(range(0, 10**6, 1000))  # every reading of the clock is 1000 s later: the ten budgets are gone at the first block
 
-    with pytest.raises(ValueError, match="no coarse level finished: the levels used the 10 s they are allowed"):
+    with pytest.raises(ValueError, match="no coarse level finished: the approximate answers used the 10 s they are allowed"):
         climb(decision, exact.start, exact.offers, lambda: float(next(ticks)))
 
 
@@ -418,7 +418,7 @@ def test_the_ladder_stops_early_with_the_interval_of_the_levels_that_finished_an
 
     found = solved.approximation
     assert found.level == decision.levels[0].level.name and not found.within_tolerance  # the first rung alone is wider than 1%
-    assert "The ladder stopped early: the levels used the 10 s they are allowed" in found.message
+    assert "The ladder stopped early: the approximate answers used the 10 s they are allowed" in found.message
     assert found.lower <= exact.mean_remaining <= found.upper
 
 
@@ -445,7 +445,7 @@ def test_a_block_that_holds_a_metamod_ends_the_level_instead_of_dropping_the_act
     monkeypatch.setattr(Coarsening, "_holds_blocking_metamod", lambda self, block: True)
     decision = decide(exact.abstraction, exact.start, exact.offers, budget, RATES)
 
-    with pytest.raises(ValueError, match="no coarse level finished: a block holds a metamod"):
+    with pytest.raises(ValueError, match="no coarse level finished: the item holds a lock or an Attack or Caster metamod"):
         climb(decision, exact.start, exact.offers)
 
 

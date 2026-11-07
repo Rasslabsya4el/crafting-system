@@ -155,7 +155,7 @@ def test_an_empty_pool_at_a_low_item_level_has_no_draw(data):
 
 @pytest.mark.parametrize("base_id, kind", [(CLUSTER, "Cluster Jewel"), (TIMELESS, "Timeless Jewel")])
 def test_cluster_and_timeless_jewels_are_refused_with_a_reason(data, base_id, kind):
-    with pytest.raises(OutOfScopeError, match=f"is a {kind}.*not checked"):
+    with pytest.raises(OutOfScopeError, match=f"is a {kind}.*does not check"):
         corrupted_implicit_pool(data, base_id, 100)
 
 

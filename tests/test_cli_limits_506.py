@@ -88,7 +88,7 @@ def test_m2_rate_a_calibration_that_cannot_run_names_why_and_a_measured_one_says
     few = _decide.measure_solve_rate(abstraction, 0, calibration_layers(10)[0], {})
 
     assert measured[1] == "" and measured[0] != _decide.SOLVE_RATE_FALLBACK
-    assert failed == (_decide.SOLVE_RATE_FALLBACK, "the timing run did not finish (no luck in 3000 sweeps)")
+    assert failed == (_decide.SOLVE_RATE_FALLBACK, "the timing run did not finish")
     assert few == (_decide.SOLVE_RATE_FALLBACK, "the size estimate covers only 20 possible moves between states, too few to time the search on")
     assert _decide.calibrate_solve_rate(abstraction, 0, estimate, {}) == _decide.SOLVE_RATE_FALLBACK  # the old function keeps its answer
 
@@ -115,8 +115,8 @@ def test_m2_prune_a_bound_pruning_that_fell_back_to_all_the_actions_says_why(mon
 
     assert made.pruned is not None and made.pruned.fell_back
     (limit,) = [each for each in made.limits if each.what == "All the actions were solved"]
-    assert limit.kind == "how-solved" and made.pruned.why == "the certificate did not close within 0 rounds"
-    assert limit.why == "the search first solved a smaller set of actions and could not prove it enough (the certificate did not close within 0 rounds)"
+    assert limit.kind == "how-solved" and made.pruned.why == "the proof that the smaller set is enough did not finish in 0 rounds"
+    assert limit.why == "the search first solved a smaller set of actions and could not prove it enough (the proof that the smaller set is enough did not finish in 0 rounds)"
     assert limit.guarantee == "The answer is exact among the methods offered."
     monkeypatch.setattr(_plan, "solve_pruned", real)
     clean = plan_of()

@@ -102,7 +102,7 @@ def test_an_out_of_scope_pool_is_refused_on_every_call():
     data = dataclasses.replace(DATA, mods={**DATA.mods, mod.id: two})
 
     for _ in range(2):
-        with pytest.raises(OutOfScopeError, match="IncreasedLife1.*2 families"):
+        with pytest.raises(OutOfScopeError, match="2 families"):
             pool_candidates(data, amulet())
 
 
