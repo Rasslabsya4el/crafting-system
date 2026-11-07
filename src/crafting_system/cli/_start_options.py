@@ -17,7 +17,7 @@ option and keeps the cheapest total (`_starts.plan_with_starts`).
   and a mod needs its required level. A step whose mod needs more than the target's item level is refused.
 * **The rule axis.** Each step table is read at every reading of the recipe's axis (the elemental cap: `wiki` T3, `coe` T2). A
   candidate or a refusal says at which values of the axis it holds.
-* **Price.** The base is a Normal base priced under `base_line_name` (the result keeps its level and influences; a poe.ninja line of a name several bases share is refused), plus the flasks,
+* **Price.** The base is a Normal base priced under `base_line_name` (the result keeps its level and influences; a poe.ninja line of a name whose bases differ is refused), plus the flasks,
   the Orbs of Augmentation and the gems at the price file's lines (a trade price or a hand override on top, as for every
   price). A recipe with a missing line is refused and the names that are missing are listed.
 
@@ -37,7 +37,7 @@ from crafting_system.items.vendor_recipes import RECIPES, GemInput, Recipe, Reci
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.rules import rule_by_id
-from crafting_system.targets import KOfN, Requirement, Target, base_line_name, ninja_line_name, shared_name_refusal
+from crafting_system.targets import KOfN, Requirement, Target, base_line_name, is_name_only_source, ninja_line_name, shared_name_refusal
 
 from ._plan import leaf_labels
 from ._start_types import (
@@ -275,7 +275,7 @@ def _examine(
 def _goods(context: StartContext, recipe: Recipe, steps: tuple[RecipeStep, ...]) -> tuple[Goods, tuple[str, ...], tuple[str, ...]]:
     """The priced goods of a recipe made of `steps`, the names the price file lacks, and the prices refused with their words.
 
-    The base is priced under `base_line_name`; where its name is shared by several bases a poe.ninja line of the plain name is refused
+    The base is priced under `base_line_name`; where its name is shared by bases that differ a poe.ninja line of the plain name is refused
     (`shared_name_refusal`), and any other price must be under the name with the base id.
     """
     target = context.target
@@ -297,9 +297,12 @@ def _goods(context: StartContext, recipe: Recipe, steps: tuple[RecipeStep, ...])
             continue
         line_name = ninja_line_name(context.data, target)
         line = context.prices.prices.get(line_name) if name == base_name else None
-        refusal = None if line is None else shared_name_refusal(context.data, target.base_id, line.source, line_name)
-        if refusal is None:
+        if line is None or not is_name_only_source(line.source):  # only a poe.ninja or poe.watch line of the plain name has no base id
             missing.append(name)
+            continue
+        refusal = shared_name_refusal(context.data, target.base_id, line.source, line_name)
+        if refusal is None:  # the bases of the name agree: the line prices any of them
+            goods.append((line_name, count, count * line.chaos, line.source))
         else:
             refused.append(refusal)
     return tuple(goods), tuple(missing), tuple(refused)

@@ -21,8 +21,9 @@ price is stored under; the trade query is `build_query` of the spec. Nothing is 
   (the base id too, where the name is shared), the rarity, the item level window, the influences and the corruption, then the start mods.
   Two targets that differ in any of these read two price entries. `base_line_name` is the other name made here: the poe.ninja-style line
   of a Normal base (`Lion Pelt (ilvl 84)`) that a vendor recipe buys, with the base id in it where the name is shared.
-* **A poe.ninja price for a shared name is refused** (`shared_name_refusal`): its line has a name, a level and a variant, no base id,
-  so for a name that belongs to several bases it is the price of none of them. The trade site has no discriminator either (checked on
+* **A poe.ninja price for a shared name is refused when the bases differ** (`shared_name_refusal`): its line has a name, a level and a variant,
+  no base id, so for a name whose bases differ in item class, implicit mods or mod tags it is the price of none of them. Bases that agree in
+  all three are one item to a crafter and the line prices any of them (R04's two Penetrating Arrow Quivers). The trade site has no discriminator either (checked on
   2026-11-07 against `GET /api/trade/data/items`: one plain entry per base name, and `disc` only on legacy uniques), so the own implicit above is
   all the query can use.
 * **The start mods** are searched by their stat text, with the lowest roll of the mod's own stat range as the minimum (OR-3: the tier the
@@ -49,6 +50,7 @@ __all__ = [
     "base_line_name",
     "buy_spec_of",
     "ninja_line_name",
+    "is_name_only_source",
     "item_level_window",
     "same_name_bases",
     "shared_name_refusal",
@@ -207,21 +209,59 @@ def ninja_line_name(data: GameData, target: Target) -> str:
     return base_price_name(data.base_items[target.base_id].name, target.item_level, [each.value for each in target.influences])
 
 
+def is_name_only_source(source: str) -> bool:
+    """True for a price source whose line has a name, a level and a variant and no base id (poe.ninja, poe.watch)."""
+    return source.startswith((NINJA_SOURCE, WATCH_SOURCE))
+
+
+def _pool_tags(data: GameData) -> frozenset[str]:
+    """Every tag some mod's spawn or generation weights read: the tags of a base that can change its mod pool."""
+    return frozenset(weight.tag for mod in data.mods.values() for weight in (*mod.spawn_weights, *mod.generation_weights))
+
+
+def differences_between_same_name_bases(data: GameData, base_id: str) -> tuple[str, ...]:
+    """In what the bases that share this base's name differ for a crafter: any of "item class", "implicit mods", "mod tags".
+
+    Read from the export, the same data the planner reads. The implicit mods are compared by what they read and roll (their text and the
+    range of each stat), not by id: a base re-released under a new id keeps its implicit. The mod tags are the base's tags that some mod's
+    weights read (`_pool_tags`): a tag no mod reads, like `trade_market_legacy_item`, changes no mod pool. Empty when they all agree.
+    """
+    bases = [data.base_items[each] for each in same_name_bases(data, base_id)]
+    pool_tags = _pool_tags(data)
+
+    def implicits(item: BaseItem) -> frozenset[tuple[str, tuple[tuple[str, int, int], ...]]]:
+        mods = [data.mods[mod_id] for mod_id in item.implicits]
+        return frozenset((normalize_text(mod.text or ""), tuple((stat.id, stat.min, stat.max) for stat in mod.stats)) for mod in mods)
+
+    differing = []
+    if len({each.item_class for each in bases}) > 1:
+        differing.append("item class")
+    if len({implicits(each) for each in bases}) > 1:
+        differing.append("implicit mods")
+    if len({frozenset(each.tags) & pool_tags for each in bases}) > 1:
+        differing.append("mod tags")
+    return tuple(differing)
+
+
 def shared_name_refusal(data: GameData, base_id: str, source: str, what: str) -> str | None:
     """The words that refuse a price, or None when the price may be used.
 
     A poe.ninja line has a name, a level and a variant, no base id (poe.watch's base lines are matched by name and level the same way). Where
-    the name belongs to several bases it is the price of none of them, and `what` (the start item or the base line the price is for) is not
-    priced by it. Prices from every other source are kept.
+    the name belongs to several bases that agree in item class, implicit mods and mod tags, they are one item to a crafter and the line
+    prices any of them. Where they differ in one of these the line is the price of none of them, and `what` (the start item or the base
+    line the price is for) is not priced by it. Prices from every other source are kept.
     """
-    if not source.startswith((NINJA_SOURCE, WATCH_SOURCE)):
+    if not is_name_only_source(source):
         return None
     ids = same_name_bases(data, base_id)
     if len(ids) < 2:
         return None
+    differing = differences_between_same_name_bases(data, base_id)
+    if not differing:
+        return None
     shown = ", ".join(each.rsplit("/", 1)[-1] for each in ids)
     return (
         f"the price of {what} is refused: it comes from {source}, whose line has a name and no base id, and the name "
-        f"'{data.base_items[base_id].name}' belongs to {len(ids)} bases ({shown}), so the line is the price of none of them. "
-        "Price this base on the trade site, or write its price by hand"
+        f"'{data.base_items[base_id].name}' belongs to {len(ids)} bases ({shown}) that differ in {' and '.join(differing)}, "
+        "so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
     )

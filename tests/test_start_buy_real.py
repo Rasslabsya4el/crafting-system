@@ -25,7 +25,8 @@ from crafting_system.cli._route_trade import buy_step
 from crafting_system.prices import load_price_file
 from crafting_system.prices.trade_query import TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
-from crafting_system.targets import StartKind, buy_spec_of, load_target, start_price_key
+from crafting_system.targets import StartKind, buy_spec_of, load_target, shared_name_refusal, start_price_key
+from crafting_system.targets.start_buy import differences_between_same_name_bases
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"
@@ -62,7 +63,7 @@ OTHER_ITEM = {
     "r14-hunter-bow": "#483 the exact item has 0 listings: the stored price is for any non-unique rarity of item level 78 or more",
     "r08-energy-shield-boots": "#494 point 2 the key names a rare item with no mods, the stored price is of a normal base plus a typed Alchemy",
     "r09-life-boots": "#494 point 2 and #483 the stored price is of a normal base plus a typed Alchemy, taken for any of the three Two-Toned Boots",
-    "r04-penetrating-quiver": "#426 the stored price is a hand price of a poe.ninja number, not a trade search: it has no body",
+    "r04-penetrating-quiver": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "r13-life-resist-belt": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
 }
@@ -138,6 +139,30 @@ def test_the_shared_names_of_r04_and_r09_say_which_base_and_the_others_do_not(da
 
     assert "[QuiverNew5]" in keys["r04-penetrating-quiver"] and "[BootsAtlas1]" in keys["r09-life-boots"]
     assert [stem for stem, key in keys.items() if "[" in key.split(",")[0]] == ["r04-penetrating-quiver", "r09-life-boots"]
+
+
+QUIVER = "Metadata/Items/Quivers/"
+BOOTS = "Metadata/Items/Armours/Boots/"
+
+
+def test_r04s_two_quivers_agree_in_class_implicits_and_tags_and_r09s_three_boots_do_not(data):
+    assert differences_between_same_name_bases(data, f"{QUIVER}QuiverNew5") == ()  # Quiver12's only other tag is trade_market_legacy_item, read by no mod
+    assert data.base_items[f"{QUIVER}Quiver12"].tags != data.base_items[f"{QUIVER}QuiverNew5"].tags
+    assert differences_between_same_name_bases(data, f"{BOOTS}BootsAtlas1") == ("implicit mods", "mod tags")
+
+
+def test_a_poe_ninja_price_prices_r04s_quiver_and_does_not_price_r09s_boots(data):
+    """R04's committed start price is a poe.ninja stand-in and plans; R09's would be refused on poe.ninja (its committed price is from the trade API)."""
+    for stem, base_id, expected in (
+        ("r04-penetrating-quiver", f"{QUIVER}QuiverNew5", None),
+        ("r09-life-boots", f"{BOOTS}BootsAtlas1", "that differ in implicit mods and mod tags, so the line is the price of none of them"),
+    ):
+        target = load_target(TARGETS / f"{stem}.yaml", data)
+        key = start_price_key(data, target)
+        refusal = shared_name_refusal(data, base_id, "poe.ninja", f"the start item {key!r}")
+        assert (refusal is None) if expected is None else (expected in refusal), stem
+    committed = {name: entries_of(start_price_key(data, load_target(TARGETS / f"{name}.yaml", data)))[0]["source"] for name in ("r04-penetrating-quiver", "r09-life-boots")}
+    assert committed == {"r04-penetrating-quiver": "poe.ninja", "r09-life-boots": "trade-api"}
 
 
 NO_PRICE = {

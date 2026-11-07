@@ -214,17 +214,17 @@ BY_ID = BOOTS_TARGET.replace("base: Toy Boots", f"base: {TOY_BOOTS}")  # a name 
 BOOTS_WITH_ID = "Toy Boots [ToyBoots1] (ilvl 86)"  # the name of the base line where the name is shared: the base id is in it
 
 
-def twin_boots_world(line_name: str, source: str):
-    """The toy game with a second base named Toy Boots, and a price file whose line for the Toy Boots is `line_name` with `source`."""
-    twin = dataclasses.replace(TOY.base_items[TOY_BOOTS], id="Metadata/Items/Armours/Boots/ToyBoots2")
+def twin_boots_world(line_name: str, source: str, **fields):
+    """The toy game with a second base named Toy Boots (with the fields given), and a price file whose line for the Toy Boots is `line_name` with `source`."""
+    twin = dataclasses.replace(TOY.base_items[TOY_BOOTS], id="Metadata/Items/Armours/Boots/ToyBoots2", **fields)
     data = dataclasses.replace(TOY, base_items={**TOY.base_items, twin.id: twin})
     price_file = prices(base=None)
     price_file.prices[line_name] = PriceEntry(BASE_PRICE, source)
     return data, price_file
 
 
-def test_a_poe_ninja_base_line_of_a_name_two_bases_share_does_not_price_the_recipe_and_says_why():
-    data, price_file = twin_boots_world(BOOTS_NAME, "poe.ninja")
+def test_a_poe_ninja_base_line_of_a_name_two_different_bases_share_does_not_price_the_recipe_and_says_why():
+    data, price_file = twin_boots_world(BOOTS_NAME, "poe.ninja", item_class="Gloves")
 
     found = listing(toy_target(BY_ID, data), price_file, data)
 
@@ -233,8 +233,17 @@ def test_a_poe_ninja_base_line_of_a_name_two_bases_share_does_not_price_the_reci
     assert refusal.reason == NO_PRICE
     assert refusal.detail == (
         f"the price of {BOOTS_NAME} is refused: it comes from poe.ninja, whose line has a name and no base id, and the name 'Toy Boots' "
-        "belongs to 2 bases (ToyBoots1, ToyBoots2), so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
+        "belongs to 2 bases (ToyBoots1, ToyBoots2) that differ in item class, so the line is the price of none of them. Price this base on the trade site, or write its price by hand"
     )
+
+
+def test_a_poe_ninja_base_line_of_a_name_two_identical_bases_share_prices_the_recipe():
+    data, price_file = twin_boots_world(BOOTS_NAME, "poe.ninja")
+
+    (candidate,) = listing(toy_target(BY_ID, data), price_file, data).candidates
+
+    assert candidate.key == BOOTS_KEY
+    assert candidate.price == pytest.approx(FIVE_STEPS)
 
 
 def test_a_hand_price_of_the_plain_name_of_a_shared_name_is_not_the_price_of_the_base():
