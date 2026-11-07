@@ -9,7 +9,10 @@ benchmark route with a given route now carries:
   route's own (`_route_flow.reach_of`, the visit solve of the route page; the item is told by `describe_state`);
 * the ratio planner mean / guide mean;
 * a review line, one value of the config (`[benchmark] review_ratio`): a ratio below it is "needs a human". The line is a prompt for
-  a person to look, never a cut of the search (OR-12), and a planner dearer than the guide stays a failed check as before.
+  a person to look, never a cut of the search (OR-12), and a planner dearer than the guide stays a failed check as before. A route a
+  person has already reviewed prints its verdict instead (`_benchmark_verdicts`, ticket #634);
+* at the first divergence, for the planner's action and the guide's, the chance one use ends in the target and the cost of one use with each
+  price part (`per_use_of`, ticket #617): the two numbers that explain a ratio of 17, taken from the same model, not a new search.
 
 The lines are sorted by the larger of the two chances; lines past `SHOWN` are counted, with the sum of their chances under each policy
 (a sum over states, so a run that visits two of them is counted twice), never dropped in silence. A chance that is not measured is None
@@ -23,8 +26,9 @@ from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
 
 from . import _packed
+from ._benchmark_use import per_use_of
 from ._plan import Plan
-from ._report import describe_state, number_states, percent
+from ._report import describe_state, money, number_states, percent
 from ._route import Divergence, RouteResult
 from ._route_chain import chain_of_plan
 from ._route_flow import ACCEPT_RESIDUAL, STIFF_ERROR, Chain, Reach, chain_of_policy, digits_text, reach_of
@@ -40,9 +44,13 @@ def mean_ratio(solver_mean: float | None, given_mean: float | None) -> float | N
     return solver_mean / given_mean
 
 
-def review_of(ratio: float | None, line: float) -> dict:
-    """The review of a route: its ratio, the review line, and whether a human should look (the ratio is below the line)."""
-    return {"line": line, "ratio": ratio, "needs_human": ratio is not None and ratio < line}
+def review_of(ratio: float | None, line: float, reviewed: dict | None = None) -> dict:
+    """The review of a route: its ratio, the review line, whether the ratio is below it, and the verdict a person gave it (`Reviewing.judge`, or None).
+
+    `needs_human` stays "the ratio is below the line"; whether a person already looked, and whether what they saw has moved, is in `reviewed`
+    (`again` and `reasons`).
+    """
+    return {"line": line, "ratio": ratio, "needs_human": ratio is not None and ratio < line, "reviewed": reviewed}
 
 
 def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
@@ -131,6 +139,23 @@ def _row(plan: Plan, data: GameData, ids: dict, divergence: Divergence, planner:
     }
 
 
+# --- one use of an action (ticket #617) ------------------------------------------------------------
+
+
+def first_divergence_of(plan: Plan, data: GameData, divergence: Divergence, ids: dict) -> dict:
+    """The entry's `first_divergence`: where it is, the two actions, and the numbers of one use of each (ticket #617)."""
+    return {
+        "state": ids[divergence.state],
+        "description": describe_state(plan, data, divergence.state),
+        "solver_action": divergence.solver_action,
+        "route_action": divergence.route_action,
+        "per_use": {
+            "planner": per_use_of(plan, divergence.state, divergence.solver_action),
+            "guide": per_use_of(plan, divergence.state, divergence.route_action),
+        },
+    }
+
+
 # --- the words ----------------------------------------------------------------------------------
 
 
@@ -184,24 +209,66 @@ def _more_text(more: dict, side: str) -> str:
     return f"{text} (and {unmeasured} not measured, left out)" if unmeasured else text
 
 
-def review_lines(label: str, ratio_block: dict, divergences: dict) -> list[str]:
-    """The ratio line of a route and, below the review line, the `needs a human` row that names the top divergences."""
-    ratio = ratio_block["ratio"]
-    if ratio is None:
+def per_use_lines(first: dict | None, label: str) -> list[str]:
+    """The lines of one use of the planner's action and the guide's at the first divergence, in player words (none without per-use numbers)."""
+    if not first or "per_use" not in first:
         return []
+    lines = [f"    one use of each at the first divergence ({first['state'] or 'a state'}):"]
+    for who, name in (("planner", "the planner's"), ("guide", f"the {label}'s")):
+        lines.append(f"      {name} {_use_text(first['per_use'][who])}")
+    return lines
+
+
+def _use_text(use: dict) -> str:
+    """`Fossils Prismatic Fossil: one use costs 1.59 Chaos (0.20 for 1 Prismatic Fossil + 1.39 for 1 X), ends in the target with chance 0.07% and one bench craft short of it with chance 2.20%`."""
+    if use["error"] is not None:
+        return f"{use['action']}: no numbers, {use['error']}"
+    parts = " + ".join(f"{money(part['chaos'])} for {part['count']} {part['resource']}" for part in use["parts"])
+    cost = f"{money(use['cost'])} Chaos" + (f" ({parts})" if len(use["parts"]) > 1 else "")
+    others = use["other_items"]
+    extra = f", plus the value of {others} other item(s) it consumes" if others else ""
+    reach = f"ends in the target with chance {chance_text(use['chance'])}"
+    if use.get("short") is not None:
+        reach += f" and one bench craft short of it with chance {chance_text(use['short'])}"
+    return f"{use['action']}: one use costs {cost}{extra}, {reach}"
+
+
+def review_lines(label: str, ratio_block: dict, divergences: dict, first: dict | None = None) -> list[str]:
+    """The ratio line of a route and, below the review line or where a person has reviewed it, the review row that names the top divergences.
+
+    Below the line with no verdict: `NEEDS A HUMAN`. With a verdict that stands, below the line or above it: `reviewed: <verdict>, ratio at review
+    <ratio>`. With a verdict whose ground has moved: `NEEDS A HUMAN AGAIN` with each reason (ticket #634). With `first` (the entry's
+    `first_divergence`) the row also tells the chance and the cost of one use of the two actions there (ticket #617).
+    """
+    ratio = ratio_block["ratio"]
+    reviewed = ratio_block.get("reviewed")
+    if ratio is None:
+        if reviewed is None or not reviewed["again"]:
+            return []
+        return [f"  NEEDS A HUMAN AGAIN: {'; '.join(reviewed['reasons'])} (reviewed as {reviewed['text']}, {reviewed['date']})"]
     lines = [f"  planner mean / {label} mean: {ratio:.3f} (review line {ratio_block['line']:g})"]
-    if ratio_block["needs_human"]:
+    if reviewed is not None and not reviewed["again"]:
+        lines.append(f"  reviewed: {reviewed['text']}, ratio at review {reviewed['ratio_at_review']:.3f} ({reviewed['date']})")
+    elif reviewed is not None:
+        lines.append(
+            f"  NEEDS A HUMAN AGAIN: {'; '.join(reviewed['reasons'])} "
+            f"(reviewed as {reviewed['text']} at ratio {reviewed['ratio_at_review']:.3f}, {reviewed['date']})"
+        )
+    elif ratio_block["needs_human"]:
         lines.append(
             f"  NEEDS A HUMAN: the planner costs {percent(ratio)} of the {label}, below the review line {percent(ratio_block['line'])}: "
             "a missed cost, a wrong chance or a mechanic the guide knows would all look like this"
         )
-        top = divergences["shown"][:3]
-        if top:
-            lines.append(
-                "    top divergences: "
-                + "; ".join(
-                    f"{row['state'] or 'a state'} ({_cut(_one_line(row['description']))}): the guide does {row['route_action']}, the planner does {row['solver_action']}"
-                    for row in top
-                )
+    else:
+        return lines
+    top = divergences["shown"][:3]
+    if top:
+        lines.append(
+            "    top divergences: "
+            + "; ".join(
+                f"{row['state'] or 'a state'} ({_cut(_one_line(row['description']))}): the guide does {row['route_action']}, the planner does {row['solver_action']}"
+                for row in top
             )
+        )
+    lines.extend(per_use_lines(first, label))
     return lines
