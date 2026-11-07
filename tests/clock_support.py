@@ -29,4 +29,3 @@ class FrozenDatetime(datetime):
     def now(cls, tz: tzinfo | None = None) -> "FrozenDatetime":
         instant = FIXED_NOW if tz is None else FIXED_NOW.astimezone(tz)
         return cls(instant.year, instant.month, instant.day, instant.hour, instant.minute, instant.second, instant.microsecond, instant.tzinfo)
-

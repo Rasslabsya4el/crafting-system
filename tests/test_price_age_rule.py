@@ -6,6 +6,7 @@ test clock: every place that defaults to the real clock reads `clock_support.FIX
 """
 
 import importlib
+import re
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -19,6 +20,9 @@ from crafting_system.prices import TRADE_SOURCE, load_price_file
 from crafting_system.prices.price_file import MAX_AGE_DAYS, stale_warning
 from crafting_system.prices.trade_market import offer
 
+SRC = Path(__file__).resolve().parent.parent / "src"
+CLOCK_CALL = re.compile(r"datetime\.now\(|date\.today\(|utcnow|time\.time\(")
+TIMING_ONLY: dict[str, str] = {}  # module -> why it reads the clock for timing and not for a price age; none today
 FIXTURES = Path(__file__).parent / "fixtures" / "prices"
 COMMITTED = sorted(FIXTURES.glob("*.json"))
 
@@ -82,3 +86,18 @@ def test_the_command_warns_when_the_given_day_is_past_the_limit(tmp_path, capsys
     main([str(R12), "--json", str(tmp_path / "policy.json")], data=DATA, prices=price_file(), env={}, today=fetched + timedelta(days=MAX_AGE_DAYS + 1))
 
     assert f"{MAX_AGE_DAYS + 1} days old" in capsys.readouterr().err
+
+
+def test_the_age_limit_is_seven_days():
+    assert MAX_AGE_DAYS == 7  # one description of the limit (OR-26); the tests above write days as offsets from it
+
+
+def test_every_source_file_that_reads_the_clock_is_a_clock_reader_of_the_tests():
+    found = set()
+    for path in SRC.rglob("*.py"):
+        if CLOCK_CALL.search(path.read_text(encoding="utf-8")):
+            parts = path.relative_to(SRC).with_suffix("").parts
+            found.add(".".join(parts[:-1] if parts[-1] == "__init__" else parts))
+
+    assert found - set(CLOCK_READERS) - set(TIMING_ONLY) == set(), "a new place reads the clock: add it to CLOCK_READERS (tests/clock_support.py)"
+    assert set(CLOCK_READERS) <= found  # no reader is listed that no longer reads the clock

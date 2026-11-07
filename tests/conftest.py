@@ -12,6 +12,10 @@ import shard_support
 
 os.environ.setdefault("CRAFTING_WORKERS", "1")  # ticket #250: the suite is serial inside a CI slot (4 slots run at once); a test of the pool sets its own size
 
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+PRICE_TEST_FILES = "test_prices_*.py"
+
+
 @pytest.fixture(autouse=True)
 def fixed_clock(monkeypatch):
     """Every place that defaults to the real clock reads `clock_support.FIXED_NOW` instead (ticket #542).
@@ -27,10 +31,6 @@ def fixed_clock(monkeypatch):
         return
     for name in clock_support.CLOCK_READERS:
         monkeypatch.setattr(importlib.import_module(name), "datetime", clock_support.FrozenDatetime)
-
-
-LOOPBACK_HOSTS =frozenset({"127.0.0.1", "::1", "localhost"})
-PRICE_TEST_FILES = "test_prices_*.py"
 
 
 @pytest.fixture(autouse=True)
