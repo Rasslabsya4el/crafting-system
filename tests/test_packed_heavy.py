@@ -26,6 +26,7 @@ from abstraction_support import real_game_data
 from test_strand_routes import without_strand_words
 from test_strand_routes_load import FILES, flat_price_file
 
+from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import make_plan
 from crafting_system.cli._packed import PackedPolicy
 from crafting_system.cli._reach import policy_states
@@ -103,7 +104,11 @@ def test_r14_does_not_open_with_a_transmutation_on_its_magic_bow_and_offers_none
         pytest.skip("only R14 is a Magic start")
 
     assert plan.target.start_item.rarity.value == "magic"
-    assert plan.policy[plan.start].label in {"Orb of Alteration", "Orb of Augmentation"}  # a bought Magic bow with no mod: an Augmentation may come before the Alterations
+    first = plan.policy[plan.start]
+    assert first.label == DRAW_LABEL  # the bought bow is the item the market sells (ADR-0064): the draw comes first, then the decision on each outcome of it
+    chosen = {plan.policy[state].label for state, _ in first.outcomes if state in plan.policy}
+    assert {"Orb of Alteration", "Orb of Augmentation"} <= chosen  # an Augmentation where the bow holds 1 mod, an Alteration where it holds 2
+    assert "Orb of Transmutation" not in chosen
     assert "Orb of Transmutation" not in {offer.label for offer in plan.offers}
 
 
