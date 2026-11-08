@@ -396,3 +396,25 @@ def test_the_search_primes_the_offers_it_is_about_to_build_and_the_answer_does_n
     assert calls and all(len(positions) >= 2 and len(set(positions)) == len(positions) for positions in calls)
     assert all(len(positions) <= _envelope.PRIME_AHEAD for positions in calls)
     assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)
+
+
+def test_the_names_of_the_first_offers_seed_the_universe_before_the_first_pass_and_do_not_begin_it_again(world, monkeypatch):
+    _, start, offers, _, _, _ = world
+    all_offers = pattern_offers(offers)
+    real = _pattern._Universe._seed_named
+    passes = []
+
+    def gaining(self, pattern, actions):
+        real(self, pattern, actions)
+        return len(actions)  # the offers' names add slots, as the fossils and essences of R04 do
+
+    real_pass = PatternBuilder._pass
+
+    def counted(self):
+        passes.append(len(self.keys))
+        return real_pass(self)
+
+    monkeypatch.setattr(_pattern._Universe, "_seed_named", gaining)
+    monkeypatch.setattr(PatternBuilder, "_pass", counted)
+    model = PatternBuilder(abstraction(), start).extend(all_offers)
+    assert len(passes) == 1 and model.stats.universe_growth == 0

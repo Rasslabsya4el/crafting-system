@@ -294,7 +294,7 @@ A job the caps stopped is looked at again with more time: `actions_key.py jobs -
 
 ### Where the bound's build spends its time (#626)
 
-`.github/scripts/bound_build.py profile --route R08 --variant kept|all --cap-minutes N --out DIR` builds the walk-free bound alone for a route (the first thing `make_plan(solver="envelope")` does)
+`.github/scripts/bound_build.py profile --route R08 --variant kept|all --cap-minutes N --out DIR [--search]` builds the walk-free bound alone for a route (with `--search` the search runs on to the end of the plan under the same sampler) (the first thing `make_plan(solver="envelope")` does)
 with a sampler of the main thread's stack and a timer around the stages of the build (`Pattern.members`, `Abstraction.kernel_key`, `Abstraction.kernel`, the fracture entries, the packing, the solve),
 and writes `profile-ROUTE-VARIANT.txt` and `.json`. `actions_key.py` records, for an envelope job, `bound_keys`, `bound_expanded`, `bound_offers`, `bound_seconds` and `bound_stopped` (the net that
 ended the bound's build, if one did). The build's own net is the share `BUILD_SHARE` (half) of the time net and all of the memory net (`cli/_envelope_plan.py`).

@@ -659,8 +659,13 @@ class PatternBuilder:
         if self.dead:
             raise RuntimeError("the build was stopped; use the model of the round before")
         self.offers.extend(offers)
-        self.pattern.grew = 0
-        self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
+        if self.done == 0 and not any(self.expanded):
+            # nothing is expanded yet: the names of the offers seed the universe before the first pass, as `build_pattern_model` always did. Seeding them
+            # as an addition would count as growth and begin the whole first pass again (R04: a second pass of 280 s where the model takes 96 s).
+            self._reset()
+        else:
+            self.pattern.grew = 0
+            self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
         while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
             stopped = self._pass()
             if stopped is not None:
