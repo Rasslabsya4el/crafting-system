@@ -434,3 +434,27 @@ def test_a_cookie_that_cannot_be_sent_exits_1_names_the_variable_and_sends_nothi
     assert "SECRET" not in captured.out + captured.err and "ж" not in captured.out + captured.err
     assert prices_path.read_bytes() == before
     assert SECRET not in tree_text(tmp_path)
+
+
+def test_the_message_of_a_thin_search_is_what_the_planner_then_prices_the_start_item_at(tmp_path, trade, prices_path, capsys):
+    from crafting_system.cli._plan import resolve_start_price
+    from crafting_system.targets import load_target
+
+    data = fixture_game_data()
+
+    def plan() -> tuple[float, str]:  # the start price `make_plan` takes: the target's key read from the file the command wrote
+        price = resolve_start_price(data, load_target(R12_TARGET, data), load_price_file(prices_path), None)
+        return price.chaos, price.source
+
+    assert run(tmp_path, trade) == 0  # 910 listings: a deep reading of 1 Chaos on 2026-10-30
+    capsys.readouterr()
+    thin = FakeTrade()
+    thin.search.update(total=9)
+
+    assert run(tmp_path, thin, now=NOW + timedelta(days=2)) == 1  # 9 listings: thin, two days later
+    said = capsys.readouterr().out
+
+    old_source = "trade-api, old price, read on 2026-10-30, the market has few offers now"
+    assert f"recorded as thin; the plan prices it 1 Chaos [{old_source}]" in said
+    capsys.readouterr()
+    assert plan() == (1.0, old_source)

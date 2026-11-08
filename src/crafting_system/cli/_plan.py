@@ -21,7 +21,7 @@ from crafting_system.abstraction import Abstraction, CompressedState, Goal, inte
 from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
-from crafting_system.prices import PriceFile
+from crafting_system.prices import PriceFile, planned_entry
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, ConvergenceError, Outcome, Solution, solve
 from crafting_system.prices.query_compare import other_item
@@ -295,7 +295,7 @@ def resolve_start_price(
         raise PlanError(f"the start item of the target cannot be searched: {error}") from error
     if override is not None:
         return StartPrice(name, _override(override), "given on the command line")
-    entry = prices.prices.get(name)
+    entry = planned_entry(prices, name)  # OR-8: a thin market is priced, with its mark in the source
     if entry is None:
         raise PlanError(
             f"no price for the start item {name!r}. A bought start item must have a price. Price it on the trade site with the "

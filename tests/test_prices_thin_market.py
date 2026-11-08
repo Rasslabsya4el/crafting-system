@@ -10,7 +10,6 @@ from datetime import UTC, date, datetime
 
 import pytest
 from test_start_price_report import candidate, choice_of
-from crafting_system.prices.trade_pricing import _row
 from trade_support import R12_SPEC, api_row
 from trade_support import price_file as allflame_prices
 
@@ -20,12 +19,14 @@ from crafting_system.prices import (
     load_buy_spec,
     load_price_file,
     market_of_listings,
+    merge_trade_prices,
     offer,
     store_market,
     write_price_file,
 )
 from crafting_system.prices.price_file import DeepReading
 from crafting_system.prices.price_source import source_price
+from crafting_system.prices.trade_pricing import _row
 
 SPEC = load_buy_spec(R12_SPEC)
 NAME = SPEC.name
@@ -274,3 +275,53 @@ def test_both_marks_reach_the_start_text_and_the_json_the_way_the_fallback_mark_
     assert thin_price["marks"] == [THIN_MARK] and thin_price["chaos"] == 136000.0 and thin_price["fallback"] is False
     assert "      price source both: 14.00 Chaos [trade-api, old price of 2026-11-01]" in lines
     assert "      price source both: 136,000.00 Chaos [trade-api, thin: 5 listings]" in lines
+
+
+# -- only a reading that meets the default rail is the league's deep reading ----------------------------------------------------------
+
+
+def test_a_quote_made_under_a_lowered_rail_is_a_price_but_never_the_deep_reading(tmp_path):
+    path = tmp_path / "prices.json"
+    write_price_file(path, allflame_prices())
+    rows = [_row(api_row(n)) for n in (1, 2, 3, 4, 5, 6)]
+    lowered = market_of_listings(SPEC, allflame_prices(), 6, rows, MID_LEAGUE, "hash", {"query": {}}, min_listings=5)
+    assert lowered.state == "quoted"  # 6 listings meet a rail of 5, not the default 10
+
+    store_market(path, lowered)
+    assert NAME in load_price_file(path).prices and NAME not in load_price_file(path).deep
+
+    store_market(path, deep_market(MID_LEAGUE))
+    store_market(path, lowered)  # a later lowered-rail quote does not replace the deep reading either
+    assert load_price_file(path).deep[NAME].chaos == 14.0
+
+
+def test_a_legacy_quote_under_a_lowered_rail_is_not_promoted_to_the_deep_reading(tmp_path):
+    path = tmp_path / "prices.json"
+    detail = {"league": LEAGUE, "date": "2026-11-01", "listings": 9, "used": 5, "usable": 9}
+    legacy = PriceEntry(3.0, "trade-api", "n", detail)
+    write_price_file(path, allflame_prices(prices={**allflame_prices().prices, NAME: legacy}))
+
+    store_market(path, thin_market(LEAGUE_END))
+
+    assert NAME not in load_price_file(path).deep
+
+
+# -- a refresh of the same league keeps the memory --------------------------------------------------------------------------------
+
+
+def test_a_poe_ninja_refetch_of_the_same_league_keeps_the_deep_reading_even_where_the_new_file_prices_the_name(tmp_path):
+    old = stored(tmp_path, deep_market(), thin_market())
+    new = allflame_prices(prices={**allflame_prices().prices, NAME: PriceEntry(7.0, "poe.ninja")})
+
+    merged, warnings = merge_trade_prices(new, old)
+
+    assert merged.deep[NAME].chaos == 14.0 and merged.prices[NAME] == PriceEntry(7.0, "poe.ninja")
+    assert not any("deep" in warning for warning in warnings)
+
+
+def test_a_refetch_of_another_league_drops_the_deep_reading_with_a_warning(tmp_path):
+    old = stored(tmp_path, deep_market())
+
+    merged, warnings = merge_trade_prices(allflame_prices(league="Standard"), old)
+
+    assert merged.deep == {} and any("last deep trade reading" in warning and NAME in warning for warning in warnings)

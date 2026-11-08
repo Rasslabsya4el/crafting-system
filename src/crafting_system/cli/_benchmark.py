@@ -30,7 +30,7 @@ from pathlib import Path
 
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
-from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, stale_warning
+from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, planned_entry, stale_warning
 from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
@@ -479,7 +479,7 @@ def _missing_start_price(data: GameData, target: Target, prices: PriceFile, root
     if target.start is not StartKind.BOUGHT:  # a given start item (OR-6) has no price to miss
         return None
     name = start_price_key(data, target)
-    if name in prices.prices:
+    if planned_entry(prices, name) is not None:
         return None
     price_file = target.price_file if target.price_file is not None else default_price_file_path(config)
     return {

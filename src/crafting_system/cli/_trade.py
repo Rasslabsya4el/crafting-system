@@ -23,6 +23,7 @@ from crafting_system.prices.price_file import (
     default_overrides_path,
     default_price_file_path,
     load_overrides,
+    load_price_file,
     load_prices,
     to_divine,
 )
@@ -36,7 +37,7 @@ from crafting_system.prices.trade_http import (
     urllib_transport,
     user_agent,
 )
-from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS, THIN
+from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS, planned_entry
 from crafting_system.prices.trade_pricing import (
     DEFAULT_K,
     DEFAULT_MAX_REQUESTS,
@@ -53,11 +54,12 @@ from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_ta
 COMMAND = "python -m crafting_system.cli trade"
 
 
-def _offered_as(state: str) -> str:
-    """What a recorded thin or none market is priced as (OR-8): the page prints the mark with it."""
-    if state == THIN:
-        return "priced as the last deep price marked old, else as the mean of the listings there are marked thin"
-    return "no trade price (the poe.ninja row stands in, marked)"
+def _priced_as(price_path: Path, name: str) -> str:
+    """What the planner now reads for `name` from the file just written (OR-8), in words: the price with its mark, or that there is none."""
+    entry = planned_entry(load_price_file(price_path), name)
+    if entry is None:
+        return "the plan has no trade price for it (no deep reading of this league and no listing that could be priced)"
+    return f"the plan prices it {entry.chaos:g} Chaos [{entry.source}]"
 
 
 def trade_main(
@@ -169,7 +171,7 @@ def _trade(
     except NotEnoughListings as error:
         if error.market is not None:  # thin or none: kept as a state; the last deep reading of the name stays in the file
             store_market(price_path, error.market)
-            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}, {_offered_as(error.market.state)}")
+            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}; {_priced_as(price_path, spec.name)}")
         raise
     store_trade_price(price_path, price, entry_for(price))
     print(

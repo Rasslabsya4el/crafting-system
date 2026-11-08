@@ -427,6 +427,11 @@ def deep_reading_of(price: TradePrice) -> DeepReading:
     return DeepReading(price.chaos, price.league, price.date, price.listings, price.usable)
 
 
+def is_deep(listings: int, usable: int) -> bool:
+    """Whether a reading is deep: it meets the default market rule (`DEFAULT_MIN_LISTINGS`, `MIN_USABLE`) whatever rail the run used."""
+    return classify(listings, usable) == QUOTED
+
+
 def _remembered(current: PriceFile, name: str) -> dict[str, DeepReading]:
     """The deep readings of `current` as a thin or empty reading leaves them: kept, and the file's own quote joined in.
 
@@ -439,8 +444,10 @@ def _remembered(current: PriceFile, name: str) -> dict[str, DeepReading]:
     if detail is None or name in deep or detail.get("league") not in (None, current.league):
         return deep
     read_on = _day(detail.get("date"))
-    listings, usable = detail.get("listings"), detail.get("usable", detail.get("used"))
-    if read_on is not None and isinstance(listings, int) and isinstance(usable, int):
+    listings, usable = detail.get("listings"), detail.get("usable")
+    if usable is None and isinstance(detail.get("used"), int):
+        usable = max(detail["used"], MIN_USABLE)  # an older entry: the rule then was 3 usable, `used` is at most k
+    if read_on is not None and isinstance(listings, int) and isinstance(usable, int) and is_deep(listings, usable):
         deep[name] = DeepReading(entry.chaos, current.league, read_on, listings, usable)
     return deep
 
@@ -460,14 +467,16 @@ def store_trade_price(path: Path, price: TradePrice, entry: PriceEntry) -> None:
     current = load_price_file(path)
     refuse_name_collision(price.name, current.prices.get(price.name))
     markets = {name: record for name, record in current.markets.items() if name != price.name}
-    deep = {**current.deep, price.name: deep_reading_of(price)}
+    deep = dict(current.deep)
+    if is_deep(price.listings, price.usable):  # a quote made under a lowered rail is a price, not a deep reading
+        deep[price.name] = deep_reading_of(price)
     write_price_file(path, replace(current, prices={**current.prices, price.name: entry}, markets=markets, deep=deep))
 
 
 def store_market(path: Path, market: TradeMarket) -> None:
     """Keep the outcome of a search in the price file at `path`: a quote as a price, `thin` / `none` as a record.
 
-    A quote replaces the name's last deep reading. A `thin` or `none` outcome replaces an older trade price of the
+    A quote that meets the default rail replaces the name's last deep reading (a quote made under a lowered rail does not). A `thin` or `none` outcome replaces an older trade price of the
     same name (the site no longer shows a market, so the old quote is not a quoted price) and an older record, and
     leaves the last deep reading as it is: that reading is what a thin market is priced with (OR-8). A name that is
     another source's price is refused (`ValueError`) and the file is untouched. Nothing else changes.
@@ -584,7 +593,7 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
     deep = {
         name: reading
         for name, reading in old.deep.items()
-        if reading.league == new.league and (name in kept or name not in new.prices)
+        if reading.league == new.league  # the memory of a league survives a refresh, even where the new file prices the name
     }
     aged = stale_trade_warnings(replace(new, prices=kept), new.fetched_at.astimezone(UTC).date())
     merged = replace(new, prices={**new.prices, **kept}, markets={**new.markets, **markets}, deep={**deep, **new.deep})

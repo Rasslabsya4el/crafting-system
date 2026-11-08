@@ -17,7 +17,7 @@ from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutO
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
-from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
+from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_entry
 
 from . import _limits
 from ._limits import Limit, claim, kind_title
@@ -125,8 +125,7 @@ def price_offers(
         for name, count in offer.resources.items():
             if name == CHAOS_ORB:
                 parts.append((name, count, float(count), "fixed"))
-            elif name in prices.prices:
-                entry = prices.prices[name]
+            elif (entry := planned_entry(prices, name)) is not None:
                 parts.append((name, count, count * entry.chaos, entry.source))
             elif name == DIVINE_ORB:
                 parts.append((name, count, count * prices.chaos_per_divine, "rate"))
