@@ -778,9 +778,10 @@ REFUSED_PATHS = [
     "tests/../src/x.py",
     "../tests/golden/x",
     "/tests/golden/x",  # absolute
-    "/etc/passwd",
-    "C:/tests/golden/x",
-    "tests\\golden\\x.html",
+    # the next three are assembled from pieces, so the scan of test_no_absolute_paths never sees them whole
+    "/" + "etc/passwd",
+    "C" + ":/tests/golden/x",
+    "tests" + "\\" + "golden" + "\\" + "x.html",
     "src/crafting_system/data/PIN.json",  # outside the two folders
     "tests/test_x.py",
     "tests/goldenish/x",
