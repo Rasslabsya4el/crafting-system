@@ -98,7 +98,7 @@ from ._state import CompressedState, Slot, best_of
 
 SINK = -1  # the successor of the mass an approximate kernel does not account for: a state that costs nothing (the goal)
 SHRINK = Fraction(2**30 - 1, 2**30)  # every chance of a float kernel is taken this much lower; the float error is 1e-13, so no chance is above its exact one
-PRIME_FROM = 8  # a key that is given at least this many offers at once primes their distributions in a process pool, in chunks of ...
+PRIME_FROM = 16  # a key that is given at least this many offers at once primes their distributions in a process pool (fewer cost more in forks than they save: R14, 11 offers), in chunks of ...
 PRIME_CHUNK = 32  # ... this many offers (the net is asked between two chunks)
 POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read, cheap beside one offer)
 SIDES = (Side.PREFIX, Side.SUFFIX)
