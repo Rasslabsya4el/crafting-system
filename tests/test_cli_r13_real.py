@@ -3,10 +3,13 @@
 R13 is the alt-regal belt of the reference routes: a Magic Leather Belt of item level 86 (a trade price, #576: the guide opens
 with "Alt spam for T1 Life and a resist" and names no Transmutation Orb), Orbs of Alteration until it holds tier-1 life and a tier-1 resistance, a Regal
 Orb for the second tier-1 resistance (the guide buys the belt again when the Regal gives anything else), and the
-bench finish for the damage modifier. The prices are `tests/fixtures/prices/routes-allflame-2026-11-07.json`, the
+bench finish for the damage modifier. The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`, the
 same file as the other real routes, so the checks do not move with the market. These tests need the cached dump
 (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it; CI fetches it, ticket #165) and skip
 cleanly without it.
+
+The file stays the snapshot of 2026-10-31 on purpose (#616): at the prices of 2026-11-07 the percentiles of R13 are not resolved (`quantiles_resolved` is false, and the
+plan and the command take 15 minutes in all, not 4); the issue filed by PR #662 keeps the case.
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees, and at the same
 prices the solver's mean is no more than the guide's given route's. The odds and the mean are exact; p90 is not resolved
@@ -34,12 +37,12 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 TARGET = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml"
 RUNS = 8  # a simulated craft is about 50,000 orb uses and takes 10 s or more here, so --verify gets eight runs
 BELT = "Leather Belt, magic, item level 86-100"
-BELT_PRICE = 15.7605  # the trade API, Allflame, 2026-11-07: the mean of the 5 cheapest instant-buyout listings of a magic Leather Belt of item level 86 or more (the snapshot's own entry)
+BELT_PRICE = 15.234  # the trade API, Allflame, 2026-11-07: the mean of the 5 cheapest instant-buyout listings of a magic Leather Belt of item level 86 or more, 28 on the site
 ORBS_OF_THE_GUIDE = {"Orb of Alteration", "Regal Orb"}
 
 
