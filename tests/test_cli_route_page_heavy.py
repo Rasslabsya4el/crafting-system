@@ -211,6 +211,8 @@ KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that h
     # found by #598, held by #651 (a page statement of what step 4 adds that the tier lines do not show). The page of #640 opens R14 with the draw of the
     # bought bow's mods, so step 4 is again an Orb of Augmentation that aims at +1 to Level of Socketed Gems and prints no tier line for it.
     ("R14", "check_tier_step_has_tier_line"): 651,
+    # found by the heavy run of PR #662 (rebased onto #660, snapshot of 2026-11-08): the Percentiles limit lists what the slower method costs and not what the answer still guarantees.
+    ("R14", "check_cut_guarantee"): 708,
 }
 JUDGES = page_lint.CHECKS  # `check_no_internal_names` is one of them
 
