@@ -50,12 +50,13 @@ def test_the_recorded_offer_is_18_chaos_a_unit_on_24_units():
     assert (got.chaos, got.depth, got.used, got.total) == (18.0, 24.0, 1, 1)
 
 
-def test_the_price_is_the_mean_of_the_cheapest_five_offers_and_the_depth_the_units_they_hold():
+def test_the_price_is_the_cost_of_the_units_of_the_cheapest_five_offers_per_unit_and_the_depth_those_units():
+    """#706: each of the cheapest five offers weighs its units. (10*2 + 11*3 + 12*4 + 13*5 + 14*6) / 20 = 250 / 20 = 12.5."""
     offers = [offer(ask, units) for ask, units in [(10, 2), (11, 3), (12, 4), (13, 5), (14, 6), (50, 1000), (60, 1000)]]
 
     got = read_offers(answer(*offers), RATES, k=5)
 
-    assert got.chaos == pytest.approx(12.0)
+    assert got.chaos == pytest.approx(12.5)
     assert got.depth == 20.0
     assert (got.used, got.offers) == (5, 7)
 
@@ -63,7 +64,7 @@ def test_the_price_is_the_mean_of_the_cheapest_five_offers_and_the_depth_the_uni
 def test_the_cheapest_are_found_whatever_order_the_site_lists_them_in():
     got = read_offers(answer(offer(50, 9), offer(10, 2), offer(30, 4)), RATES, k=2)
 
-    assert (got.chaos, got.depth) == (20.0, 6.0)
+    assert got.chaos == pytest.approx((10 * 2 + 30 * 4) / 6) and got.depth == 6.0  # 140 / 6 = 23.33
 
 
 def test_a_book_of_few_offers_is_priced_like_any_other_by_the_mean_of_the_cheapest_few_whatever_their_number():
@@ -72,9 +73,28 @@ def test_a_book_of_few_offers_is_priced_like_any_other_by_the_mean_of_the_cheape
 
     got = read_offers(book, RATES)
 
-    assert got.chaos == pytest.approx(10.0) and got.depth == 71.0 and (got.used, got.offers) == (3, 3)
+    assert got.chaos == pytest.approx(660 / 71) and got.depth == 71.0 and (got.used, got.offers) == (3, 3)  # (5*11 + 10*59 + 15*1) / 71
     one = read_offers(answer(offer(12.5, 94)), RATES)
     assert (one.chaos, one.depth, one.used) == (12.5, 94.0, 1)
+
+
+def test_a_bulk_offer_weighs_its_units_so_the_price_is_what_a_plan_buying_the_depth_pays():
+    """#706: 80 units at 1 c and four single units at 20 c are (80*1 + 4*20) / 84 = 1.905 c on 84 units, not the 16.2 c of the plain mean."""
+    book = answer(offer(1, 80), *[offer(20, 1) for _ in range(4)])
+
+    got = read_offers(book, RATES)
+
+    assert got.chaos == pytest.approx(160 / 84) and got.depth == 84.0 and got.used == 5
+    assert got.chaos * got.depth == pytest.approx(80 * 1 + 4 * 20)  # the price times the depth is the cost of the depth
+
+
+def test_an_item_listing_of_one_unit_each_is_priced_by_the_plain_mean_as_before():
+    """Every weight is 1, so the weighted price is the plain mean of the five (what a start item and `cli trade` give)."""
+    book = answer(*[offer(ask, 1) for ask in (3, 5, 7, 9, 11, 40)])
+
+    got = read_offers(book, RATES)
+
+    assert got.chaos == pytest.approx(7.0) and got.depth == 5.0
 
 
 def test_an_offer_asked_in_divine_orbs_is_turned_to_chaos_per_unit():

@@ -226,3 +226,13 @@ def test_a_thin_price_whose_trade_offers_were_not_read_says_so_and_a_deep_enough
     assert codes(marks) == [DEPTH, TRADE_UNREAD]
     assert [m.reason for m in marks] == ["price on 3 units", "the trade offers beside it were not read: the trade site blocked the run"]
     assert price_marks(entry(0.2, p), FILE, uses=2.0) == ()  # the plan buys less than the 3 units there are: a plain fact
+
+
+def test_a_previous_leagues_price_whose_trade_offers_were_not_read_says_so_beside_its_league():
+    """The Fear case (finding 2): 0.15 c from Mirage with `trade_unread` showed only "previous league's price"."""
+    p = Provenance(PREVIOUS_LEAGUE, "Mirage", "2026-06-01", 40.0, trade_unread="the trade site blocked the run")
+
+    marks = price_marks(entry(0.15, p), FILE, uses=2.0)
+
+    assert codes(marks) == [EARLIER, TRADE_UNREAD]
+    assert marks[1].reason == "the trade offers beside it were not read: the trade site blocked the run"

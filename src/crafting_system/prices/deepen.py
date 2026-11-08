@@ -8,7 +8,7 @@ depth in units, the other one in the entry's provenance (`other`), so the price 
 The order of preference is: a reading of the league being priced before one of an earlier league (a previous-league
 or Standard price is only ever kept when nothing of this league exists), then the greater depth **in units**; a reading with no
 recorded depth loses to one that has it. A trade book is read as the mean of its cheapest few offers whatever their number
-(OR-8), and its depth is the units the offers priced hold: no count of offers decides, a book of three offers with 94 units
+(OR-8), each offer weighing the units it holds, so the price is the cost of the depth's units per unit (#706): no count of offers decides, a book of three offers with 94 units
 beats a line of 0.5 units (OR-12). A hand price, a default and a trade price already in the file are never replaced.
 Nothing here reads the clock or sends a request: `read(name)` is the caller's.
 """
@@ -30,7 +30,7 @@ UNITS_OF_THE_FILE = (CHAOS_ORB, DIVINE_ORB)  # the Chaos Orb is the unit of ever
 def exchange_entry(reading: ExchangeReading, league: str, day: date, item_id: str, k: int = DEFAULT_K) -> PriceEntry:
     """The price entry of a reading of the bulk exchange: source `trade-api`, provenance `trade` with the units the offers hold."""
     note = (
-        f"mean of the {reading.used} cheapest instant offers of the trade site's bulk exchange, "
+        f"mean of the {reading.used} cheapest instant offers of the trade site's bulk exchange, each weighing its units, "
         f"{reading.depth:g} units in them, {reading.total} offers in all, {day.isoformat()}"
     )
     detail = {"league": league, "date": day.isoformat(), "exchange": item_id, "listings": reading.total, "used": reading.used, "k": k}

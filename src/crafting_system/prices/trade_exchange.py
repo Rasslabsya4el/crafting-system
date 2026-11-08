@@ -3,16 +3,21 @@
 A fossil, an essence, a lifeforce or an oil is bought on the trade site in the bulk exchange: each offer says how
 many units it holds (`stock`) and what it asks for them (`exchange.amount` of a currency for `item.amount` units).
 `read_offers` turns the offers of one item into a reading, by the owner's rule for a trade price (OR-8): the mean of the
-`k` cheapest offers, per unit, five by default, whatever the number of offers the book holds (a book of three offers is the mean
-of the three; no count of offers decides, OR-12). The depth of the reading is the units those offers hold. Nothing here
-sends a request or reads the clock; `trade_pricing.read_exchange` does both.
+`k` cheapest offers, five by default, whatever the number of offers the book holds (a book of three offers is the mean
+of the three; no count of offers decides, OR-12).
+
+The price and its depth are one quantity (#706): over the cheapest five offers each offer weighs as much as the units it
+holds, so the price is the cost of the units the depth reports divided by those units. One offer of 80 units at 1 c and four
+offers of 1 unit at 20 c are 84 units at (80 * 1 + 4 * 20) / 84 = 1.905 c, not the plain mean 16.2 c of five offers, which
+a plan buying 80 units would never pay. For an item listing (one listing, one unit: `trade_pricing`) every weight is 1 and the
+price is the plain mean, so a start item's price is unchanged. Nothing here sends a request or reads the clock;
+`trade_pricing.read_exchange` does both.
 
 The site's answer is `{"result": {offer id: {"listing": {"offers": [{"exchange": {"currency", "amount"},
 "item": {"amount", "stock"}}]}}}, "total": n}`; an offer paid in a currency this code has no rate for, or with no
 usable amounts, is dropped and counted, never guessed.
 """
 
-import statistics
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -23,7 +28,7 @@ HAVE = ("chaos", "divine")  # the currencies an offer may ask in; the others are
 
 @dataclass(frozen=True)
 class ExchangeReading:
-    chaos: float  # the mean per unit of the `used` cheapest offers
+    chaos: float  # the cost of the `depth` units per unit: the mean of the `used` cheapest offers, each weighing its units
     depth: float  # the units those offers hold
     used: int  # the offers in the mean
     offers: int  # the offers the answer holds that could be priced
@@ -79,10 +84,11 @@ def read_offers(answer: Mapping[str, Any], rates: Mapping[str, float], k: int = 
     if not priced:
         return None
     cheapest = sorted(priced)[:k]
-    price = statistics.fmean(each for each, _ in cheapest)
+    depth = sum(units for _, units in cheapest)
+    price = sum(each * units for each, units in cheapest) / depth
     return ExchangeReading(
         chaos=float(price),
-        depth=sum(units for _, units in cheapest),
+        depth=depth,
         used=len(cheapest),
         offers=len(priced),
         total=total if isinstance(total, int) and not isinstance(total, bool) else len(priced),

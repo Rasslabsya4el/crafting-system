@@ -8,13 +8,29 @@ Anonymous only (no POESESSID, no login), within the trade site's rate limits (`p
 1. poe.ninja: every exchange overview (currency, fossils, resonators, essences, oils) with the units traded on the day, the
    stash overviews of the bases, then the fallback chain for the wanted names with no usable line (history, poe.watch,
    the previous league), each stamped with its provenance.
-2. The trade site's bulk exchange for every wanted name that has no price or fewer than `--below` units behind it: the
+2. The trade site's bulk exchange for every wanted name a trade reading may replace and that has fewer than `--below` units behind its price: the
    deeper of the two readings is the price, the other one is kept in its provenance (`prices.deepen`).
 3. The start items of the old file that were priced on the trade site: each stored search is asked again today, and the
    exact item of the target is asked too; a price taken for a wider item says which item and what the exact one's listings ask.
 4. The hand-made stand-in of R04's start quiver is read again from the stash lines.
 
 Nothing is written until every step is done. The old file is only read.
+
+The fixed numbers of this script, and why each one stays or went (OR-12; the issue that lists the open ones is named in the PR body of #662):
+
+* `--below` (default 100 units): a name whose poe.ninja line stands on 100 units or more is not compared with the trade site. This is a
+  cut that decides which source a name gets, so it is an open point of OR-12 (#710), kept here because dropping it was
+  measured to do harm: read for every name, the chaos-and-divine-only bulk book of a cheap currency is a handful of offers and the deeper
+  reading in units takes it (Orb of Transmutation: 6 offers, one of them 372 c a unit, replaced a line on 750 units at 0.0053 c with
+  118.6 c; Orb of Alchemy 0.034 -> 1.44; Orb of Augmentation 0.021 -> 0.257). `--below 1e9` reads every name.
+* start items: `classify(total, usable)` of `prices.trade_market`, the market rule of #355 that `cli trade` applies too (`DEFAULT_MIN_LISTINGS`
+  10 listings on the site, `MIN_USABLE` 3 priced ones). This script used to hold its own copy of both numbers (`total < 10`, `len(prices) < 3`);
+  it now has none: a thin or empty market is the rule's `thin` or `none`, one rule for the fixture and for the product. Whether the rule's
+  two numbers themselves follow OR-12 is an open point of that rule (#710), not of this script.
+* `QUIVER_MIN_OBSERVATIONS` (5): a stash line with fewer observations is not taken as R04's start quiver price, because one sale is
+  not a price. It decides one fixture price; it is an open point (#710).
+* `QUIVER_LEVEL` (81) is the item level of R04's start quiver, a fact of the target, not a cut.
+* `EXCHANGE_GROUPS` and `LIFEFORCE_WORDS` say which items are wanted by name, not a count.
 """
 
 import argparse
@@ -51,6 +67,7 @@ from crafting_system.prices.price_names import FORESIGHT_PRICE_NAMES, canonical_
 from crafting_system.prices.provenance import EXACT, STASH, WIDER, Provenance  # noqa: E402
 from crafting_system.prices.query_compare import other_item, wider_words  # noqa: E402
 from crafting_system.prices.trade_exchange import static_ids  # noqa: E402
+from crafting_system.prices.trade_market import QUOTED, classify  # noqa: E402
 from crafting_system.prices.trade_pricing import DEFAULT_K, ExactListings, TradePrice, _chaos_of, _listings, _stats, entry_for  # noqa: E402
 from crafting_system.prices.trade_query import build_query, query_hash  # noqa: E402
 from crafting_system.prices.trade_stats import resolve_buy_mod  # noqa: E402
@@ -109,8 +126,9 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         digest = query_hash(league, stored)
         total, rows = _listings(client, league, stored, cache / "trade" / f"{digest}.json", now)
         prices = priced_rows(rows, spec, new)
-        if total < 10 or len(prices) < 3:
-            notes.append(f"{name}: only {total} listings today ({len(prices)} priced); the old entry is not carried over")
+        state = classify(total, len(prices))  # the market rule of #355, the one `cli trade` applies
+        if state != QUOTED:
+            notes.append(f"{name}: the market is {state} today ({total} listings, {len(prices)} priced); the old entry is not carried over")
             continue
         cheapest = prices[:DEFAULT_K]
         composite = COMPOSITES.get(name)
@@ -169,7 +187,7 @@ def main() -> int:
     parser.add_argument("--league", default="Allflame")
     parser.add_argument("--starts-only", action="store_true", help="read OUT, ask the start items again and write OUT: no poe.ninja and no bulk-exchange request")
     parser.add_argument("--resume", action="store_true", help="skip the poe.ninja step: read the file this run wrote after it (OUT.stage1)")
-    parser.add_argument("--below", type=float, default=100.0, help="read the trade offers of every name with fewer units than this behind its price")
+    parser.add_argument("--below", type=float, default=100.0, help="read the trade offers of every name with fewer units than this behind its price (an open point of OR-12, see the header)")
     args = parser.parse_args()
 
     now = datetime.now(UTC)

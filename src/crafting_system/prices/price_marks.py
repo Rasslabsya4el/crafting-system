@@ -7,7 +7,8 @@ its depth in units is at least the units the plan expects to use. Every other pr
 * "price on N units" (the depth is below the plan's expected uses, or no depth was recorded);
 * "previous league's price" (a price of an earlier league or of Standard);
 * "price of a wider item; the exact item has K listings at P" (a stand-in);
-* "price of league X" or "price of an earlier day".
+* "price of league X" or "price of an earlier day";
+* "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
 
 There is no fixed cut that drops a route (OR-12): a price on few units is kept, marked, and the plan is solved with it.
 A price with no recorded provenance (`recorded` False: a file written before #616, a test's price) is an approximate input too,
@@ -92,8 +93,8 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         elif p.depth < (1.0 if uses is None else uses):
             noun = "observations" if p.depth_unit == OBSERVATIONS else "units"
             found.append(PriceMark(DEPTH, f"price on {units_text(p.depth)} {noun}"))
-        if p.trade_unread is not None and found and found[-1].code in (DEPTH, NO_DEPTH):
-            found.append(PriceMark(TRADE_UNREAD, f"the trade offers beside it were not read: {p.trade_unread}"))
+    if p.recorded and p.trade_unread is not None and found:  # beside every other reason, a previous league's included; a plain fact needs none
+        found.append(PriceMark(TRADE_UNREAD, f"the trade offers beside it were not read: {p.trade_unread}"))
     if not p.recorded:
         found.append(PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS))
     return tuple(found)

@@ -146,7 +146,7 @@ def main(
 def _deepen(
     price_file: PriceFile,
     wanted: Sequence[str],
-    below: float,
+    below: float | None,
     now: datetime,
     env: Mapping[str, str] | None,
     transport: Transport | None,
