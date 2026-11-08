@@ -4,7 +4,7 @@
 
 writes `OUT_DIR/benchmark.json` for those routes and prints the summary, as `python -m crafting_system.cli benchmark --heavy` does for all
 of them. A CI checkout has no price file of its own, so the routes with the plain start item are priced from the committed snapshot of
-the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-11-07.json`, as `measure_routes.py` does; the optional third argument names another
+the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-11-08.json`, as `measure_routes.py` does; the optional third argument names another
 price file from the project root, to put two snapshots side by side, #616) and a route that starts from a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`.
 
@@ -16,7 +16,7 @@ the new snapshot (the Prismatic Fossil at 5.87 Chaos, not 0.2), where it took 53
 import sys
 from pathlib import Path
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-11-07.json"
+PRICES = "tests/fixtures/prices/routes-allflame-2026-11-08.json"
 
 
 def main(argv: list[str]) -> int:

@@ -232,3 +232,13 @@ def test_the_unread_mark_round_trips_through_the_price_file_json():
 
     assert from_json(to_json(p), "test") == p
 
+
+
+def test_the_chaos_orb_and_the_divine_orb_are_never_read_on_the_trade_site():
+    """The Chaos Orb is the unit of every price (always 1) and the Divine Orb's price is the file's rate: a trade reading of either would break the file (the first snapshot of this PR priced the Chaos Orb at 1.158)."""
+    start = file(**{"Chaos Orb": PriceEntry(1.0, "poe.ninja"), "Divine Orb": PriceEntry(400.0, "poe.ninja", None, None, Provenance(EXCHANGE, "Allflame", "2026-11-07", 2.0))})
+    asked = []
+
+    outcome = deepen_with_trade(start, ["Chaos Orb", "Divine Orb"], lambda name: asked.append(name) or book(9.0, 9e5))
+
+    assert asked == [] and outcome.price_file.prices == start.prices

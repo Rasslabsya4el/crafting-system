@@ -19,7 +19,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-08.json"
 TARGET_70 = ROOT / "examples" / "targets" / "r10-fractured-boots-70-life.yaml"
 RUNS = 3_000
 

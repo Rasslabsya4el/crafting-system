@@ -37,7 +37,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-08.json"
 TARGETS = {"R04": "r04-penetrating-quiver", "R14": "r14-hunter-bow"}
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 MEASURED_MB = {"R04": 0.067, "R14": 0.067}  # the page as `page_size.py` counted it after #466: heavy runs 42304541274 (R04) and 42304575904 (R14), on ce5e88b

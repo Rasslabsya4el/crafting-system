@@ -42,7 +42,7 @@ from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-08.json"
 GOLDEN = json.loads((ROOT / "tests" / "golden" / "packed_values.json").read_text(encoding="utf-8"))["routes"]
 FILES = {
     "R04": ("r04-penetrating-quiver", 9.0),

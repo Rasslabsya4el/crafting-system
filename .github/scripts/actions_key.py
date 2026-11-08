@@ -48,7 +48,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = "tests/fixtures/prices/routes-allflame-2026-11-07.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
+PRICES = "tests/fixtures/prices/routes-allflame-2026-11-08.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
 FORMAT = "crafting-system-actions-key/1"
 
 ROUTES = ("J01", "R04", "R08", "R09", "R13", "R14", "V01")

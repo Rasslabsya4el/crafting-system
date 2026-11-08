@@ -17,13 +17,14 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
 from datetime import date
 
-from .price_file import PriceEntry, PriceFile
+from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
 from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, PREVIOUS_LEAGUE, STANDARD, TRADE, WATCH, Provenance
 from .trade_exchange import DEFAULT_K, ExchangeReading
 from .trade_market import TRADE_SOURCE
 
 REPLACEABLE = (EXCHANGE, HISTORY, WATCH, PREVIOUS_LEAGUE, STANDARD)  # the kinds a trade reading may replace
 EARLIER_LEAGUE = (PREVIOUS_LEAGUE, STANDARD)
+UNITS_OF_THE_FILE = (CHAOS_ORB, DIVINE_ORB)  # the Chaos Orb is the unit of every price and the Divine Orb's price is the file's rate: no trade reading replaces either
 
 
 def exchange_entry(reading: ExchangeReading, league: str, day: date, item_id: str, k: int = DEFAULT_K) -> PriceEntry:
@@ -94,7 +95,7 @@ def mark_unread(price_file: PriceFile, names: Iterable[str], reason: str, below_
     left: list[str] = []
     for name in sorted(set(names)):
         current = prices.get(name)
-        if not wants_trade_reading(current, below_units):
+        if name in UNITS_OF_THE_FILE or not wants_trade_reading(current, below_units):
             continue
         left.append(name)
         if current is not None and current.provenance is not None:
@@ -121,7 +122,7 @@ def deepen_with_trade(
     todo = sorted(set(names))
     for position, name in enumerate(todo):
         current = prices.get(name)
-        if not wants_trade_reading(current, below_units):
+        if name in UNITS_OF_THE_FILE or not wants_trade_reading(current, below_units):
             continue
         try:
             found = read(name)

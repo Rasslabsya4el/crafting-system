@@ -1,7 +1,7 @@
 """Make a price snapshot with provenance and depths (#616): the file the benchmark and the real-route tests read.
 
     python .github/scripts/price_snapshot.py --old tests/fixtures/prices/routes-allflame-2026-10-31.json \
-        --out tests/fixtures/prices/routes-allflame-2026-11-07.json --cache .claude/scratch/616-cache
+        --out tests/fixtures/prices/routes-allflame-2026-11-08.json --cache .claude/scratch/616-cache
 
 Anonymous only (no POESESSID, no login), within the trade site's rate limits (`prices.trade_http`), a few minutes of requests. Steps:
 

@@ -26,7 +26,7 @@ from crafting_system.solver import Solution
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-07.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-08.json"
 LIFE = "+# to maximum Life"
 BOW = "#% increased Damage with Bow Skills"
 
