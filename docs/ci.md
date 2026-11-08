@@ -165,7 +165,7 @@ those paths onto the branch the run ran on.
   shell except through `env:`.
 - **Collecting.** After the command succeeded, each runner uploads the files it changed (new or modified, not deleted) under the paths as the
   artifact `commit-<n>` (a symlink is skipped). The last job, `commit`, is the only one with `contents: write` (`plan` and `run` keep `contents: read`); it merges the artifacts with
-  `.github/scripts/merge_commit_files.py`, which checks every path against the same rules again. Two runners that wrote the same path with
+  `.github/scripts/merge_commit_files.py`, which checks every path against the same rules again. It does not rely on the layout `download-artifact` gives (one matching artifact is extracted straight into the folder, several into one folder each; run 42467788169 showed it): a runner's root is the folder that holds its `runner-collected.txt`, and a file under no root is refused. Two runners that wrote the same path with
   different bytes make the job refuse and commit nothing.
 - **Committing.** One commit `Re-record <paths> (heavy run <id>)` on top of the commit the run tested (`github.sha`). The job pushes only when the
   branch still points at that commit (a lease on that sha); if the branch moved, the job fails, says so in its error and summary, and pushes nothing.

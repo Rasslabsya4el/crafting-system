@@ -991,12 +991,14 @@ def test_the_merge_with_nothing_changed_copies_nothing_and_succeeds(tmp_path, ca
 
 def test_two_runners_with_different_content_for_one_path_are_refused_and_nothing_is_copied(tmp_path, capsys):
     got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "commit-1/runner-collected.txt", "runner 1")
+    write(got, "commit-2/runner-collected.txt", "runner 2")
     write(got, "commit-1/tests/golden/a.json", "one")
     write(got, "commit-1/tests/golden/ok.json", "ok")
     write(got, "commit-2/tests/golden/a.json", "two")
     assert merge_commit_files.main([str(got), str(out)]) == 1
     captured = capsys.readouterr()
-    assert "tests/golden/a.json" in captured.err and "different content" in captured.err
+    assert "tests/golden/a.json" in captured.err and "runners wrote different content" in captured.err
     assert "commit-1" in captured.err and "commit-2" in captured.err
     assert captured.out == "" and not out.exists()
 
@@ -1004,7 +1006,51 @@ def test_two_runners_with_different_content_for_one_path_are_refused_and_nothing
 @pytest.mark.parametrize("relative", ["src/x.py", "tests/test_x.py", ".github/workflows/ci.yml", "tests/golden/.git/config"])
 def test_the_merge_refuses_a_file_outside_the_two_folders(tmp_path, capsys, relative):
     got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "commit-1/runner-collected.txt", "runner 1")
     write(got, "commit-1/tests/golden/a.json", "A")
     write(got, f"commit-1/{relative}", "bad")
     assert merge_commit_files.main([str(got), str(out)]) == 1
     assert relative in capsys.readouterr().err and not out.exists()
+
+
+def test_a_single_artifact_downloaded_flat_into_the_folder_merges_and_copies(tmp_path, capsys):
+    """download-artifact v8 puts one matching artifact straight into the folder: no commit-1/ above its files (run 42467788169)."""
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "runner-collected.txt", "runner 1")
+    write(got, "tests/fixtures/heavy_commit_probe.txt", "probe")
+    assert merge_commit_files.main([str(got), str(out)]) == 0
+    assert capsys.readouterr().out.split() == ["tests/fixtures/heavy_commit_probe.txt"]
+    assert (out / "tests/fixtures/heavy_commit_probe.txt").read_text(encoding="utf-8") == "probe"
+
+
+def test_the_runner_of_a_flat_artifact_is_named_by_its_marker(tmp_path, capsys):
+    got = tmp_path / "got"
+    write(got, "runner-collected.txt", "runner 7")
+    write(got, "tests/golden/x.json", "x")
+    roots = merge_commit_files.runner_roots(got)
+    assert roots == {got: "runner 7"}
+
+
+def test_the_nested_layout_names_a_runner_by_its_folder_and_merges_same_content(tmp_path, capsys):
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    for n in (1, 2):
+        write(got, f"commit-{n}/runner-collected.txt", f"runner {n}")
+        write(got, f"commit-{n}/tests/golden/same.json", "same")
+    write(got, "commit-2/tests/fixtures/only2.txt", "2")
+    assert set(merge_commit_files.runner_roots(got).values()) == {"commit-1", "commit-2"}
+    assert merge_commit_files.main([str(got), str(out)]) == 0
+    assert capsys.readouterr().out.split() == ["tests/fixtures/only2.txt", "tests/golden/same.json"]
+
+
+def test_a_file_under_no_runner_folder_is_refused_in_both_layouts(tmp_path, capsys):
+    nested, out = tmp_path / "nested", tmp_path / "out"
+    write(nested, "commit-1/runner-collected.txt", "runner 1")
+    write(nested, "commit-1/tests/golden/a.json", "A")
+    write(nested, "tests/golden/stray.json", "stray")  # beside the runners' folders, not in one
+    assert merge_commit_files.main([str(nested), str(out)]) == 1
+    err = capsys.readouterr().err
+    assert "tests/golden/stray.json" in err and "under no runner folder" in err and not out.exists()
+    bare = tmp_path / "bare"
+    write(bare, "tests/golden/a.json", "A")  # no marker at all: the layout cannot be trusted
+    assert merge_commit_files.main([str(bare), str(out)]) == 1
+    assert "under no runner folder" in capsys.readouterr().err and not out.exists()
