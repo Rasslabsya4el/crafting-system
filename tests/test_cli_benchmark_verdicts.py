@@ -246,15 +246,15 @@ def test_r08_r09_and_r04_carry_their_verdicts_as_real_finds():
     assert found[("R08", GUIDE)].issues == (591,) and found[("R09", GUIDE)].issues == (592,)
     assert found[("R04", COMPLETED)].issues == (599, 628)
     assert {each.kind for each in found.values()} == {REAL_FIND}
-    assert found[("R08", GUIDE)].ratio == pytest.approx(0.057, abs=1e-3) and found[("R09", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3)
+    assert found[("R08", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3) and found[("R09", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3)
     assert found[("R04", COMPLETED)].ratio == pytest.approx(0.331, abs=1e-3)
 
 
-# What the heavy run 42395491917 (the committed price snapshot) measured for the three routes: the ratio planner mean / guide mean and the
+# What the heavy runs 42395491917 (R04) and 42433997611 (R08, R09: the bought boots are drawn, #640) measured at the committed price snapshot: the ratio planner mean / guide mean and the
 # planner's first divergent action. The verdicts were written from it.
 MEASURED = {
-    ("R08", GUIDE): (0.05738580407161665, "Fossils Prismatic Fossil"),
-    ("R09", GUIDE): (0.05796558469433014, "Fossils Prismatic Fossil"),
+    ("R08", GUIDE): (0.05781596927097446, "Fossils Prismatic Fossil"),
+    ("R09", GUIDE): (0.058222611236752486, "Fossils Prismatic Fossil"),
     ("R04", COMPLETED): (0.33095397065170684, "Exalted Orb"),
 }
 
