@@ -439,13 +439,18 @@ def boots(request):
     return request.param, plan
 
 
+def the_boots_after_the_draw(plan):
+    """The item the fossil is used on: since #640 the plan starts at the unopened listing, where only the draw works, and the fossil acts on the rare boots it opens to."""
+    return plan.abstraction.compress(plan.target.start_item) if plan.start.flags.unopened else plan.start
+
+
 def test_one_use_on_the_start_boots_has_equal_odds_and_a_cost_25_times_apart(boots):
     """#591, #592: the Prismatic Fossil and the guide's pair reach the target about as often, at 25 and 22 times the cost per use: the whole of the ratio."""
     route, plan = boots
     _, pair, (cheap_cost, dear_cost), (cheap_odds, dear_odds), pair_parts = START_BOOTS[route]
 
-    cheap = per_use_of(plan, plan.start, PRISMATIC)
-    dear = per_use_of(plan, plan.start, pair)
+    cheap = per_use_of(plan, the_boots_after_the_draw(plan), PRISMATIC)
+    dear = per_use_of(plan, the_boots_after_the_draw(plan), pair)
 
     assert cheap["cost"] == pytest.approx(cheap_cost) and dear["cost"] == pytest.approx(dear_cost)
     assert [part["resource"] for part in cheap["parts"]] == ["Primitive Chaotic Resonator", "Prismatic Fossil"]
@@ -464,7 +469,10 @@ def test_the_row_of_the_start_boots_tells_both_numbers(boots):
     pair = START_BOOTS[route][1]
     first = {
         "state": "S1",
-        "per_use": {"planner": per_use_of(plan, plan.start, PRISMATIC), "guide": per_use_of(plan, plan.start, pair)},
+        "per_use": {
+            "planner": per_use_of(plan, the_boots_after_the_draw(plan), PRISMATIC),
+            "guide": per_use_of(plan, the_boots_after_the_draw(plan), pair),
+        },
     }
 
     lines = per_use_lines(first, "guide")
