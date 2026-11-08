@@ -207,7 +207,11 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 # judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
 # a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
 
-KNOWN_REAL: dict[tuple[str, str], int] = {}  # (route, check) -> the issue that holds the fault; none since #553 (R04) and #640 (R14: the bought Magic bow is drawn "any mod or empty")
+KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault; R04's is gone since #553, R14's "bought Magic bow drawn empty" since #640
+    # found by #598, held by #651 (a page statement of what step 4 adds that the tier lines do not show). The page of #640 opens R14 with the draw of the
+    # bought bow's mods, so step 4 is again an Orb of Augmentation that aims at +1 to Level of Socketed Gems and prints no tier line for it.
+    ("R14", "check_tier_step_has_tier_line"): 651,
+}
 JUDGES = page_lint.CHECKS  # `check_no_internal_names` is one of them
 
 
