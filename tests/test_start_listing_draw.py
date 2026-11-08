@@ -28,7 +28,10 @@ from crafting_system.abstraction import Status
 from crafting_system.actions import DRAW_LABEL, AlterationOrb, NotApplicableError, OpenListing, unopened_listing
 from crafting_system.cli import evaluate_route, make_plan, parse_route
 from crafting_system.cli._offers import DRAW_COST_SHARE, RESTART
+from crafting_system.cli._plan import PlanError
 from crafting_system.items import Item, ItemError, Rarity
+from crafting_system.items.quality import PlainQuality
+from crafting_system.items.sockets import SocketColour, Sockets
 from crafting_system.targets import StartKind, start_price_key
 
 MAGIC = magic_toy()
@@ -86,6 +89,56 @@ def test_the_influence_of_the_listing_is_kept_by_the_draw(request):
     assert listing.rarity is Rarity.NORMAL and listing.unopened and not listing.mods
     assert OpenListing(Rarity.MAGIC).outcomes(MAGIC, listing).retained.influences == listing.influences
 
+
+# --- the properties of the listing are kept by the draw, as the game's Alteration and Alchemy keep them (ADR-0064) ---------------------
+
+
+PROPERTIES = {
+    "quality": {"quality": PlainQuality(20)},
+    "memory strands": {"memory_strands": 40},
+    "sockets": {"sockets": Sockets((SocketColour.RED, SocketColour.WHITE), (2,))},
+}
+
+
+@pytest.mark.parametrize("rarity, toy", [(Rarity.MAGIC, MAGIC), (Rarity.RARE, RARE)], ids=["magic", "rare"])
+@pytest.mark.parametrize("name", sorted(PROPERTIES))
+def test_a_bought_start_with_quality_strands_or_sockets_is_drawn_and_keeps_them(rarity, toy, name):
+    fields = PROPERTIES[name]
+    listing = unopened_listing(toy, listing_of(toy, rarity, **fields))
+
+    assert listing is not None and listing.unopened  # drawn: the rule asks for no mod, nothing corrupted, no imprint and no offer, nothing else
+    opened = OpenListing(rarity).outcomes(toy, listing)
+    for field, held in fields.items():
+        assert getattr(listing, field) == held and getattr(opened.retained, field) == held  # the orb does not touch them, so neither does the draw
+    assert (by_mod(opened) == magic_sets()) if rarity is Rarity.MAGIC else (by_mod(opened) == rare_sets())  # the odds are those of the bare item
+
+
+@pytest.mark.parametrize("rarity", [Rarity.MAGIC, Rarity.RARE])
+def test_a_bought_start_with_an_enchantment_is_drawn_and_keeps_it(rarity):
+    from enchant_support import ARMOUR_EXTRA_SLOT, BODY, DATA
+
+    start = Item.build(DATA, base_id=BODY, item_level=84, rarity=rarity, enchantment=ARMOUR_EXTRA_SLOT)
+    listing = unopened_listing(DATA, start)
+
+    assert listing is not None and listing.enchantment == ARMOUR_EXTRA_SLOT
+    assert OpenListing(rarity).outcomes(DATA, listing).retained.enchantment == ARMOUR_EXTRA_SLOT
+
+
+def test_a_plan_from_a_bought_magic_start_with_quality_and_sockets_opens_with_the_draw():
+    aim = target(MAGIC)
+    held = dataclasses.replace(aim, start_item=aim.start_item.changed(MAGIC, **PROPERTIES["quality"], **PROPERTIES["sockets"]))
+    plan = make_plan(MAGIC, held, prices(start_price_key(MAGIC, held)))
+
+    assert plan.start.flags.unopened and plan.policy[plan.start].label == DRAW_LABEL
+    assert plan.abstraction.compress(plan.target.start_item).flags.unopened is False  # the item the draw opens to is the start item as written
+
+
+def test_a_bought_start_with_memory_strands_is_refused_plainly_before_any_solve():
+    aim = target(MAGIC)
+    held = dataclasses.replace(aim, start_item=aim.start_item.changed(MAGIC, **PROPERTIES["memory strands"]))
+
+    with pytest.raises(PlanError, match="Memory Strands are on .* which the planner cannot plan yet"):  # the same plain refusal as for any start with strands
+        make_plan(MAGIC, held, prices(start_price_key(MAGIC, held)))
 
 # --- the rule: which starts are drawn ----------------------------------------------------------------------------------------------
 
