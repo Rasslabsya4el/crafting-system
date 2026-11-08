@@ -11,3 +11,7 @@ output = "local/output"
 # a route whose planner mean is below this share of the guide's mean prints a "needs a human" row with its top divergences, because a
 # planner far cheaper than the guide is as likely a missed cost or a wrong chance as a find. 0.5 = the planner costs less than half the guide.
 review_ratio = 0.5
+# How far the ratio of a route that a person has already reviewed may move from the ratio at review (ticket #634), as a share of that
+# ratio and either way, before `benchmark` prints "NEEDS A HUMAN AGAIN". Prices drift week to week, so 0.2 means a ratio of 0.057 at
+# review stays reviewed between 0.046 and 0.068. The verdicts themselves are in src/crafting_system/cli/_benchmark_verdicts.py.
+review_tolerance = 0.2

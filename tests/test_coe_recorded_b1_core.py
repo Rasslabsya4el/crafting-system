@@ -6,7 +6,10 @@ hashes of the Craft of Exile copy; no Craft of Exile code). They were recorded o
 * the Chaos Orb (R12's amulet with a fractured mod, R13's belt with four ordinary mods);
 * the essences of R05 (Deafening Rage), R10 (Shrieking Spite) and R11 (Shrieking Loathing) on the routes' start items;
 * Alteration, Augmentation and Regal on R13's belt, tested at the goal's tier (Life, Fire/Cold/Lightning Resistance T1);
-* the fossil pairs of R08 (Dense + Shuddering) and R09 (Pristine + Shuddering) on their boots.
+* the fossil pairs of R08 (Dense + Shuddering) and R09 (Pristine + Shuddering) on their boots;
+* the start boots of R08 and R09 with one Prismatic Fossil and with the guide's pair again (#617, `tools/coe_emulator/checks/617-start-boots.json`), each
+  with the joint "the target is met" count: the share of finished items that are the target, or one sure bench craft short of it, read by the planner's
+  own judge, against the planner's exact chance of one use (`_benchmark_use.per_use_of`), the number the review row of `benchmark` tells.
 
 The statistic is stated in `coe_recorded_support.py`: an exact two-sided binomial test per cell, a Bonferroni correction
 over every cell of this module, `ALPHA` = 0.01 for the module. There is no percentage threshold. A cell that fails is a
@@ -47,6 +50,7 @@ from coe_recorded_support import (
     mod_cells,
     roll_cell,
     shape_cells,
+    target_cells,
 )
 
 from crafting_system.targets import load_target
@@ -68,7 +72,13 @@ TARGET_OF = {
     "fossil-r08-boots": "r08-energy-shield-boots",
     "fossil-r09-boots": "r09-life-boots",
     "essence-c02-helmet": None,  # the prototype's case C02 has no route: its two targets are the joint cells
+    "start-r08-prismatic": "r08-energy-shield-boots",  # #617: the first action of the planner and of the guide on the start boots, with the target-met count
+    "start-r08-pair": "r08-energy-shield-boots",
+    "start-r09-prismatic": "r09-life-boots",
+    "start-r09-pair": "r09-life-boots",
 }
+# the label of the case's action, for the cases recorded with a `target`: the planner's own numbers of one use of it on the start item
+PRICES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 # the essence cases: the target's `mod:` line that the essence's forced mod must be (OR-2)
 FORCED_BY_GOAL = {
     "essence-r05-ring": "StrengthEssence7_",
@@ -85,6 +95,26 @@ def data():
 @pytest.fixture(scope="module")
 def ours(data):
     return {case: OurCase(data, record) for case, record in CASES.items()}
+
+
+@pytest.fixture(scope="module")
+def uses(data, targets):
+    """The planner's numbers of one use of each recorded action that has a target-met count, on the start item (the plan is not solved)."""
+    from crafting_system.cli._benchmark_use import per_use_of
+    from crafting_system.cli._plan import make_plan
+    from crafting_system.prices import load_price_file
+
+    found = {}
+    for case, record in CASES.items():
+        if "target" in record:
+            target = targets[TARGET_OF[case]]
+            plan = make_plan(data, target, load_price_file(PRICES), solve_it=False)
+            item = target.start_item
+            assert (record["item"]["base"], record["item"]["item_level"], record["item"]["rarity"], record["item"]["mods"]) == (
+                item.base_id, item.item_level, item.rarity.value, []
+            ), f"{case}: the recorded item is not the target's start item"
+            found[case] = per_use_of(plan, plan.start, record["action"])
+    return found
 
 
 @pytest.fixture(scope="module")
@@ -153,9 +183,11 @@ def family(data, all_cells) -> int:
 
 
 @pytest.fixture(scope="module")
-def all_cells(data, ours, targets):
+def all_cells(data, ours, targets, uses):
     cells = []
     for case, record in CASES.items():
+        if "target" in record:
+            cells += target_cells(case, record, uses[case])
         cells += mod_cells(case, record, ours[case])
         cells += shape_cells(case, record, ours[case])
         cells += joint_cells(case, record, ours[case])
@@ -259,7 +291,7 @@ def test_the_emulator_frequencies_are_ours_under_the_binomial_test(all_cells, fa
 def test_the_module_tests_many_cells_with_a_stated_correction(all_cells):
     testable = [cell for cell in all_cells if cell.testable]
     assert len(testable) >= 200
-    assert {cell.kind for cell in testable} == {"mod", "shape", "tier", "joint", "roll"}
+    assert {cell.kind for cell in testable} == {"mod", "shape", "tier", "joint", "roll", "target"}
     assert ALPHA == 0.01 and MIN_EXPECTED == 5
 
 
