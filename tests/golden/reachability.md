@@ -21,8 +21,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
 | Settings and flags the planner accepts | 28 |
-| - read by some code | 23 |
-| - never read | 5 |
+| - read by some code | 25 |
+| - never read | 3 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
 Kinds that no target is offered: 44 of 59 (28 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
@@ -139,13 +139,13 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
 | `cache` | [paths] | `local/cache` | read | cli/_route_view.py: _trade_stats (compared; on the planning path); cli/_route_view.py: _trade_stats (used in an operation; on the planning path); and 4 more |
 | `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path) |
-| `memory_strands` | [planner] | `false` | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
+| `memory_strands` | [planner] | `false` | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: plan_with_starts (read from `**kwargs`; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
 | `recipe_starts` | [planner] | `true` | read | cli/_starts.py: plan_with_starts (used in an operation; on the planning path) |
 | `recombinator_junk_craft` | [planner] | `false` | **never read** | no code reads it |
 | `max_imprints` | [planner] | `1` | **never read** | no code reads it |
-| `price_source` | [planner] | `both` | **never read** | stops at the field `StartContext.price_source` |
+| `price_source` | [planner] | `both` | read | cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path); prices/trade_market.py: planned_price (compared; on the planning path) |
 | `price_gap_percent` | [planner] | `20.0` | **never read** | stops at the field `StartContext.gap_percent` |
-| `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 4 more |
+| `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 5 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
 | `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
@@ -155,26 +155,23 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
-| `--price-source` | command `plan` |  | **never read** | stops at the field `StartContext.price_source` |
+| `--price-source` | command `plan` |  | read | cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path); prices/trade_market.py: planned_price (compared; on the planning path) |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 1 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
 | `--start-price` | command `plan` |  | read | cli/_plan.py: _override (compared; on the planning path); cli/_plan.py: _override (formatted into text; on the planning path); and 2 more |
-| `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
+| `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: plan_with_starts (read from `**kwargs`; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 
 Code that takes a never-read setting by its own name:
 
 - `recombinator_junk_craft`: context variable `recombinator_junk_craft` in `actions/recombinator.py`: set by `junk_craft_offered` (0 referrer(s) outside its module)
 - `max_imprints`: parameter `max_imprints` of `actions/imprint.py: imprint_actions`: 0 referrer(s) outside its module, 0 pass the parameter
-- `price_source`: parameter `price_source` of `cli/_starts.py: plan_with_starts`: 2 referrer(s) outside its module, 1 pass the parameter
 - `price_gap_percent`: parameter `price_gap_percent` of `cli/_starts.py: plan_with_starts`: 2 referrer(s) outside its module, 1 pass the parameter
 
-- `price_source`: reads of an attribute with the same name on a receiver of unknown type, not counted: cli._main: main, cli._report: render_text, cli._start_report: first_step_document, cli._start_report: first_step_lines, cli._starts: _plan_candidate.
 - `price_gap_percent`: reads of an attribute with the same name on a receiver of unknown type, not counted: prices.price_source: SourcedPrice.document, prices.price_source: SourcedPrice.lines.
-- `--price-source`: reads of an attribute with the same name on a receiver of unknown type, not counted: cli._main: main, cli._report: render_text, cli._start_report: first_step_document, cli._start_report: first_step_lines, cli._starts: _plan_candidate.
 
 ## 5. Built modules
 
@@ -182,10 +179,12 @@ The public names of the modules the audit says are built and not wired (of a mod
 
 | Built module | Name | In | Referenced by | Planning path | Audit |
 |---|---|---|---|---|---|
-| the market rule | `TradeOffer` | `prices/trade_market.py` | nothing | **no** | INPUTS-2 |
+| the market rule | `PlannedPrice` | `prices/trade_market.py` | nothing | yes | INPUTS-2 |
+| the market rule | `TradeOffer` | `prices/trade_market.py` | nothing | yes | INPUTS-2 |
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
-| the market rule | `classify` | `prices/trade_market.py` | prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
+| the market rule | `classify` | `prices/trade_market.py` | prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_offers.py: price_offers, cli/_plan.py: resolve_start_price, and 3 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
