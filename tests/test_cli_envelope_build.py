@@ -29,7 +29,7 @@ from crafting_system.cli import _envelope_plan
 from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.cli._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
-from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
+from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, FloorsStopped, OfferFloors
 from crafting_system.cli._offers import BuyStartItem
 from crafting_system.solver import ConvergenceError
 from crafting_system.cli._pattern_bound import pattern_lower_bound, pattern_offers
@@ -418,3 +418,106 @@ def test_the_names_of_the_first_offers_seed_the_universe_before_the_first_pass_a
     monkeypatch.setattr(PatternBuilder, "_pass", counted)
     model = PatternBuilder(abstraction(), start).extend(all_offers)
     assert len(passes) == 1 and model.stats.universe_growth == 0
+
+
+def test_the_float_kernel_of_every_fossil_set_is_below_the_exact_one_after_the_shrink():
+    """The float path through the fossils (plain and Fractured sets, three starts): no chance of the lowered kernel is above the exact chance of its state (ticket #626)."""
+    import test_abstraction_fossil as fossil
+
+    checked = 0
+    for make in fossil.STARTS.values():
+        for names in [*fossil.SETS, *fossil.FRACTURING]:
+            action = fossil.fossils(*names)
+            exact_ab = fossil.abstraction(action)
+            try:
+                exact = exact_ab.kernel(exact_ab.compress(make()), action)
+            except (NotApplicableError, OutOfScopeError):
+                continue  # the set cannot be used on this start (a Fractured Fossil on a fractured item): no kernel to compare
+            float_ab = fossil.abstraction(action)
+            with float_ab.approximate():
+                made = float_ab.kernel(float_ab.compress(make()), action)
+            assert set(made) == set(exact), names
+            states = list(made)
+            lowered = _pattern._lowered(dict(enumerate(made.values())))
+            for index, state in enumerate(states):
+                assert Fraction(lowered[index]) <= exact[state], (names, state)
+                checked += 1
+            assert sum(lowered.values()) == 1  # the missing mass went to the sink
+    assert checked > 300
+
+
+def build_world_offers(offers):
+    """The offers of the world without the restart: no plan can be executed before the greedy policy closes."""
+    return [offer for offer in offers if offer.label != "restart"]
+
+
+def test_a_refusal_after_a_build_that_was_stopped_names_the_phase_and_the_sizes(world, monkeypatch):
+    _, start, offers, _, _, _ = world
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
+    given = build_world_offers(offers)
+    fresh = abstraction()
+    stopped = pattern_lower_bound(fresh, fresh.compress(START_ITEM), given, stop=counting_stop(12))
+    assert stopped.phase == "model" and not stopped.complete
+    with pytest.raises(NoPolicy) as refusal:
+        envelope_result(fresh, fresh.compress(START_ITEM), given, net=Net(states=12), bound=stopped)
+    text = str(refusal.value)
+    assert "no plan costs less than" in text
+    assert "was stopped (the test net) while counting the kinds of item the crafting can reach" in text
+    assert f"worked through {sum(stopped.model.expanded):,} of the {stopped.model.stats.keys:,} kinds of item it had found" in text
+    assert f"counted {len(stopped.positions):,} of the {len(given):,} actions offered" in text
+    fresh = abstraction()
+    complete = pattern_lower_bound(fresh, fresh.compress(START_ITEM), given)
+    with pytest.raises(NoPolicy) as refusal:
+        envelope_result(fresh, fresh.compress(START_ITEM), given, net=Net(states=12), bound=complete)
+    assert "while" not in str(refusal.value) or "cheapest possible cost was stopped" not in str(refusal.value)  # a finished count adds nothing
+
+
+def test_the_net_ends_the_offers_floors_and_the_bound_is_the_cheapest_offer_at_every_key(world, floors_on):
+    ab, start, offers, _, exact, _ = world
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=counting_stop(2))
+    assert bound.phase == "floors" and bound.stopped == "the test net" and bound.positions == () and bound.floors is None
+    assert not any(bound.model.expanded)  # every key a tip
+    assert_lower_bound(bound, ab, exact)
+    with pytest.raises(NoPolicy, match="while working out the cheapest possible cost of each action"):
+        fresh = abstraction()
+        envelope_result(fresh, fresh.compress(START_ITEM), build_world_offers(offers), net=Net(states=12), bound=bound)
+
+
+def test_the_net_ends_the_examination_of_the_offers_outside_the_model_and_the_round_stands(world, floors_on, monkeypatch):
+    ab, start, offers, _, exact, _ = world
+
+    def stopped(self, position, limits):
+        raise FloorsStopped("the test net")
+
+    monkeypatch.setattr(OfferFloors, "needed", stopped)
+    said = []
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
+    assert bound.phase == "growth" and bound.stopped == "the test net" and bound.rounds == 1 and bound.positions == (0, 6)
+    assert any(line.startswith("binding: examining") for line in said)
+    assert_lower_bound(bound, ab, exact)
+
+
+def test_the_net_is_asked_before_the_solve_of_a_round_that_grew_and_the_round_before_stands(world, floors_on, monkeypatch):
+    ab, start, offers, _, exact, _ = world
+    packed, solved = [], []
+    real_pack, real_solve = _pattern_bound.pack_pattern_model, _pattern_bound.solve_packed
+
+    def pack(*args, **kwargs):
+        packed.append(1)
+        return real_pack(*args, **kwargs)
+
+    def solve(*args, **kwargs):
+        solved.append(1)
+        return real_solve(*args, **kwargs)
+
+    monkeypatch.setattr(_pattern_bound, "pack_pattern_model", pack)
+    monkeypatch.setattr(_pattern_bound, "solve_packed", solve)
+    said = []
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append, stop=lambda: "the test net" if len(packed) >= 2 else None)
+    assert len(packed) == 2 and len(solved) == 1  # the second round was packed, and the net was reached before its solve
+    assert bound.phase == "growth" and bound.stopped == "the test net" and bound.rounds == 1
+    assert any("before the solve" in line for line in said) and any(line.startswith("model 1: solving the count") for line in said)
+    assert_lower_bound(bound, ab, exact)

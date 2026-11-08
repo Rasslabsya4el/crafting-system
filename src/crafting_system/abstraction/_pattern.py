@@ -749,7 +749,7 @@ class PatternBuilder:
 
         The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
         one after the other. Nothing is built here and nothing changes in the answer; with one worker, or no `fork`, this does nothing. A chunk is
-        at most `PRIME_CHUNK` offers so that the net is asked between chunks.
+        at most `PRIME_CHUNK` offers so that the net is asked between chunks; the pool's `map` cannot be interrupted, so a net is overshot by at most one chunk.
         """
         requests = []
         for offer in self.offers[lo:hi]:

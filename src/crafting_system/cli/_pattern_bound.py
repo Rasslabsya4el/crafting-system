@@ -28,7 +28,7 @@ from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.abstraction._pattern import PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats
 from crafting_system.solver import PackedBuilder, policy_reach, solve_packed
 
-from ._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
+from ._offer_floor import INSIDE, OTHER, OUTSIDE, FloorsStopped, OfferFloors
 from ._offers import BuyStartItem, PricedOffer
 
 FAKE = -1  # the tag of the floor action
@@ -132,14 +132,22 @@ def pattern_lower_bound(
     phases: dict[str, float] = {"floors": 0.0, "model": 0.0, "solve": 0.0}
     floors = None
     order: list[int] = list(range(len(priced)))  # the offers of the model, in the order they joined: offer j of the model is `priced[order[j]]`
+    floors_stopped: str | None = None  # the reason the net ended the floors: the bound is then the start alone, every key a tip with the cheapest offer as its floor
     if item is not None and len(priced) >= MIN_OFFERS:
-        floors = OfferFloors(abstraction, start, priced, item)
-        order = floors.initial()
-        phases["floors"] = time.perf_counter() - began
-        say(
-            f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
-            f"({phases['floors']:.1f} s)"
-        )
+        say(f"offers' floors: working out the floors of {len(priced):,} offers")
+        try:
+            floors = OfferFloors(abstraction, start, priced, item, stop)
+        except FloorsStopped as reached:
+            floors_stopped, order = reached.reason, []
+            say(f"offers' floors: STOPPED ({floors_stopped}) after {time.perf_counter() - began:.1f} s; the bound is the cheapest offer at every key")
+            stop = lambda: floors_stopped  # noqa: E731  (the builder below ends at once, with every key a tip)
+        else:
+            order = floors.initial()
+            phases["floors"] = time.perf_counter() - began
+            say(
+                f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
+                f"({phases['floors']:.1f} s)"
+            )
     builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate)
     kept = None  # the last round that ran to its end: (model, value, error bound, order)
     adding = list(order)
@@ -159,7 +167,12 @@ def pattern_lower_bound(
         outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
         floor = _floor_of(floors, outside, priced) if floors is not None else _tip_floor(priced)
         graph = pack_pattern_model(model, [all_offers[p] for p in order], floor)
-        solved = solve_packed(graph, progress=None)
+        if kept is not None and stop is not None and (reason := stop()) is not None:  # the solve cannot be interrupted: the net is asked before it
+            say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
+            model, value, error, order = kept
+            return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth")
+        say(f"model {rounds}: solving the count on {len(model.keys):,} keys and {graph.num_kernels:,} kernels")
+        solved = solve_packed(graph, progress=None)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
         solved_at = time.perf_counter()
         phases["solve"] += solved_at - built
         n = len(model.keys)
@@ -169,8 +182,15 @@ def pattern_lower_bound(
             f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
         )
         if model.stopped is not None or floors is None or not outside:
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, "model" if model.stopped else "complete")
-        more, limits = _binding(graph, solved, model, floors, outside)
+            return _bound(
+                model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped,
+                "floors" if floors_stopped else "model" if model.stopped else "complete",
+            )  # fmt: skip
+        try:
+            more, limits = _binding(graph, solved, model, floors, outside, say)
+        except FloorsStopped as reached:  # the model of this round is solved and stands; only the offers that would join are not known
+            say(f"model {rounds}: the net was reached while the offers outside the model were examined ({reached.reason}); the model of this round stands")
+            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth")
         if not more:
             return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete")
         names = ", ".join(f"{priced[p].label} (cost {priced[p].cost:.3g})" for p in more[:2]) + (", ..." if len(more) > 2 else "")
@@ -206,7 +226,9 @@ def _floor_of(floors: OfferFloors, outside: list[int], priced: Sequence[PricedOf
     return floor
 
 
-def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int]) -> tuple[list[int], dict[int, float | None]]:
+def _binding(
+    graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int], say: Callable[[str], None] = lambda _text: None
+) -> tuple[list[int], dict[int, float | None]]:
     """The offers outside the model that could lower the value of a key where the floor action is the cheapest, the least floors first.
 
     At a key whose floor action is cheaper than every action of the model, the value is the floor and not the model's own; an offer outside the model
@@ -244,10 +266,13 @@ def _binding(graph, solved, model: PatternModel, floors: OfferFloors, outside: l
         bound = float(best[k])
         limit[klass] = bound if limit[klass] is None else max(limit[klass], bound)
     found: list[tuple[float, int]] = []
-    for position in outside:
+    examined = time.perf_counter()
+    say(f"binding: examining {len(outside):,} offers outside the model")
+    for position in outside:  # a floor raised here is an exact chance: `needed` asks the net before each (`FloorsStopped`)
         low = floors.needed(position, limit)
         if low is not None:
             found.append((low, position))
+    say(f"binding: {len(found):,} of {len(outside):,} offers are needed ({time.perf_counter() - examined:.1f} s)")
     found.sort()
     return [position for _, position in found], limit
 

@@ -26,7 +26,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
-from crafting_system.abstraction._pattern import Pattern
+from crafting_system.abstraction._pattern import SINK, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 
 from . import _limits
@@ -60,10 +60,11 @@ class CraftingProblem:
         values = np.asarray(bound.value, dtype=np.float64) * (1.0 - bound.error_bound)  # lowered by what the solver cannot certify
         self.values = values
         expected: list[float] = []  # the lowered value of each pushed kernel of the model, in expectation
+        sink = len(values) - 1  # the successor `SINK` (-1) of a float kernel is the model's last state, the goal that costs nothing (`_pattern_bound`, `close_state`)
         for successors, weights in model.kernels:
             total = sum(weights)
             chance = np.array([w / total for w in weights])  # int / int is exact to one rounding, whatever the size
-            expected.append(float(chance @ values[list(successors)]))
+            expected.append(float(chance @ values[[sink if key == SINK else key for key in successors]]))
         self.lowest: list[dict[int, float]] = []  # key -> offer position -> the least lowered backup of its abstract actions there
         for row in model.actions:
             found: dict[int, float] = {}
@@ -270,7 +271,12 @@ def envelope_result(
     where = {priced.label: position for position, priced in enumerate(offers)}
     positions = None if incumbent is None else (lambda state: [where[label] for label in incumbent(state) if label in where])
     search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance, guard=guard)
-    result = search.run()
+    try:
+        result = search.run()
+    except NoPolicy as refusal:
+        if bound.complete:
+            raise
+        raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}") from refusal
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
     packed = solve_walked(abstraction, start, walked, tolerance=tolerance, progress=say)
     mean = float(packed.solution.values[start])
@@ -281,6 +287,23 @@ def envelope_result(
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
     )  # fmt: skip
     return packed
+
+
+BUILD_PHASES = {  # the phase of a stopped build, as a player reads it
+    "floors": "working out the cheapest possible cost of each action",
+    "model": "counting the kinds of item the crafting can reach",
+    "growth": "adding the actions that matter to that count",
+    "solve": "solving that count",
+}
+
+
+def build_note(bound: PatternBound, expanded: int, offers: int) -> str:
+    """What a refusal says about the count of the cheapest possible cost when the net stopped it before it was finished (OR-13): the phase and the sizes it reached."""
+    phase = BUILD_PHASES.get(bound.phase, bound.phase)
+    return (
+        f"The count of the cheapest possible cost was stopped ({bound.stopped}) while {phase}: it had worked through {expanded:,} of the "
+        f"{bound.model.stats.keys:,} kinds of item it had found and counted {len(bound.positions):,} of the {offers:,} actions offered"
+    )
 
 
 def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
