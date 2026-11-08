@@ -21,7 +21,7 @@ Nothing here reads a clock: the caller passes `today`.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -35,6 +35,7 @@ NONE = MARKET_NONE
 STALE = "stale"  # a record older than the limit (or without a date): not offered, ask again
 UNKNOWN = "unknown"  # nothing recorded under the name
 
+_NINJA = "ninja"  # the price_source setting that reads no trade price (`price_source.NINJA`; imported there, so not from there)
 OLD_PRICE = "old"  # `TradeOffer.basis`: the league's last deep price, read on an earlier day
 THIN_MEAN = "thin"  # `TradeOffer.basis`: the mean of the listings there are
 
@@ -221,26 +222,43 @@ def _count_reason(state: str, listings: int, usable: int, min_listings: int) -> 
     return "recorded thin"
 
 
-def planned_entry(price_file: PriceFile, name: str) -> PriceEntry | None:
+@dataclass(frozen=True)
+class PlannedPrice:
+    """The price a plan is made from: the entry as the file has it, and the mark that goes with it (None for an unmarked price).
+
+    The mark is its own field, never part of `entry.source`: `source` stays the plain name of the source (`trade-api`,
+    `poe.ninja`, `override`), and what the page and the report print as a note beside the price is `mark`.
+    """
+
+    entry: PriceEntry
+    mark: str | None = None
+
+    @property
+    def chaos(self) -> float:
+        return self.entry.chaos
+
+    @property
+    def source(self) -> str:
+        return self.entry.source
+
+
+def planned_price(price_file: PriceFile, name: str, price_source: str = "both") -> PlannedPrice | None:
     """The price the planner reads for `name`: the one place that applies OR-8 to a price a plan is made from.
 
     A name with a price in `prices` is read as it always was (a quoted trade price, a hand override, a poe.ninja row; the
-    planner has never judged age or rail here). A name that has none but a `thin` trade record of the price file's league
-    reads as the rule says: the league's last deep price, or else the thin mean. That price is a trade-api price whose
-    `source` carries the mark (`trade-api, old price, read on <date>, ...`), so every line that prints a source (the start
-    line, the cost breakdown, the JSON `price_source`) prints the mark with it and no price stands unmarked. With nothing to
-    show (no record, a `none` record, a thin one with no deep reading and no priced listing) the answer is None, as it was.
+    planner has never judged age or rail here), unmarked. A name that has none but a `thin` trade record of the price file's
+    league reads as the rule says: the league's last deep price (marked old, with its date), or else the thin mean (marked
+    thin). The profile setting `price_source` is respected: under `ninja` no trade record is read, so a thin one prices nothing.
+    With nothing to show (no record, a `none` record, a thin one with no deep reading and no priced listing) the answer is None.
     """
     entry = price_file.prices.get(name)
     if entry is not None:
-        return entry
+        return PlannedPrice(entry)
     record = price_file.markets.get(name)
-    if record is None or record.state != THIN or record.league != price_file.league:
+    if price_source == _NINJA or record is None or record.state != THIN or record.league != price_file.league:
         return None
     offered = _thin_offer(
         price_file, name, "", None, record.listings, record.usable, record.chaos, record.used,
         remembered=True, query=record.query,
     )  # fmt: skip
-    if offered.entry is None:
-        return None
-    return replace(offered.entry, source=f"{TRADE_SOURCE}, {offered.mark}")
+    return None if offered.entry is None else PlannedPrice(offered.entry, offered.mark)

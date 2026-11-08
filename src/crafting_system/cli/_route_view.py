@@ -530,7 +530,8 @@ class _View:
 
     def cost_lines(self, action: Action) -> list[str]:
         if action.label == RESTART:
-            return [money(self.plan.start_price.chaos)]
+            mark = self.plan.start_price.mark
+            return [money(self.plan.start_price.chaos), *([mark] if mark else [])]  # OR-8: a thin market's price carries its mark
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price was paid in row 1 and is paid again by every restart
             counted = money(self.plan.offer_of(action).cost)
             return [f"free: the listing's price is paid in step 1 and again by each restart; counted as {counted} so that every step has a positive cost"]
@@ -538,6 +539,7 @@ class _View:
         lines = [f"{count_} × {name} {money(chaos)}" for name, count_, chaos, _ in priced.parts]
         if len(priced.parts) > 1:
             lines.append(f"total {money(priced.cost)}")
+        lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
         return lines
 
     def plan_name(self, price_name: str | None) -> str | None:
@@ -631,6 +633,8 @@ class _View:
             fields = _fields(_plain("Start item", *self.start_accepts()), _plain("Cost per use", GIVEN_SOURCE))
             return StepRow(1, "Start item (given)", fields, self.start_card(), self.anchor(1), final, price.chaos)
         cost = [money(price.chaos)]
+        if price.mark:  # OR-8: a thin market's price never stands unmarked
+            cost.append(price.mark)
         if price.taken_for:
             cost.append(price.taken_for)
         fields = _fields(

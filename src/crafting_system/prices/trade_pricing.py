@@ -444,9 +444,7 @@ def _remembered(current: PriceFile, name: str) -> dict[str, DeepReading]:
     if detail is None or name in deep or detail.get("league") not in (None, current.league):
         return deep
     read_on = _day(detail.get("date"))
-    listings, usable = detail.get("listings"), detail.get("usable")
-    if usable is None and isinstance(detail.get("used"), int):
-        usable = max(detail["used"], MIN_USABLE)  # an older entry: the rule then was 3 usable, `used` is at most k
+    listings, usable = detail.get("listings"), detail.get("usable")  # an entry without a usable count cannot show the default rail: not promoted
     if read_on is not None and isinstance(listings, int) and isinstance(usable, int) and is_deep(listings, usable):
         deep[name] = DeepReading(entry.chaos, current.league, read_on, listings, usable)
     return deep

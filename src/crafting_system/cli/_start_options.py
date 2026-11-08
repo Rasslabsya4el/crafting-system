@@ -35,7 +35,7 @@ from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, tier_table
 from crafting_system.items.words import mod_words_of
 from crafting_system.items.vendor_recipes import RECIPES, GemInput, Recipe, RecipeStep
-from crafting_system.prices import PriceFile, planned_entry
+from crafting_system.prices import PriceFile, planned_price
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.rules import rule_by_id
 from crafting_system.targets import KOfN, Requirement, Target, base_line_name, is_name_only_source, ninja_line_name, shared_name_refusal
@@ -292,9 +292,12 @@ def _goods(context: StartContext, recipe: Recipe, steps: tuple[RecipeStep, ...])
     missing: list[str] = []
     refused: list[str] = []
     for name, count in wanted:
-        entry = planned_entry(context.prices, name)
-        if entry is not None:
-            goods.append((name, count, count * entry.chaos, entry.source))
+        planned = planned_price(context.prices, name, context.price_source)
+        if planned is not None and planned.mark is not None:  # a thin market's price is a bought item's, not a recipe good's: say so
+            refused.append(f"the price of {name!r} is a thin trade market ({planned.mark}); a recipe good is not priced from one")
+            continue
+        if planned is not None:
+            goods.append((name, count, count * planned.chaos, planned.source))
             continue
         line_name = ninja_line_name(context.data, target)
         line = context.prices.prices.get(line_name) if name == base_name else None

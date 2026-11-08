@@ -306,6 +306,16 @@ def test_a_legacy_quote_under_a_lowered_rail_is_not_promoted_to_the_deep_reading
     assert NAME not in load_price_file(path).deep
 
 
+def test_a_legacy_quote_with_no_usable_count_cannot_show_the_rail_and_is_not_promoted(tmp_path):
+    path = tmp_path / "prices.json"
+    detail = {"league": LEAGUE, "date": "2026-11-01", "listings": 40, "used": 5}  # the old shape: no `usable`, so the rail cannot be read
+    write_price_file(path, allflame_prices(prices={**allflame_prices().prices, NAME: PriceEntry(3.0, "trade-api", "n", detail)}))
+
+    store_market(path, thin_market(LEAGUE_END))
+
+    assert NAME not in load_price_file(path).deep
+
+
 # -- a refresh of the same league keeps the memory --------------------------------------------------------------------------------
 
 

@@ -21,7 +21,8 @@ from crafting_system.abstraction import Abstraction, CompressedState, Goal, inte
 from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
-from crafting_system.prices import PriceFile, planned_entry
+from crafting_system.prices import PriceFile, planned_price
+from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, ConvergenceError, Outcome, Solution, solve
 from crafting_system.prices.query_compare import other_item
@@ -94,6 +95,7 @@ class StartPrice:
     source: str
     taken_for: str | None = None  # "price taken for a wider item (...)": the stored search is not the item the key names (#474, OR-7)
     given: bool = False
+    mark: str | None = None  # a thin market's price is marked (OR-8): "old price, read on <date>, ..." or "few offers: ..."; None for an unmarked price
 
     def __post_init__(self) -> None:
         if self.given and self.chaos != 0:
@@ -270,7 +272,7 @@ def leaf_labels(target: Target) -> tuple[str, ...]:
 
 
 def resolve_start_price(
-    data: GameData, target: Target, prices: PriceFile, override: float | None
+    data: GameData, target: Target, prices: PriceFile, override: float | None, price_source: str = DEFAULT_PRICE_SOURCE
 ) -> StartPrice:
     """The cost of the start item (OR-6): a given one costs nothing and is never bought again; a bought one has a price.
 
@@ -278,6 +280,7 @@ def resolve_start_price(
     (`--start-price`, above 0), else the price file (hand overrides already in it) under the key computed from the target
     (`start_price_key`); a key that is not in the file is an error that names it: the cost of the whole craft would be wrong without it.
     A poe.ninja price of a name that several bases share is refused with the words that say why (`shared_name_refusal`).
+    The price is read by `planned_price` under the profile's `price_source`: a thin market is priced by OR-8 and the price carries its mark.
     """
     if target.start is not StartKind.BOUGHT:
         if override is not None:
@@ -295,17 +298,18 @@ def resolve_start_price(
         raise PlanError(f"the start item of the target cannot be searched: {error}") from error
     if override is not None:
         return StartPrice(name, _override(override), "given on the command line")
-    entry = planned_entry(prices, name)  # OR-8: a thin market is priced, with its mark in the source
-    if entry is None:
+    planned = planned_price(prices, name, price_source)  # OR-8: a thin market is priced, with its mark
+    if planned is None:
         raise PlanError(
             f"no price for the start item {name!r}. A bought start item must have a price. Price it on the trade site with the "
             "`trade` command, write a hand price for it in your price overrides, or give it with --start-price"
         )
+    entry = planned.entry
     refusal = shared_name_refusal(data, target.base_id, entry.source, f"the start item {name!r}")
     if refusal is not None:  # a poe.ninja line has no base id: for a name that several bases share it prices none of them (#471)
         raise PlanError(refusal)
     stored = (entry.detail or {}).get("query")
-    return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None)
+    return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None, mark=planned.mark)
 
 
 def _override(override: float) -> float:
@@ -326,6 +330,7 @@ def make_plan(
     strands: bool = False,
     solve_it: bool = True,
     start_price_of: StartPrice | None = None,
+    price_source: str = DEFAULT_PRICE_SOURCE,
     solver: str = "auto",
     with_risk: bool = True,
     incumbent: Callable[[CompressedState], Sequence[str]] | None = None,
@@ -350,7 +355,7 @@ def make_plan(
     given route can be read and played on concrete items (`_route_sim`) when the graph is too large to solve (R04, R14).
     `strands` is the setting `memory_strands` of the query (ADR-0040): with it off and no strands on the start item the
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
-    (tickets of batch B5). `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
+    (tickets of batch B5). `price_source` is the profile setting (`ninja`, `trade`, `both`) that `planned_price` respects. `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the price the target's computed key has in the file.
 
     `solver` picks the exact solve (ticket #374, ADR-0063): "auto" (the default) walks the graph on packed arrays first and
@@ -391,7 +396,7 @@ def make_plan(
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"
         )
-    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price)
+    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price, price_source)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
     if offers is None:
@@ -400,7 +405,7 @@ def make_plan(
         except ValueError as error:
             raise PlanError(str(error)) from error
         offers, limits = chosen.offers, (*chosen.limits, *limits)
-    priced, dropped = price_offers(offers, prices)
+    priced, dropped = price_offers(offers, prices, price_source)
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
@@ -418,7 +423,8 @@ def make_plan(
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(listing or target.start_item), {bought: 1}, shares=False)
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
-        priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,)))
+        marks = ((bought, price_of_start.mark),) if price_of_start.mark else ()
+        priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)

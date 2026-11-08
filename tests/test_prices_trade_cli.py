@@ -442,9 +442,9 @@ def test_the_message_of_a_thin_search_is_what_the_planner_then_prices_the_start_
 
     data = fixture_game_data()
 
-    def plan() -> tuple[float, str]:  # the start price `make_plan` takes: the target's key read from the file the command wrote
+    def plan() -> tuple[float, str, str | None]:  # the start price `make_plan` takes: the target's key read from the file the command wrote
         price = resolve_start_price(data, load_target(R12_TARGET, data), load_price_file(prices_path), None)
-        return price.chaos, price.source
+        return price.chaos, price.source, price.mark
 
     assert run(tmp_path, trade) == 0  # 910 listings: a deep reading of 1 Chaos on 2026-10-30
     capsys.readouterr()
@@ -454,7 +454,7 @@ def test_the_message_of_a_thin_search_is_what_the_planner_then_prices_the_start_
     assert run(tmp_path, thin, now=NOW + timedelta(days=2)) == 1  # 9 listings: thin, two days later
     said = capsys.readouterr().out
 
-    old_source = "trade-api, old price, read on 2026-10-30, the market has few offers now"
-    assert f"recorded as thin; the plan prices it 1 Chaos [{old_source}]" in said
+    mark = "old price, read on 2026-10-30, the market has few offers now"
+    assert f"recorded as thin; the plan prices it 1 Chaos [trade-api; {mark}]" in said
     capsys.readouterr()
-    assert plan() == (1.0, old_source)
+    assert plan() == (1.0, "trade-api", mark)

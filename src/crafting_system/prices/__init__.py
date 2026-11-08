@@ -38,7 +38,7 @@ from .trade_http import (
     user_agent,
 )
 from .price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE, SourcedPrice, source_price
-from .trade_market import DEFAULT_MIN_LISTINGS, TradeOffer, offer, planned_entry
+from .trade_market import DEFAULT_MIN_LISTINGS, PlannedPrice, TradeOffer, offer, planned_price
 from .trade_pricing import (
     TRADE_SOURCE,
     NotEnoughListings,
@@ -107,7 +107,8 @@ __all__ = [
     "assess_buy_spec",
     "market_of_listings",
     "offer",
-    "planned_entry",
+    "PlannedPrice",
+    "planned_price",
     "store_market",
     "BudgetExceeded",
     "BuyMod",

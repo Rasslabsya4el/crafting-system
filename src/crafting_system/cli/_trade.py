@@ -37,7 +37,7 @@ from crafting_system.prices.trade_http import (
     urllib_transport,
     user_agent,
 )
-from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS, planned_entry
+from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS, planned_price
 from crafting_system.prices.trade_pricing import (
     DEFAULT_K,
     DEFAULT_MAX_REQUESTS,
@@ -56,10 +56,11 @@ COMMAND = "python -m crafting_system.cli trade"
 
 def _priced_as(price_path: Path, name: str) -> str:
     """What the planner now reads for `name` from the file just written (OR-8), in words: the price with its mark, or that there is none."""
-    entry = planned_entry(load_price_file(price_path), name)
-    if entry is None:
-        return "the plan has no trade price for it (no deep reading of this league and no listing that could be priced)"
-    return f"the plan prices it {entry.chaos:g} Chaos [{entry.source}]"
+    planned = planned_price(load_price_file(price_path), name)
+    if planned is None:
+        return "the plan has no trade price for it"
+    note = f"; {planned.mark}" if planned.mark else ""
+    return f"the plan prices it {planned.chaos:g} Chaos [{planned.source}{note}]"
 
 
 def trade_main(
