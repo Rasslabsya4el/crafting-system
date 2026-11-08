@@ -47,7 +47,7 @@ from crafting_system.abstraction import CompressedState, Status
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Rarity, Side, capacity
-from crafting_system.risk import RiskReport
+from crafting_system.risk import RiskReport, lump
 from crafting_system.solver import Action, Outcome
 from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
@@ -520,7 +520,10 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             if weight > 0 and successor not in seen:
                 seen.add(successor)
                 order.append(successor)
-    risk = evaluate_risk(policy, plan.start, plan.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the route costs at least the solver's mean
+    # The risk is read on one state per block of states that behave alike (`risk.lump`, #717): the same cost distribution, and the budget DP runs over
+    # the blocks and not over every state (R13's route has 2,887 states; the DP over them took 4 to 18 minutes).
+    lumped = lump(policy, plan.start, plan.is_goal)
+    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the route costs at least the solver's mean
 
     divergences: list[Divergence] = []
     for state in policy_states(plan.start, plan.policy, plan.is_goal):
