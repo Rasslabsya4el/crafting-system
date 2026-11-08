@@ -9,6 +9,7 @@ under the key that `tests/reconcile/expected_keys.txt` holds for the target, whi
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from random import Random
 
 import yaml
 from independent import export as shared_export
@@ -103,6 +104,19 @@ class World:
                 raise Unsupported(f"the start mod {entry.get('mod')} gives no values")
             mods.append(Held(entry["mod"], tuple(entry["values"]), fractured=bool(entry.get("fractured", False))))
         return Item(rarity, tuple(mods))
+
+    def opened_start(self, rng: Random) -> Item:
+        """The start item as a play holds it, at its start and again after a restart.
+
+        A bought Magic item that the target gives no mod for is not an empty item: it is the item the market sells, and a Magic item holds 1 or 2 mods,
+        so it is what an Orb of Alteration leaves on this base (ADR-0064, OR-17). The planner holds it as a draw before the first decision, free beyond the
+        price of the listing, which is the start price. This opens it the same way, with the game's own Alteration and no orb paid (the guide's first
+        Alteration is then a real reroll, not the draw), so the mean here and the planner's are of the same process. Any other start item is as the file says.
+        """
+        item = self.start_item
+        if self.bought and item.rarity == "magic" and not item.mods:
+            return self.crafter.alter(item, rng)
+        return item
 
     @property
     def start_price(self) -> float:

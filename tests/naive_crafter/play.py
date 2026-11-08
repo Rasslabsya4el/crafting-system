@@ -4,7 +4,7 @@ The route file is read as its header says: rules in order, and at every item the
 that meets the target is never acted on; an item no rule covers, or where the game refuses the rule's action, is a gap (unless the route says
 `skip_refused: true`, then the next matching rule is tried). One play starts from the target's start item, spends the price of each use,
 and ends when the item meets the target. A bought start item is not paid for at the start (the planner's mean leaves it out too) but a
-`restart` pays its price and puts the start item back.
+`restart` pays its price and puts the start item back. A bought Magic start item with no mod given is opened first, free, by the game's Alteration (`World.opened_start`, ADR-0064).
 
 The conditions (`when`): `rarity`, `corrupted` (items here are never corrupted), `fractured` (`none`, a list of `{family: ...}`, or
 `{without: [...]}`), `crafted_mods`, `open_prefixes` / `open_suffixes` (at least that many free slots) and `requirements`, each a selector
@@ -238,7 +238,7 @@ class Player:
         crafter = self.world.crafter
         match action.kind:
             case "restart":
-                return self.world.start_item
+                return self.world.opened_start(rng)
             case "transmutation":
                 return crafter.transmute(item, rng)
             case "alteration":
@@ -279,7 +279,7 @@ class Player:
     def play(self, rng: Random, max_uses: int = MAX_USES, into: Play | None = None) -> Play:
         world, judge, route = self.world, self.judge, self.route
         play = into if into is not None else Play()
-        item = world.start_item
+        item = world.opened_start(rng)
         for _ in range(max_uses):
             status = judge.statuses(item)
             play.item = item
