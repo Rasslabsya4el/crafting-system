@@ -21,11 +21,17 @@ The main chat thinks and decides: the idea, the grill, the ticket, the plan, the
 - `finder` (Haiku 5.5): wide reading and search; the main chat keeps only its facts.
 - `checker` (Sonnet 5.5): every change, against its ticket, before it lands.
 
-Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. A `coder-light` prompt also carries the places to read with their line ranges; `finder` finds them when the main chat does not know them. Pieces that touch different files run in parallel, each coder with `isolation: "worktree"`.
+Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. A `coder-light` prompt also carries the places to read with their line ranges; `finder` finds them when the main chat does not know them. Pieces that touch different files run in parallel, each coder with `isolation: "worktree"`. Two limits on parallel work (retro #712):
+- PRs that change the recorded numbers of one route (goldens, fixtures, packed values) run one after another.
+- At most five tickets that need heavy runs are in flight at once; the next starts when `python .github/scripts/heavy_dispatch.py status` shows free budget.
+
+A root fix that also changes data lands as two PRs: first the mechanism, with tests on hand-worked numbers; then the data (a new snapshot) and its re-records.
 
 The owner's rules are in `docs/owner-rules.md` (`OR-1`, `OR-2`, ...). A brief that touches targets, routes, prices or pages names the rules from that file it must follow, and the `checker` reviews every change against the file as well as against its ticket. A PR's open points (findings, placeholders, places that contradict a rule) are not left in its prose: the PR's author files them as issues before asking to land, the `checker` confirms they are filed, and the main chat lands nothing without them.
 
 Model of the main chat: Opus for ideas, grills and decisions; Sonnet 5.5 for a stretch of plain implementation. A session started for one ticket runs on Sonnet 5.5 with effort high.
+
+Review comes before the expensive part: a coder reports once the code and its quick tests pass, the `checker` reviews that head, and only the head that passed review (after its fix round) gets the heavy runs and golden re-records, whose numbers the main chat checks from the diff.
 
 Landing a ticket: its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once the integration run (a `workflow_dispatch` of `ci.yml` on an `integ/...` branch holding `main` plus the PRs) is green on Ubuntu and Windows, the `checker` has passed it and its tests cover the ticket's "Done when"; a PR's own CI runs Ubuntu only and is feedback for its session, and a session that needs Windows early dispatches `ci.yml` on its branch; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging. A push to `main` starts no CI run: `main` is verified by the integration run, whose tree must equal `main` after landing (`gh workflow run ci.yml --ref main` tests it on demand; `docs/ci.md`).
 
@@ -36,6 +42,8 @@ Everything this repo needs lives inside this folder: worktrees in `.claude/workt
 ## Heavy runs
 
 **Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite, sweeps, solves and measurements go to GitHub (CI, or a heavy run), because a local multi-process sweep pins his machine at 100%. Heavy runs go **only through the dispatcher**: `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners N --command '...'`, never `gh workflow run run.yml`. The repo has 20 runner jobs at once; the dispatcher waits on the PC until merge CI keeps a buffer (`HEAVY_FLOOR` and `CI_RESERVE`, repository variables), and refuses a timeout over 60 minutes unless `--long` (one indivisible solve): split long sweeps into shorter parts. `python .github/scripts/heavy_dispatch.py status` shows the queue. Details: `docs/ci.md`.
+
+A helper never waits on a GitHub run: it dispatches the run and ends its turn with a report. The main chat waits with `python .github/scripts/wait_runs.py <run id>...` started in the background, then resumes the helper or hands its work to a fresh one. A re-record dispatched with `--commit <paths>` commits its own files onto the branch.
 
 ## Talking to the owner
 
