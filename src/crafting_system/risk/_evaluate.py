@@ -500,7 +500,8 @@ def _coarse_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins:
     the expected visits of the free states (the mean is linear in the costs and the visits do not depend on them).
     """
     found = expected_visits_checked(chain)
-    assert found is not None  # `choose_step` asked for the same visits of the same chain a moment ago
+    if found is None:  # `choose_step` asked for the same visits of the same chain a moment ago and got them: not getting them now is a defect, said with what is missing
+        raise RuntimeError("the coarse grid asked for the expected visits of a chain that `choose_step` had just found them for, and the second solve gave none")
     states, visits, error = found
     free = math.fsum(v for s, v in zip(states, visits) if low_bins[s] == 0)
     low_mean, low_error = _solve_costs(chain, [max(float(k), FREE_BINS) * step for k in low_bins])

@@ -43,14 +43,15 @@ DENSE_WORK = 1e11  # the most multiply-adds (bins to the horizon times cells of 
 
 
 def expected_visits_checked(chain: Chain) -> tuple[list[int], np.ndarray, float] | None:
-    """`(states that can finish, expected visits of each from the start, a bound on their relative error)`, or `None` (too many states, a visit count
+    """`(states that can finish, expected visits of each from the start, an estimate of their relative error)`, or `None` (too many states, a visit count
     the floats lose, or an error above `REFUSED_ABOVE`).
 
     The system is not `I - P` as the chain gives it: a state that stays with chance 1 - 1e-13 has `1 - p = 1e-13 +- 1e-16` there, and a dense solve of that
     is good to three digits (#615). Each state's row is divided by the chance to leave it (`leave`, the sum of its other chances, goals and lost mass
     included: no `1 - p`), `w` solves `(I - P')^T w = e_start` with `P'[s, t] = P[s, t] / leave[s]` and no diagonal, and the visits are `w / leave`. The
-    solve is refined and its componentwise backward error measured (`_linear.solve`); the bound on the relative error is that error times the condition
-    the system has (`_linear.forward_bound`), and it is what the caller widens its interval by.
+    solve is refined and its componentwise backward error measured (`_linear.solve`); the estimate of the relative error is that error times the condition
+    the system has (`_linear.forward_estimate`: measured by one more float solve with the same matrix, so an estimate and not a proof), and it is what the
+    caller widens its interval by.
     """
     states = chain.finishing_states()
     if not states or len(states) > DENSE_STATES:
@@ -72,7 +73,7 @@ def expected_visits_checked(chain: Chain) -> tuple[list[int], np.ndarray, float]
     if found is None:
         return None
     w, error = found
-    bound = _linear.forward_bound(transposed, start, w, error)
+    bound = _linear.forward_estimate(transposed, start, w, error)
     if not bound <= _linear.REFUSED_ABOVE or not np.all(np.isfinite(w)):
         return None
     return states, w / leave, bound

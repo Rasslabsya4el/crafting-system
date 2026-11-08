@@ -290,7 +290,7 @@ def test_a_matrix_that_is_singular_in_floats_has_no_solve_and_the_refinement_is_
     assert _linear.solve(np.zeros((0, 0)), np.zeros(0)) == (pytest.approx(np.zeros(0)), 0.0)
 
 
-def test_the_forward_bound_holds_the_true_error_of_an_answer_and_is_tiny_for_a_good_one():
+def test_the_forward_estimate_holds_the_true_error_of_an_answer_and_is_tiny_for_a_good_one():
     import numpy as np
 
     off = np.array([[0.0, 0.5], [0.25, 0.0]])
@@ -298,9 +298,9 @@ def test_the_forward_bound_holds_the_true_error_of_an_answer_and_is_tiny_for_a_g
     exact = np.array([2.0 / 0.875, 2.0 + 2.0 / 0.875 / 4.0])
     x, error = _linear.solve(off, rhs)
 
-    assert _linear.forward_bound(off, rhs, x, error) < 1e-13
+    assert _linear.forward_estimate(off, rhs, x, error) < 1e-13
     for wrong in (1e-9, 1e-6, 1e-3):  # an answer that is off by a known relative amount: the bound must cover it
         perturbed = exact * np.array([1.0 + wrong, 1.0 - wrong])
         measured = _linear.backward_error(off, rhs, perturbed)
-        assert _linear.forward_bound(off, rhs, perturbed, measured) >= float(np.max(np.abs(perturbed - exact) / exact))
-    assert _linear.forward_bound(np.array([[0.0, 1.0], [1.0, 0.0]]), rhs, rhs, 0.5) == math.inf  # a singular system has no bound
+        assert _linear.forward_estimate(off, rhs, perturbed, measured) >= float(np.max(np.abs(perturbed - exact) / exact))
+    assert _linear.forward_estimate(np.array([[0.0, 1.0], [1.0, 0.0]]), rhs, rhs, 0.5) == math.inf  # a singular system has no bound

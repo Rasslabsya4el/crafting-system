@@ -38,6 +38,8 @@ import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 
+from crafting_system.risk._linear import SAID_ABOVE  # one definition: a certified relative error above it is said (4 significant digits; as `cli/_route_flow.STIFF_ERROR` is for the chances of a step)
+
 NOT_NAMED = "kinds-not-named"
 OPT_IN = "kinds-opt-in"
 NOT_BUILT = "kinds-not-built"
@@ -454,7 +456,6 @@ def risk_limits(risk) -> tuple[Limit, ...]:
     return tuple(found)
 
 
-SAID_ABOVE = 1e-4  # a certified relative error above this is said: 4 significant digits (`risk._linear.SAID_ABOVE`, as `cli/_route_flow.STIFF_ERROR` for the chances of a step)
 
 
 def relative_error(estimate) -> float:

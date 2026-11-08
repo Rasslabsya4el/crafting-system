@@ -113,7 +113,7 @@ def test_a_stiff_policy_above_the_old_dense_fallback_count_is_solved_not_refused
     values = ps.evaluate_policy(work, leave, policy, np.zeros(work.n), ps.DENSE_LIMIT, 1e-13, info)
 
     assert info["policy_states"] == 6400 and info["linear_backward_error"] <= 1e-12
-    assert info["linear_forward_error"] > 1e-5  # what the backward error alone allows of the answer; the exact values below are far better
+    assert info["linear_error_floor"] > 1e-5  # the least that the backward error and the size of the answer allow the error to be (a lower bound; the exact values below are far better)
     exact = exact_values(graph, work, leave, BLOCKS)
     # (the backward error is 1e-15 and the answer is 6e11 times the right-hand side, so the digits that are certain are fewer than 16: 7 at 1e9, more at 1e13
     # where the 3-state rings are inverted whole and exactly; the iterate of the old code was 4e-4 off at 1e9 and wrong at 1e13)
@@ -149,13 +149,13 @@ def test_what_remains_when_the_cycles_do_not_fit_is_a_limit_that_names_the_memor
     work = ps.Work(graph)
     leave = work.nonself_sums(np.ones(work.n))
     monkeypatch.setattr(_packed_chain, "WOODBURY_CELLS", 1_000)  # the memory of a small machine
-    monkeypatch.setattr(ps, "ACCEPT_BOUND", 1e-3)  # the iterate (an error of 6e-5 allowed by its backward error) is accepted as it is
+    monkeypatch.setattr(ps, "ACCEPT_BOUND", 1e-3)  # the iterate (a true residual of 4e-4) is accepted as it is
     info: dict = {}
 
     ps.evaluate_policy(work, leave, policy, np.zeros(work.n), ps.DENSE_LIMIT, 1e-13, info)
 
     found = info["linear_limit"]
-    assert found["states"] == 6400 and found["rows"] == 3 and found["allowed"] == 1_000 and found["cells"] > 1_000 and 1e-10 < found["error"] <= 1e-3
+    assert found["states"] == 6400 and found["rows"] == 3 and found["allowed"] == 1_000 and found["cells"] > 1_000 and 1e-10 < found["residual"] <= 1e-3 and found["amplification"] > 1e5
     (limit,) = evaluation_limits(info)
     assert "6,400 states" in limit.why and "GB of memory" in limit.why and limit.what == "How much each state costs was found by approximation"
     assert evaluation_limits({}) == () and evaluation_limits({"policy_states": 6400}) == ()  # an exact solve, or none needed, says nothing
@@ -173,3 +173,47 @@ def test_the_shared_rows_of_the_policy_are_given_once_and_never_expanded_state_b
 
     assert solver.q == 3 and sorted(len(g) for g in solver.groups) == [533, 533, 534]  # BLOCKS / 3 rerolls take each kernel
     assert solver.cut.sum() == BLOCKS and not solver.cut[: 3 * BLOCKS].any()  # only the reroll states are cut
+
+
+def two_loops_and_a_dear_state(rounds: int, dear_cost: float):
+    """`(graph, policy)`: states a and b send each other on with the weight `rounds` against 1 for the goal (cost 1 each), `c` costs `dear_cost` and finishes.
+
+    The values of a and b are `rounds + 1` (a run goes round that many times); the right-hand side is as large as `dear_cost` at c, so the answer is only
+    `(rounds + 1) / dear_cost` times larger than the largest right-hand side, while the system is `rounds` ill-conditioned: a stiff state that feeds a stiff state.
+    """
+    builder = PackedBuilder()
+    weights = [rounds, 1]
+    builder.action(0, 1.0, builder.kernel([1, 3], weights))
+    builder.close_state(False)
+    builder.action(1, 1.0, builder.kernel([0, 3], weights))
+    builder.close_state(False)
+    builder.action(2, dear_cost, builder.kernel([3], [1.0]))
+    builder.close_state(False)
+    builder.close_state(True)
+    return builder.build(), np.array([0, 1, 2, -1])
+
+
+def test_an_iterate_with_a_tiny_backward_error_is_not_taken_for_an_answer_as_good_as_that_error(monkeypatch):
+    """The error an answer can have is its backward error times the condition of the system, which a ratio of the answer to the right-hand side only bounds from below.
+
+    Here the ratio is 1e5 and the backward error of the iterate 5e-16, so `backward * ratio` is 5e-11 and under the old test (1e-10) the iterate was taken; it is 1e-5 off.
+    """
+    rounds, dear = 10**10, 1e5
+    graph, policy = two_loops_and_a_dear_state(rounds, dear)
+    work = ps.Work(graph)
+    leave = work.nonself_sums(np.ones(work.n))
+    exact = np.array([rounds + 1.0, rounds + 1.0, dear])  # x = 1 + rounds / (rounds + 1) x
+    moved = np.array([1.0, 1.0, 0.0]) * (1e-10 * dear * rounds)  # along the direction the system hardly feels: a residual of 1e-10 of the largest right-hand side
+
+    def stalled(matvec, rhs, x0, tol):
+        x = np.asarray(exact, dtype=float) + moved
+        return x, float(np.linalg.norm(rhs - matvec(x)) / np.linalg.norm(rhs)), 1
+
+    monkeypatch.setattr(ps, "bicgstab_checked", stalled)
+    info: dict = {}
+
+    values = ps.evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, info)  # (0: no dense solve, the iterate path)
+
+    assert info["linear_residual_iterate"] > ps.DENSE_FALLBACK_RESIDUAL  # the iterate is judged on its residual, and that is above the line
+    assert info["linear_backward_error"] < 1e-12  # (the exact solve's, once it replaces the iterate)
+    assert values[:3] == pytest.approx(exact, rel=1e-6)  # not the iterate, 1e-5 off (the cycles of a ring that is gone round 1e10 times are good to 1e-7: its conditioning)

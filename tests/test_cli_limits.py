@@ -134,6 +134,24 @@ def test_g12_a_search_run_whole_past_the_budget_says_so_and_stays_exact():
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 
+def test_g21_a_policy_evaluation_that_stopped_short_of_the_exact_system_reaches_the_plans_limits(monkeypatch):
+    """#621, OR-13: `info["linear_limit"]` of the packed solve is read by `make_plan`, so the reader is told (it was written by the solver and read by nobody)."""
+    real = _plan.packed_result
+    plain = make_plan(DATA, load_target(R12, DATA), price_file(), solver="packed")
+
+    def stopped_short(*args, **kwargs):
+        packed = real(*args, **kwargs)
+        packed.info["linear_limit"] = {"states": 123_456, "residual": 3e-8, "amplification": 2.5e5, "why": "x", "rows": 900, "cells": 5e9, "allowed": 2.5e8}
+        return packed
+
+    monkeypatch.setattr(_plan, "packed_result", stopped_short)
+    plan = make_plan(DATA, load_target(R12, DATA), price_file(), solver="packed")
+
+    (said,) = [limit for limit in plan.limits if limit.what == "How much each state costs was found by approximation"]
+    assert "123,456 states" in said.why and "3.0e-08" in said.why and "250,000" in said.why and "40.0 GB" in said.why
+    assert not [limit for limit in plain.limits if "found by approximation" in limit.what]  # an exact solve says nothing
+
+
 def test_g14_a_tree_of_groups_of_item_states_says_it_and_keeps_the_numbers_exact(monkeypatch):
     monkeypatch.setattr(_plan, "VIEW_FROM_STATES", 0)
 

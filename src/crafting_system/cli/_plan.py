@@ -487,6 +487,8 @@ def make_plan(
         else:
             packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
         solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
+        if packed is not None:
+            limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")

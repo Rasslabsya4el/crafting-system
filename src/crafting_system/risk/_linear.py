@@ -65,8 +65,13 @@ def solve(off: np.ndarray, rhs: np.ndarray) -> tuple[np.ndarray, float] | None:
     return x, best
 
 
-def forward_bound(off: np.ndarray, rhs: np.ndarray, x: np.ndarray, error: float) -> float:
-    """A bound on the relative error of `x` (against the exact answer) for a system whose `I - off` is an M-matrix, from its backward error `error`.
+def forward_estimate(off: np.ndarray, rhs: np.ndarray, x: np.ndarray, error: float) -> float:
+    """An ESTIMATE of the relative error of `x` (against the exact answer) for a system whose `I - off` is an M-matrix, from its backward error `error`.
+
+    It is not a rigorous bound: the factor is found by one more solve with the same matrix in floats, and that solve has its own rounding (on a system stiff
+    enough to lose every digit the factor itself is wrong). The `n + 3` units of `EPS` added to it cover the rounding of the product that measured `error`,
+    not that of the solve. It is what the certified ranges and the limits of `risk/` widen by; where the arithmetic is nearer its end than the tolerances
+    (`REFUSED_ABOVE`), the figure is refused instead.
 
     With `s = |x| + |off| |x| + |rhs|` the residual is at most `error s` in each state, and the exact `(I - off)^-1` is not negative, so the
     error of `x` is at most `error (I - off)^-1 s`: one more solve with the same matrix gives it, and it is divided by the state's own value. This is

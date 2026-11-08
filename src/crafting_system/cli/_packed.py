@@ -346,7 +346,7 @@ def evaluation_limits(info: Mapping) -> tuple[Limit, ...]:
         Limit(
             _limits.SOLVE,
             "How much each state costs was found by approximation",
-            f"the plan has {found['states']:,} states whose costs depend on each other through long loops, and the approximation stopped at a distance of {found['error']:.1e} from the exact system{need}",
+            f"the plan has {found['states']:,} states whose costs depend on each other through long loops, and the approximation stopped at a true residual of {found['residual']:.1e}, and on a system this stiff the costs can be off by more than a residual: by that times a factor of at least {found['amplification']:,.0f}{need}",
             "The error bound printed with the plan is certified by a separate check against the exact rules of the model; the costs are not shown to be closer than that bound.",
         ),
     )

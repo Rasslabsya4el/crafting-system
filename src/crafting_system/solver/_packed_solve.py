@@ -569,13 +569,14 @@ def evaluate_policy(
     (`info["linear_backward_error"]`), which is what a stiff system can reach (the first cannot get below the rounding of the terms when the answer is
     far larger than the right-hand side).
 
-    An answer is good when its residual is within `DENSE_FALLBACK_RESIDUAL`, or when the error its backward error allows is (that error times how many
-    times larger than the right-hand side the answer is: `info["linear_forward_error"]`). Otherwise (a stiff system: BiCGSTAB cannot follow a cycle that a
-    run goes round millions of times, and an iterate that it does follow is good to a backward error of 1e-15 and to 1e-4 as an answer) the exact solve is
-    made by the cycles of the policy's chain, whatever the number of states (`policy_solver`: components inverted whole, the rows many states share cut and
-    put back by the Woodbury identity, then refined while the backward error falls). It costs the cells of the cut rows, not a count of states; when they do
-    not fit in `_packed_chain.WOODBURY_CELLS` the iterate stays, accepted only if its residual or the error its backward error allows is within `ACCEPT_BOUND`
-    (the certificate that follows bounds the error of the values), else `ConvergenceError` says what the exact solve would have cost.
+    An iterate is good when its true residual is within `DENSE_FALLBACK_RESIDUAL`, a dense solve when its backward error is. The backward error of an
+    iterate is NOT what makes it good: it is a measure of the system's relative change, and the error of the values is that times the condition of `I - P`,
+    which the ratio of the answer to the right-hand side (`info["linear_error_floor"]`, a lower bound named as one) only bounds from below. Otherwise (a stiff
+    system: BiCGSTAB cannot follow a cycle that a run goes round millions of times, and an iterate that it does follow is good to a backward error of 1e-15
+    and to 1e-4 as an answer) the exact solve is made by the cycles of the policy's chain, whatever the number of states (`policy_solver`: components
+    inverted whole, the rows many states share cut and put back by the Woodbury identity, then refined while the backward error falls). It costs the cells
+    of the cut rows, not a count of states; when they do not fit in `_packed_chain.WOODBURY_CELLS` the iterate stays, accepted only if its true residual is
+    within `ACCEPT_BOUND` (the certificate that follows bounds the error of the values), else `ConvergenceError` says what the exact solve would have cost.
     `info["linear_limit"]` holds what remained, derived from that cost.
     """
     g = work.g
@@ -630,20 +631,21 @@ def evaluate_policy(
 
     scale = max(float(np.max(np.abs(rhs))), 1e-300)
 
-    def reach_of(x: np.ndarray, backward: float) -> float:
-        """The error of the values that a backward error allows: that error times how many times larger than the right-hand side the answer is (the condition of `I - P` is at least that)."""
+    def floor_of(x: np.ndarray, backward: float) -> float:
+        """A LOWER bound on the error an answer can have, not the error: its backward error times how many times larger than the right-hand side it is.
+
+        The error of an answer is its backward error times the condition of `I - P`, and the ratio of this answer to this right-hand side is only the least that
+        condition can be (a stiff state that feeds a stiff state squares it: a ratio of 1e5 at a backward error of 1e-15 is 1e-10 here and can be 1e-5 off).
+        It is kept as `info["linear_error_floor"]` for the reader of a limit; no decision of this function rests on it.
+        """
         return backward * max(1.0, float(np.max(np.abs(x))) / scale)
 
     error = backward_error(terms, rhs, solved)
-    reach = reach_of(solved, error)
-    info["linear_backward_error"], info["linear_forward_error"] = error, reach
-    if residual is None:  # a dense solve is the direct method already: the cycles are tried only if its own backward error is bad
-        not_good = not error <= DENSE_FALLBACK_RESIDUAL
-    else:
-        not_good = not residual <= DENSE_FALLBACK_RESIDUAL and not reach <= DENSE_FALLBACK_RESIDUAL
-    if not_good:
+    info["linear_backward_error"], info["linear_error_floor"] = error, floor_of(solved, error)
+    # what is judged: the true residual of an iterate (a measured quantity, and the old test), the backward error of a direct solve (stable by the division of the self-loops)
+    judged = error if residual is None else residual
+    if not judged <= DENSE_FALLBACK_RESIDUAL:
         # the iterate (or the dense solve) is not good: the exact solve by the cycles of the chain, whatever the number of states
-        shown = reach if residual is None else residual
         if residual is not None:
             info["linear_residual_iterate"] = residual
         reason, cost = None, {}
@@ -667,27 +669,30 @@ def evaluate_policy(
             exact, exact_error, reason = None, INF, (str(stopped) or "the memory of the run, or a block of the chain that is singular in floats, stopped it")
             cost = {"rows": stopped.rows, "cells": stopped.cells, "allowed": stopped.allowed} if isinstance(stopped, CyclesTooTangled) else {}
         accepted = False
-        if exact is not None and (exact_error <= DENSE_FALLBACK_RESIDUAL or reach_of(exact, exact_error) < reach):
-            # a direct solve that is backward stable is taken over an iterate whose error the backward error does not bound
-            solved, error, reach, accepted = exact, exact_error, reach_of(exact, exact_error), exact_error <= DENSE_FALLBACK_RESIDUAL
-            info["linear_replaced"] = info.get("linear_replaced", 0) + 1
-            info["linear_backward_error"], info["linear_forward_error"] = error, reach
+        if exact is not None:
             with np.errstate(all="ignore"):  # the residual that goes with the values taken, not with the iterate thrown away
-                taken = float(np.linalg.norm(rhs - (solved - terms(solved))) / max(float(np.linalg.norm(rhs)), 1e-300))
-            info["linear_residual"] = taken
-            residual = taken if residual is not None else None
-        elif exact is not None:
-            reason = f"the exact solve by the cycles of the chain reached only a backward error of {exact_error:.3g}"
-        best = reach if residual is None else min(residual, reach)
-        if not accepted and not best <= DENSE_FALLBACK_RESIDUAL:
-            if not best <= ACCEPT_BOUND:  # a stop-and-say-so rail: a residual this large is not a value the certificate could accept
+                taken = float(np.linalg.norm(rhs - (exact - terms(exact))) / max(float(np.linalg.norm(rhs)), 1e-300))
+            accepted = exact_error <= DENSE_FALLBACK_RESIDUAL
+            if accepted or (taken < residual if residual is not None else exact_error < error):  # a direct solve that is backward stable is taken over an iterate
+                solved, error = exact, exact_error
+                info["linear_replaced"] = info.get("linear_replaced", 0) + 1
+                info["linear_backward_error"], info["linear_error_floor"], info["linear_residual"] = error, floor_of(solved, error), taken
+                residual = taken if residual is not None else None
+                judged = error if residual is None else residual
+            if not accepted:
+                reason = f"the exact solve by the cycles of the chain reached only a backward error of {exact_error:.3g}"
+        if not accepted and not judged <= DENSE_FALLBACK_RESIDUAL:
+            if not judged <= ACCEPT_BOUND:  # a stop-and-say-so rail: a residual this large is not a value the certificate could accept
                 raise ConvergenceError(
-                    f"the evaluation of a policy of {m:,} states did not reach a true residual of {ACCEPT_BOUND:g} (it is {shown:.3g}) "
+                    f"the evaluation of a policy of {m:,} states did not reach a true residual of {ACCEPT_BOUND:g} (it is {judged:.3g}) "
                     f"and the exact solve by its cycles could not be made: {reason}",
                     INF,
                 )
-            if best >= info.get("linear_limit", {}).get("error", 0.0):  # (the worst of the evaluations of a solve is the one that is said)
-                info["linear_limit"] = {"states": m, "error": best, "why": reason, **cost}  # accepted as it is; the certificate that follows bounds the error of the values
+            if judged >= info.get("linear_limit", {}).get("residual", 0.0):  # (the worst of the evaluations of a solve is the one that is said)
+                # accepted as it is; the certificate that follows bounds the error of the values. `amplification`: how many times the answer is the right-hand side,
+                # the least the condition of the system can be (so the error is the residual times at least that, in the worst case: not a bound, a reason to say it)
+                amplification = max(1.0, float(np.max(np.abs(solved))) / scale)
+                info["linear_limit"] = {"states": m, "residual": judged, "amplification": amplification, "why": reason, **cost}
     if not np.all(np.isfinite(solved)):
         raise ConvergenceError("the evaluation of a policy did not give finite values", INF)
     values[states] = solved
