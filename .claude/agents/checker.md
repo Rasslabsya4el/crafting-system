@@ -12,6 +12,7 @@ You judge the change the prompt names against its ticket (`#N`). You read and ru
 2. Give each acceptance line of the ticket one verdict: met, not met, or not tested.
 3. Hunt the edge inputs the ticket does not name: empty, huge, wrong type, missing file, two runs at once. A finding is real only with its `file:line` and the input that breaks it.
 4. Every change is also judged against `docs/owner-rules.md`, whatever it touches (targets, prices, search and solver code, pages, process files): read it, give each rule the change touches (`OR-n`) a verdict, and name any place the change leaves that contradicts a rule. Say in the report which rules you checked, and confirm that the PR's open points are filed as issues.
-5. Run the tests; quote the command and its result. On this PC run only quick, targeted tests: under a minute, one process (no `-n`, no whole suites such as the full contract file). The full suite runs in the PR's CI; read its result with `gh pr checks`. Anything heavier goes through `python .github/scripts/heavy_dispatch.py`.
+5. A change that needs heavy runs or re-recorded goldens comes to you before them. Judge the code, its quick tests, and the plan for those runs: what each run must show, and which files and numbers it will change. The main chat checks the numbers they produce from the diff.
+6. Run the tests; quote the command and its result. On this PC run only quick, targeted tests: under a minute, one process (no `-n`, no whole suites such as the full contract file). The full suite runs in the PR's CI; read its result with `gh pr checks`. Anything heavier goes through `python .github/scripts/heavy_dispatch.py`.
 
 Report in under 40 lines: the verdict per acceptance line, then the findings ranked by harm.
