@@ -20,6 +20,7 @@ runs of its inputs included: with weight 1 on the recombinations, the expected n
 
 from ._evaluate import evaluate
 from ._free import is_free as is_free_cost
+from ._lump import Lumped, lump
 from ._readings import Baseline, IntervalReport, Route, has_inputs, solve_readings
 from ._report import Estimate, GridInfo, RiskReport
 from ._visits import expected_total
@@ -29,11 +30,13 @@ __all__ = [
     "Estimate",
     "GridInfo",
     "IntervalReport",
+    "Lumped",
     "RiskReport",
     "Route",
     "evaluate",
     "expected_total",
     "has_inputs",
     "is_free_cost",
+    "lump",
     "solve_readings",
 ]

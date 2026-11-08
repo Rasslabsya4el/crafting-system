@@ -345,6 +345,23 @@ start: bought
     assert {action.label for action in result.policy.values()} == {"restart", CHAOS, DRAW_LABEL}
 
 
+def test_the_risk_of_a_route_is_that_of_its_whole_policy_though_it_is_read_on_blocks_of_alike_states(plan):
+    """#717: `evaluate_route` hands the risk the policy lumped (`risk.lump`); the numbers are those of the policy state by state."""
+    from crafting_system.cli._offers import free_action_cost
+    from crafting_system.cli._plan import evaluate_risk
+
+    for text in ("rules:\n  - do: Chaos Orb\n", f"rules:\n  - do: {REFORGE}\n"):
+        result = evaluate_route(plan, read(text, plan), DATA)
+
+        whole = evaluate_risk(result.policy, plan.start, plan.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))
+
+        for name in ("success_probability", "mean", "variance", "cvar"):
+            assert getattr(result.risk, name).value == pytest.approx(getattr(whole, name).value, rel=1e-9)
+        for level in (0.5, 0.9):
+            assert result.risk.quantiles[level].low == pytest.approx(whole.quantiles[level].low, rel=1e-9)
+            assert result.risk.quantiles[level].high == pytest.approx(whole.quantiles[level].high, rel=1e-9)
+
+
 # --- the reader's errors -----------------------------------------------------------------------------
 
 
