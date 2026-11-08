@@ -662,6 +662,7 @@ def check_approximate_marked(page: Page) -> list[Fault]:
 _SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price")
 _COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) (?:≈ )?[\d.,]+ c(?:\s|$)")
 _PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
+_MARKET_SOURCES = tuple(source for source in _SOURCES if source not in ("hand price", "default price"))  # a price of these rests on trades or listings: a plain fact shows how many
 
 
 _BEHIND = re.compile(r"(?P<depth>[\d,]+(?:\.\d+)?) units behind it, the plan buys about (?P<uses>[\d,]+(?:\.\d+)?)")
@@ -671,7 +672,7 @@ _PRICE_INPUT = re.compile(r"^The price of (?P<name>.+?) is [\d.,]+ Chaos, an app
 def check_price_source_shown(page: Page) -> list[Fault]:
     """OR-7: the goal card's "Prices" names where each price came from, and no price stands unmarked when it is not a plain fact (#616, #598).
     Every line after the league line says its source (the exchange, the trade site's instant buyout, a hand price, a previous league ...); a
-    price of an earlier league or Standard, a price taken for a wider item, and a price on fewer units than the plan buys ("N units behind it,
+    price of an earlier league or Standard, a price taken for a wider item, a price that shows no depth (its provenance is not recorded), and a price on fewer units than the plan buys ("N units behind it,
     the plan buys about M", N below M) say "approximate:" and have their line in "Approximate inputs" ("The price of X is ..."); a line in
     "Approximate inputs" about a price has its line in "Prices"; and every resource of a step's "Cost per use" has a line (R04's page printed
     "league Allflame, fetched 2026-10-31" and nothing else, #598)."""
@@ -696,6 +697,8 @@ def check_price_source_shown(page: Page) -> list[Fault]:
                     fault("goal card, Prices", f"a price of an earlier league that is not marked approximate: {text[:100]}")
                 if "taken for a wider item" in text:
                     fault("goal card, Prices", f"a price taken for a wider item that is not marked approximate: {text[:100]}")
+                if any(source in text for source in _MARKET_SOURCES) and "units behind it" not in text:
+                    fault("goal card, Prices", f"a market price that shows no depth and is not marked approximate (its provenance is not recorded): {text[:100]}")
                 behind = _BEHIND.search(text)
                 if behind and float(behind.group("depth").replace(",", "")) < float(behind.group("uses").replace(",", "")):
                     fault("goal card, Prices", f"a price on fewer units than the plan buys that is not marked approximate: {text[:100]}")

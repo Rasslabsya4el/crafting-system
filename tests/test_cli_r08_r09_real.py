@@ -11,7 +11,7 @@ tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_
 
 The file stays the snapshot of 2026-10-31 on purpose (#616): at the prices of 2026-11-07 (the Prismatic Fossil at 5.9 Chaos, not 0.2) the pruned search of R08 does not
 finish in 40 minutes on a runner, so these tests could not plan it. The prices of the newer snapshot do not change what the tests check; the plan at them waits for the
-search to scale (the issue filed by PR #662).
+search to scale (#702: R08 and R09 are not planned at the new prices; #703: their benchmark verdicts are measured at the old ones).
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees; at the same prices the
 solver's mean is no more than the given route's. Times and state counts are in the PR, not asserted (ADR-0014).

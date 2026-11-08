@@ -28,6 +28,7 @@ from typing import Any
 
 from ..data import Mod
 from .price_file import MAX_AGE_DAYS, MarketRecord, PriceEntry, PriceFile, load_price_file, write_price_file
+from .provenance import EXACT, TRADE, WIDER, Provenance
 from .trade_http import MAX_FETCH_IDS, TradeClient, TradeError
 from .trade_market import (
     DEFAULT_MIN_LISTINGS,
@@ -381,7 +382,34 @@ def within(indexed: str | None) -> str:
     return "any time" if indexed is None else f"within {indexed}"
 
 
-def entry_for(price: TradePrice) -> PriceEntry:
+@dataclass(frozen=True)
+class ExactListings:
+    """What the exact item has on the site, read beside a price taken for a wider item: its listings and what its cheapest few ask (Chaos)."""
+
+    total: int
+    price: float | None  # the mean of the cheapest few (OR-8); None when none could be priced
+
+
+def trade_provenance(
+    price: TradePrice, taken_for: str | None = None, exact: ExactListings | None = None, stand_in: str | None = None
+) -> Provenance:
+    """Where a trade price came from, as data (#616): the site, the league and day, the depth, and the item it was taken for.
+
+    The depth is the listings the mean is made of (a unit each). `taken_for` says in words what a search wider than the item asked for
+    (`query_compare.wider_words`), `stand_in` what a price that is not a search of the item stands in for (a normal base the plan makes
+    rare); either makes the price a stand-in, and `exact` is the exact item's own listings if they were read. Every writer of a trade
+    price entry calls this one function (`entry_for`; `.github/scripts/price_snapshot.py`).
+    """
+    wider = taken_for or stand_in
+    listed = exact if wider and exact is not None else None
+    return Provenance(
+        TRADE, price.league, price.date.isoformat(), float(price.used), "units", price.used, WIDER if wider else EXACT, wider,
+        None if listed is None else listed.total, None if listed is None else listed.price,
+    )  # fmt: skip
+
+
+def entry_for(price: TradePrice, taken_for: str | None = None, exact: ExactListings | None = None, stand_in: str | None = None) -> PriceEntry:
+    """The price-file entry of a trade price, with its provenance (`trade_provenance`); `cli trade` and the snapshot script both write it."""
     note = (
         f"mean of the {price.used} cheapest instant-buyout listings of {price.fetched} fetched, "
         f"{price.listings} on the site, listed {within(price.indexed)}"
@@ -396,7 +424,7 @@ def entry_for(price: TradePrice) -> PriceEntry:
         "query_hash": price.query_hash,
         "query": price.query,
     }
-    return PriceEntry(price.chaos, TRADE_SOURCE, note, detail)
+    return PriceEntry(price.chaos, TRADE_SOURCE, note, detail, trade_provenance(price, taken_for, exact, stand_in))
 
 
 def refuse_name_collision(name: str, existing: PriceEntry | None) -> None:

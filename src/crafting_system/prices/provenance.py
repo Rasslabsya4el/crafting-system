@@ -18,9 +18,12 @@ a plain fact or an approximate input; this module only holds the record, writes 
   and what they ask (`exact_price`, in Chaos), so a reader sees both.
 * `other`: the reading that was not taken, when two were compared (the same day's trade listings beside a thin
   exchange line, `{"kind", "chaos", "depth"}`).
+* `trade_unread`: why the trade site's offers were not read beside this price when the fetch meant to (the site blocked the
+  run, or the request budget was spent); a plan that buys more than the price's depth says so.
 
 An entry with no provenance block (a file written before #616, a hand-written test file) is read from its `source`
-and `detail` as far as they go (`derive`), and is not judged on depth: nothing was recorded to judge it by.
+and `detail` as far as they go (`derive`), and is an approximate input: nothing was recorded to show it is of today's league,
+of the exact item and deep enough (`price_marks`).
 Nothing here reads the clock.
 """
 
@@ -87,6 +90,7 @@ class Provenance:
     exact_listings: int | None = None  # a stand-in: the listings the exact item has
     exact_price: float | None = None  # a stand-in: what those listings ask, in Chaos (their mean)
     other: Mapping[str, Any] | None = None  # the reading not taken: {"kind", "chaos", "depth"}
+    trade_unread: str | None = None  # why the trade site's offers were not read beside this price when a fetch meant to ("blocked", "request budget spent")
     recorded: bool = True  # False for a provenance derived from a source string alone (`derive`)
 
     def __post_init__(self) -> None:
@@ -117,7 +121,7 @@ def to_json(provenance: Provenance) -> dict[str, Any]:
         out["listings"] = provenance.listings
     if provenance.item != EXACT:
         out["item"] = provenance.item
-    for key in ("for_item", "exact_listings", "exact_price", "other"):
+    for key in ("for_item", "exact_listings", "exact_price", "other", "trade_unread"):
         value = getattr(provenance, key)
         if value is not None:
             out[key] = dict(value) if isinstance(value, Mapping) else value
@@ -128,7 +132,7 @@ def from_json(raw: object, where: str) -> Provenance:
     """A provenance from its JSON object; a bad shape is a `ValueError` that names `where`."""
     if not isinstance(raw, dict):
         raise ValueError(f"{where}: provenance must be an object")
-    unknown = sorted(set(raw) - {"kind", "league", "date", "depth", "depth_unit", "listings", "item", "for_item", "exact_listings", "exact_price", "other"})
+    unknown = sorted(set(raw) - {"kind", "league", "date", "depth", "depth_unit", "listings", "item", "for_item", "exact_listings", "exact_price", "other", "trade_unread"})
     if unknown:
         raise ValueError(f"{where}: provenance has an unknown key {unknown[0]!r}")
     for key in ("kind", "league", "date"):
@@ -142,6 +146,8 @@ def from_json(raw: object, where: str) -> Provenance:
             raise ValueError(f"{where}: provenance {key} must be a whole number, zero or more")
     if "for_item" in raw and not isinstance(raw["for_item"], str):
         raise ValueError(f"{where}: provenance for_item must be a string")
+    if "trade_unread" in raw and not isinstance(raw["trade_unread"], str):
+        raise ValueError(f"{where}: provenance trade_unread must be a string")
     if "other" in raw and not isinstance(raw["other"], dict):
         raise ValueError(f"{where}: provenance other must be an object")
     try:
@@ -149,7 +155,7 @@ def from_json(raw: object, where: str) -> Provenance:
             raw["kind"], raw["league"], raw["date"],
             None if raw.get("depth") is None else float(raw["depth"]),
             raw.get("depth_unit", UNITS), raw.get("listings"), raw.get("item", EXACT), raw.get("for_item"),
-            raw.get("exact_listings"), None if raw.get("exact_price") is None else float(raw["exact_price"]), raw.get("other"),
+            raw.get("exact_listings"), None if raw.get("exact_price") is None else float(raw["exact_price"]), raw.get("other"), raw.get("trade_unread"),
         )  # fmt: skip
     except ValueError as error:
         raise ValueError(f"{where}: {error}") from None

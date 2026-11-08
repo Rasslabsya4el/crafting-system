@@ -14,7 +14,7 @@ from pathlib import Path
 
 from ..config import load_config
 from .fallbacks import MIN_COUNT
-from .deepen import deepen_with_trade, exchange_entry
+from .deepen import Deepened, ReadStopped, deepen_with_trade, exchange_entry, mark_unread
 from .fetch import fetch_price_file
 from .http_json import GetJson, SourceError, http_get_json, paced
 from .price_names import FORESIGHT_PRICE_NAMES, canonical_price_name
@@ -31,7 +31,7 @@ from .price_file import (
     write_price_file,
 )
 from .trade_exchange import exchange_body, read_offers, static_ids
-from .trade_http import RateLimiter, RequestBudget, TradeBlocked, TradeClient, TradeError, Transport, package_version, urllib_transport, user_agent
+from .trade_http import BudgetExceeded, RateLimiter, RequestBudget, TradeBlocked, TradeClient, TradeError, Transport, package_version, urllib_transport, user_agent
 from .trade_pricing import merge_trade_prices, stale_trade_warnings
 
 
@@ -81,6 +81,7 @@ def main(
         wanted = [*_read_wanted(args.wanted_file), *FORESIGHT_PRICE_NAMES]  # the Lock and its burns are always wanted (ADR-0056)
         price_path = default_price_file_path(config)
         overrides_path = default_overrides_path(config)
+        unread: dict[str, str] = {}
         if args.command == "fetch":
             instant = now if now is not None else datetime.now(UTC)
             old_file, old_problem = _old_price_file(price_path)
@@ -103,11 +104,10 @@ def main(
             )
             new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path)[0])
             if args.trade_below is not None:
-                new_file, deepen_warnings = _deepen(
-                    new_file, wanted, args.trade_below, instant, env, transport, sleep, monotonic
-                )
-                trade_warnings = [*trade_warnings, *deepen_warnings]
-            write_price_file(price_path, new_file)
+                deepened = _deepen(new_file, wanted, args.trade_below, instant, env, transport, sleep, monotonic)
+                new_file, unread = deepened.price_file, deepened.unread
+                trade_warnings = [*trade_warnings, *deepened.warnings]
+            write_price_file(price_path, new_file)  # what poe.ninja and the trade site gave is kept whether or not the rest could be read
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
             if result.thin:
                 print(
@@ -116,6 +116,11 @@ def main(
                 )
             for warning in [*result.warnings, *trade_warnings]:
                 print(f"Warning: {warning}")
+            for reason in sorted(set(unread.values())):
+                names = sorted(name for name, why in unread.items() if why == reason)
+                print(f"Error: {len(names)} names were not read on the trade site ({reason}); the prices from poe.ninja are written and these are marked unread:", file=sys.stderr)
+                for name in names:
+                    print(f"  {name}", file=sys.stderr)
         merged = load_prices(price_path, overrides_path)  # overrides count as priced
         if args.command == "check":
             print(f"League {merged.league}, fetched {merged.fetched_at:%Y-%m-%d}: {len(merged.prices)} prices")
@@ -130,6 +135,8 @@ def main(
             print(f"No price for {len(missing)} wanted resources:")
             for name in missing:
                 print(f"  {name}")
+        if unread:
+            return 1  # the file is written, but the run did not read what it meant to: a scheduled run must show it is incomplete
     except (SourceError, TradeError, PriceFileNotFound, ValueError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
@@ -145,8 +152,12 @@ def _deepen(
     transport: Transport | None,
     sleep: Callable[[float], None] | None,
     monotonic: Callable[[], float] | None,
-) -> tuple[PriceFile, list[str]]:
-    """The price file with the trade site's offers read for the thin and the missing names of `wanted` (#616)."""
+) -> Deepened:
+    """The price file with the trade site's offers read for the thin and the missing names of `wanted` (#616).
+
+    A blocked site or a spent request budget stops the reading, never the run: the names not yet read keep their poe.ninja price,
+    marked unread (`Provenance.trade_unread`), and are returned in `unread` with the reason, for the caller to write and report.
+    """
     client = TradeClient(
         transport if transport is not None else urllib_transport(),
         user_agent(package_version()),
@@ -154,7 +165,12 @@ def _deepen(
         RequestBudget(MAX_DEEPEN_REQUESTS),
         None,  # anonymous: no session is ever sent
     )
-    ids = static_ids(client.data_static())
+    try:
+        ids = static_ids(client.data_static())
+    except TradeError as error:
+        reason = _why_stopped(error)
+        marked, left = mark_unread(price_file, wanted, reason, below)
+        return Deepened(marked, [], dict.fromkeys(left, reason))
     rates = {"chaos": 1.0, "divine": price_file.chaos_per_divine}
     day = now.astimezone(UTC).date()
 
@@ -164,13 +180,22 @@ def _deepen(
             return None  # not an item of the bulk exchange (a base, a beast, a start item)
         try:
             reading = read_offers(client.exchange(price_file.league, exchange_body(item_id)), rates)
-        except TradeBlocked:
-            raise
+        except (TradeBlocked, BudgetExceeded) as error:
+            raise ReadStopped(_why_stopped(error)) from error
         except TradeError:
             return None  # the site refused this one item (not a block): the name keeps the price it has
         return None if reading is None else exchange_entry(reading, price_file.league, day, item_id)
 
     return deepen_with_trade(price_file, [name for name in wanted if name in ids], read, below)
+
+
+def _why_stopped(error: TradeError) -> str:
+    """The reason a trade reading stopped, in the words a price mark and the run's output print."""
+    if isinstance(error, BudgetExceeded):
+        return "the request budget of the run was spent"
+    if isinstance(error, TradeBlocked):
+        return "the trade site blocked the run"
+    return "the trade site could not be read"
 
 
 def _old_price_file(path: Path) -> tuple[PriceFile | None, str | None]:

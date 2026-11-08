@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from crafting_system.prices import PriceEntry, PriceFile
-from crafting_system.prices.deepen import deepen_with_trade, exchange_entry
+from crafting_system.prices.deepen import ReadStopped, deepen_with_trade, exchange_entry
 from crafting_system.prices.provenance import EXCHANGE, PREVIOUS_LEAGUE, TRADE, Provenance
 from crafting_system.prices.trade_exchange import ExchangeReading, exchange_body, read_offers, static_ids
 
@@ -53,7 +53,7 @@ def test_the_recorded_offer_is_18_chaos_a_unit_on_24_units():
 def test_the_price_is_the_mean_of_the_cheapest_five_offers_and_the_depth_the_units_they_hold():
     offers = [offer(ask, units) for ask, units in [(10, 2), (11, 3), (12, 4), (13, 5), (14, 6), (50, 1000), (60, 1000)]]
 
-    got = read_offers(answer(*offers), RATES, k=5, min_offers=1)
+    got = read_offers(answer(*offers), RATES, k=5)
 
     assert got.chaos == pytest.approx(12.0)
     assert got.depth == 20.0
@@ -61,19 +61,20 @@ def test_the_price_is_the_mean_of_the_cheapest_five_offers_and_the_depth_the_uni
 
 
 def test_the_cheapest_are_found_whatever_order_the_site_lists_them_in():
-    got = read_offers(answer(offer(50, 9), offer(10, 2), offer(30, 4)), RATES, k=2, min_offers=1)
+    got = read_offers(answer(offer(50, 9), offer(10, 2), offer(30, 4)), RATES, k=2)
 
     assert (got.chaos, got.depth) == (20.0, 6.0)
 
 
-def test_a_book_of_fewer_than_ten_offers_is_priced_by_its_median_so_one_odd_offer_cannot_set_it():
-    """The Screaming Essence of Spite on 2026-11-07: 5, 10, 15 and 35 Chaos and one Divine Orb (400 Chaos at this rate): the mean is 93, the median 15."""
-    book = answer(offer(5, 11), offer(10, 59), offer(15, 1), offer(35, 18), offer(1, 2, currency="divine"))
+def test_a_book_of_few_offers_is_priced_like_any_other_by_the_mean_of_the_cheapest_few_whatever_their_number():
+    """OR-8: the mean of the cheapest few. No count of offers turns it into a median or into no price (OR-12)."""
+    book = answer(offer(5, 11), offer(10, 59), offer(15, 1))
 
-    got = read_offers(book, {"chaos": 1.0, "divine": 400.0})
+    got = read_offers(book, RATES)
 
-    assert got.thin and got.chaos == 15.0 and got.depth == 91.0 and got.used == 5
-    assert not read_offers(book, RATES, min_offers=5).thin and read_offers(book, RATES, min_offers=5).chaos == pytest.approx(93.0)
+    assert got.chaos == pytest.approx(10.0) and got.depth == 71.0 and (got.used, got.offers) == (3, 3)
+    one = read_offers(answer(offer(12.5, 94)), RATES)
+    assert (one.chaos, one.depth, one.used) == (12.5, 94.0, 1)
 
 
 def test_an_offer_asked_in_divine_orbs_is_turned_to_chaos_per_unit():
@@ -110,7 +111,8 @@ def test_the_trade_offers_win_over_a_thin_exchange_line_and_the_exchange_reading
     """#616: 0.2 Chaos on 3 units against 8 on 24 in stock."""
     start = file(**{"Prismatic Fossil": ninja_entry(0.2, 3.0)})
 
-    got, warnings = deepen_with_trade(start, ["Prismatic Fossil"], lambda name: reading(8.0, 24.0))
+    outcome = deepen_with_trade(start, ["Prismatic Fossil"], lambda name: reading(8.0, 24.0))
+    got, warnings = outcome.price_file, outcome.warnings
 
     entry = got.prices["Prismatic Fossil"]
     assert (entry.chaos, entry.source, entry.provenance.kind, entry.provenance.depth) == (8.0, "trade-api", TRADE, 24.0)
@@ -121,7 +123,8 @@ def test_the_trade_offers_win_over_a_thin_exchange_line_and_the_exchange_reading
 def test_the_exchange_line_stays_when_it_is_the_deeper_one_and_the_trade_reading_is_kept_beside_it():
     start = file(**{"Prismatic Fossil": ninja_entry(6.0, 40.0)})
 
-    got, _ = deepen_with_trade(start, ["Prismatic Fossil"], lambda name: reading(18.0, 24.0))
+    outcome = deepen_with_trade(start, ["Prismatic Fossil"], lambda name: reading(18.0, 24.0))
+    got, warnings = outcome.price_file, outcome.warnings
 
     entry = got.prices["Prismatic Fossil"]
     assert (entry.chaos, entry.provenance.kind) == (6.0, EXCHANGE)
@@ -129,7 +132,8 @@ def test_the_exchange_line_stays_when_it_is_the_deeper_one_and_the_trade_reading
 
 
 def test_a_name_with_no_price_gets_the_trade_reading_and_one_with_nothing_anywhere_gets_a_warning_and_stays_unpriced():
-    got, warnings = deepen_with_trade(file(), ["A", "B"], lambda name: reading(3.0, 5.0) if name == "A" else None)
+    outcome = deepen_with_trade(file(), ["A", "B"], lambda name: reading(3.0, 5.0) if name == "A" else None)
+    got, warnings = outcome.price_file, outcome.warnings
 
     assert got.prices["A"].chaos == 3.0 and "B" not in got.prices
     assert any(w.startswith("B:") and "no offer on the trade site" in w for w in warnings)
@@ -138,7 +142,8 @@ def test_a_name_with_no_price_gets_the_trade_reading_and_one_with_nothing_anywhe
 def test_this_leagues_reading_beats_a_previous_leagues_price_whatever_the_depths():
     start = file(**{"Shrieking Essence of Fear": ninja_entry(0.3425, 90_000.0, PREVIOUS_LEAGUE, "Mirage", "2026-06-13")})
 
-    got, _ = deepen_with_trade(start, ["Shrieking Essence of Fear"], lambda name: reading(7.8, 2.0))
+    outcome = deepen_with_trade(start, ["Shrieking Essence of Fear"], lambda name: reading(7.8, 2.0))
+    got, warnings = outcome.price_file, outcome.warnings
 
     assert got.prices["Shrieking Essence of Fear"].chaos == 7.8
 
@@ -157,31 +162,73 @@ def test_a_hand_price_and_a_trade_price_already_in_the_file_are_never_replaced()
     start = file(Hand=hand, Bought=reading(9.0, 3.0))
     asked = []
 
-    got, _ = deepen_with_trade(start, ["Hand", "Bought"], lambda name: asked.append(name) or reading(1.0, 99.0))
+    outcome = deepen_with_trade(start, ["Hand", "Bought"], lambda name: asked.append(name) or reading(1.0, 99.0))
+    got, warnings = outcome.price_file, outcome.warnings
 
     assert asked == [] and got.prices == start.prices
 
 
-def thin_book(chaos, depth):
-    """A book of fewer offers than the market rail: the mean is of all of them."""
-    return exchange_entry(ExchangeReading(chaos, depth, 5, 5, 5, 0), "Allflame", DAY, "x")
+def book(chaos, depth, used=5, offers=12):
+    """The entry of a trade reading: `used` offers priced, holding `depth` units, out of `offers` on the site."""
+    return exchange_entry(ExchangeReading(chaos, depth, used, offers, offers, 0), "Allflame", DAY, "x")
 
 
-def test_a_book_of_fewer_offers_than_the_market_rail_replaces_no_price_of_this_league():
-    """The Screaming Essence of Spite on 2026-11-07: five offers, 5, 10, 15, 35 Chaos and one Divine Orb, a mean of 110 against poe.ninja's 1."""
-    start = file(**{"Screaming Essence of Spite": ninja_entry(1.0, 6.7)})
+def test_the_deeper_reading_wins_measured_in_units_whatever_the_number_of_offers_behind_it():
+    """The Shrieking Essence of Fear on 2026-11-07: poe.ninja 0.33 on 0.5 units, the trade site 12.5 on 94 units in 4 offers (#616, the spec's "the deeper of the two")."""
+    start = file(**{"Shrieking Essence of Fear": ninja_entry(0.33, 0.5)})
 
-    got, warnings = deepen_with_trade(start, ["Screaming Essence of Spite"], lambda name: thin_book(110.6, 91.0))
+    outcome = deepen_with_trade(start, ["Shrieking Essence of Fear"], lambda name: book(12.5, 94.0, used=4, offers=4))
 
-    entry = got.prices["Screaming Essence of Spite"]
+    entry = outcome.price_file.prices["Shrieking Essence of Fear"]
+    assert (entry.chaos, entry.provenance.kind, entry.provenance.depth) == (12.5, TRADE, 94.0)
+    assert entry.provenance.other == {"kind": EXCHANGE, "chaos": 0.33, "depth": 0.5}
+    assert "deeper" in outcome.warnings[0]
+
+
+def test_a_book_with_fewer_units_than_the_exchange_line_does_not_replace_it_whatever_the_number_of_offers():
+    """The other way round: a book of twelve offers on 3 units loses to a line on 40 units; the offers' number decides nothing, the units do."""
+    start = file(Line=ninja_entry(1.0, 40.0))
+
+    outcome = deepen_with_trade(start, ["Line"], lambda name: book(9.0, 3.0, used=5, offers=12))
+
+    entry = outcome.price_file.prices["Line"]
     assert (entry.chaos, entry.provenance.kind) == (1.0, EXCHANGE)
-    assert entry.provenance.other == {"kind": TRADE, "chaos": 110.6, "depth": 91.0}
-    assert "kept" in warnings[0]
+    assert entry.provenance.other == {"kind": TRADE, "chaos": 9.0, "depth": 3.0}
 
 
-def test_a_thin_book_still_beats_a_previous_leagues_price_and_a_missing_price():
+def test_a_trade_reading_beats_a_previous_leagues_price_and_a_missing_price():
     previous = file(Old=ninja_entry(0.34, 9e4, PREVIOUS_LEAGUE, "Mirage", "2026-06-13"))
 
-    got, _ = deepen_with_trade(previous, ["Old", "New"], lambda name: thin_book(8.8, 71.0))
+    outcome = deepen_with_trade(previous, ["Old", "New"], lambda name: book(8.8, 71.0, used=2, offers=2))
 
-    assert got.prices["Old"].chaos == 8.8 and got.prices["New"].chaos == 8.8
+    assert outcome.price_file.prices["Old"].chaos == 8.8 and outcome.price_file.prices["New"].chaos == 8.8
+
+
+# --- a site that stops: nothing already read is thrown away -------------------------------------------------------------
+
+
+def test_a_read_that_stops_leaves_the_rest_unread_and_marked_and_keeps_what_was_read():
+    start = file(A=ninja_entry(1.0, 2.0), B=ninja_entry(2.0, 3.0), C=ninja_entry(3.0, 4.0))
+
+    def read(name):
+        if name == "B":
+            raise ReadStopped("the trade site blocked the run")
+        return book(9.0, 50.0)
+
+    outcome = deepen_with_trade(start, ["A", "B", "C", "D"], read)
+
+    prices = outcome.price_file.prices
+    assert prices["A"].chaos == 9.0 and prices["A"].provenance.trade_unread is None  # read before the stop
+    assert prices["B"].chaos == 2.0 and prices["B"].provenance.trade_unread == "the trade site blocked the run"
+    assert prices["C"].provenance.trade_unread == "the trade site blocked the run"
+    assert "D" not in prices  # no price at all: nothing to mark, but it is reported
+    assert outcome.unread == dict.fromkeys(["B", "C", "D"], "the trade site blocked the run")
+
+
+def test_the_unread_mark_round_trips_through_the_price_file_json():
+    from crafting_system.prices.provenance import from_json, to_json
+
+    p = Provenance(EXCHANGE, "Allflame", "2026-11-07", 3.0, trade_unread="the request budget of the run was spent")
+
+    assert from_json(to_json(p), "test") == p
+

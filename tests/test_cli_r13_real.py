@@ -9,7 +9,7 @@ same file as the other real routes, so the checks do not move with the market. T
 cleanly without it.
 
 The file stays the snapshot of 2026-10-31 on purpose (#616): at the prices of 2026-11-07 the percentiles of R13 are not resolved (`quantiles_resolved` is false, and the
-plan and the command take 15 minutes in all, not 4); the issue filed by PR #662 keeps the case.
+plan and the command take 15 minutes in all, not 4); #704 keeps the case.
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees, and at the same
 prices the solver's mean is no more than the guide's given route's. The odds and the mean are exact; p90 is not resolved

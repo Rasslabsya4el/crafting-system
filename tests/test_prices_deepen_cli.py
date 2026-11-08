@@ -79,3 +79,68 @@ def test_the_requests_are_anonymous(ninja, tmp_path):
     run(tmp_path, ninja, exchange, "--wanted-file", wanted(tmp_path, "Hollow Fossil"), "--trade-below", "1000000")
 
     assert exchange.requests and all("Cookie" not in request.headers for request in exchange.requests)
+
+
+# --- a site that stops the run: what poe.ninja gave is written, and every name left unread is reported and marked (#616) ----------------------------------
+
+
+class BlockingExchange(FakeExchange):
+    """The static list and the first `allowed` exchange answers are served; the next exchange request is refused with a 403 (a block)."""
+
+    def __init__(self, answers, allowed):
+        super().__init__(answers)
+        self.allowed = allowed
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        if request.url.endswith("/data/static") or self.allowed > 0:
+            self.allowed -= not request.url.endswith("/data/static")
+            return super().__call__(request)
+        self.requests.append(request)
+        return HttpResponse(403, {"content-type": "application/json"}, b'{"error":{"message":"Forbidden"}}')
+
+
+ANSWERS = {"hollow-fossil": offers(*[(300 + i, 10) for i in range(12)]), "bound-fossil": offers(*[(2, 30)] * 12)}
+
+
+def test_a_blocked_trade_site_does_not_throw_away_the_poe_ninja_prices_and_the_unread_names_are_reported_and_marked(ninja, tmp_path, capsys):
+    exchange = BlockingExchange(ANSWERS, allowed=1)  # Bound Fossil is read, Hollow Fossil meets the block
+
+    code = run(tmp_path, ninja, exchange, "--wanted-file", wanted(tmp_path, "Hollow Fossil", "Bound Fossil"), "--trade-below", "1000000")
+
+    saved = load_price_file(tmp_path / "data" / "prices.json").prices
+    shallow = load_price_file(_first_fetch(ninja, tmp_path)).prices["Hollow Fossil"]
+    err = capsys.readouterr().err
+    assert code == 1  # the run is incomplete and says so, after it has written
+    assert saved["Hollow Fossil"].chaos == shallow.chaos and saved["Hollow Fossil"].source == "poe.ninja"  # the poe.ninja price is kept
+    assert saved["Hollow Fossil"].provenance.trade_unread == "the trade site blocked the run"
+    assert saved["Bound Fossil"].provenance.trade_unread is None  # read before the block
+    assert "1 names were not read on the trade site (the trade site blocked the run)" in err and "  Hollow Fossil" in err
+    assert len(saved) > 2  # the whole poe.ninja fetch is there, not only the wanted names
+
+
+def test_a_spent_request_budget_does_not_throw_away_the_poe_ninja_prices_and_the_unread_names_are_reported_and_marked(ninja, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr("crafting_system.prices.__main__.MAX_DEEPEN_REQUESTS", 2)  # the static list and one exchange read
+    exchange = FakeExchange(ANSWERS)
+
+    code = run(tmp_path, ninja, exchange, "--wanted-file", wanted(tmp_path, "Hollow Fossil", "Bound Fossil"), "--trade-below", "1000000")
+
+    saved = load_price_file(tmp_path / "data" / "prices.json").prices
+    err = capsys.readouterr().err
+    assert code == 1
+    assert saved["Hollow Fossil"].source == "poe.ninja"
+    assert saved["Hollow Fossil"].provenance.trade_unread == "the request budget of the run was spent"
+    assert "1 names were not read on the trade site (the request budget of the run was spent)" in err and "  Hollow Fossil" in err
+    assert len(exchange.requests) == 2
+
+
+def test_a_site_that_blocks_the_static_list_leaves_every_wanted_name_unread_and_still_writes_the_file(ninja, tmp_path, capsys):
+    def blocked(request: HttpRequest) -> HttpResponse:
+        return HttpResponse(403, {"content-type": "application/json"}, b"{}")
+
+    code = run(tmp_path, ninja, blocked, "--wanted-file", wanted(tmp_path, "Hollow Fossil", "Bound Fossil"), "--trade-below", "1000000")
+
+    saved = load_price_file(tmp_path / "data" / "prices.json").prices
+    err = capsys.readouterr().err
+    assert code == 1
+    assert saved["Hollow Fossil"].provenance.trade_unread == saved["Bound Fossil"].provenance.trade_unread == "the trade site blocked the run"
+    assert "names were not read on the trade site (the trade site blocked the run)" in err and "  Hollow Fossil" in err and "  Bound Fossil" in err

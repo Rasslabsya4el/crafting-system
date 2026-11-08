@@ -10,8 +10,10 @@ its depth in units is at least the units the plan expects to use. Every other pr
 * "price of league X" or "price of an earlier day".
 
 There is no fixed cut that drops a route (OR-12): a price on few units is kept, marked, and the plan is solved with it.
-A price with no recorded provenance (`recorded` False: a file written before #616, a test's price) is read from its source
-alone and not judged on depth or on the item it was taken for, because nothing was kept to judge it by.
+A price with no recorded provenance (`recorded` False: a file written before #616, a test's price) is an approximate input too,
+never a plain fact: nothing shows it is of today's league, of the exact item and deep enough. Its reason is "where this price comes
+from is not recorded"; the source it names is read from its source string alone. A hand price and a default are the user's and
+the model's own numbers and need no record.
 Pure: no I/O, no clock; the plan's expected uses are the caller's number.
 """
 
@@ -30,6 +32,9 @@ STAND_IN = "wider-item"
 OTHER_LEAGUE = "other-league"
 OLD = "old"
 NO_DEPTH = "no-depth"
+NOT_RECORDED = "not-recorded"
+NOT_RECORDED_WORDS = "where this price comes from is not recorded"
+TRADE_UNREAD = "trade-unread"
 
 
 @dataclass(frozen=True)
@@ -66,9 +71,11 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
     takes the action can be said to buy.
     """
     p = provenance_of(entry, price_file)
-    if p is None or p.kind in (OVERRIDE, DEFAULT):
+    if p is not None and p.kind in (OVERRIDE, DEFAULT):
         return ()  # a hand price and a default are the user's and the model's own numbers; the page names their source
     found: list[PriceMark] = []
+    if p is None:
+        return (PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS),)
     if p.kind == PREVIOUS_LEAGUE:
         found.append(PriceMark(EARLIER, f"previous league's price ({p.league}, {p.date})"))
     elif p.kind == STANDARD:
@@ -85,6 +92,10 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         elif p.depth < (1.0 if uses is None else uses):
             noun = "observations" if p.depth_unit == OBSERVATIONS else "units"
             found.append(PriceMark(DEPTH, f"price on {units_text(p.depth)} {noun}"))
+        if p.trade_unread is not None and found and found[-1].code in (DEPTH, NO_DEPTH):
+            found.append(PriceMark(TRADE_UNREAD, f"the trade offers beside it were not read: {p.trade_unread}"))
+    if not p.recorded:
+        found.append(PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS))
     return tuple(found)
 
 

@@ -85,6 +85,14 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
     return f"price taken for {'another' if another else 'a wider'} item ({', '.join(parts)})"
 
 
+def wider_words(phrase: str | None) -> str | None:
+    """`other_item`'s "price taken for a wider item (item level 84 or more)" as what it is taken for: "item level 84 or more"; None stays None."""
+    if phrase is None:
+        return None
+    start, end = phrase.find("("), phrase.rfind(")")
+    return phrase[start + 1 : end] if 0 <= start < end else phrase
+
+
 _CATEGORY_WORDS = {"armour.chest": "body armour"}
 
 

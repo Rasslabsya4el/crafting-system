@@ -10,14 +10,14 @@ from targets_support import DATA, EXAMPLES
 
 from crafting_system.cli import main
 from crafting_system.prices import PriceEntry, PriceFile
-from crafting_system.prices.provenance import PREVIOUS_LEAGUE, Provenance
+from crafting_system.prices.provenance import EXCHANGE, TRADE, Provenance
 from crafting_system.targets import StartKind, Target, load_target, start_price_key
 
 R12 = EXAMPLES / "r12-lightning-amulet.yaml"
 TODAY = datetime.date(2026, 10, 31)
+DAY = "2026-10-30"  # the day of the fixture price file
+DEEP = 1e9  # units behind the fixture's prices: deep enough for any plan of these tests, so they are plain facts and the tests judge something else
 LIFEFORCE = "Primal Crystallised Lifeforce"
-OTHER_RESOURCES = ("Wild Crystallised Lifeforce", "Vivid Crystallised Lifeforce", "Crystallised Rancour")  # the other goods of the Harvest reforges
-EVIDENCE_PRICE = 100.0  # dear enough that no plan of these tests chooses a reforge that costs it
 START = start_price_key(DATA, load_target(R12, DATA))  # the price key computed from the R12 target (#474)
 
 
@@ -26,23 +26,17 @@ def given(target: Target) -> Target:
     return dataclasses.replace(target, start=StartKind.GIVEN)
 
 
-def price_file(lifeforce: float | None = 0.01, start: float | None = 4.0, divine: float = 300.0, data=None, evidence: bool = False) -> PriceFile:
+def price_file(lifeforce: float | None = 0.01, start: float | None = 4.0, divine: float = 300.0, data=None) -> PriceFile:
     """Prices in Chaos: the lifeforce of a Harvest reforge and the trade-API price of the R12 start amulet.
-
-    With `evidence`, the other goods of the Harvest reforges (`OTHER_RESOURCES`) are priced too, as a previous league's price (an approximate
-    input, OR-23) so that no action is dropped for want of a price (#552): the pages of these tests then have no part "Actions with no price".
 
     The start amulet is priced under the key computed from the R12 target on `data` (default: the fixture data, `START`): the item level
     window, and so the key, depend on the game data.
     """
     prices = {}
     if lifeforce is not None:
-        prices[LIFEFORCE] = PriceEntry(lifeforce, "poe.ninja")
+        prices[LIFEFORCE] = PriceEntry(lifeforce, "poe.ninja", None, None, Provenance(EXCHANGE, "Test", DAY, DEEP))
     if start is not None:
-        prices[START if data is None else start_price_key(data, load_target(R12, data))] = PriceEntry(start, "trade-api")
-    if evidence:
-        earlier = Provenance(PREVIOUS_LEAGUE, "Earlier", "2026-06-13")
-        prices.update({name: PriceEntry(EVIDENCE_PRICE, "poe.ninja-previous-league", None, None, earlier) for name in OTHER_RESOURCES})
+        prices[START if data is None else start_price_key(data, load_target(R12, data))] = PriceEntry(start, "trade-api", None, None, Provenance(TRADE, "Test", DAY, DEEP, "units", 5))
     return PriceFile("Test", datetime.datetime(2026, 10, 30, tzinfo=datetime.UTC), divine, prices)
 
 

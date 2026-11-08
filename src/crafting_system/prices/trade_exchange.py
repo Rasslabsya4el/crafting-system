@@ -3,10 +3,8 @@
 A fossil, an essence, a lifeforce or an oil is bought on the trade site in the bulk exchange: each offer says how
 many units it holds (`stock`) and what it asks for them (`exchange.amount` of a currency for `item.amount` units).
 `read_offers` turns the offers of one item into a reading, by the owner's rule for a trade price (OR-8): the mean of the
-`k` cheapest offers, per unit, five by default. The depth of the reading is the units those offers hold. A book of fewer than
-`min_offers` offers (the market rule of #355, ten) is no market and its mean is of all of them, so one odd offer sets it (the
-Screaming Essence of Spite had five offers on 2026-11-07, 5, 10, 15 and 35 Chaos and one Divine Orb, a mean of 110): the price of
-such a book is the median of its offers, and the reading says it is `thin`. Nothing here
+`k` cheapest offers, per unit, five by default, whatever the number of offers the book holds (a book of three offers is the mean
+of the three; no count of offers decides, OR-12). The depth of the reading is the units those offers hold. Nothing here
 sends a request or reads the clock; `trade_pricing.read_exchange` does both.
 
 The site's answer is `{"result": {offer id: {"listing": {"offers": [{"exchange": {"currency", "amount"},
@@ -18,8 +16,6 @@ import statistics
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
-
-from .trade_market import DEFAULT_MIN_LISTINGS
 
 DEFAULT_K = 5
 HAVE = ("chaos", "divine")  # the currencies an offer may ask in; the others are dropped
@@ -33,7 +29,6 @@ class ExchangeReading:
     offers: int  # the offers the answer holds that could be priced
     total: int  # the search `total`
     dropped: int  # offers that could not be priced
-    thin: bool = False  # fewer offers than the market rail: `chaos` is the median of all of them, not the mean of the cheapest `k`
 
 
 def static_ids(answer: Mapping[str, Any]) -> dict[str, str]:
@@ -57,9 +52,7 @@ def _positive(value: object) -> bool:
     return isinstance(value, int | float) and not isinstance(value, bool) and value > 0
 
 
-def read_offers(
-    answer: Mapping[str, Any], rates: Mapping[str, float], k: int = DEFAULT_K, min_offers: int = DEFAULT_MIN_LISTINGS
-) -> ExchangeReading | None:
+def read_offers(answer: Mapping[str, Any], rates: Mapping[str, float], k: int = DEFAULT_K) -> ExchangeReading | None:
     """The reading of one exchange answer, or None when no offer can be priced.
 
     `rates` is the Chaos value of one unit of each currency an offer may ask (`{"chaos": 1.0, "divine": 372.2}`).
@@ -85,9 +78,8 @@ def read_offers(
             priced.append((float(asks["amount"]) * rate / float(gives["amount"]), units))
     if not priced:
         return None
-    thin = len(priced) < min_offers
-    cheapest = sorted(priced) if thin else sorted(priced)[:k]
-    price = statistics.median(each for each, _ in cheapest) if thin else statistics.fmean(each for each, _ in cheapest)
+    cheapest = sorted(priced)[:k]
+    price = statistics.fmean(each for each, _ in cheapest)
     return ExchangeReading(
         chaos=float(price),
         depth=sum(units for _, units in cheapest),
@@ -95,5 +87,4 @@ def read_offers(
         offers=len(priced),
         total=total if isinstance(total, int) and not isinstance(total, bool) else len(priced),
         dropped=dropped,
-        thin=thin,
     )

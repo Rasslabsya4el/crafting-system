@@ -22,6 +22,7 @@ import os
 import statistics
 import sys
 import time
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -47,10 +48,10 @@ from crafting_system.prices import (  # noqa: E402
 from crafting_system.prices.__main__ import _deepen  # noqa: E402
 from crafting_system.prices.http_json import http_get_json, paced  # noqa: E402
 from crafting_system.prices.price_names import FORESIGHT_PRICE_NAMES, canonical_price_name  # noqa: E402
-from crafting_system.prices.provenance import EXACT, STASH, TRADE, WIDER, Provenance  # noqa: E402
-from crafting_system.prices.query_compare import other_item  # noqa: E402
+from crafting_system.prices.provenance import EXACT, STASH, WIDER, Provenance  # noqa: E402
+from crafting_system.prices.query_compare import other_item, wider_words  # noqa: E402
 from crafting_system.prices.trade_exchange import static_ids  # noqa: E402
-from crafting_system.prices.trade_pricing import DEFAULT_K, FETCH_COUNT, _chaos_of, _listings, _stats  # noqa: E402
+from crafting_system.prices.trade_pricing import DEFAULT_K, ExactListings, TradePrice, _chaos_of, _listings, _stats, entry_for  # noqa: E402
 from crafting_system.prices.trade_query import build_query, query_hash  # noqa: E402
 from crafting_system.prices.trade_stats import resolve_buy_mod  # noqa: E402
 from crafting_system.targets import StartKind, buy_spec_of, load_target, start_price_key  # noqa: E402
@@ -88,14 +89,6 @@ def priced_rows(rows, spec, price_file) -> list[float]:
     return sorted(value for value in found if not isinstance(value, str))
 
 
-def _words_of(phrase: str | None) -> str | None:
-    """`other_item`'s "price taken for a wider item (item level 84 or more)" as what it is taken for: "item level 84 or more"."""
-    if phrase is None:
-        return None
-    start, end = phrase.find("("), phrase.rfind(")")
-    return phrase[start + 1 : end] if 0 <= start < end else phrase
-
-
 def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetime, data, targets: dict) -> tuple[dict[str, PriceEntry], list[str]]:
     """The trade-priced start items of `old`, asked again today: the stored search, and the exact item of the target."""
     client = trade_client(120)
@@ -120,67 +113,27 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
             notes.append(f"{name}: only {total} listings today ({len(prices)} priced); the old entry is not carried over")
             continue
         cheapest = prices[:DEFAULT_K]
-        chaos = statistics.fmean(cheapest)
-        sentence = f"mean of the {len(cheapest)} cheapest instant-buyout listings of {len(rows)} fetched, {total} on the site, listed any time"
         composite = COMPOSITES.get(name)
-        if composite is not None:
-            chaos += alchemy
-            sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
-        taken_for = None if composite is not None else _words_of(other_item(spec, stored))  # a composite is a normal base the plan makes rare: its search is the item by design
-        item = WIDER if (taken_for is not None or composite == WIDER) else EXACT
-        for_item = taken_for if taken_for is not None else ("any of the bases that share this name on the trade site" if composite == WIDER else None)
-        exact_listings = exact_price = None
+        taken_for = None if composite is not None else wider_words(other_item(spec, stored))  # a composite is a normal base the plan makes rare: its search is the item by design
+        exact = None
         if taken_for is not None:
             filters = [resolve_buy_mod(mod, list(data.mods.values()), stats) for mod in spec.mods]
             exact_body = build_query(spec, filters, None).body()
             exact_total, exact_rows = _listings(client, league, exact_body, cache / "trade" / f"{query_hash(league, exact_body)}.json", now)
-            exact = priced_rows(exact_rows, spec, new)
-            exact_listings = exact_total
-            exact_price = statistics.fmean(exact[:DEFAULT_K]) if exact else None  # the mean of the cheapest few, as every trade price (OR-8)
-        depth = float(len(cheapest))
-        provenance = Provenance(TRADE, league, day.isoformat(), depth, "units", len(cheapest), item, for_item, exact_listings, exact_price)
-        detail = {"league": league, "date": day.isoformat(), "listings": total, "used": len(cheapest), "usable": len(prices), "k": DEFAULT_K, "query_hash": digest, "query": stored}
-        found[name] = PriceEntry(chaos, "trade-api", sentence, detail, provenance)
+            exact_prices = priced_rows(exact_rows, spec, new)
+            exact = ExactListings(exact_total, statistics.fmean(exact_prices[:DEFAULT_K]) if exact_prices else None)  # the mean of the cheapest few, as every trade price (OR-8)
+        today = TradePrice(
+            name, statistics.fmean(cheapest), league, day, total, len(cheapest), len(prices), DEFAULT_K, len(rows), {}, digest, stored
+        )  # the same record `cli trade` makes; `entry_for` is the one writer of the entry and its provenance
+        made = entry_for(today, taken_for, exact, "any of the bases that share this name on the trade site" if composite == WIDER else None)
+        chaos, item, exact_listings, exact_price = made.chaos, made.provenance.item, made.provenance.exact_listings, made.provenance.exact_price
+        sentence = made.note
+        if composite is not None:
+            chaos += alchemy
+            sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
+        found[name] = replace(made, chaos=chaos, note=sentence)
         notes.append(f"{name}: {entry.chaos:g} -> {chaos:g} ({item}; exact listings {exact_listings}, ask {exact_price})")
     return found, notes
-
-
-def thin_again(price_file: PriceFile, now: datetime) -> tuple[PriceFile, list[str]]:
-    """Read the bulk exchange again for the names whose trade reading came from a book of fewer than ten offers (it is now priced by the median).
-
-    A name priced by such a reading gets the new reading; a name that kept a price of the league and has the trade reading beside it
-    (`other`) gets that reading renewed. Nothing else changes.
-    """
-    from dataclasses import replace  # noqa: PLC0415
-
-    from crafting_system.prices.deepen import exchange_entry  # noqa: PLC0415
-    from crafting_system.prices.trade_exchange import exchange_body, read_offers  # noqa: PLC0415
-
-    client = trade_client(400)
-    ids = static_ids(client.data_static())
-    rates = {"chaos": 1.0, "divine": price_file.chaos_per_divine}
-    day = now.astimezone(UTC).date()
-    prices = dict(price_file.prices)
-    notes = []
-    for name, entry in sorted(price_file.prices.items()):
-        p = entry.provenance
-        on_a_thin_book = p is not None and p.kind == TRADE and (entry.detail or {}).get("exchange") and (entry.detail or {}).get("listings", 0) < 10
-        beside = p is not None and (p.other or {}).get("kind") == TRADE
-        if name not in ids or not (on_a_thin_book or beside):
-            continue
-        reading = read_offers(client.exchange(price_file.league, exchange_body(ids[name])), rates)
-        if reading is None:
-            notes.append(f"{name}: no offer on the trade site now; the entry is kept")
-            continue
-        fresh = exchange_entry(reading, price_file.league, day, ids[name])
-        if on_a_thin_book:
-            prices[name] = replace(fresh, provenance=replace(fresh.provenance, other=p.other))
-            notes.append(f"{name}: {entry.chaos:g} -> {fresh.chaos:g} (median of {reading.offers} offers, {reading.depth:g} units)")
-        else:
-            other = {"kind": TRADE, "chaos": fresh.chaos, "depth": fresh.provenance.depth}
-            prices[name] = replace(entry, provenance=replace(p, other=other))
-            notes.append(f"{name}: the trade reading beside it {p.other.get('chaos'):g} -> {fresh.chaos:g}")
-    return replace(price_file, prices=prices), notes
 
 
 def quiver_standins(new: PriceFile, ninja_get, league: str, day: str) -> dict[str, PriceEntry]:
@@ -214,7 +167,6 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--cache", required=True, help="a folder for the trade site's stat list and answers")
     parser.add_argument("--league", default="Allflame")
-    parser.add_argument("--thin-again", action="store_true", help="read OUT, read the bulk exchange again for the names that rest on a book of fewer than ten offers and write OUT")
     parser.add_argument("--starts-only", action="store_true", help="read OUT, ask the start items again and write OUT: no poe.ninja and no bulk-exchange request")
     parser.add_argument("--resume", action="store_true", help="skip the poe.ninja step: read the file this run wrote after it (OUT.stage1)")
     parser.add_argument("--below", type=float, default=100.0, help="read the trade offers of every name with fewer units than this behind its price")
@@ -235,13 +187,6 @@ def main() -> int:
     ids = static_ids(trade_client(5).data_static())
     wanted = wanted_names(old, ids)
     stage1 = Path(args.out + ".stage1")
-    if args.thin_again:
-        new, notes = thin_again(load_price_file(Path(args.out)), datetime.now(UTC))
-        for note in notes:
-            print("  thin:", note, flush=True)
-        write_price_file(Path(args.out), new)
-        print(f"wrote {args.out}: {len(notes)} names read again")
-        return 0
     if args.starts_only:
         new = load_price_file(Path(args.out))
         now = datetime.now(UTC)
@@ -262,7 +207,10 @@ def main() -> int:
             print("  warning:", warning)
         new = result.price_file
         write_price_file(stage1, new)
-    new, notes = _deepen(new, wanted, args.below, now, None, None, None, None)
+    deepened = _deepen(new, wanted, args.below, now, None, None, None, None)
+    if deepened.unread:
+        raise SystemExit(f"the trade site was not read for {len(deepened.unread)} names ({sorted(set(deepened.unread.values()))}); nothing is written. Run again with --resume.")
+    new, notes = deepened.price_file, deepened.warnings
     for note in notes:
         print("  trade:", note)
     day = now.astimezone(UTC).date().isoformat()

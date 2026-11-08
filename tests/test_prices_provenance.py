@@ -15,7 +15,7 @@ from ninja_support import ninja, ninja_fixture  # noqa: F401  (ninja is a fixtur
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write_price_file
 from crafting_system.prices.fetch import fetch_price_file
 from crafting_system.prices.poe_ninja import parse_overview
-from crafting_system.prices.price_marks import DEPTH, EARLIER, NO_DEPTH, OLD, OTHER_LEAGUE, STAND_IN, price_marks, units_text
+from crafting_system.prices.price_marks import DEPTH, EARLIER, NO_DEPTH, NOT_RECORDED, NOT_RECORDED_WORDS, OLD, OTHER_LEAGUE, STAND_IN, TRADE_UNREAD, price_marks, units_text
 from crafting_system.prices.provenance import (
     EXCHANGE,
     HISTORY,
@@ -191,12 +191,12 @@ def test_a_hand_price_and_a_default_are_not_approximate_inputs():
     assert price_marks(PriceEntry(0.0001, "default"), FILE, uses=1e9) == ()
 
 
-def test_an_entry_with_no_provenance_is_judged_by_its_source_alone():
-    """A file from before #616 keeps its meaning: no depth was kept, so none is judged; a previous league's price is still one."""
-    assert price_marks(entry(0.2), FILE, uses=1e9) == ()
+def test_an_entry_with_no_provenance_is_an_approximate_input_never_a_plain_fact():
+    """Nothing shows it is of today's league, of the exact item and deep enough (finding 6 of the checker): the reason says so, beside the previous league's if it is one."""
+    assert [m.reason for m in price_marks(entry(0.2), FILE, uses=1e9)] == [NOT_RECORDED_WORDS]
     legacy = entry(0.3425, None, "poe.ninja-previous-league", {"league": "Mirage", "date": "2026-06-13"})
-    assert codes(price_marks(legacy, FILE, uses=1.0)) == [EARLIER]
-    assert price_marks(entry(1.0, None, "made-up source"), FILE, uses=1.0) == ()
+    assert codes(price_marks(legacy, FILE, uses=1.0)) == [EARLIER, NOT_RECORDED]
+    assert codes(price_marks(entry(1.0, None, "made-up source"), FILE, uses=1.0)) == [NOT_RECORDED]
 
 
 @pytest.mark.parametrize(("depth", "words"), [(0.0, "0"), (3.33, "3.3"), (3.0, "3"), (9.96, "10"), (10.4, "10"), (1546.0, "1,546")])
@@ -204,11 +204,25 @@ def test_units_are_said_with_one_decimal_below_ten(depth, words):
     assert units_text(depth) == words
 
 
-def test_the_committed_snapshot_reads_without_a_provenance_block():
+def test_the_old_snapshot_reads_without_a_provenance_block_and_every_price_of_it_is_marked():
+    """The Prismatic Fossil at 0.2 Chaos (2026-10-31) would have passed as a plain fact: it is marked as not recorded (it was 8 Chaos a week later, #616)."""
     path = Path(__file__).resolve().parent / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 
     old = load_price_file(path)
 
     assert all(e.provenance is None for e in old.prices.values())
-    assert codes(price_marks(old.prices["Shrieking Essence of Fear"], old, uses=50.0)) == [EARLIER]
-    assert price_marks(old.prices["Prismatic Fossil"], old, uses=50.0) == ()  # the old file kept no volume: nothing to judge it by
+    assert codes(price_marks(old.prices["Shrieking Essence of Fear"], old, uses=50.0)) == [EARLIER, NOT_RECORDED]
+    prismatic = old.prices["Prismatic Fossil"]
+    assert prismatic.chaos == 0.2
+    assert [m.reason for m in price_marks(prismatic, old, uses=50.0)] == [NOT_RECORDED_WORDS]
+
+
+def test_a_thin_price_whose_trade_offers_were_not_read_says_so_and_a_deep_enough_one_does_not():
+    """A fetch that was blocked, or spent its request budget, marks the names it meant to read (finding 5): a plan that buys more than the price's depth prints it."""
+    p = Provenance(EXCHANGE, "Allflame", "2026-11-07", 3.0, trade_unread="the trade site blocked the run")
+
+    marks = price_marks(entry(0.2, p), FILE, uses=45.0)
+
+    assert codes(marks) == [DEPTH, TRADE_UNREAD]
+    assert [m.reason for m in marks] == ["price on 3 units", "the trade offers beside it were not read: the trade site blocked the run"]
+    assert price_marks(entry(0.2, p), FILE, uses=2.0) == ()  # the plan buys less than the 3 units there are: a plain fact

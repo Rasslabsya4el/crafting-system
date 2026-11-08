@@ -7,6 +7,10 @@ of them. A CI checkout has no price file of its own, so the routes with the plai
 the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-11-07.json`, as `measure_routes.py` does; the optional third argument names another
 price file from the project root, to put two snapshots side by side, #616) and a route that starts from a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`.
+
+At that default snapshot R08 and R09 do not finish: the pruned search (`solve_pruned`) does not end inside a runner's 25 minutes at the prices of
+the new snapshot (the Prismatic Fossil at 5.87 Chaos, not 0.2), where it took 53 seconds at the old ones (#702). Run them with the older snapshot
+(the third argument, `tests/fixtures/prices/routes-allflame-2026-10-31.json`) until #702 is fixed; their verdicts are then measured at the old prices (#703).
 """
 
 import sys
