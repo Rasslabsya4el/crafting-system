@@ -6,6 +6,11 @@ name: Run a command
 # It checks out the branch, puts the pinned game data in place (the same step as CI), runs the command in bash on
 # 1 to 16 runners and uploads what the command wrote into $OUT_DIR. See docs/ci.md.
 # The run name carries runners, system and timeout so the dispatcher can count a run before its jobs exist.
+#
+# `--commit PATH [PATH ...]` (ticket #711) sets the input commit_paths: the files the command changed under those paths
+# (only tests/golden/ and tests/fixtures/, never on main or integ/*) are passed on by each runner, merged by the last job
+# and committed onto the branch the run ran on, on top of the commit it tested. That job alone has contents: write.
+# Every input reaches a shell only through `env:`, never through ${{ }} inside `run:`.
 
 run-name: "heavy ${{ inputs.runners }}x ${{ inputs.os }} t${{ inputs.timeout_minutes }}: ${{ inputs.command }}"
 
@@ -32,6 +37,11 @@ on:
         required: false
         default: "60"
         type: string
+      commit_paths:
+        description: "space-separated paths under tests/golden/ or tests/fixtures/ whose changed files are committed onto the branch (not main, not integ/*); empty = commit nothing"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -47,7 +57,23 @@ jobs:
         env:
           RUNNERS: ${{ inputs.runners }}
           TIMEOUT: ${{ inputs.timeout_minutes }}
+          COMMIT_PATHS: ${{ inputs.commit_paths }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
+          set -f
+          fail() { echo "::error::$1"; exit 1; }
+          if [ -n "$COMMIT_PATHS" ]; then
+            case "$REF_NAME" in (main|integ/*) fail "a heavy run never commits to '$REF_NAME' (main and integ/* are changed only by the main chat)";; esac
+            count=0
+            for path in $COMMIT_PATHS; do
+              count=$((count + 1))
+              trimmed="${path%/}"
+              case "$trimmed" in (tests/golden|tests/golden/*|tests/fixtures|tests/fixtures/*) ;; (*) fail "commit path '$path' is not under tests/golden/ or tests/fixtures/";; esac
+              case "$path" in (*[!A-Za-z0-9._/+=@-]*) fail "commit path '$path' has a character other than letters, digits and . _ / + = @ -";; esac
+              case "/$trimmed/" in (*//*|*/./*|*/../*|*/.git/*) fail "commit path '$path' has an empty, '.', '..' or '.git' part";; esac
+            done
+            [ "$count" -gt 0 ] || fail "commit_paths holds no path"
+          fi
           case "$RUNNERS" in ([1-9]|1[0-6]) ;; (*) echo "runners must be 1 to 16, not '$RUNNERS'"; exit 1;; esac
           case "$TIMEOUT" in ([1-9]|[1-9][0-9]|[12][0-9][0-9]|3[0-5][0-9]|360) ;; (*) echo "timeout_minutes must be 1 to 360, not '$TIMEOUT'"; exit 1;; esac
           echo "indices=$(seq -s, 1 "$RUNNERS" | sed 's/^/[/; s/$/]/')" >> "$GITHUB_OUTPUT"
@@ -84,3 +110,76 @@ jobs:
           overwrite: true
           path: out/
           if-no-files-found: warn
+      # Only when the command succeeded: the files it changed under commit_paths, at their paths, plus a marker file so
+      # that the artifact exists when nothing changed. The commit job merges the artifacts of all runners.
+      - name: Pass on the files the command changed
+        if: inputs.commit_paths != ''
+        env:
+          COMMIT_PATHS: ${{ inputs.commit_paths }}
+          RUNNER_NUMBER: ${{ matrix.index }}
+        run: |
+          set -f
+          dest="$RUNNER_TEMP/commit"
+          rm -rf "$dest"
+          mkdir -p "$dest"
+          echo "runner $RUNNER_NUMBER" > "$dest/runner-collected.txt"
+          git ls-files -z --modified --others --exclude-standard -- $COMMIT_PATHS | while IFS= read -r -d '' file; do
+            [ -f "$file" ] || continue
+            mkdir -p "$dest/$(dirname "$file")"
+            cp -- "$file" "$dest/$file"
+          done
+          find "$dest" -type f
+      - uses: actions/upload-artifact@v7.0.2
+        if: inputs.commit_paths != ''
+        with:
+          name: commit-${{ matrix.index }}
+          overwrite: true
+          path: ${{ runner.temp }}/commit
+          if-no-files-found: error
+
+  commit:
+    name: commit
+    needs: [plan, run]
+    if: inputs.commit_paths != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: commit-*
+          path: ${{ runner.temp }}/collected
+      - name: Commit the changed files on top of the commit the run tested
+        env:
+          COMMIT_PATHS: ${{ inputs.commit_paths }}
+          REF_NAME: ${{ github.ref_name }}
+          TESTED_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          summary() { echo "$1" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          python3 .github/scripts/merge_commit_files.py "$RUNNER_TEMP/collected" . > "$RUNNER_TEMP/files.txt"
+          mapfile -t files < "$RUNNER_TEMP/files.txt"
+          if [ "${#files[@]}" -gt 0 ]; then git add -- "${files[@]}"; fi
+          if git diff --cached --quiet; then
+            summary "No change: the command changed nothing under $COMMIT_PATHS, so there is no commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Re-record $COMMIT_PATHS (heavy run $RUN_ID)"
+          now="$(git ls-remote origin "refs/heads/$REF_NAME" | cut -f1)"
+          if [ "$now" != "$TESTED_SHA" ]; then
+            echo "::error::The branch $REF_NAME moved: it points at ${now:-nothing} and the run tested $TESTED_SHA. Nothing is pushed."
+            summary "Refused: $REF_NAME moved from $TESTED_SHA to ${now:-nothing} while the run was going. Nothing was pushed."
+            exit 1
+          fi
+          if ! git push --force-with-lease="refs/heads/$REF_NAME:$TESTED_SHA" origin "HEAD:refs/heads/$REF_NAME"; then
+            echo "::error::The branch $REF_NAME moved while the commit was pushed. Nothing is pushed."
+            summary "Refused: $REF_NAME moved while the commit was pushed. Nothing was pushed."
+            exit 1
+          fi
+          summary "Committed ${#files[@]} file(s) onto $REF_NAME on top of $TESTED_SHA: $(git rev-parse HEAD)"
