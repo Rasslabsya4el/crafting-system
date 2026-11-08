@@ -219,9 +219,12 @@ To record it again (R04 about 10 minutes, R14 about 45 on a runner):
 
 (`write` keeps the naive shares of the heavy run recorded under `naive_heavy`; update them from `python -m naive_crafter merge` when the long simulation is run again.)
 
-The long simulation of these two then runs on many runners, each its own `NAIVE_SEED`, with `NAIVE_HEAVY=1` (which also plays enough for the mean tests and runs the mutation tests of the two routes):
+The long simulation of these two then runs with `NAIVE_HEAVY=1` (which also plays enough for the mean tests and runs the mutation tests of the two routes). One runner doing all of it
+took 39 to over 59 minutes (run 42436780459: one of three hit the timeout), so the work is split by `-k` over five runners, each its own `NAIVE_SEED` (run 42441281288, the slowest runner 25 minutes):
+the base tests of R04 (2,000 plays), of R14 twice (10,000 plays each), the Annulment mutation of R04 (1,000 plays, 14 minutes) and the other three mutations (12 minutes). The mutation runners
+set `NAIVE_RUNS=20`, because the fixture still plays that many plays of the base route before the mutation test starts and does not use them:
 
-    $D --runners 16 --command 'export NAIVE_HEAVY=1 NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR; NAIVE_RUNS=3000 uv run --no-sync pytest -q -p no:cacheprovider -k "R04 or R14" tests/test_naive_crafter_routes.py'
+    $D --runners 5 --command 'export NAIVE_HEAVY=1 NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR; T="uv run --no-sync pytest -q -p no:cacheprovider -rP --durations=6 tests/test_naive_crafter_routes.py"; case $RUNNER_INDEX in 1) NAIVE_RUNS=2000 $T -k "R04 and not each_law";; 2|3) NAIVE_RUNS=10000 $T -k "R14 and not each_law";; 4) NAIVE_RUNS=20 $T -k "each_law and Annulment";; 5) NAIVE_RUNS=20 $T -k "each_law and not Annulment";; esac'
     gh run download <run id> --dir results
     PYTHONPATH=tests python -m naive_crafter merge results
 
