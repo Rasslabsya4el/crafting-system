@@ -74,8 +74,16 @@ def test_the_limit_on_the_number_of_states_is_inclusive(monkeypatch):
     assert _coarse.expected_visits(chain_of(CRAFT)) is None
 
 
-def test_a_state_that_never_leaves_in_floats_has_no_visits():
-    policy = {"S": Action("use", 1.0, (("goal", 1), ("S", 10**30)))}  # leaves with chance 1e-30: 1 - p rounds to 0
+def test_a_state_that_leaves_with_chance_1e_minus_30_is_visited_1e30_times_because_its_self_loop_is_divided_out():
+    policy = {"S": Action("use", 1.0, (("goal", 1), ("S", 10**30)))}  # `1 - p` rounds to 0 in floats; the sum of its other chances does not
+
+    states, visits = _coarse.expected_visits(chain_of(policy))
+
+    assert states == [0] and visits == pytest.approx([1e30], rel=1e-12)
+
+
+def test_a_state_that_leaves_with_a_chance_no_float_holds_has_no_visits():
+    policy = {"S": Action("use", 1.0, (("goal", 1), ("S", 10**330)))}  # the chance to leave underflows to 0
 
     assert _coarse.expected_visits(chain_of(policy)) is None
 

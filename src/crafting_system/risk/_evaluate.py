@@ -99,14 +99,14 @@ from ..solver import Action
 from . import _free, _inputs, _moments, _regen
 from ._budget import BudgetRun, rounding_allowance, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
-from ._coarse import beyond_ordinary_grid, choose_step, expected_visits, may_exceed_ordinary_grid
+from ._coarse import beyond_ordinary_grid, choose_step, expected_visits_checked, may_exceed_ordinary_grid
 from . import _dense
 from ._dense import fits_dense, run_dense
 from ._fold import fold_free
 from ._gaveup import collected, note
 from ._moments import interval, real_costs
 from ._nested import nested_work, run_nested
-from ._report import IMPROPER, SUBCRITICAL, UNORDERED, Estimate, GridInfo, RiskReport
+from ._report import IMPROPER, SUBCRITICAL, UNDECIDED, UNORDERED, Estimate, GridInfo, RiskReport
 
 INFINITE = Estimate(math.inf, math.inf, math.inf)
 ZERO = Estimate(0.0, 0.0, 0.0)
@@ -236,7 +236,9 @@ def evaluate[S](
     if proper:
         try:
             mean, variance, m1 = _mean_and_variance(chain)
-        except _inputs.NotSubcritical:  # every state can finish, but the runs need more than they make
+        except _inputs.NotSubcritical as stopped:  # every state can finish, but the runs need more than they make, or the arithmetic could not say how much
+            if isinstance(stopped, _inputs.Undecided):  # the arithmetic, not the policy: nothing below can rest on a mean that is not certified
+                return _unordered_report(chain, None, cvar_level, levels, UNDECIDED)
             proper = False
             cause = SUBCRITICAL
         else:
@@ -497,11 +499,14 @@ def _coarse_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins:
     The solver wants positive costs, so a free state is charged `FREE_BINS` bins and the charge is given back from
     the expected visits of the free states (the mean is linear in the costs and the visits do not depend on them).
     """
-    states, visits = expected_visits(chain)
+    found = expected_visits_checked(chain)
+    if found is None:  # `choose_step` asked for the same visits of the same chain a moment ago and got them: not getting them now is a defect, said with what is missing
+        raise RuntimeError("the coarse grid asked for the expected visits of a chain that `choose_step` had just found them for, and the second solve gave none")
+    states, visits, error = found
     free = math.fsum(v for s, v in zip(states, visits) if low_bins[s] == 0)
     low_mean, low_error = _solve_costs(chain, [max(float(k), FREE_BINS) * step for k in low_bins])
     high_mean, high_error = _solve_costs(chain, [float(k) * step for k in high_bins])
-    low = interval(low_mean[0], low_error)[0] - FREE_BINS * step * free * (1.0 + FREE_SLACK)
+    low = interval(low_mean[0], low_error)[0] - FREE_BINS * step * free * (1.0 + FREE_SLACK + error)  # the visits are good to `error`: the charge given back is widened by it
     return max(low, 0.0), interval(high_mean[0], high_error)[1]
 
 

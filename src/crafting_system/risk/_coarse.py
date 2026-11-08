@@ -12,8 +12,8 @@ of such an action, and the expected gap between them is
 
     gap(D) = D * sum over states i that are not whole multiples of D of the expected visits of i.
 
-The expected visits come from one dense solve of the chain. R13 has 57,830 visits of a 0.1001 action
-and 50 to 1,000 of each cheaper one: D = 0.1001 makes the first exact and leaves a gap of about 115
+The expected visits come from one dense solve of the chain (each state's own chance of staying divided out, its
+error measured: `expected_visits_checked`). R13 has 57,830 visits of a 0.1001 action and 50 to 1,000 of each cheaper one: D = 0.1001 makes the first exact and leaves a gap of about 115
 Chaos on a mean of 6,300. So the step is searched among `cost / m` of the costs that matter, the
 coarsest one whose gap is within `GAP_TARGET` of the mean (the least work); if none, the one with the
 least gap when that is within `GAP_LIMIT` of the mean; otherwise there is no coarse grid and the
@@ -31,6 +31,7 @@ import math
 
 import numpy as np
 
+from . import _linear
 from ._chain import UNIT_TOLERANCE, Chain
 
 DENSE_STATES = 2500  # the visits are one dense solve and the DP is dense: at most this many states that can finish
@@ -41,23 +42,47 @@ PARTS_TRIED = 64  # step = cost / m for m up to this
 DENSE_WORK = 1e11  # the most multiply-adds (bins to the horizon times cells of the matrix) of one dense run: a minute or so
 
 
-def expected_visits(chain: Chain) -> tuple[list[int], np.ndarray] | None:
-    """The states that can finish and the expected number of visits of each from the start; `None` if too many."""
+def expected_visits_checked(chain: Chain) -> tuple[list[int], np.ndarray, float] | None:
+    """`(states that can finish, expected visits of each from the start, an estimate of their relative error)`, or `None` (too many states, a visit count
+    the floats lose, or an error above `REFUSED_ABOVE`).
+
+    The system is not `I - P` as the chain gives it: a state that stays with chance 1 - 1e-13 has `1 - p = 1e-13 +- 1e-16` there, and a dense solve of that
+    is good to three digits (#615). Each state's row is divided by the chance to leave it (`leave`, the sum of its other chances, goals and lost mass
+    included: no `1 - p`), `w` solves `(I - P')^T w = e_start` with `P'[s, t] = P[s, t] / leave[s]` and no diagonal, and the visits are `w / leave`. The
+    solve is refined and its componentwise backward error measured (`_linear.solve`); the estimate of the relative error is that error times the condition
+    the system has (`_linear.forward_estimate`: measured by one more float solve with the same matrix, so an estimate and not a proof), and it is what the
+    caller widens its interval by.
+    """
     states = chain.finishing_states()
     if not states or len(states) > DENSE_STATES:
         return None
     position = {s: k for k, s in enumerate(states)}
-    system = np.eye(len(states))
+    n = len(states)
+    leave = np.array([math.fsum(p for j, p in chain.succ[s] if j != s) for s in states])
+    if not np.all(leave > 0.0):  # a state that leaves with chance rounded to 0: the visits are not finite in floats
+        return None
+    off = np.zeros((n, n))  # P'[s, t]
     for s in states:
         for j, p in chain.succ[s]:
-            if j in position:
-                system[position[j], position[s]] -= p  # transposed: visits = e_0 (I - P)^-1
-    start = np.zeros(len(states))
+            if j != s and j in position:
+                off[position[s], position[j]] += p / leave[position[s]]
+    start = np.zeros(n)
     start[position[0]] = 1.0
-    try:
-        return states, np.linalg.solve(system, start)
-    except np.linalg.LinAlgError:  # a state that leaves with probability rounded to 0: the visits are not finite in floats
+    transposed = np.ascontiguousarray(off.T)
+    found = _linear.solve(transposed, start)
+    if found is None:
         return None
+    w, error = found
+    bound = _linear.forward_estimate(transposed, start, w, error)
+    if not bound <= _linear.REFUSED_ABOVE or not np.all(np.isfinite(w)):
+        return None
+    return states, w / leave, bound
+
+
+def expected_visits(chain: Chain) -> tuple[list[int], np.ndarray] | None:
+    """The states that can finish and the expected number of visits of each from the start; `None` if too many or not known (`expected_visits_checked`)."""
+    found = expected_visits_checked(chain)
+    return None if found is None else found[:2]
 
 
 def whole_multiples(costs: np.ndarray, step: float) -> np.ndarray:

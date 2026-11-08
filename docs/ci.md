@@ -182,7 +182,7 @@ and with `--skip-refused` a rule whose action the game refuses is skipped (for t
 
 ### The benchmark over all routes, split over the runners (#554)
 
-`benchmark` prints, for each route with a given route, the divergences of the guide from the planner, the ratio of the two means and a "needs a human" row below `[benchmark] review_ratio` of `crafting.toml` (default 0.5, a prompt for a person and not a cut of the search). A route a person has taken apart has a verdict in `src/crafting_system/cli/_benchmark_verdicts.py` (#634: real find / the guide is wrong / our completion, the issues, the ratio and the date at review, the hashes of the target file and of the route file, the planner's first divergent action) and prints `reviewed: real find (#591), ratio at review 0.057` instead; it prints "NEEDS A HUMAN AGAIN" with the reason when its ratio moves from the one at review by more than `[benchmark] review_tolerance` (default 0.2 of that ratio, either way), a hash changes, or the planner's first divergent action changes. Under every such row the chance one use ends in the target and the cost of one use (each price part) are told for the planner's action and the guide's at the first divergence (#617). The start-boots emulator checks of #617 are recorded on Windows runners with `tools/coe_emulator/record_runs.sh` (see `tools/coe_emulator/README.md`). The summary lines are the output of one heavy run; `.github/scripts/benchmark_routes.py IDS OUT_DIR` runs `benchmark --heavy` on the routes `IDS` (comma separated) with the committed price snapshot, and prints each phase of the packed solver and of the visit chances as it ends. Four runners split the ten routes by `$RUNNER_INDEX` (R14 alone takes about 35 minutes, R04 alone about 10):
+`benchmark` prints, for each route with a given route, the divergences of the guide from the planner, the ratio of the two means and a "needs a human" row below `[benchmark] review_ratio` of `crafting.toml` (default 0.5, a prompt for a person and not a cut of the search). A route a person has taken apart has a verdict in `src/crafting_system/cli/_benchmark_verdicts.py` (#634: real find / the guide is wrong / our completion, the issues, the ratio and the date at review, the hashes of the target file and of the route file, the planner's first divergent action) and prints `reviewed: real find (#591), ratio at review 0.057` instead; it prints "NEEDS A HUMAN AGAIN" with the reason when its ratio moves from the one at review by more than `[benchmark] review_tolerance` (default 0.2 of that ratio, either way), a hash changes, or the planner's first divergent action changes. Under every such row the chance one use ends in the target and the cost of one use (each price part) are told for the planner's action and the guide's at the first divergence (#617). The start-boots emulator checks of #617 are recorded on Windows runners with `tools/coe_emulator/record_runs.sh` (see `tools/coe_emulator/README.md`). The summary lines are the output of one heavy run; `.github/scripts/benchmark_routes.py IDS OUT_DIR` runs `benchmark --heavy` on the routes `IDS` (comma separated) with the committed price snapshot, and prints each phase of the packed solver and of the visit chances as it ends. Four runners split the ten routes by `$RUNNER_INDEX` (measured on 2026-11-07: R14 alone took 25 minutes in run 42410659176 and 44 in run 42377921091, R04 alone 16 in run 42410659176; the time follows the walk of the day, so give R14 a runner of its own and a timeout of 60):
 
     $D --runners 4 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; 3) R=R08,R09,R13;; 4) R=R12,R10,R11,R05,V01;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
 
@@ -207,7 +207,9 @@ together. More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of 
 Since the packed solver the two routes are planned by the CLI itself: with the default budget the decision finds no approximate level
 (a route with an Attack/Caster metamod has none) and `make_plan` goes on to the packed solver, noting why in the plan. The tests
 that run the CLI (`--verify`, the completed given route) and `benchmark --heavy` on them are `tests/test_cli_r04_r14_heavy.py`; one
-runner each, since each plans its route once (R04 about 10 minutes, R14 about 25):
+runner each, since each plans its route once. Measured on 2026-11-08 (runs 42429256936, 42433918807; 42415865107 and 42419193048 on the #619 branch, without #642 or #621, took the same 42 and 46 minutes, so the time is the walk and not this solver): the whole file for R04 takes about
+33 minutes on one runner; the two halves for R14 take 42 to 46 minutes each, almost all of it the plan that each half makes (the `setup` line of `--durations=0`), so the whole file for R14
+on one runner does not fit in 60 minutes (run 42429317814 was cancelled by the timeout) and R14 always goes in two (`-k "not benchmark"`, `-k benchmark`). The split:
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 4 --timeout-minutes 60'
     $D --command 'case $RUNNER_INDEX in 1) R=R04; K="not benchmark";; 2) R=R04; K=benchmark;; 3) R=R14; K="not benchmark";; 4) R=R14; K=benchmark;; esac; CRAFTING_ROUTES=$R CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider --durations=0 -s tests/test_cli_r04_r14_heavy.py -k "$K"'
@@ -234,6 +236,16 @@ of the walk, merge and solve as it ends; `check` plans the route with `solver="o
 their relative difference. The goldens of `tests/test_packed_heavy.py` (R04, R14, S02) are rewritten from such a run with
 `CRAFTING_HEAVY=1 UPDATE_GOLDEN=1 ... pytest tests/test_packed_heavy.py` and are tied to the commit of `main` they were
 taken on.
+
+`.github/scripts/evaluation_probe.py --route r04|r14 --out DIR` plans the route the same way and records, for every evaluation of a policy
+(`solver/_packed_solve.evaluate_policy`), its seconds, the peak resident memory while it ran and the counters it left (iterations, true residual,
+backward error, and the exact solve by the cycles of the policy's chain when it was made); it writes `DIR/<route>.evaluation.json`. Run on two refs
+(`--ref main-with-the-probe` and `--ref my-branch`) it gives the time and memory of the evaluation before and after a change of the solve (#621).
+`--force-exact` makes the iteration give up at once so that every evaluation takes the exact solve by the cycles: what that fallback costs on the
+route's own policy (or, when the cycles do not fit in the memory of the run, the refusal that names what they would have cost):
+
+    $D --long --timeout-minutes 120 --command 'uv run --no-sync python -u .github/scripts/evaluation_probe.py --route r14 --out $OUT_DIR'
+    $D --command 'uv run --no-sync python -u .github/scripts/evaluation_probe.py --route r04 --force-exact --out $OUT_DIR'
 
 ### Counting a route's page (#465, #466)
 

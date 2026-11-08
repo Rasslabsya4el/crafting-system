@@ -38,6 +38,8 @@ import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 
+from crafting_system.risk._linear import SAID_ABOVE  # one definition: a certified relative error above it is said (4 significant digits; as `cli/_route_flow.STIFF_ERROR` is for the chances of a step)
+
 NOT_NAMED = "kinds-not-named"
 OPT_IN = "kinds-opt-in"
 NOT_BUILT = "kinds-not-built"
@@ -401,7 +403,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
     if risk is None:
         return ()
     found: list[Limit] = []
-    if risk.grid.cause in ("subcritical", "improper"):
+    if risk.grid.cause in ("subcritical", "improper", "undecided"):
         gone = [
             name
             for name, estimate in (("mean", risk.mean), ("variance", risk.variance), ("p50", risk.p50), ("p90", risk.p90), ("CVaR", risk.cvar))
@@ -411,9 +413,11 @@ def risk_limits(risk) -> tuple[Limit, ...]:
             Limit(
                 RISK,
                 not_computed(*gone),
-                "the plan starts more runs of its inputs than it finishes, so the cost of the whole craft has no finite mean"
-                if risk.grid.cause == "subcritical"
-                else "the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle, so no cost of the whole craft is computed",
+                {
+                    "subcritical": "the plan starts more runs of its inputs than it finishes, so the cost of the whole craft has no finite mean",
+                    "undecided": "the chances of the plan are so close to 1 (a step that almost always repeats itself) that the arithmetic could not fix the cost of the whole craft to within one in a hundred",
+                    "improper": "the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle, so no cost of the whole craft is computed",
+                }[risk.grid.cause],
                 "Only the bracket around the success chance is certified; no cost is claimed.",
             )
         )
@@ -426,6 +430,9 @@ def risk_limits(risk) -> tuple[Limit, ...]:
                 "The success chance, the mean cost and the variance are exact.",
             )
         )
+    loose = loose_figures(risk)
+    if loose is not None:
+        found.append(loose)
     cut = [name for name, estimate in (("p50", risk.p50), ("p90", risk.p90), ("CVaR", risk.cvar)) if unresolved(risk, estimate)]
     if cut:
         found.append(
@@ -447,6 +454,34 @@ def risk_limits(risk) -> tuple[Limit, ...]:
             )
         )
     return tuple(found)
+
+
+
+
+def relative_error(estimate) -> float:
+    """The most the certified range of `estimate` is from its value, relative to the value; 0 for a figure that is zero or not finite (no range to speak of)."""
+    if not (math.isfinite(estimate.value) and estimate.value > 0.0):
+        return 0.0
+    high = estimate.high - estimate.value if math.isfinite(estimate.high) else math.inf
+    return max(high, estimate.value - estimate.low) / estimate.value
+
+
+def loose_figures(risk) -> Limit | None:
+    """The limit of a mean cost or variance whose certified range is wider than 4 significant digits: it is printed to more digits than the arithmetic supports (OR-13).
+
+    The range is the certificate of the linear solve behind the figure (`risk._inputs`, `risk._moments`): the forward error of the answer, with the
+    rounding of the check included, so it is not a guess at the digits but what the calculation can show.
+    """
+    error = max(relative_error(risk.mean), relative_error(risk.variance))
+    if not error > SAID_ABOVE:
+        return None
+    digits = max(0, int(-math.log10(error))) if math.isfinite(error) else 0
+    return Limit(
+        RISK,
+        "The cost figures are good to fewer digits than printed",
+        f"the chances of the plan are so close to 1 that the mean cost and the variance can be certified only to about {digits} significant digits",
+        "The mean cost and the variance lie in the range printed beside each; they are not exact to the digits printed.",
+    )
 
 
 def with_limits(limits: Sequence[Limit], added: Iterable[Limit], kind: str | None = None) -> tuple[Limit, ...]:

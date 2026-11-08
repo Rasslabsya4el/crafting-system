@@ -12,8 +12,8 @@ these tests run in a heavy run, not in a CI shard or on a PC:
 (`CRAFTING_ROUTES` is `R04`, `R14` or both, and `-k "not benchmark"` the CLI tests or `-k benchmark` the benchmark ones: four runners, each
 plans its route once; `-s` shows the `--progress` lines on stderr.) The rule of that split, checked by the quick guard test
 `test_every_bench_test_is_named_for_it_and_every_such_name_takes_bench`: a test that takes `bench` has "benchmark" in its name, and a test
-that takes `cli` does not. R14's one plan takes about 25 minutes (`docs/ci.md`): its CLI tests (that plan, then `--verify`) passed in about
-35 minutes in run 42395405712, inside the 60-minute timeout; the benchmark tests plan again, so they run on a runner of their own.
+that takes `cli` does not. R14's one plan takes 40 to 45 minutes on a runner (`docs/ci.md`, measured 2026-11-08): each half of the file passed in about
+46 minutes in run 42433918807, inside the 60-minute timeout; the benchmark tests plan again, so they run on a runner of their own.
 Without `CRAFTING_HEAVY` they skip, and without the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
 
 The CLI runs WITHOUT `--exact`: the default budget of 60 seconds finds no approximate level (a route with an Attack/Caster metamod has none)
