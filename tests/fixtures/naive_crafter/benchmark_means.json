@@ -66,7 +66,7 @@
    "success_value": 1.0
   },
   "R14": {
-   "commit": "6e1ed96de21eee2b14c343c2633beef91dbdc78c",
+   "commit": "395278dc95034085bfe9578ca9ad6d90cfaf27d9",
    "gaps": 1,
    "inputs": {
     "costs": {
@@ -82,7 +82,7 @@
      "restart": 13.0
     },
     "route": "b334c25cac3511890735a44b29887625abfefea9ba49f37bdb9c156aa4b773c5",
-    "target": "6192dbf7c3672d2e261131a1a605c12a29860dcd411bab0e4bf5ea7236e1a17c"
+    "target": "dcfbec8bc9da74e7bf9cc2c11f3911dce8b34f4a9be9ed8bea9977b224f7fcf3"
    },
    "naive_heavy": {
     "commit": "712e5e02b7cf8d90ab8ec24f2c862a58fa47697c",
@@ -93,14 +93,14 @@
     "seed": 13
    },
    "pin": "3.29.3.3",
-   "run": "42432611502",
+   "run": "42446621133",
    "stem": "r14-hunter-bow",
    "success_high": 1.0,
    "success_low": 0.0,
    "success_value": 0.0
   },
   "R14 with restart": {
-   "commit": "6e1ed96de21eee2b14c343c2633beef91dbdc78c",
+   "commit": "395278dc95034085bfe9578ca9ad6d90cfaf27d9",
    "gaps": 0,
    "inputs": {
     "costs": {
@@ -116,12 +116,12 @@
      "restart": 13.0
     },
     "route": "1162f2b3e55ee6b67ae005bfc545aa52aaac9234c625d75564af2fa5d0f81e63",
-    "target": "6192dbf7c3672d2e261131a1a605c12a29860dcd411bab0e4bf5ea7236e1a17c"
+    "target": "dcfbec8bc9da74e7bf9cc2c11f3911dce8b34f4a9be9ed8bea9977b224f7fcf3"
    },
-   "mean_with_start": 12953.482050004224,
-   "mean_without_start": 12940.482050004224,
+   "mean_with_start": 12951.708971220665,
+   "mean_without_start": 12938.708971220665,
    "pin": "3.29.3.3",
-   "run": "42432611502",
+   "run": "42446621133",
    "start_price": 13.0,
    "stem": "r14-hunter-bow-restart",
    "success_high": 1.0,
