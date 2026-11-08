@@ -113,7 +113,8 @@ def uses(data, targets):
             assert (record["item"]["base"], record["item"]["item_level"], record["item"]["rarity"], record["item"]["mods"]) == (
                 item.base_id, item.item_level, item.rarity.value, []
             ), f"{case}: the recorded item is not the target's start item"
-            found[case] = per_use_of(plan, plan.start, record["action"])
+            opened = plan.abstraction.compress(item) if plan.start.flags.unopened else plan.start  # a bought listing is drawn first (#640): the recorded item is the one it opens to
+            found[case] = per_use_of(plan, opened, record["action"])
     return found
 
 

@@ -89,6 +89,7 @@ class When:
     fractured_families: tuple[str, ...] = ()
     fractured_without: tuple[str, ...] = ()  # a mod is fractured and it is none of these families (a mod held as its family type counts as another)
     crafted: bool | None = None
+    unopened: bool | None = None  # the bought listing whose mods are not drawn yet (ADR-0064): the one state the draw is taken in
     statuses: tuple[tuple[int, frozenset[Status]], ...] = ()  # (index of the requirement leaf, statuses allowed)
     open_slots: tuple[tuple[Side, int, int], ...] = ()  # (side, capacity of the side, free slots wanted at least)
 
@@ -98,6 +99,8 @@ class When:
         if self.corrupted is not None and state.flags.corrupted != self.corrupted:
             return False
         if self.crafted is not None and state.crafted != self.crafted:
+            return False
+        if self.unopened is not None and state.flags.unopened != self.unopened:
             return False
         if self.no_fractured and state.fractured:
             return False
@@ -249,6 +252,9 @@ class _Reader:
         rules = tuple(
             self.read_rule(entry, f"rules[{index}]", entries.item_lines[index]) for index, entry in enumerate(entries)
         )
+        opening = next((priced.label for priced in self.plan.offers if priced.offer.action.opens_listing), None)
+        if opening is not None:  # ADR-0064: the draw of a bought item's mods is the market's, not the guide's; every route takes it first
+            rules = (Rule(root.line, When(unopened=True), opening), *rules)
         return Route(name, self.source, rules, skip_refused)
 
     def read_rule(self, entry: object, path: str, line: int) -> Rule:

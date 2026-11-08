@@ -618,6 +618,28 @@ def test_the_start_item_is_read_from_the_target_with_its_fractured_mods_and_the_
     assert yaml.safe_load(TARGET)["start"] == "bought"
 
 
+def test_a_bought_magic_start_with_no_mod_is_opened_free_by_the_games_alteration_and_nothing_else_is_opened():
+    """ADR-0064: the item the market sells holds what an Orb of Alteration leaves (1 or 2 mods, 1/2 each), and the draw costs nothing beyond the listing."""
+    magic = TARGET.replace("rarity: normal", "rarity: magic")
+    w = world(magic)
+    rng = Random(7)
+    sizes = [len(w.opened_start(rng).mods) for _ in range(400)]
+
+    assert set(sizes) == {1, 2} and 150 < sizes.count(1) < 250
+    assert all(w.opened_start(rng).rarity == "magic" for _ in range(20))
+    assert world().opened_start(rng) == Item("normal")  # a normal start is as the file says
+    assert World(tiny_raw(), magic.replace("start: bought", "start: given"), PRICES, None).opened_start(rng) == Item("magic")  # so is a given one
+    assert world(TARGET.replace("rarity: normal", "rarity: magic")).action(RESTART).cost == 5.0  # the draw adds no price to a restart
+
+
+def test_a_play_from_a_bought_magic_start_pays_no_orb_for_the_draw():
+    magic = TARGET.replace("rarity: normal", "rarity: magic")
+    route = "rules:\n  - do: Orb of Alteration\n"
+    plays = [player(route, magic).play(Random(seed)) for seed in range(300)]
+
+    assert min(play.uses.get("Orb of Alteration", 0) for play in plays) == 0  # an item drawn with SC is done at once; the draw is not an Alteration
+
+
 # --- pooling a long simulation that ran on several runners ---------------------------------------------------------------------------
 
 

@@ -38,14 +38,10 @@ item_level: 86
 # Influences on the base. [] means none.
 influence: []
 
-# The start: rare boots with no mod. The guide fossils a rare pair of boots and the first fossil erases whatever
-# it holds, so which mods the boots start with does not matter. A bought normal base made rare with an Orb of
-# Alchemy holds 4 to 6 random mods; tracking them (and the Alchemy as an action) multiplies the states, and a
-# plan of it did not finish in 60 minutes on a GitHub runner (run 41292010467), so the model starts from the rare
-# boots with no mod and the price of the start item includes the Alchemy. The cost of this reading: the Alchemy is
-# a free first draw of the same mods that a fossil use draws, so the mean cost is too high by at most about one use of
-# the first fossil set (about 1.6 Chaos in the solver's plan, about 38 Chaos in the guide's pair); which plan is
-# cheaper does not change.
+# The start: the rare boots the market sells (ADR-0064). The target names none of their mods, and the guide fossils a rare pair of boots, so the
+# item is a bought Normal base made rare with an Orb of Alchemy, priced as that base plus the Alchemy (OR-16). It holds what an Orb of Alchemy
+# leaves on the base: 4, 5 or 6 mods at their game weights. The plan opens with that draw and decides on each outcome of it; mods that no
+# requirement asks for are junk, counted and not told apart (OR-10), and the first fossil erases whatever the rare holds.
 start_item:
   rarity: rare
   mods: []

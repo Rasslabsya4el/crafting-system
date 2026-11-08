@@ -135,7 +135,7 @@ def verify(data: GameData, plan: Plan, *, runs: int = DEFAULT_RUNS, seed: int = 
 
     limit = max_steps_for(plan)
     report = simulate(
-        data, policy, target.start_item, target.is_met_by,
+        data, policy, plan.simulated_start, target.is_met_by,
         runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=limit, block=SIMULATION_BLOCK,
     )  # fmt: skip
     shift = plan.start_price.chaos

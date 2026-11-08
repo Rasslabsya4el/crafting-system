@@ -34,7 +34,7 @@ from route_view_support import (
 )
 from targets_support import EXAMPLES
 
-from crafting_system.actions import HarvestReforge
+from crafting_system.actions import DRAW_LABEL, HarvestReforge
 from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
 from crafting_system.cli._limits import STRANDS
 from crafting_system.cli._reach import policy_states
@@ -667,16 +667,18 @@ def test_a_gap_row_says_why_and_the_route_never_finishes(two_leaf_plan):
     assert not any(field.label == "Step cost" for field in gap.fields)
 
 
-def test_a_step_from_which_no_run_finishes_says_so_without_cost_numbers(two_leaf_plan):
+def test_a_route_that_only_restarts_finishes_by_the_draw_of_the_bought_item(two_leaf_plan):
+    """Before the draw of a bought item's mods (ADR-0064) a route that only restarts never finished; now the draw can land the goal itself."""
     only_restart = "rules:\n  - do: restart\n"
 
     section = build_section(given(two_leaf_plan, only_restart), DATA)
 
-    row = section.rows[1]
+    assert section.rows[1].title == DRAW_LABEL  # the bought rare opens with the draw of its mods, then the route restarts
+    row = section.rows[2]
     assert row.title.startswith("Restart")
-    assert lines_of(row, "Uses on average") == ["never finishes from here"]
-    assert "Step cost" not in labels_of(row) and row.cost is None
-    assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes"
+    assert lines_of(row, "Uses on average")[0].startswith("≈")
+    assert "Step cost" in labels_of(row) and row.cost is not None
+    assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"].startswith("≈")
 
 
 def test_a_step_whose_every_exit_is_a_gap_says_it_never_finishes_without_cost_numbers():

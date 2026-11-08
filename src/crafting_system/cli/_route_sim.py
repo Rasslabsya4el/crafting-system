@@ -68,6 +68,6 @@ def simulate_route(
     """`runs` crafts of the route from the target's start item, with what the start item cost added to each."""
     target = plan.target
     return simulate(
-        data, route_policy(plan, route, data, skip_refused=skip_refused), target.start_item, target.is_met_by,
+        data, route_policy(plan, route, data, skip_refused=skip_refused), plan.simulated_start, target.is_met_by,
         runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=max_steps,
     )  # fmt: skip

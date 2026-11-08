@@ -246,15 +246,15 @@ def test_r08_r09_and_r04_carry_their_verdicts_as_real_finds():
     assert found[("R08", GUIDE)].issues == (591,) and found[("R09", GUIDE)].issues == (592,)
     assert found[("R04", COMPLETED)].issues == (599, 628)
     assert {each.kind for each in found.values()} == {REAL_FIND}
-    assert found[("R08", GUIDE)].ratio == pytest.approx(0.057, abs=1e-3) and found[("R09", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3)
+    assert found[("R08", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3) and found[("R09", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3)
     assert found[("R04", COMPLETED)].ratio == pytest.approx(0.331, abs=1e-3)
 
 
-# What the heavy run 42395491917 (the committed price snapshot) measured for the three routes: the ratio planner mean / guide mean and the
+# What the heavy runs 42395491917 (R04) and 42433997611 (R08, R09: the bought boots are drawn, #640) measured at the committed price snapshot: the ratio planner mean / guide mean and the
 # planner's first divergent action. The verdicts were written from it.
 MEASURED = {
-    ("R08", GUIDE): (0.05738580407161665, "Fossils Prismatic Fossil"),
-    ("R09", GUIDE): (0.05796558469433014, "Fossils Prismatic Fossil"),
+    ("R08", GUIDE): (0.05781596927097446, "Fossils Prismatic Fossil"),
+    ("R09", GUIDE): (0.058222611236752486, "Fossils Prismatic Fossil"),
     ("R04", COMPLETED): (0.33095397065170684, "Exalted Orb"),
 }
 
@@ -439,13 +439,18 @@ def boots(request):
     return request.param, plan
 
 
+def the_boots_after_the_draw(plan):
+    """The item the fossil is used on: since #640 the plan starts at the unopened listing, where only the draw works, and the fossil acts on the rare boots it opens to."""
+    return plan.abstraction.compress(plan.target.start_item) if plan.start.flags.unopened else plan.start
+
+
 def test_one_use_on_the_start_boots_has_equal_odds_and_a_cost_25_times_apart(boots):
     """#591, #592: the Prismatic Fossil and the guide's pair reach the target about as often, at 25 and 22 times the cost per use: the whole of the ratio."""
     route, plan = boots
     _, pair, (cheap_cost, dear_cost), (cheap_odds, dear_odds), pair_parts = START_BOOTS[route]
 
-    cheap = per_use_of(plan, plan.start, PRISMATIC)
-    dear = per_use_of(plan, plan.start, pair)
+    cheap = per_use_of(plan, the_boots_after_the_draw(plan), PRISMATIC)
+    dear = per_use_of(plan, the_boots_after_the_draw(plan), pair)
 
     assert cheap["cost"] == pytest.approx(cheap_cost) and dear["cost"] == pytest.approx(dear_cost)
     assert [part["resource"] for part in cheap["parts"]] == ["Primitive Chaotic Resonator", "Prismatic Fossil"]
@@ -464,7 +469,10 @@ def test_the_row_of_the_start_boots_tells_both_numbers(boots):
     pair = START_BOOTS[route][1]
     first = {
         "state": "S1",
-        "per_use": {"planner": per_use_of(plan, plan.start, PRISMATIC), "guide": per_use_of(plan, plan.start, pair)},
+        "per_use": {
+            "planner": per_use_of(plan, the_boots_after_the_draw(plan), PRISMATIC),
+            "guide": per_use_of(plan, the_boots_after_the_draw(plan), pair),
+        },
     }
 
     lines = per_use_lines(first, "guide")
