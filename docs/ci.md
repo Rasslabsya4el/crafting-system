@@ -103,11 +103,11 @@ dispatches only while
 
 | Variable (repository, Actions variables) | Default | Meaning |
 |---|---|---|
-| `HEAVY_FLOOR` | 4 | Runners heavy runs always may use, even when CI is busy. |
-| `CI_RESERVE` | 4 | Runners kept free for merge CI on top of the jobs it already has. |
+| `HEAVY_FLOOR` | 4 (the repository variable is **6** since 2026-11-08) | Runners heavy runs always may use, even when CI is busy. |
+| `CI_RESERVE` | 4 (the repository variable is 4) | Runners kept free for merge CI on top of the jobs it already has. |
 
-With the defaults heavy runs may use 16 runners when no CI run is waiting, 8 when one pull request run is queued
-(8 jobs), and only the floor of 4 when two are (or one dispatched run, 16 jobs). The main chat turns the knobs without a commit (Settings, Secrets and variables, Actions, Variables, or
+With `CI_RESERVE` 4, heavy runs may use 16 runners when no CI run is waiting (20 - 4 - 0), 8 when one pull request run is queued
+(8 jobs: 20 - 4 - 8), and only the floor when two are (or one dispatched run, 16 jobs: 20 - 4 - 16 = 0): 6 now, 4 with the script's default. The main chat turns the knobs without a commit (Settings, Secrets and variables, Actions, Variables, or
 `gh variable set HEAVY_FLOOR --body 6`); the next poll of every waiting dispatcher sees the new value. A heavy run that
 is queued or running counts against the budget from the moment it is dispatched, so two sessions cannot both take the
 same free runners (sessions on one PC also share a lock while they decide).
@@ -133,11 +133,46 @@ Options of `run`:
 `status` shows the budget, the runner jobs in use by kind (CI per pull request, heavy per branch), the queue with how long
 it has waited, and the runs older than their own timeout or silent for 30 minutes (each with its `gh run cancel` line).
 
-After dispatching, wait for the run and download as before:
+**A helper never waits on a run inside its turn** (ticket #711: polling loops cost coders 76% of their hours and grew their contexts past
+400k tokens). It dispatches with `--no-wait`, reports the run id, what the run shows and what to do with the result, and ends its turn:
 
-    gh run list --workflow run.yml --branch my-branch --limit 1 --json databaseId,status,conclusion
-    gh run watch <run id> --exit-status
+    python .github/scripts/heavy_dispatch.py run --no-wait --ref my-branch --runners 4 --command '...'
+
+Exit 0 prints `dispatched run <id> on <branch> ...`; exit 3 means there is no room now, and the helper reports the command it wanted to
+run instead of waiting for room. The main chat waits for the run, in the background, so its exit is the notification, and resumes the helper:
+
+    python .github/scripts/wait_runs.py <run id> [<run id> ...] [--timeout-minutes 90]
+
+`wait_runs.py` takes the runs of any workflow (PR CI, integration run, heavy run). When it starts it reads each run's `node_id` once
+(`gh api repos/R/actions/runs/ID --jq .node_id`, one call per run); a run id that is not a run of the repository gets a 404 and the script
+exits 2 at once, so a typo costs two calls, not a wait. From then on it makes **one GitHub API call per poll** for all the runs (one GraphQL call over
+the node ids), at least 240 s apart (`--poll-seconds` below that is refused). A rate-limit refusal, at start or in a poll, is printed on stderr and retried
+one poll interval later. When a run completes it prints one line: `run <id>  <branch>  <workflow>  <conclusion>  jobs: success 17`.
+Exit codes: 0 every run succeeded, 1 one did not (or GitHub kept failing), 2 a bad argument or a run id that is not a run of the repository,
+3 `--timeout-minutes` ran out (the poll that finds the time up ends it, so it can overshoot by one poll). It never reads or prints a token; it calls `gh api`. Then download the files as before:
+
     gh run download <run id> --dir results        # one folder per runner: run-ubuntu-latest-1, -2, ...
+
+**A heavy run that commits its own result (`--commit`, ticket #711).** A command that re-records files (a golden, a recorded fixture) does
+not need a download, a copy and a commit by hand: add `--commit PATH [PATH ...]` and the workflow commits the files the command changed under
+those paths onto the branch the run ran on.
+
+    python .github/scripts/heavy_dispatch.py run --no-wait --ref my-branch --runners 1 --commit tests/golden/real_r05.html --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest ...'
+
+- **Allowed:** paths under `tests/golden/` and `tests/fixtures/` only (a file or a folder), made of letters, digits and `. _ / + = @ -`; no `..`,
+  no absolute path. **Refused:** the refs `main` and `integ/*`. The dispatcher checks this before it waits, and `run.yml` checks it again in
+  its `plan` job (bash), so a hand dispatch cannot get around it. The paths reach the workflow as the input `commit_paths`; no input reaches a
+  shell except through `env:`.
+- **Collecting.** After the command succeeded, each runner uploads the files it changed (new or modified, not deleted) under the paths as the
+  artifact `commit-<n>` (a symlink is skipped). The last job, `commit`, is the only one with `contents: write` (`plan` and `run` keep `contents: read`); it merges the artifacts with
+  `.github/scripts/merge_commit_files.py`, which checks every path against the same rules again. It does not rely on the layout `download-artifact` gives (one matching artifact is extracted straight into the folder, several into one folder each; run 42467788169 showed it): a runner's root is the folder that holds its `runner-collected.txt`, and a file under no root is refused. Two runners that wrote the same path with
+  different bytes make the job refuse and commit nothing.
+- **Committing.** One commit `Re-record <paths> (heavy run <id>)` on top of the commit the run tested (`github.sha`). The job pushes only when the
+  branch still points at that commit (a lease on that sha); if the branch moved, the job fails, says so in its error and summary, and pushes nothing.
+  The helper then pulls, and dispatches again.
+- **No change.** If nothing under the paths changed, there is no commit; the run succeeds and its job summary says so.
+- **No CI run follows the push.** A push made with the workflow token starts no PR CI run (GitHub's rule against loops). The PR's CI starts
+  at the next push by hand; an integration run is dispatched by hand as before (`gh workflow run ci.yml --ref integ/...`).
 
 (`gh` can be slow or time out; the same calls work with `curl` against `api.github.com/repos/<owner>/<repo>/actions/...`.)
 Fetch the data into your own folder first with `python -m crafting_system.data fetch` only for a local run; on
@@ -170,9 +205,10 @@ complete, predicted and pilot seconds) and, when it is approximate, the answer o
 
 R04 and R14 are too large for the exact solver, and these two scripts measure them (never run them on a PC):
 
+    D='python .github/scripts/heavy_dispatch.py run --no-wait --ref my-branch --runners 1 --long'
     S='uv run --no-sync python .github/scripts'
-    gh workflow run run.yml --ref my-branch -f timeout_minutes=360 -f command="$S/count_states.py examples/targets/r04-penetrating-quiver.yaml --out \$OUT_DIR"
-    gh workflow run run.yml --ref my-branch -f timeout_minutes=300 -f command="$S/simulate_route.py examples/targets/r14-hunter-bow.yaml examples/routes/r14-hunter-bow.yaml --runs 2000 --out \$OUT_DIR"
+    $D --timeout-minutes 360 --command "$S/count_states.py examples/targets/r04-penetrating-quiver.yaml --out \$OUT_DIR"
+    $D --timeout-minutes 300 --command "$S/simulate_route.py examples/targets/r14-hunter-bow.yaml examples/routes/r14-hunter-bow.yaml --runs 2000 --out \$OUT_DIR"
 
 `count_states.py` walks the exact graph of a target (every offer and `restart`) and prints, every 30 seconds, the states
 found and expanded, the transitions and the resident memory; it stops at `--max-rss-mb` (default 13,000, a runner has 16 GB)
@@ -392,7 +428,7 @@ is the **view** `tests/golden_diff.py` makes of them, and the same view is used 
   stay under 900,000 bytes (UTF-8), below the 1 MiB a job summary may hold; a file that would pass it is left out with a note.
 
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
-in the PR, and commit the file. Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
+in the PR, and commit the file (a golden that needs the real game data is re-recorded on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
 real game data is taken from where it is made, since a PC without the cache cannot make it. `reachability.md` is the artifact
 `reachability` of the PR's CI run (uploaded by the "Reachability report" step above). The `real_*` pages (`tests/golden/real_r05.html`,
 `real_r10.html`, `real_r11.html`) are not CI artifacts: `assert_golden` in `tests/route_view_support.py` rewrites each one when
@@ -401,7 +437,11 @@ cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run that copies th
 
     python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -k route_view_page_is_the_golden_file -q && cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
 
-`gh run download <run id>` puts the pages in `run-ubuntu-latest-1/`, and you copy them over `tests/golden/real_r05.html`, `real_r10.html` and `real_r11.html`, read the diff, then commit. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
+With `--commit` the run itself commits them (see "A heavy run that commits its own result" above), so there is nothing to download or copy:
+
+    python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 1 --commit tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -k route_view_page_is_the_golden_file -q'
+
+(`BRANCH` is never `main` or `integ/*`.) The commit lands on the branch, so pull it, and read the diff of the `Golden changes against main` step on the PR before it is accepted. Without `--commit`, `gh run download <run id>` puts the pages in `run-ubuntu-latest-1/`, and you copy them over `tests/golden/real_r05.html`, `real_r10.html` and `real_r11.html`, read the diff, then commit. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
 
 ## Keeping the shards balanced
 

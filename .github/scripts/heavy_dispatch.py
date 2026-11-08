@@ -15,6 +15,10 @@ it the run starts smaller when only that many fit (the command must then split i
 and still finish inside `--timeout-minutes`). Heavy jobs are kept short so runners free up: `--timeout-minutes` above
 60 needs `--long`, which is for a single indivisible solve (one runner); split a long sweep into more, shorter parts.
 
+`--commit PATH [PATH ...]` (ticket #711) makes the run commit, onto the branch it ran on, the files the command changed under
+those paths (a re-recorded golden, say), so nobody downloads and copies them: only paths under tests/golden/ and
+tests/fixtures/, never on `main` or `integ/*`. See docs/ci.md.
+
 `status` prints the budget, the runner jobs in use by kind, the queue with waiting times, and the runs that are older
 than their own timeout or silent for 30 minutes (candidates to cancel).
 
@@ -58,6 +62,10 @@ RETRY_AFTER_CAP_SECONDS = 600  # the longest wait for GitHub's secondary limit (
 STATE_DIR = Path(tempfile.gettempdir()) / "crafting-heavy-dispatch"  # shared by every session on this PC
 LOCK_STALE_SECONDS = 300
 LEDGER_HOURS = 7
+
+COMMIT_ROOTS = (("tests", "golden"), ("tests", "fixtures"))  # the only places a heavy run may commit to (ticket #711)
+COMMIT_PATH_CHARS = re.compile(r"[A-Za-z0-9._/+=@-]+")  # no space, glob, backslash, drive colon or quote; run.yml allows the same
+PROTECTED_REFS = ("main", "integ/")  # a heavy run commits to neither
 
 LOG_STAMP = r"^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}[:][0-9]{2}[:][0-9]{2})"  # [:] keeps the drive-letter scan quiet
 RUN_NAME = re.compile(r"^heavy (\d+)x (\S+) t(\d+)")
@@ -148,6 +156,29 @@ def stale_reason(run: dict, jobs: list[dict], now: dt.datetime, last_output: dt.
         silent = (now - last_output).total_seconds() / 60
         if silent > SILENT_MINUTES:
             return f"no log output for {silent:.0f} min"
+    return None
+
+
+def commit_path_problem(path: str) -> str | None:
+    """Why `path` may not be committed by a heavy run (ticket #711), else None. Allowed: a file or folder under
+    tests/golden/ or tests/fixtures/. run.yml checks the same rules in bash and the merge job checks them once more."""
+    if not COMMIT_PATH_CHARS.fullmatch(path):
+        return "only letters, digits and . _ / + = @ - are allowed (no space, wildcard, backslash or drive letter)"
+    parts = (path[:-1] if path.endswith("/") else path).split("/")
+    if parts[0] == "":
+        return "an absolute path"
+    if any(part in ("", ".", "..", ".git") for part in parts):
+        return "a path with an empty, '.', '..' or '.git' part"
+    if tuple(parts[:2]) not in COMMIT_ROOTS:
+        return "not under tests/golden/ or tests/fixtures/"
+    return None
+
+
+def commit_ref_problem(ref: str) -> str | None:
+    """Why a heavy run on `ref` may not commit (ticket #711): `main` and `integ/*` are only changed by the main chat."""
+    name = ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else ref
+    if name == "main" or name.startswith("integ/"):
+        return f"--commit never commits to '{name}' (main and integ/* are changed only by the main chat)"
     return None
 
 
@@ -509,6 +540,20 @@ def check_args(args) -> None:
             )
         if args.runners != 1:
             sys.exit("--long is for a single indivisible solve: it needs --runners 1")
+    check_commit(args)
+
+
+def check_commit(args) -> None:
+    paths = getattr(args, "commit", None)
+    if not paths:
+        return
+    problem = commit_ref_problem(args.ref)
+    if problem:
+        sys.exit(problem)
+    for path in paths:
+        problem = commit_path_problem(path)
+        if problem:
+            sys.exit(f"--commit '{path}': {problem}")
 
 
 def cmd_run(api: Api, args) -> int:
@@ -592,6 +637,8 @@ def start_run(api: Api, args, count: int) -> int:
         "os": args.os,
         "timeout_minutes": str(args.timeout_minutes),
     }
+    if getattr(args, "commit", None):  # left out otherwise, so a branch from before the input still dispatches
+        inputs["commit_paths"] = " ".join(args.commit)
     api.call("/actions/workflows/run.yml/dispatches", "POST", {"ref": args.ref, "inputs": inputs})
     # From here the run exists: never raise, or the caller would dispatch it a second time.
     for _ in range(30):  # the run shows up within seconds; holding the lock until then keeps the next session honest
@@ -677,6 +724,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--long", action="store_true", help="allow a timeout over 60 minutes: one runner, one indivisible solve")
     run.add_argument("--max-wait", type=int, default=0, help="give up after this many minutes of waiting (default: wait for ever)")
     run.add_argument("--no-wait", action="store_true", help="exit with 3 instead of waiting when it does not fit now")
+    run.add_argument("--commit", nargs="+", metavar="PATH", help="the run commits the files the command changed under these paths onto --ref (only tests/golden/ and tests/fixtures/; not on main or integ/*)")
     run.add_argument("--dry-run", action="store_true", help="decide and print, dispatch nothing")
     status = commands.add_parser("status", help="show the runner queue")
     status.add_argument("--no-logs", action="store_true", help="skip the log check for silent runs")

@@ -10,6 +10,8 @@ import importlib.util
 import io
 import json
 import os
+import shutil
+import subprocess
 import sys
 import urllib.error
 from pathlib import Path
@@ -200,7 +202,7 @@ def test_parse_run_name():
 
 def args(**options):
     values = dict(ref="my-branch", command="echo hi", runners=4, min_runners=None, os="ubuntu-latest", timeout_minutes=60,
-                  long=False, max_wait=0, no_wait=False, dry_run=False)
+                  long=False, max_wait=0, no_wait=False, dry_run=False, commit=None)
     values.update(options)
     return type("Args", (), values)()
 
@@ -757,3 +759,299 @@ def test_status_reads_each_variable_once(capsys):
     assert heavy.cmd_status(api, type("S", (), {"no_logs": True})()) == 0
     assert sorted(api.variable_reads) == ["CI_RESERVE", "HEAVY_FLOOR"]
     assert "Heavy budget 4 = max(HEAVY_FLOOR=4, 20 - CI_RESERVE=4 - CI jobs 41)" in capsys.readouterr().out
+
+
+# ---- the run that commits its own result: --commit (ticket #711) -------------------------------------------------------
+
+WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "run.yml"
+ALLOWED_PATHS = [
+    "tests/golden/real_r05.html",
+    "tests/golden/",
+    "tests/golden",
+    "tests/fixtures/heavy_commit_probe.txt",
+    "tests/fixtures/naive_crafter/record.json",
+    "tests/golden/a+b=c@d-e_f.json",
+]
+REFUSED_PATHS = [
+    "tests/golden/../../src/x.py",  # up out of the folder
+    "tests/golden/..",
+    "tests/../src/x.py",
+    "../tests/golden/x",
+    "/tests/golden/x",  # absolute
+    # the next three are assembled from pieces, so the scan of test_no_absolute_paths never sees them whole
+    "/" + "etc/passwd",
+    "C" + ":/tests/golden/x",
+    "tests" + "\\" + "golden" + "\\" + "x.html",
+    "src/crafting_system/data/PIN.json",  # outside the two folders
+    "tests/test_x.py",
+    "tests/goldenish/x",
+    "tests/fixtures2/x",
+    "tests/fixture/x",
+    "tests",
+    "",
+    "tests/golden//x",
+    "tests/golden/./x",
+    "tests/golden/.git/config",
+    "tests/golden/*",
+    "tests/golden/a b",
+    "tests/golden/$(id)",
+    "tests/golden/x;y",
+    ".github/workflows/ci.yml",
+]
+
+
+@pytest.mark.parametrize("path", ALLOWED_PATHS)
+def test_commit_paths_under_golden_and_fixtures_are_allowed(path):
+    assert heavy.commit_path_problem(path) is None
+    heavy.check_args(args(commit=[path], ref="claude/711-x"))
+
+
+@pytest.mark.parametrize("path", REFUSED_PATHS)
+def test_commit_paths_with_dotdot_absolute_or_outside_the_two_folders_are_refused(path):
+    assert heavy.commit_path_problem(path)
+    with pytest.raises(SystemExit, match="--commit"):
+        heavy.check_args(args(commit=["tests/golden/ok.json", path], ref="claude/711-x"))
+
+
+@pytest.mark.parametrize("ref", ["main", "integ/2026-11-08-x", "integ/x", "refs/heads/main", "refs/heads/integ/y"])
+def test_commit_is_refused_on_main_and_integ_refs(ref):
+    assert heavy.commit_ref_problem(ref)
+    with pytest.raises(SystemExit, match="never commits"):
+        heavy.check_args(args(commit=["tests/golden/x.json"], ref=ref))
+
+
+@pytest.mark.parametrize("ref", ["claude/711-wait", "integration-notes", "mainline", "feature/integ/x", "main2"])
+def test_other_refs_may_commit(ref):
+    assert heavy.commit_ref_problem(ref) is None
+
+
+def test_main_and_integ_still_run_heavy_commands_without_commit():
+    heavy.check_args(args(ref="main"))
+    heavy.check_args(args(ref="integ/x"))
+
+
+def test_a_refused_commit_dispatches_nothing_and_never_waits():
+    api = FakeApi([ci_run(10, queued=16)])  # a busy CI: an accepted request would wait
+    with pytest.raises(SystemExit):
+        heavy.cmd_run(api, args(commit=["src/x.py"], ref="claude/x", runners=8))
+    with pytest.raises(SystemExit):
+        heavy.cmd_run(api, args(commit=["tests/golden/x"], ref="main", runners=8))
+    assert api.dispatched == [] and api.reads == 0
+
+
+def test_the_dispatcher_passes_the_paths_to_run_yml_as_the_commit_paths_input():
+    api = FakeApi([])
+    assert heavy.cmd_run(api, args(commit=["tests/golden/a.json", "tests/fixtures/b.txt"], ref="claude/711-x", runners=2)) == 0
+    sent = api.dispatched[0]
+    assert sent["ref"] == "claude/711-x"
+    assert sent["inputs"] == {"command": "echo hi", "runners": "2", "os": "ubuntu-latest", "timeout_minutes": "60",
+                              "commit_paths": "tests/golden/a.json tests/fixtures/b.txt"}
+
+
+def test_without_commit_no_commit_paths_input_is_sent():
+    api = FakeApi([])
+    assert heavy.cmd_run(api, args()) == 0
+    assert "commit_paths" not in api.dispatched[0]["inputs"]  # a branch from before the input still dispatches
+
+
+def test_the_command_line_takes_several_paths_after_commit(monkeypatch):
+    seen = {}
+
+    def fake_cmd_run(api, parsed):
+        seen.update(vars(parsed))
+        return 0
+
+    monkeypatch.setattr(heavy, "cmd_run", fake_cmd_run)
+    monkeypatch.setattr(heavy, "find_token", lambda: "token")
+    heavy.main(["run", "--ref", "b", "--repo", "o/r", "--commit", "tests/golden/a", "tests/fixtures/b", "--command", "true"])
+    assert seen["commit"] == ["tests/golden/a", "tests/fixtures/b"] and seen["command"] == "true"
+
+
+# the same rules, in the workflow itself: its `plan` job runs them in bash on the input
+
+
+def workflow():
+    import yaml
+
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+
+
+def bash():
+    """A bash that works (on Windows the first `bash` on the PATH can be the WSL stub), else None."""
+    found = shutil.which("bash")
+    if found is None:
+        return None
+    try:
+        done = subprocess.run([found, "-c", "echo ok"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return found if done.returncode == 0 and done.stdout.strip() == "ok" else None
+
+
+def plan_step():
+    return next(step for step in workflow()["jobs"]["plan"]["steps"] if step.get("id") == "plan")
+
+
+def run_plan(commit_paths, ref):
+    exe = bash()
+    if exe is None:
+        pytest.skip("no working bash")
+    env = {**os.environ, "RUNNERS": "1", "TIMEOUT": "60", "COMMIT_PATHS": commit_paths, "REF_NAME": ref,
+           "GITHUB_OUTPUT": os.devnull}
+    return subprocess.run([exe, "-c", plan_step()["run"]], env=env, capture_output=True, text=True, timeout=60)
+
+
+@pytest.mark.parametrize("path", ALLOWED_PATHS)
+def test_the_workflow_accepts_the_allowed_paths(path):
+    done = run_plan(f"tests/golden/ok.json {path}", "claude/711-x")
+    assert done.returncode == 0, done.stdout + done.stderr
+
+
+@pytest.mark.parametrize("path", [p for p in REFUSED_PATHS if p and " " not in p])
+def test_the_workflow_refuses_what_the_dispatcher_refuses(path):
+    done = run_plan(f"tests/golden/ok.json {path}", "claude/711-x")
+    assert done.returncode == 1 and "::error::" in done.stdout, done.stdout + done.stderr
+
+
+@pytest.mark.parametrize("ref", ["main", "integ/2026-11-08-x"])
+def test_the_workflow_refuses_to_commit_on_main_and_integ(ref):
+    done = run_plan("tests/golden/ok.json", ref)
+    assert done.returncode == 1 and "never commits" in done.stdout
+
+
+def test_the_workflow_refuses_a_blank_commit_paths_input_and_runs_on_main_without_one():
+    assert run_plan("   ", "claude/x").returncode == 1  # not "nothing to commit": it would collect the whole tree
+    assert run_plan("", "main").returncode == 0  # an ordinary heavy run on any branch
+
+
+def test_the_workflow_takes_the_input_and_only_the_commit_job_can_write():
+    flow = workflow()
+    triggers = flow.get("on", flow.get(True))  # YAML reads a bare `on` as true
+    assert "commit_paths" in triggers["workflow_dispatch"]["inputs"]
+    assert flow["permissions"] == {"contents": "read"}
+    for name, job in flow["jobs"].items():
+        assert ("permissions" in job) == (name == "commit"), name  # plan and run take the workflow's contents: read
+    assert flow["jobs"]["commit"]["permissions"] == {"contents": "write"}
+    assert set(flow["jobs"]["commit"]["needs"]) == {"plan", "run"}
+
+
+def test_no_expression_is_expanded_inside_a_run_block():
+    for name, job in workflow()["jobs"].items():
+        for step in job["steps"]:
+            assert "${{" not in step.get("run", ""), (name, step.get("name"))
+
+
+def test_the_commit_job_commits_on_the_tested_sha_and_pushes_with_a_lease_on_it():
+    steps = workflow()["jobs"]["commit"]["steps"]
+    text = "\n".join(step.get("run", "") for step in steps)
+    checkout = next(step for step in steps if step.get("with", {}).get("ref"))
+    assert checkout["with"]["ref"] == "${{ github.sha }}"
+    assert 'git commit -q -m "Re-record $COMMIT_PATHS (heavy run $RUN_ID)"' in text
+    assert '--force-with-lease="refs/heads/$REF_NAME:$TESTED_SHA"' in text
+    assert "Nothing is pushed" in text and "No change" in text
+    collect = " ".join(step.get("run", "") for step in workflow()["jobs"]["run"]["steps"])
+    assert '[ ! -L "$file" ]' in collect  # a symlink under the paths is not passed on
+
+
+# the merge of what the runners passed on
+
+
+MERGE = Path(__file__).resolve().parents[1] / ".github" / "scripts" / "merge_commit_files.py"
+merge_spec = importlib.util.spec_from_file_location("merge_commit_files", MERGE)
+merge_commit_files = importlib.util.module_from_spec(merge_spec)
+merge_spec.loader.exec_module(merge_commit_files)
+
+
+def write(root, relative, text):
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def test_the_merge_copies_the_files_of_all_runners_to_their_paths(tmp_path, capsys):
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "commit-1/runner-collected.txt", "1")
+    write(got, "commit-1/tests/golden/a.json", "A")
+    write(got, "commit-2/runner-collected.txt", "2")
+    write(got, "commit-2/tests/fixtures/b.txt", "B")
+    write(got, "commit-2/tests/golden/a.json", "A")  # the same bytes twice is fine
+    assert merge_commit_files.main([str(got), str(out)]) == 0
+    assert capsys.readouterr().out.split() == ["tests/fixtures/b.txt", "tests/golden/a.json"]
+    assert (out / "tests/golden/a.json").read_text(encoding="utf-8") == "A"
+    assert (out / "tests/fixtures/b.txt").read_text(encoding="utf-8") == "B"
+    assert not (out / "runner-collected.txt").exists()
+
+
+def test_the_merge_with_nothing_changed_copies_nothing_and_succeeds(tmp_path, capsys):
+    got = tmp_path / "got"
+    write(got, "commit-1/runner-collected.txt", "1")
+    assert merge_commit_files.main([str(got), str(tmp_path / "out")]) == 0
+    assert capsys.readouterr().out == "" and not (tmp_path / "out").exists()
+    assert merge_commit_files.main([str(tmp_path / "missing"), str(tmp_path / "out")]) == 0  # no artifact at all
+
+
+def test_two_runners_with_different_content_for_one_path_are_refused_and_nothing_is_copied(tmp_path, capsys):
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "commit-1/runner-collected.txt", "runner 1")
+    write(got, "commit-2/runner-collected.txt", "runner 2")
+    write(got, "commit-1/tests/golden/a.json", "one")
+    write(got, "commit-1/tests/golden/ok.json", "ok")
+    write(got, "commit-2/tests/golden/a.json", "two")
+    assert merge_commit_files.main([str(got), str(out)]) == 1
+    captured = capsys.readouterr()
+    assert "tests/golden/a.json" in captured.err and "runners wrote different content" in captured.err
+    assert "commit-1" in captured.err and "commit-2" in captured.err
+    assert captured.out == "" and not out.exists()
+
+
+@pytest.mark.parametrize("relative", ["src/x.py", "tests/test_x.py", ".github/workflows/ci.yml", "tests/golden/.git/config"])
+def test_the_merge_refuses_a_file_outside_the_two_folders(tmp_path, capsys, relative):
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "commit-1/runner-collected.txt", "runner 1")
+    write(got, "commit-1/tests/golden/a.json", "A")
+    write(got, f"commit-1/{relative}", "bad")
+    assert merge_commit_files.main([str(got), str(out)]) == 1
+    assert relative in capsys.readouterr().err and not out.exists()
+
+
+def test_a_single_artifact_downloaded_flat_into_the_folder_merges_and_copies(tmp_path, capsys):
+    """download-artifact v8 puts one matching artifact straight into the folder: no commit-1/ above its files (run 42467788169)."""
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    write(got, "runner-collected.txt", "runner 1")
+    write(got, "tests/fixtures/heavy_commit_probe.txt", "probe")
+    assert merge_commit_files.main([str(got), str(out)]) == 0
+    assert capsys.readouterr().out.split() == ["tests/fixtures/heavy_commit_probe.txt"]
+    assert (out / "tests/fixtures/heavy_commit_probe.txt").read_text(encoding="utf-8") == "probe"
+
+
+def test_the_runner_of_a_flat_artifact_is_named_by_its_marker(tmp_path, capsys):
+    got = tmp_path / "got"
+    write(got, "runner-collected.txt", "runner 7")
+    write(got, "tests/golden/x.json", "x")
+    roots = merge_commit_files.runner_roots(got)
+    assert roots == {got: "runner 7"}
+
+
+def test_the_nested_layout_names_a_runner_by_its_folder_and_merges_same_content(tmp_path, capsys):
+    got, out = tmp_path / "got", tmp_path / "checkout"
+    for n in (1, 2):
+        write(got, f"commit-{n}/runner-collected.txt", f"runner {n}")
+        write(got, f"commit-{n}/tests/golden/same.json", "same")
+    write(got, "commit-2/tests/fixtures/only2.txt", "2")
+    assert set(merge_commit_files.runner_roots(got).values()) == {"commit-1", "commit-2"}
+    assert merge_commit_files.main([str(got), str(out)]) == 0
+    assert capsys.readouterr().out.split() == ["tests/fixtures/only2.txt", "tests/golden/same.json"]
+
+
+def test_a_file_under_no_runner_folder_is_refused_in_both_layouts(tmp_path, capsys):
+    nested, out = tmp_path / "nested", tmp_path / "out"
+    write(nested, "commit-1/runner-collected.txt", "runner 1")
+    write(nested, "commit-1/tests/golden/a.json", "A")
+    write(nested, "tests/golden/stray.json", "stray")  # beside the runners' folders, not in one
+    assert merge_commit_files.main([str(nested), str(out)]) == 1
+    err = capsys.readouterr().err
+    assert "tests/golden/stray.json" in err and "under no runner folder" in err and not out.exists()
+    bare = tmp_path / "bare"
+    write(bare, "tests/golden/a.json", "A")  # no marker at all: the layout cannot be trusted
+    assert merge_commit_files.main([str(bare), str(out)]) == 1
+    assert "under no runner folder" in capsys.readouterr().err and not out.exists()
