@@ -143,12 +143,13 @@ run instead of waiting for room. The main chat waits for the run, in the backgro
 
     python .github/scripts/wait_runs.py <run id> [<run id> ...] [--timeout-minutes 90]
 
-`wait_runs.py` takes the runs of any workflow (PR CI, integration run, heavy run) and makes **one GitHub API call per poll** for all of
-them (one GraphQL call over the runs' ids; one more call when it starts, for the repository's id), at least 240 s apart
-(`--poll-seconds` below that is refused). A rate-limit refusal is printed on stderr and retried at the next poll. When a run completes it
-prints one line: `run <id>  <branch>  <workflow>  <conclusion>  jobs: success 17`. Exit codes: 0 every run succeeded, 1 one did not
-(or GitHub kept failing), 2 a bad argument or a run id that is not a run of the repository, 3 `--timeout-minutes` ran out (the poll that
-finds the time up ends it, so it can overshoot by one poll). It never reads or prints a token; it calls `gh api`. Then download the files as before:
+`wait_runs.py` takes the runs of any workflow (PR CI, integration run, heavy run). When it starts it reads each run's `node_id` once
+(`gh api repos/R/actions/runs/ID --jq .node_id`, one call per run); a run id that is not a run of the repository gets a 404 and the script
+exits 2 at once, so a typo costs two calls, not a wait. From then on it makes **one GitHub API call per poll** for all the runs (one GraphQL call over
+the node ids), at least 240 s apart (`--poll-seconds` below that is refused). A rate-limit refusal, at start or in a poll, is printed on stderr and retried
+one poll interval later. When a run completes it prints one line: `run <id>  <branch>  <workflow>  <conclusion>  jobs: success 17`.
+Exit codes: 0 every run succeeded, 1 one did not (or GitHub kept failing), 2 a bad argument or a run id that is not a run of the repository,
+3 `--timeout-minutes` ran out (the poll that finds the time up ends it, so it can overshoot by one poll). It never reads or prints a token; it calls `gh api`. Then download the files as before:
 
     gh run download <run id> --dir results        # one folder per runner: run-ubuntu-latest-1, -2, ...
 
@@ -163,7 +164,7 @@ those paths onto the branch the run ran on.
   its `plan` job (bash), so a hand dispatch cannot get around it. The paths reach the workflow as the input `commit_paths`; no input reaches a
   shell except through `env:`.
 - **Collecting.** After the command succeeded, each runner uploads the files it changed (new or modified, not deleted) under the paths as the
-  artifact `commit-<n>`. The last job, `commit`, is the only one with `contents: write` (`plan` and `run` keep `contents: read`); it merges the artifacts with
+  artifact `commit-<n>` (a symlink is skipped). The last job, `commit`, is the only one with `contents: write` (`plan` and `run` keep `contents: read`); it merges the artifacts with
   `.github/scripts/merge_commit_files.py`, which checks every path against the same rules again. Two runners that wrote the same path with
   different bytes make the job refuse and commit nothing.
 - **Committing.** One commit `Re-record <paths> (heavy run <id>)` on top of the commit the run tested (`github.sha`). The job pushes only when the

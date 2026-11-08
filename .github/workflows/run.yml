@@ -124,7 +124,7 @@ jobs:
           mkdir -p "$dest"
           echo "runner $RUNNER_NUMBER" > "$dest/runner-collected.txt"
           git ls-files -z --modified --others --exclude-standard -- $COMMIT_PATHS | while IFS= read -r -d '' file; do
-            [ -f "$file" ] || continue
+            [ -f "$file" ] && [ ! -L "$file" ] || continue
             mkdir -p "$dest/$(dirname "$file")"
             cp -- "$file" "$dest/$file"
           done

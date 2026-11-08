@@ -948,6 +948,8 @@ def test_the_commit_job_commits_on_the_tested_sha_and_pushes_with_a_lease_on_it(
     assert 'git commit -q -m "Re-record $COMMIT_PATHS (heavy run $RUN_ID)"' in text
     assert '--force-with-lease="refs/heads/$REF_NAME:$TESTED_SHA"' in text
     assert "Nothing is pushed" in text and "No change" in text
+    collect = " ".join(step.get("run", "") for step in workflow()["jobs"]["run"]["steps"])
+    assert '[ ! -L "$file" ]' in collect  # a symlink under the paths is not passed on
 
 
 # the merge of what the runners passed on

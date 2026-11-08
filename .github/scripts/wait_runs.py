@@ -5,11 +5,13 @@
 The main chat starts it in the background and its exit is the notification; a helper never waits on a run itself, it
 ends its turn when it hands work to a runner.
 
-Cost to the API limit: the 5,000 calls an hour are one limit for every agent and session. The script asks GitHub for
-the repository's id once when it starts (one call), then makes **exactly one call per poll** whatever the number of
-runs: a single GraphQL call that reads, for every run, its status, its conclusion and the conclusion of each of its
-jobs. Polls are at least 240 s apart (`--poll-seconds` below that is refused). A rate-limit refusal is reported on
-stderr and retried at the next poll. A run found completed is printed once, on one line:
+Cost to the API limit: the 5,000 calls an hour are one limit for every agent and session. When it starts the script
+reads each run's documented `node_id` once (`gh api repos/R/actions/runs/ID --jq .node_id`, one call per run; a 404 means
+the id is not a run of the repository and the script exits 2 at once). Then it makes **exactly one call per poll**
+whatever the number of runs: a single GraphQL call over those node ids that reads, for every run, its status, its
+conclusion and the conclusion of each of its jobs. Polls are at least 240 s apart (`--poll-seconds` below that is
+refused). A rate-limit refusal, at start or in a poll, is reported on stderr and retried one poll interval later. A run
+found completed is printed once, on one line:
 
     run 42446621133  claude/711-wait  Run a command  success  jobs: success 3
 
@@ -19,7 +21,6 @@ up ends it, so it can overshoot by one poll). The script never reads or prints a
 """
 
 import argparse
-import base64
 import collections
 import datetime as dt
 import json
@@ -73,21 +74,6 @@ def say(text: str) -> None:
 # ---- pure parts -------------------------------------------------------------------------------------------------------
 
 
-def msgpack_uint(value: int) -> bytes:
-    if value < 0x80:
-        return bytes([value])
-    for marker, size in ((0xCC, 1), (0xCD, 2), (0xCE, 4), (0xCF, 8)):
-        if value < 1 << (8 * size):
-            return bytes([marker]) + value.to_bytes(size, "big")
-    raise ValueError(f"{value} does not fit 64 bits")
-
-
-def run_node_id(repo_id: int, run_id: int) -> str:
-    """The GraphQL id of a workflow run: `WFR_` and the url-safe base64 of the MessagePack array [2, repo id, run id]."""
-    packed = b"\x93" + msgpack_uint(2) + msgpack_uint(repo_id) + msgpack_uint(run_id)
-    return "WFR_" + base64.urlsafe_b64encode(packed).decode().rstrip("=")
-
-
 def parse_ids(texts: list[str]) -> list[int]:
     ids = []
     for text in texts:
@@ -129,12 +115,18 @@ def is_rate_limit(code: int, out: str, err: str) -> bool:
 # ---- the calls --------------------------------------------------------------------------------------------------------
 
 
-def repo_id(repo: str) -> int | str:
-    """The numeric id of the repository (one call), or the reason it could not be had."""
-    code, out, err = run_gh(["api", f"repos/{repo}", "--jq", ".id"])
-    if code == 0 and out.strip().isdigit():
-        return int(out.strip())
-    return (err or out).strip()[:300] or f"gh exited {code}"
+def lookup(repo: str, run_id: int) -> tuple[str, str]:
+    """One REST call: ('ok', the run's node id) or ('missing', reason) for a 404 or ('rate', reason) or ('error', reason)."""
+    code, out, err = run_gh(["api", f"repos/{repo}/actions/runs/{run_id}", "--jq", ".node_id"])
+    if code == 0 and out.strip():
+        return "ok", out.strip()
+    reason = (err.strip() or out.strip() or f"gh exited {code}")[:300]
+    if is_rate_limit(code, out, err):
+        return "rate", reason
+    said = f"{err} {out}".lower()
+    if "404" in said or "not found" in said:
+        return "missing", reason
+    return "error", reason
 
 
 def poll(ids: list[str]) -> tuple[str, list[dict] | str]:
@@ -150,6 +142,8 @@ def poll(ids: list[str]) -> tuple[str, list[dict] | str]:
     errors = answer.get("errors") or []
     if code != 0 or errors and not (answer.get("data") or {}).get("nodes"):
         reason = (err.strip() or json.dumps(errors)[:300] or out.strip()[:300] or f"gh exited {code}")[:300]
+        if "could not resolve to a node" in f"{err} {out}".lower():
+            return "missing", reason
         return ("rate" if is_rate_limit(code, out, err + json.dumps(errors)) else "error"), reason
     nodes = (answer.get("data") or {}).get("nodes")
     if not isinstance(nodes, list) or len(nodes) != len(ids):
@@ -160,18 +154,49 @@ def poll(ids: list[str]) -> tuple[str, list[dict] | str]:
 # ---- the wait ---------------------------------------------------------------------------------------------------------
 
 
+def resolve(repo: str, run_ids: list[int], deadline: float, poll_seconds: float, timeout_minutes: float) -> list[str] | int:
+    """The node id of each run (one REST call each), or the exit code: 2 for a run that is not one of the repository's,
+    1 when GitHub keeps failing, 3 on the timeout. A rate-limit refusal waits one poll interval and asks again."""
+    node_ids: list[str] = []
+    failing = 0
+    for run_id in run_ids:
+        while True:
+            kind, answer = lookup(repo, run_id)
+            if kind == "ok":
+                node_ids.append(answer)
+                failing = 0
+                break
+            if kind == "missing":
+                say(f"wait_runs: run {run_id} is not a run of {repo}: {answer}")
+                return 2
+            if kind == "rate":
+                say(f"wait_runs: GitHub refused the call (rate limit): {answer}; trying again in {poll_seconds:g} s")
+            else:
+                failing += 1
+                say(f"wait_runs: GitHub call failed ({failing} in a row): {answer}")
+                if failing >= FAILURES_IN_A_ROW:
+                    say("wait_runs: giving up")
+                    return 1
+            if now() >= deadline:
+                say(f"wait_runs: timeout after {timeout_minutes:g} min before the runs could be looked up")
+                return 3
+            pause(poll_seconds)
+    return node_ids
+
+
 def wait(repo: str, run_ids: list[int], timeout_minutes: float, poll_seconds: float) -> int:
-    found = repo_id(repo)
-    if not isinstance(found, int):
-        say(f"wait_runs: cannot read repository {repo}: {found}")
-        return 2
-    node_ids = [run_node_id(found, run_id) for run_id in run_ids]
     deadline = now() + timeout_minutes * 60
+    node_ids = resolve(repo, run_ids, deadline, poll_seconds, timeout_minutes)
+    if isinstance(node_ids, int):
+        return node_ids
     finished: dict[int, dict] = {}
     failing = 0
     while True:
         waiting = [(run_id, node_id) for run_id, node_id in zip(run_ids, node_ids) if run_id not in finished]
         kind, answer = poll([node_id for _, node_id in waiting])
+        if kind == "missing":
+            say(f"wait_runs: GitHub no longer knows one of the runs: {answer}")
+            return 2
         if kind == "ok":
             failing = 0
             for (run_id, _), node in zip(waiting, answer):
