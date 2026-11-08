@@ -66,6 +66,7 @@ class PolicyState:
     reach: float | None  # the chance the policy ever gets here
     per_use_goal: float  # the chance one use ends in a goal
     transitions: tuple[Transition, ...]
+    cost_marks: tuple[tuple[str, str], ...] = ()  # (resource, mark) of the cost parts priced from a thin market (OR-8)
 
 
 @dataclass(frozen=True)
@@ -92,6 +93,7 @@ class ReportStep:
     reason: str = ""
     acts: bool = True
     cost_parts: tuple[tuple[str, int, float, str], ...] = ()
+    cost_marks: tuple[tuple[str, str], ...] = ()  # (resource, mark) of the cost parts priced from a thin market (OR-8)
     cost: float = 0.0
     uses: float | None = None
     step_cost: float | None = None
@@ -351,7 +353,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
             PolicyState(
                 ids[state], describe_state(plan, data, state), priced.label, priced.cost, priced.parts,
                 plan.solution.values[state], None if reach is None else reach.get(state),
-                per_use_goal, tuple(transitions),
+                per_use_goal, tuple(transitions), priced.marks,
             )
         )  # fmt: skip
     offers = [priced.offer for priced in plan.offers if priced.offer.shares]
@@ -419,6 +421,11 @@ NOT_COMPUTED = {
 def _row(name: str, value: str) -> str:
     """One row of the result block: the figure in the words of `PERCENTILE_WORDS`, then its value."""
     return f"  {PERCENTILE_WORDS[name]:<{ROW_WIDTH}}{value}"
+
+
+def _mark_key(marks: tuple[tuple[str, str], ...], resource: str) -> dict[str, str]:
+    """`{"price_mark": mark}` for a resource priced from a thin market (OR-8), else nothing, so a file with no marked price is as it was."""
+    return {"price_mark": mark for name, mark in marks if name == resource}
 
 
 def _quantile_text(risk, estimate: Estimate, shift: float, divine: float) -> str:
@@ -510,6 +517,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"Start item: {plan.start_price.source}")
     else:
         lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
+        if plan.start_price.mark:  # OR-8: a thin market's price never stands unmarked
+            lines.append(f"  {plan.start_price.mark}")
     if plan.start_price.taken_for:
         lines.append(f"  {plan.start_price.taken_for}")
     if report.first_step is not None:
@@ -581,6 +590,7 @@ def _step_lines(step: ReportStep) -> list[str]:
             lines.append(f"  cost per use: free (counted at {step.cost:.1g} Chaos so that every step has a positive cost)")
         else:
             lines.append(f"  cost per use: {parts} = {money(step.cost)} Chaos")
+            lines.extend(f"  price of {resource}: {mark}" for resource, mark in step.cost_marks)
         if step.never:
             lines.append("  never finishes from here")
         elif step.uses is not None:
@@ -702,6 +712,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_name": plan.start_price.name,
             "price_chaos": shift,
             "price_source": plan.start_price.source,
+            **({"price_mark": plan.start_price.mark} if plan.start_price.mark else {}),
             "given": plan.start_price.given,
         },
         **({"start_options": start_document(plan.starts, report.first_step)} if plan.starts is not None else {}),
@@ -716,7 +727,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
                 "action": state.action,
                 "cost_per_use": state.cost,
                 "resources": [
-                    {"name": name, "count": count, "chaos": chaos, "price_source": source}
+                    {"name": name, "count": count, "chaos": chaos, "price_source": source, **_mark_key(state.cost_marks, name)}
                     for name, count, chaos, source in state.cost_parts
                 ],
                 "expected_remaining_cost": _number(state.remaining),

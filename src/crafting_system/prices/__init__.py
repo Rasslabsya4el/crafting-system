@@ -8,6 +8,7 @@ from .http_json import SourceError, http_get_json
 from .price_file import (
     CHAOS_ORB,
     DIVINE_ORB,
+    DeepReading,
     MarketRecord,
     PriceEntry,
     PriceFile,
@@ -37,7 +38,7 @@ from .trade_http import (
     user_agent,
 )
 from .price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE, SourcedPrice, source_price
-from .trade_market import DEFAULT_MIN_LISTINGS, TradeOffer, offer
+from .trade_market import DEFAULT_MIN_LISTINGS, PlannedPrice, TradeOffer, offer, planned_price
 from .trade_pricing import (
     TRADE_SOURCE,
     NotEnoughListings,
@@ -99,12 +100,15 @@ __all__ = [
     "write_price_file",
     "TRADE_SOURCE",
     "DEFAULT_MIN_LISTINGS",
+    "DeepReading",
     "MarketRecord",
     "TradeMarket",
     "TradeOffer",
     "assess_buy_spec",
     "market_of_listings",
     "offer",
+    "PlannedPrice",
+    "planned_price",
     "store_market",
     "BudgetExceeded",
     "BuyMod",

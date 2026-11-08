@@ -23,6 +23,7 @@ from crafting_system.prices.price_file import (
     default_overrides_path,
     default_price_file_path,
     load_overrides,
+    load_price_file,
     load_prices,
     to_divine,
 )
@@ -36,7 +37,7 @@ from crafting_system.prices.trade_http import (
     urllib_transport,
     user_agent,
 )
-from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS
+from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS, planned_price
 from crafting_system.prices.trade_pricing import (
     DEFAULT_K,
     DEFAULT_MAX_REQUESTS,
@@ -51,6 +52,15 @@ from crafting_system.prices.trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
 
 COMMAND = "python -m crafting_system.cli trade"
+
+
+def _priced_as(price_path: Path, name: str) -> str:
+    """What the planner now reads for `name` from the file just written (OR-8), in words: the price with its mark, or that there is none."""
+    planned = planned_price(load_price_file(price_path), name)
+    if planned is None:
+        return "the plan has no trade price for it"
+    note = f"; {planned.mark}" if planned.mark else ""
+    return f"the plan prices it {planned.chaos:g} Chaos [{planned.source}{note}]"
 
 
 def trade_main(
@@ -160,9 +170,9 @@ def _trade(
             min_listings,
         )
     except NotEnoughListings as error:
-        if error.market is not None:  # thin or none: kept as a state, the price file has no price for it
+        if error.market is not None:  # thin or none: kept as a state; the last deep reading of the name stays in the file
             store_market(price_path, error.market)
-            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}, not offered")
+            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}; {_priced_as(price_path, spec.name)}")
         raise
     store_trade_price(price_path, price, entry_for(price))
     print(

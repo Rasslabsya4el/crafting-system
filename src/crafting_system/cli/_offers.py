@@ -17,7 +17,8 @@ from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutO
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
-from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
+from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price
+from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
 from . import _limits
 from ._limits import Limit, claim, kind_title
@@ -60,6 +61,7 @@ class PricedOffer:
     offer: Offer
     cost: float
     parts: tuple[tuple[str, int, float, str], ...]  # (resource, count, chaos for all of them, source)
+    marks: tuple[tuple[str, str], ...] = ()  # (resource, mark) of the parts whose price is a thin market's (OR-8); empty when none is marked
 
     @property
     def label(self) -> str:
@@ -103,12 +105,13 @@ def default_offers() -> tuple[Offer, ...]:
 
 
 def price_offers(
-    offers: Iterable[Offer], prices: PriceFile
+    offers: Iterable[Offer], prices: PriceFile, price_source: str = DEFAULT_PRICE_SOURCE
 ) -> tuple[tuple[PricedOffer, ...], tuple[DroppedOffer, ...]]:
     """The offers whose resources all have a price, and those that do not (with the names missing).
 
     A Chaos Orb is worth 1 Chaos whether or not the file lists it, and a Divine Orb the file's `chaos_per_divine` when
-    it lists no price for it (a Divine Orb is the unit of that rate, ticket #71).
+    it lists no price for it (a Divine Orb is the unit of that rate, ticket #71). A resource is read by `planned_price` under the
+    profile's `price_source`: a thin trade market is priced by OR-8 and its mark goes in `PricedOffer.marks`, beside the part.
 
     An action that consumes nothing (an unveil, a pick: `unveil.is_free_and_in_place`) costs `FREE_ACTION_SHARE` of the cheapest
     offer that costs something, because the solver needs a positive cost on every action (ADR-0026, ticket #145). The share is a
@@ -121,13 +124,15 @@ def price_offers(
     dropped: list[DroppedOffer] = []
     for offer in offers:
         parts = []
+        marks = []
         missing = []
         for name, count in offer.resources.items():
             if name == CHAOS_ORB:
                 parts.append((name, count, float(count), "fixed"))
-            elif name in prices.prices:
-                entry = prices.prices[name]
-                parts.append((name, count, count * entry.chaos, entry.source))
+            elif (planned := planned_price(prices, name, price_source)) is not None:
+                parts.append((name, count, count * planned.chaos, planned.source))
+                if planned.mark is not None:
+                    marks.append((name, planned.mark))
             elif name == DIVINE_ORB:
                 parts.append((name, count, count * prices.chaos_per_divine, "rate"))
             else:
@@ -135,7 +140,7 @@ def price_offers(
         if missing:
             dropped.append(DroppedOffer(offer.label, tuple(sorted(missing)), offer.kind))
         else:
-            priced.append(PricedOffer(offer, sum(part[2] for part in parts), tuple(parts)))
+            priced.append(PricedOffer(offer, sum(part[2] for part in parts), tuple(parts), tuple(marks)))
     if any(not entry.offer.resources for entry in priced):
         paid = [entry.cost for entry in priced if entry.cost > 0]
         free_cost = FREE_ACTION_SHARE * min(paid) if paid else FREE_ACTION_SHARE

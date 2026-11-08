@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from crafting_system.actions import Action, HinekoraLock
 
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceFile
+from .trade_market import planned_price
 
 __all__ = [
     "PricedBurn",
@@ -44,8 +45,8 @@ def resource_cost(resources: Mapping[str, int], prices: PriceFile) -> tuple[floa
     for name, count in resources.items():
         if name == CHAOS_ORB:
             total += float(count)
-        elif name in prices.prices:
-            total += count * prices.prices[name].chaos
+        elif (planned := planned_price(prices, name)) is not None and planned.mark is None:
+            total += count * planned.chaos  # a marked price is a thin trade market's: a currency line has none, so it would count as missing
         elif name == DIVINE_ORB:
             total += count * prices.chaos_per_divine
         else:

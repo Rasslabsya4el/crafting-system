@@ -61,6 +61,7 @@ class StartCandidate:
     reading_values: tuple[str, ...] = ()
     sourced: SourcedPrice | None = None
     given: bool = False  # the target gives this start item (OR-6): its cost is not counted, the price is 0 by definition
+    price_mark: str | None = None  # the plain start item priced from a thin market (OR-8): the mark that goes with its price
 
     def exists_in(self, reading: Reading) -> bool:
         """Whether this candidate can be had at `reading` of the rule axes (one without an axis exists at every reading)."""

@@ -50,17 +50,21 @@ PLAIN_LABEL = "the target's own start item"
 SOURCES: tuple[StartSource, ...] = (vendor_recipe_starts,)  # a bought-item source (research #337) is one more entry
 
 
-def plain_candidate(data: GameData, target: Target, prices: PriceFile, override: float | None) -> StartCandidate:
+def plain_candidate(
+    data: GameData, target: Target, prices: PriceFile, override: float | None, price_source: str = DEFAULT_PRICE_SOURCE
+) -> StartCandidate:
     """The target's own start item with its price (`resolve_start_price`); an unpriced bought one has no price (None) and fails when planned.
 
     A given start item (OR-6) costs 0 and is marked given; a bought one with no price is reported as unpriced, never as an infinite price.
     """
     try:
-        price = resolve_start_price(data, target, prices, override)
-        chaos, name, source = price.chaos, price.name, price.source
+        price = resolve_start_price(data, target, prices, override, price_source)
+        chaos, name, source, mark = price.chaos, price.name, price.source, price.mark
     except PlanError as error:
-        chaos, name, source = None, _key_of(data, target), str(error)
-    return StartCandidate(PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source, given=target.start is not StartKind.BOUGHT)
+        chaos, name, source, mark = None, _key_of(data, target), str(error), None
+    return StartCandidate(
+        PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source, given=target.start is not StartKind.BOUGHT, price_mark=mark
+    )
 
 
 def _key_of(data: GameData, target: Target) -> str | None:
@@ -158,13 +162,14 @@ def plan_with_starts(
     start option reaches the goal (the message is the plain start item's).
     """
     offers = tuple(offers) if offers is not None else None  # several plans read them
+    kwargs = {**kwargs, "price_source": price_source}  # every plan reads the trade prices under the profile setting
     if not recipe_starts:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **_net_left(net, None), **kwargs)
     listing = combine([source(StartContext(data, target, prices, price_source, price_gap_percent, today)) for source in sources])
     if not listing.candidates and not listing.refused:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **_net_left(net, None), **kwargs)
 
-    plain = plain_candidate(data, target, prices, start_price)
+    plain = plain_candidate(data, target, prices, start_price, price_source)
     order = [plain, *sorted(listing.candidates, key=_by_price)]
     deadline = _deadline(net)
     outcomes: dict[str, _Outcome] = {}

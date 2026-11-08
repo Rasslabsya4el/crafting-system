@@ -41,7 +41,7 @@ def _step(view: _View, step) -> ReportStep:
         return ReportStep(number, "No action", items, item, reason=step.reason or "", acts=False, reached=step.reached)
     return ReportStep(
         number, _ascii(view.title(step.action)), items, item,
-        cost_parts=plan.offer_of(step.action).parts, cost=step.cost,
+        cost_parts=plan.offer_of(step.action).parts, cost_marks=plan.offer_of(step.action).marks, cost=step.cost,
         uses=step.uses, step_cost=step.step_cost, never=step.never_finishes, reached=step.reached,
         outcomes=tuple(StepOutcome(edge.chance, _outcome(view, step, edge)) for edge in step.edges),
     )  # fmt: skip

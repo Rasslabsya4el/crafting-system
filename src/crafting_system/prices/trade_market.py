@@ -7,8 +7,11 @@ A trade search ends in one of three recorded states:
   usable listings and sits in the price file as a `trade-api` entry with its listing total, its usable
   count and its date.
 - `thin`: the site has listings but not enough of them (fewer than the rail, or too few usable). Kept
-  as a `MarketRecord` with its counts, never offered.
-- `none`: a successful search answered `total = 0`. Kept as a `MarketRecord`, never offered.
+  as a `MarketRecord` with its counts and the mean of the cheapest usable listings there were. It is offered
+  (OR-8, #718), never as a plain price: as the league's last deep price (`PriceFile.deep`) marked old with its
+  date, else as that mean marked thin. With no deep reading of this league and no priced listing it is not offered.
+- `none`: a successful search answered `total = 0`. Kept as a `MarketRecord`, never offered: OR-7's marked
+  poe.ninja stand-in is the price.
 
 The listing-count rail (default 10) is a setting, so `offer` takes it and says which rail cut an offer
 and at what value, which lets two rail values be compared later. A record, quoted or not, is fresh for
@@ -17,8 +20,10 @@ and at what value, which lets two rail values be compared later. A record, quote
 Nothing here reads a clock: the caller passes `today`.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
 from .price_file import MARKET_NONE, MARKET_THIN, MAX_AGE_DAYS, PriceEntry, PriceFile
 
@@ -29,6 +34,10 @@ THIN = MARKET_THIN
 NONE = MARKET_NONE
 STALE = "stale"  # a record older than the limit (or without a date): not offered, ask again
 UNKNOWN = "unknown"  # nothing recorded under the name
+
+_NINJA = "ninja"  # the price_source setting that reads no trade price (`price_source.NINJA`; imported there, so not from there)
+OLD_PRICE = "old"  # `TradeOffer.basis`: the league's last deep price, read on an earlier day
+THIN_MEAN = "thin"  # `TradeOffer.basis`: the mean of the listings there are
 
 DEFAULT_MIN_LISTINGS = 10  # the market rule: listings on the site (#337, owner Q4)
 MIN_USABLE = 3  # listings that can be priced; fewer cannot make a mean worth quoting
@@ -57,9 +66,13 @@ class TradeOffer:
     """What the price file says about one name, for the planner and for a refresher.
 
     `state` is one of `quoted`, `thin`, `none`, `stale`, `unknown`; `entry` is the price and is set only
-    when the name is offered (`quoted` and fresh). `reason` says what cut a name that is not offered,
-    with the value that cut it (the rail or the age). `age_days` is None when nothing is recorded or the
-    record has no date.
+    when the name is offered: `quoted` and fresh, or `thin` with a price to show (`basis`). `reason` says what
+    cut a name that is not offered (or why the market is thin), with the value that cut it (the rail or the
+    age). `age_days` is None when nothing is recorded or the record has no date.
+
+    A thin market is offered under OR-8 with `basis` set and `mark` the words that go with the price: `old`
+    (the league's last deep price, read on `read_on`) or `thin` (the mean of the `mean_of` listings there are).
+    A quoted price has no basis and no mark.
     """
 
     name: str
@@ -69,6 +82,10 @@ class TradeOffer:
     age_days: int | None = None
     listings: int | None = None
     usable: int | None = None
+    basis: str | None = None
+    read_on: date | None = None
+    mean_of: int | None = None
+    mark: str | None = None
 
     @property
     def offered(self) -> bool:
@@ -92,7 +109,9 @@ def offer(
     A price is offered when it is a fresh `trade-api` price whose listing total meets `min_listings` and
     whose usable count meets `MIN_USABLE`. The state is judged on the stored counts with the rail given
     now, so raising the rail cuts a price that was quoted under a lower one. A `thin` or `none` record is
-    reported as stored: lowering the rail does not turn it into a price before it is searched again.
+    reported as stored: lowering the rail does not turn it into a quoted price before it is searched again.
+    A thin record is offered as the league's last deep price marked old, else as its thin mean marked thin;
+    a price whose stored counts the rail given now calls thin is offered as that mean, marked thin.
     A record or price of another league than the price file's is `unknown`. `today` is a UTC date, like
     the dates stored (a date ahead of `today` is `stale`, not fresh).
     """
@@ -111,10 +130,12 @@ def offer(
                 name, STALE, reason=f"{record.state} record is {age} days old (limit {max_age_days})",
                 age_days=age, listings=record.listings, usable=record.usable,
             )
-        return TradeOffer(
-            name, record.state, reason=_count_reason(record.state, record.listings, record.usable, min_listings),
-            age_days=age, listings=record.listings, usable=record.usable,
-        )
+        reason = _count_reason(record.state, record.listings, record.usable, min_listings)
+        if record.state == THIN:
+            return _thin_offer(
+                price_file, name, reason, age, record.listings, record.usable, record.chaos, record.used, remembered=True
+            )
+        return TradeOffer(name, record.state, reason=reason, age_days=age, listings=record.listings, usable=record.usable)
     return TradeOffer(name, UNKNOWN, reason="no trade price recorded")
 
 
@@ -146,8 +167,49 @@ def _offer_from_entry(
     state = classify(counts["listings"], counts["usable"], min_listings)
     if state != QUOTED:
         reason = _count_reason(state, counts["listings"], counts["usable"], min_listings)
+        if state == THIN:  # quoted under a lower rail: its price is the mean of what there was, and says so
+            used = detail.get("used") if isinstance(detail.get("used"), int) else counts["usable"]
+            return _thin_offer(
+                price_file, name, reason, age, counts["listings"], counts["usable"], entry.chaos, used, remembered=False
+            )
         return TradeOffer(name, state, reason=reason, age_days=age, **counts)
     return TradeOffer(name, QUOTED, entry=entry, age_days=age, **counts)
+
+
+def _thin_offer(
+    price_file: PriceFile,
+    name: str,
+    reason: str,
+    age: int | None,
+    listings: int,
+    usable: int,
+    thin_chaos: float | None,
+    used: int | None,
+    *,
+    remembered: bool,
+    query: Mapping[str, Any] | None = None,
+) -> TradeOffer:
+    """A thin market's offer (OR-8): the league's last deep price marked old, else the thin mean marked thin.
+
+    `remembered` is false for a price quoted under a lower rail: that reading is itself the latest one, so the
+    memory (which holds it, or an older one) is not set against it. A deep reading of another league never counts.
+    """
+    base = {"state": THIN, "reason": reason, "age_days": age, "listings": listings, "usable": usable}
+    deep = price_file.deep.get(name) if remembered else None
+    if deep is not None and deep.league == price_file.league:
+        detail = {
+            "league": deep.league, "date": deep.date.isoformat(), "listings": deep.listings, "usable": deep.usable,
+            **({"query": query} if query is not None else {}),
+        }  # fmt: skip
+        entry = PriceEntry(deep.chaos, TRADE_SOURCE, f"the last deep price of {deep.league}, read on {deep.date.isoformat()}", detail)
+        mark = f"old price, read on {deep.date.isoformat()}, the market has few offers now"
+        return TradeOffer(name, entry=entry, basis=OLD_PRICE, read_on=deep.date, mark=mark, **base)
+    if thin_chaos is not None and isinstance(used, int) and used > 0:
+        detail = {"query": query} if query is not None else None
+        entry = PriceEntry(thin_chaos, TRADE_SOURCE, f"mean of the {used} listings there are ({listings} on the site)", detail)
+        mark = f"few offers: the mean of the {used} listings there are"
+        return TradeOffer(name, entry=entry, basis=THIN_MEAN, mean_of=used, mark=mark, **base)
+    return TradeOffer(name, **base)
 
 
 def _count_reason(state: str, listings: int, usable: int, min_listings: int) -> str:
@@ -158,3 +220,45 @@ def _count_reason(state: str, listings: int, usable: int, min_listings: int) -> 
     if state == THIN and usable < MIN_USABLE:
         return f"{usable} usable listings, at least {MIN_USABLE} are needed"
     return "recorded thin"
+
+
+@dataclass(frozen=True)
+class PlannedPrice:
+    """The price a plan is made from: the entry as the file has it, and the mark that goes with it (None for an unmarked price).
+
+    The mark is its own field, never part of `entry.source`: `source` stays the plain name of the source (`trade-api`,
+    `poe.ninja`, `override`), and what the page and the report print as a note beside the price is `mark`.
+    """
+
+    entry: PriceEntry
+    mark: str | None = None
+
+    @property
+    def chaos(self) -> float:
+        return self.entry.chaos
+
+    @property
+    def source(self) -> str:
+        return self.entry.source
+
+
+def planned_price(price_file: PriceFile, name: str, price_source: str = "both") -> PlannedPrice | None:
+    """The price the planner reads for `name`: the one place that applies OR-8 to a price a plan is made from.
+
+    A name with a price in `prices` is read as it always was (a quoted trade price, a hand override, a poe.ninja row; the
+    planner has never judged age or rail here), unmarked. A name that has none but a `thin` trade record of the price file's
+    league reads as the rule says: the league's last deep price (marked old, with its date), or else the thin mean (marked
+    thin). The profile setting `price_source` is respected: under `ninja` no trade record is read, so a thin one prices nothing.
+    With nothing to show (no record, a `none` record, a thin one with no deep reading and no priced listing) the answer is None.
+    """
+    entry = price_file.prices.get(name)
+    if entry is not None:
+        return PlannedPrice(entry)
+    record = price_file.markets.get(name)
+    if price_source == _NINJA or record is None or record.state != THIN or record.league != price_file.league:
+        return None
+    offered = _thin_offer(
+        price_file, name, "", None, record.listings, record.usable, record.chaos, record.used,
+        remembered=True, query=record.query,
+    )  # fmt: skip
+    return None if offered.entry is None else PlannedPrice(offered.entry, offered.mark)
