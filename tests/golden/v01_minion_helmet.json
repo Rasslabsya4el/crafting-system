@@ -16,6 +16,14 @@
     {
       "claim": "vendor.result_keeps_the_input_base_type",
       "reason": "The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split."
+    },
+    {
+      "claim": "price:Orb of Augmentation",
+      "reason": "where this price comes from is not recorded"
+    },
+    {
+      "claim": "price:Regal Orb",
+      "reason": "where this price comes from is not recorded"
     }
   ],
   "target": "v01-minion-helmet.yaml",

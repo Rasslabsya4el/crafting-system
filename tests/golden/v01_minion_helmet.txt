@@ -3,10 +3,12 @@ Approximate inputs (claims that no other source settles):
   Quality gems for a vendor recipe are counted as uncorrupted skill gems only, the narrowest reading. Source: the wiki asks for 'quality gems' with the tag and gives no rule for support, Awakened or corrupted gems.
   A vendor recipe is taken to keep the item level of the input, but it is not settled whether the flask or the gems can lower the result's item level. Source: two wiki pages that disagree in wording; no other source settles it.
   A vendor recipe is taken to keep the base type of the input item. Source: the wiki does not say whether the base type stays, and the one Reddit thread on it is split.
+  The price of Orb of Augmentation is 0.016 Chaos, an approximate input: where this price comes from is not recorded. Source: poe.ninja exchange, Allflame, 2026-10-31.
+  The price of Regal Orb is 0.0636 Chaos, an approximate input: where this price comes from is not recorded. Source: poe.ninja exchange, Allflame, 2026-10-31.
 Requirements: +1 to Level of all Minion Skill Gems; family IncreasedLife (top tier, not crafted)
 Prices: league Allflame, fetched 2026-10-31, 1 Divine = 372.20 Chaos
-  Orb of Augmentation: 0.016 Chaos, poe.ninja exchange, Allflame, 2026-10-31
-  Regal Orb: 0.0636 Chaos, poe.ninja exchange, Allflame, 2026-10-31
+  Orb of Augmentation: 0.016 Chaos, poe.ninja exchange, Allflame, 2026-10-31; approximate: where this price comes from is not recorded
+  Regal Orb: 0.0636 Chaos, poe.ninja exchange, Allflame, 2026-10-31; approximate: where this price comes from is not recorded
 Start item (Lion Pelt (ilvl 84), a Normal base): 2.00 Chaos [hand]; the recipe below uses it up
 Step 1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe
   You hand the vendor:
