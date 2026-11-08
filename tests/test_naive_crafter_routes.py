@@ -377,11 +377,12 @@ def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(play
 # `naive_crafter/test_naive_mechanics.py` show each law with an exact answer on a tiny ring. A mutated route that cannot finish (a play that goes on for `MUTANT_USES` uses, or
 # meets a gap) is as far from the planner as a route can be and counts as killed.
 MUTANT_USES = 3_000_000
+# The Annulment one plays 1,000 (not 300): at 60 plays it was 2.14 standard errors from the planner's mean, so 300 plays are about 4.8, too near the line of 4 to be a test.
 MUTATIONS_HEAVY = [
-    ("no multimod", Laws(multimod=False), "R14 with restart"),
-    ("no metamod filter", Laws(metamod_filter=False), "R14 with restart"),
-    ("an Annulment may remove the fractured mod", Laws(annul_spares_fractured=False), "R04 with restart"),
-    ("no metamod filter", Laws(metamod_filter=False), "R04 with restart"),
+    ("no multimod", Laws(multimod=False), "R14 with restart", None),
+    ("no metamod filter", Laws(metamod_filter=False), "R14 with restart", None),
+    ("an Annulment may remove the fractured mod", Laws(annul_spares_fractured=False), "R04 with restart", 1000),
+    ("no metamod filter", Laws(metamod_filter=False), "R04 with restart", None),
 ]
 # Not here, because the two routes never reach the case (the heavy run of this PR gave the same mean to the last digit with each turned off): `fracture_needs_four`
 # (the route annuls down to four mods and fractures there, so an item of fewer is never offered the orb) and `metamod_refuses_rerolls` (the rule of the essence asks for no crafted mod). Their mutation tests are the
@@ -389,12 +390,12 @@ MUTATIONS_HEAVY = [
 
 
 @pytest.mark.skipif(not HEAVY, reason="long: the heavy run judges these (NAIVE_HEAVY=1)")
-@pytest.mark.parametrize(("benchmarked", "name", "laws"), [(route, name, laws) for name, laws, route in MUTATIONS_HEAVY], indirect=["benchmarked"])
-def test_each_law_of_the_metamod_routes_turned_off_moves_the_route_past_the_line(benchmarked, name, laws):
+@pytest.mark.parametrize(("benchmarked", "name", "laws", "runs"), [(route, name, laws, runs) for name, laws, route, runs in MUTATIONS_HEAVY], indirect=["benchmarked"])
+def test_each_law_of_the_metamod_routes_turned_off_moves_the_route_past_the_line(benchmarked, name, laws, runs):
     stem, _ = BENCHMARKED[benchmarked.route]
-    runs = int(os.environ.get("NAIVE_MUT_RUNS", "300"))
+    runs = runs or int(os.environ.get("NAIVE_MUT_RUNS", "300"))
     try:
-        wrong = t.simulate(play_world(stem, laws), runs, seed=7, max_uses=MUTANT_USES)
+        wrong = t.simulate(play_world(stem, laws), runs, seed=7 + SEED, max_uses=MUTANT_USES)  # a runner's own seed, so the pooled runners are independent samples
     except Gap as stuck:
         print(f"{benchmarked.route} with {name}: cannot finish ({stuck})")
         return
