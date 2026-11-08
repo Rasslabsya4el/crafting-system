@@ -1,17 +1,17 @@
 {
- "main": "e03e82162013fc896f8c2b7e0ea6fc84ae69349b",
- "taken": "2026-11-02",
- "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-10-31.json, S02 at 1 chaos per currency and 10 chaos for the start item; agrees with the #312 research snapshot (R04 69,257.54, R14 5,784.49, S02 33,878.67)",
+ "main": "e39140a96643774c6ba85fccd6459da35f15bb9c",
+ "taken": "2026-11-08",
+ "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-11-08.json (heavy run 42453668347 on the head of PR #662 rebased onto #660), S02 at 1 chaos per currency and 10 chaos for the start item; the research snapshot of #312 (R04 69,257.54, R14 5,784.49) was taken at the prices of 2026-10-31",
  "routes": {
   "R04": {
-   "mean_remaining": 69257.53649796372,
+   "mean_remaining": 151825.296932461,
    "states": 177242,
-   "error_bound": 4.792952823517993e-08
+   "error_bound": 7.312119421065688e-08
   },
   "R14": {
-   "mean_remaining": 5784.452045684935,
+   "mean_remaining": 7176.122450353393,
    "states": 816153,
-   "error_bound": 2.258121432063831e-07
+   "error_bound": 2.1491820212382606e-07
   },
   "S02": {
    "mean_remaining": 33878.67277501651,
