@@ -24,7 +24,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-08.json"
 KEYS = ROOT / "tests" / "reconcile" / "expected_keys.txt"
 TARGETS = ROOT / "examples" / "targets"
 ROUTES = ROOT / "examples" / "routes"

@@ -27,7 +27,7 @@ from .play import Judge, Player, read_route
 from .world import load_world
 
 REPO = Path(__file__).resolve().parents[2]
-PRICES = REPO / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = REPO / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-08.json"
 KEYS = REPO / "tests" / "reconcile" / "expected_keys.txt"
 RECORDED = REPO / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
 # the long routes: id -> (the route file, what is judged: the `mean` of a route that always finishes, or the chance to `finish` of one with gaps)
