@@ -21,9 +21,9 @@ The main chat thinks and decides: the idea, the grill, the ticket, the plan, the
 - `finder` (Haiku 5.5): wide reading and search; the main chat keeps only its facts.
 - `checker` (Sonnet 5.5): every change, against its ticket, before it lands.
 
-Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. A `coder-light` prompt also carries the places to read with their line ranges; `finder` finds them when the main chat does not know them. Pieces that touch different files run in parallel, each coder with `isolation: "worktree"`. Two limits on parallel work (retro #712):
-- PRs that change the recorded numbers of one route (goldens, fixtures, packed values) run one after another.
-- At most five tickets that need heavy runs are in flight at once; the next starts when `python .github/scripts/heavy_dispatch.py status` shows free budget.
+Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. A `coder-light` prompt also carries the places to read with their line ranges; `finder` finds them when the main chat does not know them. Pieces that touch different files run in parallel, each coder with `isolation: "worktree"`, within two limits (retro #712):
+- At most five tickets with heavy runs at once. A ticket counts from the start of its coder (or from its first heavy run, when the need shows late) until it lands; a sixth waits.
+- PRs that change the recorded numbers of one route (goldens, fixtures, packed values) share a queue: the later one may build its code, but its heavy runs and re-records start after the earlier one has landed. The main chat names the route when it cuts the ticket.
 
 A root fix that also changes data lands as two PRs: first the mechanism, with tests on hand-worked numbers; then the data (a new snapshot) and its re-records.
 
@@ -31,9 +31,7 @@ The owner's rules are in `docs/owner-rules.md` (`OR-1`, `OR-2`, ...). A brief th
 
 Model of the main chat: Opus for ideas, grills and decisions; Sonnet 5.5 for a stretch of plain implementation. A session started for one ticket runs on Sonnet 5.5 with effort high.
 
-Review comes before the expensive part: a coder reports once the code and its quick tests pass, the `checker` reviews that head, and only the head that passed review (after its fix round) gets the heavy runs and golden re-records, whose numbers the main chat checks from the diff.
-
-Landing a ticket: its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once the integration run (a `workflow_dispatch` of `ci.yml` on an `integ/...` branch holding `main` plus the PRs) is green on Ubuntu and Windows, the `checker` has passed it and its tests cover the ticket's "Done when"; a PR's own CI runs Ubuntu only and is feedback for its session, and a session that needs Windows early dispatches `ci.yml` on its branch; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging. A push to `main` starts no CI run: `main` is verified by the integration run, whose tree must equal `main` after landing (`gh workflow run ci.yml --ref main` tests it on demand; `docs/ci.md`).
+Landing a ticket: review comes before the expensive part. A coder reports once the code and its quick tests pass, the `checker` reviews that head, and the main chat checks the fix round from its diff (a new mechanism in it goes to the `checker` again). Only then do the heavy runs and golden re-records run; a code change after them runs them again. Its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once the integration run (a `workflow_dispatch` of `ci.yml` on an `integ/...` branch holding `main` plus the PRs) is green on Ubuntu and Windows, the `checker` has passed it, the main chat has checked its re-recorded numbers from the diff, and its tests cover the ticket's "Done when"; a PR's own CI runs Ubuntu only and is feedback for its session, and a session that needs Windows early dispatches `ci.yml` on its branch; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging. A push to `main` starts no CI run: `main` is verified by the integration run, whose tree must equal `main` after landing (`gh workflow run ci.yml --ref main` tests it on demand; `docs/ci.md`).
 
 One task per chat. The state of the work lives in the GitHub issues, so a `/clear` between tasks loses nothing.
 
@@ -43,7 +41,7 @@ Everything this repo needs lives inside this folder: worktrees in `.claude/workt
 
 **Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite, sweeps, solves and measurements go to GitHub (CI, or a heavy run), because a local multi-process sweep pins his machine at 100%. Heavy runs go **only through the dispatcher**: `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners N --command '...'`, never `gh workflow run run.yml`. The repo has 20 runner jobs at once; the dispatcher waits on the PC until merge CI keeps a buffer (`HEAVY_FLOOR` and `CI_RESERVE`, repository variables), and refuses a timeout over 60 minutes unless `--long` (one indivisible solve): split long sweeps into shorter parts. `python .github/scripts/heavy_dispatch.py status` shows the queue. Details: `docs/ci.md`.
 
-A helper never waits on a GitHub run: it dispatches the run and ends its turn with a report. The main chat waits with `python .github/scripts/wait_runs.py <run id>...` started in the background, then resumes the helper or hands its work to a fresh one. A re-record dispatched with `--commit <paths>` commits its own files onto the branch.
+Nobody waits on a GitHub run inside a turn. A helper dispatches with `--no-wait` and its turn ends either way: it reports the run id it started, or, on exit 3 (no room now), the command itself. The main chat runs a reported command in the background, waits with `python .github/scripts/wait_runs.py <run id>...` in the background, then resumes the helper or hands its work to a fresh one. A ticket session waits the same way in its own background, and Auto-fix wakes it on its PR's CI. A re-record dispatched with `--commit <paths>` commits its own files onto the branch.
 
 ## Talking to the owner
 
