@@ -168,3 +168,56 @@ def test_random_policies_keep_their_risk_when_lumped(seed):
     assert short.success_probability.value == pytest.approx(whole.success_probability.value, abs=1e-12)
     assert short.mean.value == pytest.approx(whole.mean.value, rel=1e-9)
     assert short.variance.value == pytest.approx(whole.variance.value, rel=1e-7)
+
+
+def deep_split_policy(with_twin):
+    """x1 and x2 cost the same and lead to states that cost the same, but those lead to a cheap and a dear retry: only the SECOND refinement pass tells x1 from x2.
+
+    s -> x -> y -> z -> goal; z1 retries at 1 Chaos, z2 at 5. With `with_twin` a third branch x3 -> y3 -> z3 is alike x1 all the way down
+    (z3 retries at 1 as well): x3 is x1's twin and must merge into it, x2 never.
+    """
+    branches = [1, 2, 3] if with_twin else [1, 2]
+    retry = {1: 1.0, 2: 5.0, 3: 1.0}
+    policy = {"s": Action("s", 1.0, tuple((f"x{k}", 1) for k in branches))}
+    for k in branches:
+        policy[f"x{k}"] = Action("x", 1.0, ((f"y{k}", 1),))
+        policy[f"y{k}"] = Action("y", 1.0, ((f"z{k}", 1),))
+        policy[f"z{k}"] = Action("z", retry[k], ((GOAL, 1), (f"z{k}", 1)))
+    return policy
+
+
+def test_two_states_alike_after_the_first_pass_but_apart_two_steps_down_are_not_merged():
+    policy = deep_split_policy(with_twin=False)
+
+    lumped = lump(policy, "s", is_goal)
+
+    assert "x1" in lumped.policy and "x2" in lumped.policy  # a single pass would stand x2 for x1 (and y2 for y1, ...)
+    assert "y1" in lumped.policy and "y2" in lumped.policy
+    assert len(lumped.policy) == len(policy)
+    same(evaluate(lumped.policy, lumped.start, lumped.is_goal), evaluate(policy, "s", is_goal))
+
+
+def test_a_twin_alike_all_the_way_down_merges_and_the_one_that_parts_two_steps_down_does_not():
+    policy = deep_split_policy(with_twin=True)
+
+    lumped = lump(policy, "s", is_goal)
+
+    assert set(lumped.policy) == {"s", "x1", "x2", "y1", "y2", "z1", "z2"}  # x3, y3 and z3 stand as x1, y1 and z1
+    assert lumped.is_goal(GOAL)
+    same(evaluate(lumped.policy, lumped.start, lumped.is_goal), evaluate(policy, "s", is_goal))
+
+
+def test_the_start_has_a_twin_inside_its_block_and_the_risk_of_the_merged_policy_is_that_of_the_whole_one():
+    policy = {
+        "s0": Action("s", 1.0, (("m", 1), ("s1", 1), (GOAL, 1))),
+        "s1": Action("s", 1.0, (("m", 1), ("s1", 1), (GOAL, 1))),
+        "m": Action("m", 2.0, ((GOAL, 1), ("m", 1))),
+    }
+
+    lumped = lump(policy, "s0", is_goal)
+
+    assert lumped.start == "s0" and set(lumped.policy) == {"s0", "m"}  # s1 stands as s0, the start
+    whole = evaluate(policy, "s0", is_goal)
+    short = evaluate(lumped.policy, lumped.start, lumped.is_goal)
+    same(short, whole)
+    assert short.success_probability.value == pytest.approx(1.0) and short.mean.value > 1.0
