@@ -295,6 +295,7 @@ def measure(route: str, variant: str, solver: str, data, *, net=None, say: Calla
         record.update(
             exact=info.exact, envelope_stop=info.stopped, lower=info.lower, upper=info.upper, rounds=info.rounds,
             touched=info.touched, expanded=info.expanded, realized=info.realized, candidates=info.candidates, bound_keys=info.bound_keys,
+            bound_expanded=info.bound_expanded, bound_offers=info.bound_offers, bound_stopped=info.bound_stopped, bound_seconds=round(info.bound_seconds, 1),
         )  # fmt: skip
     return record
 

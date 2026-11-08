@@ -94,6 +94,9 @@ WARM_START = True  # each round's solve starts from the last round's policy and 
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
+PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
+PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
+POLL_SECONDS = 0.5  # how often a round that expands many states asks the net inside it
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
 
@@ -135,6 +138,8 @@ class Problem[S](Protocol):
     def release(self) -> None:
         """Called after the work at one state, to let the problem drop what it cached for it."""
         ...
+
+    # optional: `prime(state, positions)` makes, side by side, what the kernels of these offers at the state will cost most (a process pool); it changes no answer
 
 
 @dataclass(frozen=True)
@@ -307,6 +312,8 @@ class Search[S]:
         self.tags: np.ndarray | None = None  # the tag (offer position, or FAKE) of the action the last solve chose at each node, NO_ACTION where none
         self.n_solved = 0
         self.restart_kernel: int | None = None
+        self.prime_skip = 0  # states to leave before the problem is asked to prime again (see `realize`)
+        self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
         self._last_root: float | None = None
         self.intern(problem.start)
@@ -414,8 +421,23 @@ class Search[S]:
         rows, cands = self.rows[i], self.cands[i]
         best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
+        prime = getattr(self.p, "prime", None)
+        primed = 0  # how many of the offers at the end of `cands` have been primed
+        self.prime_skip = max(self.prime_skip - 1, 0)
         while cands and (first or cands[-1][0] < best):
+            if prime is not None and primed == 0 and not self.prime_skip:
+                # the offers still to be realized are among those whose bound is below the best now (it only falls): ask the problem to make their
+                # expensive parts side by side before they are built one by one
+                ahead = [position for la, position in reversed(cands[-PRIME_AHEAD:]) if first or la < best]
+                if len(ahead) >= PRIME_FROM:
+                    made = prime(self.states[i], ahead)
+                    # a call that found everything made already (the pools of one offer are the same at most states) costs the preparation of every offer
+                    # for nothing: the next calls wait 2, 4, ... 64 states while the answer stays 0
+                    self.prime_zero = 0 if made else self.prime_zero + 1
+                    self.prime_skip = min(2**self.prime_zero, 64) if not made else 0
+                primed = len(ahead)
             first = False
+            primed -= 1
             _, position = cands.pop()
             try:
                 kid = self._kernel(i, position)
@@ -656,17 +678,38 @@ class Search[S]:
             if stopped is not None:
                 break
             mark = time.perf_counter()
+            polled = mark
             for i in fake.tolist():
                 if not self.expanded[i]:
                     self.expand(i)
                 self.realize(i, force=True)
                 self.p.release()
+                if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
+                    polled = time.perf_counter()
+                    stopped = self._net(began)
+                    if stopped is not None:
+                        break
             self.stats.expand_seconds += time.perf_counter() - mark
+            if stopped is not None:
+                break
         self.stats.touched = len(self.states)
         if self.p.restart is None:
-            raise NoPolicy(f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on")
-        if not math.isfinite(self.upper_value()):
-            raise NoPolicy(f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} states")
+            raise NoPolicy(
+                f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
+                f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}"
+            )
+        try:
+            upper = self.upper_value()
+        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies: say so, with the bound
+            raise NoPolicy(
+                f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
+                f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+            ) from error
+        if not math.isfinite(upper):
+            raise NoPolicy(
+                f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} of {len(self.states):,} states "
+                f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+            )
         return SearchResult(self.states, self.index, self._graph("upper"), lower, False, stopped, True, self.stats)
 
 

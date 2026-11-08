@@ -27,6 +27,7 @@ when their parts have the same sides and the same weights per label, as one-side
 import random
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
+from contextlib import contextmanager
 from fractions import Fraction
 from functools import cache
 
@@ -40,10 +41,30 @@ from .pool import PoolFamily, PoolMod
 
 __all__ = [
     "Outcome",
+    "floating",
     "guaranteed_candidates",
 ]
 
 Outcome = frozenset[tuple[Hashable, int]]
+
+NUMBER: type = Fraction  # the number type of `exact_distribution`: Fraction, or float inside `floating()`
+
+
+@contextmanager
+def floating():
+    """Within the block `exact_distribution` works in floats (ticket #626).
+
+    The engine adds and multiplies positive numbers only (a chance is a product of weight ratios, and chances are summed), so no cancellation happens and each
+    chance it returns is the exact one to a relative error of about (operations on a path) x 2^-53, a few 1e-14 at most for the draws of the game (six draws, as
+    many classes). Whoever reads these chances as those of a lower bound must take that error off (`abstraction._pattern`: every chance is shrunk by 2^-30 and the
+    mass that is missing goes to a state that costs nothing), and must not mix them with the exact ones (`Abstraction.approximate` keeps its own caches).
+    """
+    global NUMBER
+    saved, NUMBER = NUMBER, float
+    try:
+        yield
+    finally:
+        NUMBER = saved
 
 RARE_REROLL_RATIO = get_rule("affix_count.rare_reroll_ratio")
 KEPT_MODS_COUNT_IN_TOTAL = get_rule("chaos_orb.kept_mods_count_in_total")
@@ -150,6 +171,7 @@ def exact_distribution(
     per candidate mod and must be pure. `blocked` are the tags the guaranteed draw may not pick (a
     Harvest reforge under an Attack or Caster metamod: it filters that first mod only).
     """
+    number = NUMBER
     labels: list[Hashable] = []
     label_index: dict[Hashable, int] = {}
     classes: dict[tuple, int] = {}
@@ -163,16 +185,16 @@ def exact_distribution(
     for name, sides in units.items():
         parts = []
         for family in sides:
-            by_label: dict[int, Fraction] = defaultdict(Fraction)
+            by_label: dict[int, Fraction] = defaultdict(number)
             for entry in family.mods:
                 value = label(entry.mod)
                 index = label_index.setdefault(value, len(label_index))
                 if index == len(labels):
                     labels.append(value)
                 mod_label[entry.mod.id] = index
-                by_label[index] += entry.weight
+                by_label[index] += number(entry.weight)
             weights = tuple(sorted(by_label.items()))
-            parts.append((family.side is Side.PREFIX, weights, sum((w for _, w in weights), Fraction(0))))
+            parts.append((family.side is Side.PREFIX, weights, sum((w for _, w in weights), number(0))))
         key = tuple(sorted(parts))
         if key not in classes:
             classes[key] = len(class_parts)
@@ -190,7 +212,7 @@ def exact_distribution(
 
         A unit is a family: one part per side it has mods on, and drawing a mod of either part takes the unit out.
         """
-        nothing = {(0,) * width: ONE}
+        nothing = {(0,) * width: number(1)}
         if picks == 0:
             return nothing
         open_weight = {}
@@ -198,14 +220,14 @@ def exact_distribution(
             if class_count[index] > taken:
                 weight = sum(
                     (total for on_prefix, _, total in class_parts[index] if (room_prefix if on_prefix else room_suffix) > 0),
-                    Fraction(0),
+                    number(0),
                 )
                 if weight:
                     open_weight[index] = weight
         if not open_weight:
             return nothing
-        total = sum(((class_count[i] - drawn[i]) * weight for i, weight in open_weight.items()), Fraction(0))
-        result: dict[tuple[int, ...], Fraction] = defaultdict(Fraction)
+        total = sum(((class_count[i] - drawn[i]) * weight for i, weight in open_weight.items()), number(0))
+        result: dict[tuple[int, ...], Fraction] = defaultdict(number)
         for index in open_weight:
             remaining = class_count[index] - drawn[index]
             for on_prefix, weights, _ in class_parts[index]:
@@ -229,10 +251,11 @@ def exact_distribution(
         groups: dict[tuple[int, bool, int, Fraction], int] = defaultdict(int)
         for family, entry in guaranteed_candidates(pool, free, tag, blocked):
             groups[(class_of[family.family], family.side is Side.PREFIX, mod_label[entry.mod.id], entry.weight)] += 1
-        tagged_total = sum((n * weight for (_, _, _, weight), n in groups.items()), Fraction(0))
-        guaranteed = [(cls, on_prefix, lab, n * weight / tagged_total) for (cls, on_prefix, lab, weight), n in groups.items()]
-    tallies: dict[tuple[int, ...], Fraction] = defaultdict(Fraction)
+        tagged_total = sum((n * number(weight) for (_, _, _, weight), n in groups.items()), number(0))
+        guaranteed = [(cls, on_prefix, lab, n * number(weight) / tagged_total) for (cls, on_prefix, lab, weight), n in groups.items()]
+    tallies: dict[tuple[int, ...], Fraction] = defaultdict(number)
     for total, chance in totals.items():
+        chance = number(chance)
         picks = max(0, total - kept - (tag is not None))
         if tag is None:
             for tally, inner in walk(start, free[Side.PREFIX], free[Side.SUFFIX], picks).items():
