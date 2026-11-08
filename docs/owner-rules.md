@@ -76,14 +76,14 @@ The trade query asks for "Instant Buyout" and never "Instant Buyout and In Perso
 - **Source.** Owner on the R10 page, 2026-10-31 (memory note `owner-route-reading.md`; #133). The fallback: ADR-0061, decision 2 (owner answers of 2026-11-01, [#337](https://github.com/Rasslabsya4el/crafting-system/issues/337)), and the setting `price_source` `ninja`/`trade`/`both` of [#357](https://github.com/Rasslabsya4el/crafting-system/issues/357).
 - **Replaces.** The sentence of ADR-0007 (line 7) that the trade query "keeps only listings from the last week by default". Narrowed by the later ADR-0061, decision 2, for the marked fallback.
 
-### OR-8. A price is the mean of the cheapest few
+### OR-8. A price is the mean of the cheapest few while the market has enough offers
 
-The price is the mean of the cheapest few instant-buyout listings, five by default.
+The price is the mean of the cheapest few instant-buyout listings, five by default, while the market has enough of them (the market rule of #355: at least 10 listings, at least 3 usable). When it has fewer, the price is the last one read in this league while the market had enough, marked as an old price with its date; when this league never had one, it is the mean of the listings there are, marked as a thin market. A search with no listings at all falls to OR-7.
 
-- **Example.** R10's start boots: "mean of the 5 cheapest instant-buyout listings" (#133; ADR-0061, decision 3).
-- **Counter-example.** The median of the cheapest, which `trade_pricing.py` computed before #133.
-- **Source.** Memory note `owner-route-reading.md`, 2026-10-31; #133.
-- **Replaces.** The median of the cheapest listings that `trade_pricing.py` used before #133.
+- **Example.** A search that finds 5 listings, all priced far above the market by trolls (the end of the Allflame league, 2026-11-08): the page shows the price last read while the search found enough, marked old with its date; with none this league, the mean of the 5, marked thin.
+- **Counter-example.** The mean of 5 troll listings shown as a plain price; a thin record dropped silently, so the route is priced from another source with no word of why.
+- **Source.** Owner in the main chat, 2026-11-08, answer «в» (this ticket); the cheapest few: memory note `owner-route-reading.md`, 2026-10-31, #133.
+- **Replaces.** The unconditional mean of the cheapest five, and for a thin record the "never offered" of #355 (ADR-0061).
 
 ### OR-9. The system refreshes prices itself
 

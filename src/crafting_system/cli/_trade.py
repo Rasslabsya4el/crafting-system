@@ -36,7 +36,7 @@ from crafting_system.prices.trade_http import (
     urllib_transport,
     user_agent,
 )
-from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS
+from crafting_system.prices.trade_market import DEFAULT_MIN_LISTINGS, THIN
 from crafting_system.prices.trade_pricing import (
     DEFAULT_K,
     DEFAULT_MAX_REQUESTS,
@@ -51,6 +51,13 @@ from crafting_system.prices.trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
 
 COMMAND = "python -m crafting_system.cli trade"
+
+
+def _offered_as(state: str) -> str:
+    """What a recorded thin or none market is priced as (OR-8): the page prints the mark with it."""
+    if state == THIN:
+        return "priced as the last deep price marked old, else as the mean of the listings there are marked thin"
+    return "no trade price (the poe.ninja row stands in, marked)"
 
 
 def trade_main(
@@ -160,9 +167,9 @@ def _trade(
             min_listings,
         )
     except NotEnoughListings as error:
-        if error.market is not None:  # thin or none: kept as a state, the price file has no price for it
+        if error.market is not None:  # thin or none: kept as a state; the last deep reading of the name stays in the file
             store_market(price_path, error.market)
-            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}, not offered")
+            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}, {_offered_as(error.market.state)}")
         raise
     store_trade_price(price_path, price, entry_for(price))
     print(

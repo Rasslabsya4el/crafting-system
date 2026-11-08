@@ -10,7 +10,9 @@ so the cheapest listings are real prices).
 The market rule (#355, `trade_market.py`): the answer is a price only when the site has at least
 `min_listings` listings (default 10) and enough of the fetched ones can be priced; otherwise it is
 `thin`, and a search with no listing is `none`. `price_buy_spec` is the same flow that raises
-`NotEnoughListings` for those two states; the error carries the `TradeMarket` to record.
+`NotEnoughListings` for those two states; the error carries the `TradeMarket` to record. A `thin` market
+carries the mean of the cheapest `k` listings that could be priced (`thin_chaos`), which the price file keeps
+beside the last deep reading of the name (OR-8, #718): a quoted market replaces that reading, a thin one never does.
 
 Nothing here reads a clock: the caller passes `now`. The client's request budget is the only limit on
 requests; a cache hit costs none.
@@ -27,13 +29,22 @@ from pathlib import Path
 from typing import Any
 
 from ..data import Mod
-from .price_file import MAX_AGE_DAYS, MarketRecord, PriceEntry, PriceFile, load_price_file, write_price_file
+from .price_file import (
+    MAX_AGE_DAYS,
+    DeepReading,
+    MarketRecord,
+    PriceEntry,
+    PriceFile,
+    load_price_file,
+    write_price_file,
+)
 from .trade_http import MAX_FETCH_IDS, TradeClient, TradeError
 from .trade_market import (
     DEFAULT_MIN_LISTINGS,
     MIN_USABLE,
     NONE,
     QUOTED,
+    THIN,
     TRADE_SOURCE,
     age_in_days,
     classify,
@@ -130,14 +141,17 @@ class TradeMarket:
     query: Mapping[str, Any]
     price: TradePrice | None  # set only when quoted
     reason: str | None  # why it is not quoted
+    thin_chaos: float | None = None  # thin only: the mean of the cheapest `thin_used` priced listings there were
+    thin_used: int = 0
 
     def record(self) -> MarketRecord:
         """The `thin` / `none` state as the price file keeps it."""
         if self.state == QUOTED:
             raise ValueError(f"{self.name!r} is quoted; store its price, not a market record")
         return MarketRecord(
-            self.state, self.league, self.date, self.listings, self.usable, self.query_hash, self.query
-        )
+            self.state, self.league, self.date, self.listings, self.usable, self.query_hash, self.query,
+            self.thin_chaos, self.thin_used if self.thin_chaos is not None else 0,
+        )  # fmt: skip
 
 
 # --- cache files ---------------------------------------------------------------------------------
@@ -307,9 +321,12 @@ def market_of_listings(
             f"only {len(usable)} of {len(rows)} fetched listings ({total} on the site) can be priced; "
             f"at least {MIN_USABLE} are needed. Dropped: {why}{hint}"
         )
+    thin = state == THIN and bool(usable)
+    cheapest_there = sorted(usable)[:k] if thin else []
     return TradeMarket(
-        spec.name, state, price_file.league, stamp, total, len(usable), len(rows), dropped, digest, body, price, reason
-    )
+        spec.name, state, price_file.league, stamp, total, len(usable), len(rows), dropped, digest, body, price, reason,
+        float(statistics.fmean(cheapest_there)) if thin else None, len(cheapest_there),
+    )  # fmt: skip
 
 
 def assess_buy_spec(
@@ -405,23 +422,55 @@ def refuse_name_collision(name: str, existing: PriceEntry | None) -> None:
         raise ValueError(f"name {name!r} collides with a {existing.source} price; rename the buy spec")
 
 
+def deep_reading_of(price: TradePrice) -> DeepReading:
+    """The deep reading a quoted `price` is: what the price file remembers of the name until the next deep one."""
+    return DeepReading(price.chaos, price.league, price.date, price.listings, price.usable)
+
+
+def _remembered(current: PriceFile, name: str) -> dict[str, DeepReading]:
+    """The deep readings of `current` as a thin or empty reading leaves them: kept, and the file's own quote joined in.
+
+    A file written before the memory existed holds its last deep reading only as the trade price in `prices`; that
+    price is about to leave `prices`, so it moves here. A quote of another league is not a reading of this one.
+    """
+    deep = dict(current.deep)
+    entry = current.prices.get(name)
+    detail = entry.detail if entry is not None and entry.source == TRADE_SOURCE and entry.detail else None
+    if detail is None or name in deep or detail.get("league") not in (None, current.league):
+        return deep
+    read_on = _day(detail.get("date"))
+    listings, usable = detail.get("listings"), detail.get("usable", detail.get("used"))
+    if read_on is not None and isinstance(listings, int) and isinstance(usable, int):
+        deep[name] = DeepReading(entry.chaos, current.league, read_on, listings, usable)
+    return deep
+
+
+def _day(stamp: object) -> date | None:
+    try:
+        return date.fromisoformat(stamp) if isinstance(stamp, str) else None
+    except ValueError:
+        return None
+
+
 def store_trade_price(path: Path, price: TradePrice, entry: PriceEntry) -> None:
-    """Add `entry` under the price's name to the price file at `path`; nothing else changes.
+    """Add `entry` under the price's name to the price file at `path`, as the name's last deep reading too; nothing else changes.
 
     A name that is already another source's price is refused (`ValueError`) and the file is untouched.
     """
     current = load_price_file(path)
     refuse_name_collision(price.name, current.prices.get(price.name))
     markets = {name: record for name, record in current.markets.items() if name != price.name}
-    write_price_file(path, replace(current, prices={**current.prices, price.name: entry}, markets=markets))
+    deep = {**current.deep, price.name: deep_reading_of(price)}
+    write_price_file(path, replace(current, prices={**current.prices, price.name: entry}, markets=markets, deep=deep))
 
 
 def store_market(path: Path, market: TradeMarket) -> None:
     """Keep the outcome of a search in the price file at `path`: a quote as a price, `thin` / `none` as a record.
 
-    A `thin` or `none` outcome replaces an older trade price of the same name (the site no longer shows a
-    market, so the old quote is not offered) and an older record. A name that is another source's price is
-    refused (`ValueError`) and the file is untouched. Nothing else changes.
+    A quote replaces the name's last deep reading. A `thin` or `none` outcome replaces an older trade price of the
+    same name (the site no longer shows a market, so the old quote is not a quoted price) and an older record, and
+    leaves the last deep reading as it is: that reading is what a thin market is priced with (OR-8). A name that is
+    another source's price is refused (`ValueError`) and the file is untouched. Nothing else changes.
     """
     if market.price is not None:
         store_trade_price(path, market.price, entry_for(market.price))
@@ -430,7 +479,7 @@ def store_market(path: Path, market: TradeMarket) -> None:
     refuse_name_collision(market.name, current.prices.get(market.name))
     prices = {name: entry for name, entry in current.prices.items() if name != market.name}
     markets = {**current.markets, market.name: market.record()}
-    write_price_file(path, replace(current, prices=prices, markets=markets))
+    write_price_file(path, replace(current, prices=prices, markets=markets, deep=_remembered(current, market.name)))
 
 
 def trade_price_age_days(entry: PriceEntry, today: date) -> int | None:
@@ -487,13 +536,13 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
     them. So is a trade price whose own `detail["league"]` names another league than the new file's.
     A name the new file already has stays as the new file has it. A kept price older than the stale limit
     (counted to the new file's date) is flagged in the warnings, like a stale price file. The `thin` and
-    `none` records follow the same league and name rules (a record keeps its own age; it is not warned
-    about). Returns (file, warnings).
+    `none` records and the last deep readings follow the same league and name rules (a record keeps its own
+    age; it is not warned about). Returns (file, warnings).
     """
     if old is None:
         return new, []
     trade = {name: entry for name, entry in old.prices.items() if entry.source == TRADE_SOURCE}
-    if not trade and not old.markets:
+    if not trade and not old.markets and not old.deep:
         return new, []
     if old.league != new.league:
         warnings = []
@@ -507,6 +556,11 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
             warnings.append(
                 f"dropped {len(old.markets)} trade market record(s) of league {old.league} "
                 f"(the new price file is for {new.league}): {', '.join(sorted(old.markets))}"
+            )
+        if old.deep:
+            warnings.append(
+                f"dropped {len(old.deep)} last deep trade reading(s) of league {old.league} "
+                f"(the new price file is for {new.league}): {', '.join(sorted(old.deep))}"
             )
         return new, warnings
     warnings = []
@@ -527,5 +581,11 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
         for name, record in old.markets.items()
         if record.league == new.league and name not in new.prices and name not in kept
     }
+    deep = {
+        name: reading
+        for name, reading in old.deep.items()
+        if reading.league == new.league and (name in kept or name not in new.prices)
+    }
     aged = stale_trade_warnings(replace(new, prices=kept), new.fetched_at.astimezone(UTC).date())
-    return replace(new, prices={**new.prices, **kept}, markets={**new.markets, **markets}), [*warnings, *aged]
+    merged = replace(new, prices={**new.prices, **kept}, markets={**new.markets, **markets}, deep={**deep, **new.deep})
+    return merged, [*warnings, *aged]

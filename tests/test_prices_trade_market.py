@@ -202,8 +202,8 @@ def test_thin_and_none_are_recorded_and_read_back(trade, spec, game_mods, tmp_pa
 
     saved = load_price_file(path)
     assert saved.markets[spec.name] == MarketRecord(
-        "thin", "Allflame", date(2026, 10, 30), 9, 9, market.query_hash, market.query
-    )
+        "thin", "Allflame", date(2026, 10, 30), 9, 9, market.query_hash, market.query, 1.0, 5
+    )  # the thin mean (#718): the 5 cheapest of the 9 recorded listings, all 1 Chaos
     assert saved.prices == price_file().prices  # a record is not a price
 
 
@@ -293,19 +293,20 @@ def test_an_entry_older_than_seven_days_is_not_offered(age, state):
         assert f"{age} days old (limit 7)" in found.reason
 
 
-def test_a_quoted_entry_below_the_rail_or_with_few_usable_is_not_offered_and_says_which():
+def test_a_quoted_entry_below_the_rail_or_with_few_usable_is_offered_only_as_the_thin_mean_and_says_which():
     nine = offer(file_with(stored_entry(listings=9, used=5)), "Amulet", TODAY)
     few = offer(file_with(stored_entry(listings=40, used=2, usable=2)), "Amulet", TODAY)
     raised = offer(file_with(stored_entry(listings=15)), "Amulet", TODAY, min_listings=20)
 
-    assert (nine.state, nine.offered, nine.listings) == ("thin", False, 9)
+    assert (nine.state, nine.offered, nine.listings) == ("thin", True, 9)
     assert "rail needs 10" in nine.reason
-    assert (few.state, few.offered) == ("thin", False) and "2 usable" in few.reason
-    assert (raised.state, raised.offered) == ("thin", False) and "rail needs 20" in raised.reason
+    assert (nine.basis, nine.entry.chaos, nine.mark) == ("thin", 2.0, "few offers: the mean of the 5 listings there are")
+    assert (few.state, few.offered, few.basis, few.mean_of) == ("thin", True, "thin", 2) and "2 usable" in few.reason
+    assert (raised.state, raised.offered, raised.basis) == ("thin", True, "thin") and "rail needs 20" in raised.reason
     assert nine.fresh  # a thin answer of today is a fresh answer: no need to ask again
 
 
-def test_a_recorded_thin_or_none_state_is_not_offered_but_is_fresh():
+def test_a_recorded_thin_state_without_a_price_and_a_none_state_are_not_offered_but_are_fresh():
     thin = MarketRecord("thin", "Allflame", TODAY - timedelta(days=2), 9, 9, "h", {"query": {}})
     none = MarketRecord("none", "Allflame", TODAY, 0, 0, "h", {"query": {}})
 

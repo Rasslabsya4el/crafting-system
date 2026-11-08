@@ -8,6 +8,7 @@ from .http_json import SourceError, http_get_json
 from .price_file import (
     CHAOS_ORB,
     DIVINE_ORB,
+    DeepReading,
     MarketRecord,
     PriceEntry,
     PriceFile,
@@ -99,6 +100,7 @@ __all__ = [
     "write_price_file",
     "TRADE_SOURCE",
     "DEFAULT_MIN_LISTINGS",
+    "DeepReading",
     "MarketRecord",
     "TradeMarket",
     "TradeOffer",

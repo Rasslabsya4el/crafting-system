@@ -138,18 +138,19 @@ def test_a_trade_price_exactly_seven_days_old_is_still_fresh():
     assert (result.used, result.fallback) == ("trade", False)
 
 
-def test_both_with_a_thin_trade_market_of_5_listings_falls_back():
+def test_both_with_a_thin_trade_market_of_5_listings_prices_with_the_thin_mean_marked_thin():
     prices = pf(trade=trade_entry(125.0, listings=5), ninja=ninja_entry(100.0))
 
     result = source_price(prices, BASE, BOTH, TODAY)
 
-    assert (result.used, result.chaos, result.fallback) == ("poe.ninja", 100.0, True)
-    assert result.trade is not None and result.trade.state == "thin"
-    assert "thin" in result.marks[0] and "5 listings on the site" in result.marks[0]
+    assert (result.used, result.chaos, result.fallback) == ("trade", 125.0, False)  # #718: not the stand-in any more
+    assert result.trade is not None and result.trade.state == "thin" and "5 listings on the site" in result.trade.reason
+    assert result.marks == ("few offers: the mean of the 5 listings there are",)
+    assert result.side_by_side  # poe.ninja is still beside it
 
 
-def test_both_with_a_recorded_thin_market_and_a_ninja_row_falls_back():
-    prices = pf(ninja=ninja_entry(100.0), beside=False, markets={BASE: market("thin", 4, 4)})
+def test_both_with_a_recorded_thin_market_without_a_priced_listing_and_a_ninja_row_falls_back():
+    prices = pf(ninja=ninja_entry(100.0), beside=False, markets={BASE: market("thin", 4, 4)})  # no mean, no deep reading
 
     result = source_price(prices, BASE, BOTH, TODAY)
 
@@ -321,15 +322,16 @@ def test_a_hand_override_wins_for_a_fractured_start_under_ninja_too():
 # -- 6. the market rail and the printed text -----------------------------------------------------------------------------
 
 
-def test_raising_min_listings_cuts_a_quoted_price_and_both_then_falls_back():
+def test_raising_min_listings_makes_a_quoted_price_a_thin_one_and_both_then_marks_it_thin():
     prices = pf(trade=trade_entry(125.0, listings=14), ninja=ninja_entry(100.0))
     assert source_price(prices, BASE, BOTH, TODAY, min_listings=14).used == "trade"
 
     cut = source_price(prices, BASE, BOTH, TODAY, min_listings=15)
 
     assert cut.trade is not None and cut.trade.state == "thin" and "needs 15" in (cut.trade.reason or "")
-    assert (cut.used, cut.chaos, cut.fallback) == ("poe.ninja", 100.0, True)
-    assert source_price(prices, BASE, TRADE, TODAY, min_listings=15).chaos is None
+    assert (cut.used, cut.chaos, cut.fallback) == ("trade", 125.0, False)
+    assert cut.marks[0].startswith("few offers: the mean of the")
+    assert source_price(prices, BASE, TRADE, TODAY, min_listings=15).marks == cut.marks
 
 
 def test_a_flagged_both_case_prints_both_numbers_and_the_word_gap():

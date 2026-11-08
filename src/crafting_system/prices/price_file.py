@@ -54,7 +54,10 @@ class MarketRecord:
 
     `none`: the site answered a successful search with no listing (total 0). `thin`: it has listings but
     too few to call a market (fewer than the listing-count rail, or too few that can be priced). Neither
-    is offered and neither is "unknown": the trade site said so on `date`, and the record ages like a price.
+    is "unknown": the trade site said so on `date`, and the record ages like a price. A `none` record is never
+    offered. A `thin` record is offered (OR-8, #718) as the league's last deep price (`PriceFile.deep`) marked
+    old, else as `chaos`, the mean of the `used` cheapest listings there were, marked thin; a `thin` record
+    without `chaos` (no listing could be priced, or written before #718) has no price to offer.
     """
 
     state: str  # MARKET_THIN or MARKET_NONE
@@ -64,6 +67,23 @@ class MarketRecord:
     usable: int  # listings that could be priced (0 when none were fetched)
     query_hash: str
     query: Mapping[str, Any]
+    chaos: float | None = None  # thin only: the mean of the `used` cheapest priced listings there were
+    used: int = 0  # listings in that mean
+
+
+@dataclass(frozen=True)
+class DeepReading:
+    """The last deep trade reading of a name in a league: a search that met the market rule (#355) and made a price.
+
+    Kept apart from `PriceFile.prices` so a later thin reading, which takes the trade price out of `prices`, does not
+    lose it (OR-8, #718). `league` is the league it was read in: a reading of another league is never this league's.
+    """
+
+    chaos: float
+    league: str
+    date: date  # UTC date of the search
+    listings: int  # the search `total`
+    usable: int  # fetched listings that could be priced
 
 
 @dataclass(frozen=True)
@@ -74,6 +94,7 @@ class PriceFile:
     prices: dict[str, PriceEntry] = field(default_factory=dict)
     markets: dict[str, MarketRecord] = field(default_factory=dict)  # thin / none trade searches, by name
     ninja: dict[str, PriceEntry] = field(default_factory=dict)  # poe.ninja rows of names whose `prices` entry is a trade price, so both show side by side (#357)
+    deep: dict[str, DeepReading] = field(default_factory=dict)  # the last deep trade reading of each name in this league (#718)
 
 
 def default_price_file_path(config: Config) -> Path:
@@ -113,6 +134,8 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
     }
     if price_file.markets:
         document["markets"] = {name: _market_to_json(record) for name, record in price_file.markets.items()}
+    if price_file.deep:
+        document["deep"] = {name: _deep_to_json(reading) for name, reading in price_file.deep.items()}
     if price_file.ninja:
         document["ninja"] = {name: _entry_to_json(entry) for name, entry in price_file.ninja.items()}
     text = json.dumps(document, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
@@ -145,6 +168,17 @@ def _market_to_json(record: MarketRecord) -> dict[str, Any]:
         "usable": record.usable,
         "query_hash": record.query_hash,
         "query": record.query,
+        **({"chaos": record.chaos, "used": record.used} if record.chaos is not None else {}),
+    }
+
+
+def _deep_to_json(reading: DeepReading) -> dict[str, Any]:
+    return {
+        "chaos": reading.chaos,
+        "league": reading.league,
+        "date": reading.date.isoformat(),
+        "listings": reading.listings,
+        "usable": reading.usable,
     }
 
 
@@ -199,8 +233,9 @@ def _price_file_from_document(document: object, path: Path) -> PriceFile:
             raise ValueError(f"{path}: {name!r} and another name give the same price name {canonical!r}")
         prices[canonical] = entry
     markets = _markets_from_document(document.get("markets", {}), path)
+    deep = _deep_from_document(document.get("deep", {}), path)
     ninja = _ninja_from_document(document.get("ninja", {}), path)
-    return PriceFile(league, fetched_at, float(chaos_per_divine), prices, markets, ninja)
+    return PriceFile(league, fetched_at, float(chaos_per_divine), prices, markets, ninja, deep)
 
 
 def _entry_from_document(raw: object, name: str, label: str, path: Path) -> PriceEntry:
@@ -258,13 +293,42 @@ def _markets_from_document(raw_markets: object, path: Path) -> dict[str, MarketR
             raise ValueError(f"{where}: listings and usable must be whole numbers, zero or more")
         if not isinstance(raw.get("query_hash"), str) or not isinstance(raw.get("query"), dict):
             raise ValueError(f"{where}: query_hash must be a string and query an object")
+        chaos = raw.get("chaos")
+        if chaos is not None and (raw["state"] != MARKET_THIN or not is_price(chaos) or not _count(raw.get("used"))):
+            raise ValueError(f"{where}: chaos is the mean of a thin market, a number above zero, with `used` a whole number")
         canonical = canonical_price_name(name)
         if canonical in markets:
             raise ValueError(f"{path}: {name!r} and another name give the same market name {canonical!r}")
         markets[canonical] = MarketRecord(
-            raw["state"], raw["league"], searched_on, raw["listings"], raw["usable"], raw["query_hash"], raw["query"]
-        )
+            raw["state"], raw["league"], searched_on, raw["listings"], raw["usable"], raw["query_hash"], raw["query"],
+            None if chaos is None else float(chaos), 0 if chaos is None else raw["used"],
+        )  # fmt: skip
     return markets
+
+
+def _deep_from_document(raw_deep: object, path: Path) -> dict[str, DeepReading]:
+    if not isinstance(raw_deep, dict):
+        raise ValueError(f"{path}: deep must be an object of name -> last deep trade reading")
+    deep: dict[str, DeepReading] = {}
+    for name, raw in raw_deep.items():
+        where = f"{path}: deep reading {name!r}"
+        if not isinstance(raw, dict):
+            raise ValueError(f"{where} must be an object")
+        if not is_price(raw.get("chaos")):
+            raise ValueError(f"{where}: chaos must be a number above zero")
+        if not isinstance(raw.get("league"), str) or not raw["league"].strip():
+            raise ValueError(f"{where}: league must be a non-empty string")
+        try:
+            read_on = date.fromisoformat(raw["date"])
+        except (KeyError, TypeError, ValueError):
+            raise ValueError(f"{where}: date must be an ISO date") from None
+        if not _count(raw.get("listings")) or not _count(raw.get("usable")):
+            raise ValueError(f"{where}: listings and usable must be whole numbers, zero or more")
+        canonical = canonical_price_name(name)
+        if canonical in deep:
+            raise ValueError(f"{path}: {name!r} and another name give the same deep reading name {canonical!r}")
+        deep[canonical] = DeepReading(float(raw["chaos"]), raw["league"], read_on, raw["listings"], raw["usable"])
+    return deep
 
 
 def _parse_timestamp(value: object, path: Path) -> datetime:

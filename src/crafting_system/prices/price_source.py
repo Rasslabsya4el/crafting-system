@@ -3,13 +3,18 @@
 The price source is a profile setting (with the #323 user inputs, apart from the target): `ninja`, `trade` or `both`.
 
 - `ninja`: the poe.ninja base row, nothing else. A fractured base has no poe.ninja row, so it is not offered.
-- `trade`: the trade price only (`trade_market.offer`: instant buyout, fresh, the market rule met), no fallback.
+- `trade`: the trade price only (`trade_market.offer`: instant buyout, fresh), no fallback.
 - `both` (the default): the trade price; when it is missing or stale (any reason `offer` gives), the poe.ninja row,
   and the price is marked as the fallback it is. With both prices at hand the answer carries them side by side and
   flags a gap above `gap_percent` (default 20).
 
 No price from the chosen source means no option (`SourcedPrice.chaos` is None and `reason` says why). A hand override
 of the name wins over every source and setting, as it does everywhere else (ADR-0007).
+
+A thin trade market (#355) is a trade price too, never a plain one (OR-8, #718): the league's last deep price marked
+old with its date, else the mean of the listings there are marked thin. The mark is `SourcedPrice.marks`, printed under
+the price and kept in its JSON beside the fallback mark. A search with no listings at all has no trade price, so the
+poe.ninja row stands in (OR-7).
 
 The gap is the dearer price over the cheaper one, in percent (125 against 100 is 25), so it does not depend on which
 of the two is the planner's. It is flagged when strictly above the threshold. The poe.ninja row of a name whose trade
@@ -28,7 +33,7 @@ from .poe_ninja import HISTORY_SOURCE
 from .poe_ninja import SOURCE as NINJA_SOURCE
 from .price_file import MAX_AGE_DAYS, OVERRIDE_SOURCE, PriceEntry, PriceFile
 from .price_names import canonical_price_name
-from .trade_market import DEFAULT_MIN_LISTINGS, TradeOffer, offer
+from .trade_market import DEFAULT_MIN_LISTINGS, OLD_PRICE, THIN_MEAN, TradeOffer, offer
 
 NINJA = "ninja"
 TRADE = "trade"
@@ -99,6 +104,10 @@ class SourcedPrice:
     def source_label(self) -> str:
         """The source of the planner's price as the start line prints it."""
         if self.used == USED_TRADE and self.trade is not None and self.trade.entry is not None:
+            if self.trade.basis == OLD_PRICE:
+                return f"trade-api, old price of {self.trade.read_on}"
+            if self.trade.basis == THIN_MEAN:
+                return f"trade-api, thin: {self.trade.mean_of} listings"
             return f"trade-api, {self.trade.listings} listings, {self.trade.age_days} d old"
         if self.used == USED_NINJA:
             return "poe.ninja (fallback: trade price not usable)" if self.fallback else "poe.ninja"
@@ -195,6 +204,7 @@ def source_price(
         return SourcedPrice(
             name, setting, USED_TRADE, trade_chaos, trade=trade, trade_chaos=trade_chaos, ninja_chaos=beside,
             gap_percent=gap, gap_flagged=gap is not None and gap > gap_threshold, gap_threshold=gap_threshold,
+            marks=(trade.mark,) if trade.mark is not None else (),
         )  # fmt: skip
     if setting == TRADE:
         return SourcedPrice(name, setting, USED_NONE, None, trade=trade, gap_threshold=gap_threshold, reason=trade.reason)
