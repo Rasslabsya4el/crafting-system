@@ -39,7 +39,7 @@ TARGET = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml"
 RUNS = 8  # a simulated craft is about 50,000 orb uses and takes 10 s or more here, so --verify gets eight runs
 BELT = "Leather Belt, magic, item level 86-100"
-BELT_PRICE = 15.234  # the trade API, Allflame, 2026-11-07: the mean of the 5 cheapest instant-buyout listings of a magic Leather Belt of item level 86 or more, 28 on the site
+BELT_PRICE = 15.7605  # the trade API, Allflame, 2026-11-07: the mean of the 5 cheapest instant-buyout listings of a magic Leather Belt of item level 86 or more (the snapshot's own entry)
 ORBS_OF_THE_GUIDE = {"Orb of Alteration", "Regal Orb"}
 
 
