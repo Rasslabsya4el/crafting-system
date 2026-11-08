@@ -224,6 +224,7 @@ class Play:
     cost: float = 0.0
     spend: dict[str, float] = field(default_factory=dict)
     uses: dict[str, int] = field(default_factory=dict)
+    item: Item | None = None  # the item the play ended with (or stopped at, for a gap)
 
 
 class Player:
@@ -252,14 +253,36 @@ class Player:
                 return crafter.essence(item, rng, action.record)
             case "bench":
                 return crafter.bench(item, rng, action.mod_id)
+            case "remove_crafted":
+                return crafter.remove_crafted(item)
+            case "fossil":
+                return crafter.fossil(item, rng, action.fossils)
+            case "harvest":
+                return crafter.harvest(item, rng, action.tag)
+            case "exalted":
+                return crafter.exalt(item, rng)
+            case "annulment":
+                return crafter.annul(item, rng)
+            case "fracturing":
+                return crafter.fracture(item, rng)
         raise AssertionError(action.kind)
 
-    def play(self, rng: Random, max_uses: int = MAX_USES) -> Play:
-        world, judge, route = self.world, self.judge, self.route
+    def try_play(self, rng: Random, max_uses: int = MAX_USES) -> tuple[Play, str | None]:
+        """One play that may end at a gap: the play so far, and the gap's message (None when the item met the target)."""
         play = Play()
+        try:
+            self.play(rng, max_uses, play)
+        except Gap as gap:
+            return play, str(gap)
+        return play, None
+
+    def play(self, rng: Random, max_uses: int = MAX_USES, into: Play | None = None) -> Play:
+        world, judge, route = self.world, self.judge, self.route
+        play = into if into is not None else Play()
         item = world.start_item
         for _ in range(max_uses):
             status = judge.statuses(item)
+            play.item = item
             if judge.goal(status):
                 return play
             for rule in route.rules:

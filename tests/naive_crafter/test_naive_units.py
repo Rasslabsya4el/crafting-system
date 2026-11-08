@@ -590,10 +590,10 @@ def test_a_route_file_that_cannot_be_read_says_where(route, message):
 
 
 def test_an_action_the_player_does_not_have_is_refused_when_the_route_is_read_and_named():
-    for label, mechanic in (("Exalted Orb", "Exalted Orb"), ("Fossils Dense Fossil", "fossils"), ("Harvest Reforge Fire", "Harvest"), ("Mystery", "does not know")):
+    for label, mechanic in (("Harvest Reforge more likely", "more or less likely"), ("Fossils Dense Fossil", "no fossil of this name"), ("Mystery", "does not know")):
         with pytest.raises(Exception, match=mechanic):
             player(f"rules:\n  - do: {label}\n")
-    assert lacking("rules:\n  - do: Exalted Orb\n  - do: Regal Orb\n", world()).keys() == {"Exalted Orb"}
+    assert lacking("rules:\n  - do: Mystery\n  - do: Regal Orb\n", world()).keys() == {"Mystery"}
 
 
 def test_a_name_with_no_price_is_an_error_and_a_given_start_item_has_no_restart():
@@ -643,6 +643,38 @@ def test_the_tallies_of_the_runners_are_pooled_and_judged_and_a_wrong_exact_side
     write_runner(wrong, 1, "TINY", exact * 1.2, spend, t.simulate(player(), 3000, seed=40))
     assert command.main(["merge", str(wrong)]) == 1
     assert command.main(["merge", str(tmp_path / "nothing")]) == 2
+
+
+def write_long(folder, name, tally, **extra):
+    folder.mkdir(parents=True, exist_ok=True)
+    document = {"route": name, "seed": 1, "tally": tally.to_dict(), **extra}
+    (folder / f"naive-{name.replace(' ', '_')}-{extra.get('seed', 1)}-{'-'.join(extra.get('off', ()))}.json").write_text(json.dumps(document), encoding="utf-8")
+
+
+def test_a_long_route_is_judged_against_the_recorded_numbers_a_route_with_gaps_by_its_chance_of_finishing_and_a_mutation_is_killed_or_survives(tmp_path):
+    p = exact_chance_of_sc_on_a_magic_item()
+    exact = exact_mean_of_the_spam(p)
+    recorded = tmp_path / "recorded.json"
+    recorded.write_text(json.dumps({"routes": {"LONG": {"mean_without_start": exact}, "GAPPED": {"success_low": 0.5}}}), encoding="utf-8")
+    good = t.simulate(player(), 3000, seed=50)
+    write_long(tmp_path / "a", "LONG", good, kind="mean", off=[])
+    write_long(tmp_path / "a", "LONG", t.simulate(player(), 3000, seed=51, ), kind="mean", off=["one_pool"], seed=2)  # the same law: survives
+    far = t.Tally()
+    far.add_stuck()
+    write_long(tmp_path / "a", "LONG", far, kind="mean", off=["multimod"], seed=3)  # cannot finish: killed
+    half = t.Tally(n=60, total=0.0)
+    half.stuck = 40
+    write_long(tmp_path / "a", "GAPPED", half, kind="finish", off=[])
+    wrong = t.Tally(n=10)
+    wrong.stuck = 90
+    write_long(tmp_path / "a", "GAPPED", wrong, kind="finish", off=["metamod_filter"], seed=4)
+
+    verdicts, plays = command.merge_folder(tmp_path / "a", recorded=recorded)
+    mutants = {label: killed for label, killed, _ in command.merge_mutants(tmp_path / "a", recorded=recorded)}
+
+    assert plays == {"LONG": 3000, "GAPPED": 100} and [v.agrees for v in verdicts] == [True, True]  # GAPPED: 60 of 100 against 0.5 is 2 standard errors; LONG against the exact mean of the spam
+    assert mutants["LONG with multimod off"] and mutants["GAPPED with metamod_filter off"] and not mutants["LONG with one_pool off"]
+    assert command.main(["merge", str(tmp_path / "a"), "--recorded", str(recorded)]) == 1  # a mutation survives
 
 
 def test_runners_whose_exact_sides_differ_are_not_pooled(tmp_path):

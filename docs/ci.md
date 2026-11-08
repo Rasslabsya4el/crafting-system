@@ -202,6 +202,32 @@ is 12,000 Chaos, so its standard error there is about a quarter of the mean and 
 An R13 play takes about 1.6 seconds, so 1,000 plays are about 30 minutes on one runner; the three cheap routes at 30,000 plays take a few minutes
 together. More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of the other sections) give R13 a smaller standard error.
 
+Since #608 to #610 it plays R08 and R09 (fossils), R12 (the Harvest reforge) and R04 and R14 (Exalted, Annulment and Fracturing Orbs, metamods, Remove Crafted Mods).
+R08, R09 and R12 are cheap like R05 (about 1 ms to 2 ms a play). R04 and R14 are heavy on both sides: a play takes about 0.5 s (R04, mean about 200,000 Chaos) and 0.06 s (R14, mean about 13,000
+Chaos), and their planner side is a solve of 177,242 and 816,153 states. Their mean is therefore not computed in the test but read from
+`tests/fixtures/naive_crafter/benchmark_means.json`, which `tests/naive_planner_side.py` writes: for each route the mean of the completed route (the route file with a restart)
+WITHOUT the price of the bought start item (`mean_without_start`, as the naive mean is; `benchmark` prints `mean + start price`, so never copy `completed_route.mean` from its
+JSON), the start price and `mean_with_start` beside it, the bracket `(success_low, success_high)` and the printed `success_value` of the guide's route as written (issue #683),
+the run id, the commit, the game-data pin and what they were computed from (the sha256 of the target and route files and the cost of one use of each action of the route at the
+price file). A quick test in every CI run fails when one of these differs from the files as they are; it does not see a change of the planner's code, so record again after one.
+To record it again (R04 about 10 minutes, R14 about 45 on a runner):
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 2'
+    $D --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; esac; PYTHONPATH=tests:src uv run --no-sync python -u tests/naive_planner_side.py plan $R $OUT_DIR'
+    gh run download <run id> --dir results
+    PYTHONPATH=tests:src python tests/naive_planner_side.py write results --run <run id> --commit <sha of the run>
+
+(`write` keeps the naive shares of the heavy run recorded under `naive_heavy`; update them from `python -m naive_crafter merge` when the long simulation is run again.)
+
+The long simulation of these two then runs with `NAIVE_HEAVY=1` (which also plays enough for the mean tests and runs the mutation tests of the two routes). One runner doing all of it
+took 39 to over 59 minutes (run 42436780459: one of three hit the timeout), so the work is split by `-k` over five runners, each its own `NAIVE_SEED` (run 42441281288, the slowest runner 25 minutes):
+the base tests of R04 (2,000 plays), of R14 twice (10,000 plays each), the Annulment mutation of R04 (1,000 plays, 14 minutes) and the other three mutations (12 minutes). The mutation runners
+set `NAIVE_RUNS=20`, because the fixture still plays that many plays of the base route before the mutation test starts and does not use them:
+
+    $D --runners 5 --command 'export NAIVE_HEAVY=1 NAIVE_SEED=$RUNNER_INDEX NAIVE_OUT=$OUT_DIR; T="uv run --no-sync pytest -q -p no:cacheprovider -rP --durations=6 tests/test_naive_crafter_routes.py"; case $RUNNER_INDEX in 1) NAIVE_RUNS=2000 $T -k "R04 and not each_law";; 2|3) NAIVE_RUNS=10000 $T -k "R14 and not each_law";; 4) NAIVE_RUNS=20 $T -k "each_law and Annulment";; 5) NAIVE_RUNS=20 $T -k "each_law and not Annulment";; esac'
+    gh run download <run id> --dir results
+    PYTHONPATH=tests python -m naive_crafter merge results
+
 ### R04 and R14 end to end (#70)
 
 Since the packed solver the two routes are planned by the CLI itself: with the default budget the decision finds no approximate level

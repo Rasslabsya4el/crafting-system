@@ -14,7 +14,9 @@ import yaml
 from independent import export as shared_export
 from oracle import goal_oracle as g
 
-from .craft import Crafter, Held, Item, Laws, Unsupported
+from .craft import LOCKS, Crafter, Held, Item, Laws, Unsupported
+from .fossils import FossilSet, read_fossils
+from .rules import HARVEST_COST, HARVEST_TAGS
 
 ORBS = {
     "Orb of Transmutation": "transmutation",
@@ -22,22 +24,26 @@ ORBS = {
     "Orb of Augmentation": "augmentation",
     "Regal Orb": "regal",
     "Chaos Orb": "chaos",
+    "Exalted Orb": "exalted",
+    "Orb of Annulment": "annulment",
+    "Fracturing Orb": "fracturing",
 }
 BENCH = "Bench craft "
 RESTART = "restart"
 
+FOSSILS = "Fossils "  # the label of a resonator use: "Fossils Dense Fossil + Shuddering Fossil"
+FOSSIL_SEPARATOR = " + "
+HARVEST = "Harvest Reforge "  # "Harvest Reforge Lightning"
+REMOVE_CRAFTED = "Remove Crafted Mods"
+RESONATOR_SIZES = {1: "Primitive", 2: "Potent", 3: "Powerful", 4: "Prime"}  # sockets -> the resonator (rule `resonator_sockets`; the export names them DelveSocketableCurrencyReroll1 to 4)
 # What a route names that this player cannot do yet, by the start of the action's label: the mechanic it lacks.
 LACKING = (
-    ("Exalted Orb", "Exalted Orb: adds one mod to a rare item"),
-    ("Orb of Annulment", "Orb of Annulment: removes a random mod"),
-    ("Fracturing Orb", "Fracturing Orb: fractures a random mod"),
-    ("Fossils ", "fossils: they change the weights of the pool"),
-    ("Harvest ", "Harvest reforge: a reroll that keeps one mod type"),
-    ("Remove Crafted Mods", "Remove Crafted Mods: the bench step that clears the crafted mods"),
+    ("Harvest Reforge more", "Harvest reforge that is more or less likely to give the types the item holds"),
+    ("Harvest Reforge less", "Harvest reforge that is more or less likely to give the types the item holds"),
+    ("Harvest Reforge influence", "Harvest reforge of an influence modifier"),
     ("Essence of ", "an essence that is not in the export's record of essences by that name (a corrupted or unnamed tier)"),
 )
-METAMOD_GROUP = "ItemGeneration"  # the groups of the five metamods in the export (Cannot roll Attack Modifiers, Prefixes Cannot Be Changed, ...)
-LACKING_METAMODS = "metamods: a bench craft that changes what later orbs do (Cannot roll Attack Modifiers, Can have up to 3 Crafted Modifiers)"
+LACKING_LOCKS = "metamods that lock a side (Prefixes Cannot Be Changed, Suffixes Cannot Be Changed): they protect a side from a reroll, which this player does not model"
 
 
 class UnpricedError(Exception):
@@ -53,6 +59,8 @@ class Priced:
     cost: float
     record: dict | None = None
     mod_id: str | None = None
+    fossils: FossilSet | None = None
+    tag: str | None = None
 
 
 def read_keys(path: Path) -> dict[str, str]:
@@ -75,6 +83,7 @@ class World:
         self.oracle = g.Oracle(self.export, self.target)
         self.document = yaml.safe_load(target_text)
         self.crafter = Crafter(raw, self.oracle.base_id, self.target.item_level, sorted(self.target.influences), laws)
+        self.fossil_records = read_fossils(raw.source)
         self.prices = {name: entry["chaos"] for name, entry in price_document["prices"].items()}
         self.start_key = start_key
         self.bought = self.document.get("start") == "bought"
@@ -126,6 +135,12 @@ class World:
             return Priced(label, "essence", self.price(label), record=record)
         if label.startswith(BENCH):
             return self._bench(label, label[len(BENCH):])
+        if label.startswith(FOSSILS):
+            return self._fossils(label, tuple(label[len(FOSSILS):].split(FOSSIL_SEPARATOR)))
+        if label.startswith(HARVEST) and label[len(HARVEST):].lower() in HARVEST_TAGS:
+            return self._harvest(label, label[len(HARVEST):].lower())
+        if label == REMOVE_CRAFTED:
+            return self._remove_crafted(label)
         for start, mechanic in LACKING:
             if label.startswith(start):
                 raise Unsupported(f"{label!r}: this player lacks {mechanic}")
@@ -149,12 +164,33 @@ class World:
         if len(found) > 1:
             raise Unsupported(f"{label!r}: {len(found)} bench options add a mod with this text")
         option, mod_id = found[0]
-        if any(group.startswith(METAMOD_GROUP) for group in self.raw.mods[mod_id].get("groups") or ()):
-            raise Unsupported(f"{label!r}: this player lacks {LACKING_METAMODS}")
-        cost = 0.0
-        for currency, count in option["cost"].items():
-            cost += count * self.price(self.raw.bases[currency]["name"])
-        return Priced(label, "bench", cost, mod_id=mod_id)
+        if LOCKS & set(self.raw.mods[mod_id].get("groups") or ()):
+            raise Unsupported(f"{label!r}: this player lacks {LACKING_LOCKS}")
+        return Priced(label, "bench", self._option_cost(option), mod_id=mod_id)
+
+    def _option_cost(self, option: dict) -> float:
+        """What one use of a bench option costs: its currencies at their prices (rule `bench_option_cost`)."""
+        return sum(count * self.price(self.raw.bases[currency]["name"]) for currency, count in option["cost"].items())
+
+    def _remove_crafted(self, label: str) -> Priced:
+        item_class = self.export.item_class(self.oracle.base_id)
+        found = [option for option in self.raw.bench_options if (option.get("actions") or {}).get("remove_crafted_mods") and item_class in option.get("item_classes", [])]
+        if len(found) != 1:
+            raise Unsupported(f"{label!r}: {len(found)} bench options of the base's class remove the crafted mods")
+        return Priced(label, "remove_crafted", self._option_cost(found[0]))
+
+    def _fossils(self, label: str, names: tuple[str, ...]) -> Priced:
+        """A resonator of as many sockets as the set has fossils (rule `resonator_sockets`), with the fossils; one use costs the resonator and each fossil."""
+        if len(names) not in RESONATOR_SIZES:
+            raise Unsupported(f"{label!r}: no Chaotic resonator has {len(names)} sockets")
+        fossils = FossilSet(names, self.fossil_records)
+        cost = self.price(f"{RESONATOR_SIZES[len(names)]} Chaotic Resonator") + sum(self.price(name) for name in names)
+        return Priced(label, "fossil", cost, fossils=fossils)
+
+    def _harvest(self, label: str, craft: str) -> Priced:
+        """A tagged Harvest reforge: its lifeforce at the prices of the file (rule `harvest_lifeforce_cost`)."""
+        cost = sum(count * self.price(name) for name, count in HARVEST_COST[craft].items())
+        return Priced(label, "harvest", cost, tag=HARVEST_TAGS[craft])
 
 
 def load_world(
