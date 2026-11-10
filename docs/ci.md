@@ -10,7 +10,7 @@ The full test suite, the real-data tests included, runs on GitHub's machines in 
 | a push to a pull request | Ubuntu | 8, plus `CI summary` | the PR's own session: feedback while it works |
 | `workflow_dispatch` of `ci.yml` | Ubuntu and Windows | 16, plus `CI summary` | the integration run, and on-demand runs of `main` or any branch |
 
-No PR lands on its own CI. The main chat lands PRs only after an integration run: a `workflow_dispatch` of `ci.yml` on
+No PR lands on its own CI. The main chat lands PRs only after an integration run (a process-text PR excepted, see "Landing a pull request"): a `workflow_dispatch` of `ci.yml` on
 an `integ/...` branch that holds current `main` plus the PRs. That run is where Windows is checked, so the landing rule
 "green on Ubuntu and Windows" is met by it. A PR that needs Windows feedback early gets it by starting the workflow on
 its branch: `gh workflow run ci.yml --ref my-branch`.
@@ -22,7 +22,7 @@ Windows on every PR push doubled that load for a result no landing used.
 
 A push to `main` starts no CI run (ticket #308): the run would repeat a result already known. `main` is verified by
 the integration run: the main chat merges only a head, or an integration branch, whose tree it has just tested in CI,
-and checks that `main` equals that tested tree after landing. To test `main` (or any ref) on demand, start the
+and checks that `main` equals that tested tree after landing (after a process-text PR, up to those text files). To test `main` (or any ref) on demand, start the
 workflow by hand: `gh workflow run ci.yml --ref main`.
 
 ## What one run does
@@ -58,8 +58,13 @@ need a local copy of Craft of Exile, which is third-party data that stays out of
    landing condition.
 3. Merge with `gh pr merge N --match-head-commit <sha of the tested head>`, so a push after the check cannot slip in.
 
-A text-only PR, one whose every changed file is a `.md` file, skips steps 1 and 2: no test reads those files (owner, 2026-11-10).
-Check it with `git diff --name-only origin/main...<branch>`; a single file of another kind, a docstring in a script included, means the full run.
+**A process-text PR** skips steps 1 and 2 (owner, 2026-11-10): one whose every changed file is a `.md` file under
+`CLAUDE.md`, `README.md`, `docs/ci.md`, `docs/agents/`, `.claude/agents/`, `.claude/skills/`.
+No test reads those files. Other `.md` files are read by tests (`docs/owner-rules.md` by `tests/reconcile/test_reconcile_real.py`,
+`tests/golden/reachability.md`, notes under `docs/research/` and ADRs under `docs/adr/`), so a PR touching them, or any file of another
+kind (a docstring in a script included), takes the full run. Check with `git diff --name-only origin/main...<branch>`; the `checker`
+confirms that no test or script opens a file of the PR (a mention in a comment does not count). It still reviews the PR, and
+the merge is step 3 on the reviewed head. `main` then differs from the last tested tree only in those files; the next integration run tests it.
 
 ## Running the suite on your own machine
 
