@@ -9,6 +9,8 @@
 Real routes: `test_cli_envelope_real.py`. Fixture world, no game dump needed.
 """
 
+import dataclasses
+
 import pytest
 from cli_support import R12, TODAY, price_file, run
 from targets_support import DATA
@@ -95,19 +97,63 @@ def test_envelope_by_name_still_refuses_where_the_bound_is_refused(monkeypatch):
         make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", with_risk=False)
 
 
-@pytest.mark.parametrize("error", [NoPolicy("no policy closed"), OutOfScopeError("a model gap")])
-def test_an_envelope_search_that_cannot_answer_under_auto_is_a_plan_error_in_player_words_not_a_walk(monkeypatch, error):
+def refused_under_auto(monkeypatch, error) -> str:
+    """The `PlanError` text of a plan under `auto` whose envelope search raises `error`; the walk must never run after it."""
+
     def refuse(*_args, **_kwargs):
         raise error
 
     monkeypatch.setattr(_plan, "envelope_result", refuse)
     monkeypatch.setattr(_plan, "packed_result", lambda *_a, **_k: pytest.fail("auto walked after the envelope search had started"))
-
     with pytest.raises(PlanError) as raised:
         make_plan(DATA, load_target(R12, DATA), price_file(), with_risk=False)
+    return str(raised.value)
 
-    text = str(raised.value)
-    assert str(error) in text and "choose `packed` as the search" in text and "envelope" not in text
+
+def test_an_envelope_search_that_cannot_answer_under_auto_is_a_plan_error_that_names_the_walk_not_a_walk(monkeypatch):
+    text = refused_under_auto(monkeypatch, OutOfScopeError("a model gap"))
+
+    assert "a model gap" in text and "`--solver packed`" in text and "envelope" not in text
+
+
+def test_no_route_under_auto_says_so_as_the_walk_does_and_does_not_advise_the_walk(monkeypatch):
+    text = refused_under_auto(monkeypatch, NoPolicy("no policy of the offers reaches the goal from the start"))
+
+    assert text.startswith("no policy of the offered actions reaches the goal from the start item") and "--solver" not in text
+
+
+def build_refusals():
+    """The two refusals of the bound's build, made by their own functions (`_pattern._gap`, `_pattern._no_member`) on a key like a real one."""
+    from types import SimpleNamespace
+
+    from crafting_system.abstraction import _pattern
+    from crafting_system.items import Rarity
+
+    key = SimpleNamespace(status=(0, 2), crafted=(), counts=(1, 2), tags=None, flags=SimpleNamespace(rarity=Rarity.RARE), fractured=())
+    gap = _pattern._gap(SimpleNamespace(label="Orb of Annulment"), key, OutOfScopeError("no admitted rule removes a mod of this item"))
+    return [gap, _pattern._no_member(key)]
+
+
+@pytest.mark.parametrize("error", build_refusals(), ids=["model gap at a member", "no member of a key"])
+def test_a_refusal_of_the_bounds_build_reaches_the_player_as_a_cause_not_the_developers_text(monkeypatch, error):
+    """OR-13: under `auto` the player reads what went wrong in his words; the key, the member builder and the rule numbers stay in the developer's text."""
+    text = refused_under_auto(monkeypatch, error)
+
+    assert error.player in text and "`--solver packed`" in text
+    for internal in ("status [", "counts (", "member", "key", "OR-1", "defect", "crafted-pattern"):
+        assert internal not in text, internal
+    assert "(status [0, 2]" in str(error)  # the developer's text is still the error's own
+
+
+def test_a_start_item_that_already_meets_the_target_costs_nothing_under_the_default_search():
+    target = load_target(R12, DATA)
+    met = dataclasses.replace(target, requirements=tuple(r for r in target.requirements if "Lightning Skill Gems" not in str(r)))
+    assert len(met.requirements) == len(target.requirements) - 1
+
+    plan = make_plan(DATA, met, price_file())
+
+    assert plan.is_goal(plan.start) and plan.mean_remaining == 0.0
+    assert plan.risk is not None and plan.risk.success_probability.value == pytest.approx(1.0) and plan.risk.mean.value == pytest.approx(0.0)
 
 
 def test_the_command_has_the_planners_solver_choices_and_auto_by_default(monkeypatch, tmp_path):

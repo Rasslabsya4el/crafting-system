@@ -857,11 +857,15 @@ def _no_member(key: PatternKey) -> OutOfScopeError:
     The concrete state that reached the key is itself an item of the key, so the key has a member. With none, the key would keep only the
     restart, and its value, and every value that leans on it, would sit above the exact cost: a bound that a cut would trust (OR-12, OR-13).
     """
-    return OutOfScopeError(
+    refusal = OutOfScopeError(
         f"the crafted-pattern bound reached a key it can make no member of (status {[int(v) for v in key.status]}, {len(key.crafted)} crafted, "
         f"counts {key.counts}, tags {key.tags}, rarity {key.flags.rarity.value}, {len(key.fractured)} fractured). That is a defect of the member "
         "builder, since the state that reached the key is a member of it; its value would sit above the exact cost, so the build refuses."
     )
+    refusal.player = (  # type: ignore[attr-defined]  # what `make_plan` says under `solver="auto"` (#535, OR-13); the text above is the developer's
+        "the planner met a fault of its own while working out the cheapest possible cost of each kind of item the crafting can reach"
+    )
+    return refusal
 
 
 def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: PatternOffer) -> bool:
@@ -886,12 +890,17 @@ def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: Patter
 
 def _gap(offer: PatternOffer, key: PatternKey, gap: Exception) -> OutOfScopeError:
     """The refusal of a build that met a model gap at a member: the action cannot be dropped from the key without risking a bound above the exact cost."""
-    return OutOfScopeError(
+    refusal = OutOfScopeError(
         f"{offer.label} raised a model gap at a member of a key (status {[int(v) for v in key.status]}, {len(key.crafted)} crafted, "
         f"counts {key.counts}) while another member of the key can take it: {gap}. The crafted-pattern bound cannot drop the action from the "
         "key (the exact model drops it only where the gap is), so it refuses the route instead of returning a bound that may be above the "
         "exact cost (OR-12, OR-13)."
     )
+    refusal.player = (  # type: ignore[attr-defined]  # what `make_plan` says under `solver="auto"` (#535, OR-13); the text above is the developer's
+        f"the planner has no rule for {offer.label} on some of the items the crafting can reach, while it has one on others like them, so it "
+        "cannot work out the cheapest possible cost of that action there"
+    )
+    return refusal
 
 
 def _lowered(pushed: dict[int, Fraction]) -> dict[int, Fraction]:

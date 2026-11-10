@@ -505,7 +505,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     if plan.packed is not None and "envelope" in plan.packed.info:
         raise PlanError(
             "a given route is judged against the planner's choice at every state the route reaches, and the exact search used for this plan "
-            "looks only at the states that can matter: plan it again with the search that walks every possible item"
+            "looks only at the states that can matter: plan it again with the search that walks every possible item (`--solver packed`)"
         )
     if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed

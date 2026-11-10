@@ -106,7 +106,8 @@ def faults_in(text: str, options: set[str] = OPTIONS) -> list[str]:
     faults = [f"{kind}: {found}" for kind, found in page_lint.internal_names_in(text)]
     faults += [f"an option the command does not have: {option}" for option in OPTION.findall(text) if option not in options]
     faults += [f"a program name: {word}" for word in PROGRAM.findall(text)]
-    faults += [f"jargon: {name}" for name, pattern in JARGON.items() if pattern.search(text)]
+    said = OPTION.sub(lambda found: "" if found.group(0) in options else found.group(0), text)  # an option the command declares is the player's own word (`--solver`, #535)
+    faults += [f"jargon: {name}" for name, pattern in JARGON.items() if pattern.search(said)]
     return faults
 
 
@@ -425,6 +426,12 @@ def test_the_words_of_every_axis_and_value_are_in_player_words():
         for text in sentences:
             assert faults_in(text) == [], (name, text)
         assert len({value_text(name, value) for value in axis.readings}) == len(axis.readings), f"{name}: two values read the same"
+
+
+def test_an_option_the_command_declares_is_not_jargon_but_the_word_alone_is():
+    """#535: a refusal may name `--solver packed`, the player's own option; "the solver" in a sentence is still jargon."""
+    assert faults_in("choose the search that walks every possible item: `--solver packed`") == []
+    assert faults_in("the solver gave up") == ["jargon: solver"]
 
 
 def test_a_number_is_shown_as_the_report_always_showed_it():
