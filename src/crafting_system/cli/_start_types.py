@@ -54,8 +54,10 @@ class BoughtBase:
     game order. `row_name` and `row_chaos` are the base's price name and price under the profile's price source. `ninja` is the base's
     poe.ninja row when present with at least 5 observations (or no recorded count); `trade_chaos` the trade price when the file has one.
     `input_marks` are the reasons the price is an approximate input (`prices.price_marks`, one unit bought); the OR-8 thin or old mark of a
-    trade price is on the candidate (`StartCandidate.price_mark`) and in `StartCandidate.sourced`. `rarity_orb` is the orb that makes the
-    Normal base the start item's rarity (Orb of Transmutation for Magic, Orb of Alchemy for Rare), priced in the candidate's `goods`.
+    trade price is on the candidate (`StartCandidate.price_mark`) and in `StartCandidate.sourced`. `input_marks` also holds what was read and
+    not used (a poe.ninja row on fewer than 5 observations, a shared name's refused line) and the marks of the rarity orb. `rarity_orb` is the
+    orb that makes the Normal base a Rare start (Orb of Alchemy), priced in the candidate's `goods` when it has a price; a Magic start has
+    none and is marked as priced from the Normal row.
     """
 
     level: int

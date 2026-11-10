@@ -15,13 +15,16 @@ among the options is `_starts.plan_with_starts` (#359), and the realism rails th
   influenced option is the same target with that influence on its start item; more than two influences is no item.
 * **Price.** `prices.source_price` under the profile's `price_source` (`ninja`, `trade`, `both`): the trade price, the poe.ninja row as a
   marked fallback, or a hand override. No price from the chosen source means no option: the group is refused with the reason of each
-  level (`NO_PRICE`). A poe.ninja row with fewer than 5 recorded observations (`MIN_COUNT`) is not a row (ADR-0061); a row whose count was not
-  recorded is kept and marked.
+  level (`NO_PRICE`). A poe.ninja row with fewer than 5 recorded observations (`MIN_COUNT`) is not a row (ADR-0061), and the option or the
+  refusal says so with its count; a row whose count was not recorded is kept and marked.
 * **Marks are never dropped** (OR-8 as amended by #718, OR-23): a thin or old trade price keeps its mark in `sourced.marks` and
   `price_mark`; the provenance of the price used (`prices.price_marks`: a depth below one unit, a previous league, a stand-in, "not recorded")
   is kept in `BoughtBase.input_marks`; under `both` the trade price and the poe.ninja row sit side by side with the gap flag.
-* **The start item.** A base row prices a Normal base. A start item that is Magic or Rare with no mods is that base plus one Orb of
-  Transmutation or Orb of Alchemy, priced as a good of the option (OR-16: no hidden step). A start item that holds mods, is corrupted, or
+* **The start item.** A base row prices a Normal base. A Rare start with no mods is that base plus one Orb of Alchemy, priced as a good
+  of the option (OR-16: no hidden step; R08 and R09 say so). A Magic start is the item the market sells, with 1 or 2 mods (ADR-0064),
+  which one Transmutation does not make (R13's file calls a Normal start plus one "a step the guide does not give"), so it is priced from
+  the row alone and marked so (`MAGIC_ROW_MARK`, OR-23). An orb with no price leaves the option standing, marked (OR-23); a thin orb
+  price is used, marked (OR-8). A start item that holds mods, is corrupted, or
   carries an enchantment, a memory strand or an imprint is not a plain base, and no row prices it (`NOT_A_PLAIN_BASE`). A given start (OR-6) buys
   nothing, so it has no bought-base option.
 """
@@ -37,8 +40,8 @@ from crafting_system.items import Influence, ItemError, Rarity
 from crafting_system.items.model import MAX_ITEM_LEVEL
 from crafting_system.prices import PriceEntry, PriceFile, SourcedPrice, planned_price, price_marks, source_price
 from crafting_system.prices.fallbacks import MIN_COUNT
-from crafting_system.prices.price_marks import OLD_THIN, THIN
-from crafting_system.prices.price_names import INFLUENCES
+from crafting_system.prices.price_marks import OLD_THIN, THIN, units_text
+from crafting_system.prices.price_names import INFLUENCES, canonical_price_name
 from crafting_system.prices.price_source import USED_NINJA, USED_OVERRIDE, USED_TRADE, ninja_row
 from crafting_system.prices.provenance import OBSERVATIONS
 from crafting_system.targets import KOfN, StartKind, Target, TargetError, base_line_name, ninja_line_name, shared_name_refusal
@@ -56,9 +59,9 @@ from ._start_types import (
 )
 
 TOP_ROW_LEVEL = 86  # the highest item level of a poe.ninja base row, and the highest level a drawn mod needs (research #337, section 2)
-ORB_OF_TRANSMUTATION = "Orb of Transmutation"
 ORB_OF_ALCHEMY = "Orb of Alchemy"
-RARITY_ORB = {Rarity.NORMAL: None, Rarity.MAGIC: ORB_OF_TRANSMUTATION, Rarity.RARE: ORB_OF_ALCHEMY}
+RARITY_ORB = {Rarity.NORMAL: None, Rarity.MAGIC: None, Rarity.RARE: ORB_OF_ALCHEMY}
+MAGIC_ROW_MARK = "price of the Normal base row: the start item is a Magic base as the market sells it (ADR-0064), which no base row prices"
 _GAME_ORDER = {name.lower(): index for index, name in enumerate(INFLUENCES)}
 
 
@@ -87,12 +90,12 @@ def _not_plain(target: Target) -> str | None:
     return f"the start item {' and '.join(found)}; a base row prices a plain Normal base"
 
 
-def needed_influence_sets(data: GameData, target: Target) -> tuple[frozenset[Influence], ...]:
-    """The influence sets a bought base may have: the start item's own, then the set a requirement needs that the start lacks.
+def needed_influence_sets(data: GameData, target: Target) -> tuple[tuple[frozenset[Influence], ...], str | None]:
+    """The influence sets a bought base may have (the start item's own, then the set a requirement needs that the start lacks), and why a set was left out.
 
     A top-level requirement (not a member of an `at_least` group) needs an influence when every mod it counts is an influence mod of
-    it on this base (`actions.awakener.influence_mods`). An item class that takes no influence has only its own set. A set of more than
-    two influences is no item and is left out.
+    it on this base (`actions.awakener.influence_mods`). An item class that takes no influence in the model has only its own set. A set
+    of more than two influences is no item: it is left out and the second value says so (None otherwise).
     """
     own = frozenset(target.influences)
     needed = set(own)
@@ -104,12 +107,14 @@ def needed_influence_sets(data: GameData, target: Target) -> tuple[frozenset[Inf
             if influence not in pools:
                 try:
                     pools[influence] = frozenset(influence_mods(data, target.base_id, MAX_ITEM_LEVEL, influence))
-                except (OutOfScopeError, NotApplicableError, ItemError):
-                    return (own,)
+                except (OutOfScopeError, NotApplicableError):  # the item class takes no influence in the model
+                    return (own,), None
             if requirement.mod_ids <= pools[influence]:
                 needed.add(influence)
     wider = frozenset(needed)
-    return (own,) if wider == own or len(wider) > 2 else (own, wider)
+    if len(wider) > 2:
+        return (own,), f"the requirements need {len(wider)} influences ({', '.join(_shown(wider))}); an item holds at most two"
+    return ((own,) if wider == own else (own, wider)), None
 
 
 def _with_influences(data: GameData, target: Target, influences: frozenset[Influence]) -> Target:
@@ -124,17 +129,20 @@ def _observations(entry: PriceEntry) -> float | None:
     return p.depth if p is not None and p.depth is not None and p.depth_unit == OBSERVATIONS else None
 
 
-def _without_thin_row(prices: PriceFile, name: str) -> tuple[PriceFile, PriceEntry | None]:
-    """The price file with `name`'s poe.ninja row taken out when it rests on fewer than `MIN_COUNT` recorded observations, and the row kept."""
+def _without_thin_row(prices: PriceFile, name: str) -> tuple[PriceFile, PriceEntry | None, str | None]:
+    """The price file with `name`'s poe.ninja row taken out when it rests on fewer than `MIN_COUNT` recorded observations, the row kept,
+    and the words that say a row was taken out (None when none was)."""
+    name = canonical_price_name(name)
     row = ninja_row(prices, name)
     if row is None:
-        return prices, None
+        return prices, None, None
     seen = _observations(row)
     if seen is None or seen >= MIN_COUNT:
-        return prices, row
+        return prices, row, None
     ninja = {key: value for key, value in prices.ninja.items() if key != name}
     kept = {key: value for key, value in prices.prices.items() if not (key == name and value is row)}
-    return dataclasses.replace(prices, prices=kept, ninja=ninja), None
+    words = f"the poe.ninja row {name} rests on {units_text(seen)} observations, under {MIN_COUNT}, so it is not a row (ADR-0061)"
+    return dataclasses.replace(prices, prices=kept, ninja=ninja), None, words
 
 
 def _used_entry(sourced: SourcedPrice, prices: PriceFile, row: PriceEntry | None) -> PriceEntry | None:
@@ -165,15 +173,20 @@ class _Level:
         self.level = level
         self.target = target_at_level(data, target, level)
         self.name = base_line_name(data, self.target)
-        view, row = _without_thin_row(context.prices, self.name)
+        self.notes: list[str] = []  # what was read and not used: a thin poe.ninja row, a shared name's refused line
+        view, row, note = _without_thin_row(context.prices, self.name)
+        self.notes.extend([note] if note else [])
         sourced = source_price(view, self.name, context.price_source, today, gap_threshold=context.gap_percent)
         line = ninja_line_name(data, self.target)
         if not sourced.offered and line != self.name:  # a shared name: the poe.ninja line has no base id (`shared_name_refusal`)
             refusal = shared_name_refusal(data, target.base_id, "poe.ninja", line)
             if refusal is None:
-                view, row = _without_thin_row(context.prices, line)
+                view, row, note = _without_thin_row(context.prices, line)
+                self.notes.extend([note] if note else [])
                 sourced = source_price(view, line, context.price_source, today, gap_threshold=context.gap_percent)
                 self.name = line
+            elif ninja_row(context.prices, line) is not None:
+                self.notes.append(refusal)
         self.view, self.row, self.sourced = view, row, sourced
 
     @property
@@ -194,28 +207,32 @@ def _option(context: StartContext, group: LevelGroup, levels: list[_Level], infl
     key = f"base:{group.lowest}-{group.highest}" + (f":{'/'.join(influences)}" if influences else "")
     priced = sorted((each for each in levels if each.chaos is not None), key=lambda each: (each.chaos, each.level))
     if not priced:
-        why = "; ".join(f"{each.name}: {each.sourced.reason}" for each in levels)
+        why = "; ".join(f"{each.name}: {'; '.join([str(each.sourced.reason), *each.notes])}" for each in levels)
         return RefusedStart(key, _label(levels[0].target, data, levels[0].level, influences, group), NO_PRICE, f"no price from the price source {context.price_source}: {why}")
     best = priced[0]
     assert best.chaos is not None
     sourced = best.sourced
     item = best.target.start_item
     goods: list[tuple[str, int, float, str]] = [(best.name, 1, best.chaos, sourced.source_label)]
+    marks = [*_input_marks(sourced, best.view, best.row), *best.notes]
+    if item.rarity is Rarity.MAGIC:
+        marks.append(MAGIC_ROW_MARK)
     orb = RARITY_ORB[item.rarity]
     if orb is not None:
         planned = planned_price(context.prices, orb, context.price_source)
-        if planned is None or planned.mark is not None:
-            words = "no price" if planned is None else f"a thin market's price ({planned.mark})"
-            return RefusedStart(
-                key, _label(best.target, data, best.level, influences, group), NO_PRICE,
-                f"the start item is {item.rarity.value}, made from the Normal base by one {orb}, and {orb} has {words}",
-            )  # fmt: skip
-        goods.append((orb, 1, planned.chaos, planned.source))
+        if planned is None:  # OR-23: the option stands on its best estimate, marked, not dropped over a cheap orb
+            marks.append(f"no price for {orb}: the step that makes the Normal base {item.rarity.value} is not counted")
+        else:
+            goods.append((orb, 1, planned.chaos, planned.source))
+            if planned.mark is not None:
+                marks.append(f"{orb}: {planned.mark}")
+            said = planned.mark is not None
+            marks.extend(f"{orb}: {m.reason}" for m in price_marks(planned.entry, context.prices, 1.0) if not (said and m.code in (THIN, OLD_THIN)))
     observations = None if best.row is None else _observations(best.row)
     ninja = None if best.row is None else NinjaRow(best.name, best.row.chaos, observations)
     bought = BoughtBase(
         level=best.level, group=(group.lowest, group.highest), influences=influences, row_name=best.name, row_chaos=best.chaos,
-        ninja=ninja, trade_chaos=sourced.trade_chaos, input_marks=_input_marks(sourced, best.view, best.row), rarity_orb=orb,
+        ninja=ninja, trade_chaos=sourced.trade_chaos, input_marks=tuple(dict.fromkeys(marks)), rarity_orb=orb,
         priced=tuple(sorted((each.level, each.chaos) for each in priced if each.chaos is not None)),
     )  # fmt: skip
     mark = sourced.trade.mark if sourced.used == USED_TRADE and sourced.trade is not None else None
@@ -240,13 +257,17 @@ def bought_base_starts(context: StartContext) -> StartList:
     if problem is not None:
         return StartList(refused=(RefusedStart("base", "bought base", NOT_A_PLAIN_BASE, problem),))
     today = context.today if context.today is not None else context.prices.fetched_at.date()
-    floor = item_level_options(data, target).floor.level
     top = max(target.item_level, TOP_ROW_LEVEL)
     candidates: list[StartCandidate] = []
     refused: list[RefusedStart] = []
-    for influences in needed_influence_sets(data, target):
+    sets, too_many = needed_influence_sets(data, target)
+    if too_many is not None:
+        refused.append(RefusedStart("base", "bought base", NOT_A_PLAIN_BASE, too_many))
+    for influences in sets:
         try:
-            shaped = target_at_level(data, _with_influences(data, target, influences), top)
+            widened = _with_influences(data, target, influences)
+            floor = item_level_options(data, widened).floor.level
+            shaped = target_at_level(data, widened, top)
         except (ItemError, TargetError) as error:
             refused.append(RefusedStart("base", "bought base", NOT_A_PLAIN_BASE, f"the start item cannot be had with {sorted(i.value for i in influences)} at item level {top}: {error}"))
             continue

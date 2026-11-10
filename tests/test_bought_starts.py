@@ -15,19 +15,18 @@ from abstraction_support import real_game_data
 
 from crafting_system.actions.awakener import influence_mods
 from crafting_system.cli import StartContext
-from crafting_system.cli._bought_starts import ORB_OF_ALCHEMY, ORB_OF_TRANSMUTATION, bought_base_starts, needed_influence_sets
+from crafting_system.cli._bought_starts import MAGIC_ROW_MARK, ORB_OF_ALCHEMY, bought_base_starts, needed_influence_sets
 from crafting_system.cli._start_types import NO_PRICE, NOT_A_PLAIN_BASE, SOURCE_BOUGHT_BASE
 from crafting_system.items import ExplicitMod, Influence, tier_table
 from crafting_system.items.model import MAX_ITEM_LEVEL
 from crafting_system.prices import PriceEntry
 from crafting_system.prices.price_file import DeepReading, MarketRecord, load_price_file
 from crafting_system.prices.price_marks import NOT_RECORDED_WORDS
-from crafting_system.targets import StartKind, load_target
+from crafting_system.targets import KOfN, StartKind, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"
 FIXTURE = ROOT / "tests" / "fixtures" / "prices" / "bases-allflame-2026-11-01.json"
-TRANSMUTATION = 0.005804
 ALCHEMY = 0.02716
 
 
@@ -62,9 +61,10 @@ def test_r13_lists_the_84_85_86_rows_at_the_fixture_prices(data, prices, r13):
     first = listed.candidates[0]
     assert first.source == SOURCE_BOUGHT_BASE
     assert first.item.item_level == 84 and first.item.rarity.value == "magic"
-    assert first.bought.group == (84, 84) and first.bought.rarity_orb == ORB_OF_TRANSMUTATION
-    assert first.price == pytest.approx(1.7 + TRANSMUTATION)  # the Magic start is the base plus one Transmutation (OR-16)
-    assert [name for name, *_ in first.goods] == ["Leather Belt (ilvl 84)", ORB_OF_TRANSMUTATION]
+    assert first.bought.group == (84, 84) and first.bought.rarity_orb is None
+    # the Magic start is the belt the market sells (ADR-0064), not a Transmutation's: priced from the Normal row alone, and marked so
+    assert first.price == 1.7 and [name for name, *_ in first.goods] == ["Leather Belt (ilvl 84)"]
+    assert MAGIC_ROW_MARK in first.bought.input_marks
     assert listed.candidates[2].bought.group == (86, MAX_ITEM_LEVEL)
 
 
@@ -81,7 +81,7 @@ def test_a_poe_ninja_fallback_keeps_its_marks(data, prices, r13):
     assert option.sourced.used == "poe.ninja" and option.sourced.fallback
     assert any(mark.startswith("fallback:") for mark in option.sourced.marks)
     assert "a poe.ninja row does not prove an instant-buyout listing exists" in option.sourced.marks
-    assert option.bought.input_marks == ()  # 176 observations, one unit bought: a plain fact of today's league
+    assert option.bought.input_marks == (MAGIC_ROW_MARK,)  # 176 observations, one unit bought: the row itself is a plain fact of today's league
 
 
 def test_a_base_with_no_price_from_the_chosen_source_has_no_option(data, prices, r13):
@@ -118,7 +118,34 @@ def test_a_poe_ninja_row_on_fewer_than_5_observations_is_not_a_row(data, prices,
     target = dataclasses.replace(r13, influences=crusader, start_item=r13.start_item.changed(data, influences=crusader))
     listed = bought_base_starts(StartContext(data, target, prices))
     assert listed.candidates == ()
-    assert any("Leather Belt (ilvl 86, Crusader)" in r.detail for r in listed.refused)
+    assert any(
+        "the poe.ninja row Leather Belt (ilvl 86, Crusader) rests on 2 observations, under 5" in r.detail for r in listed.refused
+    )  # not dropped without a word
+
+
+def test_a_thin_poe_ninja_row_beside_a_trade_price_is_said(data, prices, r13):
+    """Under `both` a trade price is used; the thin row it would sit beside is named in the marks, not lost."""
+    crusader = frozenset({Influence.CRUSADER})
+    target = dataclasses.replace(r13, influences=crusader, start_item=r13.start_item.changed(data, influences=crusader))
+    name = "Leather Belt (ilvl 86, Crusader)"
+    record = MarketRecord("thin", "Allflame", date(2026, 11, 1), 4, 4, "hash", {"query": {}}, chaos=6.0, used=4)
+    listed = bought_base_starts(StartContext(data, target, dataclasses.replace(prices, markets={name: record}), today=date(2026, 11, 1)))
+    option = next(c for c in listed.candidates if c.bought.level == 86)
+    assert option.bought.row_chaos == 6.0 and option.bought.ninja is None
+    assert any("rests on 2 observations" in mark for mark in option.bought.input_marks)
+
+
+def test_an_unpriced_rarity_orb_leaves_the_option_marked(data, prices, r08):
+    """OR-23: a missing Orb of Alchemy price does not drop the option; it stands on the row, marked."""
+    without = dataclasses.replace(prices, prices={k: v for k, v in prices.prices.items() if k != ORB_OF_ALCHEMY})
+    listed = bought_base_starts(StartContext(data, r08, without))
+    assert [c.price for c in listed.candidates] == [1.03, 5.33, 7.43]
+    assert all(any(mark.startswith(f"no price for {ORB_OF_ALCHEMY}") for mark in c.bought.input_marks) for c in listed.candidates)
+
+
+def test_the_rarity_orb_keeps_its_own_marks(data, prices, r08):
+    option = bought_base_starts(StartContext(data, r08, prices)).candidates[0]
+    assert f"{ORB_OF_ALCHEMY}: {NOT_RECORDED_WORDS}" in option.bought.input_marks  # the fixture's orb price carries no provenance
 
 
 def test_a_requirement_only_an_influence_gives_adds_the_influenced_set(data, r13):
@@ -126,8 +153,21 @@ def test_a_requirement_only_an_influence_gives_adds_the_influenced_set(data, r13
     shaper_mods = frozenset(influence_mods(data, r13.base_id, MAX_ITEM_LEVEL, Influence.SHAPER))
     asked = dataclasses.replace(r13.requirements[0], mod_ids=shaper_mods, tier_ok=None, min_tier=None)
     target = dataclasses.replace(r13, requirements=(asked, *r13.requirements[1:]))
-    assert needed_influence_sets(data, target) == (frozenset(), frozenset({Influence.SHAPER}))
-    assert needed_influence_sets(data, r13) == (frozenset(),)
+    assert needed_influence_sets(data, target) == ((frozenset(), frozenset({Influence.SHAPER})), None)
+    assert needed_influence_sets(data, r13) == ((frozenset(),), None)
+
+
+def test_three_needed_influences_are_refused_with_words(data, prices, r13):
+    leaf = next(each for each in r13.requirements if not isinstance(each, KOfN))
+    asked = tuple(
+        dataclasses.replace(leaf, mod_ids=frozenset(influence_mods(data, r13.base_id, MAX_ITEM_LEVEL, influence)), tier_ok=None, min_tier=None)
+        for influence in (Influence.SHAPER, Influence.ELDER, Influence.CRUSADER)
+    )
+    target = dataclasses.replace(r13, requirements=asked)
+    sets, why = needed_influence_sets(data, target)
+    assert sets == (frozenset(),) and why is not None and "3 influences (Shaper, Elder, Crusader)" in why
+    listed = bought_base_starts(StartContext(data, target, prices))
+    assert any(r.reason == NOT_A_PLAIN_BASE and r.detail == why for r in listed.refused)
 
 
 def test_a_thin_trade_market_is_priced_old_and_keeps_its_mark(data, prices, r13):
