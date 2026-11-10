@@ -8,7 +8,7 @@ take it (ticket #488, OR-18, OR-20). Text is ASCII only, so it prints on any con
 """
 
 import math
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
@@ -325,6 +325,20 @@ def number_states(plan: Plan) -> dict[CompressedState, str]:
         if not plan.is_goal(state):
             ids[state] = f"S{len(ids) + 1}"
     return ids
+
+
+def name_states(ids: Mapping[CompressedState, str], states: Iterable[CompressedState]) -> dict[CompressedState, str]:
+    """`ids` plus `R1`, `R2`, ... in order for each of `states` that `ids` does not number. Those are states the report does not show
+    on their own: a state the policy never reaches, or, when the report shows the lumped chain of a big policy (`Plan.view_policy`), a
+    state of the policy whose block is shown by another of its states. A route's gaps and divergences are read on the whole policy,
+    so any of them can be such a state (R04 at the prices of 2026-11-10 diverges on one, #662)."""
+    named = dict(ids)
+    extra = 0
+    for state in states:
+        if state not in named:
+            extra += 1
+            named[state] = f"R{extra}"
+    return named
 
 
 def build_report(plan: Plan, data: GameData) -> Report:
