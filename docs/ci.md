@@ -142,7 +142,7 @@ Options of `run`:
 it has waited, and the runs older than their own timeout or silent for 30 minutes (each with its `gh run cancel` line).
 
 **Nobody polls a run inside a turn** (ticket #711: polling loops cost coders 76% of their hours and grew their contexts past
-400k tokens). The session that needs a run (the ticket's session, or the main chat) dispatches with `--no-wait` and notes the run id and
+400k tokens). The main chat dispatches with `--no-wait` and notes the run id and
 what the run must show; a helper (`finder`, `checker`) never waits on a run: it reports the id and what to do with the result, and ends its turn:
 
     python .github/scripts/heavy_dispatch.py run --no-wait --ref my-branch --runners 4 --command '...'
