@@ -20,8 +20,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry plans them | 12 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
-| Settings and flags the planner accepts | 28 |
-| - read by some code | 25 |
+| Settings and flags the planner accepts | 29 |
+| - read by some code | 26 |
 | - never read | 3 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
@@ -158,9 +158,10 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--price-source` | command `plan` |  | read | cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path); prices/trade_market.py: planned_price (compared; on the planning path) |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
-| `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 1 more |
+| `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 2 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
+| `--solver` | command `plan` |  | read | cli/_packed.py: packed_result (compared; on the planning path); cli/_packed.py: packed_result (formatted into text; on the planning path); and 4 more |
 | `--start-price` | command `plan` |  | read | cli/_plan.py: _override (compared; on the planning path); cli/_plan.py: _override (formatted into text; on the planning path); and 2 more |
 | `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: plan_with_starts (read from `**kwargs`; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |

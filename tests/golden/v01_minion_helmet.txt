@@ -26,6 +26,7 @@ What this answer leaves out:
   Not offered, 28 in all: Harvest reforges that favour a mod, Harvest quality enchants, Alchemy Orb, Influenced Exalted Orb, Orb of Dominance, Scouring Orb, Awakener's Orb, Beast influence recipe, Blessed Orb, Recombinators, Catalysts, Eldritch implicit currency, Eldritch Chaos Orb, Eldritch Exalted Orb, Eldritch Annulment Orb, Orb of Conflict, Tempering, Tailoring, Imprint, Restore, Jeweller's Orb, Orb of Fusing, Bench socket count, Bench socket links, Chromatic Orb, Bench socket colours, Quality currency, Re-anoint (methods the planner cannot use yet). The plan is the cheapest among the methods the planner can use.
   Not offered: Vaal Orb (the target takes no corrupted item, so these would only corrupt it). The plan is unaffected: nothing here could be used for this target.
   Memory Strands are not considered: Foulborn Augmentation Orb, Foulborn Regal Orb, Foulborn Exalted Orb (the start item has none, and the planner cannot plan with them yet). The plan makes no use of Memory Strands.
+  The search expanded only what could matter (it looked at the actions of 777 of the 786 states it found and built 971 of the 971 actions offered at them: an action it did not build costs more, even at its best case, than the one it kept). The plan is the cheapest among the methods offered. The cut is exact: nothing was left out for being unlikely or by a tolerance, and the mean cost is that of the best plan.
   A state lists the other mods only as a count per side (the model keeps the mods the target does not ask for by kind, not by name). The odds and costs count every one of them.
 States solved: 786
 
@@ -55,8 +56,8 @@ Step 4: Restart: make the start item at the vendor again
 Result
   the success chance                100%
   the mean cost                     866.40 Chaos (2.33 Divine)
-  the median cost                   597.04 Chaos (1.6 Divine), certified 595.87 to 598.22
-  the cost 9 runs in 10 stay under  1,984.76 Chaos (5.33 Divine), certified 1,980.82 to 1,988.70
+  the median cost                   598.10 Chaos (1.61 Divine), certified 593.42 to 602.78
+  the cost 9 runs in 10 stay under  1,988.25 Chaos (5.34 Divine), certified 1,972.63 to 2,003.88
   (the start item, 8.00 Chaos, is included; the cost left to pay after making it at the vendor is
    858.40 Chaos as the plan counts it and 858.40 as the risk figures count it)
 
