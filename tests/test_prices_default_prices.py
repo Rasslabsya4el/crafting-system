@@ -44,5 +44,5 @@ def test_a_hand_price_for_dust_wins_over_the_default(ninja, tmp_path):
 
     merged = load_prices(prices_path, overrides_path)
 
-    assert merged.prices[DUST] == PriceEntry(0.0002, "override")
+    assert (merged.prices[DUST].chaos, merged.prices[DUST].source, merged.prices[DUST].provenance.kind) == (0.0002, "override", "override")
     assert merged.prices[GOLD] == default_prices()[GOLD]

@@ -28,12 +28,14 @@ from ._marking import (
     approximate_lines,
     marking_document,
     marking_lines,
+    price_inputs,
     risk_lines,
     verification_document,
     verification_lines,
 )
 from ._offers import without_ranges
 from ._plan import Plan, chance
+from ._price_marks import PriceUse, price_lines, price_uses
 from ._route_card import leaf_sides
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
@@ -114,6 +116,7 @@ class Report:
     data: GameData | None = None  # the game data the text is worded from: a base id in brackets is said in words (#553, #604)
     steps: tuple[ReportStep, ...] = ()  # the blocks of the text tree, one for each step of the route page (ticket #488)
     step_of: Mapping[CompressedState, int] = field(default_factory=dict)  # the page's row of each item state the policy reaches
+    prices_used: tuple[PriceUse, ...] = ()  # the priced resources the policy buys with, each with its source and marks (#616)
 
 
 def with_interval(report: Report, interval: IntervalAnswer | None) -> Report:
@@ -123,7 +126,7 @@ def with_interval(report: Report, interval: IntervalAnswer | None) -> Report:
     """
     if interval is None:
         return report
-    return replace(report, interval=interval, approximate_inputs=interval.approximate_inputs)
+    return replace(report, interval=interval, approximate_inputs=(*interval.approximate_inputs, *price_inputs(report.prices_used)))
 
 
 def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
@@ -361,11 +364,12 @@ def build_report(plan: Plan, data: GameData) -> Report:
     from ._report_steps import report_steps  # it reads the route page's model, which imports this module
 
     steps, step_of = report_steps(plan, data)
+    uses = price_uses(plan, plan.view_policy)
     return Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
-        approximate_inputs(plan, plan.view_policy, data),
+        approximate_inputs(plan, plan.view_policy, data, uses),
         None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
-        data=data, steps=steps, step_of=step_of,
+        data=data, steps=steps, step_of=step_of, prices_used=uses,
     )  # fmt: skip
 
 
@@ -507,6 +511,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         f"Prices: league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}, "
         f"1 Divine = {divine:,.2f} Chaos"
     )
+    lines.extend(price_lines(report.prices_used))  # each price with its source and marks (#616, OR-7)
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     if report.first_step is not None:
         # a start made at a vendor: the start item is what the recipe takes (the Normal base), and the recipe is a step of its own (below);

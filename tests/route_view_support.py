@@ -25,6 +25,7 @@ from crafting_system.cli._plan import StartPrice, leaf_labels, offer_action
 from crafting_system.cli._route_view import RouteInput, route_input
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
+from crafting_system.prices.provenance import EXCHANGE, TRADE, Provenance
 from crafting_system.risk import evaluate
 from crafting_system.solver import Solution
 from crafting_system.targets import Requirement, StartKind, Target
@@ -39,15 +40,17 @@ DAMAGE = "JunMaster2AllDamage2_"  # a prefix craft, family AllDamage (not in the
 HYSTERIA = ApplyEssence("Essence of Hysteria")
 HYSTERIA_MOD = "ElementalPenetrationDuringFlaskEffectEssence1"
 START_NAME = "Hand start belt"
+DEEP = 1e9  # units behind the fixture's prices: deep enough for any plan of these tests, so the tests judge something else than the price
+EXCHANGE_LINE = Provenance(EXCHANGE, "Test", "2026-10-30", DEEP)
 PRICES = PriceFile(
     "Test",
     datetime.datetime(2026, 10, 30, tzinfo=datetime.UTC),
     300.0,
     {
-        START_NAME: PriceEntry(6.0, "trade-api"),
-        "Essence of Hysteria": PriceEntry(3.0, "poe.ninja"),
-        "Orb of Scouring": PriceEntry(2.0, "poe.ninja"),
-        "Divine Orb": PriceEntry(300.0, "poe.ninja"),
+        START_NAME: PriceEntry(6.0, "trade-api", None, None, Provenance(TRADE, "Test", "2026-10-30", DEEP, "units", 5)),
+        "Essence of Hysteria": PriceEntry(3.0, "poe.ninja", None, None, EXCHANGE_LINE),
+        "Orb of Scouring": PriceEntry(2.0, "poe.ninja", None, None, EXCHANGE_LINE),
+        "Divine Orb": PriceEntry(300.0, "poe.ninja", None, None, EXCHANGE_LINE),
     },
 )
 

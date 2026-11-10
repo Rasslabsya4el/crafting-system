@@ -25,6 +25,7 @@ from fractions import Fraction
 from crafting_system.abstraction import CompressedState
 from crafting_system.actions import grants_extra_crafted_slot
 from crafting_system.data import GameData
+from crafting_system.prices.price_marks import chaos_text
 from crafting_system.rules import get_rule, rule_by_id
 from crafting_system.simulator import SampledEstimate
 from crafting_system.solver import Action
@@ -32,6 +33,7 @@ from crafting_system.solver import Action
 from ._approx import Approximation
 from ._limits import PERCENTILE_WORDS, figures
 from ._plan import Plan
+from ._price_marks import PriceUse, price_uses
 from ._reach import policy_states
 from ._verify import CVAR_LEVEL, SIGMAS, Verification
 
@@ -182,10 +184,14 @@ def claim_interval(rule) -> tuple[Mapping[str, object], str] | None:
 
 
 def approximate_inputs(
-    plan: Plan, policy: Mapping[CompressedState, Action[CompressedState]], data: GameData
+    plan: Plan,
+    policy: Mapping[CompressedState, Action[CompressedState]],
+    data: GameData,
+    uses: tuple[PriceUse, ...] | None = None,
 ) -> tuple[ApproximateInput, ...]:
     """The approximate claims read by the actions `policy` takes in the states it reaches from the start, by claim id.
 
+    The marked prices the policy buys with are listed too (`price_inputs`, #616); pass `uses` (`price_uses`) when the caller has them already.
     An action the plan offers but the policy never takes is not listed (ADR-0028). The limit of crafted mods with the enchantment
     of the extra crafted slot is the exception: that claim is not a constant of any action (it would be listed on every bench
     craft), so it is named here when the start item holds the enchantment and an action of the policy checks the limit; it leans
@@ -197,7 +203,23 @@ def approximate_inputs(
         if plan.is_goal(state) or action is None:
             continue
         actions.append(action)
-    return approximate_inputs_of(plan, actions, data)
+    return (*approximate_inputs_of(plan, actions, data), *price_inputs(uses if uses is not None else price_uses(plan, policy)))
+
+
+PRICE_CLAIM = "price:"  # the id of an approximate input that is a price: "price:" and the price's name (#616, OR-23)
+
+
+def price_inputs(uses: tuple[PriceUse, ...]) -> tuple[ApproximateInput, ...]:
+    """The marked prices as approximate inputs (OR-23): the claim is `price:<name>`, the reason the marks' words, the source where the price is from."""
+    found = []
+    for use in uses:
+        if not use.marks:
+            continue
+        reason = "; ".join(mark.reason for mark in use.marks)
+        bought = "" if use.uses is None else f" The plan expects to buy about {number_text(round(use.uses, 1))} of it."
+        statement = f"The price of {use.name} is {chaos_text(use.chaos)} Chaos, an approximate input: {reason}.{bought}"
+        found.append(ApproximateInput(PRICE_CLAIM + use.name, reason, None, "", statement, use.source))
+    return tuple(found)
 
 
 def approximate_inputs_of(plan: Plan, actions, data: GameData) -> tuple[ApproximateInput, ...]:

@@ -23,7 +23,7 @@ from ._free import is_free as is_free_cost
 from ._lump import Lumped, lump
 from ._readings import Baseline, IntervalReport, Route, has_inputs, solve_readings
 from ._report import Estimate, GridInfo, RiskReport
-from ._visits import expected_total
+from ._visits import expected_total, expected_totals
 
 __all__ = [
     "Baseline",
@@ -35,6 +35,7 @@ __all__ = [
     "Route",
     "evaluate",
     "expected_total",
+    "expected_totals",
     "has_inputs",
     "is_free_cost",
     "lump",

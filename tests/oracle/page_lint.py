@@ -17,6 +17,7 @@ What it reads on a page (the markup of the route page, learned from the page and
 The checks, one per rule that can be seen on a page. A check takes a `Page` and returns the list of faults it finds, each a
 `Fault` that names the rule (`or_id`), the check and the place. `lint(page)` runs every check of `CHECKS`.
 
+  OR-7   a price names its source and its marks  `check_price_source_shown`
   OR-13  a cut says what it still guarantees      `check_cut_guarantee`
   OR-14  a repeated card is a branch not cut      `check_no_repeated_card` (and `check_one_step_per_action`; the number and the size are #476's)
   OR-15  every mod line is in one format          `check_mod_format`, `check_bench_line_is_its_craft`, `check_group_printed_once`
@@ -658,6 +659,62 @@ def check_approximate_marked(page: Page) -> list[Fault]:
     return faults
 
 
+_SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price")
+_COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) (?:≈ )?[\d.,]+ c(?:\s|$)")
+_PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
+_MARKET_SOURCES = tuple(source for source in _SOURCES if source not in ("hand price", "default price"))  # a price of these rests on trades or listings: a plain fact shows how many
+
+
+_BEHIND = re.compile(r"(?P<depth>[\d,]+(?:\.\d+)?) units behind it, the plan buys about (?P<uses>[\d,]+(?:\.\d+)?)")
+_PRICE_INPUT = re.compile(r"^The price of (?P<name>.+?) is [\d.,]+ Chaos, an approximate input")
+
+
+def check_price_source_shown(page: Page) -> list[Fault]:
+    """OR-7: the goal card's "Prices" names where each price came from, and no price stands unmarked when it is not a plain fact (#616, #598).
+    Every line after the league line says its source (the exchange, the trade site's instant buyout, a hand price, a previous league ...); a
+    price of an earlier league or Standard, a price taken for a wider item, a price that shows no depth (its provenance is not recorded), and a price on fewer units than the plan buys ("N units behind it,
+    the plan buys about M", N below M) say "approximate:" and have their line in "Approximate inputs" ("The price of X is ..."); a line in
+    "Approximate inputs" about a price has its line in "Prices"; and every resource of a step's "Cost per use" has a line (R04's page printed
+    "league Allflame, fetched 2026-10-31" and nothing else, #598)."""
+    faults = []
+
+    def fault(where: str, what: str) -> None:
+        faults.append(_fault("OR-7", check_price_source_shown, where, what))
+
+    for route in page.routes:
+        priced = route.goal_lines("Prices")[1:]
+        inputs = {found.group("name") for line in route.goal_lines("Approximate inputs") if (found := _PRICE_INPUT.match(line.text))}
+        marked = set()
+        for line in priced:
+            name = line.text.partition(": ")[0]
+            text = line.text
+            if not any(source in text for source in _SOURCES):
+                fault("goal card, Prices", f"a price that does not name its source: {text[:100]}")
+            if "approximate:" in text:
+                marked.add(name)
+            else:
+                if "previous league" in text or "Standard" in text:
+                    fault("goal card, Prices", f"a price of an earlier league that is not marked approximate: {text[:100]}")
+                if "taken for a wider item" in text:
+                    fault("goal card, Prices", f"a price taken for a wider item that is not marked approximate: {text[:100]}")
+                if any(source in text for source in _MARKET_SOURCES) and "units behind it" not in text:
+                    fault("goal card, Prices", f"a market price that shows no depth and is not marked approximate (its provenance is not recorded): {text[:100]}")
+                behind = _BEHIND.search(text)
+                if behind and float(behind.group("depth").replace(",", "")) < float(behind.group("uses").replace(",", "")):
+                    fault("goal card, Prices", f"a price on fewer units than the plan buys that is not marked approximate: {text[:100]}")
+        for name in sorted(marked - inputs):
+            fault("goal card, Approximate inputs", f"{name} is marked approximate in Prices and is not among the approximate inputs")
+        for name in sorted(inputs - {line.text.partition(": ")[0] for line in priced}):
+            fault("goal card, Prices", f"{name} is an approximate input and has no line in Prices")
+        named = {line.text.partition(": ")[0] for line in priced}
+        for step in route.steps:
+            for line in step.lines("Cost per use"):
+                found = _COST_LINE.match(line.text)
+                if found and found.group("name") not in _PLAIN_CURRENCY and found.group("name") not in named:
+                    fault(f"step {step.number} ({step.title})", f"{found.group('name')} is bought here and the goal card's Prices says nothing of its source")
+    return faults
+
+
 _NO_PRICE = re.compile(r"\(no price for ([^)]*)\)", re.I)
 
 
@@ -972,6 +1029,7 @@ def _all_texts(route: Route) -> Iterator[tuple[str, str]]:
 # --- the lint ------------------------------------------------------------------------------------------------
 
 CHECKS: tuple[Callable[[Page], list[Fault]], ...] = (
+    check_price_source_shown,
     check_cut_guarantee,
     check_mod_format,
     check_bench_line_is_its_craft,

@@ -10,10 +10,13 @@ from targets_support import DATA, EXAMPLES
 
 from crafting_system.cli import main
 from crafting_system.prices import PriceEntry, PriceFile
+from crafting_system.prices.provenance import EXCHANGE, TRADE, Provenance
 from crafting_system.targets import StartKind, Target, load_target, start_price_key
 
 R12 = EXAMPLES / "r12-lightning-amulet.yaml"
 TODAY = datetime.date(2026, 10, 31)
+DAY = "2026-10-30"  # the day of the fixture price file
+DEEP = 1e9  # units behind the fixture's prices: deep enough for any plan of these tests, so they are plain facts and the tests judge something else
 LIFEFORCE = "Primal Crystallised Lifeforce"
 START = start_price_key(DATA, load_target(R12, DATA))  # the price key computed from the R12 target (#474)
 
@@ -31,9 +34,9 @@ def price_file(lifeforce: float | None = 0.01, start: float | None = 4.0, divine
     """
     prices = {}
     if lifeforce is not None:
-        prices[LIFEFORCE] = PriceEntry(lifeforce, "poe.ninja")
+        prices[LIFEFORCE] = PriceEntry(lifeforce, "poe.ninja", None, None, Provenance(EXCHANGE, "Test", DAY, DEEP))
     if start is not None:
-        prices[START if data is None else start_price_key(data, load_target(R12, data))] = PriceEntry(start, "trade-api")
+        prices[START if data is None else start_price_key(data, load_target(R12, data))] = PriceEntry(start, "trade-api", None, None, Provenance(TRADE, "Test", DAY, DEEP, "units", 5))
     return PriceFile("Test", datetime.datetime(2026, 10, 30, tzinfo=datetime.UTC), divine, prices)
 
 

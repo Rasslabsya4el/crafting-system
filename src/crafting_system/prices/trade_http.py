@@ -337,7 +337,7 @@ class RateLimiter:
     """Waits so that no window of a policy is ever used beyond its limit minus a margin.
 
     One limiter serves one sequential caller (it is not thread-safe, by design). Kinds of request
-    are "search", "fetch", "data". The site puts each kind under a policy; the state is kept per
+    are "search", "fetch", "exchange", "data". The site puts each kind under a policy; the state is kept per
     policy name, so kinds that share a policy share the windows. A kind is mapped to the policy of
     its latest response; with no policy header ever seen the kind's own name stands in.
 
@@ -589,6 +589,15 @@ class TradeClient:
     def data_items(self) -> dict:
         """GET the list of item types the site knows (the base types and how it tells bases of one name apart)."""
         return self._call("data", "data/items", "GET", f"{TRADE_URL}/data/items")
+
+    def data_static(self) -> dict:
+        """GET the ids the bulk exchange knows (currency, fossils, essences, oils ...) by their texts."""
+        return self._call("data", "data/static", "GET", f"{TRADE_URL}/data/static")
+
+    def exchange(self, league: str, body: dict) -> dict:
+        """POST a bulk-exchange query to the league; the answer holds the offers themselves (no fetch call follows)."""
+        url = f"{TRADE_URL}/exchange/{urllib.parse.quote(league, safe='')}"
+        return self._call("exchange", f"exchange {league}", "POST", url, json.dumps(body).encode("utf-8"))
 
     def search(self, league: str, body: dict) -> dict:
         """POST a query to the league; the answer has the search `id` and the result ids."""
