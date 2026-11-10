@@ -16,8 +16,9 @@ that takes `cli` does not. R14's one plan takes 40 to 45 minutes on a runner (`d
 46 minutes in run 42433918807, inside the 60-minute timeout; the benchmark tests plan again, so they run on a runner of their own.
 Without `CRAFTING_HEAVY` they skip, and without the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
 
-The CLI runs WITHOUT `--exact`: the default budget of 60 seconds finds no approximate level (a route with an Attack/Caster metamod has none)
-and the planner goes on to the packed solver (`make_plan`, ticket #70). The given route is the guide's with a last rule that restarts, so
+The CLI runs WITHOUT `--exact` and without `--solver`: `auto` is the envelope search wherever its bound can be built (ticket #535), which both routes
+allow, so the default budget of 60 seconds is not asked and the answer is exact (before #535 the planner found no approximate level, a route with an
+Attack/Caster metamod has none, and went on to the packed solver, ticket #70). The walk's own answer and its state counts are `test_packed_heavy.py`. The given route is the guide's with a last rule that restarts, so
 its mean is finite; the guide's own route has gaps and is checked by `benchmark`, whose entry also holds the completed one.
 """
 
@@ -79,15 +80,13 @@ def cli(tmp_path_factory, data, route_id):
 
 
 @HEAVY
-def test_the_default_budget_run_reaches_the_packed_solver_and_says_so(cli, route_id):
+def test_the_default_run_is_the_exact_envelope_search_and_says_so(cli, route_id):
     _, document, _ = cli
 
     solved = [limit for limit in document["limits"] if limit["kind"] == "how-solved"]
-    assert len(solved) == 1 and "whole search ran" in solved[0]["why"] and "No approximate answer was possible" in solved[0]["why"]
-    golden_diff.check_objects(
-        {"states": GOLDEN[route_id]["states"]}, {"states": document["states_solved"]},
-        f"{route_id}: the states solved differ from tests/golden/packed_values.json",
-    )  # fmt: skip
+    assert len(solved) == 1 and solved[0]["what"] == "The search expanded only what could matter" and "The cut is exact" in solved[0]["guarantee"]
+    assert "No approximate answer was possible" not in json.dumps(document["limits"])  # the budget was not asked: the search is always exact
+    assert 0 < document["states_solved"] < GOLDEN[route_id]["states"]  # it touched part of the walk's graph (tests/golden/packed_values.json), never more
 
 
 @HEAVY

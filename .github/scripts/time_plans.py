@@ -1,12 +1,13 @@
 """Time `make_plan` on the benchmark routes, one route per runner (ticket #118; run by the `Run a command` workflow).
 
-    python .github/scripts/time_plans.py --routes r11,r10,r05,r08 --part 1/4 --out $OUT_DIR [--fossils]
+    python .github/scripts/time_plans.py --routes r11,r10,r05,r08 --part 1/4 --out $OUT_DIR [--fossils] [--solver auto]
 
 `--part I/N` takes the I-th of N slices of the route list (RUNNER_INDEX / RUNNER_COUNT). Routes: r11, r10, r05 (the
 examples), r08 and r09 (boots written below, empty rare, Sorcerer Boots / Leatherscale-class boots at item level 86). With
 `--fossils` r08 and r09 are planned with every fossil set offered, priced with MADE-UP prices (no price source has
 fossils or resonators yet), so no fossil set is expected to win: it times the pruning, not a fossil plan. The script
-writes `<route>.json` (seconds, mean, states, offers, pruning numbers if the code has them) and prints it.
+writes `<route>.json` (seconds, mean, states, offers, pruning numbers if the code has them) and prints it. `--solver` is `make_plan`'s (default `auto`: since #535 the
+envelope search wherever its bound can be built, so the pruning numbers are there only on a route it refuses or with `--solver object`).
 """
 
 import argparse
@@ -19,7 +20,7 @@ from pathlib import Path
 
 from crafting_system.abstraction import Goal
 from crafting_system.actions import kinds
-from crafting_system.cli import make_plan
+from crafting_system.cli import _packed, make_plan
 from crafting_system.cli._offers import offer_of, offers_for
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
@@ -80,6 +81,7 @@ def main() -> None:
     parser.add_argument("--routes", default="r11,r10,r05,r08")
     parser.add_argument("--part", default="1/1")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto)")
     parser.add_argument("--fossils", action="store_true", help="offer every fossil set on r08 and r09")
     arguments = parser.parse_args()
     out = Path(arguments.out)
@@ -114,7 +116,7 @@ def main() -> None:
             fossils = [offer_of(a, a.label(data), data, target.start_item) for a in fossil_kind.members(data, target.start_item)]
             offers = [*base, *fossils]
         began = time.perf_counter()
-        plan = make_plan(data, target, load_price_file(prices), offers=offers)
+        plan = make_plan(data, target, load_price_file(prices), offers=offers, solver=arguments.solver)
         seconds = time.perf_counter() - began
         pruned = getattr(plan, "pruned", None)
         result = {

@@ -272,6 +272,27 @@ class PatternModel:
     stopped: str | None = None  # why the build ended before every key was expanded (a net), None for a complete model
 
 
+def pattern_refusal(abstraction: Abstraction) -> str | None:
+    """Why the crafted-pattern bound cannot be built for `abstraction`, or None when it can (#497, #507).
+
+    The one place that decides it: `Pattern.__init__` raises `OutOfScopeError` with this text, and `make_plan` asks it before any solve, so
+    `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for a goal with a roll
+    limit, for an enabled action that rerolls values, and for one that reads the unveil offer or the imprints.
+    """
+    causes = []
+    if abstraction._has_laws:
+        causes.append("the target asks for a roll limit on a mod")
+    if abstraction.rerolls_values:
+        causes.append("an offered action rerolls the values of mods")
+    if abstraction.tracks_offer:
+        causes.append("an offered action reads the unveil offer")
+    if abstraction.tracks_imprints:
+        causes.append("an offered action reads the imprints")
+    if not causes:
+        return None
+    return f"the crafted-pattern bound has no members for it: {'; '.join(causes)} (#497)"
+
+
 class Pattern:
     """The key of a state and the members of a key, for one `Abstraction`.
 
@@ -281,10 +302,9 @@ class Pattern:
     """
 
     def __init__(self, abstraction: Abstraction, tags: bool | None = None, actions: Sequence[Action] = ()):
-        if abstraction._has_laws or abstraction.rerolls_values or abstraction.tracks_offer or abstraction.tracks_imprints:
-            raise OutOfScopeError(
-                "the crafted-pattern bound has no members for a goal with a roll limit, an action that rerolls values, an unveil offer or imprints (#497)"
-            )
+        refusal = pattern_refusal(abstraction)
+        if refusal is not None:
+            raise OutOfScopeError(refusal)
         self.ab = abstraction
         self.data = abstraction.data
         self.actions = tuple(actions)  # the offered actions: what they add by name joins the universe of slots

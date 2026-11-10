@@ -558,7 +558,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     run.add_argument("--route", required=True, help="a benchmark route id (R12, R10, ...)")
     run.add_argument("--out", required=True, help="the folder for route-ID.json")
     run.add_argument("--prices", help=f"a price file (default {PRICES}, the committed prices of the benchmark routes: a CI checkout has no price file of its own)")
-    run.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto, as the benchmark)")
+    run.add_argument("--solver", default="packed", choices=_packed.SOLVERS, help="the solver of the plan (default packed: the walk of the whole graph, whose states this measures; auto is the envelope search since #535, which walks only what it touches)")
     run.set_defaults(handler=run_command)
     summary = commands.add_parser("summary", help="the tables of the routes measured")
     summary.add_argument("--dir", required=True, help="the folder holding the route-ID.json files (searched in subfolders too)")

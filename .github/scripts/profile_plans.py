@@ -2,7 +2,7 @@
 
     python .github/scripts/profile_plans.py --case r05 [--budget SECONDS] [--workers N] [--cprofile] --out $OUT_DIR
 
-Cases: the example targets by their short name (r04, r05, r08, r09, r10, r11, r12, r13). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default);
+Cases: the example targets by their short name (r04, r05, r08, r09, r10, r11, r12, r13). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default; the envelope search, which `--solver auto` is since #535 wherever its bound can be built, ignores it); `--solver object` or `packed` profile the walk-and-solve paths whose stages the timers below wrap;
 without it the plan is exact; `--rates` injects the seconds per kernel outcome and per solved edge, as the real-route tests
 do, so that the exact-or-approximate decision does not depend on the machine. Prices are the fixture's, plus a MADE-UP
 price for every resource it lacks (none for the routes the fixture covers).
@@ -150,6 +150,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", required=True, choices=list(EXAMPLES))
     parser.add_argument("--budget", type=float, default=None)
+    parser.add_argument("--solver", default="auto", choices=("auto", "object", "packed", "envelope"), help="the solver of the plan (default auto)")
     parser.add_argument("--rates", default=None, help="KERNEL,SOLVE seconds per unit to inject (e.g. 4e-5,7e-6)")
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
     parser.add_argument("--cprofile", action="store_true")
@@ -192,7 +193,7 @@ def main() -> None:
         signal.signal(signal.SIGALRM, stop)
         signal.setitimer(signal.ITIMER_REAL, arguments.limit)
     try:
-        plan = make_plan(data, target, prices, offers=offers, budget=arguments.budget, rates=rates)
+        plan = make_plan(data, target, prices, offers=offers, budget=arguments.budget, rates=rates, solver=arguments.solver)
     except TimeoutError as stopped:
         print(stopped, flush=True)
     finally:

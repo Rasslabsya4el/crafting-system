@@ -2,7 +2,7 @@
 
     python .github/scripts/divergence_costs.py R04 OUT_DIR [EXTRA_ROUTE.yaml ...]
 
-Plans the benchmark route (the packed solver, as `benchmark --heavy` does), then for the planner's policy, the guide as written, the guide
+Plans the benchmark route (`solver="packed"`: the walked graph is read below), then for the planner's policy, the guide as written, the guide
 completed and each EXTRA route file (a completion read another way) prints and writes `OUT_DIR/costs.json`:
 
 * the steps of the policy by action: the expected uses of the action in one run and the Chaos it carries (uses x price), which add up
@@ -118,7 +118,7 @@ def main(argv: list[str]) -> int:
     data = load_game_data()
     target = load_target(root / bench.target, data)
     start = os.environ.get("START_PRICE")  # a start price in Chaos for this run instead of the price file's (the file is not changed): the planner is solved at it
-    plan = make_plan(data, target, load_price_file(root / PRICES), start_price=float(start) if start else None)
+    plan = make_plan(data, target, load_price_file(root / PRICES), start_price=float(start) if start else None, solver="packed")  # reads `plan.policy.walked`: the whole graph, which the envelope search (the `auto` of #535) does not walk
     shift = plan.start_price.chaos
     say(f"planned: mean {plan.mean_remaining + shift:,.2f} with the start price {shift}")
 

@@ -2,7 +2,7 @@
 
     python .github/scripts/page_size.py --route r04|r14|... [--out DIR]
 
-Makes the plan the way the planner does (`make_plan(solver="auto")`, exact), draws the route page of the planner's own policy
+Makes the plan the way the planner does (`make_plan(solver="auto")`: since #535 the envelope search wherever its bound can be built, exact), draws the route page of the planner's own policy
 (`build_section(route_input(plan))`, rendered by `render_page`, the page the command writes without a buy spec or a given route)
 and writes `<route>.page.json` with:
 

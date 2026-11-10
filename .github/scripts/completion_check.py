@@ -2,7 +2,7 @@
 
     python .github/scripts/completion_check.py R04 OUT_DIR
 
-Plans the benchmark route (the packed solver), reads its completed route (`BenchmarkRoute.completed`) on the walked graph and lists every
+Plans the benchmark route (`solver="packed"`), reads its completed route (`BenchmarkRoute.completed`) on the walked graph and lists every
 state where a `restart` that the guide does not have fires while an action of the guide's own rules is legal: the restart throws away progress
 the guide's loop could keep (`cli/_route_completion.py`). Prints each loss (the state, the line of the added rule, the legal actions) and writes
 `OUT_DIR/completion.json`. Exit code 0 when there is none, 1 when there is one. R04 and R14 must pass (R14 since #619).
@@ -42,7 +42,7 @@ def main(argv: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
     root = find_project_root()
     data = load_game_data()
-    plan = make_plan(data, load_target(root / bench.target, data), load_price_file(root / PRICES))
+    plan = make_plan(data, load_target(root / bench.target, data), load_price_file(root / PRICES), solver="packed")  # the completed route is read on the walked graph, which the envelope search (the `auto` of #535) does not walk
     guide = load_route(root / bench.route, plan, data)
     completed = load_route(root / bench.completed, plan, data)
     found = walked_losses(plan, guide, completed, data)

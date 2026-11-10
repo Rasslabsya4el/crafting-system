@@ -93,7 +93,7 @@ def main() -> None:
     data, target, prices, start_price = packed_routes.inputs(arguments.route)
     result = {"route": arguments.route, "force_exact": arguments.force_exact}
     try:
-        plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver="auto")
+        plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver="packed")  # the walk's policy evaluation, as before #535 made `auto` the envelope search
     except Exception as refused:  # the refusal of an evaluation says what the exact solve would have cost
         result.update(refused=f"{type(refused).__name__}: {refused}")
     else:

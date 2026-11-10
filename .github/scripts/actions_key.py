@@ -17,8 +17,9 @@ A job is one route in one `variant` planned by one `solver`:
 
 A fourth variant, `plus=KIND`, is for `probe`: the committed key with one more kind added, to find which kind makes a small route explode.
 
-Solvers: `auto` is `make_plan`'s default (with 40 priced offers or more the bound pruning on the object solver, below that the walk on packed
-arrays), `envelope` is `make_plan(solver="envelope")` (the exact branch and bound, ADR-0063). Each job runs in a child process with a wall-clock
+Solvers: `auto` is `make_plan`'s default (until #535: with 40 priced offers or more the bound pruning on the object solver, below that the walk on packed
+arrays; since #535 the envelope search wherever its bound can be built, so the `auto` column equals the `envelope` one where it can, and only a route
+the bound refuses still takes the old path), `envelope` is `make_plan(solver="envelope")` (the exact branch and bound, ADR-0063). Each job runs in a child process with a wall-clock
 cap and a memory cap, because a walk that does not finish is the measurement: the parent then records where the child stopped (the last progress
 line, the number of `CompressedState` objects alive, the peak memory). The envelope also carries its own stop-and-say-so net (`Net`: seconds and
 memory) so that it ends on its own with the plan and the interval `[LB, U]` where it can. The risk is never computed. The prices are the committed

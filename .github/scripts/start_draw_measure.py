@@ -2,7 +2,7 @@
 
     python .github/scripts/start_draw_measure.py ROUTE [--old] [--out DIR]
 
-`ROUTE` is r08, r09, r13 or r14. The plan is `make_plan(solver="auto")` at the committed prices, exact. With `--old` the start is the item with no mods
+`ROUTE` is r08, r09, r13 or r14. The plan is `make_plan(solver="auto")` at the committed prices, exact (since #535 the envelope search where its bound can be built, so `states` counts the states it touched). With `--old` the start is the item with no mods
 as before #640 (the draw is switched off), so one commit measures both sides. Writes `<route>.<new|old>.json`: the mean cost from the start item (the mean
 still to pay and the whole, with the start price), the certified error bound, the states of the graph and of the policy, the seconds, and the first
 actions: what the policy does at the start and, for the new model, how the outcomes of the draw split by the action chosen on each (and by the number of

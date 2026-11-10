@@ -2,7 +2,7 @@
 
     python .github/scripts/cli_stages.py --route r04|r14 --out DIR [--stage report,text,json,page,verify,route]
 
-Plans the route as `make_plan(budget=None, with_risk=False)` and gives it a risk without quantiles (the packed route's own rule for
+Plans the route as `make_plan(budget=None, with_risk=False)` (the planner's own solver: since #535 the envelope search wherever its bound can be built) and gives it a risk without quantiles (the packed route's own rule for
 a chain it cannot afford), then runs the stages in order and prints the seconds, the peak memory and the size of each product.
 Never run on a PC. Run by `.github/scripts/heavy_dispatch.py`.
 """

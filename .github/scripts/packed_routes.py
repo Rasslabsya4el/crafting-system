@@ -3,7 +3,7 @@
     python .github/scripts/packed_routes.py plan  --route r04|r14|s02 [--out DIR]
     python .github/scripts/packed_routes.py check --route r05|r08|r10|r12|r13 [--out DIR]
 
-`plan` makes the plan of the route the way the planner does (`make_plan(solver="auto")`, exact) and writes `<route>.json`:
+`plan` makes the plan of the route the way the planner does (`make_plan(solver="auto")`, exact; since #535 the envelope search wherever its bound can be built, so pass `--solver packed` for the walk) and writes `<route>.json`:
 the mean cost from the start, the certified error bound, the numbers of the packed solve (states, classes, kernels, rounds,
 seconds of each phase), the risk (odds, p50, p90) and the peak memory.
 
@@ -112,7 +112,7 @@ def main() -> None:
     parser.add_argument("mode", choices=("plan", "check"))
     parser.add_argument("--route", required=True)
     parser.add_argument("--out")
-    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto)")
+    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto, the planner's own; packed is the walk of the whole graph)")
     arguments = parser.parse_args()
     faulthandler.dump_traceback_later(300, repeat=True, file=sys.stderr)
     threading.Thread(target=watch_memory, daemon=True).start()

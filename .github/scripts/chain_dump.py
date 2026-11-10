@@ -1,4 +1,4 @@
-"""Plan R04 or R14 on the packed solver and dump the merged chain of the policy for offline work on its risk (ticket #70).
+"""Plan R04 or R14 on the packed solver (`solver="packed"`) and dump the merged chain of the policy for offline work on its risk (ticket #70).
 
     python .github/scripts/chain_dump.py --route r04|r14 --out DIR [--risk]
 
@@ -79,7 +79,7 @@ def main() -> None:
     data, target, prices, start_price = inputs(arguments.route)
     out = Path(arguments.out)
     out.mkdir(parents=True, exist_ok=True)
-    plan = make_plan(data, target, prices, start_price=start_price, budget=None, with_risk=False)
+    plan = make_plan(data, target, prices, start_price=start_price, budget=None, with_risk=False, solver="packed")  # the packed solver, as the title says: since #535 `auto` is the envelope search, which dumps another chain
     say(f"planned: mean {plan.mean_remaining!r}, {plan.solve_seconds:.0f} s")
     info = dump(plan, out / f"{arguments.route}.chain.npz")
     info.update(mean=plan.mean_remaining, solve_seconds=plan.solve_seconds, states=len(plan.solution.values), peak_mb=peak_mb())

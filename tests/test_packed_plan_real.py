@@ -16,7 +16,7 @@ import pytest
 from abstraction_support import real_game_data
 from limits_support import notes, only
 
-from crafting_system.cli import _packed, make_plan
+from crafting_system.cli import _packed, _plan, make_plan
 from crafting_system.cli._packed import PackedPolicy
 from crafting_system.cli._reach import policy_states
 from crafting_system.prices import load_price_file
@@ -117,6 +117,8 @@ def test_the_risk_on_the_merged_chain_agrees_with_the_mean(both):
 
 
 def test_a_graph_over_the_limit_is_solved_packed_and_a_small_one_by_the_object_solver(data, monkeypatch):
+    """The walk-and-solve `auto` of before #535 is `auto` now only where the envelope search's bound is refused (`pattern_refusal`): the test plants that refusal."""
+    monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "planted for the test: the bound has no members")
     target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
     prices = load_price_file(PRICES)
 

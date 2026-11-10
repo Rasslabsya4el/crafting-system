@@ -1,4 +1,4 @@
-"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
+"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--solver auto|object|packed|envelope] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
 
 This is the one place of the planner that reads the clock and the environment. It loads the game
 data from the cache, the target, and the price file with its hand overrides, makes the plan, prints
@@ -8,7 +8,11 @@ simulation that does not agree. With `--route` the given route (a YAML file of r
 is evaluated as a fixed policy at the same prices and printed next to the policy's numbers.
 `python -m crafting_system.cli benchmark [--out DIR]` runs the benchmark routes (see `_benchmark`).
 
-A query whose exact run is forecast to take longer than `--budget` seconds (about a minute by default) is
+`--solver` picks the search (ticket #535): `auto` (the default) is the exact envelope search wherever its bound can be built and the older
+walk-and-solve path where the target is outside it (`make_plan` says which); `envelope`, `packed` and `object` name one. The envelope
+search is always exact, so `--budget` and `--exact` do not apply to it.
+
+A query that the walk-and-solve path would run longer than `--budget` seconds (about a minute by default) is
 answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`);
 `--exact` solves it exactly however long it takes. An approximate answer gives no certified p90; its `--verify`
 runs the policy on concrete items and reports a simulated mean, p90 and CVaR labelled "simulated, not certified"
@@ -38,6 +42,7 @@ from crafting_system.solver import ConvergenceError
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
 
 from . import _packed
+from ._packed import SOLVERS
 from ._benchmark import benchmark_main
 from ._decide import BUDGET_SECONDS
 from ._inputs import load_target_prices, write_json
@@ -102,8 +107,16 @@ def main(
     parser.add_argument("--strands", action="store_true", help="consider Memory Strands (or turn them on in the planner settings); a start item with strands turns it on by itself")
     parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (or turn recipe starts off in the planner settings)")
     parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (or set it in the planner settings; default both)")
-    parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
-    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
+    parser.add_argument(
+        "--solver", choices=SOLVERS, default="auto",
+        help="how the cheapest route is searched. auto (default): the exact search that looks only at the states that could matter, whenever it can be "
+        "built for the target, and the walk of the whole graph otherwise. envelope: that exact search by name, and an error where it cannot be built. "
+        "packed: walk the whole graph, then solve it exactly; slower on a big target and it can need many GB of memory, but it names every state. "
+        "object: the same walk of the whole graph in plain objects; fine for a small target, it runs out of memory on a big one. "
+        "The answer is the same exact mean whichever is chosen",
+    )  # fmt: skip
+    parser.add_argument("--exact", action="store_true", help="where the answer would be approximate, solve exactly however long it takes (the search that auto and envelope use is always exact)")
+    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time a walk of the whole graph (packed, object, or auto where the exact search cannot be built) may take before the answer is approximate (default {BUDGET_SECONDS:g}); the exact search ignores it")
     parser.add_argument("--progress", action="store_true", help="print the phases of a long plan (the walk, the merge, the solve, the risk, the report) with their seconds to stderr")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean (an approximate answer: with its certified interval)")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
@@ -135,7 +148,7 @@ def main(
         plan = plan_with_starts(
             game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, price_source=args.price_source or config.price_source,
-            price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands,
+            price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands, solver=args.solver,
         )  # fmt: skip
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact to get an exact one")
