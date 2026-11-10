@@ -17,7 +17,7 @@ Anonymous only (no POESESSID, no login), within the trade site's rate limits (`p
 
 Nothing is written until every step is done. The old file is only read.
 
-The fixed numbers of this script, and why each one stays or went (OR-12; the issue that lists the open ones is named in the PR body of #662):
+The fixed numbers of this script, and why each one stays or went (OR-12; the open ones are listed in #710):
 
 * `--below` (default: none, every name is read): a name whose price stands on this many units or more is not compared with the trade site.
   It used to default to 100, because a chaos-and-divine-only book of a cheap currency is a handful of offers and, read for every name, the
@@ -64,6 +64,7 @@ from crafting_system.prices import (  # noqa: E402
 )
 from crafting_system.prices.__main__ import _deepen  # noqa: E402
 from crafting_system.prices.http_json import http_get_json, paced  # noqa: E402
+from crafting_system.prices.price_file import MARKET_THIN, DeepReading, MarketRecord  # noqa: E402
 from crafting_system.prices.price_names import FORESIGHT_PRICE_NAMES, canonical_price_name  # noqa: E402
 from crafting_system.prices.provenance import EXACT, STASH, WIDER, Provenance  # noqa: E402
 from crafting_system.prices.query_compare import other_item, wider_words  # noqa: E402
@@ -107,12 +108,21 @@ def priced_rows(rows, spec, price_file) -> list[float]:
     return sorted(value for value in found if not isinstance(value, str))
 
 
-def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetime, data, targets: dict) -> tuple[dict[str, PriceEntry], list[str]]:
-    """The trade-priced start items of `old`, asked again today: the stored search, and the exact item of the target."""
+def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetime, data, targets: dict) -> tuple[PriceFile, dict[str, PriceEntry], list[str]]:
+    """The trade-priced start items of `old`, asked again today: the stored search, and the exact item of the target.
+
+    Returns `new` with the market records and deep readings of those searches (OR-8, #718), the start items priced today, and the notes.
+    A search the market rule calls thin is kept as a thin record with the mean of the listings there are, and its quoted price, if
+    any, leaves `prices`: the planner then reads it as the league's last deep price marked old, else that mean marked thin
+    (`trade_market.planned_price`). A search with no listing at all is a `none` record: OR-7's marked poe.ninja stand-in is the price.
+    """
     client = trade_client(120)
     stats = _stats(client, cache, now, False)
     league, day = new.league, now.astimezone(UTC).date()
     found: dict[str, PriceEntry] = {}
+    markets = dict(new.markets)
+    deep = dict(new.deep)
+    dropped: set[str] = set()
     notes: list[str] = []
     alchemy = new.prices[ALCHEMY].chaos
     for name, entry in sorted(old.prices.items()):
@@ -129,8 +139,16 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         prices = priced_rows(rows, spec, new)
         state = classify(total, len(prices))  # the market rule of #355, the one `cli trade` applies
         if state != QUOTED:
-            notes.append(f"{name}: the market is {state} today ({total} listings, {len(prices)} priced); the old entry is not carried over")
+            thin = prices[:DEFAULT_K] if state == MARKET_THIN else []
+            markets[name] = MarketRecord(
+                state, league, day, total, len(prices), digest, stored,
+                statistics.fmean(thin) if thin else None, len(thin),
+            )  # fmt: skip
+            dropped.add(name)
+            notes.append(f"{name}: the market is {state} today ({total} listings, {len(prices)} priced); kept as a {state} record (OR-8)")
             continue
+        deep[name] = DeepReading(statistics.fmean(prices[:DEFAULT_K]), league, day, total, len(prices))
+        markets.pop(name, None)
         cheapest = prices[:DEFAULT_K]
         composite = COMPOSITES.get(name)
         taken_for = None if composite is not None else wider_words(other_item(spec, stored))  # a composite is a normal base the plan makes rare: its search is the item by design
@@ -152,7 +170,8 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
             sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
         found[name] = replace(made, chaos=chaos, note=sentence)
         notes.append(f"{name}: {entry.chaos:g} -> {chaos:g} ({item}; exact listings {exact_listings}, ask {exact_price})")
-    return found, notes
+    prices_left = {name: entry for name, entry in new.prices.items() if name not in dropped}
+    return replace(new, prices=prices_left, markets=markets, deep=deep), found, notes
 
 
 def quiver_standins(new: PriceFile, ninja_get, league: str, day: str) -> dict[str, PriceEntry]:
@@ -209,10 +228,10 @@ def main() -> int:
     if args.starts_only:
         new = load_price_file(Path(args.out))
         now = datetime.now(UTC)
-        starts, notes = reread_start_items(old, new, cache, now, data, targets)
+        new, starts, notes = reread_start_items(old, new, cache, now, data, targets)
         for note in notes:
             print("  start:", note)
-        write_price_file(Path(args.out), PriceFile(new.league, new.fetched_at, new.chaos_per_divine, {**new.prices, **starts}, new.markets, new.ninja))
+        write_price_file(Path(args.out), replace(new, prices={**new.prices, **starts}))
         print(f"wrote {args.out}: {len(starts)} start items asked again")
         return 0
     if args.resume:
@@ -235,13 +254,13 @@ def main() -> int:
     day = now.astimezone(UTC).date().isoformat()
     prices = dict(new.prices)
     prices.update(quiver_standins(new, get_json, args.league, day))
-    new = PriceFile(new.league, new.fetched_at, new.chaos_per_divine, prices, new.markets, new.ninja)
-    starts, notes = reread_start_items(old, new, cache, now, data, targets)
+    new = replace(new, prices=prices)
+    new, starts, notes = reread_start_items(old, new, cache, now, data, targets)
     for note in notes:
         print("  start:", note)
     keep = {*wanted, *old.prices, *starts, CHAOS_ORB, DIVINE_ORB}  # the overviews list thousands of bases the targets never buy
     kept = {name: entry for name, entry in {**new.prices, **starts}.items() if name in keep}
-    new = PriceFile(new.league, new.fetched_at, new.chaos_per_divine, kept, new.markets, new.ninja)
+    new = replace(new, prices=kept)  # `markets` and `deep` (the thin records and the last deep readings, #718) are carried whole
     write_price_file(Path(args.out), new)
     print(f"wrote {args.out}: {len(new.prices)} prices, {len(starts)} start items")
     return 0

@@ -19,8 +19,8 @@ Nothing here sends a request or reads the clock;
 `trade_pricing.read_exchange` does both.
 
 The site's answer is `{"result": {offer id: {"listing": {"offers": [{"exchange": {"currency", "amount"},
-"item": {"amount", "stock"}}]}}}, "total": n}`; an offer paid in a currency this code has no rate for, or with no
-usable amounts, is dropped and counted, never guessed.
+"item": {"amount", "stock"}}]}}}, "total": n}`; an offer paid in a currency this code has no rate for, with no
+usable amounts, or with less stock than one lot of it (sold out), is dropped and counted, never guessed.
 """
 
 from collections.abc import Mapping
@@ -88,7 +88,10 @@ def read_offers(answer: Mapping[str, Any], rates: Mapping[str, float], k: int = 
                 dropped += 1
                 continue
             stock = gives.get("stock")
-            units = float(stock) if _positive(stock) else float(gives["amount"])
+            if not _positive(stock) or stock < gives["amount"]:  # sold out, or less left than one lot of the offer: nothing can be bought from it
+                dropped += 1
+                continue
+            units = float(stock)
             priced.append((float(asks["amount"]) * rate / float(gives["amount"]), units))
     if not priced:
         return None

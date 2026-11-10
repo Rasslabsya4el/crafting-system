@@ -126,6 +126,15 @@ def test_an_offer_in_a_currency_with_no_rate_or_without_amounts_is_dropped_and_c
     assert read_offers({"total": 0, "result": {}}, RATES) is None
 
 
+def test_a_sold_out_offer_or_one_with_less_than_a_lot_left_is_dropped_and_counted():
+    sold_out = {"listing": {"offers": [{"exchange": {"currency": "chaos", "amount": 1}, "item": {"amount": 1, "stock": 0}}]}}
+    short = {"listing": {"offers": [{"exchange": {"currency": "chaos", "amount": 2}, "item": {"amount": 10, "stock": 3}}]}}
+
+    got = read_offers(answer(sold_out, short, offer(5, 4)), RATES)
+
+    assert (got.chaos, got.depth, got.offers, got.dropped) == (5.0, 4.0, 1, 2)
+
+
 def test_the_exchange_query_asks_for_chaos_and_divine_offers_cheapest_first():
     body = exchange_body("prismatic-fossil")
 

@@ -12,7 +12,8 @@ of its cheapest five units (`trade_exchange.read_offers`, OR-8); no count of off
 
 A thin book (the market rule of #355 on its offers) is never a plain price (OR-8, #718): it stands as the league's last deep
 reading of the name (`PriceFile.deep`), marked old with the day it was read, else as its own mean, marked thin; either is kept
-only where no price of this league with enough behind it exists. A book with enough offers that is taken becomes the name's last
+only where this league has no other price (a poe.ninja line of this league, however few units stand behind it, stays, marked
+by its depth). A book with enough offers that is taken becomes the name's last
 deep reading. A hand price, a default and a trade price already in the file are never replaced.
 Nothing here reads the clock or sends a request: `read(name)` is the caller's.
 """

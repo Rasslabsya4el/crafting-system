@@ -255,7 +255,9 @@ def test_an_old_price_in_place_of_a_thin_book_is_marked_with_the_day_it_was_read
 
     marks = price_marks(entry(3.0, p, "trade-api"), FILE, uses=2.0)
 
-    assert ("old-price", "old price, read on 2026-11-01, the market has few offers now") in [(mark.code, mark.reason) for mark in marks]
+    assert [(mark.code, mark.reason) for mark in marks] == [("old-price", "old price, read on 2026-11-01, the market has few offers now")]
+    older = Provenance(TRADE, "Allflame", "2026-10-20", None, "units", None, market="old", book=5)  # 18 days before the file: still one mark, which says the day
+    assert codes(price_marks(entry(3.0, older, "trade-api"), FILE, uses=2.0)) == ["old-price"]
 
 
 def test_a_thin_market_provenance_round_trips_and_a_bad_market_is_refused():

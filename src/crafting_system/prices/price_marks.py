@@ -103,7 +103,7 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(EARLIER, f"Standard's price, a different economy ({p.date})"))
     elif p.league != price_file.league:
         found.append(PriceMark(OTHER_LEAGUE, f"price of league {p.league} ({p.date})"))
-    elif p.recorded and _days_before(p.date, price_file) > MAX_AGE_DAYS:
+    elif p.recorded and p.market != OLD_PRICE and _days_before(p.date, price_file) > MAX_AGE_DAYS:  # an old price says its day in its own mark
         found.append(PriceMark(OLD, f"price of {p.date}, {_days_before(p.date, price_file)} days before the file"))
     if p.recorded and p.market == THIN_MARKET:
         found.append(PriceMark(THIN, f"few offers: the mean of the cheapest units of the {p.book} {'offer' if p.book == 1 else 'offers'} there are"))
@@ -111,7 +111,7 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(OLD_THIN, f"old price, read on {p.date}, the market has few offers now"))
     if p.recorded and p.item == WIDER:
         found.append(PriceMark(STAND_IN, _stand_in_words(p)))
-    if p.recorded and p.kind in MARKET_KINDS and p.kind not in EARLIER_LEAGUE:
+    if p.recorded and p.kind in MARKET_KINDS and p.kind not in EARLIER_LEAGUE and p.market != OLD_PRICE:  # an old price's depth was not kept; its mark says what it is
         if p.depth is None:
             found.append(PriceMark(NO_DEPTH, "price with no recorded depth"))
         elif p.depth < (1.0 if uses is None else uses):
