@@ -70,7 +70,7 @@ from crafting_system.prices.provenance import EXACT, STASH, WIDER, Provenance  #
 from crafting_system.prices.query_compare import other_item, wider_words  # noqa: E402
 from crafting_system.prices.trade_exchange import static_ids  # noqa: E402
 from crafting_system.prices.trade_market import QUOTED, classify  # noqa: E402
-from crafting_system.prices.trade_pricing import DEFAULT_K, ExactListings, TradePrice, _chaos_of, _listings, _stats, entry_for  # noqa: E402
+from crafting_system.prices.trade_pricing import DEFAULT_K, ExactListings, TradePrice, _chaos_of, _listings, _remembered, _stats, entry_for  # noqa: E402
 from crafting_system.prices.trade_query import build_query, query_hash  # noqa: E402
 from crafting_system.prices.trade_stats import resolve_buy_mod  # noqa: E402
 from crafting_system.targets import StartKind, buy_spec_of, load_target, start_price_key  # noqa: E402
@@ -108,6 +108,31 @@ def priced_rows(rows, spec, price_file) -> list[float]:
     return sorted(value for value in found if not isinstance(value, str))
 
 
+def remembered_starts(old: PriceFile, league: str) -> dict[str, DeepReading]:
+    """The last deep reading of each trade-priced start item of `old` in `league`: its own `deep` block, and each quoted entry of
+    that league that met the market rule (`trade_pricing._remembered`, the promotion `cli trade` makes), so a start item that is
+    thin today shows the price last read while its market had enough, marked old (OR-8, #718)."""
+    deep = {name: reading for name, reading in old.deep.items() if reading.league == league}
+    if old.league != league:
+        return deep
+    for name, entry in old.prices.items():
+        if entry.source == "trade-api" and name not in deep:
+            deep.update({key: reading for key, reading in _remembered(old, name).items() if key == name})
+    return deep
+
+
+def start_record(state: str, prices: list[float], total: int, stored: dict, digest: str, league: str, day, extra: float = 0.0) -> tuple[MarketRecord | None, DeepReading | None]:
+    """What one start item's search of today leaves in the file's memory: a thin or none record, or the deep reading.
+
+    `prices` are the priced listings, cheapest first; `extra` is what the plan adds to the bought item (the Orb of Alchemy of a
+    composite), so a remembered or thin price is on the same footing as the quoted one."""
+    if state == QUOTED:
+        return None, DeepReading(statistics.fmean(prices[:DEFAULT_K]) + extra, league, day, total, len(prices))
+    thin = prices[:DEFAULT_K] if state == MARKET_THIN else []
+    record = MarketRecord(state, league, day, total, len(prices), digest, stored, statistics.fmean(thin) + extra if thin else None, len(thin))
+    return record, None
+
+
 def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetime, data, targets: dict) -> tuple[PriceFile, dict[str, PriceEntry], list[str]]:
     """The trade-priced start items of `old`, asked again today: the stored search, and the exact item of the target.
 
@@ -121,7 +146,7 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
     league, day = new.league, now.astimezone(UTC).date()
     found: dict[str, PriceEntry] = {}
     markets = dict(new.markets)
-    deep = dict(new.deep)
+    deep = {**remembered_starts(old, new.league), **new.deep}
     dropped: set[str] = set()
     notes: list[str] = []
     alchemy = new.prices[ALCHEMY].chaos
@@ -138,16 +163,13 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         total, rows = _listings(client, league, stored, cache / "trade" / f"{digest}.json", now)
         prices = priced_rows(rows, spec, new)
         state = classify(total, len(prices))  # the market rule of #355, the one `cli trade` applies
-        if state != QUOTED:
-            thin = prices[:DEFAULT_K] if state == MARKET_THIN else []
-            markets[name] = MarketRecord(
-                state, league, day, total, len(prices), digest, stored,
-                statistics.fmean(thin) if thin else None, len(thin),
-            )  # fmt: skip
+        record, reading = start_record(state, prices, total, stored, digest, league, day, alchemy if COMPOSITES.get(name) is not None else 0.0)
+        if record is not None:
+            markets[name] = record
             dropped.add(name)
             notes.append(f"{name}: the market is {state} today ({total} listings, {len(prices)} priced); kept as a {state} record (OR-8)")
             continue
-        deep[name] = DeepReading(statistics.fmean(prices[:DEFAULT_K]), league, day, total, len(prices))
+        deep[name] = reading
         markets.pop(name, None)
         cheapest = prices[:DEFAULT_K]
         composite = COMPOSITES.get(name)
@@ -170,7 +192,7 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
             sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
         found[name] = replace(made, chaos=chaos, note=sentence)
         notes.append(f"{name}: {entry.chaos:g} -> {chaos:g} ({item}; exact listings {exact_listings}, ask {exact_price})")
-    prices_left = {name: entry for name, entry in new.prices.items() if name not in dropped}
+    prices_left = {name: entry for name, entry in new.prices.items() if name not in dropped or entry.source != "trade-api"}  # a poe.ninja stand-in stays (OR-7)
     return replace(new, prices=prices_left, markets=markets, deep=deep), found, notes
 
 
