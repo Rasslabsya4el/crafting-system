@@ -2,8 +2,8 @@
 
     python .github/scripts/wait_runs.py 42446621133 42446621134 [--timeout-minutes 90] [--repo owner/name]
 
-The main chat starts it in the background and its exit is the notification; a helper never waits on a run itself, it
-ends its turn when it hands work to a runner.
+A session (the main chat or a ticket's session) starts it in the background and its exit is the notification; a helper
+never waits on a run itself, it ends its turn when it hands work to a runner.
 
 Cost to the API limit: the 5,000 calls an hour are one limit for every agent and session. When it starts the script
 reads each run's documented `node_id` once (`gh api repos/R/actions/runs/ID --jq .node_id`, one call per run; a 404 means
