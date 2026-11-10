@@ -33,7 +33,7 @@ import dataclasses
 from collections.abc import Iterable
 from datetime import date
 
-from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.actions import OutOfScopeError
 from crafting_system.actions.awakener import influence_mods
 from crafting_system.data import GameData
 from crafting_system.items import Influence, ItemError, Rarity
@@ -50,6 +50,7 @@ from crafting_system.targets.floor import LevelGroup, item_level_options, level_
 from ._start_options import StartContext, StartList
 from ._start_types import (
     NO_PRICE,
+    NO_INFLUENCED_BASE,
     NOT_A_PLAIN_BASE,
     SOURCE_BOUGHT_BASE,
     BoughtBase,
@@ -61,7 +62,7 @@ from ._start_types import (
 TOP_ROW_LEVEL = 86  # the highest item level of a poe.ninja base row, and the highest level a drawn mod needs (research #337, section 2)
 ORB_OF_ALCHEMY = "Orb of Alchemy"
 RARITY_ORB = {Rarity.NORMAL: None, Rarity.MAGIC: None, Rarity.RARE: ORB_OF_ALCHEMY}
-MAGIC_ROW_MARK = "price of the Normal base row: the start item is a Magic base as the market sells it (ADR-0064), which no base row prices"
+MAGIC_ROW_MARK = "price of the Normal base row: the start item is a Magic base as the market sells it, with 1 or 2 mods, which no base row prices"
 _GAME_ORDER = {name.lower(): index for index, name in enumerate(INFLUENCES)}
 
 
@@ -94,8 +95,9 @@ def needed_influence_sets(data: GameData, target: Target) -> tuple[tuple[frozens
     """The influence sets a bought base may have (the start item's own, then the set a requirement needs that the start lacks), and why a set was left out.
 
     A top-level requirement (not a member of an `at_least` group) needs an influence when every mod it counts is an influence mod of
-    it on this base (`actions.awakener.influence_mods`). An item class that takes no influence in the model has only its own set. A set
-    of more than two influences is no item: it is left out and the second value says so (None otherwise).
+    it on this base (`actions.awakener.influence_mods`). An item class with no influence key in the model has only its own set. A set
+    of more than two influences is no item: it is left out. The second value says why a set was not listed (a model gap, too many
+    influences), None when nothing was left out.
     """
     own = frozenset(target.influences)
     needed = set(own)
@@ -107,8 +109,8 @@ def needed_influence_sets(data: GameData, target: Target) -> tuple[tuple[frozens
             if influence not in pools:
                 try:
                     pools[influence] = frozenset(influence_mods(data, target.base_id, MAX_ITEM_LEVEL, influence))
-                except (OutOfScopeError, NotApplicableError):  # the item class takes no influence in the model
-                    return (own,), None
+                except OutOfScopeError as gap:  # a model gap: the item class has no influence key, so its influence mods are not modelled
+                    return (own,), f"no influenced base is listed: {gap}"
             if requirement.mod_ids <= pools[influence]:
                 needed.add(influence)
     wider = frozenset(needed)
@@ -141,7 +143,7 @@ def _without_thin_row(prices: PriceFile, name: str) -> tuple[PriceFile, PriceEnt
         return prices, row, None
     ninja = {key: value for key, value in prices.ninja.items() if key != name}
     kept = {key: value for key, value in prices.prices.items() if not (key == name and value is row)}
-    words = f"the poe.ninja row {name} rests on {units_text(seen)} observations, under {MIN_COUNT}, so it is not a row (ADR-0061)"
+    words = f"the poe.ninja row {name} rests on {units_text(seen)} observations, under {MIN_COUNT}, so it is not a row"
     return dataclasses.replace(prices, prices=kept, ninja=ninja), None, words
 
 
@@ -263,7 +265,7 @@ def bought_base_starts(context: StartContext) -> StartList:
     refused: list[RefusedStart] = []
     sets, too_many = needed_influence_sets(data, target)
     if too_many is not None:
-        refused.append(RefusedStart("base", "bought base", NOT_A_PLAIN_BASE, too_many))
+        refused.append(RefusedStart("base:influence", "bought base with an influence", NO_INFLUENCED_BASE, too_many))
     for influences in sets:
         try:
             shaped = target_at_level(data, _with_influences(data, target, influences), top)

@@ -16,7 +16,7 @@ from abstraction_support import real_game_data
 from crafting_system.actions.awakener import influence_mods
 from crafting_system.cli import StartContext
 from crafting_system.cli._bought_starts import MAGIC_ROW_MARK, ORB_OF_ALCHEMY, bought_base_starts, needed_influence_sets
-from crafting_system.cli._start_types import NO_PRICE, NOT_A_PLAIN_BASE, SOURCE_BOUGHT_BASE
+from crafting_system.cli._start_types import NO_INFLUENCED_BASE, NO_PRICE, NOT_A_PLAIN_BASE, SOURCE_BOUGHT_BASE
 from crafting_system.items import ExplicitMod, Influence, tier_table
 from crafting_system.items.model import MAX_ITEM_LEVEL
 from crafting_system.prices import PriceEntry, Provenance
@@ -168,7 +168,7 @@ def test_three_needed_influences_are_refused_with_words(data, prices, r13):
     sets, why = needed_influence_sets(data, target)
     assert sets == (frozenset(),) and why is not None and "3 influences (Shaper, Elder, Crusader)" in why
     listed = bought_base_starts(StartContext(data, target, prices))
-    assert any(r.reason == NOT_A_PLAIN_BASE and r.detail == why for r in listed.refused)
+    assert any(r.reason == NO_INFLUENCED_BASE and r.detail == why for r in listed.refused)
 
 
 def test_a_thin_trade_market_is_priced_old_and_keeps_its_mark(data, prices, r13):

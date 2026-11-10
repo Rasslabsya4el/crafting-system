@@ -21,8 +21,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
 | Settings and flags the planner accepts | 28 |
-| - read by some code | 25 |
-| - never read | 3 |
+| - read by some code | 26 |
+| - never read | 2 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
 Kinds that no target is offered: 44 of 59 (28 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
@@ -143,8 +143,8 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `recipe_starts` | [planner] | `true` | read | cli/_starts.py: plan_with_starts (used in an operation; on the planning path) |
 | `recombinator_junk_craft` | [planner] | `false` | **never read** | no code reads it |
 | `max_imprints` | [planner] | `1` | **never read** | no code reads it |
-| `price_source` | [planner] | `both` | read | cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path); prices/trade_market.py: planned_price (compared; on the planning path) |
-| `price_gap_percent` | [planner] | `20.0` | **never read** | stops at the field `StartContext.gap_percent` |
+| `price_source` | [planner] | `both` | read | cli/_bought_starts.py: _option (formatted into text; not on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 10 more |
+| `price_gap_percent` | [planner] | `20.0` | read | cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); cli/_main.py: main (used as an index or container; on the planning path); and 9 more |
 | `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 5 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
@@ -155,7 +155,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
-| `--price-source` | command `plan` |  | read | cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path); prices/trade_market.py: planned_price (compared; on the planning path) |
+| `--price-source` | command `plan` |  | read | cli/_bought_starts.py: _option (formatted into text; not on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 10 more |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 1 more |
@@ -169,9 +169,6 @@ Code that takes a never-read setting by its own name:
 
 - `recombinator_junk_craft`: context variable `recombinator_junk_craft` in `actions/recombinator.py`: set by `junk_craft_offered` (0 referrer(s) outside its module)
 - `max_imprints`: parameter `max_imprints` of `actions/imprint.py: imprint_actions`: 0 referrer(s) outside its module, 0 pass the parameter
-- `price_gap_percent`: parameter `price_gap_percent` of `cli/_starts.py: plan_with_starts`: 2 referrer(s) outside its module, 1 pass the parameter
-
-- `price_gap_percent`: reads of an attribute with the same name on a receiver of unknown type, not counted: prices.price_source: SourcedPrice.document, prices.price_source: SourcedPrice.lines.
 
 ## 5. Built modules
 
@@ -184,22 +181,22 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
 | the market rule | `classify` | `prices/trade_market.py` | prices/trade_exchange.py: read_offers, prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
-| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_offers.py: price_offers, cli/_plan.py: resolve_start_price, and 3 more | yes | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_bought_starts.py: _option, cli/_offers.py: price_offers, and 4 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
-| the price-source rule | `ninja_row` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
-| the price-source rule | `source_price` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
+| the price-source rule | `ninja_row` | `prices/price_source.py` | cli/_bought_starts.py: _Level.__init__, cli/_bought_starts.py: _without_thin_row | **no** | INPUTS-2, PLANNING-6 |
+| the price-source rule | `source_price` | `prices/price_source.py` | cli/_bought_starts.py: _Level.__init__ | **no** | INPUTS-2, PLANNING-6 |
 | the item-level floor | `ItemLevelFloor` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `ItemLevelOptions` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `LevelGroup` | `targets/floor.py` | nothing | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `NodeLevel` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `floor_of` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `item_level_options` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `level_groups` | `targets/floor.py` | targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `item_level_options` | `targets/floor.py` | cli/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `level_groups` | `targets/floor.py` | cli/_bought_starts.py: bought_base_starts, targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `refusal_at` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `target_at_level` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `target_at_level` | `targets/floor.py` | cli/_bought_starts.py: _Level.__init__, cli/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `takes_inputs` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
@@ -212,11 +209,11 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 
 | Target field | Read by | Audit |
 |---|---|---|
-| `base_id` | cli/_benchmark_outcomes.py, cli/_plan.py, cli/_route_card.py, cli/_start_step.py |  |
+| `base_id` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_plan.py, cli/_route_card.py, cli/_start_step.py |  |
 | `item_level` | cli/_benchmark_outcomes.py, cli/_plan.py, cli/_route_card.py |  |
-| `influences` | cli/_route_card.py |  |
-| `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_plan.py, cli/_route_card.py, cli/_start_options.py |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_plan.py, cli/_starts.py |  |
+| `influences` | cli/_bought_starts.py, cli/_route_card.py |  |
+| `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_bought_starts.py, cli/_plan.py, cli/_route_card.py, and 1 more |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_plan.py, cli/_starts.py |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_plan.py, cli/_starts.py, cli/_trade.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
 | `implicits` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |

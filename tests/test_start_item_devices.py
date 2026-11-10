@@ -5,8 +5,9 @@ to model something, and they stay: the Magic item of a vendor-recipe step (I7), 
 Awakener's and the recombinator's models (I9, I10), the representative item of a state (I11) and the empty rare probe of the pool (I12).
 The condition of keeping them is that none of them reaches the route page or the text answer as the start item. Three things show it:
 
-* **Who can set the start item.** A `Target` is built by the parser alone, and its start item is replaced in two places only:
-  `targets/floor.py` (the same item at a lower item level) and `cli/_starts.py` (the vendor-recipe start I7). No module of I8 to I12 builds a
+* **Who can set the start item.** A `Target` is built by the parser alone, and its start item is replaced in three places only:
+  `targets/floor.py` (the same item at a lower item level), `cli/_starts.py` (the vendor-recipe start I7) and `cli/_bought_starts.py` (the
+  same base at another item level or with the influence a requirement needs, #351; listed as a start option, never a made-up item). No module of I8 to I12 builds a
   `Target` or replaces its start item (a scan of `src`, for I8, which only a real benchmark prints, and for the rest as a backstop).
 * **I7, in the output.** When a vendor recipe wins, the text's "Start item" line is the Normal base the recipe takes, the recipe is a step of
   its own ("Step 1: Vendor recipe: ...") with its bill, and the Magic item it gives back is "You get back" and row 1 of the page.
@@ -28,6 +29,7 @@ SRC = Path(__file__).resolve().parents[1] / "src" / "crafting_system"
 PARSER = "targets/parse.py"
 FLOOR = "targets/floor.py"
 VENDOR_START = "cli/_starts.py"
+BOUGHT_START = "cli/_bought_starts.py"
 
 
 def calls_named(names: set[str]):
@@ -49,7 +51,7 @@ def test_a_target_is_built_by_the_parser_alone():
 def test_the_start_item_of_a_target_is_replaced_in_the_floor_and_the_vendor_start_only():
     replacing = {path for path, call in calls_named({"replace"}) if any(keyword.arg == "start_item" for keyword in call.keywords)}
 
-    assert replacing == {FLOOR, VENDOR_START}
+    assert replacing == {FLOOR, VENDOR_START, BOUGHT_START}
 
 
 def test_the_modules_that_build_the_other_items_never_set_a_start_item():

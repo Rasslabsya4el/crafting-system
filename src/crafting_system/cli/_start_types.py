@@ -30,6 +30,7 @@ MOD_CANNOT_SPAWN = "mod cannot spawn on the base"
 NO_PRICE = "no price"
 DOMINATED = "dominated"
 INVALID_ITEM = "the game data refuses the item"
+NO_INFLUENCED_BASE = "no influenced base is listed"  # a bought-base start (#351): the influence set a requirement needs is not listed, and why
 NOT_A_PLAIN_BASE = "the start item is not a plain base"  # a bought-base start (#351): the start item carries what a base row does not price
 
 Reading = tuple[tuple[str, str], ...]  # one (rule axis, value) per axis, sorted by axis; () when a run reads no axis
