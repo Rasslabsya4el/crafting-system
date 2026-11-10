@@ -1,7 +1,7 @@
 {
- "main": "e03e82162013fc896f8c2b7e0ea6fc84ae69349b",
- "taken": "2026-11-02",
- "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-10-31.json, S02 at 1 chaos per currency and 10 chaos for the start item; agrees with the #312 research snapshot (R04 69,257.54, R14 5,784.49, S02 33,878.67)",
+ "main": "671b32fff6b24da249e62c9c8a1d1302cf1119b0",
+ "taken": "2026-11-10",
+ "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-11-10.json (re-recorded in heavy run 42907313656 on the data half of #662: R04 189,226.57, R14 9,381.10; before, at the 2026-10-31 file, R04 69,257.54, R14 5,784.45), S02 at 1 chaos per currency and 10 chaos for the start item, unchanged since #374 (33,878.67; its solve needs more memory than a standard runner has, so heavy runs on standard runners leave it out with -k 'not S02')",
  "routes": {
   "R04": {
    "mean_remaining": 189226.56738171066,
