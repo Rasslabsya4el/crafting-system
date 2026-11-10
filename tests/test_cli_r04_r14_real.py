@@ -29,7 +29,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
 ROUTES = {
     "R04": ("examples/targets/r04-penetrating-quiver.yaml", "examples/routes/r04-penetrating-quiver.yaml"),
     "R14": ("examples/targets/r14-hunter-bow.yaml", "examples/routes/r14-hunter-bow.yaml"),
@@ -46,7 +46,13 @@ OFFERS = {
         DRAW_LABEL,  # the bought Magic bow is the item the market sells (ADR-0064): the plan opens with the draw of its mods
     },
 }
-START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api", 13.0)}
+START = {
+    route: (name, source, load_price_file(PRICES).prices[name].chaos)
+    for route, name, source in (
+        ("R04", "Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja"),
+        ("R14", "Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api"),
+    )
+}  # (price key, source, price): the price is read from the file, never typed, so it moves with the snapshot
 
 
 @pytest.fixture(scope="module")

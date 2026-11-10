@@ -181,7 +181,7 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
     committed = [path.name for path in sorted(PRICES.glob("*.json")) if key in json.loads(path.read_text(encoding="utf-8"))["prices"]]
 
     # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries
-    assert committed == (["vendor-v01-2026-11-01.json"] if stem == "v01-minion-helmet" else ["routes-allflame-2026-10-31.json", "vendor-v01-2026-11-01.json"])
+    assert committed == (["vendor-v01-2026-11-01.json"] if stem == "v01-minion-helmet" else ["routes-allflame-2026-10-31.json", "routes-allflame-2026-11-10.json", "vendor-v01-2026-11-01.json"])
 
 
 def row(stem: str):
