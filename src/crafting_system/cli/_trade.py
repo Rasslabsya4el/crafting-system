@@ -28,6 +28,7 @@ from crafting_system.prices.price_file import (
     to_divine,
 )
 from crafting_system.prices.price_names import canonical_price_name
+from crafting_system.prices.query_compare import other_item, wider_words
 from crafting_system.prices.trade_http import (
     RateLimiter,
     RequestBudget,
@@ -174,7 +175,8 @@ def _trade(
             store_market(price_path, error.market)
             print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}; {_priced_as(price_path, spec.name)}")
         raise
-    store_trade_price(price_path, price, entry_for(price))
+    # the search above is built from the spec, so the price is of the exact item; the same comparison the plan makes says so (a stand-in is never passed off as the item)
+    store_trade_price(price_path, price, entry_for(price, wider_words(other_item(spec, price.query))))
     print(
         f"{price.name}: {price.chaos:g} Chaos ({to_divine(price.chaos, price_file):.4g} Divine), "
         f"mean of the {price.used} cheapest instant-buyout listings ({price.fetched} fetched, "

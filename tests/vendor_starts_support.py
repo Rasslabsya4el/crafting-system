@@ -19,6 +19,7 @@ from start_support import with_start
 
 from crafting_system.data import BaseItem, GameData, Mod, StatRange, Weight
 from crafting_system.prices import PriceEntry, PriceFile
+from crafting_system.prices.provenance import OVERRIDE, Provenance
 from crafting_system.targets import Target, parse_target
 
 TOY_BOOTS = "Metadata/Items/Armours/Boots/ToyBoots1"
@@ -135,11 +136,12 @@ def prices(*, base: float | None = BASE_PRICE, flask: float | None = FLASK_PRICE
     """A price file: the currency the target needs and the goods of the movement speed recipe (None leaves a line out).
 
     `lines` adds more, by name with underscores for spaces (`Ruby_Flask=3`); `base` is the price of the Toy Boots (ilvl 86)."""
-    entries = {name: PriceEntry(chaos, "fixture") for name, chaos in CURRENCY.items()}
+    fixture = Provenance(OVERRIDE, "Test", "2026-10-30")  # the fixture's numbers are set by hand: a hand price needs no depth, and is no unrecorded price
+    entries = {name: PriceEntry(chaos, "fixture", None, None, fixture) for name, chaos in CURRENCY.items()}
     if base is not None:
-        entries[BOOTS_NAME] = PriceEntry(base, "trade-api")
+        entries[BOOTS_NAME] = PriceEntry(base, "trade-api", None, None, fixture)
     if flask is not None:
-        entries[QUICKSILVER] = PriceEntry(flask, "trade-api")
+        entries[QUICKSILVER] = PriceEntry(flask, "trade-api", None, None, fixture)
     for name, chaos in lines.items():
-        entries[name.replace("_", " ")] = PriceEntry(chaos, "fixture")
+        entries[name.replace("_", " ")] = PriceEntry(chaos, "fixture", None, None, fixture)
     return PriceFile("Test", datetime.datetime(2026, 10, 30, tzinfo=datetime.UTC), divine, entries)

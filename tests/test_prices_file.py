@@ -20,6 +20,7 @@ from crafting_system.prices import (
     to_divine,
     write_price_file,
 )
+from crafting_system.prices.provenance import OVERRIDE, Provenance
 
 FETCHED_AT = datetime(2026, 10, 30, 20, 24, 0, tzinfo=UTC)
 
@@ -225,7 +226,7 @@ def test_an_override_wins_over_the_fetched_price_and_is_marked_as_such(tmp_path)
 
     merged = load_prices(prices_path, overrides_path)
 
-    assert merged.prices["Hollow Fossil"] == PriceEntry(20.0, "override")
+    assert merged.prices["Hollow Fossil"] == PriceEntry(20.0, "override", None, None, Provenance(OVERRIDE, "Allflame", "2026-10-30"))
     assert merged.prices["Divine Orb"] == PriceEntry(359.7, "poe.ninja")
 
 
@@ -237,7 +238,7 @@ def test_an_override_adds_a_name_the_fetch_lacks(tmp_path):
 
     merged = load_prices(prices_path, overrides_path)
 
-    assert merged.prices["Fracturing Orb"] == PriceEntry(250.0, "override")
+    assert merged.prices["Fracturing Orb"] == PriceEntry(250.0, "override", None, None, Provenance(OVERRIDE, "Allflame", "2026-10-30"))
     assert merged.league == "Allflame"
     assert merged.fetched_at == FETCHED_AT
 
@@ -381,7 +382,7 @@ def test_an_override_wins_over_a_price_that_carries_a_detail(tmp_path):
 
     entry = load_prices(tmp_path / "prices.json", tmp_path / "price_overrides.toml").prices["Amulet"]
 
-    assert entry == PriceEntry(9.0, "override")
+    assert entry == PriceEntry(9.0, "override", None, None, Provenance(OVERRIDE, "Allflame", "2026-10-30"))
     assert entry.detail is None
 
 
@@ -410,7 +411,7 @@ def test_a_hand_price_with_reordered_influences_prices_the_wanted_name(tmp_path)
     merged = load_prices(prices_path, overrides_path)
 
     wanted = "Stygian Vise (ilvl 85, Hunter/Warlord)"
-    assert merged.prices[wanted] == PriceEntry(900.0, "override")
+    assert merged.prices[wanted] == PriceEntry(900.0, "override", None, None, Provenance(OVERRIDE, "Allflame", "2026-10-30"))
     assert missing_prices([wanted], merged.prices) == []
 
 

@@ -10,6 +10,7 @@ from crafting_system.data import GameData
 from crafting_system.targets import plain_base_names
 
 from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
+from ._price_marks import price_uses
 from ._report import ROW_WIDTH, UNRESOLVED, Report, _estimate, _row, _shifted, describe_state, interval, percent, unresolved
 from ._route import Route, RouteResult
 
@@ -49,7 +50,8 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
     for name, given, found in (("mean", risk.mean, solver.mean), ("p50", risk.p50, solver.p50), ("p90", risk.p90, solver.p90)):  # the words of `PERCENTILE_WORDS` (#633)
         lines.append(_row(name, _interval(given, shift, divine, risk)))
         lines.append(f"  {'':<{ROW_WIDTH}}(policy {_interval(found, shift, divine, solver)})")
-    lines.extend(approximate_lines(approximate_inputs(plan, result.policy, data)))
+    uses = price_uses(plan, result.policy, risk.mean.value)  # the route's own mean bounds what it buys, not the plan's optimum (#616)
+    lines.extend(approximate_lines(approximate_inputs(plan, result.policy, data, uses)))
     lines.append("")
     divergence = result.divergence
     if divergence is None:
@@ -89,7 +91,9 @@ def route_document(report: Report, route: Route, result: RouteResult, data: Game
         "p50": _estimate(risk.p50, shift),
         "p90": _estimate(risk.p90, shift),
         "quantiles_resolved": not (unresolved(risk, risk.p50) or unresolved(risk, risk.p90)),
-        "approximate_inputs": approximate_inputs_document(approximate_inputs(plan, result.policy, data)),
+        "approximate_inputs": approximate_inputs_document(
+            approximate_inputs(plan, result.policy, data, price_uses(plan, result.policy, risk.mean.value))
+        ),
         "first_divergence": None
         if divergence is None
         else {

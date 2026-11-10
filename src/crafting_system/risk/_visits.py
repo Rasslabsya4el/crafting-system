@@ -8,7 +8,7 @@ with the same certificate, so the interval holds whatever the float rounding.
 """
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 
 from ..solver import Action
 from . import _inputs, _moments
@@ -42,3 +42,28 @@ def expected_total[S](
     except _inputs.NotSubcritical:
         return INFINITE
     return Estimate(*_inputs.weighted_visits(chain, values, error, weights))
+
+
+def expected_totals[S](
+    policy: Mapping[S, Action[S]], start: S, is_goal: Callable[[S], bool], weights: Sequence[Callable[[Action[S]], float]]
+) -> list[Estimate]:
+    """`expected_total` for several weights from one solve of the visits: one `Estimate` per weight, in order."""
+    chain = build_chain(policy, start, is_goal)
+    if chain.goal[0]:
+        return [ZERO for _ in weights]
+    if not chain.can_finish[0] or not chain.proper:
+        return [INFINITE for _ in weights]
+    arrays = []
+    for weight in weights:
+        column = []
+        for action in chain.action:
+            found = 0.0 if action is None else float(weight(action))
+            if found < 0.0 or math.isnan(found):
+                raise ValueError(f"the weight of an action is not negative, got {found!r}")
+            column.append(found)
+        arrays.append(column)
+    try:
+        values, error = _inputs.solve_costs(chain, _moments.real_costs(chain))
+    except _inputs.NotSubcritical:
+        return [INFINITE for _ in weights]
+    return [Estimate(*each) for each in _inputs.weighted_visits_many(chain, values, error, arrays)]
