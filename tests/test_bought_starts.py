@@ -19,10 +19,11 @@ from crafting_system.cli._bought_starts import MAGIC_ROW_MARK, ORB_OF_ALCHEMY, b
 from crafting_system.cli._start_types import NO_PRICE, NOT_A_PLAIN_BASE, SOURCE_BOUGHT_BASE
 from crafting_system.items import ExplicitMod, Influence, tier_table
 from crafting_system.items.model import MAX_ITEM_LEVEL
-from crafting_system.prices import PriceEntry
+from crafting_system.prices import PriceEntry, Provenance
 from crafting_system.prices.price_file import DeepReading, MarketRecord, load_price_file
 from crafting_system.prices.price_marks import NOT_RECORDED_WORDS
-from crafting_system.targets import KOfN, StartKind, load_target
+from crafting_system.targets import KOfN, StartKind, base_line_name, load_target
+from crafting_system.targets.floor import target_at_level
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"
@@ -217,3 +218,24 @@ def test_a_start_item_with_mods_is_not_a_plain_base(data, prices, r08):
 def test_warnings_start_empty_for_the_rails_to_fill(data, prices, r13):
     """#353 annotates options with its rails' warnings without cutting them (OR-12): the field is there and empty."""
     assert all(c.warnings == () for c in bought_base_starts(StartContext(data, r13, prices)).candidates)
+
+
+def test_every_bought_example_target_lists_without_raising(data, prices):
+    """R14's file says 78 and its floor at 86 is 81: the levels come from the target planned at 86, so no level below its floor is asked."""
+    for path in sorted(TARGETS.glob("*.yaml")):
+        target = load_target(path, data)
+        if target.start is StartKind.BOUGHT:
+            listed = bought_base_starts(StartContext(data, target, prices))
+            assert all(c.bought.level >= c.bought.group[0] for c in listed.candidates), path.name
+
+
+def test_a_thin_row_on_another_level_of_the_group_is_said(data, prices):
+    """R09's levels 69 to 71 are one pool: a thin row at 69 is set aside and named on the option priced from 70."""
+    r09 = load_target(TARGETS / "r09-life-boots.yaml", data)
+    names = {level: base_line_name(data, target_at_level(data, r09, level)) for level in (69, 70)}
+    thin = PriceEntry(0.5, "poe.ninja", None, {"category": "BaseType"}, Provenance("ninja-stash", "Allflame", "2026-11-01", 2.0, "observations"))
+    deep = PriceEntry(3.0, "poe.ninja", None, {"category": "BaseType"}, Provenance("ninja-stash", "Allflame", "2026-11-01", 40.0, "observations"))
+    file = dataclasses.replace(prices, prices={**prices.prices, names[69]: thin, names[70]: deep})
+    option = next(c for c in bought_base_starts(StartContext(data, r09, file)).candidates if c.bought.group == (69, 71))
+    assert option.bought.level == 70 and option.bought.row_chaos == 3.0
+    assert any(f"the poe.ninja row {names[69]} rests on 2 observations" in mark for mark in option.bought.input_marks)

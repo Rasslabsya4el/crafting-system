@@ -214,7 +214,8 @@ def _option(context: StartContext, group: LevelGroup, levels: list[_Level], infl
     sourced = best.sourced
     item = best.target.start_item
     goods: list[tuple[str, int, float, str]] = [(best.name, 1, best.chaos, sourced.source_label)]
-    marks = [*_input_marks(sourced, best.view, best.row), *best.notes]
+    # every level's notes, not only the chosen one's: a cheaper level whose thin row was set aside is said (OR-8, OR-23)
+    marks = [*_input_marks(sourced, best.view, best.row), *(note for each in levels for note in each.notes)]
     if item.rarity is Rarity.MAGIC:
         marks.append(MAGIC_ROW_MARK)
     orb = RARITY_ORB[item.rarity]
@@ -265,15 +266,21 @@ def bought_base_starts(context: StartContext) -> StartList:
         refused.append(RefusedStart("base", "bought base", NOT_A_PLAIN_BASE, too_many))
     for influences in sets:
         try:
-            widened = _with_influences(data, target, influences)
-            floor = item_level_options(data, widened).floor.level
-            shaped = target_at_level(data, widened, top)
+            shaped = target_at_level(data, _with_influences(data, target, influences), top)
+            floor = item_level_options(data, shaped).floor.level  # the floor of the target the levels are planned from (R14: 81, its file says 78)
         except (ItemError, TargetError) as error:
             refused.append(RefusedStart("base", "bought base", NOT_A_PLAIN_BASE, f"the start item cannot be had with {sorted(i.value for i in influences)} at item level {top}: {error}"))
             continue
         shown = _shown(influences)
         for group in level_groups(data, shaped, floor):
-            levels = [_Level(context, shaped, level, today) for level in range(group.lowest, min(group.highest, top) + 1)]
-            found = _option(context, group, levels, shown)
-            (candidates if isinstance(found, StartCandidate) else refused).append(found)
+            levels: list[_Level] = []
+            for level in range(group.lowest, min(group.highest, top) + 1):
+                try:
+                    levels.append(_Level(context, shaped, level, today))
+                except (ItemError, TargetError) as error:  # a level the target cannot be planned at is said, never a crash
+                    key = f"base:{group.lowest}-{group.highest}" + (f":{'/'.join(shown)}" if shown else "")
+                    refused.append(RefusedStart(key, f"bought base at item level {level}", NOT_A_PLAIN_BASE, str(error)))
+            if levels:
+                found = _option(context, group, levels, shown)
+                (candidates if isinstance(found, StartCandidate) else refused).append(found)
     return StartList(tuple(candidates), tuple(refused))
