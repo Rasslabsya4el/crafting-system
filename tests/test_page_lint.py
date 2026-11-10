@@ -556,11 +556,10 @@ ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other tw
 ISSUE_FETCH_TRADE = 672  # the default fetch reads no trade listing for a resource poe.ninja lacks, so the product holds no evidence for it
 WHY = {ISSUE_UNPRICED: f"the fixture price file prices no Harvest good but Primal Crystallised Lifeforce, and the product has no evidence for the others unless a fetch reads their trade listings (#{ISSUE_FETCH_TRADE})"}
 
-# The fixture pages still drop an action for want of a price (#552). They are not fed an invented price to pass: a resource with no price and no evidence
-# is dropped, and the limit says so. The three real pages (R05, R10, R11) are priced from the snapshot of 2026-10-31, which has no reading of those goods;
-# a snapshot made with the trade site's offers (the data PR that follows #662) prices them.
+# The three fixture pages still drop an action for want of a price (#552). They are not fed an invented price to pass: a resource with no price and no evidence
+# is dropped, and the limit says so. The three real pages (R05, R10, R11) price those goods from the snapshot of 2026-11-10, whose evidence is poe.ninja and the trade site's offers.
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it (OR-29)
-    **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route", "real_r05", "real_r10", "real_r11")},
+    **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route")},
     **{(name, "check_tier_lines"): ISSUE_ROLL_MINIMUM for name in ("real_r10", "real_r11")},
 }
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
