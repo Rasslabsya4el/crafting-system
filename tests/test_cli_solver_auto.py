@@ -15,7 +15,7 @@ from targets_support import DATA
 
 from crafting_system.abstraction import Pattern, pattern_refusal
 from crafting_system.actions import OutOfScopeError
-from crafting_system.cli import _plan, _starts, main
+from crafting_system.cli import _plan, _starts, evaluate_route, load_route, main
 from crafting_system.cli._envelope import NoPolicy
 from crafting_system.cli._packed import SOLVERS
 from crafting_system.cli._plan import PlanError, make_plan
@@ -125,6 +125,42 @@ def test_the_command_has_the_planners_solver_choices_and_auto_by_default(monkeyp
         assert run(tmp_path, "--no-recipe-starts", "--solver", solver, prices=price_file())[0] == 0
 
     assert seen == ["auto", *SOLVERS]
+
+
+ROUTE = R12.parents[1] / "routes" / "r12-lightning-amulet.yaml"
+
+
+def test_a_plan_a_route_is_judged_against_walks_under_auto_and_judges_the_route_with_no_false_gap(packed):
+    """Option A of #535 (#732 is the route judged without the walk): the envelope search never decides the states it proves irrelevant, so a
+    plan a given route is judged against is made on the walk, decided before solving; the route reads the same as on the packed plan."""
+    judged = make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)
+    route = load_route(ROUTE, judged, DATA)
+
+    assert judged.packed is None or "envelope" not in judged.packed.info
+    assert judged.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
+    assert evaluate_route(judged, route, DATA).gaps == evaluate_route(packed, load_route(ROUTE, packed, DATA), DATA).gaps
+
+
+def test_a_route_judged_against_an_envelope_plan_is_refused_in_words_not_read_as_gaps():
+    envelope = make_plan(DATA, load_target(R12, DATA), price_file())
+
+    with pytest.raises(PlanError, match="judged against the planner's choice at every state the route reaches"):
+        evaluate_route(envelope, load_route(ROUTE, envelope, DATA), DATA)
+
+
+def test_the_command_with_a_route_asks_for_a_plan_a_route_is_judged_against(monkeypatch, tmp_path):
+    seen = []
+    real = make_plan
+
+    def spy(*args, **kwargs):
+        seen.append(kwargs.get("judges_route"))
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(_starts, "make_plan", spy)
+
+    assert run(tmp_path, "--route", str(ROUTE), prices=price_file())[0] == 0
+    assert run(tmp_path, "--no-recipe-starts", prices=price_file())[0] == 0
+    assert seen == [True, False]
 
 
 def test_the_command_refuses_a_solver_it_does_not_have(capsys, tmp_path):

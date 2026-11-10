@@ -70,7 +70,7 @@ def plan_route(route_id: str, out: Path) -> Path:
     _packed.PROGRESS = lambda text: print(text, flush=True)
     stem = STEMS[route_id]
     data = load_game_data()
-    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICES))
+    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICES), judges_route=True)
     found: dict = {"route": route_id, "pin": data_pin(), "start_price": plan.start_price.chaos}
     for kind, name in (("guide", stem), ("completed", f"{stem}-restart")):
         result = evaluate_route(plan, load_route(ROUTES / f"{name}.yaml", plan, data), data)

@@ -2,9 +2,8 @@
 
     python .github/scripts/time_routes.py --route r08 [--exact | --budget 60] [--solver object] --out $OUT_DIR
 
-Prints where the time goes (the bound pruning's progress, a stack dump every 3 minutes) and writes `<route>.json`. The bound pruning is the object
-solver's path with 40 offers or more, which is what this script watches, so `--solver` defaults to `object`; `auto` is the envelope search since #535, which prints
-its own progress lines instead.
+Prints where the time goes (the bound pruning's progress, a stack dump every 3 minutes) and writes `<route>.json`. `--solver` defaults to `auto`, what the
+player gets (the envelope search since #535, which prints its own progress lines); `object` is the bound pruning the script was written to watch.
 """
 
 import argparse
@@ -30,7 +29,7 @@ def main() -> None:
     parser.add_argument("--route", required=True, choices=sorted(TARGETS))
     parser.add_argument("--exact", action="store_true")
     parser.add_argument("--budget", type=float, default=60.0)
-    parser.add_argument("--solver", default="object", choices=_packed.SOLVERS, help="the solver of the plan (default object: the bound pruning this script watches)")
+    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto: what the player gets; object for the bound pruning)")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
     out = Path(arguments.out)

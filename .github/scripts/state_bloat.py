@@ -289,8 +289,8 @@ def plan_of(bench: BenchmarkRoute, data: GameData, root: Path, config: Config, p
     if missing is not None:
         raise ValueError(_missing_message(missing))
     if bench.start is None:
-        return make_plan(data, target, loaded, with_risk=False, solver=solver)
-    return plan_with_starts(data, target, loaded, solver=solver)  # it plans each start without the risk and measures it for the one it keeps (V01 is small)
+        return make_plan(data, target, loaded, with_risk=False, solver=solver, judges_route=bench.route is not None)
+    return plan_with_starts(data, target, loaded, solver=solver, judges_route=bench.route is not None)  # it plans each start without the risk and measures it for the one it keeps (V01 is small)
 
 
 def walked_of(plan: Plan) -> dict:

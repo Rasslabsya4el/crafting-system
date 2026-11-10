@@ -57,7 +57,7 @@ from crafting_system.targets.resolve import Resolver, Unresolved, close_matches,
 from ._limits import UNPRICED
 from ._offers import free_action_cost
 from ._packed import PackedPolicy
-from ._plan import Plan, evaluate_risk, offer_action
+from ._plan import Plan, PlanError, evaluate_risk, offer_action
 from ._reach import policy_states
 
 RESTART = "restart"
@@ -497,7 +497,16 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     Breadth-first from the start: at every reachable non-goal state the first matching rule gives the
     action, built as the solver builds its own (same kernel, same integer weights). A state with no
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
+
+    Raises `PlanError` for a plan made by the envelope search: judging a route needs the planner's action at every state the route reaches,
+    and that search never decides the states it proves irrelevant, so the route would read as gaps there (#535). Such a plan is made with
+    `make_plan(..., judges_route=True)`, which keeps `solver="auto"` on the walk (a route judged without the full walk is #732).
     """
+    if plan.packed is not None and "envelope" in plan.packed.info:
+        raise PlanError(
+            "a given route is judged against the planner's choice at every state the route reaches, and the exact search used for this plan "
+            "looks only at the states that can matter: plan it again with the search that walks every possible item"
+        )
     if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed
 

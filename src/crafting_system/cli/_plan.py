@@ -335,6 +335,7 @@ def make_plan(
     with_risk: bool = True,
     incumbent: Callable[[CompressedState], Sequence[str]] | None = None,
     net: Net | None = None,
+    judges_route: bool = False,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -365,7 +366,9 @@ def make_plan(
     the budget decision when there is a `budget`, `solve_pruned` for 40 offers or more, otherwise the graph is walked on packed arrays and
     solved there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02) and by the object solver below that.
     There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
-    `solver="packed"`. "object" never packs; "packed" always walks, and with 40 offers or more it solves the offers left after the twins are
+    `solver="packed"`. With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
+    older path too, decided before solving: judging a route needs the planner's action at every state the route reaches, and the envelope
+    search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with 40 offers or more it solves the offers left after the twins are
     merged, without the bound pruning (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
     "envelope" is the same search asked for by name: it refuses with `PlanError` an abstraction the bound cannot be built for (#507). It is the
     exact branch-and-bound of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds
@@ -457,7 +460,9 @@ def make_plan(
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
     refusal = pattern_refusal(abstraction)
-    envelope = solver == "envelope" or (solver == "auto" and refusal is None)  # #535: "auto" is the envelope search wherever its bound can be built
+    # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
+    # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant
+    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route)
     if budget is not None and not envelope:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []

@@ -148,7 +148,7 @@ def main(
         plan = plan_with_starts(
             game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, price_source=args.price_source or config.price_source,
-            price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands, solver=args.solver,
+            price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
         )  # fmt: skip
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact to get an exact one")

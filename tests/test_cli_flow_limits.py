@@ -43,7 +43,7 @@ def unsolvable(monkeypatch):
 
 
 def made():
-    return make_plan(DATA, load_target(R12, DATA), price_file())
+    return make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)  # a route is judged against it (#535: `auto` walks)
 
 
 def test_a_plan_whose_visits_were_solved_and_whose_entry_chances_were_computed_has_no_such_limit():

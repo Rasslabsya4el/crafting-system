@@ -101,7 +101,7 @@ def test_the_route_without_its_strand_rules_is_read_against_the_offers_of_its_ta
         data,
         source=stem,
     )
-    plan = make_plan(data, target, flat_price_file(), start_price=10.0)
+    plan = make_plan(data, target, flat_price_file(), start_price=10.0, solver="object")  # `no_solve` stands in for the object solver's solves
     assert plan.offers
     route_text = without_strand_words_in_rules((FILES / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
     assert parse_route(route_text, plan, data, source=stem).rules
