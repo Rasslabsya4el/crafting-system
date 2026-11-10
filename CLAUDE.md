@@ -35,6 +35,8 @@ One task per chat. The state of the work lives in the GitHub issues, so a `/clea
 
 Everything this repo needs lives inside this folder: worktrees in `.claude/worktrees/`, scratch files and run output in `.claude/scratch/`.
 
+The main folder (`C:\Coding\Crafting system` itself) stays on the branch `main`, because every new chat reads this file and `.claude/agents/` from it: a chat never checks out another branch or commit there (it reads one with `git show` or works in a worktree), and after merging a PR it runs `git pull --ff-only` there. From 2026-11-07 to 2026-11-10 it sat on an old commit, and new chats kept the coder helpers this file had already dropped (#722).
+
 ## Heavy runs
 
 **Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite, sweeps, solves and measurements go to GitHub (CI, or a heavy run), because a local multi-process sweep pins his machine at 100%. Heavy runs go **only through the dispatcher**: `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners N --command '...'`, never `gh workflow run run.yml`. The repo has 20 runner jobs at once; the dispatcher waits on the PC until merge CI keeps a buffer (`HEAVY_FLOOR` and `CI_RESERVE`, repository variables), and refuses a timeout over 60 minutes unless `--long` (one indivisible solve): split long sweeps into shorter parts. `python .github/scripts/heavy_dispatch.py status` shows the queue. Details: `docs/ci.md`.
