@@ -79,7 +79,7 @@ MAIN = "additions_with_chaos"
 @functools.cache
 def exact_plan(name: str):
     rarity, offers = WORLDS[name]
-    return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers)
+    return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers, solver="object")  # the reference of the budget decision: the walk-and-solve path (#535)
 
 
 def actions_of(name: str):

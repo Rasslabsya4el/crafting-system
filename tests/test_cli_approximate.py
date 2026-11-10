@@ -58,7 +58,7 @@ def target():
 
 @pytest.fixture(scope="module")
 def exact(target):
-    return make_plan(DATA, target, PRICES, offers=OFFERS)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, solver="object")  # the reference of the budget decision: the walk-and-solve path (#535)
 
 
 @pytest.fixture(scope="module")
