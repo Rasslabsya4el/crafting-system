@@ -1,0 +1,146 @@
+{
+  "chaos_per_divine": 372.2,
+  "fetched_at": "2026-11-01T12:00:00Z",
+  "league": "Allflame",
+  "prices": {
+    "Chaos Orb": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 84)": {
+      "chaos": 1.7,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 176.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 85)": {
+      "chaos": 1.0,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 275.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 86)": {
+      "chaos": 10.0,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 37.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 86, Crusader)": {
+      "chaos": 2.0,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 2.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 86, Elder)": {
+      "chaos": 5.0,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 20.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 86, Shaper)": {
+      "chaos": 4.2,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 13.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Orb of Alchemy": {
+      "chaos": 0.02716,
+      "source": "poe.ninja"
+    },
+    "Orb of Transmutation": {
+      "chaos": 0.005804,
+      "source": "poe.ninja"
+    },
+    "Sorcerer Boots (ilvl 84)": {
+      "chaos": 1.03,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 36.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Sorcerer Boots (ilvl 85)": {
+      "chaos": 5.33,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 84.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    },
+    "Sorcerer Boots (ilvl 86)": {
+      "chaos": 7.43,
+      "detail": {
+        "category": "BaseType"
+      },
+      "provenance": {
+        "date": "2026-11-01",
+        "depth": 32.0,
+        "depth_unit": "observations",
+        "kind": "ninja-stash",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja"
+    }
+  },
+  "unit": "chaos"
+}
