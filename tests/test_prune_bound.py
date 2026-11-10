@@ -259,9 +259,9 @@ class Planned:
         self.data = data
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_plan, "PRUNE_BOUND", True)
-            self.pruned = make_plan(data, target, prices, offers=offers, start_price=start_price)
+            self.pruned = make_plan(data, target, prices, offers=offers, start_price=start_price, solver="object")  # the subject is the bound pruning, the object solver's path (`auto` is the envelope search since #535)
             patch.setattr(_plan, "PRUNE_BOUND", False)
-            self.whole = make_plan(data, target, prices, offers=offers, start_price=start_price)
+            self.whole = make_plan(data, target, prices, offers=offers, start_price=start_price, solver="object")
 
     def cost_to_go(self, state, action) -> float:
         """The cost of `action` at `state` plus the expected value after it, by the values of the plan WITHOUT pruning."""
@@ -345,7 +345,7 @@ def test_a_fractured_fossil_set_in_the_model_moves_the_item_to_another_shape_and
     found = _bound_prune.solve_pruned(abstraction, start, priced, item, min_offers=0)
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(_plan, "PRUNE_BOUND", False)
-        whole = make_plan(world.data, target, prices, offers=offers)
+        whole = make_plan(world.data, target, prices, offers=offers, solver="object")
 
     assert found.fell_back and "kind of item" in found.why
     assert found.solution.values[start] == pytest.approx(whole.mean_remaining, rel=1e-9)
@@ -425,7 +425,7 @@ def test_the_last_round_takes_every_offer_that_fails_and_still_closes(world, mon
 
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(_plan, "PRUNE_BOUND", True)
-        plan = make_plan(world.data, target, world.prices, offers=offers)
+        plan = make_plan(world.data, target, world.prices, offers=offers, solver="object")
     whole = Planned(world.data, target, world.prices, offers).whole
 
     assert plan.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
@@ -464,7 +464,7 @@ def test_fewer_than_min_offers_are_solved_whole(world):
     target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:10])
 
-    plan = make_plan(world.data, target, world.prices, offers=offers)
+    plan = make_plan(world.data, target, world.prices, offers=offers, solver="object")
 
     assert plan.pruned is None and not of_kind(plan.limits, "proved-unneeded")
 
@@ -586,7 +586,7 @@ def test_a_wrong_bound_gives_a_wrong_plan_and_the_comparison_with_the_unpruned_p
     monkeypatch.setattr(_bound_prune, "reach_bound", lying)
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(_plan, "PRUNE_BOUND", True)
-        wrong = make_plan(world.data, target, world.prices, offers=offers)
+        wrong = make_plan(world.data, target, world.prices, offers=offers, solver="object")
 
     assert wrong.mean_remaining > honest.whole.mean_remaining * (1 + 1e-6), best
     assert best not in {priced.label for priced in wrong.pruned.used}
@@ -632,7 +632,7 @@ def golden():
 @pytest.fixture(scope="module", params=ROUTES)
 def route_plan(request, real):
     target = load_target(ROOT / "examples" / "targets" / f"{request.param}.yaml", real)
-    return request.param, make_plan(real, target, load_price_file(ROUTE_PRICES))
+    return request.param, make_plan(real, target, load_price_file(ROUTE_PRICES), solver="object")  # the subject is the bound pruning, the object solver's path (#535)
 
 
 def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gave(route_plan, golden):

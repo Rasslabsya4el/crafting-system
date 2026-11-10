@@ -544,7 +544,7 @@ def envelope_refusal(solver: str, error: Exception) -> str:
         return f"the envelope search cannot answer this target: {error}"
     return (
         f"the exact search for the cheapest route could not give an answer: {error}. "
-        "`--solver packed` (`solver=\"packed\"` in Python) walks the whole graph instead, which is slower and may need more memory"
+        "The search that walks every possible item gives the exact answer instead, more slowly and with more memory: choose `packed` as the search on the command line"
     )
 
 

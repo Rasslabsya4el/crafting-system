@@ -317,7 +317,7 @@ def approximate_plan(monkeypatch, error=None):
             return real(self, state, action)
 
         monkeypatch.setattr(Abstraction, "kernel", planted)
-    return make_plan(COARSE, target, prices, budget=budget, rates=APPROX_RATES), REMOVE.label(COARSE)
+    return make_plan(COARSE, target, prices, budget=budget, rates=APPROX_RATES, solver="object"), REMOVE.label(COARSE)
 
 
 def test_a_model_gap_in_a_block_is_a_limit_of_an_approximate_answer_that_claims_only_the_gap(monkeypatch):
@@ -440,7 +440,7 @@ def test_g6_an_action_that_consumes_other_items_is_a_limit_of_its_own_and_a_plai
     from crafting_system.prices import PriceEntry
 
     prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.0001, "test")})
-    plan = make_plan(CONTRACT_DATA, load_target(target_path, CONTRACT_DATA), prices, offers=_offers_with(ToyGraft(with_axis=False)))
+    plan = make_plan(CONTRACT_DATA, load_target(target_path, CONTRACT_DATA), prices, offers=_offers_with(ToyGraft(with_axis=False)), solver="object")
 
     consumes = only(plan.limits, "consumes-items")
     assert consumes.labels == ("Toy Graft",) and "consume other items" in consumes.why
@@ -452,7 +452,7 @@ def test_g6_an_action_that_consumes_other_items_is_a_limit_of_its_own_and_a_plai
 
 def test_a_plan_with_a_model_gap_shows_it_in_the_text_the_json_and_the_page(refusing):
     refusing(OutOfScopeError)
-    plan = plan_of()
+    plan = plan_of(solver="object")  # a gap is met where an action is built: the walk builds every one, the envelope search (`auto`, #535) only those it cannot rule out
     report = build_report(plan, DATA)
     text = render_text(report)
     document = policy_document(report)

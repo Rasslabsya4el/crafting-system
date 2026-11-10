@@ -57,7 +57,7 @@ def test_m1_a_refused_forecast_puts_its_own_text_in_the_limit_and_the_answer_sta
 
     monkeypatch.setattr(Abstraction, "estimate", refused)
 
-    made = plan_of(budget=60.0)
+    made = plan_of(budget=60.0, solver="packed")
 
     (whole,) = [limit for limit in of_kind(made.limits, "how-solved") if limit.what == "The whole search was run"]
     assert made.approximation is None and made.risk is not None
@@ -94,8 +94,8 @@ def test_m2_rate_a_calibration_that_cannot_run_names_why_and_a_measured_one_says
 
 
 def test_m2_rate_a_plan_whose_forecast_used_the_guessed_speed_says_so_and_a_given_rate_does_not():
-    guessed = plan_of(budget=1e-9)  # no rates given, a forecast above the budget: the solver is timed, and R12's pilot graph is too small to time
-    given = plan_of(budget=1e-9, rates=_decide.Rates(1.0, 1.0))
+    guessed = plan_of(budget=1e-9, solver="packed")  # no rates given, a forecast above the budget: the solver is timed, and R12's pilot graph is too small to time
+    given = plan_of(budget=1e-9, rates=_decide.Rates(1.0, 1.0), solver="packed")
 
     (limit,) = [each for each in guessed.limits if each.what == "The time of the search was guessed"]
     assert limit.kind == "how-solved" and "too few to time the search on" in limit.why and limit.why.endswith("so the size estimate used a fixed speed")
@@ -111,7 +111,7 @@ def test_m2_prune_a_bound_pruning_that_fell_back_to_all_the_actions_says_why(mon
     monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)  # R12 has 6 offers: the pruning runs
     monkeypatch.setattr(_plan, "solve_pruned", lambda *args, **options: real(*args, **{**options, "rounds": 0}))  # no round to prove anything in
 
-    made = plan_of()
+    made = plan_of(solver="object")  # the bound pruning is the object solver's path (#535)
 
     assert made.pruned is not None and made.pruned.fell_back
     (limit,) = [each for each in made.limits if each.what == "All the actions were solved"]
@@ -119,7 +119,7 @@ def test_m2_prune_a_bound_pruning_that_fell_back_to_all_the_actions_says_why(mon
     assert limit.why == "the search first solved a smaller set of actions and could not prove it enough (the proof that the smaller set is enough did not finish in 0 rounds)"
     assert limit.guarantee == "The answer is exact among the methods offered."
     monkeypatch.setattr(_plan, "solve_pruned", real)
-    clean = plan_of()
+    clean = plan_of(solver="object")
     assert clean.pruned is not None and not clean.pruned.fell_back and not [each for each in clean.limits if each.what == "All the actions were solved"]
 
 

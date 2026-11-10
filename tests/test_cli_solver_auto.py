@@ -107,7 +107,7 @@ def test_an_envelope_search_that_cannot_answer_under_auto_is_a_plan_error_in_pla
         make_plan(DATA, load_target(R12, DATA), price_file(), with_risk=False)
 
     text = str(raised.value)
-    assert str(error) in text and "--solver packed" in text and "envelope" not in text
+    assert str(error) in text and "choose `packed` as the search" in text and "envelope" not in text
 
 
 def test_the_command_has_the_planners_solver_choices_and_auto_by_default(monkeypatch, tmp_path):

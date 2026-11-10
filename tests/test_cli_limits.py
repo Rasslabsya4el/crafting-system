@@ -127,7 +127,7 @@ def test_u1_the_actions_without_a_price_are_limits_grouped_by_what_is_missing(pl
 
 
 def test_g12_a_search_run_whole_past_the_budget_says_so_and_stays_exact():
-    limits = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9).limits
+    limits = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9, solver="packed").limits
     (solved,) = [limit for limit in of_kind(limits, "how-solved") if limit.what == "The whole search was run"]
 
     assert "no approximate answer was possible" in solved.why
@@ -371,11 +371,11 @@ def approximate_pair():
     prices = dataclasses.replace(APPROX_PRICES, prices={name: PriceEntry(2.0, "test") for name in names})
     keys = json.dumps(["chaos-orb", "remove-crafted-mods", *(craft.label(COARSE) for craft in CRAFTS)])
     target = parse_target(APPROX_TARGET + f"actions: {keys}\n", COARSE, source="t.yaml")
-    exact = make_plan(COARSE, target, prices)
+    exact = make_plan(COARSE, target, prices, solver="object")
     forecast = exact.abstraction.estimate([exact.start], [priced.offer.action for priced in exact.offers])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
-    return exact, make_plan(COARSE, target, prices, budget=budget, rates=APPROX_RATES)
+    return exact, make_plan(COARSE, target, prices, budget=budget, rates=APPROX_RATES, solver="object")
 
 
 def test_an_exact_plan_claims_the_cheapest_and_an_approximate_one_only_within_its_gap(approximate_pair):

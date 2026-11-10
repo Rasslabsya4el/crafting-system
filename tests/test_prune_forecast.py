@@ -200,7 +200,7 @@ def pooled(real):
 
 
 def planned(pooled, budget):
-    return make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, budget=budget, rates=RATES)
+    return make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, budget=budget, rates=RATES, solver="object")
 
 
 def test_the_world_of_the_budget_tests_has_a_forecast_set_far_smaller_than_the_offers_and_a_coarse_level(pooled):

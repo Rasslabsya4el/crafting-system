@@ -280,7 +280,7 @@ def other_surfaces(tmp_path_factory) -> dict[str, str]:
     forecast = exact.abstraction.estimate([exact.start], [offer.action for offer in OFFERS])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
-    approximate = make_plan(COARSE, target, PRICES, offers=OFFERS, budget=budget, rates=RATES)
+    approximate = make_plan(COARSE, target, PRICES, offers=OFFERS, budget=budget, rates=RATES, solver="object")
     approximate_check = verify(COARSE, approximate, runs=300, seed=7)
 
     with pytest.MonkeyPatch.context() as patch:

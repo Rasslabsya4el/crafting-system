@@ -79,14 +79,14 @@ def offers(data, target, crafts):
 def exact_32(ring):
     data, target, crafts = ring
     touching = [craft for craft in crafts if set(data.mods[craft.mod_id].families) & TOUCHING]
-    plan = make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, touching), budget=60.0, rates=RATES, start_price=START_PRICE)
+    plan = make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, touching), budget=60.0, rates=RATES, start_price=START_PRICE, solver="object")
     return touching, plan
 
 
 @pytest.fixture(scope="module")
 def approximate_141(ring):
     data, target, crafts = ring
-    return crafts, make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, crafts), budget=60.0, rates=RATES, start_price=START_PRICE)
+    return crafts, make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, crafts), budget=60.0, rates=RATES, start_price=START_PRICE, solver="object")
 
 
 def test_32_crafts_stay_exact(exact_32):

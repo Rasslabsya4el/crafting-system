@@ -71,7 +71,7 @@ def budget(exact):
 
 @pytest.fixture(scope="module")
 def approximate(target, budget):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, budget=budget, rates=RATES)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, budget=budget, rates=RATES, solver="object")
 
 
 def priced():
@@ -101,7 +101,7 @@ def test_the_policy_is_a_policy_of_blocks_that_starts_at_the_start_block(approxi
 
 
 def test_the_same_query_inside_the_budget_is_exact_and_unmarked(target, exact):
-    plan = make_plan(DATA, target, PRICES, offers=OFFERS, budget=1e12, rates=RATES)
+    plan = make_plan(DATA, target, PRICES, offers=OFFERS, budget=1e12, rates=RATES, solver="object")
 
     assert plan.approximation is None and plan.risk is not None and notes(plan.limits) == []
     assert plan.mean_remaining == exact.mean_remaining
@@ -386,7 +386,7 @@ def command(tmp_path, monkeypatch, budget):
 
 
 def test_the_command_prints_the_marking_and_writes_it_to_the_json(command, budget, capsys):
-    code, out = command("--budget", str(budget))
+    code, out = command("--solver", "object", "--budget", str(budget))
 
     shown = capsys.readouterr().out
     document = read_json(out)
@@ -404,7 +404,7 @@ def test_exact_forces_the_exact_run_whatever_the_forecast(command, capsys):
 
 
 def test_a_given_route_is_refused_for_an_approximate_answer(command, budget, capsys, tmp_path):
-    code, _ = command("--budget", str(budget), "--route", str(tmp_path / "route.yaml"))
+    code, _ = command("--solver", "object", "--budget", str(budget), "--route", str(tmp_path / "route.yaml"))
 
     assert code == 1
     assert "--route is not available for an approximate answer yet; run again with --exact to get an exact one" in capsys.readouterr().err
@@ -413,7 +413,7 @@ def test_a_given_route_is_refused_for_an_approximate_answer(command, budget, cap
 def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsys):
     from cli_support import price_file, run
 
-    code, out = run(tmp_path, "--budget", "0", prices=price_file())
+    code, out = run(tmp_path, "--solver", "packed", "--budget", "0", prices=price_file())
 
     text = capsys.readouterr().out
     assert code == 0 and "no approximate answer was possible" in text and "was run in full" in text
