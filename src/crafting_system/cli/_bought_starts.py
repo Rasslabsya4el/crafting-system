@@ -109,8 +109,9 @@ def needed_influence_sets(data: GameData, target: Target) -> tuple[tuple[frozens
             if influence not in pools:
                 try:
                     pools[influence] = frozenset(influence_mods(data, target.base_id, MAX_ITEM_LEVEL, influence))
-                except OutOfScopeError as gap:  # a model gap: the item class has no influence key, so its influence mods are not modelled
-                    return (own,), f"no influenced base is listed: {gap}"
+                except OutOfScopeError:  # a model gap: the item class has no influence key, so its influence mods are not modelled
+                    kind = data.base_items[target.base_id].item_class
+                    return (own,), f"the item class {kind} has no influence key in the model, so no requirement is checked for an influence mod"
             if requirement.mod_ids <= pools[influence]:
                 needed.add(influence)
     wider = frozenset(needed)

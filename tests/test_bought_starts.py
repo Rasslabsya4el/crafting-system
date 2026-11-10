@@ -239,3 +239,18 @@ def test_a_thin_row_on_another_level_of_the_group_is_said(data, prices):
     option = next(c for c in bought_base_starts(StartContext(data, r09, file)).candidates if c.bought.group == (69, 71))
     assert option.bought.level == 70 and option.bought.row_chaos == 3.0
     assert any(f"the poe.ninja row {names[69]} rests on 2 observations" in mark for mark in option.bought.input_marks)
+
+
+def test_an_item_class_with_no_influence_key_says_so(data, prices):
+    """A model gap is said, never silent: a jewel's class has no influence key, so no influenced set is listed and the refusal names the class."""
+    from start_support import with_start
+
+    from crafting_system.targets import parse_target
+
+    text = "base: Cobalt Jewel\nitem_level: 84\nstart: bought\nstart_item:\n  rarity: magic\nrequirements:\n  - family: IncreasedLife\n"
+    target = parse_target(with_start(text), data, source="jewel.yaml")
+    sets, why = needed_influence_sets(data, target)
+    assert sets == (frozenset(),)
+    assert why == "the item class Jewel has no influence key in the model, so no requirement is checked for an influence mod"
+    refusals = [r for r in bought_base_starts(StartContext(data, target, prices)).refused if r.reason == NO_INFLUENCED_BASE]
+    assert [(r.recipe, r.detail) for r in refusals] == [("base:influence", why)]
