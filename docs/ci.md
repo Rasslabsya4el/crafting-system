@@ -147,8 +147,8 @@ what the run must show; a helper (`finder`, `checker`) never waits on a run: it 
 
     python .github/scripts/heavy_dispatch.py run --no-wait --ref my-branch --runners 4 --command '...'
 
-Exit 0 prints `dispatched run <id> on <branch> ...`; exit 3 means there is no room now: the command is noted (by a helper, in its report)
-instead of waiting for room. The session waits for the run in the background, so its exit is the notification, and goes on (or resumes the helper):
+Exit 0 prints `dispatched run <id> on <branch> ...`; exit 3 means there is no room now: the main chat runs the command again later
+instead of waiting for room. It waits for the run in the background, so its exit is the notification, and goes on:
 
     python .github/scripts/wait_runs.py <run id> [<run id> ...] [--timeout-minutes 90]
 
@@ -178,7 +178,7 @@ those paths onto the branch the run ran on.
   different bytes make the job refuse and commit nothing.
 - **Committing.** One commit `Re-record <paths> (heavy run <id>)` on top of the commit the run tested (`github.sha`). The job pushes only when the
   branch still points at that commit (a lease on that sha); if the branch moved, the job fails, says so in its error and summary, and pushes nothing.
-  The session that dispatched it then pulls, and dispatches again.
+  The main chat then pulls, and dispatches again.
 - **No change.** If nothing under the paths changed, there is no commit; the run succeeds and its job summary says so.
 - **No CI run follows the push.** A push made with the workflow token starts no PR CI run (GitHub's rule against loops). The PR's CI starts
   at the next push by hand; an integration run is dispatched by hand as before (`gh workflow run ci.yml --ref integ/...`).
