@@ -33,8 +33,7 @@ import dataclasses
 from collections.abc import Iterable
 from datetime import date
 
-from crafting_system.actions import OutOfScopeError
-from crafting_system.actions.awakener import influence_mods
+from crafting_system.actions import OutOfScopeError, influence_mods
 from crafting_system.data import GameData
 from crafting_system.items import Influence, ItemError, Rarity
 from crafting_system.items.model import MAX_ITEM_LEVEL
@@ -95,7 +94,7 @@ def needed_influence_sets(data: GameData, target: Target) -> tuple[tuple[frozens
     """The influence sets a bought base may have (the start item's own, then the set a requirement needs that the start lacks), and why a set was left out.
 
     A top-level requirement (not a member of an `at_least` group) needs an influence when every mod it counts is an influence mod of
-    it on this base (`actions.awakener.influence_mods`). An item class with no influence key in the model has only its own set. A set
+    it on this base (`actions.influence_mods`). An item class with no influence key in the model has only its own set. A set
     of more than two influences is no item: it is left out. The second value says why a set was not listed (a model gap, too many
     influences), None when nothing was left out.
     """
