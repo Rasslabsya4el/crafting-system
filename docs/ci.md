@@ -170,7 +170,7 @@ those paths onto the branch the run ran on.
   different bytes make the job refuse and commit nothing.
 - **Committing.** One commit `Re-record <paths> (heavy run <id>)` on top of the commit the run tested (`github.sha`). The job pushes only when the
   branch still points at that commit (a lease on that sha); if the branch moved, the job fails, says so in its error and summary, and pushes nothing.
-  The helper then pulls, and dispatches again.
+  The session that dispatched it then pulls, and dispatches again.
 - **No change.** If nothing under the paths changed, there is no commit; the run succeeds and its job summary says so.
 - **No CI run follows the push.** A push made with the workflow token starts no PR CI run (GitHub's rule against loops). The PR's CI starts
   at the next push by hand; an integration run is dispatched by hand as before (`gh workflow run ci.yml --ref integ/...`).
