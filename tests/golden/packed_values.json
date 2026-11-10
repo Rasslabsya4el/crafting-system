@@ -4,14 +4,14 @@
  "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-10-31.json, S02 at 1 chaos per currency and 10 chaos for the start item; agrees with the #312 research snapshot (R04 69,257.54, R14 5,784.49, S02 33,878.67)",
  "routes": {
   "R04": {
-   "mean_remaining": 69257.53649796372,
+   "mean_remaining": 189226.56738171066,
    "states": 177242,
-   "error_bound": 4.792952823517993e-08
+   "error_bound": 9.36973177934064e-08
   },
   "R14": {
-   "mean_remaining": 5784.452045684935,
+   "mean_remaining": 9381.09647401641,
    "states": 816153,
-   "error_bound": 2.258121432063831e-07
+   "error_bound": 4.646931232032969e-07
   },
   "S02": {
    "mean_remaining": 33878.67277501651,
