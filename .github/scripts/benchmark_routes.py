@@ -8,8 +8,8 @@ the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-11-10.json`,
 price file from the project root, to put two snapshots side by side, #616) and a route that starts from a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`.
 
-At that default snapshot R08 and R09 do not finish: the pruned search (`solve_pruned`) does not end inside a runner's 25 minutes at the prices of
-the snapshot of 2026-11-10 (the Prismatic Fossil at 20.15 Chaos, not 0.2), where it took 53 seconds at the old ones (#702). Run them with the older snapshot
+At that default snapshot R08 and R09 are not expected to finish: the pruned search (`solve_pruned`) does not end inside a runner's 25 minutes at the prices of
+the newer snapshots (measured at 2026-11-07, the Prismatic Fossil at 5.87 Chaos, not 0.2; it is 20.15 in the default of 2026-11-10, not measured there), where it took 53 seconds at the old ones (#702). Run them with the older snapshot
 (the third argument, `tests/fixtures/prices/routes-allflame-2026-10-31.json`) until #702 is fixed; their verdicts are then measured at the old prices (#703).
 """
 

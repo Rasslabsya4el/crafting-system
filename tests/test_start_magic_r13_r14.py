@@ -81,3 +81,12 @@ def test_the_start_price_of_r13_is_a_trade_price_and_r14s_a_marked_stand_in(data
     assert belt["source"] == "trade-api" and belt["detail"]["query"]["query"]["filters"]["type_filters"]["filters"]["rarity"] == {"option": "magic"}
     bow = committed[CASES["r14-hunter-bow"][1]]  # the exact item has 0 listings (#601): the wider item's price, said so in its note
     assert bow["source"] == "trade-api" and "STAND-IN" in bow["note"] and "#601" in bow["note"]
+
+
+def test_in_the_snapshot_with_provenance_r14s_bow_is_a_stand_in_by_its_provenance():
+    """From the snapshot of 2026-11-10 on, the stand-in is data (#616): the price was taken for a wider item, and the exact item's listings are beside it."""
+    bow = json.loads((PRICES / "routes-allflame-2026-11-10.json").read_text(encoding="utf-8"))["prices"][CASES["r14-hunter-bow"][1]]
+
+    assert bow["source"] == "trade-api"
+    assert (bow["provenance"]["item"], bow["provenance"]["exact_listings"]) == ("wider", 0)
+    assert bow["provenance"]["for_item"]
