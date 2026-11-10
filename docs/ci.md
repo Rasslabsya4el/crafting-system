@@ -58,6 +58,9 @@ need a local copy of Craft of Exile, which is third-party data that stays out of
    landing condition.
 3. Merge with `gh pr merge N --match-head-commit <sha of the tested head>`, so a push after the check cannot slip in.
 
+A text-only PR, one whose every changed file is a `.md` file, skips steps 1 and 2: no test reads those files (owner, 2026-11-10).
+Check it with `git diff --name-only origin/main...<branch>`; a single file of another kind, a docstring in a script included, means the full run.
+
 ## Running the suite on your own machine
 
 The serial command is unchanged:
