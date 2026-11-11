@@ -31,7 +31,7 @@ from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.targets import load_target, parse_target
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"  # `ROUTE_PRICES` (a path) names another snapshot for one run
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"  # `ROUTE_PRICES` (a path from the project root) names another snapshot for one run
 TARGETS = {
     "r04": "r04-penetrating-quiver",
     "r05": "r05-strength-ring",
@@ -94,7 +94,7 @@ def inputs(route: str):
         text = re.sub(r"\b(?:%s)\b,? ?" % "|".join(STRAND_KINDS), "", text)
         prices = PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, FlatPrices())
         return data, parse_target(text, data, source="s02"), prices, 10.0
-    return data, load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data), load_price_file(os.environ.get("ROUTE_PRICES") or PRICES), None
+    return data, load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data), load_price_file(ROOT / os.environ["ROUTE_PRICES"] if os.environ.get("ROUTE_PRICES") else PRICES), None
 
 
 def risk_row(plan) -> dict | None:
