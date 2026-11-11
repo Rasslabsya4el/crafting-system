@@ -130,14 +130,8 @@ class WorkerPool:
     def abandon(self) -> None:
         """Kill the workers and drop the pool without waiting on them (a worker that does not return must not hold the caller, #535)."""
         executor, self._executor = self._executor, None
-        if executor is None:
-            return
-        processes = list((executor._processes or {}).values())  # the executor keeps no public handle on its workers
-        for process in processes:
-            process.kill()
-        executor.shutdown(wait=False, cancel_futures=True)
-        for process in processes:
-            process.join(5.0)
+        if executor is not None:
+            executor.kill_workers()  # kills the live workers and shuts the executor down without waiting (Python 3.14)
 
     def _start(self) -> ProcessPoolExecutor:
         if self._executor is None:
@@ -160,7 +154,8 @@ class WorkerPool:
         at a time; the default cuts about eight chunks per worker. It changes the speed, never the result.
 
         `timeout` (seconds) bounds the wait on the workers: when a chunk has not come back by then the workers are killed
-        (`abandon`) and `TimeoutError` is raised. A worker that dies raises `BrokenProcessPool` either way. Without
+        (`abandon`) and `TimeoutError` is raised; the chunks that did come back are dropped with the rest. A worker that dies
+        raises `BrokenProcessPool` either way. Without
         workers (`workers` below 2) the pieces run here and `timeout` is not applied.
         """
         items = list(pieces)

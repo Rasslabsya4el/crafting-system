@@ -18,6 +18,7 @@ import pytest
 
 from crafting_system import parallel
 from crafting_system.risk import _budget, _evaluate, _regen
+from crafting_system.risk._regen import ABANDON_MARGIN as ABANDON
 from crafting_system.risk._budget import PLAIN_LIMIT, run_budget
 from crafting_system.risk._chain import Chain
 from crafting_system.solver import Action
@@ -84,38 +85,72 @@ def test_the_attempt_runs_stopped_by_the_time_net_say_so_and_leave_no_finer_step
     stopped = narrow(regenerative=True)
 
     assert len(tried) == 1  # the time net stopped the first step and no finer one was tried
-    (said,) = [line for line in stopped.grid.gave_up if line.startswith("the attempt runs on a step of ")]
-    assert "were stopped at the time limit of 0 s" in said and said.endswith("this step's percentiles are not used (a coarser one's brackets stand)")
+    (said,) = [line for line in stopped.grid.gave_up if "time limit" in line]
+    assert said == _regen.time_net_words(0.0, coarser=False)  # no coarser step was kept: it says the slower method follows
     assert math.isinf(stopped.p90.high)  # no coarser step was kept: the ordinary grid ran instead and could not reach it
 
 
-class SlowClock:
-    """A stand-in for `_evaluate`'s clock on which every step seems to take 250 s (a slow runner), below the 600 s net."""
-
-    def __init__(self):
-        self.now = 0.0
-
-    def perf_counter(self):
-        self.now += 250.0
-        return self.now
-
-
-def test_a_slow_machine_runs_the_same_steps_as_a_fast_one(monkeypatch):
+def test_the_ladder_reads_no_clock_and_runs_every_step_until_one_is_narrow_enough(monkeypatch):
     from test_risk_regen import narrow
 
     monkeypatch.setattr(_evaluate, "REGEN_WIDTH", 0.0)  # no step is ever narrow enough: the whole ladder runs
     tried = []
     original = _regen.regenerative_runs
     monkeypatch.setattr(_regen, "regenerative_runs", lambda *a, **k: tried.append(k["step"]) or original(*a, **k))
-    fast = narrow(regenerative=True)
-    every = list(tried)
-    tried.clear()
-    monkeypatch.setattr(_evaluate, "time", SlowClock())
 
-    slow = narrow(regenerative=True)
+    narrow(regenerative=True)
 
-    assert tried == every and len(every) == 1 + len(_evaluate.REGEN_PARTS)  # #535: not cut after 250 s for a guess that the next takes 750
-    assert slow == fast
+    assert len(tried) == 1 + len(_evaluate.REGEN_PARTS)  # #535: no step is skipped for a guess of how long the next would take
+    assert not hasattr(_evaluate, "time")  # the steps that run cannot depend on the machine's speed
+
+
+def test_each_attempt_run_gets_the_whole_time_net_from_its_own_start(monkeypatch):
+    """Run one after another (no workers), four runs must not share one deadline: the later ones would start past it."""
+    from test_risk_regen import narrow
+
+    monkeypatch.setenv("CRAFTING_WORKERS", "1")
+    given = []
+    original = _regen.attempt_pmf
+    monkeypatch.setattr(_regen, "attempt_pmf", lambda *a, **k: given.append(dict(k)) or original(*a, **k))
+
+    serial = narrow(regenerative=True)
+
+    assert given and all(k["seconds"] == _evaluate.REGEN_SECONDS and "deadline" not in k for k in given)
+    assert not [line for line in serial.grid.gave_up if "time limit" in line]
+
+
+class RecordingPool:
+    """A stand-in for `parallel.WorkerPool` that runs the jobs here and keeps the timeout it was given."""
+
+    timeouts: list = []
+
+    def __init__(self, factory, args, *, workers):
+        self.context, self.workers = factory(*args), workers
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return None
+
+    def map(self, function, pieces, *, chunk=None, timeout=None):
+        RecordingPool.timeouts.append((self.workers, timeout))
+        saved, parallel._context = parallel._context, self.context
+        try:
+            return [function(piece) for piece in pieces]
+        finally:
+            parallel._context = saved
+
+
+def test_the_pool_waits_one_net_per_run_a_worker_has_to_do_in_turn(monkeypatch):
+    monkeypatch.setenv("CRAFTING_WORKERS", "2")
+    monkeypatch.setattr(parallel, "can_inherit", lambda: True)
+    monkeypatch.setattr(parallel, "WorkerPool", RecordingPool)
+    RecordingPool.timeouts.clear()
+
+    assert _regen.run_jobs([(abs, (-k,), {}) for k in range(4)], seconds=100.0) == [0, 1, 2, 3]
+
+    assert RecordingPool.timeouts == [(2, 2 * 100.0 + _regen.ABANDON_MARGIN)]  # two workers, four runs: two nets each, then the margin
 
 
 PARENT = os.getpid()
@@ -143,7 +178,7 @@ def never_ends(*args, **options):
 def test_workers_that_never_come_back_are_killed_and_the_step_is_refused_and_said(monkeypatch):
     monkeypatch.setenv("CRAFTING_WORKERS", "2")
     with pytest.raises(_regen.TimedOut):
-        _regen.run_jobs([(never_ends, (), {}), (never_ends, (), {})], deadline=-math.inf)  # its limit long past: the wait ends at once
+        _regen.run_jobs([(never_ends, (), {}), (never_ends, (), {})], seconds=-ABANDON)  # no time at all: the wait ends at once
 
     from test_risk_regen import narrow
 
@@ -153,6 +188,6 @@ def test_workers_that_never_come_back_are_killed_and_the_step_is_refused_and_sai
 
     stopped = narrow(regenerative=True)
 
-    (said,) = [line for line in stopped.grid.gave_up if line.startswith("the attempt runs on a step of ")]
-    assert "a worker did not come back 0 s after it and was stopped" in said
+    (said,) = [line for line in stopped.grid.gave_up if "time limit" in line]
+    assert said == _regen.time_net_words(0.0, coarser=False) and said.endswith("so it worked out none of them; the slower method follows")
     assert math.isinf(stopped.p90.high)  # the step was refused, no finer one tried; the ordinary grid could not reach the level
