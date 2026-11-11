@@ -19,7 +19,9 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
+# the roll mechanics, not the prices, are under test: at the 2026-11-10 snapshot the two plans take twice as long and the Windows CI slot
+# times out (#743), so the test stays on the 2026-10-31 file like R08 and R09
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 TARGET_70 = ROOT / "examples" / "targets" / "r10-fractured-boots-70-life.yaml"
 RUNS = 3_000
 
