@@ -156,6 +156,21 @@ def test_a_start_item_that_already_meets_the_target_costs_nothing_under_the_defa
     assert plan.risk is not None and plan.risk.success_probability.value == pytest.approx(1.0) and plan.risk.mean.value == pytest.approx(0.0)
 
 
+def test_with_40_offers_or_more_auto_keeps_the_bound_pruning_until_742(monkeypatch, packed):
+    """#535: on fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound pruning (#696, #742) and refuses R09 (#731), so `auto`
+    keeps the existing switch to the bound pruning at `MIN_OFFERS_TO_PRUNE`; `envelope` by name still searches. Both are exact."""
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)  # R12 has 6 offers: they count as many
+    real = _plan.envelope_result
+    monkeypatch.setattr(_plan, "envelope_result", lambda *_a, **_k: pytest.fail("auto searched with 40 offers or more"))
+
+    plan = make_plan(DATA, load_target(R12, DATA), price_file())
+
+    assert plan.pruned is not None and plan.packed is None
+    assert plan.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
+    monkeypatch.setattr(_plan, "envelope_result", real)
+    assert make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", with_risk=False).packed.info["envelope"].exact
+
+
 def test_the_command_has_the_planners_solver_choices_and_auto_by_default(monkeypatch, tmp_path):
     seen = []
     real = make_plan

@@ -366,7 +366,8 @@ def make_plan(
     the budget decision when there is a `budget`, `solve_pruned` for 40 offers or more, otherwise the graph is walked on packed arrays and
     solved there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02) and by the object solver below that.
     There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
-    `solver="packed"`. With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
+    `solver="packed"`. With 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the fossil sets) "auto" keeps the bound pruning for now: on those worlds
+    the envelope search is 1.2 to 40 times slower (#696, #742) and refuses R09 (#731); #742 carries removing the exception. With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
     older path too, decided before solving: judging a route needs the planner's action at every state the route reaches, and the envelope
     search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with 40 offers or more it solves the offers left after the twins are
     merged, without the bound pruning (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
@@ -461,8 +462,12 @@ def make_plan(
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
     refusal = pattern_refusal(abstraction)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
-    # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant
-    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route)
+    # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
+    # Nor, for now, with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the bound pruning that already existed, not a new cut-off): on
+    # fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound pruning (#696, #742) and refuses R09 (#731); both paths are
+    # exact (OR-11, OR-12), and #742 carries removing this exception.
+    many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
+    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not many_offers)
     if budget is not None and not envelope:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
