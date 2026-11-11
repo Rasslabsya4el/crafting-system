@@ -51,6 +51,7 @@ from ._plan import STRANDS_OFF, Plan, PlanError, StartPrice, StrandSetting, make
 from ._report import Report, build_report, policy_document, render_text
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
+from ._bought_starts import bought_base_starts
 from ._start_options import StartContext, StartList, StartSource, vendor_recipe_starts
 from ._start_step import FirstStep, first_step
 from ._start_types import ConsideredStart, ReadingChoice, RefusedStart, StartCandidate, StartChoice
@@ -88,6 +89,7 @@ __all__ = [
     "Verification",
     "WeightShare",
     "When",
+    "bought_base_starts",
     "build_report",
     "default_offers",
     "evaluate_route",
