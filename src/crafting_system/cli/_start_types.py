@@ -2,7 +2,8 @@
 
 A **start candidate** is one priced item a plan can start from, with the **source** it comes from. Today there are two
 sources: the target's own start item (`plain`) and the Magic item a vendor recipe makes from a Normal base and cheap goods
-(`vendor recipe`). The list is deliberately a list of priced candidates with a source and not a recipe-only code path:
+(`vendor recipe`); a third, the target's base bought at an item level of each equal-pool group (`bought base`, #351), is listed
+but not yet planned (#359). The list is deliberately a list of priced candidates with a source and not a recipe-only code path:
 research #337 asks whether the planner should choose what to buy at any state (the start item, the donors, mid-route), and
 a bought item is one more source whose candidates are priced by a trade query. Such a source needs a function that returns a
 `StartList` (`_start_options.StartSource`) and one entry in the list of sources; the choice (`_starts.plan_with_starts`)
@@ -18,6 +19,7 @@ from crafting_system.prices.price_source import SourcedPrice
 
 SOURCE_PLAIN = "plain"
 SOURCE_VENDOR_RECIPE = "vendor recipe"
+SOURCE_BOUGHT_BASE = "bought base"
 
 # why a recipe start is refused (`RefusedStart.reason`)
 NO_TARGET_MOD = "no target mod"
@@ -28,9 +30,47 @@ MOD_CANNOT_SPAWN = "mod cannot spawn on the base"
 NO_PRICE = "no price"
 DOMINATED = "dominated"
 INVALID_ITEM = "the game data refuses the item"
+NO_INFLUENCED_BASE = "no influenced base is listed"  # a bought-base start (#351): the influence set a requirement needs is not listed, and why
+NOT_A_PLAIN_BASE = "the start item is not a plain base"  # a bought-base start (#351): the start item carries what a base row does not price
 
 Reading = tuple[tuple[str, str], ...]  # one (rule axis, value) per axis, sorted by axis; () when a run reads no axis
 Goods = tuple[tuple[str, int, float, str], ...]  # (price name, count, Chaos for all of them, where the price came from)
+
+
+@dataclass(frozen=True)
+class NinjaRow:
+    """The poe.ninja row of a bought base (ADR-0061): its name, its price and the observations it rests on (None when not recorded)."""
+
+    name: str
+    chaos: float
+    observations: float | None
+
+
+@dataclass(frozen=True)
+class BoughtBase:
+    """What a bought-base start option is (ticket #351, ADR-0061 decision 1): the cheapest priced row of one equal-pool group of levels.
+
+    `group` is the item levels (lowest, highest) with one pool, so one plan; `level` is the row chosen, the cheapest of the group's
+    priced levels (`priced`, every (level, Chaos) of the group with a price, lowest level first). `influences` are the row's influences in
+    game order. `row_name` and `row_chaos` are the base's price name and price under the profile's price source. `ninja` is the base's
+    poe.ninja row when present with at least 5 observations (or no recorded count); `trade_chaos` the trade price when the file has one.
+    `input_marks` are the reasons the price is an approximate input (`prices.price_marks`, one unit bought); the OR-8 thin or old mark of a
+    trade price is on the candidate (`StartCandidate.price_mark`) and in `StartCandidate.sourced`. `input_marks` also holds what was read and
+    not used (a poe.ninja row on fewer than 5 observations, a shared name's refused line) and the marks of the rarity orb. `rarity_orb` is the
+    orb that makes the Normal base a Rare start (Orb of Alchemy), priced in the candidate's `goods` when it has a price; a Magic start has
+    none and is marked as priced from the Normal row.
+    """
+
+    level: int
+    group: tuple[int, int]
+    influences: tuple[str, ...]
+    row_name: str
+    row_chaos: float
+    ninja: NinjaRow | None = None
+    trade_chaos: float | None = None
+    input_marks: tuple[str, ...] = ()
+    rarity_orb: str | None = None
+    priced: tuple[tuple[int, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -62,6 +102,8 @@ class StartCandidate:
     sourced: SourcedPrice | None = None
     given: bool = False  # the target gives this start item (OR-6): its cost is not counted, the price is 0 by definition
     price_mark: str | None = None  # the plain start item priced from a thin market (OR-8): the mark that goes with its price
+    bought: BoughtBase | None = None  # a bought-base start option (#351): the row, its group of levels and the marks of its price
+    warnings: tuple[str, ...] = ()  # words a later check adds without cutting the option (the realism rails of #353, OR-12)
 
     def exists_in(self, reading: Reading) -> bool:
         """Whether this candidate can be had at `reading` of the rule axes (one without an axis exists at every reading)."""
