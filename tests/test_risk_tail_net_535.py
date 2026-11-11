@@ -10,7 +10,6 @@ step stop at a time limit and say so.
 
 import math
 import os
-import time
 
 import numpy as np
 import pytest
@@ -65,7 +64,7 @@ def test_a_long_run_stops_at_its_tail_though_one_minus_the_float_sums_stays_abov
 def test_a_passed_deadline_stops_the_run_with_its_mass_in_flight_unresolved(base):
     chain, bins = ring(20, 3e-3, 1, 3, base)
 
-    run = run_budget(chain, bins, target=None, tail_mass=TAIL, max_bins=CAP, deadline=time.monotonic() - 1.0)
+    run = run_budget(chain, bins, target=None, tail_mass=TAIL, max_bins=CAP, deadline=-math.inf)  # a deadline long past
 
     assert len(run.cdf) < 1000
     assert run.unresolved == pytest.approx(1.0 - run.cdf[-1], abs=1e-12) and run.unresolved > 0.5
@@ -86,6 +85,35 @@ def test_the_attempt_runs_stopped_by_the_time_net_say_so_and_leave_no_finer_step
     (said,) = [line for line in stopped.grid.gave_up if line.startswith("the attempt runs on a step of ")]
     assert "were stopped at the time limit of 0 s" in said and said.endswith("this step's percentiles are not used (a coarser one's brackets stand)")
     assert math.isinf(stopped.p90.high)  # no coarser step was kept: the ordinary grid ran instead and could not reach it
+
+
+class SlowClock:
+    """A stand-in for `_evaluate`'s clock on which every step seems to take 250 s (a slow runner), below the 600 s net."""
+
+    def __init__(self):
+        self.now = 0.0
+
+    def perf_counter(self):
+        self.now += 250.0
+        return self.now
+
+
+def test_a_slow_machine_runs_the_same_steps_as_a_fast_one(monkeypatch):
+    from test_risk_regen import narrow
+
+    monkeypatch.setattr(_evaluate, "REGEN_WIDTH", 0.0)  # no step is ever narrow enough: the whole ladder runs
+    tried = []
+    original = _regen.regenerative_runs
+    monkeypatch.setattr(_regen, "regenerative_runs", lambda *a, **k: tried.append(k["step"]) or original(*a, **k))
+    fast = narrow(regenerative=True)
+    every = list(tried)
+    tried.clear()
+    monkeypatch.setattr(_evaluate, "time", SlowClock())
+
+    slow = narrow(regenerative=True)
+
+    assert tried == every and len(every) == 1 + len(_evaluate.REGEN_PARTS)  # #535: not cut after 250 s for a guess that the next takes 750
+    assert slow == fast
 
 
 PARENT = os.getpid()
