@@ -28,7 +28,7 @@ from crafting_system.data import GameData
 from . import _packed
 from ._benchmark_use import per_use_of
 from ._plan import Plan
-from ._report import describe_state, money, number_states, percent
+from ._report import describe_state, money, name_states, number_states, percent
 from ._route import Divergence, RouteResult
 from ._route_chain import chain_of_plan
 from ._route_flow import ACCEPT_RESIDUAL, STIFF_ERROR, Chain, Reach, chain_of_policy, digits_text, reach_of
@@ -67,7 +67,7 @@ def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
     say(f"divergences: the visit chances under the planner ({time.perf_counter() - began:.1f} s)")
     route_reach = _chances(route, [d.state for d in found])
     say(f"divergences: the visit chances under the route ({time.perf_counter() - began:.1f} s)")
-    ids = number_states(plan)
+    ids = name_states(number_states(plan), [d.state for d in found])
     rows = [
         _row(plan, data, ids, divergence, planner_reach[number], route_reach[number])
         for number, divergence in enumerate(found)

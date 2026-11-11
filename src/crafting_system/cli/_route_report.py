@@ -1,7 +1,8 @@
 """A given route next to the solver's policy: the text section and the `given_route` object of the JSON policy.
 
 The route's numbers carry the start price like the policy's do. In the JSON a state is named by the id the report
-gives it (`S1`, ...); a gap on a state the policy never reaches has no such id and is named `R1`, `R2`, ... The text names the step of the report's
+gives it (`S1`, ...); a gap or the divergence on a state the report does not show on its own (one the policy never reaches, or under a
+lumped view one whose block another state shows) has no such id and is named `R1`, `R2`, ... (`_report.name_states`). The text names the step of the report's
 tree that the state is in ("step 3 (Regal Orb)"), since the tree has a block for each step and not for each state (ticket #488).
 """
 
@@ -11,25 +12,25 @@ from crafting_system.targets import plain_base_names
 
 from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
 from ._price_marks import price_uses
-from ._report import ROW_WIDTH, UNRESOLVED, Report, _estimate, _row, _shifted, describe_state, interval, percent, unresolved
+from ._report import ROW_WIDTH, UNRESOLVED, Report, _estimate, _row, _shifted, describe_state, interval, name_states, percent, unresolved
 from ._route import Route, RouteResult
 
 
 def route_state_ids(report: Report, result: RouteResult) -> dict[CompressedState, str]:
-    """The report's state ids, plus `R1`, `R2`, ... for the gaps of the route the policy never reaches."""
-    ids = dict(report.ids)
-    extra = 0
-    for gap in result.gaps:
-        if gap.state not in ids:
-            extra += 1
-            ids[gap.state] = f"R{extra}"
-    return ids
+    """The report's state ids, plus `R1`, `R2`, ... for the gaps, then the first divergence, that the report does not show on their own."""
+    named = [gap.state for gap in result.gaps]
+    if result.divergence is not None:
+        named.append(result.divergence.state)
+    return name_states(report.ids, named)
 
 
 def _place(report: Report, state: CompressedState) -> str:
-    """Where a state is in the text tree: the step it belongs to, or that the policy never reaches it."""
+    """Where a state is in the text tree: the step it belongs to, that the lumped view shows it by another state of its block, or that the
+    policy never reaches it."""
     number = report.step_of.get(state)
     if number is None:
+        if report.plan.lumped and state in report.plan.policy:
+            return "a state of the policy that the report shows by another state of its block"
         return "a state the policy never reaches"
     title = next(step.title for step in report.steps if step.number == number)
     return f"step {number} ({title})"

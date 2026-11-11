@@ -3,10 +3,13 @@
 R13 is the alt-regal belt of the reference routes: a Magic Leather Belt of item level 86 (a trade price, #576: the guide opens
 with "Alt spam for T1 Life and a resist" and names no Transmutation Orb), Orbs of Alteration until it holds tier-1 life and a tier-1 resistance, a Regal
 Orb for the second tier-1 resistance (the guide buys the belt again when the Regal gives anything else), and the
-bench finish for the damage modifier. The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`, the
+bench finish for the damage modifier. The prices are `tests/fixtures/prices/routes-allflame-2026-11-10.json`, the
 same file as the other real routes, so the checks do not move with the market. These tests need the cached dump
 (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it; CI fetches it, ticket #165) and skip
 cleanly without it.
+
+At the first snapshot of PR #662 (2026-11-07, on a base before #626's net and bound work) the percentiles of R13 were not resolved and the plan and the command took 15 minutes in all
+(#704); at the snapshot of 2026-11-08 on the base with #626 the plan took seconds and the percentiles were certified (run 42450836295), so the file moved to the snapshot of 2026-11-10 with the other real routes.
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees, and at the same
 prices the solver's mean is no more than the guide's given route's. The odds and the mean are exact; p90 is not resolved
@@ -34,12 +37,12 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
 TARGET = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml"
 RUNS = 8  # a simulated craft is about 50,000 orb uses and takes 10 s or more here, so --verify gets eight runs
 BELT = "Leather Belt, magic, item level 86-100"
-BELT_PRICE = 15.234  # the trade API, Allflame, 2026-11-07: the mean of the 5 cheapest instant-buyout listings of a magic Leather Belt of item level 86 or more, 28 on the site
+BELT_PRICE = load_price_file(PRICES).prices[BELT].chaos  # the trade API: the mean of the 5 cheapest instant-buyout listings of a magic Leather Belt of item level 86 or more (read from the file, never typed)
 ORBS_OF_THE_GUIDE = {"Orb of Alteration", "Regal Orb"}
 
 
@@ -110,7 +113,7 @@ def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_certified_quan
     assert not unresolved(risk, risk.p50) and not unresolved(risk, risk.p90)
     assert risk.grid.step > 0.0058 and not risk.grid.exact
     assert risk.p50.low <= risk.p50.value <= risk.p50.high < risk.p90.low
-    assert 10_000 < risk.p90.low <= risk.p90.high < 20_000
+    assert risk.mean.value < risk.p90.low <= risk.p90.high < 4 * risk.mean.value
     assert risk.p90.high - risk.p90.low < 0.05 * risk.p90.value
     assert math.isfinite(risk.cvar.value) and risk.cvar.value > risk.p90.low  # the mean of the worst tenth is above p90
     assert risk.cvar.high - risk.cvar.low < 0.5 * risk.cvar.value  # the lower end is a tail mean, not just the quantile
@@ -152,7 +155,7 @@ def command(tmp_path_factory, data):
             data=data,
             prices=load_price_file(PRICES),
             env={},
-            today=datetime.date(2026, 11, 1),
+            today=datetime.date(2026, 11, 10),
         )
     return code, read_json(out), printed.getvalue()
 
@@ -164,7 +167,7 @@ def test_the_command_returns_the_policy_and_verify_agrees(command):
     totals = document["totals"]
     assert totals["success_probability"]["value"] == pytest.approx(1.0)
     assert totals["mean_cost"]["value"] > BELT_PRICE
-    assert totals["quantiles_resolved"] is True and 10_000 < totals["p90"]["value"] < 20_000
+    assert totals["quantiles_resolved"] is True and totals["mean_cost"]["value"] < totals["p90"]["value"] < 4 * totals["mean_cost"]["value"]
     simulated = document["verification"]["simulated_p90"]
     assert simulated["value"] > document["verification"]["simulated_mean_cost"]["value"]  # simulated, not certified
     assert document["verification"]["agrees"] is True
