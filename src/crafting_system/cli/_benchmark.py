@@ -387,7 +387,8 @@ def run_route(
         entry["missing_price"] = missing
         if missing is not None:
             raise ValueError(_missing_message(missing))
-        plan = make_plan(data, target, loaded) if bench.start is None else plan_with_starts(data, target, loaded)
+        judged = bench.route is not None  # the guide's route is judged against the plan: `auto` walks (#535, #732)
+        plan = make_plan(data, target, loaded, judges_route=judged) if bench.start is None else plan_with_starts(data, target, loaded, judges_route=judged)
         entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos
         risk = plan.risk

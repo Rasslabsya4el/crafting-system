@@ -257,7 +257,7 @@ start: given
 """
     # a given bare rare (the item the player holds, as written, OR-6): a bought one would open with the draw of its mods (ADR-0064) and this chain starts at the bare rare
     target = parse_target(text, DATA, source="tiny.yaml")
-    plan = make_plan(DATA, target, price_file(start=None))
+    plan = make_plan(DATA, target, price_file(start=None), judges_route=True)
     route = parse_route(f"rules:\n  - do: {CHAOS}\n", plan, DATA)
     return plan, evaluate_route(plan, route, DATA)
 
@@ -337,7 +337,7 @@ def test_the_lines_say_what_the_item_is_what_each_does_and_both_chances(tiny):
 
 def test_a_route_that_does_what_the_planner_does_has_no_divergence_lines():
     target = parse_target(f'base: Paua Amulet\nitem_level: 84\nrequirements:\n  - stat: "{GEM_TEXT}"\nstart_item:\n  rarity: rare\nstart: given\n', DATA, source="given.yaml")
-    plan = make_plan(DATA, target, price_file(start=None))
+    plan = make_plan(DATA, target, price_file(start=None), judges_route=True)
     route = parse_route(f"rules:\n  - do: {next(iter(plan.policy.values())).label}\n", plan, DATA)
 
     block = divergences_of(plan, evaluate_route(plan, route, DATA), DATA)

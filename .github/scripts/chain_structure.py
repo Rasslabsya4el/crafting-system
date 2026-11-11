@@ -79,7 +79,7 @@ def main() -> None:
 
     _packed.PROGRESS = say
     data, target, prices, start_price = inputs(arguments.route)
-    plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver="auto")
+    plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver="packed")  # the chain of the walk: with "auto" (the envelope search since #535) it would be the chain of the states the search touched
     say(f"planned: {len(plan.policy):,} policy states")
     chain = chain_of_plan(plan)
     m = chain.m

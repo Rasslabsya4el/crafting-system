@@ -66,7 +66,7 @@ def plans(data):
 @pytest.fixture(scope="module")
 def plan(data, route, plans):
     if route not in plans:
-        plans[route] = make_plan(data, load_target(paths(route)[0], data), load_price_file(PRICES), budget=BUDGET, rates=RATES)
+        plans[route] = make_plan(data, load_target(paths(route)[0], data), load_price_file(PRICES), budget=BUDGET, rates=RATES, judges_route=True)  # the guide's route is judged against it (#535: `auto` walks)
     return plans[route]
 
 

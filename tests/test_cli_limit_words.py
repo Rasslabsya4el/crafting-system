@@ -35,6 +35,7 @@ from crafting_system.cli._limits import (
 )
 from crafting_system.cli._report import NOT_COMPUTED, UNRESOLVED
 from crafting_system.risk import Estimate
+from crafting_system.risk._regen import time_net_words
 from crafting_system.risk._report import GridInfo
 from crafting_system.targets import load_target
 
@@ -137,6 +138,13 @@ def test_the_limits_written_from_what_a_run_finds_are_in_player_words():
         grid=GridInfo(0.5, True, 100, 0.0, 0.0, gave_up=("a loop of states that cost almost nothing is longer than the 1 states",)),
     )  # fmt: skip
     cut = [*risk_limits(unreached)]
+    for coarser in (True, False):  # the time net of the quicker method (#535): with a coarser pass kept, and with none
+        stopped = SimpleNamespace(
+            success_probability=estimate(1.0), mean=estimate(5.0), variance=estimate(1.0),
+            p50=estimate(10.0), p90=estimate(20.0 if coarser else float("inf")), cvar=estimate(30.0 if coarser else float("inf")),
+            grid=GridInfo(0.5, False, 100, 0.0, 0.0, gave_up=(time_net_words(1800.0, coarser),)),
+        )  # fmt: skip
+        cut += risk_limits(stopped)
     for cause in ("subcritical", "improper", "unordered"):
         broken = SimpleNamespace(
             success_probability=estimate(0.5), mean=estimate(float("inf")), variance=estimate(float("inf")),

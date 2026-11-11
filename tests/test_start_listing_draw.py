@@ -280,7 +280,7 @@ def test_a_rare_start_is_drawn_like_an_alchemy_orb_and_the_plan_goes_on_from_eac
 def test_a_given_route_takes_the_draw_first_and_needs_no_rule_for_it():
     data = MAGIC
     aim = target(data)
-    plan = make_plan(data, aim, prices(start_price_key(data, aim)))
+    plan = make_plan(data, aim, prices(start_price_key(data, aim)), judges_route=True)
     route = parse_route(
         "rules:\n  - when: {rarity: magic}\n    do: Orb of Alteration\n", plan, data
     )  # the guide: roll Alterations until the goal; it says nothing of buying
@@ -315,9 +315,9 @@ def test_the_bound_pruning_bounds_the_offers_on_the_opened_item_and_keeps_the_dr
     aim = target(data, rarity="rare", actions="chaos-orb", wanted=("ToyP3", "ToyS3"))
     entries = prices(start_price_key(data, aim))
     entries.prices["Chaos Orb"] = type(entries.prices["Orb of Alteration"])(1.0, "fixture")
-    whole = make_plan(data, aim, entries)
+    whole = make_plan(data, aim, entries, solver="object")  # the bound pruning is the object solver's path (#535)
     monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
-    pruned = make_plan(data, aim, entries)
+    pruned = make_plan(data, aim, entries, solver="object")
 
     assert pruned.pruned is not None and not pruned.pruned.fell_back
     assert DRAW_LABEL in {offer.label for offer in pruned.pruned.used}

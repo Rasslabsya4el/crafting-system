@@ -54,16 +54,16 @@ def test_the_golden_values_file_names_the_main_it_was_taken_on():
 
 @pytest.fixture(scope="module", params=["R04", "R14", "S02"])
 def planned(request):
-    """(route id, plan) of one heavy route, planned once by `make_plan` (exact, the packed solver is picked by the size)."""
+    """(route id, plan) of one heavy route, planned once by `make_plan` on the packed solver by name (`auto` is the envelope search since #535, which walks less)."""
     data = real_game_data()
     route = request.param
     if route == "S02":
         stem = "s02-fire-res-ring-showcase"
         text = without_strand_words((FILES / "targets" / f"{stem}.yaml").read_text(encoding="utf-8"))
-        plan = make_plan(data, parse_target(text, data, source=stem), flat_price_file(), start_price=10.0)
+        plan = make_plan(data, parse_target(text, data, source=stem), flat_price_file(), start_price=10.0, solver="packed")
     else:
         target = load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data)
-        plan = make_plan(data, target, load_price_file(PRICES))
+        plan = make_plan(data, target, load_price_file(PRICES), solver="packed")
     return route, plan
 
 

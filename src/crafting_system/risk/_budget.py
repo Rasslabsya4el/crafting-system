@@ -25,7 +25,8 @@ few steps has too little work per block for numpy to pay; it runs the plain bin 
 
 The run stops when the target is met (proper policy: the cumulative absorbed mass reaches the
 highest asked level plus the rounding allowance; otherwise: the mass still in flight is at most
-`tail_mass`), when the cap is reached, or when no mass is left. The stop is searched at the bins
+`tail_mass`), when the cap is reached, when the caller's `deadline` has passed (a net that stops and says so: what
+was not reached is in `unresolved`), or when no mass is left. The stop is searched at the bins
 `s` that are final: with `e` the earliest bin of an entry not yet processed, the lost mass of the
 sources below `e` and the absorbed mass `pmf[s]` for `s <= e` no longer change, so the rules are
 evaluated for those `s` (vectorised, the first bin that meets one wins). It never truncates
@@ -46,10 +47,17 @@ Rounding. The cumulative F is a running float sum, so each F(i) carries an error
 bin run. `delta = 1e-12 + 4 eps bins` is the allowance: "level L reached" means F >= L - delta at
 the low end of an interval and F >= L + delta at the high end. All bounds therefore hold up to
 ties within delta in probability.
+
+The tail rule is not read off `1 - lost - F` alone (ticket #535). That difference carries the rounding of the running
+sums, a few eps per bin, so on a long run it settles at about 1e-13 while the mass really in flight goes on falling (R14
+at the 2026-11-10 prices, heavy run 42954014788: the four attempt runs on a step of 0.3063 Chaos ran to their cap of a
+million bins with 1e-137 still in flight, four workers of 4.5 to 5.9 GB on a 16 GB runner). Once the difference is within that rounding of `tail_mass`, the mass in flight is also
+summed directly from its parts, as `unresolved` is, and either one at or below `tail_mass` stops the run.
 """
 
 import heapq
 import sys
+import time
 from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -62,6 +70,7 @@ from ._chain import Chain
 EPS = sys.float_info.epsilon
 BASE_DELTA = 1e-12
 LOST_FLOOR = 1e-15  # a smaller remainder of the starting mass is float noise, not lost mass
+DEADLINE_BINS = 4096  # the plain loop looks at the clock once per this many bins
 PLAIN_LIMIT = 300  # a chain with at most this many (states that can finish) * kmin runs the plain loop
 SLICE_ENTRIES = 1 << 14  # a block is expanded this many entries at a time: arrays that stay in the CPU cache
 DENSE_CELLS = 1 << 24  # the widest block range merged by a dense bincount (a float per cell)
@@ -106,6 +115,7 @@ def run_budget(
     max_bins: int,
     initial: Sequence[tuple[int, float]] | None = None,
     goal_mass: float = 0.0,
+    deadline: float | None = None,
 ) -> BudgetRun:
     """Run the DP with `bin_cost[i]` whole bins per step in state i.
 
@@ -113,7 +123,8 @@ def run_budget(
     in flight is at most `tail_mass`. The run starts from state 0 with mass 1, or, with `initial`, from
     the given (state, mass) pairs at bin 0 (states that can finish and have an action) with `goal_mass`
     already absorbed there; what is left of 1 is lost at bin 0 (the start of a chain whose free states
-    were folded away, `_fold`).
+    were folded away, `_fold`). `deadline` (a `time.monotonic()` value) stops the run at the last bin it finished once
+    passed; the mass not yet resolved is then in `unresolved`, as at the cap.
     """
     finishing = chain.finishing_states()
     if not finishing or not chain.can_finish[0]:
@@ -128,8 +139,13 @@ def run_budget(
             if state not in expanded:
                 raise ValueError(f"initial state {state!r} cannot finish: it is not a state the DP moves")
     if len(finishing) * kmin <= PLAIN_LIMIT:
-        return _run_plain(chain, bin_cost, target, tail_mass, max_bins, initial, goal_mass)
-    return _Dp(chain, finishing, bin_cost, target, tail_mass, max_bins, initial, goal_mass).run()
+        return _run_plain(chain, bin_cost, target, tail_mass, max_bins, initial, goal_mass, deadline)
+    return _Dp(chain, finishing, bin_cost, target, tail_mass, max_bins, initial, goal_mass, deadline).run()
+
+
+def _within_rounding(difference: float, tail_mass: float, bins: int) -> bool:
+    """Whether `1 - lost - F` at bin `bins` is so close to `tail_mass` that its rounding could keep it above (see the module)."""
+    return difference <= tail_mass + BASE_DELTA + 4.0 * EPS * bins
 
 
 def _run_plain(
@@ -140,6 +156,7 @@ def _run_plain(
     max_bins: int,
     initial: Sequence[tuple[int, float]] | None = None,
     goal_mass: float = 0.0,
+    deadline: float | None = None,
 ) -> BudgetRun:
     """The bin by bin DP on dicts: quicker than numpy when a bin holds only a few entries."""
     moves: dict[int, tuple[float, list[tuple[int, float]], float, float]] = {}
@@ -179,7 +196,13 @@ def _run_plain(
         if target is not None:
             if running >= target + rounding_allowance(b):
                 break
-        elif 1.0 - lost_total - running <= tail_mass:
+        else:
+            difference = 1.0 - lost_total - running
+            if difference <= tail_mass:
+                break
+            if _within_rounding(difference, tail_mass, b) and _plain_in_flight(pending, pmf, b, overflow) <= tail_mass:
+                break
+        if deadline is not None and b % DEADLINE_BINS == 0 and time.monotonic() >= deadline:
             break
         for i, mass in pending.pop(b, {}).items():
             absorbed, onward, lost, stay = moves[i]
@@ -197,8 +220,12 @@ def _run_plain(
                 for j, p in onward:
                     slot[j] = slot.get(j, 0.0) + mass * p
         b += 1
-    unresolved = fsum(m for slot in pending.values() for m in slot.values()) + fsum(pmf[b + 1 :]) + overflow
-    return BudgetRun(cdf, unresolved)
+    return BudgetRun(cdf, _plain_in_flight(pending, pmf, b, overflow))
+
+
+def _plain_in_flight(pending: dict[int, dict[int, float]], pmf: list[float], b: int, overflow: float) -> float:
+    """The mass in flight at bin `b` of the plain loop, summed from its parts: the entries not yet moved, the absorbed mass after `b`, the overflow."""
+    return fsum((fsum(m for slot in pending.values() for m in slot.values()), fsum(pmf[b + 1 :]), overflow))
 
 
 @dataclass(frozen=True, slots=True)
@@ -352,7 +379,9 @@ class _Dp:
         max_bins: int,
         initial: Sequence[tuple[int, float]] | None = None,
         goal_mass: float = 0.0,
+        deadline: float | None = None,
     ) -> None:
+        self.deadline = deadline
         self.shift = max(1, (len(chain.states) - 1).bit_length())  # key = bin << shift | state
         if (max_bins + 1).bit_length() + self.shift > 62:
             raise ValueError(f"max_bins {max_bins!r} is too large for {len(chain.states)} states: a key must fit 62 bits")
@@ -396,6 +425,9 @@ class _Dp:
             stop = self._scan(max(final, self.checked), quiet, parts)
             if stop is not None:
                 break
+            if self.deadline is not None and time.monotonic() >= self.deadline:
+                stop = self.checked - 1  # the last bin with its cdf: what is beyond it is unresolved
+                break
             self._process()
         cdf = np.concatenate(parts)[: stop + 1]
         return BudgetRun(cdf.tolist(), self._unresolved(stop))
@@ -422,7 +454,10 @@ class _Dp:
         if self.target is not None:
             stop |= running >= self.target + (BASE_DELTA + 4.0 * EPS * bins)
         else:
-            stop |= (1.0 - before - running) <= self.tail_mass
+            difference = 1.0 - before - running
+            stop |= difference <= self.tail_mass
+            if not stop.any() and _within_rounding(float(difference[-1]), self.tail_mass, hi):
+                stop |= self._in_flight(lo, hi) <= self.tail_mass
         if stop.any():
             index = int(np.argmax(stop))
             parts.append(running[: index + 1])
@@ -486,6 +521,13 @@ class _Dp:
         new_mass = np.repeat(mass, degree)
         new_mass *= moves.prob[edge]
         self.pending.add(new_keys, new_mass)
+
+    def _in_flight(self, lo: int, hi: int) -> np.ndarray:
+        """The mass in flight at each bin `lo..hi`, summed from its parts as `_unresolved` does (the pmf and lost arrays reach `hi`)."""
+        beyond = self._unresolved(hi)
+        absorbed_after = np.concatenate((np.cumsum(self.pmf[lo + 1 : hi + 1][::-1])[::-1], [0.0]))  # pmf of the bins b+1..hi
+        lost_from = np.concatenate((np.cumsum(self.lost[lo:hi][::-1])[::-1], [0.0]))  # lost mass of the sources b..hi-1
+        return beyond + absorbed_after + lost_from
 
     def _unresolved(self, stop: int) -> float:
         """What is in flight at `stop`: the absorbed mass after it, the lost mass of the sources from it on, and what was never moved."""

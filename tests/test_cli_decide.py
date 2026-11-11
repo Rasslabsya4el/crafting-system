@@ -208,7 +208,7 @@ def target():
 
 @pytest.fixture(scope="module")
 def exact(target):
-    return make_plan(DATA, target, PRICES, offers=OFFERS)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, solver="object")  # the reference of the budget decision: the walk-and-solve path (#535)
 
 
 def priced(offers=OFFERS):
@@ -302,7 +302,7 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
     monkeypatch.setattr(_packed, "OBJECT_SOLVER_EDGES", 100)
 
-    plan = make_plan(DATA, target, PRICES, offers=offers, budget=0.0, rates=Rates(1.0, 1.0))
+    plan = make_plan(DATA, target, PRICES, offers=offers, budget=0.0, rates=Rates(1.0, 1.0), solver="packed")
 
     assert plan.approximation is None and plan.packed is not None
     assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
@@ -324,7 +324,7 @@ def test_the_text_tree_has_a_block_for_each_step_and_none_for_each_state(exact):
 
 
 def test_make_plan_without_a_budget_never_decides(target, exact):
-    plan = make_plan(DATA, target, PRICES, offers=OFFERS, rates=Rates(1e9, 1e9))
+    plan = make_plan(DATA, target, PRICES, offers=OFFERS, rates=Rates(1e9, 1e9), solver="object")  # the walk-and-solve path, where a budget would decide (#535)
 
     assert plan.approximation is None and notes(plan.limits) == [] and plan.mean_remaining == exact.mean_remaining
 

@@ -300,11 +300,11 @@ arrays, merged into its exact classes, solved by policy iteration and certified.
 them and the cross-check against the object solver on a runner (never on a PC):
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
-    $D --command 'uv run --no-sync python .github/scripts/packed_routes.py plan --route r04 --out $OUT_DIR'
-    $D --long --timeout-minutes 150 --command 'uv run --no-sync python .github/scripts/packed_routes.py plan --route r14 --out $OUT_DIR'
+    $D --command 'uv run --no-sync python .github/scripts/packed_routes.py plan --solver packed --route r04 --out $OUT_DIR'
+    $D --long --timeout-minutes 150 --command 'uv run --no-sync python .github/scripts/packed_routes.py plan --solver packed --route r14 --out $OUT_DIR'
     $D --command 'uv run --no-sync python .github/scripts/packed_routes.py check --route r05 --out $OUT_DIR'
 
-`plan` writes `<route>.json` (mean cost, certified error bound, states, seconds, risk, peak memory) and prints each phase
+`plan` takes `--solver` (default `auto`: since #535 the envelope search wherever its bound can be built; `packed` is the walk, which the goldens below read) and writes `<route>.json` (mean cost, certified error bound, states, seconds, risk, peak memory) and prints each phase
 of the walk, merge and solve as it ends; `check` plans the route with `solver="object"` and `solver="packed"` and writes
 their relative difference. The goldens of `tests/test_packed_heavy.py` (R04, R14, S02) are rewritten from such a run with
 `CRAFTING_HEAVY=1 UPDATE_GOLDEN=1 ... pytest tests/test_packed_heavy.py` and are tied to the commit of `main` they were
@@ -360,7 +360,7 @@ The small, hand-built version of the same check runs in CI (`tests/test_route_co
 `.github/scripts/actions_key.py` plans each of the seven routes that carry an `actions:` key (J01, R04, R08, R09, R13, R14, V01) in three variants of
 a copy of the target's text (the committed file is never written): `kept`, `removed` (the key deleted: the kinds offered by default, the opt-in kinds
 such as Exalted Orb, Annulment, Fracturing Orb and the fossil sets not among them) and `all` (every kind the planner can use named, which is what OR-5
-asks for), each with the default solver (`auto`) and with `solver="envelope"`. Every job is a child process under a wall-clock cap (8 to 20 minutes,
+asks for), each with the default solver (`auto`, the envelope search wherever its bound can be built since #535, so the two columns differ only where the bound is refused) and with `solver="envelope"`. Every job is a child process under a wall-clock cap (8 to 20 minutes,
 45 for the committed R14) and a memory cap (13 GB); the envelope also gets its own time and memory net. A job that does not finish leaves where it
 was: the last progress line, the `CompressedState` objects alive and the peak memory. 42 jobs are dealt over the runners, longest first, so that the
 caps on one runner add up to at most 50 minutes (`actions_key.py plan --count N --variants kept` prints the deal). One dispatch per variant keeps each run small

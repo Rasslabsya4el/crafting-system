@@ -90,7 +90,6 @@ grid.
 """
 
 import math
-import time
 from collections.abc import Callable, Mapping, Sequence
 from numbers import Integral, Real
 
@@ -122,8 +121,7 @@ FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean o
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 REGEN_PARTS = (4, 8, 16, 32)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
 REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
-REGEN_SECONDS = 600.0  # the next finer step is not tried when the last one took long enough that it would run past this
-REGEN_SLOWER = 3.0  # (a step half as wide costs two to four times the work)
+REGEN_SECONDS = 1800.0  # the time net of each attempt run (#535), only for runs that never finish: a step it stops is refused and said, and no finer one is tried; R14's slowest step seen is 524 s for four runs side by side (step 0.3063, run 42964753874)
 REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 
 
@@ -437,7 +435,10 @@ def _regen_report(
     max_bins: int,
 ) -> RiskReport | None:
     """The report from one attempt at a time (`_regen`), on the coarsest step of `REGEN_PARTS` of the restart's cost that brackets every level
-    within `REGEN_WIDTH` (relative), else the finest that brackets them at all; `None` when the chain does not start over or no step works."""
+    within `REGEN_WIDTH` (relative), else the finest that brackets them at all; `None` when the chain does not start over or no step works.
+
+    The ladder is not cut by a guess of the next step's time (before #535 a step was skipped when the last one took over 200 s, so a slower
+    runner gave R14 a coarser p50); the only time rule is the net of `REGEN_SECONDS` on each attempt run, said when it stops a step."""
     into = _regen.regeneration_edges(chain)
     if not into:
         return None
@@ -447,19 +448,19 @@ def _regen_report(
     base = max(counts, key=lambda cost: counts[cost])
     target = max([*levels, cvar_level])
     best: RiskReport | None = None
-    last = 0.0
     unit = exact_unit([chain.action[i].cost for i in chain.finishing_states()])
     horizon = mean[0] + math.sqrt(variance[0] * target / (1.0 - target))
     steps = [(unit, 0)] if unit is not None and horizon / unit <= max_bins else []  # every cost a whole multiple of the unit: the exact distribution
     steps += [(base / parts, parts) for parts in REGEN_PARTS]
-    for step, parts in steps:
-        if best is not None and last * REGEN_SLOWER > REGEN_SECONDS:  # a finer step costs about this many times the last: not worth the wait
-            break
+    for step, parts in steps:  # every step until one is narrow enough: which steps run never depends on the machine's speed (#535)
         low_bins, high_bins = _bin_costs(chain, step)
         _regen.trace(f"attempt by attempt: step {step:.4g} ({'the unit of every cost' if parts == 0 else f'the restart cost over {parts}'})")
-        began = time.perf_counter()
-        found = _regen.regenerative_runs(chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins)
-        last = time.perf_counter() - began
+        found = _regen.regenerative_runs(
+            chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins, seconds=REGEN_SECONDS, step=step
+        )
+        if found is _regen.TIMED_OUT:  # a finer step would take longer still: none is tried
+            note(_regen.time_net_words(REGEN_SECONDS, coarser=best is not None))
+            break
         if found is None:
             continue
         low_run, high_run = found

@@ -1,8 +1,9 @@
 """Plan R08 / R09 (ticket #63) with progress and stack dumps, one route per runner; run by the `Run a command` workflow.
 
-    python .github/scripts/time_routes.py --route r08 [--exact | --budget 60] --out $OUT_DIR
+    python .github/scripts/time_routes.py --route r08 [--exact | --budget 60] [--solver object] --out $OUT_DIR
 
-Prints where the time goes (the bound pruning's progress, a stack dump every 3 minutes) and writes `<route>.json`.
+Prints where the time goes (the bound pruning's progress, a stack dump every 3 minutes) and writes `<route>.json`. `--solver` defaults to `auto`, what the
+player gets (the envelope search since #535, which prints its own progress lines); `object` is the bound pruning the script was written to watch.
 """
 
 import argparse
@@ -12,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-from crafting_system.cli import _bound_prune, make_plan
+from crafting_system.cli import _bound_prune, _packed, make_plan
 from crafting_system.cli._limits import limit_document
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
@@ -28,6 +29,7 @@ def main() -> None:
     parser.add_argument("--route", required=True, choices=sorted(TARGETS))
     parser.add_argument("--exact", action="store_true")
     parser.add_argument("--budget", type=float, default=60.0)
+    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto: what the player gets; object for the bound pruning)")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
     out = Path(arguments.out)
@@ -48,7 +50,7 @@ def main() -> None:
     data = load_game_data()
     target = load_target(ROOT / "examples" / "targets" / f"{TARGETS[arguments.route]}.yaml", data)
     progress("target loaded")
-    plan = make_plan(data, target, load_price_file(PRICES), budget=None if arguments.exact else arguments.budget)
+    plan = make_plan(data, target, load_price_file(PRICES), budget=None if arguments.exact else arguments.budget, solver=arguments.solver)
     approximation = plan.approximation
     result = {
         "route": arguments.route,

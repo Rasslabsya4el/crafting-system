@@ -62,7 +62,7 @@ def test_the_whole_search_made_from_a_refused_forecast_carries_the_refusals_deta
         raise EstimateRefused("a state holds a fracture made during the craft, which the size estimate has no rule for", detail=f"{SECRET}: state 1")
 
     monkeypatch.setattr(Abstraction, "estimate", refused)
-    made = plan_of(budget=60.0)
+    made = plan_of(budget=60.0, solver="packed")
 
     (limit,) = [each for each in of_kind(made.limits, "how-solved") if each.what == "The whole search was run"]
     assert "a fracture made during the craft" in limit.why
@@ -71,7 +71,7 @@ def test_the_whole_search_made_from_a_refused_forecast_carries_the_refusals_deta
 
 def test_the_whole_search_made_from_a_reason_no_coarse_level_exists_carries_its_detail(monkeypatch):
     monkeypatch.setattr(_decide, "coarse_cause", lambda abstraction, actions: ("an approximate answer cannot include Regal Orb: a reason in words", f"{SECRET}: Regal Orb"))
-    made = plan_of(budget=1e-9)  # a forecast over the budget and no coarse level: the whole search runs
+    made = plan_of(budget=1e-9, solver="packed")  # a forecast over the budget and no coarse level: the whole search runs
 
     (limit,) = [each for each in of_kind(made.limits, "how-solved") if each.what == "The whole search was run"]
     assert "an approximate answer cannot include Regal Orb" in limit.why
@@ -124,7 +124,7 @@ def test_the_fall_back_of_the_bound_pruning_carries_the_solvers_text(monkeypatch
 
     monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
     monkeypatch.setattr(_bound_prune, "solve", failing_once)
-    made = plan_of()
+    made = plan_of(solver="object")  # the bound pruning is the object solver's path (#535)
 
     (limit,) = [each for each in made.limits if each.what == "All the actions were solved"]
     assert made.pruned.fell_back and "did not settle" in made.pruned.why and SECRET in made.pruned.detail

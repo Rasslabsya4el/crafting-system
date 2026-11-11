@@ -183,7 +183,7 @@ def pooled(real):
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring", "Orb of Transmutation")
     life, speed = requirement(data, "IncreasedLife"), requirement(data, "MovementVelocity", min_tier=1)
     target = Target(BASE, LEVEL, frozenset(), (life, speed), item, start=StartKind.BOUGHT)  # the restart of the budget tests buys it again
-    exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)
+    exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)  # 40 offers or more: `auto` is the bound pruning (#535, until #742)
     merged = merge_twins(data, item, exact.offers)[0]
     first = starting_offers(exact.abstraction, exact.start, merged, item, min_offers=40)
     forecast = {}
@@ -200,7 +200,7 @@ def pooled(real):
 
 
 def planned(pooled, budget):
-    return make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, budget=budget, rates=RATES)
+    return make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, budget=budget, rates=RATES, solver="object")
 
 
 def test_the_world_of_the_budget_tests_has_a_forecast_set_far_smaller_than_the_offers_and_a_coarse_level(pooled):

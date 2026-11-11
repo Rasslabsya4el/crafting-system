@@ -17,7 +17,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
-from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
+from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights, pattern_refusal
 from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -335,6 +335,7 @@ def make_plan(
     with_risk: bool = True,
     incumbent: Callable[[CompressedState], Sequence[str]] | None = None,
     net: Net | None = None,
+    judges_route: bool = False,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -358,15 +359,24 @@ def make_plan(
     (tickets of batch B5). `price_source` is the profile setting (`ninja`, `trade`, `both`) that `planned_price` respects. `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the price the target's computed key has in the file.
 
-    `solver` picks the exact solve (ticket #374, ADR-0063): "auto" (the default) walks the graph on packed arrays first and
-    solves it there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02), otherwise the
-    object solver solves it as it always did; "object" never packs; "packed" always does, and with 40 offers or more it
-    solves the offers left after the twins are merged, without the bound pruning (the cross-check of the two solvers).
-    The values are the same to the certificate; only the cost differs. "envelope" (ticket #377, ADR-0063 point 4) is the exact branch-and-bound
-    of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds only the actions, the
-    bound cannot rule out (`_envelope`); it gives the same plan and mean as "packed" and says so in `Plan.limits` (which cut ran, what it
-    guarantees). It takes the offers after the twins are merged, as "packed" does, ignores `budget` (it is always exact), and refuses with
-    `PlanError` an abstraction the bound cannot be built for (#507). `incumbent` (a state to the labels of the offers it takes) is the policy the search completes with a restart for its
+    `solver` picks the exact solve (ticket #374, #377, #535, ADR-0063): "auto" (the default) is the envelope search wherever its bound can be
+    built (`abstraction.pattern_refusal` says before any solve: a goal with a roll limit, an action that rerolls values, an unveil offer or
+    imprints refuse it, #507), whatever the size of the graph and whatever the `budget`, because that search is exact, ends in seconds on the small
+    graphs and expands far less than the walk on the big ones. Where the bound cannot be built, "auto" is the path it was before the envelope search:
+    the budget decision when there is a `budget`, `solve_pruned` for 40 offers or more, otherwise the graph is walked on packed arrays and
+    solved there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02) and by the object solver below that.
+    There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
+    `solver="packed"`. With 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the fossil sets) "auto" keeps the bound pruning for now: on those worlds
+    the envelope search is 1.2 to 40 times slower (#696, #742) and refuses R09 (#731); #742 carries removing the exception. With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
+    older path too, decided before solving: judging a route needs the planner's action at every state the route reaches, and the envelope
+    search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with 40 offers or more it solves the offers left after the twins are
+    merged, without the bound pruning (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
+    "envelope" is the same search asked for by name: it refuses with `PlanError` an abstraction the bound cannot be built for (#507). It is the
+    exact branch-and-bound of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds
+    only the actions, the bound cannot rule out (`_envelope`); it gives the same plan and mean as "packed" and says so in `Plan.limits` (which
+    cut ran, what it guarantees). It takes the offers after the twins are merged, as "packed" does, and ignores `budget` (it is always exact), so
+    a test or a measurement that needs the approximate answer or the budget refusal names `solver="packed"` or `"object"`. `incumbent` (a state to
+    the labels of the offers it takes) is the policy the search completes with a restart for its
     first upper bound (`_envelope_plan.route_incumbent` reads a given route as one); `net` is a stop-and-say-so safety net (time, states or
     memory; none by default): when it ends the search the plan is the best executable one, `Plan.limits` says it is not shown to be the best and
     gives the lower and upper bounds of its cost.
@@ -450,7 +460,15 @@ def make_plan(
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
-    if budget is not None and solver != "envelope":
+    refusal = pattern_refusal(abstraction)
+    # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
+    # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
+    # Nor, for now, with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the bound pruning that already existed, not a new cut-off): on
+    # fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound pruning (#696, #742) and refuses R09 (#731); both paths are
+    # exact (OR-11, OR-12), and #742 carries removing this exception.
+    many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
+    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not many_offers)
+    if budget is not None and not envelope:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -486,7 +504,7 @@ def make_plan(
     pruned = None
     packed = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
-    if many and solver not in ("packed", "envelope"):
+    if many and not envelope and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
@@ -494,13 +512,13 @@ def make_plan(
         offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
         if twins:
             limits += (twins_limit(twins),)  # G17: the packed path leaves out the dearer twins, as the bound pruning does
-        if solver == "envelope":
+        if envelope:
             try:
                 packed = envelope_result(
                     abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net, item=target.start_item if many else None
                 )
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
-                raise PlanError(f"the envelope search cannot answer this target: {error}") from error
+                raise PlanError(envelope_refusal(solver, error)) from error
             limits += envelope_limits(packed.info["envelope"])
         else:
             packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
@@ -528,6 +546,23 @@ def make_plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
         solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed,
     ))
+
+
+def envelope_refusal(solver: str, error: Exception) -> str:
+    """The `PlanError` text of an envelope search that cannot answer (OR-13): the cause in words, and for `auto` the way to the walk, which is never taken silently (#535).
+
+    Under `auto` a refusal of the bound's build carries a player's cause (`.player`, set by `abstraction._pattern`) in place of the developer's text,
+    and a search that found no route says so as the walk does, with no advice to walk: the walk would find none either.
+    """
+    if solver == "envelope":
+        return f"the envelope search cannot answer this target: {error}"
+    if isinstance(error, NoPolicy):
+        return f"no policy of the offered actions reaches the goal from the start item ({error})"
+    cause = getattr(error, "player", None) or str(error)
+    return (
+        f"the exact search for the cheapest route could not give an answer: {cause}. "
+        "The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`"
+    )
 
 
 def finished(plan: Plan) -> Plan:

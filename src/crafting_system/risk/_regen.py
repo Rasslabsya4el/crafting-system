@@ -17,9 +17,15 @@ Bins are as in `_evaluate`: a step D, the lower chain pays floor(cost / D) bins,
 two bracket the true one. A cost below D is free on the lower chain and is folded away (`_fold`). The attempt DPs run until the
 mass still in flight is below `ATTEMPT_TAIL`, and the answer is refused (None) when the attempts that are cut (the missing mass
 over the chance of success) could move a quantile by more than the rounding allowance.
+
+A net bounds the time (ticket #535): each attempt run gets `seconds` of its own from the moment it starts (so four runs one after
+another, without workers, are not cut for their sum), and a run that is still going then stops at the last bin it finished, like a
+run at its cap. A worker that does not come back by `ABANDON_MARGIN` past its runs' time (stuck outside that loop) is killed; its jobs
+are not run again here. Either way the step is refused (`TIMED_OUT`) and the caller says so.
 """
 
 import gc
+import time
 from collections import deque
 
 import numpy as np
@@ -40,6 +46,20 @@ def trace(text: str) -> None:
 
 ATTEMPT_TAIL = 1e-13  # the mass of an attempt that may stay in flight when its DP stops (below it the float sums of the lost mass no longer settle)
 MAX_MISSING = 1e-10  # the cut attempts' mass over the chance of success must not exceed this
+ABANDON_MARGIN = 60.0  # seconds past its runs' time a worker has to stop by itself before it is killed
+TIMED_OUT = "timed out"  # what `regenerative_runs` returns for a step its time net stopped
+
+
+def time_net_words(seconds: float, coarser: bool) -> str:
+    """What the player is told when the time net stops a step (OR-13): whether the figures shown still come from this method."""
+    limit = f"{seconds / 60:.0f} minutes"
+    if coarser:
+        return f"a finer pass of the quicker method for the cost figures ran past its time limit of {limit} and was stopped; the figures shown come from the coarser pass before it, and their ranges still hold"
+    return f"the quicker method for the cost figures ran past its time limit of {limit} and was stopped, so it worked out none of them; the slower method follows"
+
+
+class TimedOut(Exception):
+    """The workers of `run_jobs` did not come back by their time limit and were killed."""
 
 
 def regeneration_edges(chain: Chain) -> list[int]:
@@ -90,24 +110,29 @@ def attempt_chain(chain: Chain, *, success: bool) -> Chain:
     )  # fmt: skip
 
 
-def attempt_pmf(chain: Chain, bins: list[int], *, success: bool, max_bins: int) -> tuple[np.ndarray, float] | None:
-    """`(pmf over bins, mass that is neither in it nor lost)` of one attempt ending in a goal (`success`) or back at the start, or None.
+def attempt_pmf(
+    chain: Chain, bins: list[int], *, success: bool, max_bins: int, seconds: float | None = None
+) -> tuple[np.ndarray, float, bool] | None:
+    """`(pmf over bins, mass that is neither in it nor lost, stopped by the time net)` of one attempt ending in a goal (`success`) or back at the start, or None.
 
-    None when a free component is too large to fold (`_fold`).
+    None when a free component is too large to fold (`_fold`). `seconds` from this call on is the run's time net (`run_budget`'s deadline).
     """
+    deadline = None if seconds is None else time.monotonic() + seconds
     attempt = attempt_chain(chain, success=success)
     extended = [*bins, 0]
     if not attempt.can_finish[0]:
-        return np.zeros(1), 0.0
+        return np.zeros(1), 0.0, False
     folded = fold_free(attempt, extended)
     if folded is None:
         return None
     run = run_budget(
-        folded.chain, extended, target=None, tail_mass=ATTEMPT_TAIL, max_bins=max_bins, initial=folded.initial, goal_mass=folded.goal_mass
+        folded.chain, extended, target=None, tail_mass=ATTEMPT_TAIL, max_bins=max_bins, initial=folded.initial, goal_mass=folded.goal_mass,
+        deadline=deadline,
     )
     cdf = np.asarray(run.cdf)
-    trace(f"attempt run ({'goal' if success else 'back to the start'}): {len(cdf):,} bins, in flight at the end {run.unresolved:.3g}")
-    return np.diff(cdf, prepend=0.0), run.unresolved
+    stopped = deadline is not None and run.unresolved > ATTEMPT_TAIL and time.monotonic() >= deadline
+    trace(f"attempt run ({'goal' if success else 'back to the start'}): {len(cdf):,} bins, in flight at the end {run.unresolved:.3g}" + (" (stopped by the time net)" if stopped else ""))
+    return np.diff(cdf, prepend=0.0), run.unresolved, stopped
 
 
 def renewal_cdf(g: np.ndarray, f: np.ndarray, target: float, max_bins: int, allowance) -> list[float]:
@@ -132,21 +157,32 @@ def renewal_cdf(g: np.ndarray, f: np.ndarray, target: float, max_bins: int, allo
 
 
 def regenerative_runs(
-    chain: Chain, low_bins: list[int], high_bins: list[int], target: float, max_bins: int, allowance, attempt_bins: int
-) -> tuple[BudgetRun, BudgetRun] | None:
-    """The lower and the upper chain's `BudgetRun` of the whole craft, from its attempts; None when they cannot be made.
+    chain: Chain, low_bins: list[int], high_bins: list[int], target: float, max_bins: int, allowance, attempt_bins: int,
+    *, seconds: float | None = None, step: float = 0.0,
+) -> tuple[BudgetRun, BudgetRun] | str | None:
+    """The lower and the upper chain's `BudgetRun` of the whole craft, from its attempts; None when they cannot be made, `TIMED_OUT` when the net stopped them.
+
+    `seconds` is the time net of each attempt run (`step` only names the grid in the trace).
 
     Each run's `cdf` is the cumulative distribution of the total in bins up to `target` (or `max_bins`). `unresolved` is the mass beyond.
     """
     distinct = [low_bins] if low_bins == high_bins else [low_bins, high_bins]
-    jobs = [(attempt_pmf, (chain, bins), {"success": success, "max_bins": attempt_bins}) for bins in distinct for success in (True, False)]
-    found = run_jobs(jobs)  # the attempt runs share nothing: side by side when workers can be forked
+    options = {"max_bins": attempt_bins, "seconds": seconds}
+    jobs = [(attempt_pmf, (chain, bins), {"success": success, **options}) for bins in distinct for success in (True, False)]
+    try:
+        found = run_jobs(jobs, seconds=seconds)  # the attempt runs share nothing: side by side when workers can be forked
+    except TimedOut as stopped:
+        trace(f"attempt by attempt on step {step:.4g}: {stopped}")
+        return TIMED_OUT
     if any(each is None for each in found):
         note(FOLD_GAVE_UP.format(FOLD_LIMIT))  # an attempt cut short by `fold_free`; said here as well, since a forked worker's note is not seen
         return None
+    if any(each[2] for each in found):
+        trace(f"attempt by attempt on step {step:.4g}: a run was stopped by its time net of {seconds:.0f} s")
+        return TIMED_OUT
     runs: list[BudgetRun] = []
     for k in range(len(distinct)):
-        (g, _), (f, _) = found[2 * k], found[2 * k + 1]
+        (g, _, _), (f, _, _) = found[2 * k], found[2 * k + 1]
         chance = float(g.sum())
         missing = max(0.0, 1.0 - chance - float(f.sum()))
         if chance <= 0.0 or float(f[0]) >= 1.0:
@@ -168,19 +204,25 @@ def _call(name: str):
     return function(*args, **kwargs)
 
 
-def run_jobs(jobs: list[tuple]) -> list:
+def run_jobs(jobs: list[tuple], *, seconds: float | None = None) -> list:
     """The results of `(function, args, kwargs)` jobs, in order: side by side in a pool when `CRAFTING_WORKERS` allows and workers can be forked.
 
     A job is a function of its arguments alone, so the list is the same either way (as `_evaluate._both`); a worker that fails sends the jobs
-    back to a serial run here.
+    back to a serial run here. With `seconds`, each job's time net, the pool waits for as many nets as a worker has jobs to run one after
+    another, plus `ABANDON_MARGIN`; workers not back by then are killed and `TimedOut` is raised (the jobs are not run again: they would take
+    as long here). Run here, each job bounds itself from its own start.
     """
     if len(jobs) > 1 and parallel.worker_count() >= 2 and parallel.can_inherit():
         names = [str(i) for i in range(len(jobs))]
         gc.collect()
         gc.freeze()  # the forked workers must not touch the parent's objects (a collection writes to every one of them: a plan holds gigabytes)
         try:
-            with parallel.WorkerPool(_held, (dict(zip(names, jobs)),), workers=min(len(jobs), parallel.worker_count())) as pool:
-                return pool.map(_call, names, chunk=1)
+            workers = min(len(jobs), parallel.worker_count())
+            timeout = None if seconds is None else -(-len(jobs) // workers) * seconds + ABANDON_MARGIN
+            with parallel.WorkerPool(_held, (dict(zip(names, jobs)),), workers=workers) as pool:
+                return pool.map(_call, names, chunk=1, timeout=timeout)
+        except TimeoutError as late:
+            raise TimedOut(f"a worker was not back {ABANDON_MARGIN:.0f} s after its time net and was stopped: {late}") from late
         except Exception:  # a worker failed or was killed: run them here
             pass
         finally:

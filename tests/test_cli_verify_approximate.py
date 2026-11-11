@@ -46,7 +46,7 @@ def budget(exact):
 
 @pytest.fixture(scope="module")
 def approximate(target, budget):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, budget=budget, rates=RATES)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, budget=budget, rates=RATES, solver="object")
 
 
 @pytest.fixture(scope="module")
@@ -131,7 +131,7 @@ def command(tmp_path, monkeypatch):
 
 
 def test_the_text_shows_no_p90_or_cvar_that_looks_certified(command, budget, capsys):
-    code, _ = command("--budget", str(budget), "--verify", "--runs", "1500", "--seed", "7")
+    code, _ = command("--solver", "object", "--budget", str(budget), "--verify", "--runs", "1500", "--seed", "7")
 
     text = capsys.readouterr().out
     assert code == 0
@@ -148,7 +148,7 @@ def test_the_text_shows_no_p90_or_cvar_that_looks_certified(command, budget, cap
 
 
 def test_the_json_labels_the_verification_and_has_no_certified_p90(command, budget):
-    code, out = command("--budget", str(budget), "--verify", "--runs", "1500", "--seed", "7")
+    code, out = command("--solver", "object", "--budget", str(budget), "--verify", "--runs", "1500", "--seed", "7")
 
     document = read_json(out)
     block = document["verification"]
@@ -175,7 +175,7 @@ def test_the_command_exits_with_2_when_a_bound_is_wrong(command, budget, monkeyp
     real = _main.verify
     monkeypatch.setattr(_main, "verify", lambda data, plan, **fields: real(data, moved(plan, 1.4), **fields))
 
-    code, out = command("--budget", str(budget), "--verify", "--runs", "1500", "--seed", "7")
+    code, out = command("--solver", "object", "--budget", str(budget), "--verify", "--runs", "1500", "--seed", "7")
 
     assert code == 2
     assert "DOES NOT AGREE: the simulated mean" in capsys.readouterr().out

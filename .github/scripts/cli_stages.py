@@ -2,7 +2,7 @@
 
     python .github/scripts/cli_stages.py --route r04|r14 --out DIR [--stage report,text,json,page,verify,route]
 
-Plans the route as `make_plan(budget=None, with_risk=False)` and gives it a risk without quantiles (the packed route's own rule for
+Plans the route as `make_plan(budget=None, with_risk=False)` (`judges_route=True`: the stages judge a given route, so `auto` walks, #535) and gives it a risk without quantiles (the packed route's own rule for
 a chain it cannot afford), then runs the stages in order and prints the seconds, the peak memory and the size of each product.
 Never run on a PC. Run by `.github/scripts/heavy_dispatch.py`.
 """
@@ -47,7 +47,7 @@ def main() -> None:
     data, target, prices, start_price = inputs(arguments.route)
     out = Path(arguments.out)
     out.mkdir(parents=True, exist_ok=True)
-    plan = make_plan(data, target, prices, start_price=start_price, budget=None, with_risk=False)
+    plan = make_plan(data, target, prices, start_price=start_price, budget=None, with_risk=False, judges_route=True)  # the stages judge the guide's route: `auto` walks (#535)
     plan = add_risk(plan)
     say(f"planned: mean {plan.mean_remaining!r}, {len(plan.policy):,} policy states, shown as {len(plan.view_policy):,}, risk {plan.risk.mean.value!r}, p90 {plan.risk.p90!r}")
 

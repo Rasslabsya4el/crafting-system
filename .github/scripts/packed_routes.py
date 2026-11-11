@@ -3,7 +3,7 @@
     python .github/scripts/packed_routes.py plan  --route r04|r14|s02 [--out DIR]
     python .github/scripts/packed_routes.py check --route r05|r08|r10|r12|r13 [--out DIR]
 
-`plan` makes the plan of the route the way the planner does (`make_plan(solver="auto")`, exact) and writes `<route>.json`:
+`plan` makes the plan of the route the way the planner does (`make_plan(solver="auto")`, exact; since #535 the envelope search wherever its bound can be built, so pass `--solver packed` for the walk) and writes `<route>.json`:
 the mean cost from the start, the certified error bound, the numbers of the packed solve (states, classes, kernels, rounds,
 seconds of each phase), the risk (odds, p50, p90) and the peak memory.
 
@@ -31,7 +31,7 @@ from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.targets import load_target, parse_target
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"  # `ROUTE_PRICES` (a path from the project root) names another snapshot for one run
 TARGETS = {
     "r04": "r04-penetrating-quiver",
     "r05": "r05-strength-ring",
@@ -94,7 +94,7 @@ def inputs(route: str):
         text = re.sub(r"\b(?:%s)\b,? ?" % "|".join(STRAND_KINDS), "", text)
         prices = PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, FlatPrices())
         return data, parse_target(text, data, source="s02"), prices, 10.0
-    return data, load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data), load_price_file(PRICES), None
+    return data, load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data), load_price_file(ROOT / os.environ["ROUTE_PRICES"] if os.environ.get("ROUTE_PRICES") else PRICES), None
 
 
 def risk_row(plan) -> dict | None:
@@ -112,7 +112,7 @@ def main() -> None:
     parser.add_argument("mode", choices=("plan", "check"))
     parser.add_argument("--route", required=True)
     parser.add_argument("--out")
-    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto)")
+    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto, the planner's own; packed is the walk of the whole graph)")
     arguments = parser.parse_args()
     faulthandler.dump_traceback_later(300, repeat=True, file=sys.stderr)
     threading.Thread(target=watch_memory, daemon=True).start()

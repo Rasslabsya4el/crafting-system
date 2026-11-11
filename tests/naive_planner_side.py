@@ -71,7 +71,7 @@ def plan_route(route_id: str, out: Path) -> Path:
     stem = STEMS[route_id]
     data = load_game_data()
     # the routes are evaluated on the policy alone; the planner's own risk grid is not read and took 8 GB more on R14 at the 2026-11-10 prices (#738)
-    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICES), with_risk=False)
+    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICES), with_risk=False, judges_route=True)
     found: dict = {"route": route_id, "pin": data_pin(), "start_price": plan.start_price.chaos}
     for kind, name in (("guide", stem), ("completed", f"{stem}-restart")):
         result = evaluate_route(plan, load_route(ROUTES / f"{name}.yaml", plan, data), data)

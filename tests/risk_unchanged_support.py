@@ -71,7 +71,7 @@ def r12_risk() -> str:
     from crafting_system.cli import make_plan
     from crafting_system.targets import load_target
 
-    return repr(make_plan(DATA, load_target(R12, DATA), price_file()).risk)
+    return repr(make_plan(DATA, load_target(R12, DATA), price_file(), solver="object").risk)  # the risk of the plan main gave: the object solver (#535: `auto` is the envelope search, whose certified bounds differ at 1e-14)
 
 
 def snapshot() -> dict:

@@ -144,7 +144,7 @@ INPUTS = {
 
 @pytest.fixture(scope="module")
 def r12_plan():
-    return make_plan(DATA, load_target(R12, DATA), price_file())
+    return make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)
 
 
 TWO_LEAVES = f"""\
@@ -186,7 +186,7 @@ def two_leaf_plan():
     target = parse_target(TWO_LEAVES, DATA, source="two.yaml")
     prices = price_file(start=None)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")  # the start item is priced under the key computed from the target
-    return make_plan(DATA, target, prices)
+    return make_plan(DATA, target, prices, judges_route=True)
 
 
 def given(plan, text: str) -> RouteInput:
@@ -621,7 +621,7 @@ def fractured_start_plan():
     target = parse_target(FRACTURED_START, DATA, source="fractured.yaml")
     prices = price_file(start=None)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")
-    return make_plan(DATA, target, prices)
+    return make_plan(DATA, target, prices, judges_route=True)
 
 
 def test_golden_a_restart_that_buys_a_rare_item_with_a_fractured_mod_draws_it_as_the_first_card_does(fractured_start_plan):
@@ -889,7 +889,7 @@ def plan_with_a_wider_price():
     del body["query"]["filters"]["misc_filters"]["filters"]["ilvl"]  # the stored search had no item level at all
     prices = price_file(start=None)
     prices.prices[spec.name] = PriceEntry(4.0, "trade-api", "a note", {"query": body})
-    return make_plan(DATA, target, prices)
+    return make_plan(DATA, target, prices, judges_route=True)
 
 
 def test_the_buy_step_prints_the_line_next_to_the_price_and_a_price_for_the_same_item_prints_none(r12_plan):

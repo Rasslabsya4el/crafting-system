@@ -55,7 +55,7 @@ def target():
 
 @pytest.fixture(scope="module")
 def plan(target):
-    return make_plan(DATA, target, price_file())
+    return make_plan(DATA, target, price_file(), judges_route=True)
 
 
 def read(text: str, plan, source: str = "route.yaml"):
@@ -309,7 +309,7 @@ start_item:
 start: bought
 """
     two = parse_target(text, DATA, source="two.yaml")
-    plan = make_plan(DATA, two, priced_for(two))
+    plan = make_plan(DATA, two, priced_for(two), judges_route=True)
     outcomes = ChaosOrb().outcomes(DATA, two.start_item)
     resists = [mod_id for mod_id, mod in DATA.mods.items() if "LightningResistance" in mod.families]
     gem_chance = float(outcomes.chance_all([GEM]))
@@ -470,7 +470,7 @@ def test_an_unknown_action_lists_the_known_ones_with_a_close_match(plan):
 
 
 def test_an_action_dropped_for_lack_of_a_price_names_the_missing_price(target):
-    unpriced = make_plan(DATA, target, price_file(lifeforce=None))
+    unpriced = make_plan(DATA, target, price_file(lifeforce=None), judges_route=True)
 
     message = error_of(f"rules:\n  - do: {REFORGE}\n", unpriced)
 
@@ -490,7 +490,7 @@ def test_an_essence_that_no_price_source_lists_is_refused_in_a_route_without_a_b
 
 
 def test_a_restart_is_refused_for_a_given_start_item_and_the_message_says_why(target):
-    free = make_plan(DATA, given(target), price_file())
+    free = make_plan(DATA, given(target), price_file(), judges_route=True)
 
     message = error_of("rules:\n  - do: restart\n", free)
 
@@ -518,7 +518,7 @@ def test_a_selector_that_names_two_leaves_is_ambiguous():
         DATA,
         source="twice.yaml",
     )
-    plan = make_plan(DATA, twice, priced_for(twice))
+    plan = make_plan(DATA, twice, priced_for(twice), judges_route=True)
 
     message = error_of(
         f'rules:\n  - when:\n      requirements:\n        - stat: "{GEM_TEXT}"\n          status: absent\n    do: Chaos Orb\n',
@@ -590,7 +590,7 @@ def test_open_prefixes_and_suffixes_count_what_is_free_on_the_item():
         source="belt.yaml",
     )
     offers = [Offer(CHAOS, ChaosOrb(), {CHAOS: 1}), Offer("Craft damage", BenchCraft("JunMaster2AllDamage2_"), {CHAOS: 4})]
-    belt_plan = make_plan(DATA, target, prices_of(), offers=offers)
+    belt_plan = make_plan(DATA, target, prices_of(), offers=offers, judges_route=True)
     route = read(
         """
         rules:

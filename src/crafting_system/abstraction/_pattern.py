@@ -272,6 +272,27 @@ class PatternModel:
     stopped: str | None = None  # why the build ended before every key was expanded (a net), None for a complete model
 
 
+def pattern_refusal(abstraction: Abstraction) -> str | None:
+    """Why the crafted-pattern bound cannot be built for `abstraction`, or None when it can (#497, #507).
+
+    The one place that decides it: `Pattern.__init__` raises `OutOfScopeError` with this text, and `make_plan` asks it before any solve, so
+    `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for a goal with a roll
+    limit, for an enabled action that rerolls values, and for one that reads the unveil offer or the imprints.
+    """
+    causes = []
+    if abstraction._has_laws:
+        causes.append("the target asks for a roll limit on a mod")
+    if abstraction.rerolls_values:
+        causes.append("an offered action rerolls the values of mods")
+    if abstraction.tracks_offer:
+        causes.append("an offered action reads the unveil offer")
+    if abstraction.tracks_imprints:
+        causes.append("an offered action reads the imprints")
+    if not causes:
+        return None
+    return f"the crafted-pattern bound has no members for it: {'; '.join(causes)} (#497)"
+
+
 class Pattern:
     """The key of a state and the members of a key, for one `Abstraction`.
 
@@ -281,10 +302,9 @@ class Pattern:
     """
 
     def __init__(self, abstraction: Abstraction, tags: bool | None = None, actions: Sequence[Action] = ()):
-        if abstraction._has_laws or abstraction.rerolls_values or abstraction.tracks_offer or abstraction.tracks_imprints:
-            raise OutOfScopeError(
-                "the crafted-pattern bound has no members for a goal with a roll limit, an action that rerolls values, an unveil offer or imprints (#497)"
-            )
+        refusal = pattern_refusal(abstraction)
+        if refusal is not None:
+            raise OutOfScopeError(refusal)
         self.ab = abstraction
         self.data = abstraction.data
         self.actions = tuple(actions)  # the offered actions: what they add by name joins the universe of slots
@@ -837,11 +857,15 @@ def _no_member(key: PatternKey) -> OutOfScopeError:
     The concrete state that reached the key is itself an item of the key, so the key has a member. With none, the key would keep only the
     restart, and its value, and every value that leans on it, would sit above the exact cost: a bound that a cut would trust (OR-12, OR-13).
     """
-    return OutOfScopeError(
+    refusal = OutOfScopeError(
         f"the crafted-pattern bound reached a key it can make no member of (status {[int(v) for v in key.status]}, {len(key.crafted)} crafted, "
         f"counts {key.counts}, tags {key.tags}, rarity {key.flags.rarity.value}, {len(key.fractured)} fractured). That is a defect of the member "
         "builder, since the state that reached the key is a member of it; its value would sit above the exact cost, so the build refuses."
     )
+    refusal.player = (  # type: ignore[attr-defined]  # what `make_plan` says under `solver="auto"` (#535, OR-13); the text above is the developer's
+        "the planner met a fault of its own while working out the cheapest possible cost of each kind of item the crafting can reach"
+    )
+    return refusal
 
 
 def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: PatternOffer) -> bool:
@@ -866,12 +890,17 @@ def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: Patter
 
 def _gap(offer: PatternOffer, key: PatternKey, gap: Exception) -> OutOfScopeError:
     """The refusal of a build that met a model gap at a member: the action cannot be dropped from the key without risking a bound above the exact cost."""
-    return OutOfScopeError(
+    refusal = OutOfScopeError(
         f"{offer.label} raised a model gap at a member of a key (status {[int(v) for v in key.status]}, {len(key.crafted)} crafted, "
         f"counts {key.counts}) while another member of the key can take it: {gap}. The crafted-pattern bound cannot drop the action from the "
         "key (the exact model drops it only where the gap is), so it refuses the route instead of returning a bound that may be above the "
         "exact cost (OR-12, OR-13)."
     )
+    refusal.player = (  # type: ignore[attr-defined]  # what `make_plan` says under `solver="auto"` (#535, OR-13); the text above is the developer's
+        f"the planner has no rule for {offer.label} on some of the items the crafting can reach, while it has one on others like them, so it "
+        "cannot work out the cheapest possible cost of that action there"
+    )
+    return refusal
 
 
 def _lowered(pushed: dict[int, Fraction]) -> dict[int, Fraction]:

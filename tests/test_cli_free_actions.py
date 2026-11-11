@@ -175,7 +175,7 @@ def test_a_target_that_names_the_veiled_kinds_is_planned_end_to_end_and_the_repo
 def test_a_budget_that_the_exact_run_overshoots_falls_back_to_the_exact_run_for_a_veil_target(tmp_path):
     from crafting_system.cli import make_plan
 
-    plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0), budget=1e-9)
+    plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0), budget=1e-9, solver="packed")
 
     assert plan.approximation is None and "no approximate answer was possible" in note_text(plan.limits)  # the family-group level refuses the veiled actions, and says so
     assert plan.mean_remaining == pytest.approx(1.5 + 2.6 * 5.0 * FREE_ACTION_SHARE, rel=1e-12)
