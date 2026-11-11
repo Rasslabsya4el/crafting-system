@@ -183,7 +183,7 @@ def pooled(real):
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring", "Orb of Transmutation")
     life, speed = requirement(data, "IncreasedLife"), requirement(data, "MovementVelocity", min_tier=1)
     target = Target(BASE, LEVEL, frozenset(), (life, speed), item, start=StartKind.BOUGHT)  # the restart of the budget tests buys it again
-    exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)
+    exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE, solver="object")  # the reference of the budget tests: the bound pruning's path (#535; the envelope search on this world is #742)
     merged = merge_twins(data, item, exact.offers)[0]
     first = starting_offers(exact.abstraction, exact.start, merged, item, min_offers=40)
     forecast = {}

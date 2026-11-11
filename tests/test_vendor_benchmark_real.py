@@ -187,6 +187,20 @@ def rounded(value, digits: int = 9):
     return value
 
 
+def error_bound_to_its_order(document: dict) -> dict:
+    """`document` with `totals.solver_error_bound` cut to its power of ten.
+
+    The bound is the certificate of the float rounding of the solve's sums (`solver.certify`), so it is made of the last digits of numpy sums, which
+    differ between CPUs: since #535 V01 is solved on packed arrays (the envelope search) and two kinds of runner give 1.1078e-09 and 1.1104e-09 with
+    the same mean to 16 digits (runs 42926202378, 42926684689; one process gives the same bound under every hash seed). The order of magnitude is
+    what the golden holds; the mean and every other number keep their 9 digits.
+    """
+    bound = document.get("totals", {}).get("solver_error_bound")
+    if isinstance(bound, float) and bound > 0:
+        document["totals"]["solver_error_bound"] = 10.0 ** math.floor(math.log10(bound))
+    return document
+
+
 def test_the_json_policy_is_the_golden(report):
     document = policy_document(report, None, target_name="v01-minion-helmet.yaml")
     document.pop("timings_seconds")
@@ -196,9 +210,9 @@ def test_the_json_policy_is_the_golden(report):
         path.write_text(text, encoding="utf-8", newline="\n")
 
     assert path.exists(), f"no golden file {path}; run with UPDATE_GOLDEN=1 to write it"
-    golden_diff.check_objects(  # floats to 9 digits, everything else exact
-        rounded(json.loads(path.read_text(encoding="utf-8"))),
-        rounded(json.loads(text)),
+    golden_diff.check_objects(  # floats to 9 digits, everything else exact; the solver's error bound to its order of magnitude
+        error_bound_to_its_order(rounded(json.loads(path.read_text(encoding="utf-8")))),
+        error_bound_to_its_order(rounded(json.loads(text))),
         "the JSON policy differs from its golden file tests/golden/v01_minion_helmet.json",
     )
 
