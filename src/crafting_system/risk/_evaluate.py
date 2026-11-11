@@ -122,7 +122,7 @@ FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean o
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 REGEN_PARTS = (4, 8, 16, 32)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
 REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
-REGEN_SECONDS = 600.0  # the next finer step is not tried when the last one took long enough that it would run past this
+REGEN_SECONDS = 600.0  # the next finer step is not tried when the last one took long enough that it would run past this; also the time net of one step's attempt runs (#535)
 REGEN_SLOWER = 3.0  # (a step half as wide costs two to four times the work)
 REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 
@@ -458,9 +458,13 @@ def _regen_report(
         low_bins, high_bins = _bin_costs(chain, step)
         _regen.trace(f"attempt by attempt: step {step:.4g} ({'the unit of every cost' if parts == 0 else f'the restart cost over {parts}'})")
         began = time.perf_counter()
-        found = _regen.regenerative_runs(chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins)
+        found = _regen.regenerative_runs(
+            chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins, seconds=REGEN_SECONDS, step=step
+        )
         last = time.perf_counter() - began
         if found is None:
+            if last >= REGEN_SECONDS:  # stopped by the time net: a finer step would take longer still
+                break
             continue
         low_run, high_run = found
         mean_low, mean_high = _regen_means(chain, step, low_bins, high_bins)

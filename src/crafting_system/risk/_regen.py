@@ -17,9 +17,14 @@ Bins are as in `_evaluate`: a step D, the lower chain pays floor(cost / D) bins,
 two bracket the true one. A cost below D is free on the lower chain and is folded away (`_fold`). The attempt DPs run until the
 mass still in flight is below `ATTEMPT_TAIL`, and the answer is refused (None) when the attempts that are cut (the missing mass
 over the chance of success) could move a quantile by more than the rounding allowance.
+
+A net bounds the time (ticket #535): the attempt runs of one step get a `deadline`, and a run that is still going then stops
+at the last bin it finished, like a run at its cap. Its mass in flight then counts as cut, so the step is refused for it and
+said (`TIME_NET`), and the caller keeps the coarser step it had (whose brackets still hold).
 """
 
 import gc
+import time
 from collections import deque
 
 import numpy as np
@@ -40,6 +45,7 @@ def trace(text: str) -> None:
 
 ATTEMPT_TAIL = 1e-13  # the mass of an attempt that may stay in flight when its DP stops (below it the float sums of the lost mass no longer settle)
 MAX_MISSING = 1e-10  # the cut attempts' mass over the chance of success must not exceed this
+TIME_NET = "the attempt runs on a step of {:.4g} were stopped at the time limit of {:.0f} s with {:.1e} of an attempt's chance still in flight; this step's percentiles are not used (a coarser one's brackets stand)"
 
 
 def regeneration_edges(chain: Chain) -> list[int]:
@@ -90,10 +96,12 @@ def attempt_chain(chain: Chain, *, success: bool) -> Chain:
     )  # fmt: skip
 
 
-def attempt_pmf(chain: Chain, bins: list[int], *, success: bool, max_bins: int) -> tuple[np.ndarray, float] | None:
+def attempt_pmf(
+    chain: Chain, bins: list[int], *, success: bool, max_bins: int, deadline: float | None = None
+) -> tuple[np.ndarray, float] | None:
     """`(pmf over bins, mass that is neither in it nor lost)` of one attempt ending in a goal (`success`) or back at the start, or None.
 
-    None when a free component is too large to fold (`_fold`).
+    None when a free component is too large to fold (`_fold`). `deadline` (`time.monotonic()`) is the net of `run_budget`.
     """
     attempt = attempt_chain(chain, success=success)
     extended = [*bins, 0]
@@ -103,7 +111,8 @@ def attempt_pmf(chain: Chain, bins: list[int], *, success: bool, max_bins: int) 
     if folded is None:
         return None
     run = run_budget(
-        folded.chain, extended, target=None, tail_mass=ATTEMPT_TAIL, max_bins=max_bins, initial=folded.initial, goal_mass=folded.goal_mass
+        folded.chain, extended, target=None, tail_mass=ATTEMPT_TAIL, max_bins=max_bins, initial=folded.initial, goal_mass=folded.goal_mass,
+        deadline=deadline,
     )
     cdf = np.asarray(run.cdf)
     trace(f"attempt run ({'goal' if success else 'back to the start'}): {len(cdf):,} bins, in flight at the end {run.unresolved:.3g}")
@@ -132,14 +141,19 @@ def renewal_cdf(g: np.ndarray, f: np.ndarray, target: float, max_bins: int, allo
 
 
 def regenerative_runs(
-    chain: Chain, low_bins: list[int], high_bins: list[int], target: float, max_bins: int, allowance, attempt_bins: int
+    chain: Chain, low_bins: list[int], high_bins: list[int], target: float, max_bins: int, allowance, attempt_bins: int,
+    *, seconds: float | None = None, step: float = 0.0,
 ) -> tuple[BudgetRun, BudgetRun] | None:
     """The lower and the upper chain's `BudgetRun` of the whole craft, from its attempts; None when they cannot be made.
+
+    `seconds` is the time net of the attempt runs (`step` only names the grid in what is said when it stops them).
 
     Each run's `cdf` is the cumulative distribution of the total in bins up to `target` (or `max_bins`). `unresolved` is the mass beyond.
     """
     distinct = [low_bins] if low_bins == high_bins else [low_bins, high_bins]
-    jobs = [(attempt_pmf, (chain, bins), {"success": success, "max_bins": attempt_bins}) for bins in distinct for success in (True, False)]
+    deadline = None if seconds is None else time.monotonic() + seconds
+    options = {"max_bins": attempt_bins, "deadline": deadline}
+    jobs = [(attempt_pmf, (chain, bins), {"success": success, **options}) for bins in distinct for success in (True, False)]
     found = run_jobs(jobs)  # the attempt runs share nothing: side by side when workers can be forked
     if any(each is None for each in found):
         note(FOLD_GAVE_UP.format(FOLD_LIMIT))  # an attempt cut short by `fold_free`; said here as well, since a forked worker's note is not seen
@@ -149,6 +163,9 @@ def regenerative_runs(
         (g, _), (f, _) = found[2 * k], found[2 * k + 1]
         chance = float(g.sum())
         missing = max(0.0, 1.0 - chance - float(f.sum()))
+        if deadline is not None and time.monotonic() >= deadline and (chance <= 0.0 or missing > MAX_MISSING * chance):
+            note(TIME_NET.format(step, seconds, missing))
+            return None
         if chance <= 0.0 or float(f[0]) >= 1.0:
             return None
         if missing / chance > MAX_MISSING:

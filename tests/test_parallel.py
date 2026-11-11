@@ -2,6 +2,7 @@
 
 import os
 import random
+import time
 from types import MappingProxyType
 
 import pytest
@@ -101,3 +102,17 @@ def test_an_error_in_a_worker_reaches_the_caller():
     with WorkerPool(make_base, (0,), workers=2) as pool:
         with pytest.raises(KeyError):
             pool.map(fails, [1, 2, 3, 4])
+
+
+def dies(piece: int) -> int:
+    os._exit(3)  # a worker killed from outside (the kernel's out-of-memory killer, say) ends like this
+
+
+def test_a_dead_worker_raises_in_the_caller_instead_of_leaving_it_waiting():
+    from concurrent.futures.process import BrokenProcessPool
+
+    began = time.monotonic()
+    with WorkerPool(make_base, (0,), workers=2) as pool:
+        with pytest.raises(BrokenProcessPool):
+            pool.map(dies, [1, 2, 3, 4])
+    assert time.monotonic() - began < 60  # #535: a pool never waits forever on a worker that is gone
