@@ -110,7 +110,8 @@ def main(
     parser.add_argument(
         "--solver", choices=SOLVERS, default="auto",
         help="how the cheapest route is searched. auto (default): the exact search that looks only at the states that could matter, whenever it can be "
-        "built for the target, and the walk of the whole graph otherwise. envelope: that exact search by name, and an error where it cannot be built. "
+        "built for the target; the walk of the whole graph where it cannot, and with --route (judging your route needs the planner's choice at every "
+        "state your route reaches); for now, with 40 or more priced actions (the fossil sets), the walk that first proves most of them not needed. envelope: that exact search by name, and an error where it cannot be built. "
         "packed: walk the whole graph, then solve it exactly; slower on a big target and it can need many GB of memory, but it names every state. "
         "object: the same walk of the whole graph in plain objects; fine for a small target, it runs out of memory on a big one. "
         "The answer is the same exact mean whichever is chosen",

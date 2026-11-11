@@ -237,5 +237,5 @@ def test_the_help_says_what_each_choice_does(capsys):
 
     text = " ".join(capsys.readouterr().out.split())
     assert "--solver {auto,object,packed,envelope}" in text
-    for word in ("auto (default)", "envelope:", "packed:", "object:", "same exact mean"):
+    for word in ("auto (default)", "with --route", "40 or more priced actions", "envelope:", "packed:", "object:", "same exact mean"):
         assert word in text

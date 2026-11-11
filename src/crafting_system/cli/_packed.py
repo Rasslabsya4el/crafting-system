@@ -14,8 +14,9 @@ is the chain that fits: 11,767 classes with 17 million transitions for R04 lump 
 to 14,743 blocks. The same lumped chain, on one shown item state per block, is what the report prints for a big policy
 (`Plan.view_policy`), while `--verify` and the route evaluation run the whole policy.
 
-`make_plan(solver="auto")` is the envelope search (`_envelope_plan`) wherever its bound can be built and does not come here (#535);
-where it cannot (`abstraction.pattern_refusal`, #507) it walks packed first and keeps the object solver for graphs of at most
+`make_plan(solver="auto")` is the envelope search (`_envelope_plan`) wherever its bound can be built and does not come here (#535),
+except with 40 offers or more (`MIN_OFFERS_TO_PRUNE`: the bound pruning `solve_pruned`, until #742) and for a plan a given route is judged
+against (`judges_route`, `--route`: the walk, #732); where the bound cannot be built (`abstraction.pattern_refusal`, #507) it walks packed first and keeps the object solver for graphs of at most
 `EXACT_TRANSITIONS` transitions (what it has been run on, ADR-0023), unchanged; `solver="packed"` always uses this route and `"object"`
 never. The answers are the same to the certificate; only the cost differs. The packed route takes no inputs, variants or
 Locks (the abstraction of `make_plan` has none; `Peek` is solved elsewhere).
