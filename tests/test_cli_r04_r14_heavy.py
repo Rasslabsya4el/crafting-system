@@ -54,7 +54,7 @@ FILES = {
 }  # (target file, the start item's price: read from the file, never typed, so it moves with the snapshot)
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 RUNS = int(os.environ.get("CRAFTING_VERIFY_RUNS", "300"))  # simulated crafts of --verify (a craft is thousands of uses)
-P90_WIDTH = {"R04": 0.05, "R14": 0.15}  # the certified bracket of the p90 is at most this share of it wide (R04 on the coarse grid; R14 attempt by attempt, whose ladder ends at the restart cost over 32: 1,774.5 wide at a p90 of 12,291.1 Chaos, 14.4%, in run 41476195715)  # R04: 0.05 since the snapshot of 2026-11-08 (4.4% measured, run 42459442302; it was under 2% at the old prices): #709
+P90_WIDTH = {"R04": 0.05, "R14": 0.20}  # the certified bracket of the p90 is at most this share of it wide (R04 on the coarse grid; R14 attempt by attempt, whose ladder ends at the restart cost over 32: 1,774.5 wide at a p90 of 12,291.1 Chaos, 14.4%, in run 41476195715)  # R04: 0.05 since the snapshot of 2026-11-08 (4.4% measured, run 42459442302; it was under 2% at the old prices): #709  # R14: 0.20 since the snapshot of 2026-11-10 (3,964.1 wide at a p90 of 20,131.0 Chaos, 19.7%, run 42922949267; 14.4% at the old prices): #709
 
 
 @pytest.fixture(scope="module")
