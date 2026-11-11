@@ -20,8 +20,9 @@ here (`types.MappingProxyType` has none).
 import copyreg
 import multiprocessing
 import os
+import sys
 from collections.abc import Callable, Iterable, Sequence
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, wait
 from types import MappingProxyType
 
 WORKERS_ENV = "CRAFTING_WORKERS"
@@ -57,8 +58,29 @@ def context() -> object:
     return _context
 
 
-def _initialise(factory: Callable[..., object], args: tuple) -> None:
+def _fresh_streams() -> None:
+    """New `sys.stdout` and `sys.stderr` on the same files, for a forked worker (ticket #535).
+
+    A fork copies the parent's stream objects with their locks as they were at that moment. When another thread of the parent
+    was writing (a progress thread printing to a slow pipe), the copy's lock is held by a thread that does not exist in the
+    worker, and the worker's first print waits on it forever: R14's risk hung so in heavy runs 42946872857 and 42957520245,
+    caught by py-spy in 42964753874 (a worker in `print`, `PyThread_acquire_lock`, its attempt run done).
+    """
+    for name, number in (("stdout", 1), ("stderr", 2)):
+        old = getattr(sys, name)
+        if old is None:
+            continue
+        try:
+            fresh = open(number, "w", encoding=getattr(old, "encoding", None), errors=getattr(old, "errors", None), buffering=1, closefd=False)
+        except OSError:
+            continue
+        setattr(sys, name, fresh)
+
+
+def _initialise(factory: Callable[..., object], args: tuple, forked: bool = False) -> None:
     global _context
+    if forked:
+        _fresh_streams()
     _context = factory(*args)
 
 
@@ -105,6 +127,18 @@ class WorkerPool:
             self._executor.shutdown(wait=True, cancel_futures=True)
             self._executor = None
 
+    def abandon(self) -> None:
+        """Kill the workers and drop the pool without waiting on them (a worker that does not return must not hold the caller, #535)."""
+        executor, self._executor = self._executor, None
+        if executor is None:
+            return
+        processes = list((executor._processes or {}).values())  # the executor keeps no public handle on its workers
+        for process in processes:
+            process.kill()
+        executor.shutdown(wait=False, cancel_futures=True)
+        for process in processes:
+            process.join(5.0)
+
     def _start(self) -> ProcessPoolExecutor:
         if self._executor is None:
             methods = multiprocessing.get_all_start_methods()
@@ -115,15 +149,19 @@ class WorkerPool:
                 max_workers=self.workers,
                 mp_context=multiprocessing.get_context(method),
                 initializer=_initialise,
-                initargs=(self._factory, self._args),
+                initargs=(self._factory, self._args, method == "fork"),
             )
         return self._executor
 
-    def map(self, function: Callable, pieces: Iterable, *, chunk: int | None = None) -> list:
+    def map(self, function: Callable, pieces: Iterable, *, chunk: int | None = None, timeout: float | None = None) -> list:
         """`[function(p) for p in pieces]`, in that order, spread over the workers.
 
         `function` must be a module-level function (it is sent by name). `chunk` is how many pieces go to a worker
         at a time; the default cuts about eight chunks per worker. It changes the speed, never the result.
+
+        `timeout` (seconds) bounds the wait on the workers: when a chunk has not come back by then the workers are killed
+        (`abandon`) and `TimeoutError` is raised. A worker that dies raises `BrokenProcessPool` either way. Without
+        workers (`workers` below 2) the pieces run here and `timeout` is not applied.
         """
         items = list(pieces)
         if self.workers < 2 or len(items) < 2:
@@ -139,8 +177,17 @@ class WorkerPool:
         chunks = [items[start : start + size] for start in range(0, len(items), size)]
         executor = self._start()
         results: list = []
-        for part in executor.map(_run_chunk, [function] * len(chunks), chunks):
-            results.extend(part)
+        if timeout is None:
+            for part in executor.map(_run_chunk, [function] * len(chunks), chunks):
+                results.extend(part)
+            return results
+        futures = [executor.submit(_run_chunk, function, part) for part in chunks]
+        _, waiting = wait(futures, timeout=max(0.0, timeout))
+        if waiting:
+            self.abandon()
+            raise TimeoutError(f"{len(waiting)} of {len(futures)} chunks did not come back in {timeout:.0f} s; their workers were stopped")
+        for future in futures:
+            results.extend(future.result())
         return results
 
     def map_chunks(self, function: Callable, pieces: Iterable, *, chunk: int) -> list:

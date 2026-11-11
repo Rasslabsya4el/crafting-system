@@ -20,7 +20,9 @@ over the chance of success) could move a quantile by more than the rounding allo
 
 A net bounds the time (ticket #535): the attempt runs of one step get a `deadline`, and a run that is still going then stops
 at the last bin it finished, like a run at its cap. Its mass in flight then counts as cut, so the step is refused for it and
-said (`TIME_NET`), and the caller keeps the coarser step it had (whose brackets still hold).
+said (`TIME_NET`), and the caller keeps the coarser step it had (whose brackets still hold). A worker that does not come back
+by `ABANDON_MARGIN` past the deadline (stuck outside that loop) is killed and the step is refused and said the same way; its jobs
+are not run again here.
 """
 
 import gc
@@ -45,7 +47,12 @@ def trace(text: str) -> None:
 
 ATTEMPT_TAIL = 1e-13  # the mass of an attempt that may stay in flight when its DP stops (below it the float sums of the lost mass no longer settle)
 MAX_MISSING = 1e-10  # the cut attempts' mass over the chance of success must not exceed this
-TIME_NET = "the attempt runs on a step of {:.4g} were stopped at the time limit of {:.0f} s with {:.1e} of an attempt's chance still in flight; this step's percentiles are not used (a coarser one's brackets stand)"
+ABANDON_MARGIN = 60.0  # seconds past the deadline a worker has to stop by itself before it is killed
+TIME_NET = "the attempt runs on a step of {:.4g} were stopped at the time limit of {:.0f} s ({}); this step's percentiles are not used (a coarser one's brackets stand)"
+
+
+class TimedOut(Exception):
+    """The workers of `run_jobs` did not come back by their time limit and were killed."""
 
 
 def regeneration_edges(chain: Chain) -> list[int]:
@@ -154,7 +161,11 @@ def regenerative_runs(
     deadline = None if seconds is None else time.monotonic() + seconds
     options = {"max_bins": attempt_bins, "deadline": deadline}
     jobs = [(attempt_pmf, (chain, bins), {"success": success, **options}) for bins in distinct for success in (True, False)]
-    found = run_jobs(jobs)  # the attempt runs share nothing: side by side when workers can be forked
+    try:
+        found = run_jobs(jobs, deadline=deadline)  # the attempt runs share nothing: side by side when workers can be forked
+    except TimedOut as stopped:
+        note(TIME_NET.format(step, seconds, str(stopped)))
+        return None
     if any(each is None for each in found):
         note(FOLD_GAVE_UP.format(FOLD_LIMIT))  # an attempt cut short by `fold_free`; said here as well, since a forked worker's note is not seen
         return None
@@ -164,7 +175,7 @@ def regenerative_runs(
         chance = float(g.sum())
         missing = max(0.0, 1.0 - chance - float(f.sum()))
         if deadline is not None and time.monotonic() >= deadline and (chance <= 0.0 or missing > MAX_MISSING * chance):
-            note(TIME_NET.format(step, seconds, missing))
+            note(TIME_NET.format(step, seconds, f"{missing:.1e} of an attempt's chance still in flight"))
             return None
         if chance <= 0.0 or float(f[0]) >= 1.0:
             return None
@@ -185,19 +196,23 @@ def _call(name: str):
     return function(*args, **kwargs)
 
 
-def run_jobs(jobs: list[tuple]) -> list:
+def run_jobs(jobs: list[tuple], *, deadline: float | None = None) -> list:
     """The results of `(function, args, kwargs)` jobs, in order: side by side in a pool when `CRAFTING_WORKERS` allows and workers can be forked.
 
     A job is a function of its arguments alone, so the list is the same either way (as `_evaluate._both`); a worker that fails sends the jobs
-    back to a serial run here.
+    back to a serial run here. With a `deadline` (`time.monotonic()`), workers that have not come back `ABANDON_MARGIN` seconds after it are
+    killed and `TimedOut` is raised (the jobs are not run again: they would take as long here). Run here, a job bounds itself.
     """
     if len(jobs) > 1 and parallel.worker_count() >= 2 and parallel.can_inherit():
         names = [str(i) for i in range(len(jobs))]
         gc.collect()
         gc.freeze()  # the forked workers must not touch the parent's objects (a collection writes to every one of them: a plan holds gigabytes)
         try:
+            timeout = None if deadline is None else deadline + ABANDON_MARGIN - time.monotonic()
             with parallel.WorkerPool(_held, (dict(zip(names, jobs)),), workers=min(len(jobs), parallel.worker_count())) as pool:
-                return pool.map(_call, names, chunk=1)
+                return pool.map(_call, names, chunk=1, timeout=timeout)
+        except TimeoutError as late:
+            raise TimedOut(f"a worker did not come back {ABANDON_MARGIN:.0f} s after it and was stopped: {late}") from late
         except Exception:  # a worker failed or was killed: run them here
             pass
         finally:

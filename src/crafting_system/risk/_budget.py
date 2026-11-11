@@ -51,8 +51,7 @@ ties within delta in probability.
 The tail rule is not read off `1 - lost - F` alone (ticket #535). That difference carries the rounding of the running
 sums, a few eps per bin, so on a long run it settles at about 1e-13 while the mass really in flight goes on falling (R14
 at the 2026-11-10 prices, heavy run 42954014788: the four attempt runs on a step of 0.3063 Chaos ran to their cap of a
-million bins with 1e-137 still in flight, four workers of 4.5 to 5.9 GB on a 16 GB runner; in run 42946872857 one on a
-step of 0.6125 did not come back in 1 h 50 min). Once the difference is within that rounding of `tail_mass`, the mass in flight is also
+million bins with 1e-137 still in flight, four workers of 4.5 to 5.9 GB on a 16 GB runner). Once the difference is within that rounding of `tail_mass`, the mass in flight is also
 summed directly from its parts, as `unresolved` is, and either one at or below `tail_mass` stops the run.
 """
 

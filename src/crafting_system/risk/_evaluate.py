@@ -122,7 +122,7 @@ FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean o
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 REGEN_PARTS = (4, 8, 16, 32)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
 REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
-REGEN_SECONDS = 600.0  # the time net of one step's attempt runs (#535): a step stopped by it is refused and said, and no finer one is tried
+REGEN_SECONDS = 1800.0  # the time net of one step's attempt runs (#535), only for runs that never finish: a step stopped by it is refused and said, and no finer one is tried; R14's slowest step seen is 524 s (step 0.3063, run 42964753874)
 REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 
 

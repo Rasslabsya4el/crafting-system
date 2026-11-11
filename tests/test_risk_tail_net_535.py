@@ -1,15 +1,17 @@
 """The tail rule of the budget DP and the time net of the attempt-wise runs (ticket #535).
 
-R14 at the 2026-11-10 prices hung in `packed_risk` (heavy run 42946872857, 1 h 50 min on a step of 0.6125 Chaos); its rerun
-42954014788 showed why: the attempt runs on a step of 0.3063 never met their tail of 1e-13, because `1 - lost - F` carries the
+Two faults of R14's risk at the 2026-11-10 prices. The hang itself (runs 42946872857, 42957520245) was a forked worker waiting
+forever on a stdout lock copied at the fork (`parallel._fresh_streams`, caught by py-spy in 42964753874). Apart from it, rerun
+42954014788 showed the attempt runs on a step of 0.3063 never meeting their tail of 1e-13, because `1 - lost - F` carries the
 rounding of the running sums and settled just above it while the mass really in flight fell to 1e-137; they ran to their cap
-of a million bins, four workers filling the 16 GB runner, and the pool waited on them. Now the
-mass in flight is also summed from its parts once the difference is within its rounding of the tail, and the attempt runs of a
-step stop at a time limit and say so.
+of a million bins. Now the mass in flight is also summed from its parts once the difference is within its rounding of the
+tail, and the attempt runs of a step have a time net that stops them (in the worker, or by killing a worker that does not
+come back) and says so.
 """
 
 import math
 import os
+import threading
 
 import numpy as np
 import pytest
@@ -130,3 +132,27 @@ def test_attempt_jobs_whose_worker_dies_are_run_here_instead(monkeypatch):
     monkeypatch.setenv("CRAFTING_WORKERS", "2")
 
     assert _regen.run_jobs([(dies_in_a_worker, (1,), {}), (dies_in_a_worker, (2,), {})]) == [1, 2]
+
+
+def never_ends(*args, **options):
+    """A job stuck where no deadline is checked (a lock, a call that does not return): it waits for an event nobody sets."""
+    threading.Event().wait()
+
+
+@pytest.mark.skipif(not parallel.can_inherit(), reason="the attempt runs go side by side only where workers are forked")
+def test_workers_that_never_come_back_are_killed_and_the_step_is_refused_and_said(monkeypatch):
+    monkeypatch.setenv("CRAFTING_WORKERS", "2")
+    with pytest.raises(_regen.TimedOut):
+        _regen.run_jobs([(never_ends, (), {}), (never_ends, (), {})], deadline=-math.inf)  # its limit long past: the wait ends at once
+
+    from test_risk_regen import narrow
+
+    monkeypatch.setattr(_evaluate, "REGEN_SECONDS", 0.0)
+    monkeypatch.setattr(_regen, "ABANDON_MARGIN", 0.0)
+    monkeypatch.setattr(_regen, "attempt_pmf", never_ends)
+
+    stopped = narrow(regenerative=True)
+
+    (said,) = [line for line in stopped.grid.gave_up if line.startswith("the attempt runs on a step of ")]
+    assert "a worker did not come back 0 s after it and was stopped" in said
+    assert math.isinf(stopped.p90.high)  # the step was refused, no finer one tried; the ordinary grid could not reach the level

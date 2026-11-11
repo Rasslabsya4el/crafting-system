@@ -1,7 +1,10 @@
 """The process pool of ticket #250: the size comes from CRAFTING_WORKERS, and `map` gives a loop's list for any size."""
 
+import io
 import os
 import random
+import sys
+import threading
 from types import MappingProxyType
 
 import pytest
@@ -114,3 +117,40 @@ def test_a_dead_worker_raises_in_the_caller_instead_of_leaving_it_waiting():
         with pytest.raises(BrokenProcessPool):
             pool.map(dies, [1, 2, 3, 4])
     # #535: the pool raises at once instead of waiting forever on a worker that is gone (a hang would stall the suite)
+
+
+class GatedStream(io.TextIOBase):
+    """A stream whose writes take a lock, as a buffered stdout does."""
+
+    def __init__(self):
+        self.gate = threading.Lock()
+
+    def write(self, text):
+        with self.gate:
+            return len(text)
+
+
+def prints(piece: int) -> int:
+    print(f"piece {piece}")
+    return piece
+
+
+@pytest.mark.skipif(not parallel.can_inherit(), reason="only forked workers inherit the parent's stream locks")
+def test_a_forked_worker_prints_though_the_parent_held_its_stream_lock_at_the_fork(monkeypatch):
+    gated = GatedStream()
+    monkeypatch.setattr(sys, "stdout", gated)
+    with gated.gate:  # held while the workers are forked, as by a progress thread writing to a slow pipe (#535)
+        with WorkerPool(make_base, (0,), workers=2) as pool:
+            assert pool.map(prints, [1, 2], timeout=60.0) == [1, 2]  # before #535 each worker waited on the copied lock forever
+
+
+def waits_forever(piece: int) -> int:
+    threading.Event().wait()  # nobody sets it: a worker that never comes back
+
+
+def test_a_worker_that_never_comes_back_is_killed_at_the_timeout():
+    with WorkerPool(make_base, (0,), workers=2) as pool:
+        with pytest.raises(TimeoutError):
+            pool.map(waits_forever, [1, 2], timeout=0.0)
+        assert pool._executor is None  # abandoned: the next map starts fresh workers
+        assert pool.map(add_offset, [1, 2]) == [(1, 7), (2, 14)]
