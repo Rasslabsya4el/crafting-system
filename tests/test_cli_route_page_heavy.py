@@ -37,7 +37,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
 TARGETS = {"R04": "r04-penetrating-quiver", "R14": "r14-hunter-bow"}
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 MEASURED_MB = {"R04": 0.067, "R14": 0.067}  # the page as `page_size.py` counted it after #466: heavy runs 42304541274 (R04) and 42304575904 (R14), on ce5e88b
@@ -207,10 +207,10 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
 # judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
 # a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
 
-KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault; R04's is gone since #553, R14's "bought Magic bow drawn empty" since #640
-    # found by #598, held by #651 (a page statement of what step 4 adds that the tier lines do not show). The page of #640 opens R14 with the draw of the
-    # bought bow's mods, so step 4 is again an Orb of Augmentation that aims at +1 to Level of Socketed Gems and prints no tier line for it.
-    ("R14", "check_tier_step_has_tier_line"): 651,
+KNOWN_REAL: dict[tuple[str, str], int] = {  # (route, check) -> the issue that holds the fault; R04's is gone since #553, R14's "bought Magic bow drawn empty" since #640,
+    # R14's #651 (a step aiming at a mod no tier line shows): the check passes at the prices of 2026-11-10 (heavy run 42907582304); #651 stays open for the cause
+    # found by the heavy run of PR #662 (rebased onto #660, snapshot of 2026-11-08): the Percentiles limit lists what the slower method costs and not what the answer still guarantees.
+    ("R14", "check_cut_guarantee"): 708,
 }
 JUDGES = page_lint.CHECKS  # `check_no_internal_names` is one of them
 

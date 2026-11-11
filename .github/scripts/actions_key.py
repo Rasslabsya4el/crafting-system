@@ -49,7 +49,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
+PRICES = "tests/fixtures/prices/routes-allflame-2026-11-10.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
 FORMAT = "crafting-system-actions-key/1"
 
 ROUTES = ("J01", "R04", "R08", "R09", "R13", "R14", "V01")
@@ -246,7 +246,7 @@ def plan_of_job(route: str, variant: str, solver: str, data, net=None):
 
     target, bench = load_variant(route, variant, data)
     starts = bench is not None and bench.start is not None
-    prices = load_target_prices(target.price_file, load_config(None)) if starts else load_price_file(ROOT / PRICES)
+    prices = load_target_prices(target.price_file, load_config(None)) if starts else load_price_file(ROOT / os.environ.get("ACTIONS_KEY_PRICES", PRICES))
     options = {"net": net} if net is not None else {}
     if starts:  # `plan_with_starts` plans each start without the risk and measures it for the one it keeps (V01 is small)
         return plan_with_starts(data, target, prices, solver=solver, **options)

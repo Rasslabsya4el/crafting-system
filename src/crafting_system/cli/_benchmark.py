@@ -42,7 +42,7 @@ from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, pub
 from ._inputs import load_target_prices, write_json
 from ._offers import default_offers
 from ._plan import Plan, make_plan
-from ._report import money, number_states, percent
+from ._report import money, name_states, number_states, percent
 from ._route import RouteResult, evaluate_route, load_route
 from ._shares import weight_share
 from ._start_report import first_step_document
@@ -543,7 +543,7 @@ def _given_route(
     found["gaps"] = len(result.gaps)
     found["first_divergence"] = None
     if divergence is not None:
-        first = first_divergence_of(plan, data, divergence, number_states(plan))
+        first = first_divergence_of(plan, data, divergence, name_states(number_states(plan), [divergence.state]))
         found["first_divergence"] = first if review_line is not None else {key: value for key, value in first.items() if key != "per_use"}
     found["seconds"] = result.seconds
     if review_line is not None:

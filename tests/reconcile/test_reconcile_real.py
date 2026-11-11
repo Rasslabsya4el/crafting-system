@@ -58,7 +58,7 @@ def test_the_places_agree(results, target, slot):
 def test_a_known_disagreement_is_exactly_the_pinned_one(results, target, slot):
     known = KNOWN[(target, slot)]
 
-    assert {item.values for item in results[target][slot]} == {known.values}
+    assert {item.values for item in results[target][slot]} == known.values
 
 
 def test_the_set_of_checks_is_the_committed_one():

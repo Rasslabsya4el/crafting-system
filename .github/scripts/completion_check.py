@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"
+PRICES = "tests/fixtures/prices/routes-allflame-2026-11-10.json"
 
 
 def main(argv: list[str]) -> int:
@@ -42,7 +42,9 @@ def main(argv: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
     root = find_project_root()
     data = load_game_data()
-    plan = make_plan(data, load_target(root / bench.target, data), load_price_file(root / PRICES), solver="packed")  # the completed route is read on the walked graph, which the envelope search (the `auto` of #535) does not walk
+    # the routes are evaluated on the policy alone; the planner's own risk grid is not read and took 8 GB more on R14 at the 2026-11-10 prices (#738)
+    # the completed route is read on the walked graph, which the envelope search (the `auto` of #535) does not walk
+    plan = make_plan(data, load_target(root / bench.target, data), load_price_file(root / PRICES), with_risk=False, solver="packed")
     guide = load_route(root / bench.route, plan, data)
     completed = load_route(root / bench.completed, plan, data)
     found = walked_losses(plan, guide, completed, data)
