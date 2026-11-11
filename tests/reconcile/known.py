@@ -13,7 +13,7 @@ in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
     #417  (closed) the buy spec and the target described different start items; the spec is computed from the target since #474
     #494  point 2: the price entries of R08 and R09 are of a normal base plus a typed Alchemy, OR-16 (what was left of #417)
     #418  the start price is keyed by base name, not base id (the key says the base since #474; rows moved to #483 and #486)
-    #425  R04's price is for item level 85 against 81; V01's hand price records no level
+    #425  R04's price is for item level 85 (snapshot of 2026-10-31) or 84 (2026-11-10) against 81; V01's hand price records no level
     #426  R04, V01 start prices are poe.ninja or hand stand-ins (R13's is a trade price since #576)
     #427  targets with no start price (J01, R03, R06): closed by #505, every target says `start: given` (J01) or `start: bought`, and a
           bought one has a key and a computed spec; the two prices that cannot be taken are #483
@@ -38,10 +38,12 @@ class Known:
     why: str
     value_a: str  # the target's side (or the first place), as the check prints it
     value_b: str  # the other place
+    more: tuple[tuple[str, str], ...] = ()  # further (value_a, value_b) pairs: one price file each, when the price folder holds several snapshots
 
     @property
-    def values(self) -> tuple[str, str]:
-        return (self.value_a, self.value_b)
+    def values(self) -> frozenset[tuple[str, str]]:
+        """Every pair of values the slot disagrees by: one per place that differs (a price slot is checked against each file of the folder)."""
+        return frozenset({(self.value_a, self.value_b), *self.more})
 
 
 _ATLAS = "Metadata/Items/Armours/Boots/"
@@ -49,7 +51,7 @@ _RING = "Metadata/Items/Rings/"
 _QUIVER = "Metadata/Items/Quivers/"
 
 
-def _known(rows: dict[tuple[str, str], tuple[str, str, str, str, str]]) -> dict[tuple[str, str], Known]:
+def _known(rows: dict[tuple[str, str], tuple]) -> dict[tuple[str, str], Known]:
     return {key: Known(*row) for key, row in rows.items()}
 
 
@@ -58,7 +60,7 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r03-avoid-shock-boots", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage", "no entry"),
         ("r06-strength-heavy-belt", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Heavy Belt, normal, item level 75, Hunter influence", "no entry"),
         ("r04-penetrating-quiver", "price.base"): ("#486", "OR-3", "the price entry is by a name that two bases share, and neither the trade site nor poe.ninja can tell them apart", f"{_QUIVER}QuiverNew5", f"{_QUIVER}Quiver12, {_QUIVER}QuiverNew5"),
-        ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85, labelled 81", "81", "85"),
+        ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85 in the snapshot of 2026-10-31 and 84 in that of 2026-11-10, labelled 81", "81", "85", (("81", "84"),)),
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
         ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has no market (0 listings)", "Amethyst Ring", "any accessory.ring"),
         ("r05-strength-ring", "price.pool"): ("#483", "OR-3", "the price entry accepts the Unset Ring and the Bone Ring; the exact item has no market", "Amethyst Ring", f"{_RING}Ring15 (+3 -0); {_RING}Ring16 (+23 -0)"),
