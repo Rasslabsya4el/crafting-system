@@ -368,3 +368,17 @@ def test_on_the_bound_pruning_path_the_lock_plan_equals_the_one_solved_without_t
     assert pruned.foresight.status is whole.foresight.status is Status.USED
     assert pruned.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
     assert pruned.foresight.lock_free_mean == pytest.approx(whole.foresight.lock_free_mean, rel=1e-9)
+
+
+def test_a_burn_is_a_fallback_that_leads_back_to_the_state_and_a_plan_with_it_solves(r12, lock_free):
+    prices = dataclasses.replace(with_lock(price_file(), 0.05), prices={**with_lock(price_file(), 0.05).prices, "Clear Oil": PriceEntry(0.01, "test")})
+    plan = make_plan(DATA, r12, prices)  # an amulet: the re-anoint (three Clear Oils) is its burn
+
+    from crafting_system.cli._foresight import plan_burn
+
+    burn = plan_burn(DATA, r12.start_item, plan.abstraction, prices)
+    assert burn is not None and burn.label == "Burn with Re-anoint" and burn.cost == pytest.approx(0.03)
+    site = PlanSites(plan.abstraction, plan.offers, plan.offers, plan.start, burn)(plan.start)
+    loop = next(action for action in site.fallback if action.label == burn.label)
+    assert [(state, weight) for state, weight in loop.outcomes] == [(plan.start, 1)]
+    assert plan.foresight.status is Status.USED and plan.mean_remaining < lock_free.mean_remaining

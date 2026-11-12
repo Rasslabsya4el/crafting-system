@@ -271,7 +271,7 @@ class PlanSites:
         offers: Iterable[PricedOffer],
         plain_offers: Iterable[PricedOffer],
         start: CompressedState,
-        burn: Action | None,
+        burn: BurnPrice | None,
         *,
         prune_corrupting: bool = True,
         cache: dict | None = None,
@@ -343,8 +343,16 @@ def _previewable(priced: PricedOffer, data) -> Previewable:
     return Previewable.NO if previewable is None else previewable(data)
 
 
-def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile, price_source: str = "both") -> Action | None:
-    """The burn of the plan's Peeks as a solver action whose outcomes are filled per state: the cheapest legal burn of the start item, or None.
+@dataclass(frozen=True)
+class BurnPrice:
+    """The burn of a plan's Peeks: its label and the price of one use; at each state it is the action that leads back to the state."""
+
+    label: str
+    cost: float
+
+
+def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile, price_source: str = "both") -> BurnPrice | None:
+    """The burn of the plan's Peeks: the cheapest legal burn of the start item, or None.
 
     Its legality is read on the start item: a burn depends on the class, the corruption (a corrupted state takes no Lock), the implicits (refused
     where the state keeps them, `BurnKeeps.implicits`) and the quality (which the planner never keeps: it refuses a target that names it).
@@ -353,10 +361,10 @@ def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile, pri
         raise ValueError("the Lock's burn is built for states that keep no quality; the planner refuses a target that names it")
     keeps = BurnKeeps(quality=False, implicits=abstraction.tracks_implicits, enchantment=False)
     found = cheapest_burn(burns_at(data, item, keeps), data, prices, price_source)
-    return None if found is None else Action(found.burn.label(data), found.cost, ())
+    return None if found is None else BurnPrice(found.burn.label(data), found.cost)
 
 
-def cheapest_cost(offers: Iterable[PricedOffer], burn: Action | None) -> float:
+def cheapest_cost(offers: Iterable[PricedOffer], burn: BurnPrice | None) -> float:
     """`c_min`: the cheapest action of the plan, a lower bound of the cheapest option or fallback action of every state (module text)."""
     return min((*(priced.cost for priced in offers), *((burn.cost,) if burn is not None else ())), default=0.0)
 
