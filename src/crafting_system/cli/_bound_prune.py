@@ -458,8 +458,9 @@ def through_listing(abstraction: Abstraction, start: CompressedState, shape: Com
             outcomes = abstraction.kernel(start, draw.priced.offer.action)
         except NotApplicableError:
             continue  # refused at the listing: never used after a restart
-        except OutOfScopeError:
-            return  # no rule for it: the restart stays as it was, and the walk writes its gap
+        except OutOfScopeError:  # no rule for it proves no chance: counted as landing, the argument cut there as at a terminal offer
+            landing = ONE
+            continue
         landing = max(landing, ONE - sum((chance for state, chance in outcomes.items() if outside(state)), ZERO))
     cheapest = min(draw.priced.cost for draw in draws)
     for entry in entries:
