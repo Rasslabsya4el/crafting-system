@@ -48,7 +48,7 @@ from enum import StrEnum
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.actions import BurnKeeps, HinekoraLock, NotApplicableError, OutOfScopeError, Previewable, burns_at
 from crafting_system.items import Item
-from crafting_system.prices import PriceFile, cheapest_burn, lock_price
+from crafting_system.prices import PriceFile, cheapest_burn
 from crafting_system.solver import Action, Outcome, Peek, PeekNode, Solution, peek_backup, solve_peek
 
 from ._offers import LOCK_KIND, BuyStartItem, PricedOffer
@@ -343,7 +343,7 @@ def _previewable(priced: PricedOffer, data) -> Previewable:
     return Previewable.NO if previewable is None else previewable(data)
 
 
-def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile) -> Action | None:
+def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile, price_source: str = "both") -> Action | None:
     """The burn of the plan's Peeks as a solver action whose outcomes are filled per state: the cheapest legal burn of the start item, or None.
 
     Its legality is read on the start item: a burn depends on the class, the corruption (a corrupted state takes no Lock), the implicits (refused
@@ -352,7 +352,7 @@ def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile) -> 
     if abstraction.tracks_quality:
         raise ValueError("the Lock's burn is built for states that keep no quality; the planner refuses a target that names it")
     keeps = BurnKeeps(quality=False, implicits=abstraction.tracks_implicits, enchantment=False)
-    found = cheapest_burn(burns_at(data, item, keeps), data, prices)
+    found = cheapest_burn(burns_at(data, item, keeps), data, prices, price_source)
     return None if found is None else Action(found.burn.label(data), found.cost, ())
 
 
@@ -383,22 +383,21 @@ def foresee(
     start: CompressedState,
     first: Solution,
     sites: PlanSites,
-    plain_model,
+    second_solve: Callable[[], tuple[object, PlanSites]],
     *,
-    wanted: bool,
-    prices: PriceFile,
+    lock: float | None,
     c_min: float,
     is_goal: Callable[[Hashable], bool],
 ) -> tuple[Foresight, Solution | None]:
-    """The Lock of an exact plan: its status, N, the pruning count and, when the Lock survives somewhere and the plan takes it, the second solution.
+    """The Lock of an exact plan that wants it: its status, N, the pruning count and, when the Lock survives somewhere and the plan takes it, the
+    second solution.
 
-    `first` is the Lock-free solution and `plain_model` the solver's model of the plain offers that the second solve runs on. The second solution is
-    returned only when its policy takes the Lock from the start; otherwise None, and the plan stays the Lock-free one, bit for bit.
+    `first` is the Lock-free solution, `sites` the Peeks the gains for N read, `lock` the Lock's price (None: no price). `second_solve` gives the
+    solver's model of the plain offers that the second solve runs on and the Peeks of that solve (whose fallback reads those offers); it is asked only
+    when some state keeps the Lock. The second solution is returned only when its policy takes the Lock from the start; otherwise None, and the plan
+    stays the Lock-free one, bit for bit.
     """
     began = time.perf_counter()
-    lock = lock_price(prices)
-    if not wanted:
-        return Foresight(Status.SWITCHED_OFF, lock), None
     if start.flags.corrupted:  # every state of a corrupted start is corrupted: the item takes no Lock (hinekora_lock.refused_on)
         return Foresight(Status.REFUSED, lock), None
     values = first.values
@@ -422,7 +421,8 @@ def foresee(
     def keep(state: Hashable) -> bool:
         return survives(lock, c_min, values.get(state, math.inf))
 
-    second = solve_peek(LockModel(plain_model, sites, lock, keep), [start])
+    plain_model, second_sites = second_solve()
+    second = solve_peek(LockModel(plain_model, second_sites, lock, keep), [start])
     mean = values[start]
     if takes_the_lock(second.policy, start, is_goal) and second.values[start] < mean:
         return done(Status.USED, kept=kept, pruned=pruned, lock_free_mean=mean, saving=mean - second.values[start], solution=second)

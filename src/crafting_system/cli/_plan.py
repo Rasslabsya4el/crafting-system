@@ -31,7 +31,7 @@ from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind,
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
-from ._foresight import CoarseLockError, Foresight, PlanSites, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
+from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, listing_draw, offers_for, price_offers, split_usable
@@ -492,8 +492,8 @@ def make_plan(
         if decision.action == "approximate":
             try:
                 solved = climb(decision, start, merged)
-                burn = plan_burn(data, target.start_item, abstraction, prices)
-                foresight = coarse_check(solved.solution.values, lock_price(prices), cheapest_cost(merged, burn), lock_wanted(target.actions))
+                burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+                foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
             except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
                 raise PlanError(str(error)) from error
             limits += skipped_level_limits(solved.skipped)
@@ -532,7 +532,7 @@ def make_plan(
             limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
-    foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned)
+    foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
     if with_lock is not None:  # the plan takes the Lock: its policy is the second solve's, on the object solver (ADR-0054)
         solution, packed = with_lock, None
     solve_seconds = time.perf_counter() - began
@@ -566,21 +566,29 @@ def plan_foresight(
     priced: Sequence[PricedOffer],
     offered: Sequence[PricedOffer] | None,
     pruned: Pruned | None,
+    price_source: str = DEFAULT_PRICE_SOURCE,
 ) -> tuple[Foresight, Solution | None]:
     """Hinekora's Lock of an exact plan (`_foresight.foresee`): its status, N and, when the plan takes it, the solution with the Lock.
 
     The options come from the full list `priced`; the fallback of the gains for N reads the offers the Lock-free solve used (`offered`, or the offers
-    the bound pruning kept, a subset whose fallback is never cheaper, so N is never overstated); the second solve runs on the offers after the twins,
-    with no bound pruning (`offered`, or the twins merged from `priced`).
+    the bound pruning kept, a subset whose fallback is never cheaper, so N is never overstated); the second solve and the fallback of its Peeks read the
+    offers after the twins, with no bound pruning (`offered`, or the twins merged from `priced`). Nothing is built for a Lock the target switched off.
     """
-    burn = plan_burn(data, target.start_item, abstraction, prices)
+    lock = lock_price(prices, price_source)
+    if not lock_wanted(target.actions):  # switched off: nothing is built
+        return Foresight(LockStatus.SWITCHED_OFF, lock), None
+    burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
     cache: dict = {}
     plain = offered if offered is not None else (pruned.used if pruned is not None else priced)
     sites = PlanSites(abstraction, priced, plain, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
-    second = offered if offered is not None else tuple(merge_twins(data, target.start_item, priced)[0])
+
+    def second_solve():
+        second = offered if offered is not None else tuple(merge_twins(data, target.start_item, priced)[0])
+        peeks = sites if second is plain else PlanSites(abstraction, priced, second, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
+        return _Model(abstraction, start, second, cache), peeks
+
     return foresee(
-        abstraction, start, solution, sites, _Model(abstraction, start, second, cache),
-        wanted=lock_wanted(target.actions), prices=prices, c_min=cheapest_cost(priced, burn), is_goal=abstraction.is_goal,
+        abstraction, start, solution, sites, second_solve, lock=lock, c_min=cheapest_cost(priced, burn), is_goal=abstraction.is_goal,
     )  # fmt: skip
 
 

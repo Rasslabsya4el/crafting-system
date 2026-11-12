@@ -330,3 +330,41 @@ def test_a_toy_option_of_the_catalog_reaches_the_plan(r12, lock_free):
         plan = make_plan(DATA, r12, dataclasses.replace(with_lock(price_file(), 0.05), prices={**with_lock(price_file(), 0.05).prices, "Toy Orb": PriceEntry(1.0, "test")}))
     assert plan.foresight.status is Status.USED and plan.foresight.n > lock_free.foresight.n  # two independent previews are worth more than one
     assert plan.foresight.by_item_text == ("Toy",)
+
+
+@dataclasses.dataclass(frozen=True)
+class ToyBlind(GameAction):
+    """A dear Chaos Orb that the Lock does not preview: one of the many offers that send a plan to the bound pruning (40 or more)."""
+
+    index: int = 0
+
+    def label(self, data=None):
+        return f"Blind Chaos {self.index}"
+
+    def resources(self, data=None):
+        return {"Chaos Orb": 50 + self.index}
+
+    def reads(self, data):
+        return ChaosOrb().reads(data)
+
+    def adds(self, data=None, item=None):
+        return ChaosOrb().adds(data, item)
+
+    def outcomes(self, data, item):
+        return ChaosOrb().outcomes(data, item)
+
+
+def test_on_the_bound_pruning_path_the_lock_plan_equals_the_one_solved_without_that_pruning(r12):
+    from crafting_system.cli._offers import offers_for
+    from crafting_system.abstraction import Goal
+
+    base = offers_for(DATA, Goal.from_target(r12), r12.base_id, r12.start_item, r12.actions).offers
+    offers = (*base, *(Offer(ToyBlind(i).label(), ToyBlind(i), ToyBlind(i).resources()) for i in range(40)))
+    prices = with_lock(price_file(), 0.05)
+    pruned = make_plan(DATA, r12, prices, offers=offers)
+    whole = make_plan(DATA, r12, prices, offers=offers, solver="packed")  # every offer after the twins, no bound pruning
+
+    assert pruned.pruned is not None and whole.pruned is None
+    assert pruned.foresight.status is whole.foresight.status is Status.USED
+    assert pruned.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
+    assert pruned.foresight.lock_free_mean == pytest.approx(whole.foresight.lock_free_mean, rel=1e-9)
