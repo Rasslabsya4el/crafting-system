@@ -4,8 +4,8 @@ import io
 import os
 import random
 import sys
+import multiprocessing
 import threading
-import time
 from types import MappingProxyType
 
 import pytest
@@ -182,9 +182,14 @@ def test_a_pool_under_the_memory_net_gives_the_list_of_a_loop(monkeypatch):
             assert pool.map_chunks(total_of, [1, 2, 3], chunk=2) == [1 + 2 + 7, 3 + 7]
 
 
+def make_gate(ready, release) -> dict:
+    return {"ready": ready, "release": release}
+
+
 def holds(piece: int) -> int:
-    block = bytearray(200 * 2**20)  # 200 MB written (a zeroed bytearray is touched page by page), held for a few seconds
-    time.sleep(4)
+    block = bytearray(200 * 2**20)  # 200 MB written (a zeroed bytearray is touched page by page), held until the test has read the memory
+    context()["ready"].put(piece)
+    context()["release"].wait(60)
     return len(block)
 
 
@@ -192,30 +197,29 @@ def holds(piece: int) -> int:
 def test_the_memory_held_counts_the_workers():
     """The memory the net reads is the caller's and its live workers' (proportional sizes, so the pages a fork shares are counted once)."""
     alone = parallel.held_mb()
-    with WorkerPool(make_base, (0,), workers=2) as pool:
+    ready, release = multiprocessing.Queue(), multiprocessing.Event()
+    with WorkerPool(make_gate, (ready, release), workers=2) as pool:
         executor = pool._start()
         futures = [executor.submit(parallel._run_chunk, holds, [piece]) for piece in (1, 2)]
-        time.sleep(2.5)
+        assert sorted(ready.get(timeout=60) for _ in futures) == [1, 2]  # both workers hold their block now
         during = parallel.held_mb()
+        release.set()
         assert [future.result() for future in futures] == [[200 * 2**20]] * 2
     assert during >= alone + 300, (alone, during)
 
 
-def sleeps_or_fails(piece: int) -> int:
+def hangs_or_fails(piece: int) -> int:
     if piece == 2:
         raise KeyError(piece)
-    threading.Event().wait(30)
-    return piece
+    threading.Event().wait()  # nobody sets it: before the fix the caller waited on this one after the other had failed
 
 
 @pytest.mark.parametrize("net", [None, 10_000])
 def test_a_failed_chunk_ends_the_wait_at_once_and_kills_the_hung_one(monkeypatch, net):
     """A chunk that raises while another hangs: the caller gets the error now, not after the hung one, and its workers are stopped (#535 kept)."""
     monkeypatch.setattr(parallel, "held_mb", lambda: 100.0)
-    began = time.monotonic()
     with parallel.memory_net(net):
         with WorkerPool(make_base, (0,), workers=2) as pool:
             with pytest.raises(KeyError):
-                pool.map(sleeps_or_fails, [1, 2], chunk=1, timeout=20.0)
+                pool.map(hangs_or_fails, [1, 2], chunk=1, timeout=3600.0)  # the hour is never reached: the failure ends the wait
             assert pool._executor is None
-    assert time.monotonic() - began < 15
