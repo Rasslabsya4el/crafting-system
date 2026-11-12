@@ -29,8 +29,8 @@ Limit: a kept mod's value is rerolled, but the compressed state keeps the contri
 limit the kernel raises `OutOfScopeError` (`abstraction._kernel._split`). The donor's own mod is a new mod to the kernel, so a
 roll limit on it is refused there as for any forced mod.
 
-The catalog lists the kind only for a receiver with one influence; it is not a planner kind until the solver prices donors
-(#211, #212) and the interval driver exists (#220).
+The catalog lists the kind only for a receiver with one influence; it is not a planner kind until the planner prices donors (ADR-0062
+'As built'). Its rule axis needs nothing more: the planner solves a plan that reads one at every reading (#589).
 
 Memory Strands (ADR-0041, ticket #289, B5-11f). The orb cuts and spends: the draw of the rerolled mods takes `self.cut_of(data, item)` and
 the count after the craft is `max(0, s - x)` for `x` uniform on 0 to 100, the wiki's "Awakener's Orb - 0-100"
@@ -81,7 +81,7 @@ GROUP_CONFLICT_AXIS = Axis("awakener.group_conflict", (RECEIVER, DONOR), RECEIVE
 
 __all__ = ["AwakenersOrb", "influence_mods"]
 
-WHY_NOT_PLANNER = "the solver takes no donors yet (#211, #212) and the interval over its rule axis does not exist (#220)"
+WHY_NOT_PLANNER = "the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built')"
 
 _DONORS_LIMIT = 64
 # (id(data), base, item level, donor influence, donor mod) -> (data, the donor as bought, the donor as wanted, its mod as kept).
