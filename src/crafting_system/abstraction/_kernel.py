@@ -729,7 +729,7 @@ class Abstraction:
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
-            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints, split.rolled, split.strands)
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints, split.rolled, split.strands, split.replaced)
             if split.rolled and not isinstance(part, Fixed):
                 raise OutOfScopeError(_ROLLED_BY_A_DRAW)
             if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
@@ -1319,7 +1319,7 @@ class Abstraction:
             )
         erasing = not self._kinds.reads_junk(action) and not self._metamods
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
-        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer, state.imprints, state.strands)
+        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer, state.imprints, state.strands, state.replaced)
         prepared = self._prepared_by.get(key)
         if prepared is None:
             try:
