@@ -24,6 +24,7 @@ from . import _limits
 from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
+LOCK_KIND = "hinekora-lock"  # the name a target's `actions:` gives Hinekora's Lock, on by default (`_foresight`, ticket #296)
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 # What the draw of a bought item's mods costs (ADR-0064), as a share of the cheapest offer that costs something. It is not free like an unveil
 # because it lies on every cycle of a restart: the certified error of a component is about (m + 2) * epsilon * value / g for its smallest constant
@@ -456,6 +457,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     """
     if names is None:
         return None, frozenset()
+    names = [name for name in names if name != LOCK_KIND]  # Hinekora's Lock is no action of the catalog: the plan offers it as a Peek (`_foresight`)
     usable = {entry.name for entry in kinds(planner_only=True)}
     exist = {entry.name for entry in kinds()}
     kind_names = {name for name in names if name in exist}
@@ -469,7 +471,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     if unready:
         problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
     if problems:
-        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable - absent))}")
+        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted((usable - absent) | {LOCK_KIND}))}")
     return frozenset(kind_names), frozenset(name for name in names if name not in exist)
 
 
