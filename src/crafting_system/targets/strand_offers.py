@@ -12,7 +12,8 @@ counts of one class are equivalent (the spend depends on the exact count, ADR-00
   begins at 1 (the first count that cuts) and wherever the kept tiers change. The offers are the union over the tables, in order.
 * **The search.** `buy_spec_of(data, target, strands=m)`: the start item's own spec with the trade site's `memory_level` minimum `m`, instant
   buyout (OR-7), named by the plain key followed by ", m or more Memory Strands", which is the name its price is cached under in the price
-  file (ADR-0007; the `trade` command fetches it by that spec).
+  file (ADR-0007). Nothing fetches these specs yet: the `trade` command prices the plain start item only, so until the fetch is built
+  (filed with this ticket) every stranded offer is dropped as unpriced unless the price file holds it.
 * **The price** is `prices.planned_price` of that name under the profile's price source: a thin market keeps its mark (OR-8). **An offer
   without a price is dropped and the report lists it** (`StrandedOffers.dropped`, `report_lines`), as for any resource without a price.
 * **A listing "with at least `m`" is planned as an item with exactly `m`.** Under the plan's weight reading more strands never hurt a requirement
@@ -117,7 +118,7 @@ def needed_tables(data: GameData, target: Target) -> Mapping[TableKey, int]:
         for entry in family.mods:
             mod = entry.mod
             levels.setdefault((mod.type, mod.generation_type, mod.domain), set()).add(mod.required_level)
-    wanted = {(mod.type, mod.generation_type, mod.domain) for mod in (data.mods[mod_id] for mod_id in _wanted_mods(target.requirements) if mod_id in data.mods)}
+    wanted = {(mod.type, mod.generation_type, mod.domain) for mod in (data.mods[mod_id] for mod_id in _wanted_mods(target.requirements))}
     return {key: len(levels[key]) for key in sorted(wanted) if key in levels}
 
 

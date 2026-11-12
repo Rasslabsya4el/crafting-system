@@ -97,6 +97,14 @@ def test_a_jewel_is_refused() -> None:
     assert not any(isinstance(action, RemembranceOrb) for action in catalog(data, item, strands=True))
 
 
+def test_a_flask_is_no_equipment_and_is_refused() -> None:
+    flask = BaseItem("Metadata/Items/Flasks/FlaskLife1", "Small Life Flask", "LifeFlask", "flask", 1, ("default", "flask"), (), "released")
+    data = dataclasses.replace(SMALL, base_items={**SMALL.base_items, flask.id: flask})
+    item = Item.build(data, base_id=flask.id, item_level=LEVEL, rarity=Rarity.NORMAL)
+    with pytest.raises(NotApplicableError, match="equipment only"):
+        REMEMBRANCE.outcomes(data, item)
+
+
 def test_the_kind_is_listed_only_for_a_normal_item_and_only_with_strands_on() -> None:
     normal = small_item(rarity=Rarity.NORMAL)
     assert any(isinstance(action, RemembranceOrb) for action in catalog(SMALL, normal, strands=True))

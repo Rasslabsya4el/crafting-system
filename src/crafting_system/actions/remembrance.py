@@ -24,6 +24,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import cache
+from types import MappingProxyType
 
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
@@ -82,7 +83,7 @@ def remembrance_table() -> Mapping[int, Fraction]:
         if end > start:
             masses[count] = round((below(end) - below(start)) * 10**_DIGITS)
     total = sum(masses.values())
-    return {count: Fraction(mass, total) for count, mass in masses.items() if mass}
+    return MappingProxyType({count: Fraction(mass, total) for count, mass in masses.items() if mass})  # cached and shared: read-only
 
 
 def is_equipment(data: GameData, item: Item) -> bool:
