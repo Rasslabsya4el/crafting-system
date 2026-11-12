@@ -17,7 +17,7 @@ from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutO
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
-from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price
+from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
 from . import _limits
@@ -114,7 +114,8 @@ def price_offers(
     it lists no price for it (a Divine Orb is the unit of that rate, ticket #71). A resource is read by `planned_price` under the
     profile's `price_source`: a thin trade market is priced by OR-8 and its mark goes in `PricedOffer.marks`, beside the part.
 
-    An action that consumes nothing (an unveil, a pick: `unveil.is_free_and_in_place`) costs `FREE_ACTION_SHARE` of the cheapest
+    An action that consumes nothing (an unveil, a pick: `unveil.is_free_and_in_place`), or only resources priced at 0 (a use of the
+    Locus of Corruption at its standing default, ADR-0038, which a price file that lacks it prices too: `standing_defaults`), costs `FREE_ACTION_SHARE` of the cheapest
     offer that costs something, because the solver needs a positive cost on every action (ADR-0026, ticket #145). The share is a
     compromise: a use must stay negligible next to the value of a route (a route of a million Chaos is moved by a Chaos at most),
     yet a cycle of free steps and paid steps (veil, unveil, pick, veil again) lies in one component of the solver, whose certified
@@ -136,17 +137,24 @@ def price_offers(
                     marks.append((name, planned.mark))
             elif name == DIVINE_ORB:
                 parts.append((name, count, count * prices.chaos_per_divine, "rate"))
+            elif (standing := standing_defaults().get(name)) is not None:  # a use of the Locus: 0 Chaos unless the file or an override names it (ADR-0038)
+                parts.append((name, count, count * standing.chaos, standing.source))
             else:
                 missing.append(name)
         if missing:
             dropped.append(DroppedOffer(offer.label, tuple(sorted(missing)), offer.kind))
         else:
             priced.append(PricedOffer(offer, sum(part[2] for part in parts), tuple(parts), tuple(marks)))
-    if any(not entry.offer.resources for entry in priced):
+    if any(_costs_nothing(entry) for entry in priced):
         paid = [entry.cost for entry in priced if entry.cost > 0]
         free_cost = FREE_ACTION_SHARE * min(paid) if paid else FREE_ACTION_SHARE
-        priced = [replace(entry, cost=free_cost) if not entry.offer.resources else entry for entry in priced]
+        priced = [replace(entry, cost=free_cost) if _costs_nothing(entry) else entry for entry in priced]
     return tuple(priced), tuple(dropped)
+
+
+def _costs_nothing(entry: PricedOffer) -> bool:
+    """Whether a use consumes nothing, or only resources priced at 0 (a use of the Locus at its default, ADR-0038): `price_offers` charges it the free share."""
+    return not entry.offer.resources or (bool(entry.parts) and all(part[2] == 0 for part in entry.parts))
 
 
 def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer]) -> PricedOffer:
@@ -159,7 +167,7 @@ def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable
 
 def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
     """What `price_offers` charged the actions that consume nothing, or `None` when the offers hold none (ticket #349)."""
-    costs = [entry.cost for entry in priced if not entry.offer.resources]
+    costs = [entry.cost for entry in priced if _costs_nothing(entry)]
     return max(costs) if costs else None
 
 

@@ -1,0 +1,23 @@
+# Mechanic family: the Locus of Corruption's use (ticket #262, ADR-0038). The outcome rules of the altar are in corruption.yaml (ticket #255);
+# these are the two the action needs besides them: what one use costs, and which implicits the two corrupted ones replace.
+rules:
+  - id: locus.cost
+    statement: "One use of the Locus of Corruption's altar consumes no currency: its price is the price-file entry \"Locus of Corruption (use)\", editable by the owner, default 0 Chaos Orbs (the temple is not bought per use). The value maps that price-file name to the number of uses."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/95#issuecomment-6556328111
+    quote: "the per-use price is an owner-editable entry in the price file, default 0 Chaos (temple access is not bought per use)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-12
+    value: {Locus of Corruption (use): 1}
+
+  - id: locus.replaces_two_implicits
+    statement: "The two corrupted implicits of a double corruption replace implicits already on the item: an item with three or more loses two chosen at random, an item with two loses both, an item with one loses it and gains the second besides, an item with none gains both (Craft of Exile's poec_simRollImplicits replaces random existing slots first and appends the rest). The wiki's Corrupted page also says that a Synthesised item or one with Eldritch implicits loses only one random implicit; the planner follows ADR-0038 and replaces two on those too."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Locus_of_Corruption
+    quote: "These will replace implicit modifiers already on the item. An item with three or more implicit modifiers will have two of them replaced at random."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-12
+    approximate: true
+    approximate_reason: "the wiki's Corrupted page says an item with Eldritch implicits loses only one random implicit to a double corruption; the planner replaces two (ADR-0038)"
+    page_statement: "The Locus's two corrupted implicits replace two implicits of the item (one plus an added one when it has a single implicit)."
+    page_source: "wiki and Craft of Exile's code; the wiki's Corrupted page says an item with Eldritch implicits loses only one"

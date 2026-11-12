@@ -109,6 +109,7 @@ _NAMES = {  # the kinds whose name in the catalog does not read as the game's wo
     "unveil": "Unveil",
     "pick": "Pick from the unveil offer",
     "vaal": "Vaal Orb",
+    "locus": "Locus of Corruption",
     "talisman-fracture": "Talisman fracture",
     "aspect-beast": "Aspect beast",
     "beast-side-swap": "Beast side swap",
