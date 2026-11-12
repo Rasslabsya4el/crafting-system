@@ -60,7 +60,7 @@ from crafting_system.rules import get_rule
 
 from .bloodstained import CLAIM_IDS as BLOODSTAINED_CLAIM_IDS
 from .bloodstained import BloodstainedOutcomes, ImplicitDraw
-from .catalog import kind
+from .catalog import kind, listing_gap
 from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .metamods import refuse_blocking_metamod
@@ -370,12 +370,13 @@ def _check_fossil(record: Fossil, base_tags: tuple[str, ...], item: Item) -> Non
         )
 
 
+def _forcing(records: list[Fossil]) -> list[Fossil]:
+    """The fossils of a set that each force a mod (Hollow, Glyphic)."""
+    return [record for record in records if record.forced_mods or record.corrupted_essence_chance >= 100 and not _special(record, "tangled")]
+
+
 def _check_set(records: list[Fossil]) -> None:
-    forcing = [
-        record
-        for record in records
-        if record.forced_mods or record.corrupted_essence_chance >= 100 and not _special(record, "tangled")
-    ]
+    forcing = _forcing(records)
     if len(forcing) > 1:
         raise OutOfScopeError(
             "two fossils that each force a mod (Hollow and Glyphic) are in one resonator, and the model has no rule for how the game counts them",
@@ -390,12 +391,16 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
     """The names of the fossils that a resonator could hold on `item`: none when the item takes no resonator.
 
     A fossil the item refuses on its own is left out. The Bloodstained Fossil is listed when the item has a corrupted implicit pool
-    to draw from (it corrupts: `ApplyFossils.adds`) and left out when it has none.
+    to draw from (it corrupts: `ApplyFossils.adds`) and left out when it has none. A fossil, or the whole kind, left out because the
+    model has no rule for the item is said to the listing (`listing_gap`, #511); one the game refuses is not.
     """
     try:
         _check_item(data, item)
         refuse_unmodelled(data, item, jewels=True)
-    except (NotApplicableError, OutOfScopeError):  # either: no fossil is listed for this item (a model gap here is #511)
+    except NotApplicableError:  # the game: the item takes no resonator
+        return []
+    except OutOfScopeError as error:  # the model has no rule for the item: no fossil is listed, and the listing is told
+        listing_gap(error)
         return []
 
     base = data.base_items.get(item.base_id)
@@ -409,7 +414,10 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
             _check_fossil(record, base.tags, item)
             if _special(record, "bloodstained"):
                 ImplicitDraw.for_item(data, item, replaces_all=False)
-        except (NotApplicableError, OutOfScopeError):  # either: this fossil is not listed for the item (a model gap here is #511)
+        except NotApplicableError:  # the game: the item refuses this fossil
+            continue
+        except OutOfScopeError as error:  # the model has no rule for this fossil on the item: it is not listed, and the listing is told
+            listing_gap(error, record.name)
             continue
         usable.append(record.name)
     return usable
@@ -427,9 +435,11 @@ def fossil_actions(data: GameData, item: Item) -> list[ApplyFossils]:
     actions = []
     for size in range(MIN_FOSSILS, MAX_FOSSILS + 1):
         for chosen in combinations(names, size):
+            records = [by_name[name] for name in chosen]
             try:
-                _check_set([by_name[name] for name in chosen])
-            except (NotApplicableError, OutOfScopeError):  # either: this set is not listed for the item (a model gap here is #511)
+                _check_set(records)
+            except OutOfScopeError as error:  # the model has no rule for the set: it is not listed, and the listing is told (once per pair)
+                listing_gap(error, " with ".join(record.name for record in _forcing(records)))
                 continue
             actions.append(ApplyFossils(chosen))
     return actions

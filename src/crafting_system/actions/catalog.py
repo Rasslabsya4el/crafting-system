@@ -38,23 +38,33 @@ names the one part of the item state (`"implicits"`, `"quality"` or `"offer"`) t
 suite expects that part to be declared by its actions and the others not; `"any"` says that the kind declares whatever part it needs
 (the veiled orbs, which declare the offer and are planner kinds since ticket #145: the compressed model keeps the offer). Both are empty
 for an ordinary kind.
+
+**A model gap met while a kind lists its actions** (ticket #511) is not a game refusal. A `members` function that leaves an action, a part of
+the kind or the whole kind out because the model has no rule for this item (`OutOfScopeError`) says so with `listing_gap(error, subject)`;
+one that leaves it out because the game refuses it (`NotApplicableError`) stays silent. `catalog_kinds(..., gaps=found)` collects what the
+kinds it lists said into `found`, one `ListingGap` per kind, subject and cause, and the planner makes them a limit of the answer
+(`cli/_offers.py`). A listing asked without `gaps` collects nothing: a `listing_gap` there is a no-op.
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 
 from crafting_system.data import GameData
 from crafting_system.items import Item
 
 from .contract import Action
+from .errors import OutOfScopeError
 
 __all__ = [
     "Kind",
+    "ListingGap",
     "catalog",
     "catalog_kinds",
     "kind",
     "kinds",
+    "listing_gap",
     "register",
     "registered",
 ]
@@ -78,6 +88,37 @@ class Kind:
 
 
 _KINDS: dict[str, Kind] = {}
+
+
+@dataclass(frozen=True)
+class ListingGap:
+    """A model gap met while the kind `kind` listed its actions for an item (ticket #511).
+
+    `subject` is what the kind left out, in player words ("Hollow Fossil"), or "" when it left the whole kind out; `cause` is the player's
+    sentence of the `OutOfScopeError` and `detail` the developer's text behind it.
+    """
+
+    kind: str
+    subject: str
+    cause: str
+    detail: str = field(default="", compare=False)
+
+
+_LISTING: ContextVar[tuple[str, list[ListingGap]] | None] = ContextVar("catalog_listing", default=None)
+
+
+def listing_gap(error: OutOfScopeError, subject: str = "") -> None:
+    """Say that the kind being listed leaves `subject` ("" for all of it) out because the model has no rule for the item (`error`).
+
+    It goes to the `gaps` of the `catalog_kinds` that lists the kind, once per subject and cause; outside such a listing it is dropped.
+    """
+    current = _LISTING.get()
+    if current is None:
+        return
+    name, found = current
+    gap = ListingGap(name, subject, error.player, error.detail)
+    if gap not in found:
+        found.append(gap)
 
 
 def register(entry: Kind) -> Kind:
@@ -140,8 +181,12 @@ def catalog_kinds(
     planner_only: bool = False,
     names: Collection[str] | None = None,
     strands: bool = False,
+    gaps: list[ListingGap] | None = None,
 ) -> dict[Action, str]:
-    """`catalog`, each action with the name of the kind that lists it (the first, when two kinds list the same action)."""
+    """`catalog`, each action with the name of the kind that lists it (the first, when two kinds list the same action).
+
+    With `gaps`, the model gaps the kinds meet while they list (`listing_gap`) are added to it.
+    """
     found: dict[Action, str] = {}
     for entry in kinds(planner_only=planner_only):
         if names is not None and entry.name not in names:
@@ -150,12 +195,16 @@ def catalog_kinds(
             continue
         if names is None and entry.opt_in and planner_only:
             continue
-        for action in entry.members(data, item):
-            try:
-                hash(action)
-            except TypeError:
-                raise TypeError(f"{action!r} of the kind {entry.name!r} is not hashable: make an action a frozen dataclass") from None
-            found.setdefault(action, entry.name)
+        token = _LISTING.set((entry.name, gaps) if gaps is not None else None)  # a listing inside a listing writes to its own caller's list
+        try:
+            for action in entry.members(data, item):
+                try:
+                    hash(action)
+                except TypeError:
+                    raise TypeError(f"{action!r} of the kind {entry.name!r} is not hashable: make an action a frozen dataclass") from None
+                found.setdefault(action, entry.name)
+        finally:
+            _LISTING.reset(token)
     return found
 
 

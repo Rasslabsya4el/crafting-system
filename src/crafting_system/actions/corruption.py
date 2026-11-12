@@ -67,7 +67,7 @@ from crafting_system.items.words import base_words
 from crafting_system.rules import get_rule
 
 from .bloodstained import ImplicitDraw
-from .catalog import kind
+from .catalog import kind, listing_gap
 from .contract import Action, Adds, Axis, Previewable, Reading, Reads
 from .corrupted_pool import corrupted_implicit_pool
 from .draw import Outcome, refuse_unmodelled
@@ -343,6 +343,9 @@ def _vaal_orb(data: GameData, item: Item):
         return
     try:
         corrupted_implicit_pool(data, item.base_id, item.item_level)
+    except OutOfScopeError as error:  # a Cluster or Timeless Jewel: the model has no rule for its pool, and the listing is told (#511)
+        listing_gap(error)
+        return
     except ValueError:
-        return  # a class with no pool (NotApplicableError), a Cluster or Timeless Jewel (OutOfScopeError) or a base the data lacks: the Orb is not listed
+        return  # a class with no pool (NotApplicableError, the game) or a base the data lacks: the Orb is not listed
     yield VaalOrb()
