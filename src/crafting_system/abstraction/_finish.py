@@ -28,7 +28,7 @@ decision 3; `abstraction` may not import `solver`).
 
 **Readings** (ADR-0047): an action the plan's policy takes may read a rule axis (`Action.rule_axes`: the Jeweller's table, the forced colour); the
 finish is solved at the plan's reading, and each other reading's number is the plan's policy evaluated at it (not a re-solve), as ADR-0045 says.
-A reading that changes no number (the forced colour of a target that needs two coloured sockets or more) is not listed.
+A reading that changes no number is not listed.
 
 **The bound flag** of Orb of Binding (ADR-0048, ticket #232) is a second start of the same problem: `FinishValues.of` gives the value of any
 state the solve reached, and `solve_finish` takes the start it is given.
