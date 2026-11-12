@@ -478,8 +478,8 @@ class Axis:
 
     `planned` says that the planner answers at the `plan` reading alone: one exact answer (OR-11), the claim behind the other
     readings named among its approximate inputs (OR-23, ADR-0028), as for any approximate claim. The other readings stay for the
-    contract suite and the interval driver (`risk.solve_readings`). An axis without it is refused by the planner until the interval
-    is wired (#589). The Vaal brick's axis is planned (ticket #260).
+    contract suite. An axis without it is solved by the planner at every reading of its grid (`risk.solve_readings` through
+    `cli._plan.solve_each_reading`, #589), and the answer shows the plan's cost interval over them. The Vaal brick's axis is planned (ticket #260).
     """
 
     name: str

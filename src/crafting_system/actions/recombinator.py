@@ -137,7 +137,7 @@ METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 _JUNK_CRAFT: contextvars.ContextVar[bool] = contextvars.ContextVar("recombinator_junk_craft", default=False)
 WHY_NOT_PLANNER = (
     "the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs "
-    "(ADR-0062 'As built'; the compressed state is built, #217, and so are the lazy offer loop, #212, and the interval driver, #220, #221)"
+    "(ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589)"
 )
 
 
