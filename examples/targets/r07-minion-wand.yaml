@@ -1,0 +1,85 @@
+# Target for benchmark route R07: a +2 generic minion Convoking Wand, read for 3.29: the bench Trigger and the unveiled minion speed
+# (ticket #146, ADR-0013's route notes).
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, GhazzyTV, "Crafting a +2 generic minion wand", 2024-07-25, docs/research/2026-10-30-5-reference-routes.md, id R07):
+#   1. Prime Chaotic Resonators with Corroded, Jagged, Shuddering and Metallic Fossils until the +1 Spell and +1 Minion prefixes are
+#      present; continue for the desired minion-damage tier.
+#   2. If all suffixes are full, use an Orb of Annulment to make room (if a wanted prefix is removed, back to 1).
+#   3. Craft "Prefixes Cannot Be Changed" and use a Veiled Chaos Orb.
+#   4. Unveil Trigger a Socketed Spell; otherwise repeat, or settle for the bench-crafted Trigger.
+#   5. Craft "Minions have (14-15)% increased Attack Speed / Cast Speed" in a remaining suffix.
+#
+# Read for 3.29 (ADR-0013): the veiled Trigger has weight 0 on every base (claim unveil.legacy_mods_have_weight_zero), so it is never
+# offered. Both the Trigger and the minion speed are bench crafts, but an item holds one crafted mod without the multimod, so the route
+# becomes: the veil is unveiled for the minion speed, and the Trigger is the bench craft. The readings (OR-1 to OR-4):
+#   * "+1 to level of all Spell Skill Gems": GlobalSpellGemsLevel1, the one mod of that text on a wand.
+#   * "+1 to level of all Minion Skill Gems": MinionGemLevel1h1, the one-handed mod of that text.
+#   * "Minions deal #% increased Damage": "continue for desired minion-damage tier" states no tier, so the top tier the item level allows
+#     (OR-1): MinionDamageOnWeapon8, tier 1 at item level 84, rolled.
+#   * "Trigger a Socketed Spell on Using a Skill": the bench craft, exactly (OR-2), EinharMasterTriggerSocketedSpellOnSkillUse1 (8 second
+#     cooldown, 3 Chaos Orbs).
+#   * "Minions have (14-15)% increased Attack Speed, Minions have (14-15)% increased Cast Speed": the guide's numbers are those of the bench
+#     craft; the 3.29 route unveils it, so the target asks the unveiled one-handed mod exactly (OR-2), JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,
+#     which rolls (18-20)%: a stronger roll than the guide's.
+#   * "Zealotry has #% increased Aura Effect": no mod of a wand's pool, essence, bench or veil gives it in 3.29 (only a corrupted implicit
+#     of other items), and the guide's steps never make it, so it is not asked.
+#   * Item level 84 (the guide's): the top minion damage needs 84.
+#
+# The actions line names the kinds and the single actions of the route: the veiled kinds are offered only when a target names them
+# (opt-in), of the 15,000 fossil sets of a wand only the guide's is named, and the bench by its two crafts (with the whole kind, about
+# 130 crafts of the families the wand's unveiled pool holds would be offered as unveil blocks, ADR-0026, which the guide never uses)
+# (OR-5 is not met here: see the PR of #146).
+
+base: Convoking Wand
+
+# The item level, a whole number from 1 to 100.
+item_level: 84
+
+# Influences on the base. [] means none.
+influence: []
+
+# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action.
+actions:
+  - Fossils Corroded Fossil + Jagged Fossil + Metallic Fossil + Shuddering Fossil
+  - annulment-orb
+  - Bench craft Prefixes Cannot Be Changed
+  - "Bench craft Trigger a Socketed Spell when you Use a Skill, with a 8 second Cooldown / Spells Triggered this way have 150% more Cost"
+  - remove-crafted-mods
+  - veiled-chaos-orb
+  - unveil
+  - pick
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  - family: IncreaseSocketedGemLevel
+    mod: GlobalSpellGemsLevel1
+
+  - family: IncreaseSpecificSocketedGemLevel
+    mod: MinionGemLevel1h1
+
+  - family: WeaponCasterDamagePrefix
+    mod: MinionDamageOnWeapon8
+    not_crafted: true
+
+  # The unveiled minion speed.
+  - family: MinionAttackSpeedAndCastSpeed
+    mod: JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h
+
+  # The bench Trigger.
+  - family: SupportedByTrigger
+    mod: EinharMasterTriggerSocketedSpellOnSkillUse1
+
+# The start: a rare wand the market sells (ADR-0064): a Normal Convoking Wand made rare with an Orb of Alchemy, since a resonator takes a
+# rare item only (claim fossils.resonator_rare_only). Its mods are drawn first; the first fossil erases them.
+start_item:
+  rarity: rare
+  mods: []
+
+# The start item is bought. Its buy spec, trade query and price key are computed from this file.
+start: bought
+
+# The price file of this route (a path from this file's folder): see examples/targets/r24-avoid-shock-boots.yaml.
+price_file: ../../tests/fixtures/prices/veiled-r24-r07-2026-11-12.json

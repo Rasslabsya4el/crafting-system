@@ -71,6 +71,7 @@ TRADE_CATEGORY = {
     "Shield": "armour.shield",
     "Quiver": "armour.quiver",
     "Bow": "weapon.bow",
+    "Wand": "weapon.wand",  # R07 (ticket #146)
 }
 
 NOT_FOR_SALE_TAG = "not_for_sale"

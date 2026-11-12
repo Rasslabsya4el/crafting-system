@@ -92,7 +92,9 @@ STAYS = {
     "r03-avoid-shock-boots": (100, "at target"),
     "r04-penetrating-quiver": (81, "derived"),
     "r06-strength-heavy-belt": (75, "derived"),
+    "r07-minion-wand": (84, "at target"),  # the minion speed and the Trigger are veiled and bench mods: no source the floor knows
     "r14-hunter-bow": (78, "at target"),
+    "r24-avoid-shock-boots": (86, "at target"),  # the Movement Speed + Onslaught is a veiled mod: no source the floor knows
 }
 LOWERED = {
     "j01-cobalt-life-attack-speed": 1,  # a jewel's mods all open at level 1

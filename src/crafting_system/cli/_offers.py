@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from itertools import combinations
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, Recombinator, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing
+from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, Recombinator, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, spawn_weight
@@ -25,6 +25,7 @@ from . import _limits
 from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
+UNVEIL_KIND = "unveil"  # the catalog kind whose offer a bench craft can block (ADR-0026)
 LOCK_KIND = "hinekora-lock"  # the name a target's `actions:` gives Hinekora's Lock, on by default (`_foresight`, ticket #296)
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 # What the draw of a bought item's mods costs (ADR-0064), as a share of the cheapest offer that costs something. It is not free like an unveil
@@ -314,6 +315,10 @@ def offers_for(
       the model is 100 offers and the states grow past what a plan can hold; the plan is then the cheapest
       among the offered crafts, not a proof against the rest (the report says so). REVISIT with the
       Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
+    * An UNVEIL BLOCK is the exception (ADR-0026, ticket #146): when the unveil kind is offered, a craft whose mod's family is in the
+      unveiled pool of the base (`unveil_pool_families`, either side, weight above 0 on the base) is offered even though it counts toward
+      no requirement, because explicit mods, crafts included, take their families out of the next offer. Crafts of one family give one
+      kernel, so the solver keeps the cheapest of them at each state (ADR-0031, equal kernels).
     * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
       below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
       and the kinds not named are a `Limit` of the answer (`_limits`). A name may also be the label of ONE action (`Essence of
@@ -383,6 +388,7 @@ def offers_for(
     erased_by_all = not any(
         action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
     )
+    blocks = _unveil_blocks(data, base_id, candidates, kind_of)
     chosen: list[Action] = []
     left_out_crafts: list[str] = []
     for action in candidates:
@@ -390,6 +396,7 @@ def offers_for(
             _only_crafts(data, start_item, action)
             and not action.adds(data, start_item).named & counting
             and action.label(data) not in label_names
+            and not _families_of(data, action.adds(data, start_item).named) & blocks
         ):
             left_out_crafts.append(told_apart(action))
             continue
@@ -646,6 +653,18 @@ def _counts_as_crafted(data: GameData, leaf, mod_id: str) -> bool:
         return False
     values = tuple(max(stat.min, stat.max) for stat in mod.stats)
     return status_of(leaf, mod_id, values, True) is Status.PASSING
+
+
+def _unveil_blocks(data: GameData, base_id: str, candidates: Iterable[Action], kind_of: Mapping[Action, str]) -> frozenset[str]:
+    """The families a bench craft blocks an unveil offer by, when an unveil is offered: those of the base's unveiled pool, else none (ADR-0026)."""
+    if not any(kind_of.get(action) == UNVEIL_KIND for action in candidates):
+        return frozenset()
+    return unveil_pool_families(data, base_id)
+
+
+def _families_of(data: GameData, mod_ids: Iterable[str] | None) -> frozenset[str]:
+    """The families of the mods `mod_ids` (none for `None`)."""
+    return frozenset(family for mod_id in mod_ids or () if mod_id in data.mods for family in data.mods[mod_id].families)
 
 
 def _only_crafts(data: GameData, item: Item, action: Action) -> bool:

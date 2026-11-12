@@ -1,4 +1,4 @@
-"""The bought start items of the 14 benchmark targets, on the real 3.29.3.3 export (#474, OR-3, OR-6, OR-7).
+"""The bought start items of the 16 benchmark targets, on the real 3.29.3.3 export (#474, OR-3, OR-6, OR-7).
 
 The buy spec, the trade query and the price key are computed from the target (`targets/start_buy.py`). These tests pin, for every benchmark
 target: whether it buys, the key and the item level window; that the committed price files hold an entry under that key; and (row 2 of the
@@ -39,6 +39,7 @@ GIVEN = {"j01-cobalt-life-attack-speed"}  # "what you hold after you scour a rar
 WINDOWS = {  # (item level, highest item level with the same pool)
     "r03-avoid-shock-boots": (100, 100),
     "r06-strength-heavy-belt": (75, 75),
+    "r07-minion-wand": (84, 84),
     "r04-penetrating-quiver": (81, 81),
     "r05-strength-ring": (75, 75),
     "r08-energy-shield-boots": (86, 100),
@@ -49,6 +50,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
     "r12-lightning-amulet": (84, 84),
     "r13-life-resist-belt": (86, 100),
     "r14-hunter-bow": (78, 79),
+    "r24-avoid-shock-boots": (86, 100),
     "v01-minion-helmet": (84, 84),
 }
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
@@ -65,6 +67,8 @@ OTHER_ITEM = {
     "r09-life-boots": "#494 point 2 and #483 the stored price is of a normal base plus a typed Alchemy, taken for any of the three Two-Toned Boots",
     "r04-penetrating-quiver": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
+    "r07-minion-wand": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
+    "r24-avoid-shock-boots": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
 }
 
 
@@ -170,6 +174,9 @@ NO_PRICE = {
 }  # bought, and the market holds fewer listings than the rail: kept bought, no price written (#505, #483)
 
 
+VEILED = {"r07-minion-wand", "r24-avoid-shock-boots"}  # priced only in their own file, by hand stand-ins (#758)
+
+
 def price_row(stem: str):
     marks = [pytest.mark.xfail(strict=True, raises=AssertionError, reason=NO_PRICE[stem])] if stem in NO_PRICE else []
     return pytest.param(stem, id=stem, marks=marks)
@@ -180,8 +187,14 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
     key = expected_keys()[stem]
     committed = [path.name for path in sorted(PRICES.glob("*.json")) if key in json.loads(path.read_text(encoding="utf-8"))["prices"]]
 
-    # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries
-    assert committed == (["vendor-v01-2026-11-01.json"] if stem == "v01-minion-helmet" else ["routes-allflame-2026-10-31.json", "routes-allflame-2026-11-10.json", "vendor-v01-2026-11-01.json"])
+    # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries; the veiled file is R24's and R07's own
+    # (`price_file:`) and holds a copy of the 2026-11-10 file (#146)
+    if stem == "v01-minion-helmet":
+        assert committed == ["vendor-v01-2026-11-01.json"]
+    elif stem in VEILED:
+        assert committed == ["veiled-r24-r07-2026-11-12.json"]
+    else:
+        assert committed == ["routes-allflame-2026-10-31.json", "routes-allflame-2026-11-10.json", "veiled-r24-r07-2026-11-12.json", "vendor-v01-2026-11-01.json"]
 
 
 def row(stem: str):
