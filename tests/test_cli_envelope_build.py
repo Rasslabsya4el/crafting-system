@@ -16,7 +16,7 @@ from fractions import Fraction
 from types import SimpleNamespace
 
 import pytest
-from coarse_support import abstraction
+from coarse_support import DATA, abstraction, item
 from pattern_support import exact_values
 from test_packed_walk_light import START_ITEM, make_offers
 
@@ -30,7 +30,8 @@ from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, cert
 from crafting_system.cli._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, FloorsStopped, OfferFloors
-from crafting_system.cli._offers import BuyStartItem
+from crafting_system.actions import unopened_listing
+from crafting_system.cli._offers import BuyStartItem, listing_draw
 from crafting_system.solver import ConvergenceError
 from crafting_system.cli._pattern_bound import pattern_lower_bound, pattern_offers
 
@@ -360,6 +361,51 @@ def test_the_floor_of_an_offer_is_below_its_exact_q_at_every_state_of_the_world_
             assert floors.lower(position, klass) <= q * (1 + 1e-9), (priced.label, klass, state)
     assert seen == {OTHER, INSIDE, OUTSIDE} or seen == {INSIDE, OUTSIDE}, seen  # the world has states in E and outside it
     assert floors.klass(start.flags, start.fractured, start.status) == OUTSIDE
+
+
+def listing_world():
+    """The light world from a bought start the market sells unopened (ADR-0064): the restart buys the listing and a draw opens it into the Rare."""
+    opened = item()
+    listing = unopened_listing(DATA, opened)
+    offers = make_offers(listing)
+    offers.append(listing_draw(DATA, listing, opened.rarity, offers))
+    ab = abstraction()
+    start = ab.compress(listing)
+    return ab, start, opened, offers, exact_values(ab, start, pattern_offers(offers))
+
+
+def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and_stay_below_the_exact_q():
+    """#626/#731: a bought start is an unopened listing (ADR-0064) that no reroll touches; the floors are stated for the shape it opens into, as the
+    pruned walk's are, so `rho` is finite and the listing itself is a state of another shape (its floor is the cost), never `rho` = 1e300 above its exact value."""
+    ab, start, opened, offers, exact = listing_world()
+    assert start.flags.unopened
+    floors = OfferFloors(ab, start, offers, opened)
+    fresh = abstraction()
+    plain = OfferFloors(fresh, fresh.compress(opened), make_offers(opened), opened)
+    assert floors.chosen == plain.chosen and floors.rho == pytest.approx(plain.rho, rel=1e-12) and floors.rho < 1e6
+    assert floors.klass(start.flags, start.fractured, start.status) == OTHER
+    shape = ab.compress(opened)
+    assert floors.klass(shape.flags, shape.fractured, shape.status) == OUTSIDE
+    for entry in floors.entries:
+        if entry.kind == "reroll":
+            floors._raise(entry, 2)
+    for state, value in exact.items():
+        if ab.is_goal(state):
+            continue
+        klass = floors.klass(state.flags, state.fractured, state.status)
+        if klass == OUTSIDE:
+            assert value >= floors.rho * (1 - 1e-9), (state, value, floors.rho)
+        for position, priced in enumerate(offers):
+            action = priced.offer.action
+            if isinstance(action, BuyStartItem):
+                successors = {start: Fraction(1)}
+            else:
+                try:
+                    successors = ab.kernel(state, action)
+                except (NotApplicableError, OutOfScopeError):
+                    continue
+            q = priced.cost + float(sum(chance * exact[successor] for successor, chance in successors.items()))
+            assert floors.lower(position, klass) <= q * (1 + 1e-9), (priced.label, klass, state)
 
 
 def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):

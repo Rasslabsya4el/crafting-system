@@ -6,7 +6,7 @@ the pruned walk proves it without the kernel (`_bound_prune`: the number `pbar` 
 two numbers, and the proof that they are a floor of the cost of the offers it leaves out of the model.
 
 For an offer `a` and a state `s` outside `E` (every necessary leaf of the goal that is open at the start is PASSING) that has the flags and the
-fractured mods of the start, one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
+fractured mods of the start (of the item it opens into when the start is an unopened listing, ADR-0064), one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
 with the same shape (the claim and its proof are in `_bound_prune`: Wald's identity over the number of uses). So, with three classes of states,
 
     class OUTSIDE (outside E, the start's shape):   Q*(s, a) >= c(a) + (1 - pbar(a)) rho,  V*(s) >= rho,
@@ -62,7 +62,7 @@ class FloorsStopped(Exception):
 
 
 class OfferFloors:
-    """The floors of a list of priced offers, from the start `start` of a plan and its start item `item`."""
+    """The floors of a list of priced offers, from the start `start` of a plan and its start item `item` (the item an unopened `start` opens into)."""
 
     def __init__(
         self, abstraction: Abstraction, start: CompressedState, priced: list[PricedOffer] | tuple[PricedOffer, ...], item, stop: Callable[[], str | None] | None = None
@@ -79,7 +79,11 @@ class OfferFloors:
                 self.ask()
             kinds.append(_kind_of(data, item, offer))
         crafts = frozenset().union(*(named for kind, named in kinds if kind == CRAFT)) if kinds else frozenset()
-        self.chosen = goal_set(goal, start, crafts)
+        # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
+        # as the pruned walk's are (`_bound_prune._run`, `shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
+        # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
+        shape = abstraction.compress(item) if start.flags.unopened else start
+        self.chosen = goal_set(goal, shape, crafts)
         u_mods = frozenset().union(*(goal.leaves[index].mod_ids for index in self.chosen)) if self.chosen else frozenset()
         self.entries: list[_Entry] = []
         for index, (offer, (kind, named)) in enumerate(zip(priced, kinds)):
@@ -91,8 +95,8 @@ class OfferFloors:
             elif kind == CRAFT:
                 pbar = ONE if named & u_mods else ZERO
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
-        self.bare = replace(start, slots=())
-        self.shape = (start.flags, start.fractured)
+        self.bare = replace(shape, slots=())
+        self.shape = (shape.flags, shape.fractured)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
 
     def ask(self) -> None:
