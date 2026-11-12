@@ -313,6 +313,10 @@ class Adds:
       (`Goal.asks_corrupted`) and not for one that merely allows a corrupted item: there the same reroll without the corruption is offered
       and the corrupting one would only add a price and an implicit nobody wants (ADR-0038). The default is False: a Vaal Orb or a Locus
       is offered to a target that allows a corrupted item too, because its brick can end in the goal (ADR-0037).
+    * `erases_fractured`: with `corrupts`, an outcome at some reading of the action's rule axes takes the fractured mods off the item (the
+      Vaal Orb's brick at Craft of Exile's reading, ticket #260). Every outcome is a corrupted item and final, so nothing that holds the
+      fractured mods fixed (pruning by bound, #118) sees what follows it; the contract suite then checks only that no result gains a
+      fractured mod. The default is False, which says the fractured mods of the item stay as they were (unless `fractures`).
     * `imprints`: the action makes, replaces or uses up an imprint of the item (an Imprint, a Restore), so the compressed state stores the
       imprints the item holds (ADR-0060, ticket #219). The default is False, which says the action leaves the imprints it was given alone
       (or, if it builds a new item, drops them); `Action.adds` itself says False too, because the kernel carries them.
@@ -342,6 +346,7 @@ class Adds:
     corrupts: bool = False
     keeps_mods: bool = False
     asked_only: bool = False
+    erases_fractured: bool = False
     imprints: bool = False
     socket_count: bool = False
     socket_links: bool = False
@@ -356,6 +361,8 @@ class Adds:
             raise ValueError("`keeps_mods` says what a corrupting action leaves of the explicit mods: it needs `corrupts`")
         if self.asked_only and not self.corrupts:
             raise ValueError("`asked_only` says that a corrupting action is offered only to a target that asks: it needs `corrupts`")
+        if self.erases_fractured and not self.corrupts:
+            raise ValueError("`erases_fractured` is allowed only to a corrupting action, whose outcomes are final: it needs `corrupts`")
 
     @property
     def item_state(self) -> bool:
@@ -468,11 +475,17 @@ class Axis:
     values a reading of the axis may take (at least two, all different, hashable), and `plan` is the one the plan
     uses (the exponent 1, the receiver's mod kept): it must be one of them. Each combination of one value per axis
     is a `Reading`, and each `Reading` is one ordinary model: the solver never learns what an axis is.
+
+    `planned` says that the planner answers at the `plan` reading alone: one exact answer (OR-11), the claim behind the other
+    readings named among its approximate inputs (OR-23, ADR-0028), as for any approximate claim. The other readings stay for the
+    contract suite and the interval driver (`risk.solve_readings`). An axis without it is refused by the planner until the interval
+    is wired (#589). The Vaal brick's axis is planned (ticket #260).
     """
 
     name: str
     readings: tuple[Hashable, ...]
     plan: Hashable
+    planned: bool = False
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -762,6 +775,16 @@ class Action(ABC):
         compressed state applies the move to the state, and the contract suite compares it with `outcomes` on concrete items.
         """
         return None
+
+    def for_allowed_corruption(self, data: GameData | None = None) -> "Action":
+        """The action as it is offered to a target that allows a corrupted item and asks for no corrupted implicit (ADR-0036); itself by default.
+
+        A corrupting action whose outcome is a dead end for a target that asks for a corrupted implicit can reach the goal of one that only
+        allows corruption (the Vaal Orb's brick, a full rare, ADR-0037, ticket #260). The catalog lists the action a target that asks gets;
+        the offer filter (`cli._offers.offers_for`) asks this of every corrupting action for a target that only allows, and offers the answer.
+        The answer has the same label, so a route names it alike.
+        """
+        return self
 
     def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
         """The rules the action reads that the sources leave open, each as an `Axis` with its readings; none by default.
