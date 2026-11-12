@@ -14,6 +14,9 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
                                       # or {without: [{family: Pierce}]}: some mod is fractured and none of the listed families is
           crafted_mods: false         # the item holds a crafted mod or metamod
           open_suffixes: 1            # at least this many free suffixes (open_prefixes likewise); needs a bench action offered
+          veil: prefix                # the item holds a veiled placeholder on that side: prefix, suffix, any, or none (an unveil offered)
+          offer: none                 # no unveil offer is drawn; `drawn`: one is; or {shows: {stat: "..."}, at: 2}: the 2nd mod shown
+                                      # (the one `Pick 2` takes) meets that requirement of the target (without `at`: any mod shown does)
           requirements:               # the status of a requirement of the target, named by its selector
             - stat: "+1 to Level of all Lightning Skill Gems"    # or `family: ID`, as the target writes it
               status: absent          # absent, below or passing, or a list of them
@@ -63,7 +66,11 @@ from ._reach import policy_states
 RESTART = "restart"
 TOP_KEYS = ("name", "skip_refused", "rules")
 RULE_KEYS = ("when", "do")
-WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "requirements")
+WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "veil", "offer", "requirements")
+VEIL_SIDES = {"prefix": "VeiledPrefix", "suffix": "VeiledSuffix"}  # the slot kind of the generic placeholder of each side (ADR-0026)
+VEIL_KINDS = frozenset(VEIL_SIDES.values())
+VEIL_VALUES = ("prefix", "suffix", "any", "none")
+OFFER_VALUES = ("none", "drawn")
 REQUIREMENT_KEYS = ("stat", "family", "status")
 RARITIES = tuple(rarity.value for rarity in Rarity)
 STATUSES = tuple(status.name.lower() for status in Status)
@@ -92,6 +99,9 @@ class When:
     unopened: bool | None = None  # the bought listing whose mods are not drawn yet (ADR-0064): the one state the draw is taken in
     statuses: tuple[tuple[int, frozenset[Status]], ...] = ()  # (index of the requirement leaf, statuses allowed)
     open_slots: tuple[tuple[Side, int, int], ...] = ()  # (side, capacity of the side, free slots wanted at least)
+    veil: str | None = None  # "prefix", "suffix", "any" or "none": the side of the veiled placeholder the item holds (ticket #146)
+    offer: str | None = None  # "none" or "drawn": whether an unveil offer is drawn
+    offer_shows: tuple[int, int | None] | None = None  # (index of the requirement leaf, position 1 to 3 or None for any): a mod shown meets the leaf
 
     def matches(self, state: CompressedState, data: GameData) -> bool:
         if self.rarities is not None and state.flags.rarity not in self.rarities:
@@ -120,6 +130,17 @@ class When:
             held = sum(data.mods[entry.mod_id].generation_type == side.value for entry in state.fractured)
             held += sum(slot.side is side for slot in state.slots)
             if room - held < wanted:
+                return False
+        if self.veil is not None:
+            veils = {slot.kind for slot in state.slots if slot.kind in VEIL_KINDS and not slot.crafted}
+            if (self.veil == "none") != (not veils) or (self.veil in VEIL_SIDES and VEIL_SIDES[self.veil] not in veils):
+                return False
+        if self.offer is not None and (self.offer == "drawn") != bool(state.offer):
+            return False
+        if self.offer_shows is not None:
+            leaf, position = self.offer_shows
+            shown = state.offer if position is None else state.offer[position - 1 : position]
+            if not any(entry.contribution[leaf] is Status.PASSING for entry in shown):
                 return False
         return all(state.status[index] in allowed for index, allowed in self.statuses)
 
@@ -321,6 +342,8 @@ class _Reader:
             fields["open_slots"] = open_slots
         if "fractured" in when:
             fields.update(self.read_fractured(when["fractured"], f"{path}.fractured", when.key_lines["fractured"]))
+        if "veil" in when or "offer" in when:
+            fields.update(self.read_veil(when, path))
         if "requirements" in when:
             fields["statuses"] = self.read_statuses(
                 when["requirements"], f"{path}.requirements", when.key_lines["requirements"]
@@ -345,6 +368,48 @@ class _Reader:
             room = capacity(self.data, self.plan.target.base_id, Rarity.RARE).of(side)
             found.append((side, room, value))
         return tuple(found)
+
+    def read_veil(self, when: LineMap, path: str) -> dict[str, object]:
+        """`veil` and `offer` (ticket #146): what the state holds of the veiled placeholder and of the unveil offer (ADR-0026)."""
+        first = "veil" if "veil" in when else "offer"
+        if not self.plan.abstraction.tracks_offer:
+            self.fail(
+                when.key_lines[first],
+                f"{path}.{first}",
+                "the states of this plan hold no veil and no offer (no unveil is offered), so the condition cannot be checked; leave it out",
+            )
+        fields: dict[str, object] = {}
+        if "veil" in when:
+            value = when["veil"]
+            if value not in VEIL_VALUES:
+                self.fail(when.key_lines["veil"], f"{path}.veil", f"must be one of {quoted(VEIL_VALUES)}, got {describe(value)}")
+            fields["veil"] = value
+        if "offer" in when:
+            value, line = when["offer"], when.key_lines["offer"]
+            where = f"{path}.offer"
+            if isinstance(value, LineMap):
+                self.check_keys(value, where, ("shows", "at"))
+                if "shows" not in value:
+                    self.fail(value.line, f"{where}.shows", "this key is required but missing")
+                shows = value["shows"]
+                if not isinstance(shows, LineMap):
+                    self.fail(value.key_lines["shows"], f"{where}.shows", f"must be a requirement such as {{stat: \"...\"}}, got {describe(shows)}")
+                self.check_keys(shows, f"{where}.shows", ("stat", "family"))
+                if ("stat" in shows) == ("family" in shows):
+                    self.fail(shows.line, f"{where}.shows", "give exactly one of `stat` and `family`")
+                leaf = self.leaf_of(shows, f"{where}.shows")
+                position = None
+                if "at" in value:
+                    position = value["at"]
+                    if type(position) is not int or position not in (1, 2, 3):
+                        self.fail(value.key_lines["at"], f"{where}.at", f"must be 1, 2 or 3 (the mod `Pick 1`, `Pick 2` or `Pick 3` takes), got {describe(position)}")
+                fields["offer_shows"] = (leaf, position)
+                fields["offer"] = "drawn"
+            elif value in OFFER_VALUES:
+                fields["offer"] = value
+            else:
+                self.fail(line, where, f"must be one of {quoted(OFFER_VALUES)} or {{shows: <requirement>, at: 1}}, got {describe(value)}")
+        return fields
 
     def read_rarities(self, when: LineMap, path: str) -> frozenset[Rarity]:
         value, line = when["rarity"], when.key_lines["rarity"]

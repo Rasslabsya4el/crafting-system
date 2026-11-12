@@ -5,6 +5,7 @@ r03-avoid-shock-boots	Velour Boots, item level 100, fractured +(13-14)% chance t
 r04-penetrating-quiver	Penetrating Arrow Quiver [QuiverNew5], normal, item level 81
 r05-strength-ring	Amethyst Ring, item level 75, fractured +(13-16) to all Attributes
 r06-strength-heavy-belt	Heavy Belt, normal, item level 75, Hunter influence
+r07-minion-wand	Convoking Wand, item level 84
 r08-energy-shield-boots	Sorcerer Boots, item level 86-100
 r09-life-boots	Two-Toned Boots [BootsAtlas1], item level 86-100
 r10-fractured-boots	Sorcerer Boots, item level 84, fractured 30% increased Movement Speed
@@ -13,4 +14,5 @@ r11-reservation-helmet	Lion Pelt, item level 84, fractured +(31-35)% to Chaos Re
 r12-lightning-amulet	Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance
 r13-life-resist-belt	Leather Belt, magic, item level 86-100
 r14-hunter-bow	Thicket Bow, magic, item level 78-79, Hunter influence
+r24-avoid-shock-boots	Murder Boots, item level 86-100, fractured +(69-73) to maximum Mana
 v01-minion-helmet	Lion Pelt, normal, item level 84

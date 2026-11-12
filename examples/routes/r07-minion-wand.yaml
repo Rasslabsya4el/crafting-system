@@ -1,0 +1,110 @@
+# Given route for benchmark route R07: a +2 generic minion Convoking Wand, read for 3.29 (ticket #146).
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices as the
+# solver's route. In every state the FIRST rule whose conditions match is followed; a goal state is never acted on. The conditions
+# and actions are explained in examples/routes/r12-lightning-amulet.yaml; `veil` and `offer` in src/crafting_system/cli/_route.py.
+#
+# The route (PoE Vault, GhazzyTV, 2024-07-25, docs/research/2026-10-30-5-reference-routes.md, id R07), read for 3.29 (the target's header):
+#   1. Prime Chaotic Resonators with Corroded, Jagged, Shuddering and Metallic Fossils until the two gem prefixes are present; continue
+#      for the minion-damage tier.
+#   2. If all suffixes are full, an Orb of Annulment makes room; if a wanted prefix is removed, back to 1.
+#   3. Craft "Prefixes Cannot Be Changed" and use a Veiled Chaos Orb.
+#   4. Unveil: the minion speed (3.29: the veiled Trigger is never offered); otherwise repeat step 3.
+#   5. Craft the Trigger at the bench in a remaining suffix.
+#
+# How the steps are read:
+#   * Step 4 is the guide's step 4 and 5 swapped for 3.29: the unveil is for the minion speed, the bench gives the Trigger.
+#   * When the minion speed is not shown there is no decline: any mod is picked (the first the game allows) and step 3 is taken
+#     again; its Veiled Chaos Orb rerolls the suffixes, the picked mod with them.
+#   * Step 5 needs a free suffix; with none, the guide's step 2 is taken again (an Orb of Annulment), as in step 2.
+#   * `skip_refused: true` only lets a pick the game refuses fall to the next pick.
+
+name: R07, PoE Vault guide read for 3.29
+skip_refused: true
+
+rules:
+  # Step 4: the minion speed is on offer: take it.
+  - when:
+      offer:
+        shows: {family: MinionAttackSpeedAndCastSpeed}
+        at: 1
+    do: Pick 1
+  - when:
+      offer:
+        shows: {family: MinionAttackSpeedAndCastSpeed}
+        at: 2
+    do: Pick 2
+  - when:
+      offer:
+        shows: {family: MinionAttackSpeedAndCastSpeed}
+        at: 3
+    do: Pick 3
+  # Step 4, it is not on offer: take another and go back to step 3.
+  - when:
+      offer: drawn
+    do: Pick 1
+  - when:
+      offer: drawn
+    do: Pick 2
+  - when:
+      offer: drawn
+    do: Pick 3
+  - when:
+      veil: any
+      offer: none
+    do: Unveil
+  # Step 5: the Trigger in a free suffix.
+  - when:
+      open_suffixes: 1
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: IncreaseSpecificSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+        - family: MinionAttackSpeedAndCastSpeed
+          status: passing
+    do: "Bench craft Trigger a Socketed Spell when you Use a Skill, with a 8 second Cooldown / Spells Triggered this way have 150% more Cost"
+  # Step 3: the prefixes are locked: Veiled Chaos Orb.
+  - when:
+      crafted_mods: true
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: IncreaseSpecificSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+        - family: MinionAttackSpeedAndCastSpeed
+          status: absent
+    do: Veiled Chaos Orb
+  # Step 3: the prefixes are done and a suffix is free: lock the prefixes.
+  - when:
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: IncreaseSpecificSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+        - family: MinionAttackSpeedAndCastSpeed
+          status: absent
+    do: Bench craft Prefixes Cannot Be Changed
+  # Step 2 (and step 5 with no free suffix): the prefixes are done, the suffixes full: annul.
+  - when:
+      crafted_mods: false
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: IncreaseSpecificSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+    do: Orb of Annulment
+  # Step 1 (and every way back to it): the fossils.
+  - when:
+      rarity: rare
+    do: Fossils Corroded Fossil + Jagged Fossil + Metallic Fossil + Shuddering Fossil
