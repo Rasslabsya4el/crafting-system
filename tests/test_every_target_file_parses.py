@@ -46,7 +46,7 @@ FILES = target_files()
 def test_the_search_finds_the_targets_of_every_place_they_live():
     names = {path.relative_to(ROOT).as_posix() for path in FILES}
 
-    assert len([name for name in names if name.startswith("examples/targets/")]) == 16
+    assert len([name for name in names if name.startswith("examples/targets/")]) == 17
     assert {name for name in names if "strand-routes-files/targets/" in name} >= {
         f"docs/research/2026-11-01-strand-routes-files/targets/{stem}.yaml"
         for stem in ("s01-es-ring-forum-guide", "s02-fire-res-ring-showcase", "s11-remembrance-belt", "s12-stranded-ring", "s13-unravelling-belt")

@@ -11,7 +11,7 @@ from crafting_system.actions import unopened_listing
 from crafting_system.items import Rarity
 from crafting_system.targets import StartKind, load_target
 
-DRAWN = {"r07-minion-wand", "r08-energy-shield-boots", "r09-life-boots", "r13-life-resist-belt", "r14-hunter-bow"}
+DRAWN = {"r07-minion-wand", "r08-energy-shield-boots", "r09-life-boots", "r13-life-resist-belt", "r14-hunter-bow", "r20-rf-helmet"}
 NAMES_ITS_MODS = {  # a bought rare with its fractured mod listed (the mods it does not list: ticket #656)
     "r03-avoid-shock-boots", "r05-strength-ring", "r10-fractured-boots", "r10-fractured-boots-70-life", "r11-reservation-helmet", "r12-lightning-amulet",
     "r24-avoid-shock-boots",
