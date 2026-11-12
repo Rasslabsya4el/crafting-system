@@ -17,7 +17,7 @@ from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutO
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
-from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price
+from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
 from . import _limits
@@ -25,6 +25,7 @@ from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
 UNVEIL_KIND = "unveil"  # the catalog kind whose offer a bench craft can block (ADR-0026)
+LOCK_KIND = "hinekora-lock"  # the name a target's `actions:` gives Hinekora's Lock, on by default (`_foresight`, ticket #296)
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 # What the draw of a bought item's mods costs (ADR-0064), as a share of the cheapest offer that costs something. It is not free like an unveil
 # because it lies on every cycle of a restart: the certified error of a component is about (m + 2) * epsilon * value / g for its smallest constant
@@ -114,7 +115,8 @@ def price_offers(
     it lists no price for it (a Divine Orb is the unit of that rate, ticket #71). A resource is read by `planned_price` under the
     profile's `price_source`: a thin trade market is priced by OR-8 and its mark goes in `PricedOffer.marks`, beside the part.
 
-    An action that consumes nothing (an unveil, a pick: `unveil.is_free_and_in_place`) costs `FREE_ACTION_SHARE` of the cheapest
+    An action that consumes nothing (an unveil, a pick: `unveil.is_free_and_in_place`), or only resources priced at 0 (a use of the
+    Locus of Corruption at its standing default, ADR-0038, which a price file that lacks it prices too: `standing_defaults`), costs `FREE_ACTION_SHARE` of the cheapest
     offer that costs something, because the solver needs a positive cost on every action (ADR-0026, ticket #145). The share is a
     compromise: a use must stay negligible next to the value of a route (a route of a million Chaos is moved by a Chaos at most),
     yet a cycle of free steps and paid steps (veil, unveil, pick, veil again) lies in one component of the solver, whose certified
@@ -136,17 +138,24 @@ def price_offers(
                     marks.append((name, planned.mark))
             elif name == DIVINE_ORB:
                 parts.append((name, count, count * prices.chaos_per_divine, "rate"))
+            elif (standing := standing_defaults().get(name)) is not None:  # a use of the Locus: 0 Chaos unless the file or an override names it (ADR-0038)
+                parts.append((name, count, count * standing.chaos, standing.source))
             else:
                 missing.append(name)
         if missing:
             dropped.append(DroppedOffer(offer.label, tuple(sorted(missing)), offer.kind))
         else:
             priced.append(PricedOffer(offer, sum(part[2] for part in parts), tuple(parts), tuple(marks)))
-    if any(not entry.offer.resources for entry in priced):
+    if any(_costs_nothing(entry) for entry in priced):
         paid = [entry.cost for entry in priced if entry.cost > 0]
         free_cost = FREE_ACTION_SHARE * min(paid) if paid else FREE_ACTION_SHARE
-        priced = [replace(entry, cost=free_cost) if not entry.offer.resources else entry for entry in priced]
+        priced = [replace(entry, cost=free_cost) if _costs_nothing(entry) else entry for entry in priced]
     return tuple(priced), tuple(dropped)
+
+
+def _costs_nothing(entry: PricedOffer) -> bool:
+    """Whether a use consumes nothing, or only resources priced at 0 (a use of the Locus at its default, ADR-0038): `price_offers` charges it the free share."""
+    return not entry.offer.resources or (bool(entry.parts) and all(part[2] == 0 for part in entry.parts))
 
 
 def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer]) -> PricedOffer:
@@ -159,7 +168,7 @@ def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable
 
 def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
     """What `price_offers` charged the actions that consume nothing, or `None` when the offers hold none (ticket #349)."""
-    costs = [entry.cost for entry in priced if not entry.offer.resources]
+    costs = [entry.cost for entry in priced if _costs_nothing(entry)]
     return max(costs) if costs else None
 
 
@@ -204,6 +213,11 @@ class BuyStartItem(Action):
 
     def sample(self, rng: random.Random) -> Item:
         return self.item
+
+
+def _allowing(data: GameData, start_item: Item, action: Action) -> Action:
+    """`action` as a target that only allows a corrupted item uses it: `Action.for_allowed_corruption` for a corrupting one, the action itself otherwise."""
+    return action.for_allowed_corruption(data) if action.adds(data, start_item).corrupts else action
 
 
 def offers_for(
@@ -258,7 +272,8 @@ def offers_for(
       other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
       asks, is `solver_actions`' business (`_prune.py`). One that also declares `Adds.asked_only` (a fossil set with the Bloodstained
       Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
-      merely allows a corrupted item (ADR-0038).
+      merely allows a corrupted item (ADR-0038). For a target that only allows a corrupted item (and asks for no corrupted implicit) a
+      corrupting action is offered as `Action.for_allowed_corruption` gives it: the Vaal Orb whose brick is a full fill (ticket #260).
     """
     goal = goal.resolved(data, start_item.base_id, start_item.item_level)  # a leaf built by hand with a `min_tier` reads it from the data
     counting = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids if _counts_as_crafted(data, leaf, mod_id)}
@@ -267,6 +282,8 @@ def offers_for(
     candidates = []
     left_out_unwanted: list[str] = []
     kind_of = _listed(data, start_item, kind_names, label_names)
+    if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
+        kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
     listed = list(kind_of)
     label_count = Counter(action.label(data) for action in listed)
 
@@ -463,6 +480,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     """
     if names is None:
         return None, frozenset()
+    names = [name for name in names if name != LOCK_KIND]  # Hinekora's Lock is no action of the catalog: the plan offers it as a Peek (`_foresight`)
     usable = {entry.name for entry in kinds(planner_only=True)}
     exist = {entry.name for entry in kinds()}
     kind_names = {name for name in names if name in exist}
@@ -476,7 +494,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     if unready:
         problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
     if problems:
-        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable - absent))}")
+        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted((usable - absent) | {LOCK_KIND}))}")
     return frozenset(kind_names), frozenset(name for name in names if name not in exist)
 
 

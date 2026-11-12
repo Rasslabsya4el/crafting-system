@@ -63,16 +63,18 @@ def finished_items(
     cap: int | None = None,
     pool: Iterable[PoolFamily] | None = None,
     totals: Mapping[int, Fraction] | None = None,
+    keep_all: bool = False,
 ) -> list[tuple[Item, Fraction]]:
     """Every finished item of rerolling `start` (kept: its fractured mods) with its exact probability.
 
     `forced` is the id of the forced mod of an essence and `cap` the level cap of a low essence.
     `pool` replaces the candidates (a fossil pool with its weights); it must be built for the retained item.
     `totals` replaces the 8:3:1 chance of each total number of mods (a likelihood reforge draws a fixed number).
+    With `keep_all` every mod of `start` is kept, not only its fractured ones (a Vaal brick around a locked side, ticket #260).
     Raises `ValueError` when `tag` is given and no tagged mod can be drawn first. `start` is taken to
     be an uncorrupted, uninfluenced item that the action accepts: refusals are not the oracle's business.
     """
-    kept_mods = start.fractured_mods
+    kept_mods = start.mods if keep_all else start.fractured_mods
     if forced is not None:
         low = tuple(min(stat.min, stat.max) for stat in data.mods[forced].stats)
         kept_mods = (*kept_mods, ExplicitMod(forced, low))

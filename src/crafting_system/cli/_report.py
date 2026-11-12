@@ -33,8 +33,9 @@ from ._marking import (
     verification_document,
     verification_lines,
 )
-from ._offers import without_ranges
-from ._plan import Plan, chance
+from ._offers import free_action_cost, without_ranges
+from ._foresight import Status as LockStatus
+from ._plan import Plan, PlanError, chance
 from ._price_marks import PriceUse, price_lines, price_uses
 from ._route_card import leaf_sides
 from ._reach import policy_states, reach_probabilities
@@ -342,7 +343,16 @@ def name_states(ids: Mapping[CompressedState, str], states: Iterable[CompressedS
 
 
 def build_report(plan: Plan, data: GameData) -> Report:
-    """Number the reachable states and collect what each one does."""
+    """Number the reachable states and collect what each one does.
+
+    A plan that takes Hinekora's Lock is refused with the reason in words: the Lock step in the player's words is ticket #298 (ADR-0057).
+    """
+    if plan.foresight is not None and plan.foresight.status is LockStatus.USED:
+        raise PlanError(
+            f"the cheapest plan takes Hinekora's Lock (one Lock costs {plan.foresight.price:,.2f} Chaos and saves "
+            f"{plan.foresight.saving:,.2f} Chaos of the mean), and the report cannot show a Lock step yet. "
+            "To see the best plan without the Lock, name the kinds to use in the target's `actions:` without `hinekora-lock`"
+        )
     order = policy_states(plan.start, plan.view_policy, plan.is_goal)
     ids = number_states(plan)
     reach = reach_probabilities(plan.start, plan.view_policy, plan.is_goal)
@@ -492,8 +502,9 @@ def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
 
 
 def free_action_price(plan: Plan) -> float:
-    """The price the planner gave the actions that consume nothing."""
-    return max((entry.cost for entry in plan.offers if not entry.offer.resources), default=0.0)
+    """The price the planner gave the actions that consume nothing, or only resources priced at 0 (a Locus use at its default): `free_action_cost`, 0 when none."""
+    free = free_action_cost(plan.offers)
+    return 0.0 if free is None else free
 
 
 def money_small(chaos: float) -> str:

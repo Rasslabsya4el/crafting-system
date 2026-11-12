@@ -532,7 +532,11 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
     if not adds.fractures:
         fractured = {entry.mod_id for entry in given.mods if entry.fractured}
         for _, result in items:
-            assert fractured == {entry.mod_id for entry in result.mods if entry.fractured}, "an action that does not fracture leaves the fractured mods as they were"
+            left = {entry.mod_id for entry in result.mods if entry.fractured}
+            if adds.erases_fractured:  # a reading may take them off (the Vaal brick at Craft of Exile's reading), never add one
+                assert left <= fractured, "an action that may erase the fractured mods adds none"
+            else:
+                assert fractured == left, "an action that does not fracture leaves the fractured mods as they were"
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:
