@@ -251,7 +251,7 @@
       "what": "Memory Strands are not considered",
       "why": "the start item has none, and the planner cannot plan with them yet",
       "guarantee": "The plan makes no use of Memory Strands.",
-      "count": 3,
+      "count": 4,
       "labels": [
         "Foulborn Augmentation Orb",
         "Foulborn Regal Orb",
