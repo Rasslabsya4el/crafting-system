@@ -249,7 +249,7 @@ BENCHMARKS = (
         "examples/targets/r17-lightning-talisman.yaml",
         "examples/routes/r17-lightning-talisman.yaml",
         (),
-        heavy="MEASURE: the exact graph of the imprint loop",
+        heavy="the exact walk of the imprint loop passed 2.76 million states and 28 million transitions in an hour and did not end (heavy run 43308613718, #223): it waits for a bound or a value-carrying form of the held imprint (ADR-0060, #817)",
     ),
     # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
     BenchmarkRoute(

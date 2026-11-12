@@ -9,7 +9,9 @@ benchmark entry solves the whole imprint loop (`run_route`), which is a heavy ru
     python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --timeout-minutes 60 \
         --command 'CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider -s tests/test_r17_imprint.py -k benchmark'
 
-Without `CRAFTING_HEAVY` the benchmark test skips, and without the cached dump the data fixture skips every test.
+Without `CRAFTING_HEAVY` the benchmark test skips, and without the cached dump the data fixture skips every test. It does not pass
+yet: the exact walk of the imprint loop passed 2.76 million states in an hour and did not end (heavy run 43308613718); #223 stays open until
+the solver can hold the held imprint (ADR-0060, "One held imprint is a number"; #817).
 """
 
 import dataclasses
