@@ -44,6 +44,7 @@ from ._bound_prune import (
     _raised,
     best_first_rho,
     goal_set,
+    through_listing,
     ONE,
     ZERO,
 )
@@ -95,6 +96,7 @@ class OfferFloors:
             elif kind == CRAFT:
                 pbar = ONE if named & u_mods else ZERO
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
+        through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0

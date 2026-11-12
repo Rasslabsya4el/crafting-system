@@ -363,26 +363,32 @@ def test_the_floor_of_an_offer_is_below_its_exact_q_at_every_state_of_the_world_
     assert floors.klass(start.flags, start.fractured, start.status) == OUTSIDE
 
 
-def listing_world():
+def listing_world(restart_price: float = 3.0):
     """The light world from a bought start the market sells unopened (ADR-0064): the restart buys the listing and a draw opens it into the Rare."""
     opened = item()
     listing = unopened_listing(DATA, opened)
-    offers = make_offers(listing)
+    offers = [dataclasses.replace(p, cost=restart_price) if isinstance(p.offer.action, BuyStartItem) else p for p in make_offers(listing)]
     offers.append(listing_draw(DATA, listing, opened.rarity, offers))
     ab = abstraction()
     start = ab.compress(listing)
     return ab, start, opened, offers, exact_values(ab, start, pattern_offers(offers))
 
 
-def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and_stay_below_the_exact_q():
+@pytest.mark.parametrize("restart_price", [3.0, 0.05])
+def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and_stay_below_the_exact_q(restart_price):
     """#626/#731: a bought start is an unopened listing (ADR-0064) that no reroll touches; the floors are stated for the shape it opens into, as the
-    pruned walk's are, so `rho` is finite and the listing itself is a state of another shape (its floor is the cost), never `rho` = 1e300 above its exact value."""
-    ab, start, opened, offers, exact = listing_world()
+    pruned walk's are, so `rho` is finite and the listing itself is a state of another shape (its floor is the cost), never `rho` = 1e300 above its exact value.
+    The restart buys the listing and its draw can land in E: with a cheap restart, buying again and drawing is the cheapest way into E, and `rho` counts it."""
+    ab, start, opened, offers, exact = listing_world(restart_price)
     assert start.flags.unopened
     floors = OfferFloors(ab, start, offers, opened)
     fresh = abstraction()
     plain = OfferFloors(fresh, fresh.compress(opened), make_offers(opened), opened)
-    assert floors.chosen == plain.chosen and floors.rho == pytest.approx(plain.rho, rel=1e-12) and floors.rho < 1e6
+    assert floors.chosen == plain.chosen and 0 < floors.rho < 1e6
+    if restart_price == 3.0:  # buying again is dearer than the Chaos Orb: `rho` is the reroll's, as from the opened start
+        assert floors.rho == pytest.approx(plain.rho, rel=1e-12)
+    else:  # the restart and its draw are the cheapest way into E, below the Chaos Orb's cost / chance
+        assert floors.rho < plain.rho
     assert floors.klass(start.flags, start.fractured, start.status) == OTHER
     shape = ab.compress(opened)
     assert floors.klass(shape.flags, shape.fractured, shape.status) == OUTSIDE
