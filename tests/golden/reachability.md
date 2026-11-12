@@ -11,11 +11,11 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 
 |  | Count |
 |---|---|
-| Action kinds in the catalog | 60 |
+| Action kinds in the catalog | 61 |
 | - with `planner=False` (no plan can use them) | 28 |
-| - with `planner=True` | 32 |
+| - with `planner=True` | 33 |
 | - `planner=True` and offered by at least one target (reachable) | 15 |
-| - `planner=True` and offered by no target | 17 |
+| - `planner=True` and offered by no target | 18 |
 | Benchmark targets | 14 |
 | - the planner entry plans them | 12 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 2 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 45 of 60 (28 closed by `planner=False`, 17 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 46 of 61 (28 closed by `planner=False`, 18 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -87,6 +87,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `foulborn-exalted-orb` | yes | opt-in, needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
+| `orb-of-remembrance` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `vaal` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-1 |
 | `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
@@ -183,7 +184,7 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
 | the market rule | `classify` | `prices/trade_market.py` | prices/trade_exchange.py: read_offers, prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
-| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_bought_starts.py: _option, cli/_offers.py: price_offers, and 4 more | yes | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_bought_starts.py: _option, cli/_offers.py: price_offers, and 5 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |

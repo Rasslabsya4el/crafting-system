@@ -139,8 +139,11 @@ def _base_label(data: GameData, base: BaseItem) -> str:
     return f"{base.name} [{base.id.rsplit('/', 1)[-1]}]"
 
 
-def buy_spec_of(data: GameData, target: Target) -> BuySpec:
+def buy_spec_of(data: GameData, target: Target, *, strands: int = 0) -> BuySpec:
     """The buy spec of the target's start item: what to search the trade site for, named by its price key.
+
+    `strands` above 0 makes it a stranded purchase (ADR-0043, ticket #278): the same item with at least that many Memory Strands, searched
+    with the `memory_level` minimum and named by the plain key followed by ", `strands` or more Memory Strands".
 
     Raises `StartBuyError` when a part of the item cannot be searched: an item class with no trade category, a crafted start mod, a mod
     of several stats.
@@ -159,8 +162,9 @@ def buy_spec_of(data: GameData, target: Target) -> BuySpec:
             raise StartBuyError(f"the start mod {entry.mod_id} is crafted: a crafted mod is not bought on the trade site")
         mod = data.mods[entry.mod_id]
         mods.append((BuyMod(_plain(mod.text or ""), _minimum(mod), entry.fractured), _plain(mod.text or "")))
+    name = _key(_base_label(data, base), rarity, low, high, influences, item.corrupted, [(buy.fractured, shown) for buy, shown in mods])
     return BuySpec(
-        name=_key(_base_label(data, base), rarity, low, high, influences, item.corrupted, [(buy.fractured, shown) for buy, shown in mods]),
+        name=f"{name}, {strands} or more Memory Strands" if strands else name,
         base_type=base.name,
         category=category,
         rarity=rarity.value,
@@ -169,6 +173,7 @@ def buy_spec_of(data: GameData, target: Target) -> BuySpec:
         influences=tuple(name.lower() for name in influences),
         corrupted=item.corrupted,
         mods=(*(buy for buy, _ in mods), *_own_implicits(data, base)),
+        memory_strands_min=strands or None,
     )
 
 
