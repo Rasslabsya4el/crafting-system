@@ -94,6 +94,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
     ("cli/_plan.py", "make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
+    ("cli/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
     ("cli/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
     ("cli/_prune.py", "solver_actions", ("NotApplicableError",), RECORDS, "a game refusal: silent"),

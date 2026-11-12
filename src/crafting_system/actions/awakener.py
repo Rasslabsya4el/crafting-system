@@ -81,7 +81,7 @@ GROUP_CONFLICT_AXIS = Axis("awakener.group_conflict", (RECEIVER, DONOR), RECEIVE
 
 __all__ = ["AwakenersOrb", "influence_mods"]
 
-WHY_NOT_PLANNER = "the planner entry takes no donors yet: it refuses an action with inputs (ADR-0062 'As built')"
+WHY_NOT_PLANNER = "the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built')"
 
 _DONORS_LIMIT = 64
 # (id(data), base, item level, donor influence, donor mod) -> (data, the donor as bought, the donor as wanted, its mod as kept).

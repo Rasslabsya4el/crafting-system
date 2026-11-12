@@ -19,8 +19,7 @@ from fractions import Fraction
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal
-from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
-from crafting_system.actions.contract import Axis, Reading
+from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile, planned_price
