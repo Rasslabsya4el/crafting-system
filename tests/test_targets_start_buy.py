@@ -73,7 +73,7 @@ def test_a_base_class_with_no_trade_category_is_refused_by_name():
         buy_spec_of(DATA, target)
 
 
-def test_the_category_map_has_the_ten_classes_of_the_benchmark_routes():
+def test_the_category_map_has_the_eleven_classes_of_the_benchmark_routes():
     assert set(TRADE_CATEGORY.values()) == {
         "accessory.amulet",
         "accessory.ring",
@@ -85,6 +85,7 @@ def test_the_category_map_has_the_ten_classes_of_the_benchmark_routes():
         "armour.shield",
         "armour.quiver",
         "weapon.bow",
+        "weapon.wand",  # R07 (ticket #146)
     }
 
 
