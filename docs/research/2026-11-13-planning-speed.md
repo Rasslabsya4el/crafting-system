@@ -78,7 +78,7 @@ So on the fast path the walk-free bound already knows the cost of the best plan 
 | A stop at 0.1% | 71 | 492 s | 164,661 | 741,115 | 189,043 / 189,226.57 |
 | The exact stop (today) | 77 | 510 s | 165,980 | 754,755 | 189,226.55 / 189,226.55 |
 
-(The search took 510 s on this runner against 364 s on the runner of heavy run 42955861457; runners differ by up to 1.9x, ADR-0063. The `U` solves, 78 s, are taken off.)
+(The search took 510 s on this runner against 364 s on the runner of heavy run 42955861457; runners differ by up to 1.9x, ADR-0063. The `U` solves, 78 s, are taken off. The traced search expanded the same number of states round by round as the untraced run 42955861457, on R04 and on R14, so the measurement did not change the search.)
 
 What it shows:
 
