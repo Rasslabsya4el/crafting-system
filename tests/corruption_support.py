@@ -112,14 +112,13 @@ def base_implicit() -> ImplicitMod:
 
 
 def starts() -> dict[str, Item]:
-    """Rare items with no implicit listed, one, two, a base implicit listed with an Eater one or replaced by it, a fractured mod, a normal and a magic item."""
+    """Rare items with no implicit listed, one, two, a base implicit or an Eater one in its place (no item holds both, ticket #528), a fractured mod, a normal and a magic item."""
     junk = (_roll(RESIST_2), _roll(LIFE_1))
     return {
         "none": amulet(*junk),
         "one": on(BOOTS, *junk, implicits=(exarch(),)),
         "two": on(BOOTS, *junk, implicits=(exarch(), eater())),
         "belt-stored": on(BELT, *junk, implicits=(base_implicit(),)),  # a belt as it is bought: its base implicit
-        "belt-both": on(BELT, *junk, implicits=(base_implicit(), eater())),  # the model allows it, no game route makes it (an Ember replaces the base implicit)
         "belt-replaced": on(BELT, *junk, implicits=(eater(),)),  # the base implicit went to an Ember (#484): the item lists the Eater one alone
         "fractured": amulet(_roll(RESIST_2, fractured=True), _roll(LIFE_1), _roll(MANA_1)),
         "normal": amulet(rarity=Rarity.NORMAL),

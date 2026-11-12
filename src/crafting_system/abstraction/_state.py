@@ -189,6 +189,11 @@ class CompressedState:
     `strands` (ADR-0040, ticket #277) is the item's Memory Strand count, exact (the spend of a craft depends on the exact count, so counts
     are not lumped into cut classes): 0 for an item with none. It is kept for every item, since a count that no action reads or changes
     stays what the start item has and adds no state. At 0 the hash, the order key and the text of a state are what they were before.
+
+    `replaced` (ticket #528) are the implicits of the base that no requirement names and that a corrupted item does not hold although it holds
+    no Eldritch implicit: a corrupted implicit took their place (`corruption.implicit_replaces_existing`), and the state keeps no corrupted
+    implicit (ADR-0036). Sorted; `()` for every other item, since `with_base_implicits` derives the rest (an Eldritch implicit took them all,
+    or nothing took any). Kept only when `implicits` is. When empty the hash, the order key and the text of a state are what they were before.
     """
 
     flags: Flags
@@ -200,13 +205,18 @@ class CompressedState:
     offer: tuple[OfferedMod, ...] = ()
     imprints: tuple["CompressedState", ...] = ()
     strands: int = 0
+    replaced: tuple[str, ...] = ()
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
             parts = (self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints)
-            value = hash((*parts, self.strands) if self.strands else parts)  # at 0 strands the hash of before ticket #277
+            if self.strands:  # at 0 strands the hash of before ticket #277
+                parts = (*parts, self.strands)
+            if self.replaced:  # with none replaced the hash of before ticket #528
+                parts = (*parts, ("replaced", self.replaced))
+            value = hash(parts)
             object.__setattr__(self, "_hash", value)
             return value
 
@@ -227,7 +237,9 @@ class CompressedState:
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
                 tuple(held.order_key for held in self.imprints),
             )
-            if self.strands:  # at 0 strands the key of before ticket #277; a stranded state sorts after the state at 0 with the same rest
+            if self.replaced:  # with none replaced the key of before ticket #528; the count stays in its place so keys compare
+                value = (*value, self.strands, self.replaced)
+            elif self.strands:  # at 0 strands the key of before ticket #277; a stranded state sorts after the state at 0 with the same rest
                 value = (*value, self.strands)
             object.__setattr__(self, "_order_key", value)
             return value
@@ -238,19 +250,21 @@ class CompressedState:
     def __repr__(self) -> str:
         """The dataclass repr, with the item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
         text = f"flags={self.flags!r}, fractured={self.fractured!r}, status={self.status!r}, slots={self.slots!r}"
-        for name in ("implicits", "quality", "offer", "imprints", "strands"):
+        for name in ("implicits", "quality", "offer", "imprints", "strands", "replaced"):
             value = getattr(self, name)
             if value:
                 text += f", {name}={value!r}"
         return f"CompressedState({text})"
 
     @property
-    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | PlainQuality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...], int]:
+    def held(
+        self,
+    ) -> tuple[tuple[ImplicitSide, ...], Quality | PlainQuality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...], int, tuple[str, ...]]:
         """The item state beyond the explicit mods, as one key: what a memo of a kernel must tell states apart by besides the mods.
 
         In the order of the fields, so `CompressedState(flags, fractured, status, slots, *held)` rebuilds a state.
         """
-        return (self.implicits, self.quality, self.offer, self.imprints, self.strands)
+        return (self.implicits, self.quality, self.offer, self.imprints, self.strands, self.replaced)
 
     @property
     def crafted(self) -> bool:

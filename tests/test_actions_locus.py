@@ -28,7 +28,7 @@ from contract_support import _roll, check_action
 from corruption_support import ABYSS, ALL_RES, BELT, FLASK, LATE, LEVEL, SECOND, THIRD, base_implicit, eater, exarch
 from implicits_support import BOOTS
 from items_support import AMULET as AMULET_ID
-from locus_support import DATA, GROUPS, TWIN, oracle, pair_chance, pool
+from locus_support import DATA, GROUPS, THREE_BELT, THREE_IMPLICITS, TWIN, oracle, pair_chance, pool
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import LOCUS_USE, LocusOfCorruption, NotApplicableError, OutOfScopeError, VaalOrb, catalog, kinds
@@ -55,7 +55,7 @@ STARTS = {
     "one": item_on(BOOTS, *JUNK, implicits=(exarch(),)),
     "two": item_on(BOOTS, *JUNK, implicits=(exarch(), eater())),
     "belt-stored": item_on(BELT, *JUNK, implicits=(base_implicit(),)),
-    "three": item_on(BELT, *JUNK, implicits=(base_implicit(), exarch(), eater())),  # the model allows it; it shows two of three replaced
+    "three": item_on(THREE_BELT, *JUNK, implicits=tuple(ImplicitMod(mod_id, 0, tuple(min(s.min, s.max) for s in DATA.mods[mod_id].stats)) for mod_id in THREE_IMPLICITS)),  # two of three replaced
     "fractured": item_on(AMULET_ID, _roll(RESIST_2, fractured=True), _roll(LIFE_1)),
     "normal": item_on(AMULET_ID, rarity=Rarity.NORMAL),
     "magic": item_on(AMULET_ID, _roll(LIFE_1), rarity=Rarity.MAGIC),

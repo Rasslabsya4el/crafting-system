@@ -43,6 +43,7 @@ def state(**changes) -> CompressedState:
         "offer": (),
         "imprints": (),
         "strands": 0,
+        "replaced": (),
     }
     fields.update(changes)
     return CompressedState(**fields)
@@ -58,6 +59,7 @@ OTHER = {
     "offer": (OfferedMod("a", (ABSENT,)),),
     "imprints": (state(slots=()),),
     "strands": 40,
+    "replaced": ("StrengthImplicitBelt1",),
 }
 
 

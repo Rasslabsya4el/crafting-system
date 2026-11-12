@@ -110,10 +110,11 @@ def test_one_implicit_on_each_side_is_accepted():
     assert built.eldritch_implicits(EXTENDED) == {EldritchSide.EXARCH: AVOID3, EldritchSide.EATER: EATER2}
 
 
-def test_a_base_implicit_and_an_eldritch_implicit_can_sit_together():
-    built = make(implicits=(AVOID1, BASE))
-
-    assert built.eldritch_implicits(EXTENDED) == {EldritchSide.EXARCH: AVOID1}
+def test_a_base_implicit_beside_an_eldritch_implicit_is_rejected():
+    """Ticket #528: an Ember or an Ichor replaces every implicit but the other side's Eldritch one, so no item holds both."""
+    with pytest.raises(ImplicitError, match=r"implicit StrengthImplicitBelt1 is an implicit of the base and .* an Eldritch implicit"):
+        make(implicits=(AVOID1, BASE))
+    assert make(implicits=(AVOID1, EATER2)).eldritch_implicits(EXTENDED) == {EldritchSide.EXARCH: AVOID1, EldritchSide.EATER: EATER2}
 
 
 def test_an_implicit_that_is_not_in_the_game_data_is_rejected():
@@ -158,11 +159,11 @@ def test_an_eldritch_value_outside_its_range_is_rejected():
 
 
 def test_the_given_order_of_implicits_does_not_matter():
-    assert make(implicits=(BASE, AVOID1)) == make(implicits=(AVOID1, BASE))
-    assert hash(make(implicits=(BASE, AVOID1))) == hash(make(implicits=(AVOID1, BASE)))
-    assert [entry.mod_id for entry in make(implicits=(BASE, AVOID1)).implicits] == [
+    assert make(implicits=(EATER2, AVOID1)) == make(implicits=(AVOID1, EATER2))
+    assert hash(make(implicits=(EATER2, AVOID1))) == hash(make(implicits=(AVOID1, EATER2)))
+    assert [entry.mod_id for entry in make(implicits=(EATER2, AVOID1)).implicits] == [
         "AvoidShockEldritchImplicit1",
-        "StrengthImplicitBelt1",
+        "ChanceToShockEldritchImplicit2",
     ]
 
 
@@ -248,16 +249,16 @@ def test_a_presence_variant_is_found_by_its_stat():
 
 
 def test_changed_keeps_the_implicits_and_can_replace_them():
-    built = make(implicits=(BASE, AVOID1))
+    built = make(implicits=(EATER2, AVOID1))
 
     assert built.changed(EXTENDED, corrupted=True).implicits == built.implicits
     assert built.changed(EXTENDED, implicits=(BASE,)).implicits == (BASE,)
     with pytest.raises(ImplicitError):
-        built.changed(EXTENDED, implicits=(BASE, AVOID1, AVOID3))
+        built.changed(EXTENDED, implicits=(EATER2, AVOID1, AVOID3))
 
 
 def test_add_mod_and_remove_mod_keep_the_implicits():
-    built = make(implicits=(BASE, AVOID1))
+    built = make(implicits=(EATER2, AVOID1))
     added = built.add_mod(EXTENDED, roll("ColdResist1"))
 
     assert added.implicits == built.implicits
