@@ -46,7 +46,7 @@ from itertools import combinations
 from crafting_system.data import GameData, conflicts
 from crafting_system.items import ImplicitMod, Item, is_corrupted_implicit
 from crafting_system.items.implicits import BASE_GRADE
-from crafting_system.items.words import base_words
+from crafting_system.items.words import base_words, mod_words
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -123,7 +123,7 @@ class TwoImplicitDraw:
         lonely = next((entry for entry in pool.mods if draw.rest_weight(entry.mod.id) == 0), None)
         if lonely is not None:
             raise OutOfScopeError(
-                f"every corrupted implicit {base_words(data, item.base_id)} can get at item level {item.item_level} shares a mod group with {lonely.mod.id}, so the Locus of Corruption has no second implicit to draw after it, and the model has no rule for that",
+                f"every corrupted implicit {base_words(data, item.base_id)} can get at item level {item.item_level} shares a mod group with {mod_words(lonely.mod)}, so the Locus of Corruption has no second implicit to draw after it, and the model has no rule for that",
                 detail=(
                     f"the corrupted pool of {item.base_id} at item level {item.item_level} holds no mod of another group than {lonely.mod.id}: "
                     "no admitted rule says what the second draw of a double corruption does then"
