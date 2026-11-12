@@ -438,8 +438,6 @@ def interval(estimate: Estimate, divine: float) -> str:
     return text
 
 
-
-
 def _row(name: str, value: str) -> str:
     """One row of the result block: the figure in the words of `PERCENTILE_WORDS`, then its value."""
     return f"  {PERCENTILE_WORDS[name]:<{ROW_WIDTH}}{value}"
