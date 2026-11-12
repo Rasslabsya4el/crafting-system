@@ -33,7 +33,7 @@ from ._marking import (
     verification_document,
     verification_lines,
 )
-from ._offers import without_ranges
+from ._offers import free_action_cost, without_ranges
 from ._plan import Plan, chance
 from ._price_marks import PriceUse, price_lines, price_uses
 from ._route_card import leaf_sides
@@ -492,8 +492,9 @@ def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
 
 
 def free_action_price(plan: Plan) -> float:
-    """The price the planner gave the actions that consume nothing."""
-    return max((entry.cost for entry in plan.offers if not entry.offer.resources), default=0.0)
+    """The price the planner gave the actions that consume nothing, or only resources priced at 0 (a Locus use at its default): `free_action_cost`, 0 when none."""
+    free = free_action_cost(plan.offers)
+    return 0.0 if free is None else free
 
 
 def money_small(chaos: float) -> str:
