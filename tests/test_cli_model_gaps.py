@@ -119,6 +119,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_estimate.py", "_Pilot.walked_kernel", ("ValueError",), NOT_A_REFUSAL, "after the clause for both families: a kernel error that is no refusal makes the forecast refuse (`EstimateRefused`)"),
     ("abstraction/_kernel.py", "Abstraction._refusal_depends_on_the_family", ("ItemError", "ValueError"), NOT_A_REFUSAL, "the item cannot be built with another family: no other family is left to try; no action is called"),
     ("actions/corruption.py", "_vaal_orb", ("ValueError",), EITHER, "a class with no corrupted pool lists no Vaal Orb, whichever family refuses; a model gap met while listing is #511"),
+    ("actions/locus.py", "_locus", ("ValueError",), EITHER, "a class with no corrupted pool, or a pool with no second draw, lists no Locus of Corruption, whichever family refuses; a model gap met while listing is #511"),
     ("actions/recombinator.py", "Recombinator.outcomes", ("TypeError", "ValueError", "OverflowError"), NOT_A_REFUSAL, "the exponent of the reading is no number; no action is called"),
     ("cli/_benchmark.py", "benchmark_main", ("DataError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the command"),
     ("cli/_benchmark.py", "run_route", ("ValueError", "OSError", "DataError", "PriceFileNotFound", "ConvergenceError"), EITHER, "`ROUTE_ERRORS`: ValueError is the parent of both families and of every other error of a route; the entry carries the text of whichever"),

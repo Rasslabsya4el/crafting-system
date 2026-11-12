@@ -1,6 +1,6 @@
 """The price file and its fetchers (ADR-0007). May import only: data, rules, items, actions, abstraction, solver, risk, simulator."""
 
-from .default_prices import DUST, GOLD, default_prices
+from .default_prices import DUST, GOLD, LOCUS_USE, default_prices, standing_defaults
 from .fallbacks import Context, Gap, StageResult, stamped_entry
 from .fetch import FetchResult, fetch_price_file
 from .foresight import PricedBurn, cheapest_burn, lock_missing, lock_price, price_burns, resource_cost
@@ -71,7 +71,9 @@ __all__ = [
     "http_get_json",
     "DUST",
     "GOLD",
+    "LOCUS_USE",
     "default_prices",
+    "standing_defaults",
     "Context",
     "Gap",
     "StageResult",
