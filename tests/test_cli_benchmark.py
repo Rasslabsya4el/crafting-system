@@ -129,7 +129,7 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
 
     assert code == 0
     document = read_json(path)
-    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
+    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R25", "R28", "V01"]
     entry = entry_of(document)
     assert entry["missing_price"]["name"] == START
     assert entry["missing_price"]["override_line"] == f'"{START}" = <the price in Chaos Orbs>'  # a missing price is an error, never a 0 placeholder (OR-6)
@@ -231,10 +231,10 @@ def test_the_target_form_still_works_next_to_the_benchmark_command(tmp_path):
     assert code == 0 and json.loads(out.read_text(encoding="utf-8"))["format"] == "crafting-system-policy/3"
 
 
-def test_the_benchmark_lists_r12_r10_r11_r05_r13_r08_r09_r04_r14_and_v01_with_their_target_and_route_files():
+def test_the_benchmark_lists_r12_r10_r11_r05_r13_r08_r09_r04_r14_r25_r28_and_v01_with_their_target_and_route_files():
     root = Path(__file__).resolve().parents[1]
 
-    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
+    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R25", "R28", "V01"]
     for bench in benchmark_module.BENCHMARKS:
         assert (root / bench.target).is_file(), bench.id
         assert bench.route is None or (root / bench.route).is_file(), bench.id

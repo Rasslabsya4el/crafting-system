@@ -109,6 +109,8 @@ SPEED, GEMS, DOT = "LocalIncreasedAttackSpeed5", "LocalIncreaseSocketedGemLevel1
 BOW_TOP = "DamageWithBowSkills5"  # tier 2 of Damage with Bow Skills, the top tier at item level 81
 DOT_TIERS = ("PoisonDamagePrefixInfluence1__", "PoisonDamagePrefixInfluence2__", "PoisonDamagePrefixInfluence3", DOT)
 
+DONOR_PLAN = "the plan is the product of the target and its second items, solved once for each of the five readings of alpha (ticket #225)"
+
 BENCHMARKS = (
     BenchmarkRoute(
         "R12",
@@ -240,6 +242,25 @@ BENCHMARKS = (
         ),
         heavy="the exact graph has 816,153 states: the packed solver takes about 32 minutes and 9 GB, and no approximate level exists for a route with metamods (ticket #70)",
         completed="examples/routes/r14-hunter-bow-restart.yaml",
+    ),
+    # Recombinator routes (ticket #225): the plan is the product of the target and the second items its recombinations consume, solved at
+    # every reading of the selection exponent alpha, so the answer is approximate and carries its interval (`entry["interval"]`). The guides
+    # publish no odds.
+    BenchmarkRoute(
+        "R25",
+        "Triple tier-1 energy shield prefix Vaal Regalia by recombining overlapping pairs (Reddit guide)",
+        "examples/targets/r25-energy-shield-regalia.yaml",
+        "examples/routes/r25-energy-shield-regalia.yaml",
+        (),
+        heavy=DONOR_PLAN,
+    ),
+    BenchmarkRoute(
+        "R28",
+        "+2 Onyx Amulet whose five mods are made one by one and recombined (Reddit post)",
+        "examples/targets/r28-plus-two-amulet.yaml",
+        "examples/routes/r28-plus-two-amulet.yaml",
+        (),
+        heavy=DONOR_PLAN,
     ),
     # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
     BenchmarkRoute(
