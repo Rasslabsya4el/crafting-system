@@ -1,0 +1,101 @@
+# Target for benchmark route R24: boots with a fractured Mana, Movement Speed + Onslaught unveiled from a veil, the Avoid Shock
+# essence suffix, top-tier Spell Suppression and a tier 2 or better elemental resistance (ticket #146).
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, r/PathOfExileBuilds, "How would I craft these boots", 2026-04-03, docs/research/2026-10-30-5-reference-routes.md, id R24):
+#   1. Fracture or purchase Mana.
+#   2. Spam the Avoid Shock essence until T1 Suppress.
+#   3. Ensure one open prefix and one open suffix, annulling if necessary (if Suppress or Avoid Shock is annulled, back to 2).
+#   4. Reforge Fire/Cold/Lightning for a T2+ resistance (on a bad one, annul it; if a core suffix is lost, back to 2).
+#   5. Lock suffixes.
+#   6. Veiled Chaos for Movement Speed + Onslaught (repeat the locked veiled stage until it is offered).
+#
+# How the words are read (OR-1 to OR-4):
+#   * "Rare Boots": no base is named. The suffixes need a Dexterity base (Spell Suppression) and the guide's Mana says nothing of armour,
+#     so the file takes Murder Boots, a top Evasion/Energy Shield base; every Dexterity/Intelligence boot base has the same pool.
+#     Item level 86: tier 1 of Spell Suppression needs 85 and the top Mana needs 85.
+#   * "fractured Mana": no tier is stated, so the top tier the item level allows (OR-1), IncreasedMana13, +(74-78); it is the bought
+#     item's fractured mod and the trade price is taken for that tier (OR-3). "Fracture or purchase": the file buys it.
+#   * "Movement Speed + Onslaught veil": the unveiled mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill, exactly (OR-2: an unveil
+#     gives that one mod).
+#   * "Avoid Shock essence modifier": what the Deafening Essence of Torment forces on boots, ChanceToAvoidShockEssence7, exactly (OR-2).
+#   * "T1 Spell Suppression": tier 1, rolled (OR-4: the guide states the tier).
+#   * "T2+ Elemental Resistance": a Fire, Cold or Lightning resistance of tier 2 or better, rolled (OR-4).
+#   * "Reforge Fire/Cold/Lightning": the step adds one resistance to an item that keeps its suffixes, and its failure is annulled away, so
+#     it is the Harvest craft that adds a mod of the tag (and removes another), not the reforge that rerolls the whole item.
+#   * "Lock suffixes": the bench craft "Suffixes Cannot Be Changed".
+#
+# The actions line names the kinds and the single actions of the route, because the veiled kinds are offered only when a target
+# names them (opt-in) and the full catalog would not be solved (OR-5 is not met here: see the PR of #146). Bench crafts of a family the
+# boots' unveiled pool holds are offered too, as unveil blocks (ADR-0026), through the bench-craft kind.
+
+base: Murder Boots
+
+# The item level, a whole number from 1 to 100.
+item_level: 86
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord). [] means none.
+influence: []
+
+# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action.
+actions:
+  - Deafening Essence of Torment
+  - annulment-orb
+  - Harvest Add Remove Fire
+  - Harvest Add Remove Cold
+  - Harvest Add Remove Lightning
+  - bench-craft
+  - Bench craft Suffixes Cannot Be Changed
+  - remove-crafted-mods
+  - veiled-chaos-orb
+  - unveil
+  - pick
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The fractured Mana of the bought boots, the top tier.
+  - family: IncreasedMana
+    mod: IncreasedMana13
+
+  # Movement Speed + Onslaught, unveiled.
+  - family: MovementVelocity
+    mod: JunMasterVeiledMovementVelocityAndOnslaughtOnKill
+
+  # The Avoid Shock suffix of the Deafening Essence of Torment.
+  - family: ReducedShockChance
+    mod: ChanceToAvoidShockEssence7
+
+  # "T1 Suppress", rolled.
+  - family: ChanceToSuppressSpells
+    min_tier: 1
+    not_crafted: true
+
+  # "T2+ Elemental Resistance": one of the three, tier 2 or better, rolled.
+  - at_least: 1
+    of:
+      - family: FireResistance
+        min_tier: 2
+        not_crafted: true
+      - family: ColdResistance
+        min_tier: 2
+        not_crafted: true
+      - family: LightningResistance
+        min_tier: 2
+        not_crafted: true
+
+# Where the crafting starts: rare boots with the top Mana fractured, the rest whatever the market sells (OR-17).
+start_item:
+  rarity: rare
+  mods:
+    - mod: IncreasedMana13
+      values: [74]
+      fractured: true
+
+# The start item is bought. Its buy spec, trade query and price key are computed from this file.
+start: bought
+
+# The price file of this route (a path from this file's folder): the 2026-11-10 snapshot of the other routes plus the Veiled Chaos Orb and
+# the start items of R24 and R07 (ticket #146).
+price_file: ../../tests/fixtures/prices/veiled-r24-r07-2026-11-12.json
