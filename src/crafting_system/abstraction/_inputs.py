@@ -260,7 +260,7 @@ def _kernel_of(ability, state, want, action, types: list[_Type], specs: list[Spe
     mine_item, origins = ability._item_of(state, False, placement=placed[0])
     theirs_item, _ = ability._item_of(want, False, placement=placed[1])
     try:
-        outcomes = action.with_inputs((theirs_item,)).outcomes_under(ability.data, mine_item, ability._reading)
+        outcomes = ability._outcomes(action.with_inputs((theirs_item,)), mine_item)
     except NotApplicableError as refusal:  # the game's refusal of the representative has been raised by `_prepare`: this is another placement's
         raise OutOfScopeError(
             f"the game refuses {action.label(ability.data)} for some placements of the mods and not for others, so the model cannot average over them",

@@ -28,6 +28,7 @@ from crafting_system.actions import (
     floating,
     partners,
 )
+from crafting_system.actions import PLAN_READING, Spent, WeightReading, kept_tier_weights
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -143,6 +144,7 @@ class _Split:
     offer: tuple[OfferedMod, ...] = ()
     imprints: tuple[CompressedState, ...] = ()  # the states the retained item was imprinted at (ADR-0060); () when not kept or when no imprint can be used on it
     rolled: tuple[tuple[int, Cells], ...] = ()  # (index in `implicits`, roll law) of each implicit the action rolled afresh whose roll a requirement looks at (ticket #158); `implicits` shows them at their lowest values
+    strands: int = 0  # the Memory Strand count of the retained item: the count before the craft for a spending action, whose spend `_mixture_kernel` spreads (ticket #277)
 
 
 class _Context:
@@ -198,8 +200,12 @@ class Abstraction:
         enchantment: str | None = None,
         reading: Reading | None = None,
         allow_inputs: bool = True,
+        weights: WeightReading = PLAN_READING,
     ):
+        if not isinstance(weights, WeightReading):
+            raise ValueError(f"the reading of the kept tiers is a WeightReading, got {weights!r}")
         self.data = data
+        self._weights = weights
         self.gaps = ModelGaps()  # the actions the model had no rule for, written by whoever walks this abstraction (ticket #506)
         self.prunings = Prunings()  # the offers left out of the states that cannot use them (K13)
         self._reading = reading
@@ -289,6 +295,17 @@ class Abstraction:
             self._approx = tuple(getattr(self, name) for name in names)
             for name, kept in zip(names, saved):
                 setattr(self, name, kept)
+
+    @property
+    def weights(self) -> WeightReading:
+        """What the kept tiers weigh after a cut in every kernel of this abstraction (ADR-0042, ticket #277): the plan reading of the claim
+        `memory_strands.weights_of_kept_tiers` by default. Each reading is one ordinary model, as for `reading`."""
+        return self._weights
+
+    def _outcomes(self, action: Action, item: Item):
+        """`action.outcomes_under` on `item` at this abstraction's reading, its cutting draws at `weights` (every kernel asks the action through here)."""
+        with kept_tier_weights(self._weights):
+            return action.outcomes_under(self.data, item, self._reading)
 
     @property
     def reading(self) -> Reading | None:
@@ -500,6 +517,7 @@ class Abstraction:
             status,
             tuple(slots),
             *self._held_by(item, influences),
+            strands=item.memory_strands,
         )
 
     def _refuse_out_of_scope_veil(self, item: Item) -> None:
@@ -642,6 +660,9 @@ class Abstraction:
         """
         if not self._tracks_imprints:
             raise ValueError(f"{action!r} moves the imprints of the item, and the state does not keep them: declare `imprints` in its reads and adds")
+        use = action.strand_use(self.data)
+        if state.strands and use is not None and use.changes_count:  # the move is applied here, not through `outcomes`, so a spend would be lost (#277)
+            raise ValueError(f"{action!r} moves the imprints and declares a strand spend, which the kernel of an imprint move does not apply")
         bare = replace(state, imprints=())
         held = list(state.imprints)
         if move.restore:
@@ -705,7 +726,7 @@ class Abstraction:
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
-            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints, split.rolled)
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints, split.rolled, split.strands)
             if split.rolled and not isinstance(part, Fixed):
                 raise OutOfScopeError(_ROLLED_BY_A_DRAW)
             if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
@@ -718,6 +739,8 @@ class Abstraction:
                 )
                 key = (*key, part.forced, pool)
             parts[key] += 1
+        if isinstance(outcomes, Spent):  # the counts the spend leaves (ticket #277)
+            return (outcomes.fractures, frozenset(parts.items()), tuple(sorted(outcomes.strands_after.items())))
         return (outcomes.fractures, frozenset(parts.items()))
 
     def _averages_inputs(self, action: Action) -> bool:
@@ -1205,6 +1228,7 @@ class Abstraction:
             veil_offer=() if erasing else self._offered_mod_ids(state.offer, influences),  # an action that erases the junk erases the placeholder
             enchantment=self.enchantment,
             imprints=tuple(self._item_of(held, False)[0] for held in state.imprints),  # each imprint is the whole item as it was, whatever the action erases
+            memory_strands=state.strands,
         )
         return item, origins
 
@@ -1275,7 +1299,7 @@ class Abstraction:
             )
         erasing = not self._kinds.reads_junk(action) and not self._metamods
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
-        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer, state.imprints)
+        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer, state.imprints, state.strands)
         prepared = self._prepared_by.get(key)
         if prepared is None:
             try:
@@ -1289,11 +1313,12 @@ class Abstraction:
                     influences=state.flags.influences,
                     corrupted=state.flags.corrupted,
                     enchantment=self.enchantment,
+                    memory_strands=state.strands,
                 )
-                action.outcomes_under(self.data, bare, self._reading)
+                self._outcomes(action, bare)
                 raise
             try:
-                outcomes = action.outcomes_under(self.data, item, self._reading)  # a refusal of the action comes first
+                outcomes = self._outcomes(action, item)  # a refusal of the action comes first
             except NotApplicableError:
                 self._refusal_depends_on_the_family(state, erasing, action, origins)
                 raise
@@ -1331,7 +1356,7 @@ class Abstraction:
             except (ItemError, ValueError):
                 return  # no other family of the type is left to try
             try:
-                action.outcomes_under(self.data, other, self._reading)
+                self._outcomes(action, other)
             except NotApplicableError:
                 continue
             raise OutOfScopeError(
@@ -1435,7 +1460,22 @@ class Abstraction:
                 self._add_fractured(result, share, state, part, signature, split)
             else:
                 self._add_drawn(result, share, part, signature, split)
+        if isinstance(outcomes, Spent):
+            return self._spread_spend(result, outcomes.strands_after)
         return dict(result)
+
+    @staticmethod
+    def _spread_spend(result: Mapping[CompressedState, Fraction], after: Mapping[int, Fraction]) -> dict[CompressedState, Fraction]:
+        """The states of a spending action's result over the counts its spend leaves (ADR-0041, ticket #277).
+
+        The states of `result` hold the count before the craft (the retained item keeps it, and the cut used it); the spend is
+        independent of the mods drawn, so each state splits over `after`, the exact distribution of the count after the craft.
+        """
+        spread: dict[CompressedState, Fraction] = defaultdict(Fraction)
+        for state, chance in result.items():
+            for count, each in after.items():
+                spread[replace(state, strands=count)] += chance * each
+        return dict(spread)
 
     def _splits_of(self, prepared: _Prepared) -> tuple[_Split, ...]:
         """The split of every part of the outcomes (cached on `prepared`)."""
@@ -1521,7 +1561,7 @@ class Abstraction:
         status = best_of(len(self.goal.leaves), contributions)
         held = self._held_by(retained, influences, given)
         rolled = self._rolled_implicits(retained, prior, rerolled) if self._implicit_roll_leaves else ()
-        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held, rolled)
+        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held, rolled, retained.memory_strands)
 
     def _rolled_implicits(self, retained: Item, prior: tuple[ImplicitMod, ...], rerolled: frozenset[str]) -> tuple[tuple[int, Cells], ...]:
         """The implicits of `retained` that the action rolled afresh and whose roll changes what they give the goal, with their laws.
@@ -1577,7 +1617,7 @@ class Abstraction:
                 for ints, each in cells
             ]
         for implicits, chance in spread:
-            result[CompressedState(split.flags, split.fractured, split.status, slots, implicits, split.quality, split.offer, split.imprints)] += share * chance
+            result[CompressedState(split.flags, split.fractured, split.status, slots, implicits, split.quality, split.offer, split.imprints, split.strands)] += share * chance
 
     def _add_drawn(
         self, result: dict[CompressedState, Fraction], share: Fraction, part: Outcomes, signature, split: _Split
@@ -1591,7 +1631,7 @@ class Abstraction:
         stays = sorted((*split.kept, *split.new), key=_SLOT_KEY)
         stays_tuple = tuple(stays)
         flags, fractured, stay_status = split.flags, split.fractured, split.status
-        held = (split.implicits, split.quality, split.offer, split.imprints)
+        held = (split.implicits, split.quality, split.offer, split.imprints, split.strands)
         whole = share == 1
         for best, drawn, chance in self._expanded_distribution(signature, part):
             if not drawn:
@@ -1651,7 +1691,7 @@ class Abstraction:
                         self._canonical_of_mod(mod, influences), self._drawn_contribution(mod, False, influences)
                     )
                     fractured = tuple(sorted((*fractured, entry), key=lambda e: (e.mod_id, e.contribution)))
-                result[CompressedState(split.flags, fractured, status, tuple(slots), split.implicits, split.quality, split.offer, imprints)] += share * each
+                result[CompressedState(split.flags, fractured, status, tuple(slots), split.implicits, split.quality, split.offer, imprints, split.strands)] += share * each
 
     def _mod_with_label(self, family, label: Label, influences: frozenset[Influence]) -> Mod:
         """A mod of `family` with the label `label`: the mods of one family that share a label share a canonical id."""
@@ -2020,4 +2060,4 @@ class Abstraction:
         for chosen, chance in outcomes:
             slots = sorted((*fixed, *chosen), key=_SLOT_KEY)
             status = best_of(width, (*held, *(slot.contribution for slot in slots)))
-            result[CompressedState(split.flags, split.fractured, status, tuple(slots), split.implicits, split.quality, split.offer, split.imprints)] += share * chance
+            result[CompressedState(split.flags, split.fractured, status, tuple(slots), split.implicits, split.quality, split.offer, split.imprints, split.strands)] += share * chance
