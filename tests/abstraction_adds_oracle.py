@@ -17,11 +17,11 @@ with no mod, which `abstraction_oracle.finished_items` plays.
 """
 
 from collections import Counter, defaultdict
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from fractions import Fraction
 
 from abstraction_oracle import Candidate
-from crafting_system.actions import build_pool
+from crafting_system.actions import PoolFamily, build_pool
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, Rarity, tier_table
 
@@ -37,12 +37,13 @@ def _drawn(data: GameData, tiers: Mapping[str, int], mod_id: str) -> ExplicitMod
 
 
 def drawn_items(
-    data: GameData, retained: Item, totals: Mapping[int, Fraction]
+    data: GameData, retained: Item, totals: Mapping[int, Fraction], pool: Iterable[PoolFamily] | None = None
 ) -> list[tuple[Item, Fraction]]:
     """Every finished item of drawing onto `retained` up to `totals`, with its exact probability.
 
     `retained` is the item before any draw, with the rarity that decides the capacity; `totals` is
     the probability of each total number of mods of the finished item (the mods of `retained` counted).
+    `pool` replaces the candidates (a pool cut by Memory Strands, ticket #277); it must be built for `retained`.
     """
     cap = CAP[retained.rarity]
     room = {
@@ -51,7 +52,7 @@ def drawn_items(
     }
     candidates = [
         Candidate(entry.mod, family.family, family.side.value, entry.weight)
-        for family in build_pool(data, retained)
+        for family in (build_pool(data, retained) if pool is None else pool)
         for entry in family.mods
     ]
     by_id = {candidate.mod.id: candidate for candidate in candidates}
