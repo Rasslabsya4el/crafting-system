@@ -185,6 +185,10 @@ class CompressedState:
     `order_key` and kept as a set (a second imprint of a state already held never helps, ADR-0060 point 4); each holds no imprint of its own.
     They are empty unless an enabled action makes or uses an imprint (`Adds.imprints`), and the kernel forgets them when the item is fractured
     or corrupted (no imprint can be used on it) or is a new item.
+
+    `strands` (ADR-0040, ticket #277) is the item's Memory Strand count, exact (the spend of a craft depends on the exact count, so counts
+    are not lumped into cut classes): 0 for an item with none. It is kept for every item, since a count that no action reads or changes
+    stays what the start item has and adds no state. At 0 the hash, the order key and the text of a state are what they were before.
     """
 
     flags: Flags
@@ -195,12 +199,14 @@ class CompressedState:
     quality: Quality | PlainQuality | None = None
     offer: tuple[OfferedMod, ...] = ()
     imprints: tuple["CompressedState", ...] = ()
+    strands: int = 0
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
-            value = hash((self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints))
+            parts = (self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints)
+            value = hash((*parts, self.strands) if self.strands else parts)  # at 0 strands the hash of before ticket #277
             object.__setattr__(self, "_hash", value)
             return value
 
@@ -221,6 +227,8 @@ class CompressedState:
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
                 tuple(held.order_key for held in self.imprints),
             )
+            if self.strands:  # at 0 strands the key of before ticket #277; a stranded state sorts after the state at 0 with the same rest
+                value = (*value, self.strands)
             object.__setattr__(self, "_order_key", value)
             return value
 
@@ -230,16 +238,19 @@ class CompressedState:
     def __repr__(self) -> str:
         """The dataclass repr, with the item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
         text = f"flags={self.flags!r}, fractured={self.fractured!r}, status={self.status!r}, slots={self.slots!r}"
-        for name in ("implicits", "quality", "offer", "imprints"):
+        for name in ("implicits", "quality", "offer", "imprints", "strands"):
             value = getattr(self, name)
             if value:
                 text += f", {name}={value!r}"
         return f"CompressedState({text})"
 
     @property
-    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | PlainQuality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...]]:
-        """The item state beyond the explicit mods, as one key: what a memo of a kernel must tell states apart by besides the mods."""
-        return (self.implicits, self.quality, self.offer, self.imprints)
+    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | PlainQuality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...], int]:
+        """The item state beyond the explicit mods, as one key: what a memo of a kernel must tell states apart by besides the mods.
+
+        In the order of the fields, so `CompressedState(flags, fractured, status, slots, *held)` rebuilds a state.
+        """
+        return (self.implicits, self.quality, self.offer, self.imprints, self.strands)
 
     @property
     def crafted(self) -> bool:
