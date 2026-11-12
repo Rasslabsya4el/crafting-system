@@ -1,4 +1,4 @@
-"""The bought start items of the 16 benchmark targets, on the real 3.29.3.3 export (#474, OR-3, OR-6, OR-7).
+"""The bought start items of the 17 benchmark targets, on the real 3.29.3.3 export (#474, OR-3, OR-6, OR-7).
 
 The buy spec, the trade query and the price key are computed from the target (`targets/start_buy.py`). These tests pin, for every benchmark
 target: whether it buys, the key and the item level window; that the committed price files hold an entry under that key; and (row 2 of the
@@ -50,6 +50,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
     "r12-lightning-amulet": (84, 84),
     "r13-life-resist-belt": (86, 100),
     "r14-hunter-bow": (78, 79),
+    "r17-lightning-talisman": (85, 85),
     "r24-avoid-shock-boots": (86, 100),
     "v01-minion-helmet": (84, 84),
 }
@@ -66,6 +67,7 @@ OTHER_ITEM = {
     "r08-energy-shield-boots": "#494 point 2 the key names a rare item with no mods, the stored price is of a normal base plus a typed Alchemy",
     "r09-life-boots": "#494 point 2 and #483 the stored price is of a normal base plus a typed Alchemy, taken for any of the three Two-Toned Boots",
     "r04-penetrating-quiver": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
+    "r17-lightning-talisman": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
     "r07-minion-wand": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
     "r24-avoid-shock-boots": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
@@ -193,6 +195,8 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
         assert committed == ["vendor-v01-2026-11-01.json"]
     elif stem in VEILED:
         assert committed == ["veiled-r24-r07-2026-11-12.json"]
+    elif stem == "r17-lightning-talisman":  # R17's own file (`price_file:`, #223): the 2026-11-10 file without the other routes' start items, plus its beasts and Talisman
+        assert committed == ["r17-allflame-2026-11-10.json"]
     else:
         assert committed == ["routes-allflame-2026-10-31.json", "routes-allflame-2026-11-10.json", "veiled-r24-r07-2026-11-12.json", "vendor-v01-2026-11-01.json"]
 
