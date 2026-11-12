@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from itertools import combinations
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, Recombinator, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing, unveil_pool_families
+from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, spawn_weight
@@ -152,10 +152,18 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
     The catalog's own donors (a copy of the item in hand and a donor of other mods) are a contract fixture, not the planner's choice; the
     planner's donors come from the target (ADR-0062 decision 4). The price follows whether the item in hand carries an influence.
     """
-    kept = {action: kind for action, kind in kind_of.items() if not isinstance(action, Recombinator)}
-    hand = bool(start_item.influences)
-    for donor in isolated_feeders(data, goal, start_item):
-        kept[Recombinator(donor, hand_influenced=hand)] = RECOMBINATOR_KIND
+    kept = {action: kind for action, kind in kind_of.items() if kind != RECOMBINATOR_KIND}
+    feeders = isolated_feeders(data, goal, start_item)
+    if not feeders:
+        return kept
+    # the kind's first action for an item of the target's mods is the plain one (no junk craft), priced for the influences of the item in hand
+    # (the feeders carry the start item's); every feeder is that action with its own donor (`with_inputs`)
+    listed = catalog_kinds(data, feeders[0], planner_only=True, names=frozenset({RECOMBINATOR_KIND}))
+    template = next(iter(listed), None)
+    if template is None:
+        return kept
+    for donor in feeders:
+        kept[template.with_inputs((donor,))] = RECOMBINATOR_KIND
     return kept
 
 
@@ -354,10 +362,10 @@ def offers_for(
     kind_of = _listed(data, start_item, kind_names, label_names, listing_gaps)
     if kind_names is not None and RECOMBINATOR_KIND in kind_names:
         kind_of = _with_feeder_donors(data, goal, start_item, kind_of)
-        # a donor is made from a normal item of the base (`Recombinator.inputs`): the actions that apply to one are offered too
+        # a donor is made from a normal item of the base (the recombinator's `inputs`): the actions that apply to one are offered too
         bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=start_item.influences)
         for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
-            if not isinstance(action, Recombinator):
+            if kind != RECOMBINATOR_KIND:
                 kind_of.setdefault(action, kind)
     if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
         kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
