@@ -15,7 +15,7 @@ import pytest
 from cli_support import R12, TODAY, price_file
 from items_support import DATA, roll
 
-from crafting_system.actions import Action, Adds, Axis, Finite, Kind, NotApplicableError, Reading, Reads, registered
+from crafting_system.actions import Action, Adds, Axis, Finite, Kind, NotApplicableError, OutOfScopeError, Reading, Reads, registered
 from crafting_system.cli import PlanError, build_report, make_plan
 from crafting_system.cli._axes import AXIS_WORDS, AxisWords
 from crafting_system.cli._main import main
@@ -132,3 +132,40 @@ def test_a_plan_whose_route_reads_no_axis_has_no_interval_block(lucky):
 
     assert plan.readings is not None and LUCKY not in route_labels(plan)
     assert build_report(plan, DATA).interval is None
+
+
+def test_a_time_budget_is_said_not_to_apply_to_a_plan_solved_at_every_reading(lucky):
+    plan = make_plan(DATA, load_target(R12, DATA), lucky, budget=60.0)
+
+    assert plan.readings is not None and plan.approximation is None
+    assert "The time budget was not applied" in [limit.what for limit in plan.limits]
+
+
+SHAKY = "Toy Shaky Craft"
+
+
+@dataclasses.dataclass(frozen=True)
+class ShakyCraft(LuckyCraft):
+    """The lucky craft, but with no rule at the lowest reading: the model of that reading leaves it out (a gap)."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return SHAKY
+
+    def resources(self, data: GameData | None = None) -> dict[str, int]:
+        return {SHAKY: 1}
+
+    def outcomes(self, data: GameData, item: Item, reading: Reading | None = None) -> Finite:
+        if (reading or Reading()).get(LUCK.name, LUCK.plan) == Fraction(1, 5):
+            raise OutOfScopeError("no rule for the toy craft at this reading")
+        return super().outcomes(data, item, reading)
+
+
+def test_a_gap_of_another_reading_is_said_in_the_limits(lucky):
+    shaky = Kind("toy-shaky-craft", lambda data, item: (ShakyCraft(),) if item.rarity is Rarity.RARE else (), order=904)
+    prices = dataclasses.replace(lucky, prices={**lucky.prices, SHAKY: PriceEntry(PRICE, "test")})
+    with registered(shaky):
+        plan = make_plan(DATA, load_target(R12, DATA), prices)
+
+    assert not plan.abstraction.gaps.entries()  # the plan reading has a rule everywhere
+    said = [limit for limit in plan.limits if any(text.startswith(SHAKY) for text in limit.labels)]
+    assert said, [limit.what for limit in plan.limits]

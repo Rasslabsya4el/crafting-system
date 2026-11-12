@@ -18,7 +18,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
-from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights, pattern_refusal
+from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal
 from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
 from crafting_system.actions.contract import Axis, Reading
 from crafting_system.data import GameData
@@ -188,11 +188,17 @@ class _Model:
     """
 
     def __init__(
-        self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer], cache: dict | None = None
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        offers: Iterable[PricedOffer],
+        cache: dict | None = None,
+        merge_equal: bool | None = None,
     ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
+        self.merge_equal = MERGE_EQUAL if merge_equal is None else merge_equal
         self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
         self.chosen: dict[CompressedState, list[PricedOffer]] = {}  # the offers chosen at the queued states (`prefetch` made the choice)
 
@@ -213,7 +219,7 @@ class _Model:
             if self.abstraction.is_goal(state):
                 continue
             chosen = self.chosen[state] = chosen_offers(
-                self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING
+                self.abstraction, self.offers, state, self.start, merge_equal=self.merge_equal, prune_corrupting=PRUNE_CORRUPTING
             )
             for priced in chosen:
                 if self.cache is None or (state, priced.label, priced.cost) not in self.cache:
@@ -225,7 +231,7 @@ class _Model:
         chosen = self.chosen.pop(state, None)
         return solver_actions(
             self.abstraction, self.offers, state, self.start,
-            merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache, chosen=chosen,
+            merge_equal=self.merge_equal, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache, chosen=chosen,
         )  # fmt: skip
 
 
@@ -517,8 +523,9 @@ def make_plan(
     readings = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
     if axes:
-        readings = solve_each_reading(abstraction, model, start, priced, axes)
+        readings, others = solve_each_reading(abstraction, model, start, priced, axes)
         solution = readings.solution
+        limits += reading_limits(abstraction, others, budget is not None)
     elif many and not envelope and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
@@ -579,23 +586,59 @@ def solve_each_reading(
     start: CompressedState,
     priced: Sequence[PricedOffer],
     axes: Sequence[Axis],
-) -> IntervalReport[CompressedState, Reading]:
+) -> tuple[IntervalReport[CompressedState, Reading], tuple[Abstraction, ...]]:
     """Solve the plan once for each reading of `axes` and cross-evaluate the routes (`risk.solve_readings`, ADR-0012, ADR-0022; #589).
 
     A reading is one value of each axis (their product, the plan reading first); an axis that is `planned` stays at its plan value in every
     one (OR-11). `abstraction` is the model of the plan reading (its `reading` None); each other reading gets its own, `model(reading)`, of the
     same target and enabled actions, so every kernel is taken at that reading. Each model is solved whole by the object solver: the envelope search
     and the packed walk take no reading. The solve is exact; no comparison route is asked, since the planner offers no action with inputs.
+    Offers with an equal kernel are not merged (`merge_equal`): the routes are compared across readings by their offers' labels, and an offer
+    merged away at one reading could leave a route with no action there. Returns the driver's report and the abstractions of the other readings.
     """
     names = [axis.name for axis in axes]
     plan = Reading.of({axis.name: axis.plan for axis in axes})
     every = [Reading.of(dict(zip(names, values))) for values in itertools.product(*(axis.readings for axis in axes))]
 
-    models = {reading: _Model(abstraction if reading == plan else model(reading), start, priced) for reading in (plan, *(r for r in every if r != plan))}
+    models = {
+        reading: _Model(abstraction if reading == plan else model(reading), start, priced, merge_equal=False)
+        for reading in (plan, *(r for r in every if r != plan))
+    }
     try:
-        return solve_readings(models, start, plan=plan)
+        report = solve_readings(models, start, plan=plan)
     except (OutOfScopeError, ConvergenceError) as error:
         raise PlanError(f"the plan could not be made at every reading of the rule axis {', '.join(names)}: {error}") from error
+    return report, tuple(each.abstraction for reading, each in models.items() if reading != plan)
+
+
+def reading_limits(abstraction: Abstraction, others: Iterable[Abstraction], budgeted: bool) -> tuple[Limit, ...]:
+    """What the solves of the other readings left out, beyond what the plan reading's own model says (`finished` adds that), and the budget.
+
+    A gap of an action the plan reading's model has no gap for, and a pruning limit it does not give, are said once (OR-13). With a time
+    budget the run says that it did not apply: each reading is solved whole and exactly, however long that takes.
+    """
+    others = tuple(others)
+    own = {gap.label for gap in abstraction.gaps.entries()}
+    gaps: dict[str, Gap] = {}
+    for other in others:
+        for gap in other.gaps.entries():
+            if gap.label not in own:
+                gaps.setdefault(gap.label, gap)
+    found = list(model_gap_limits(gaps.values()))
+    seen = set(pruning_limits(abstraction.prunings))
+    for other in others:
+        for limit in pruning_limits(other.prunings):
+            if limit not in seen:
+                seen.add(limit)
+                found.append(limit)
+    if budgeted:
+        found.append(Limit(
+            _limits.SOLVE,
+            "The time budget was not applied",
+            "an offered action reads a rule the sources leave open, so the plan is solved whole at each reading of that rule",
+            "The answer is exact at every reading; only the time it takes is not bounded.",
+        ))  # fmt: skip
+    return tuple(found)
 
 
 def envelope_refusal(solver: str, error: Exception) -> str:
