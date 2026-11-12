@@ -17,6 +17,32 @@ SUBCRITICAL = "subcritical"
 UNDECIDED = "undecided"
 UNORDERED = "unordered"
 IMPROPER = "improper"
+STUCK = "stuck"  # only of `Expected`: the policy can reach a state from which it cannot finish (a stuck state, or a loop with no way out)
+
+
+@dataclass(frozen=True, slots=True)
+class Expected:
+    """An expected total of a fixed policy (`policy_mean`, `expected_total`) and, when it is infinite, why (M7, ticket #512).
+
+    `estimate` is the number with its certified interval; `value`, `low` and `high` read it. `cause` is empty when the total is finite, else one
+    of `SUBCRITICAL` (the policy starts more runs of its inputs than it finishes), `UNDECIDED` (the arithmetic could not certify the total) or
+    `STUCK` (the policy can reach a state from which it cannot finish), the words `GridInfo.cause` uses for `evaluate`'s report.
+    """
+
+    estimate: Estimate
+    cause: str = ""
+
+    @property
+    def value(self) -> float:
+        return self.estimate.value
+
+    @property
+    def low(self) -> float:
+        return self.estimate.low
+
+    @property
+    def high(self) -> float:
+        return self.estimate.high
 
 
 @dataclass(frozen=True, slots=True)
