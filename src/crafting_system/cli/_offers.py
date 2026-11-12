@@ -109,12 +109,16 @@ def isolated_feeders(data: GameData, goal: Goal, start_item: Item) -> tuple[Item
     """
     tags = data.base_items[start_item.base_id].tags
     picked: dict[str, None] = {}
+    rolled_high: set[str] = set()  # mods whose leaf limits the roll: the feeder holds them at the top of their range, which every limit accepts
     for leaf in goal.leaves:
         accepted = leaf.tier_ok if leaf.tier_ok is not None else leaf.mod_ids  # a tier the leaf accepts (OR-1: the top tier when none is written)
         rolled = [(spawn_weight(data.mods[mod_id], tags), mod_id) for mod_id in accepted if mod_id in data.mods]
         rolled = [(weight, mod_id) for weight, mod_id in rolled if weight > 0]
         if rolled:
-            picked.setdefault(min(rolled, key=lambda pair: (-pair[0], pair[1]))[1], None)
+            chosen_mod = min(rolled, key=lambda pair: (-pair[0], pair[1]))[1]
+            picked.setdefault(chosen_mod, None)
+            if leaf.has_roll_limit:
+                rolled_high.add(chosen_mod)
     found: list[Item] = []
     seen: set[Item] = set()
     chosen = sorted(picked)
@@ -125,7 +129,10 @@ def isolated_feeders(data: GameData, goal: Goal, start_item: Item) -> tuple[Item
                 continue
             per_side = Counter(data.mods[mod_id].generation_type for mod_id in group)
             rarity = Rarity.MAGIC if max(per_side.values()) <= 1 else Rarity.RARE
-            mods = tuple(ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)) for mod_id in group)
+            mods = tuple(
+                ExplicitMod(mod_id, tuple((max if mod_id in rolled_high else min)(stat.min, stat.max) for stat in data.mods[mod_id].stats))
+                for mod_id in group
+            )
             try:
                 item = Item.build(
                     data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=rarity, mods=mods, influences=start_item.influences
@@ -344,7 +351,7 @@ def offers_for(
         kind_of = _with_feeder_donors(data, goal, start_item, kind_of)
         # a donor is made from a normal item of the base (`Recombinator.inputs`): the actions that apply to one are offered too
         bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=start_item.influences)
-        for action, kind in _listed(data, bare, kind_names, label_names, listing_gaps).items():
+        for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
             if not isinstance(action, Recombinator):
                 kind_of.setdefault(action, kind)
     if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)

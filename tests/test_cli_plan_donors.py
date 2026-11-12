@@ -136,3 +136,46 @@ def test_the_report_shows_the_interval_and_the_expected_recombinations_of_a_plan
     assert report.interval is not None
     assert report.interval.recombinations.value == pytest.approx(1 / 0.33, rel=1e-6)  # a geometric number of combines, one in 0.33 a success
     assert report.interval.best.value == pytest.approx((R + T + ALT) / 0.33, rel=1e-9)
+
+
+def test_the_risk_measured_after_the_start_choice_counts_the_second_items_too():
+    from crafting_system.cli._starts import plan_with_starts
+
+    data = world()
+    plan = plan_with_starts(data, donor_target(data), PRICES)
+
+    assert plan.risk is not None and plan.risk.mean.value == pytest.approx((R + T + ALT) / 0.33, rel=1e-6)
+    assert plan.risk.p50.value == pytest.approx(make_plan(data, donor_target(data), PRICES).risk.p50.value)
+
+
+def test_a_feeder_of_a_leaf_with_a_roll_limit_holds_a_roll_the_leaf_accepts():
+    import dataclasses
+
+    from crafting_system.abstraction import Status
+
+    data = world()
+    target = donor_target(data)
+    top = tuple(max(stat.min, stat.max) for stat in data.mods[A].stats)
+    limited = dataclasses.replace(target.requirements[0], min_roll=top)
+    target = dataclasses.replace(target, requirements=(limited, target.requirements[1]))
+    chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions)
+    goal = Goal.from_target(target)
+    from crafting_system.abstraction import Abstraction
+
+    ab = Abstraction(data, goal, target.base_id, target.item_level, [])
+    holding = [o.action.donor for o in chosen.offers if isinstance(o.action, Recombinator) and any(e.mod_id == A for e in o.action.donor.mods)]
+    assert len(holding) == 2  # A alone, and A with B
+    assert all(ab.compress(donor).status[0] is Status.PASSING for donor in holding)
+
+
+def test_a_target_that_allows_the_lock_hears_it_is_not_offered_with_second_items():
+    import dataclasses
+
+    from crafting_system.cli._foresight import Status as LockStatus
+
+    data = world()
+    plan = make_plan(data, dataclasses.replace(donor_target(data), actions=(*donor_target(data).actions, "hinekora-lock")), PRICES)
+
+    assert plan.foresight.status is LockStatus.WITH_SECOND_ITEMS
+    assert any(limit.what == "Hinekora's Lock is not offered" for limit in plan.limits)
+    assert any(limit.what == "A second item's base is not counted" for limit in plan.limits)

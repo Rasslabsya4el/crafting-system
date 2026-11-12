@@ -576,7 +576,7 @@ def make_plan(
         if product is not None:  # the solve was over the product of the target and its donors: the plan's own process is read off it
             donor_plan = DonorPlan(product, product.start(start), readings.solution)
             solution = main_view(readings.solution)
-            limits += (_limits.feeder_donors_limit(), _limits.second_items_shown_limit())
+            limits += (_limits.feeder_donors_limit(), _limits.free_donor_base_limit(), _limits.second_items_shown_limit())
         limits += reading_limits(abstraction, others, budget is not None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     elif many and not envelope and solver != "packed":
@@ -604,9 +604,11 @@ def make_plan(
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
     if donor_plan is not None:  # the Lock's second solve has no product of donors yet (#225): it is not offered, and the answer says so
-        if lock_wanted(target.actions):
+        wanted = lock_wanted(target.actions)
+        if wanted:
             limits += (_limits.lock_with_donors_limit(),)
-        foresight, with_lock = Foresight(LockStatus.SWITCHED_OFF, lock_price(prices, price_source)), None
+        status = LockStatus.WITH_SECOND_ITEMS if wanted else LockStatus.SWITCHED_OFF
+        foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
     else:
         foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
     if with_lock is not None and readings is not None:
@@ -957,6 +959,10 @@ def add_risk(plan: Plan) -> Plan:
     free = free_action_cost(plan.offers)
     if plan.packed is not None:
         risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
+    elif plan.donors is not None:  # the whole product: `solution` is the target's own process, whose actions leave their donors out (#225)
+        donors = plan.donors
+        risk = evaluate_risk(donors.solution.policy, donors.start, donors.acquisition.is_goal, plan.solution.values[plan.start], free_cost=free)
+        found = risk_limits(risk)
     else:
         risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, plan.solution.values[plan.start], free_cost=free)
         found = risk_limits(risk)

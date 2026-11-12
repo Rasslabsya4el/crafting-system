@@ -535,7 +535,7 @@ def _complement(data: GameData, item: Item) -> Item | None:
     )
 
 
-@kind("recombinator", order=89, opt_in=True)
+@kind("recombinator", order=89, opt_in=True, reads_item_state_while_not_planner="any")
 def _recombinators(data: GameData, item: Item):
     """A copy of the item as the donor (every mod doubled), and a donor of other mods the base can roll."""
     if item.corrupted or item.rarity is Rarity.NORMAL or jewel_class(data, item) is not None:

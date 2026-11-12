@@ -551,3 +551,13 @@ def second_items_shown_limit() -> Limit:
         "the steps show the target's own item; a recombination's second item is made by its own run of orbs, which the steps do not draw yet",
         "The costs and the odds count every second item and every orb used to make it.",
     )
+
+
+def free_donor_base_limit() -> Limit:
+    """The approximate input of a plan that makes second items (ticket #225, OR-23): the Normal base each second item starts from costs nothing."""
+    return Limit(
+        CONSUMES,
+        "A second item's base is not counted",
+        "every second item starts as a Normal base of the item, and the planner does not price that base",
+        "The plan costs at least what it says: each second item it makes adds the price of one Normal base, about a Chaos Orb or less.",
+    )
