@@ -301,3 +301,30 @@ def test_the_filling_brick_on_boots_and_a_belt_keeps_their_implicits():
         for _, result in finished(FILL.outcomes(DATA, item), DATA):
             if not any(is_corrupted_implicit(DATA.mods[entry.mod_id]) for entry in result.implicits):
                 assert result.implicits == item.implicits
+
+
+# --- the planner answers an allow-only target at the plan's reading -------------------------------------
+
+
+def test_the_planner_answers_a_target_that_only_allows_corruption_at_the_wiki_reading():
+    """The brick's axis is planned (OR-11): one exact answer at the wiki, not a refusal; a target that asks gets the dead brick as before."""
+    import datetime
+
+    from targets_corrupted_support import DATA as RING_DATA
+    from targets_corrupted_support import parse
+
+    from crafting_system.cli import make_plan
+    from crafting_system.prices import PriceEntry, PriceFile
+
+    assert BRICK_AXIS.planned
+    prices = PriceFile("Test", datetime.datetime(2026, 11, 12, tzinfo=datetime.UTC), 300.0, {"Vaal Orb": PriceEntry(1.0, "test")})
+    # a bought normal ring: the pool's only explicit mod is the cold resistance, so a brick holds it (the fill ends when the pool is empty), a
+    # quarter of the uses; any other outcome buys the ring again. Each try costs the orb and a ring: V = 4 * (1 + 2) - 2 = 10 from the ring in hand
+    plan = make_plan(RING_DATA, parse("allow_corrupted: true\nactions: [vaal]\n", start="bought"), prices, start_price=2.0)
+    offered = [priced.offer.action for priced in plan.offers if priced.label == "Vaal Orb"]
+    assert offered == [FILL]
+    assert plan.abstraction.reading is None  # the plan's reading: the wiki
+    assert plan.solution.values[plan.start] == pytest.approx(10.0)
+    asking = parse("implicits:\n  - stat: '+#% to all Elemental Resistances'\n    corrupted: true\nactions: [vaal]\n", start="bought")
+    found = offers_for(RING_DATA, Goal.from_target(asking), asking.base_id, asking.start_item, asking.actions).offers
+    assert [offer.action for offer in found if offer.label == "Vaal Orb"] == [VaalOrb()]  # the planner refuses it today (implicits), the filter keeps the dead brick

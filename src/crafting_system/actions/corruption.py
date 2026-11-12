@@ -102,7 +102,7 @@ COST = get_rule("vaal_orb.cost")
 UNIQUE_JEWEL_BASES = frozenset({"Cobalt Jewel", "Crimson Jewel", "Viridian Jewel"})
 QUARTER = Fraction(1, 4)
 # what the brick keeps (ticket #260): the wiki's reading (fractured mods and locked sides stay) is the plan's, Craft of Exile's removes them all
-BRICK_AXIS = Axis("corruption.vaal_brick", ("wiki", "coe"), "wiki")
+BRICK_AXIS = Axis("corruption.vaal_brick", ("wiki", "coe"), "wiki", planned=True)  # the plan answers at the wiki, the claim marked approximate (OR-11)
 EQUIPMENT_DOMAIN = "item"  # the domain of the corrupted mods of equipment, jewellery and quivers; a jewel draws from `misc` and an abyss jewel from `abyss_jewel`
 
 

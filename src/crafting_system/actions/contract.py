@@ -475,11 +475,17 @@ class Axis:
     values a reading of the axis may take (at least two, all different, hashable), and `plan` is the one the plan
     uses (the exponent 1, the receiver's mod kept): it must be one of them. Each combination of one value per axis
     is a `Reading`, and each `Reading` is one ordinary model: the solver never learns what an axis is.
+
+    `planned` says that the planner answers at the `plan` reading alone: one exact answer (OR-11), the claim behind the other
+    readings named among its approximate inputs (OR-23, ADR-0028), as for any approximate claim. The other readings stay for the
+    contract suite and the interval driver (`risk.solve_readings`). An axis without it is refused by the planner until the interval
+    is wired (#589). The Vaal brick's axis is planned (ticket #260).
     """
 
     name: str
     readings: tuple[Hashable, ...]
     plan: Hashable
+    planned: bool = False
 
     def __post_init__(self) -> None:
         if not self.name:
