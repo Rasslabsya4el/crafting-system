@@ -109,6 +109,29 @@ def test_every_finish_kernel_equals_the_action_on_every_assignment(base_id, want
     assert checked > 0
 
 
+@pytest.mark.parametrize("count", [1, 2, 3])
+def test_the_colour_kernels_equal_the_actions_on_a_base_of_two_attributes(count):
+    """The colour actions on the dexterity-intelligence helmet of `colour_data` (red the missing colour, ADR-0047's two-attribute weights), every
+    assignment of up to three sockets, a target of one red socket in a group of two (the forced colour matters)."""
+    data = colour_data()
+    steps = [FinishStep("Chromatic Orb", ChromaticOrb(), 1.0), FinishStep("Chromatic Orb with Omen of Trichromatism", ChromaticOrb(omen=True), 2.0)]
+    model = FinishModel(data, HELMET, 84, SocketWanted(links=2, red=1), steps, quality=10)
+    for sockets in assignments(count):
+        item = Item.build(data, base_id=HELMET, item_level=84, rarity=Rarity.RARE, mods=(), sockets=sockets, quality=PlainQuality(10))
+        state = model.reduce(state_of(sockets))
+        for step in model.steps:
+            try:
+                outcomes = step.action.outcomes(data, item).by_sockets
+            except NotApplicableError:
+                assert model.kernel(state, step) is None
+                continue
+            reduced: dict = {}
+            for result, chance in outcomes.items():
+                key = model.reduce(state_of(result))
+                reduced[key] = reduced.get(key, Fraction(0)) + chance
+            assert model.kernel(state, step) == reduced, (step.label, sockets)
+
+
 def test_a_group_shorter_than_the_target_s_group_is_forgotten():
     model = FinishModel(finish_data(), BODY, 84, SocketWanted(links=3), all_steps(finish_data()))
     assert model.reduce(((1, 2, 3, 0), (2, 2))) == ((1, 2, 3, 0), (1, 1, 1, 1))

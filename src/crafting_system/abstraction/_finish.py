@@ -596,7 +596,9 @@ class _Graph:
                 current = mapped
                 break
             if sweeps >= MAX_SWEEPS:
-                raise ArithmeticError(f"the socket finish did not converge in {MAX_SWEEPS:,} sweeps (Bellman residual {residual:.3g})")
+                raise ArithmeticError(
+                    f"the cost of finishing the sockets did not settle after {MAX_SWEEPS:,} rounds of working it out (it still moved by {residual:.3g} Chaos)"
+                )
             f = (mapped - current)[free]
             history_x.append(current[free].copy())
             history_f.append(f)

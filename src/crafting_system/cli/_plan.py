@@ -469,13 +469,13 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     finish = None
-    if target.sockets is not None:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
+    if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
         try:
             finish = plan_finish(
                 data, target, prices, price_source, names=finish_names, goal_takes_corrupted=goal.takes_corrupted,
                 mod_actions=[p.offer.action for p in priced if not isinstance(p.offer.action, BuyStartItem)],
             )  # fmt: skip
-        except (FinishRefused, OutOfScopeError) as error:
+        except (FinishRefused, OutOfScopeError, ArithmeticError) as error:  # ArithmeticError: the finish did not converge
             raise PlanError(str(error)) from error
         limits = without_finish_kinds(limits)
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
@@ -546,7 +546,7 @@ def make_plan(
             if merged_twins:
                 limits += (twins_limit(merged_twins),)  # G17: the approximate answer is made of the offers left after the twins
             if finish is not None:
-                limits += finish_limits(finish, solved.solution.values[solved.start])
+                limits += finish_limits(finish, solved.solution.values[solved.start], mods_at_most=True)  # the upper end of the approximate answer
             return finished(Plan(
                 target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, limits,
                 solved.solution, None, solved.seconds, 0.0, solved.approximation, foresight=foresight, finish=finish,

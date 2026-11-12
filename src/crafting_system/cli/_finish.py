@@ -128,9 +128,17 @@ def plan_finish(
     return PlanFinish(finish, tuple(priced), quality, (*dropped, *quality_dropped))
 
 
-def finish_limits(plan_finish: PlanFinish, mods_mean: float) -> tuple[Limit, ...]:
-    """What the answer says of the finish until it is a sub-route of its own (ticket #233): its mean beside the mods' and the total, the methods
-    it uses, and the finish actions left out for lack of a price."""
+SECOND_READING_WORDS = {  # the inputs of the finish that have a second reading (ADR-0047), in a player's words
+    "jeweller_table": "with the older table of the Jeweller's Orb odds",
+    "chromatic_forced_colour": "with the flatter reading of the colour a Chromatic Orb forces",
+}
+
+
+def finish_limits(plan_finish: PlanFinish, mods_mean: float, *, mods_at_most: bool = False) -> tuple[Limit, ...]:
+    """What the answer says of the finish until it is a sub-route of its own (ticket #233): its mean beside the mods' and the total, the number
+    each second reading of its odds gives (OR-23), the methods it uses, and the finish actions left out for lack of a price.
+
+    `mods_at_most`: the mods' mean is the upper end of an approximate answer, so the total is said as at most."""
     finish = plan_finish.finish
     total = mods_mean + finish.value
     if finish.met:
@@ -144,18 +152,25 @@ def finish_limits(plan_finish: PlanFinish, mods_mean: float) -> tuple[Limit, ...
         bought = (
             f", of which {finish.quality_cost:,.2f} Chaos is the quality raised to 20% first" if finish.quality_bought else ""
         )
+        others = "".join(
+            f"; {SECOND_READING_WORDS[axis]} the same steps cost {value:,.2f} Chaos" for axis, value in sorted(finish.second_readings.items())
+        )
+        costs = "costs at most" if mods_at_most else "costs"
         why = (
-            f"the sockets are finished on their own once the mods are made: {finish.value:,.2f} Chaos on average{bought}, "
-            f"so the whole craft costs {total:,.2f} Chaos on average after the start item; the mean and the percentiles shown here are of the mods alone"
+            f"the sockets are finished on their own once the mods are made: {finish.value:,.2f} Chaos on average{bought}{others}, "
+            f"so the whole craft {costs} {total:,.2f} Chaos on average after the start item; the mean and the percentiles shown here are of the mods alone"
         )
     found = (
         Limit(
             _limits.FINISH,
             "Sockets finished after the mods",
             why,
-            "The finish is the cheapest way to the sockets with the socket methods offered, and adding it changes no step of the mods.",
+            "The finish is the cheapest way to the sockets with the socket methods offered, at the odds read for them, and adding it changes no step of the mods.",
             labels,
-            approximate="The finish is worked out exactly, the cheapest way to the sockets with the socket methods offered; it changes no step of the mods.",
+            approximate=(
+                "The finish is the cheapest way to the sockets with the socket methods offered, at the odds read for them, and adding it changes no step of "
+                "the mods; the mods' part is within the stated gap."
+            ),
         ),
     )
     return found + unpriced_limits((drop.label, drop.missing, drop.kind) for drop in plan_finish.dropped)
