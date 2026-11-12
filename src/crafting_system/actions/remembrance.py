@@ -28,7 +28,7 @@ from types import MappingProxyType
 
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
-from crafting_system.rules import get_rule
+from crafting_system.rules import Rule, get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
@@ -53,12 +53,12 @@ def _jewel_classes() -> frozenset[str]:
     return frozenset(get_rule("affix_count.rare_jewel_max_per_side").value["item_classes"])
 
 
-def _claims() -> tuple[str, ...]:
+def _claims() -> tuple[Rule, ...]:
     return (
-        "memory_strands.remembrance_action",
-        "memory_strands.remembrance_distribution",
-        "memory_strands.remembrance_independent_of_old_count",
-        "memory_strands.remembrance_classes_observed",
+        get_rule("memory_strands.remembrance_action"),
+        get_rule("memory_strands.remembrance_distribution"),
+        get_rule("memory_strands.remembrance_independent_of_old_count"),
+        get_rule("memory_strands.remembrance_classes_observed"),
     )
 
 
@@ -117,7 +117,7 @@ class RemembranceOrb(Action):
         return {ORB_OF_REMEMBRANCE: 1}
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
-        return StrandUse.recounting(remembrance_table(), *(get_rule(claim) for claim in _claims()))
+        return StrandUse.recounting(remembrance_table(), *_claims())
 
     def reads(self, data: GameData) -> Reads:
         return Reads.nothing(block_invariant=True)  # a normal item holds no mod to read; the count it had does not matter
