@@ -81,16 +81,16 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `imprint` | **no** | reads: any | none | `planner=False`: the end-to-end ticket #223 wires R15 and R17 and measures the state growth of imprints |  |
 | `restore` | **no** | reads: any | none | `planner=False`: the end-to-end ticket #223 wires R15 and R17 and measures the state growth of imprints |  |
 | `foulborn-augmentation-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `jewellers-orb` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
+| `jewellers-orb` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
 | `foulborn-regal-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `orb-of-fusing` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
-| `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
+| `orb-of-fusing` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
 | `foulborn-exalted-orb` | yes | opt-in, needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
-| `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
+| `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
 | `vaal` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-1 |
-| `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
-| `quality-currency` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0049), bought before the orbs; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
+| `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `quality-currency` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0049), bought before the orbs when that is cheaper: solved with the finish of a target that names sockets (`cli/_finish.py`), never searched over as a step of the mods |  |
 | `re-anoint` | **no** | burns | none | `planner=False`: a burn only (ticket #295, ADR-0056): as a plain action it changes nothing the state keeps and gives a target nothing; the Peek of a Lock takes it as a fallback |  |
 | `locus` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 
@@ -122,7 +122,6 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 |---|---|---|
 | `setting.on` | Memory Strands are on ({setting.why}), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them | no benchmark target |
 | `target.implicits or target.quality is not None` | the target asks for implicits or quality, which the planner cannot plan yet | r03, r06 |
-| `target.sockets is not None` | the target asks for sockets, which the planner cannot plan yet: the finish of sockets is not built, so an answer would silently ignore them | no benchmark target |
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
 
@@ -209,11 +208,11 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 
 | Target field | Read by | Audit |
 |---|---|---|
-| `base_id` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_plan.py, cli/_route_card.py, cli/_start_step.py |  |
-| `item_level` | cli/_benchmark_outcomes.py, cli/_plan.py, cli/_route_card.py |  |
+| `base_id` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_finish.py, cli/_plan.py, cli/_route_card.py, and 1 more |  |
+| `item_level` | cli/_benchmark_outcomes.py, cli/_finish.py, cli/_plan.py, cli/_route_card.py |  |
 | `influences` | cli/_bought_starts.py, cli/_route_card.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_bought_starts.py, cli/_plan.py, cli/_route_card.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_plan.py, cli/_starts.py |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_finish.py, cli/_plan.py, cli/_starts.py |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_plan.py, cli/_starts.py, cli/_trade.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
 | `implicits` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
@@ -221,6 +220,6 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `actions` | cli/_benchmark_outcomes.py, cli/_plan.py |  |
 | `enchantment` | cli/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
-| `sockets` | cli/_plan.py |  |
+| `sockets` | cli/_finish.py, cli/_plan.py |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
 

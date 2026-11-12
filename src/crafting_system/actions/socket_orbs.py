@@ -4,8 +4,8 @@ These are the finish actions of ADR-0045: they change the number of sockets (`Je
 `BenchSocketLinks`) and **nothing else**; every mod, the quality, the implicits and the colours of the sockets that stay are as they were. They
 declare it with `Adds.socket_action` (the contract suite checks that no result differs from the item in a mod, and that an action which does
 not declare `adds.socket_*` leaves the sockets alone), and they stay out of the compressed state of the mods (ADR-0045: the finish is solved on
-its own state, ticket #231). So the four kinds are not planner kinds yet (`planner=False`): they are in the catalog and under the contract suite,
-and the planner refuses a target with sockets until S5 attaches the finish. The Chromatic Orb, the Omen of Trichromatism and the colour crafts
+its own state). So the four kinds are not planner kinds (`planner=False`): the mods never offer them, and for a target that names sockets the finish
+lists, prices and solves them on its own and adds its value to every goal state (ticket #231, `abstraction/_finish.py`, `cli/_finish.py`). The Chromatic Orb, the Omen of Trichromatism and the colour crafts
 are ticket #229 (S3), Binding and the beast recipes #232 (S6).
 
 **The sockets of the item** are `Item.sockets` (ADR-0046): one colour per socket in socket order and the link groups as their sizes in the same
@@ -102,8 +102,8 @@ FUSING_MIN_QUALITY = FUSING_GROUP_SIZE_WEIGHTS.value["at_quality"]  # the table 
 WIKI_TABLE, DEVELOPER_2014_TABLE = "wiki_developer_table", "chris_wilson_2014"
 JEWELLER_TABLE = Axis("jeweller_table", (WIKI_TABLE, DEVELOPER_2014_TABLE), WIKI_TABLE)
 WHY_NOT_PLANNER = (
-    "a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states "
-    "by ticket #231 (B6 S5)"
+    "a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target "
+    "that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods"
 )
 
 

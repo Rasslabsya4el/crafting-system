@@ -351,15 +351,18 @@ class BurnPrice:
     cost: float
 
 
-def plan_burn(data, item: Item, abstraction: Abstraction, prices: PriceFile, price_source: str = "both") -> BurnPrice | None:
+def plan_burn(
+    data, item: Item, abstraction: Abstraction, prices: PriceFile, price_source: str = "both", *, sockets: bool = False
+) -> BurnPrice | None:
     """The burn of the plan's Peeks: the cheapest legal burn of the start item, or None.
 
     Its legality is read on the start item: a burn depends on the class, the corruption (a corrupted state takes no Lock), the implicits (refused
-    where the state keeps them, `BurnKeeps.implicits`) and the quality (which the planner never keeps: it refuses a target that names it).
+    where the state keeps them, `BurnKeeps.implicits`), the quality (which the planner never keeps: it refuses a target that names it) and, for a
+    target that names sockets (`sockets`), the sockets: the finish starts from them, so a burn that changes them is refused (`BurnKeeps.sockets`).
     """
     if abstraction.tracks_quality:
         raise ValueError("the Lock's burn is built for states that keep no quality; the planner refuses a target that names it")
-    keeps = BurnKeeps(quality=False, implicits=abstraction.tracks_implicits, enchantment=False)
+    keeps = BurnKeeps(quality=False, implicits=abstraction.tracks_implicits, enchantment=False, sockets=sockets)
     found = cheapest_burn(burns_at(data, item, keeps), data, prices, price_source)
     return None if found is None else BurnPrice(found.burn.label(data), found.cost)
 

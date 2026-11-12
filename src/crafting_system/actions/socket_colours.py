@@ -2,8 +2,8 @@
 
 Like the Jeweller's Orb and the Orb of Fusing of `socket_orbs.py` they are finish actions (ADR-0045): they change the **colours** of the sockets and
 **nothing else**. The count, the link groups, every mod, the quality and the implicits are as they were; the contract suite checks it
-(`Adds.socket_action(colours=True)`). They are not planner kinds yet (`planner=False`): the finish is attached to the goal states by ticket #231
-(B6 S5). The same refusals as the sibling actions: `NotApplicableError` for a corrupted item and for a class with no socket table, `OutOfScopeError`
+(`Adds.socket_action(colours=True)`). They are not planner kinds (`planner=False`): the finish of a target that names sockets solves them on its
+own and adds its value to every goal state (ticket #231, `abstraction/_finish.py`). The same refusals as the sibling actions: `NotApplicableError` for a corrupted item and for a class with no socket table, `OutOfScopeError`
 for an item with no stated sockets or with an Abyssal-socket mod (`_accept` of `socket_orbs.py`).
 
 **The roll** (ADR-0047, Siveran's formula; `sockets.chromatic_roll_then_force`, `sockets.chromatic_nonwhite_chance`, none of them marked): every socket is
@@ -59,6 +59,8 @@ __all__ = [
     "CHROMATIC_FORCED_COLOUR",
     "ChromaticOrb",
     "ColourOutcomes",
+    "OMEN_MINIMUM_SOCKETS",
+    "colour_roll",
     "colour_weights",
     "nonwhite_chance",
     "roll_colours",
@@ -89,8 +91,8 @@ SIVERAN_WEIGHTS, FLATTER_SECOND_READING = "siveran_weights", "flatter_second_rea
 CHROMATIC_FORCED_COLOUR = Axis("chromatic_forced_colour", (SIVERAN_WEIGHTS, FLATTER_SECOND_READING), SIVERAN_WEIGHTS)
 OMEN_MINIMUM_SOCKETS = 3
 WHY_NOT_PLANNER = (
-    "a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states "
-    "by ticket #231 (B6 S5)"
+    "a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target "
+    "that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods"
 )
 
 Colours = tuple[SocketColour, ...]
@@ -188,21 +190,33 @@ def _conditioned(roll: Mapping[Colours, Fraction], keep: Callable[[Colours], boo
     return {colours: chance / total for colours, chance in kept.items()}
 
 
-def _roll_of(data: GameData, item: Item, sockets: Sockets, reading: Reading | None, *, forced_rule: bool) -> Mapping[Colours, Fraction]:
-    """The roll of a Chromatic Orb (`forced_rule`) or of the bench on `item`: its odds by item level and plain quality, its colours by the base's requirements."""
-    requirements = data.base_items[item.base_id].attribute_requirements
+def colour_roll(
+    data: GameData, base_id: str, item_level: int, quality: int, count: int, reading: Reading | None = None, *, forced: bool = True
+) -> Mapping[Colours, Fraction]:
+    """The roll of `count` sockets before any condition: a Chromatic Orb's (`forced`, the first socket made non-white when all came out white) or the bench's.
+
+    Its odds are by `item_level` and the plain `quality` percent, its colours by the requirements of `base_id`; the forced colour is read at
+    `reading` (the plan: Siveran's weights). The socket finish (`abstraction`, ticket #231) builds its shared tables from it; the actions condition it.
+    Raises `OutOfScopeError` for a base that asks for no attribute.
+    """
+    requirements = data.base_items[base_id].attribute_requirements
     if not any(requirements):
         raise OutOfScopeError(
             "the base asks for no attribute, and the model has no rule for the colours of its sockets",
             detail="the base asks for no attribute, and no admitted rule weights the colours of its sockets (ADR-0047)",
         )
     weights = colour_weights(requirements)
-    forced = None
-    if forced_rule:
+    forced_weights = None
+    if forced:
         second = reading is not None and reading.get(CHROMATIC_FORCED_COLOUR.name, SIVERAN_WEIGHTS) == FLATTER_SECOND_READING
-        forced = _flatter(weights) if second else weights
+        forced_weights = _flatter(weights) if second else weights
+    return roll_colours(count, nonwhite_chance(item_level, quality), weights, forced_weights)
+
+
+def _roll_of(data: GameData, item: Item, sockets: Sockets, reading: Reading | None, *, forced_rule: bool) -> Mapping[Colours, Fraction]:
+    """The roll of a Chromatic Orb (`forced_rule`) or of the bench on `item`: `colour_roll` at the item's item level and plain quality."""
     percent = item.quality.percent if isinstance(item.quality, PlainQuality) else 0
-    return roll_colours(sockets.count, nonwhite_chance(item.item_level, percent), weights, forced)
+    return colour_roll(data, item.base_id, item.item_level, percent, sockets.count, reading, forced=forced_rule)
 
 
 def _colour_outcomes(data: GameData, item: Item, sockets: Sockets, chances: Mapping[Colours, Fraction]) -> ColourOutcomes:

@@ -216,6 +216,7 @@ claim of the rules registry.
 from ._bound import keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
+from ._finish import Finish, FinishModel, FinishStep, FinishValues, SocketWanted, solve_finish
 from ._gaps import PRUNED_CORRUPTING, PRUNED_QUALITY, Gap, ModelGaps, Prunings
 from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
@@ -236,6 +237,10 @@ __all__ = [
     "Estimate",
     "EstimateRefused",
     "FamilyType",
+    "Finish",
+    "FinishModel",
+    "FinishStep",
+    "FinishValues",
     "Gap",
     "Flags",
     "FracturedMod",
@@ -251,12 +256,14 @@ __all__ = [
     "PatternOffer",
     "PatternStats",
     "Slot",
+    "SocketWanted",
     "Goal",
     "Status",
     "Wanted",
     "integer_weights",
     "keeps_shape",
     "reach_bound",
+    "solve_finish",
     "status_of",
     "BlockHoldsMetamod",
     "build_pattern_model",

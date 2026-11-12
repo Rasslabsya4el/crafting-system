@@ -638,13 +638,15 @@ class BurnKeeps:
     * `implicits`: a requirement reads the implicits (ticket #158). A Blessed Orb rerolls them, so it is no burn there.
     * `enchantment`: the target requires the enchantment of the item (ADR-0050). A re-anoint replaces it, so it is no burn there.
 
-    The sockets are not here: a Chromatic Orb is a burn at every state of a socketed class, a move where a target names sockets and a loop
-    otherwise, which the planner's kernel shows and the legality does not need.
+    * `sockets`: the target names sockets (ticket #231). The compressed state does not hold them: the finish starts from the sockets the goal item
+      has (ADR-0045), the start item's, so a burn that changes them (a Chromatic Orb) would change the finish unseen, and is no burn there
+      (`burns_at`). Where no target names sockets a Chromatic Orb is a burn at every state of a socketed class.
     """
 
     quality: bool = False
     implicits: bool = False
     enchantment: bool = False
+    sockets: bool = False
 
 
 class Action(ABC):

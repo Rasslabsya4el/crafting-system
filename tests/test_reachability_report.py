@@ -224,7 +224,7 @@ def test_the_gates_of_make_plan_are_read_from_its_code_in_order():
     conditions = [condition for condition, _ in gates]
     assert "target.implicits or target.quality is not None" in conditions
     assert not any("solution" in condition for condition in conditions)  # the refusal after the solve is not a gate of the entry
-    assert dict(gates)["target.sockets is not None"].startswith("the target asks for sockets")
+    assert "target.sockets is not None" not in dict(gates)  # the socket finish is attached to the goal states since #231: no longer a gate
 
 
 def test_a_run_over_its_time_is_given_up_and_reported():
