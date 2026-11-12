@@ -28,12 +28,15 @@ from crafting_system.actions import (
     Destination,
     NotApplicableError,
     OrbOfUnravelling,
+    OutOfScopeError,
     PLAN_DESTINATION,
     catalog,
     destination_shares,
+    kinds,
     unravel_chance,
 )
 from crafting_system.actions.strand_use import SpendLaw, Spent, strands_after
+from crafting_system.cli._limits import kind_title
 from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
@@ -192,9 +195,26 @@ def test_the_declarations() -> None:
     claims = ORB.claims(SMALL)
     for name in ("chance_model", "destination_tier", "limits", "ignores_metamods", "needs_identified_item", "skips_fractured_and_veiled"):
         assert f"memory_strands.unravelling_{name}" in claims
-    assert "orb_of_unravelling.cost" in claims
+    assert {"orb_of_unravelling.cost", "orb_of_unravelling.raises_natural_mods_only"} <= claims
+    assert get_rule("orb_of_unravelling.raises_natural_mods_only").approximate
     reads = ORB.reads(SMALL)
-    assert reads.junk and {"LightningResistance", "IncreasedLife", "LightningDamage"} <= reads.by_mod
+    assert reads.junk and {"LightningResistance", "IncreasedLife", "LightningDamage", "ManaLeech"} <= reads.by_mod
+    assert not {"FireResistance", "ColdResistance", "GlobalDamageTypeGemLevel"} & reads.by_mod  # one tier: never raised, no name needed
+
+
+def test_a_result_past_the_limit_is_refused_and_says_its_size(monkeypatch) -> None:
+    import crafting_system.actions.unravelling as unravelling
+
+    start = small_item(roll(RESIST_1), roll(DAMAGE_1), roll(LIFE_1), memory_strands=5)  # 3 x 2 x 2 = 12 items
+    assert len(ORB.outcomes(SMALL, start).given.results) == 12
+    monkeypatch.setattr(unravelling, "RESULTS_LIMIT", 11)
+    with pytest.raises(OutOfScopeError, match="12 different items"):
+        ORB.outcomes(SMALL, start)
+
+
+def test_the_kind_is_named_as_the_route_files_name_it() -> None:
+    assert "unravelling-orb" in {entry.name for entry in kinds()}
+    assert kind_title("unravelling-orb") == "Orb of Unravelling"
 
 
 def test_the_kind_needs_strands() -> None:

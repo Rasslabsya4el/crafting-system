@@ -60,7 +60,7 @@ def test_the_three_kinds_are_registered_and_flagged_as_needing_strands():
     registered = {entry.name: entry for entry in kinds()}
 
     assert all(registered[name].needs_strands for name in KIND_NAMES)
-    other_strand_kinds = {"orb-of-unravelling"}  # the other kinds that exist only with strands (#281)
+    other_strand_kinds = {"unravelling-orb"}  # the other kinds that exist only with strands (#281)
     assert {entry.name for entry in kinds() if entry.needs_strands and entry.name not in KIND_NAMES} == other_strand_kinds  # no other kind is gated
     assert [registered[name].opt_in for name in KIND_NAMES] == [False, False, True]  # like the plain orbs: the Exalted Orb only when named
 

@@ -7,8 +7,10 @@ item of the model whose mods are not looked at yet, `Item.unopened`: the game re
 **Eligible mods.** An explicit mod of the item's own domain that is itself a mod of the item's pool (the whole pool of its base, item
 level and influences, as if the item held no explicit mod) and has a higher tier there. Left as they are: a crafted mod
 (`memory_strands.unravelling_limits`), a fractured mod and a veiled one (`memory_strands.unravelling_skips_fractured_and_veiled`,
-approximate), a mod at the top of its tier table at this item level, and a mod the pool does not hold (an essence-only or a delve mod:
-the emulator gives those another form of the chance that no source tests, `memory_strands.unravelling_side_weight_is_whole_pool`). The
+approximate), a mod at the top of its tier table at this item level, and a mod the pool does not hold (an essence-only, delve or unveiled
+mod: `orb_of_unravelling.raises_natural_mods_only`, approximate; the emulator gives essence and influenced mods another form of the
+chance that no source tests, `memory_strands.unravelling_side_weight_is_whole_pool`). A result past `RESULTS_LIMIT` items is refused as
+out of scope (#800). The
 `Prefixes` and `Suffixes Cannot Be Changed` metamods do not protect a mod (`memory_strands.unravelling_ignores_metamods`). An influence
 mod rises among the regular tiers of its own table; an Elevated mod has no weight in the pool, so it is never a destination
 (`memory_strands.unravelling_limits`).
@@ -27,7 +29,8 @@ plan's. The destination is not cut by the strands (`memory_strands.unravelling_d
 **The count** becomes 0 (`StrandUse.spending_all`): the spend is applied around `outcomes` like every spend (`strand_use.py`), and the
 declaration says that the odds read the count. The result is a finite list of items, the product over the eligible mods of "stays" or
 "rises to this tier", each raised mod at the lowest values of its new tier (`sample` rolls them). The compressed state must name each mod of
-the item by id to know its tier, so `reads` names every family by mod (`Reads.by_mod`), as the Harvest swaps do for theirs (#149).
+the item by id to know its tier, so `reads` names every family with two tiers or more by mod (`Reads.by_mod`), as the Harvest swaps do
+for theirs (#149).
 """
 
 import random
@@ -44,7 +47,7 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
-from .errors import NotApplicableError
+from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .pool import pool_candidates
 from .strand_use import StrandUse
@@ -66,10 +69,15 @@ CHANCE_MODEL = get_rule("memory_strands.unravelling_chance_model")
 SIDE_WEIGHT = get_rule("memory_strands.unravelling_side_weight_is_whole_pool")
 DESTINATION_TIER = get_rule("memory_strands.unravelling_destination_tier")
 DESTINATION_NOT_CUT = get_rule("memory_strands.unravelling_destination_not_cut")
+NATURAL_MODS_ONLY = get_rule("orb_of_unravelling.raises_natural_mods_only")
 COST = get_rule("orb_of_unravelling.cost")
 
 ONE = Fraction(1)
 ZERO = Fraction(0)
+# A safety net, not a cut (OR-12): the result is listed item by item, the product over the eligible mods of "stays" or "rises to this
+# tier", and past this many items an item is refused as out of scope with the count said, rather than built for minutes. A kernel that
+# takes the mods one at a time is ticket #800.
+RESULTS_LIMIT = 20_000
 
 
 class Destination(StrEnum):
@@ -187,7 +195,7 @@ class OrbOfUnravelling(Action):
         return StrandUse.spending_all(EFFECT)  # every strand is used; the odds read the count; no draw is cut (unravelling_destination_not_cut)
 
     def reads(self, data: GameData) -> Reads:
-        # The chance and the destination of a mod depend on its tier, so every family the item can hold is told apart by mod; the
+        # The chance and the destination of a mod depend on its tier, so every family with two tiers or more is told apart by mod; the
         # implicits, the quality, the offer, the enchantment and the sockets are not read.
         return Reads(junk=True, families=None, by_mod=_rollable_families(data))
 
@@ -216,7 +224,7 @@ class OrbOfUnravelling(Action):
         """Every item one use can leave on `item`, with its chance: each eligible mod stays or rises to one of its higher tiers.
 
         Raises `NotApplicableError` for an unopened listing (unidentified), a corrupted item, an item with no strand and an item with no
-        eligible mod.
+        eligible mod, and `OutOfScopeError` when the list would hold more than `RESULTS_LIMIT` items (#800).
         """
         if item.unopened:
             raise NotApplicableError("the item is not identified yet (a bought listing not opened), and an Orb of Unravelling needs an identified item")
@@ -234,6 +242,14 @@ class OrbOfUnravelling(Action):
             options: list[tuple[Fraction, ExplicitMod | None]] = [(ONE - chance, None)] if chance < 1 else []
             options += [(chance * share, ExplicitMod(target.id, _lowest(target))) for target, share in targets]
             choices.append([(entry, option) for option in options])
+        count = 1
+        for options in choices:
+            count *= len(options)
+        if count > RESULTS_LIMIT:
+            raise OutOfScopeError(
+                f"an Orb of Unravelling on this item can leave {count:,} different items, more than the model lists one by one ({RESULTS_LIMIT:,})",
+                detail=f"the Unravelling result is the product over {len(choices)} eligible mods, {count} items, above RESULTS_LIMIT {RESULTS_LIMIT} (ticket #800)",
+            )
         results = []
         for picks in product(*choices):
             probability, raised = ONE, {}
@@ -247,25 +263,31 @@ class OrbOfUnravelling(Action):
 
 
 _FAMILIES: dict[int, tuple[GameData, frozenset[str]]] = {}
+_FAMILIES_LIMIT = 4
 
 
 def _rollable_families(data: GameData) -> frozenset[str]:
-    """The family of every prefix or suffix that spawns somewhere and has one family (what a pool can hold); cached per game data object."""
+    """The families an Unravelling can raise a mod of: those of a tier table with two levels or more, among the prefixes and suffixes that
+    spawn somewhere and have one family (what a pool can hold). A family whose table has one tier never rises, so its tier needs no name.
+    Cached per game data object (the last few)."""
     hit = _FAMILIES.get(id(data))
     if hit is not None and hit[0] is data:
         return hit[1]
-    found = frozenset(
-        mod.families[0]
-        for mod in data.mods.values()
-        if len(mod.families) == 1
-        and mod.generation_type in (Side.PREFIX.value, Side.SUFFIX.value)
-        and any(weight.weight > 0 for weight in mod.spawn_weights)
-    )
+    levels: dict[tuple[str, str, str], set[int]] = defaultdict(set)
+    families: dict[tuple[str, str, str], set[str]] = defaultdict(set)
+    for mod in data.mods.values():
+        if len(mod.families) == 1 and mod.generation_type in (Side.PREFIX.value, Side.SUFFIX.value) and any(weight.weight > 0 for weight in mod.spawn_weights):
+            key = (mod.domain, mod.type, mod.generation_type)
+            levels[key].add(mod.required_level)
+            families[key].add(mod.families[0])
+    found = frozenset(family for key, names in families.items() if len(levels[key]) > 1 for family in names)
+    if len(_FAMILIES) >= _FAMILIES_LIMIT:
+        _FAMILIES.clear()
     _FAMILIES[id(data)] = (data, found)
     return found
 
 
-@kind("orb-of-unravelling", order=110, needs_strands=True)
+@kind("unravelling-orb", order=110, needs_strands=True)
 def _orb_of_unravelling(data: GameData, item: Item):
     if item.mods:
         yield OrbOfUnravelling()
