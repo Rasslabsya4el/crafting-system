@@ -33,9 +33,10 @@ Refusals. `NotApplicableError`: an item that is normal or corrupted, a jewel, or
 a veiled mod on either input (its unveil offer would have to be carried over, which no source describes) and a pooled count above 6 (the
 count table has no row).
 
-The catalog lists the kind for an item in hand with two donors (a copy of the item, and a donor of other mods the base can roll); it
-is not a planner kind until the planner entry takes donors (the end-to-end tickets of B3 wire the lazy offer loop, #212, and the interval
-driver, #220 and #221, to it). Its compressed state is built (ticket #217): `reads` declares `input_classes`, so the state tells a junk mod by
+The catalog lists the kind for an item in hand with two donors (a copy of the item, and a donor of other mods the base can roll), the
+contract suite's fixture. It is a planner kind offered only when a target names it (`opt_in`, ticket #225): the planner replaces those donors
+with the target's isolated feeders (`cli/_offers.isolated_feeders`) and solves the product of the target and its donors at every reading
+of alpha (`cli/_plan.solve_each_reading`, ADR-0062 "As built (#225)"). Its compressed state is built (ticket #217): `reads` declares `input_classes`, so the state tells a junk mod by
 its family type and its place in it, and the kernel is the action averaged over the names the item and the donor could hold in their classes
 (`abstraction/_inputs.py`, ADR-0062 decision 3, "As built (#217)"). `with_inputs` gives the kernel the same action with another donor.
 
@@ -67,7 +68,8 @@ names against the prices crate), so the price file decides what a combine costs 
   `recombinator_cost.junk_craft_halves_dust_3_26`.
 * **The setting.** The variant is offered only when the setting is on: `junk_craft_offered()` is a context manager that turns it on for
   the catalog kind (`junk_craft_enabled()` reads it; a context variable, off by default). The config setting
-  `recombinator_junk_craft` turns it on once the kind is a planner kind (the end-to-end tickets); until then nothing calls it but tests.
+  `recombinator_junk_craft` is not wired yet: the planner offers the target's isolated feeders without a junk craft (#225), so nothing calls
+  it but tests.
 """
 
 import contextvars

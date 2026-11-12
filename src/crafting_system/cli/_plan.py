@@ -576,7 +576,7 @@ def make_plan(
         if product is not None:  # the solve was over the product of the target and its donors: the plan's own process is read off it
             donor_plan = DonorPlan(product, product.start(start), readings.solution)
             solution = main_view(readings.solution)
-            limits += (_limits.feeder_donors_limit(),)
+            limits += (_limits.feeder_donors_limit(), _limits.second_items_shown_limit())
         limits += reading_limits(abstraction, others, budget is not None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     elif many and not envelope and solver != "packed":

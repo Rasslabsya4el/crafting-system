@@ -124,3 +124,15 @@ def test_making_names_the_targets_mods_the_second_item_holds():
     from crafting_system.solver import MAIN
 
     assert not when.is_for(MAIN)
+
+
+def test_the_report_shows_the_interval_and_the_expected_recombinations_of_a_plan_with_second_items():
+    from crafting_system.cli import build_report
+
+    data = world()
+    plan = make_plan(data, donor_target(data), PRICES)
+    report = build_report(plan, data)
+
+    assert report.interval is not None
+    assert report.interval.recombinations.value == pytest.approx(1 / 0.33, rel=1e-6)  # a geometric number of combines, one in 0.33 a success
+    assert report.interval.best.value == pytest.approx((R + T + ALT) / 0.33, rel=1e-9)

@@ -19,6 +19,11 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
               status: absent          # absent, below or passing, or a list of them
         do: Harvest Reforge Lightning # an action as the solver prints it, or `restart`
 
+A plan that makes second items (a recombinator, ticket #225) reads the route on every item it makes: the target's own and each second item a
+recombination consumes, which starts as a Normal item of the base. `when: {making: target}` is a rule for the target's own item, `when:
+{making: [{family: ID}, ...]}` (or `stat:`) a rule for the second item that holds exactly those mods of the target, and a rule without
+`making` is for any item. A recombination is named by its label, which names its second item ("Recombinator with a donor of ...").
+
 `restart` buys the start item again: an action that costs the start price and ends in the start state. Only a bought start item has one; a given item is never bought again (OR-6).
 Conditions speak only of what the compressed state holds; one it cannot answer yet (mods per side, metamods)
 is refused, not guessed. `open_prefixes` and `open_suffixes` count the free slots of a side, which the state holds only

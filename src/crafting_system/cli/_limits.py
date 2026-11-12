@@ -518,3 +518,13 @@ def lock_with_donors_limit() -> Limit:
         "the plan makes second items for its recombinations, and the planner cannot weigh the Lock in such a plan yet",
         **claim("the plans without Hinekora's Lock", "Taking the Lock could make it cheaper."),
     )
+
+
+def second_items_shown_limit() -> Limit:
+    """What the steps of a plan that makes second items leave out (ticket #225): how each second item is made is not drawn yet."""
+    return Limit(
+        DISPLAY,
+        "How each second item is made is not shown",
+        "the steps show the target's own item; a recombination's second item is made by its own run of orbs, which the steps do not draw yet",
+        "The costs and the odds count every second item and every orb used to make it.",
+    )

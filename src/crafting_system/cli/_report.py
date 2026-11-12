@@ -397,7 +397,19 @@ def build_report(plan: Plan, data: GameData) -> Report:
     )  # fmt: skip
     if plan.readings is None:
         return report
-    return with_interval(report, build_interval_answer(plan.readings, plan, data, start=plan.start, is_goal=plan.is_goal))
+    return with_interval(report, interval_answer_of(plan, data))
+
+
+def interval_answer_of(plan: Plan, data: GameData) -> IntervalAnswer | None:
+    """The interval answer of a plan solved at every reading of a rule axis (#589), None for any other plan or one whose route reads no axis.
+
+    A plan that makes second items (#225) was solved over the product of the target and its second items, so its route is walked there.
+    """
+    if plan.readings is None:
+        return None
+    if plan.donors is not None:
+        return build_interval_answer(plan.readings, plan, data, start=plan.donors.start, is_goal=plan.donors.acquisition.is_goal)
+    return build_interval_answer(plan.readings, plan, data, start=plan.start, is_goal=plan.is_goal)
 
 
 def _leaf_chance(plan: Plan, share: WeightShare) -> float | None:
