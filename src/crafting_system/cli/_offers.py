@@ -205,6 +205,11 @@ class BuyStartItem(Action):
         return self.item
 
 
+def _allowing(data: GameData, start_item: Item, action: Action) -> Action:
+    """`action` as a target that only allows a corrupted item uses it: `Action.for_allowed_corruption` for a corrupting one, the action itself otherwise."""
+    return action.for_allowed_corruption(data) if action.adds(data, start_item).corrupts else action
+
+
 def offers_for(
     data: GameData, goal: Goal, base_id: str, start_item: Item, kinds_named: Collection[str] | None = None
 ) -> OfferSet:
@@ -253,7 +258,8 @@ def offers_for(
       other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
       asks, is `solver_actions`' business (`_prune.py`). One that also declares `Adds.asked_only` (a fossil set with the Bloodstained
       Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
-      merely allows a corrupted item (ADR-0038).
+      merely allows a corrupted item (ADR-0038). For a target that only allows a corrupted item (and asks for no corrupted implicit) a
+      corrupting action is offered as `Action.for_allowed_corruption` gives it: the Vaal Orb whose brick is a full fill (ticket #260).
     """
     goal = goal.resolved(data, start_item.base_id, start_item.item_level)  # a leaf built by hand with a `min_tier` reads it from the data
     counting = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids if _counts_as_crafted(data, leaf, mod_id)}
@@ -262,6 +268,8 @@ def offers_for(
     candidates = []
     left_out_unwanted: list[str] = []
     kind_of = _listed(data, start_item, kind_names, label_names)
+    if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
+        kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
     listed = list(kind_of)
     label_count = Counter(action.label(data) for action in listed)
 
