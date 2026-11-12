@@ -1,0 +1,36 @@
+# Target for benchmark route R25: three tier-1 prefixes made by recombining overlapping pairs.
+#
+# This file says WHAT you want to end with. It does not say how to craft it: the planner finds
+# that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, 2026-05, docs/research/2026-10-30-5-reference-routes.md, id R25, "Generic triple-T1 prefix recombination by
+# overlapping pairs"): isolate single-mod feeders A, B and C with Orbs of Alteration, recombine A + B into AB and A + C into AC, then
+# AB + AC into ABC. The guide is generic ("Weapon or Armour", "T1 prefix A, B, C"); an agent picks the item (OR-27): an energy shield
+# Vaal Regalia of item level 86, whose three energy shield prefixes are its classic triple-T1 prefix set. Each is the top tier, so each
+# is the family with `min_tier: 1` (OR-1, OR-4: the guide says "T1").
+
+base: Vaal Regalia
+item_level: 86
+
+# Where the crafting starts: a Normal Vaal Regalia the player holds (OR-6). The guide makes every feeder from a plain base and names no
+# price for it, and the planner makes the second items of a recombination from a Normal base it does not price either (issue filed with
+# the pull request of #225), so the target's own base is given too: the two are counted alike.
+start_item:
+  rarity: normal
+start: given
+
+# The kinds the guide uses (the planner may use Orbs of Transmutation and Augmentation too, which the guide's "Alteration/Augmentation"
+# implies on a Normal base). The recombinator is offered only when a target names it; its second items are the target's own mods
+# (the answer says so).
+actions: [transmutation-orb, alteration-orb, augmentation-orb, recombinator]
+
+requirements:
+  # A: "(101-110)% increased Energy Shield", tier 1 at item level 86.
+  - family: DefencesPercent
+    min_tier: 1
+  # B: "+(91-100) to maximum Energy Shield", tier 1.
+  - family: BaseLocalDefences
+    min_tier: 1
+  # C: "(39-42)% increased Energy Shield, (16-17)% increased Stun and Block Recovery", tier 1.
+  - family: DefencesPercentAndStunRecovery
+    min_tier: 1

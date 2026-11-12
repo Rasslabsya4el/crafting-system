@@ -1,0 +1,158 @@
+# Given route for benchmark route R25: three tier-1 prefixes by recombining overlapping pairs.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices as the solver's
+# route. In every state the FIRST rule whose conditions match is followed (see examples/routes/r12-lightning-amulet.yaml). A route with
+# a recombinator also says how each SECOND ITEM is made (ticket #225): `making: target` is a rule for the target's own item, `making:`
+# with a list of the target's mods is a rule for the second item that holds exactly those mods, and a rule with no `making` is for any.
+# Every second item starts as a Normal Vaal Regalia, as the planner makes it.
+#
+# The route (Reddit, 2026-05, docs/research/2026-10-30-5-reference-routes.md, id R25):
+#   1. Isolate single-mod feeder bases A, B and C, usually with Alteration/Augmentation.
+#   2. Recombine A + B until AB survives.
+#   3. Recombine A + C until AC survives.
+#   4. Recombine AB + AC for ABC; reuse outputs containing useful overlapping pairs.
+#
+# A = (101-110)% increased Energy Shield, B = +(91-100) to maximum Energy Shield, C = the tier-1 energy shield and stun recovery hybrid
+# (examples/targets/r25-energy-shield-regalia.yaml). "Single-mod" is the guide's word: a recombination is used only on an item that holds
+# nothing but wanted mods, which the planner also keeps to (the answer says so), so on an item that holds a wanted mod and anything else
+# the rule's recombination is refused and the route goes on to the next rule (`skip_refused`), the Orb of Alteration of step 1.
+
+name: R25, Reddit guide
+skip_refused: true
+
+rules:
+  # Step 4: AB in hand, recombined with an AC second item: ABC.
+  - when:
+      making: target
+      requirements:
+        - family: DefencesPercent
+          status: passing
+        - family: BaseLocalDefences
+          status: passing
+        - family: DefencesPercentAndStunRecovery
+          status: [absent, below]
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield, (39-42)% increased Energy Shield (16-17)% increased Stun and Block Recovery"
+
+  # Step 4, read the other way: AC in hand, recombined with an AB second item.
+  - when:
+      making: target
+      requirements:
+        - family: DefencesPercent
+          status: passing
+        - family: BaseLocalDefences
+          status: [absent, below]
+        - family: DefencesPercentAndStunRecovery
+          status: passing
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield, +(91-100) to maximum Energy Shield"
+
+  # Step 4's failures, reused ("reuse outputs containing useful overlapping pairs"): BC in hand overlaps AB on B.
+  - when:
+      making: target
+      requirements:
+        - family: DefencesPercent
+          status: [absent, below]
+        - family: BaseLocalDefences
+          status: passing
+        - family: DefencesPercentAndStunRecovery
+          status: passing
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield, +(91-100) to maximum Energy Shield"
+
+  # Steps 2 and 3 on the target's own item: a single-mod A becomes AB with a B second item.
+  - when:
+      making: target
+      requirements:
+        - family: DefencesPercent
+          status: passing
+        - family: BaseLocalDefences
+          status: [absent, below]
+        - family: DefencesPercentAndStunRecovery
+          status: [absent, below]
+    do: "Recombinator with a donor of +(91-100) to maximum Energy Shield"
+
+  # A single-mod B becomes AB with an A second item.
+  - when:
+      making: target
+      requirements:
+        - family: DefencesPercent
+          status: [absent, below]
+        - family: BaseLocalDefences
+          status: passing
+        - family: DefencesPercentAndStunRecovery
+          status: [absent, below]
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield"
+
+  # A single-mod C becomes AC with an A second item.
+  - when:
+      making: target
+      requirements:
+        - family: DefencesPercent
+          status: [absent, below]
+        - family: BaseLocalDefences
+          status: [absent, below]
+        - family: DefencesPercentAndStunRecovery
+          status: passing
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield"
+
+  # Step 2: the AB second item, made from a single-mod A and a B second item.
+  - when:
+      making:
+        - family: DefencesPercent
+        - family: BaseLocalDefences
+      requirements:
+        - family: DefencesPercent
+          status: passing
+        - family: BaseLocalDefences
+          status: [absent, below]
+        - family: DefencesPercentAndStunRecovery
+          status: [absent, below]
+    do: "Recombinator with a donor of +(91-100) to maximum Energy Shield"
+
+  # Step 2, the other way round: from a single-mod B and an A second item.
+  - when:
+      making:
+        - family: DefencesPercent
+        - family: BaseLocalDefences
+      requirements:
+        - family: DefencesPercent
+          status: [absent, below]
+        - family: BaseLocalDefences
+          status: passing
+        - family: DefencesPercentAndStunRecovery
+          status: [absent, below]
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield"
+
+  # Step 3: the AC second item, made from a single-mod A and a C second item.
+  - when:
+      making:
+        - family: DefencesPercent
+        - family: DefencesPercentAndStunRecovery
+      requirements:
+        - family: DefencesPercent
+          status: passing
+        - family: BaseLocalDefences
+          status: [absent, below]
+        - family: DefencesPercentAndStunRecovery
+          status: [absent, below]
+    do: "Recombinator with a donor of (39-42)% increased Energy Shield (16-17)% increased Stun and Block Recovery"
+
+  # Step 3, the other way round: from a single-mod C and an A second item.
+  - when:
+      making:
+        - family: DefencesPercent
+        - family: DefencesPercentAndStunRecovery
+      requirements:
+        - family: DefencesPercent
+          status: [absent, below]
+        - family: BaseLocalDefences
+          status: [absent, below]
+        - family: DefencesPercentAndStunRecovery
+          status: passing
+    do: "Recombinator with a donor of (101-110)% increased Energy Shield"
+
+  # Step 1: a Normal base is made magic, and a magic one is altered until it is a single-mod feeder the rules above use.
+  - when:
+      rarity: normal
+    do: Orb of Transmutation
+  - when:
+      rarity: magic
+    do: Orb of Alteration

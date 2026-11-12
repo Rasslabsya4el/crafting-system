@@ -135,12 +135,6 @@ DUST_NAME = "Thaumaturgic Dust"  # the price-file names (an action imports no pr
 GOLD_NAME = "Gold"
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 _JUNK_CRAFT: contextvars.ContextVar[bool] = contextvars.ContextVar("recombinator_junk_craft", default=False)
-WHY_NOT_PLANNER = (
-    "the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs "
-    "(ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589)"
-)
-
-
 @cache
 def count_table(name: str = "guide") -> Mapping[int, Mapping[int, Fraction]]:
     """The count table by pooled count, each row renormalised to sum to exactly 1: `{pooled: {kept: chance}}` (row 0 keeps none)."""
@@ -539,7 +533,7 @@ def _complement(data: GameData, item: Item) -> Item | None:
     )
 
 
-@kind("recombinator", order=89, planner=False, why_not=WHY_NOT_PLANNER, reads_item_state_while_not_planner="any")
+@kind("recombinator", order=89, opt_in=True)
 def _recombinators(data: GameData, item: Item):
     """A copy of the item as the donor (every mod doubled), and a donor of other mods the base can roll."""
     if item.corrupted or item.rarity is Rarity.NORMAL or jewel_class(data, item) is not None:
