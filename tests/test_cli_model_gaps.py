@@ -45,11 +45,12 @@ from crafting_system.targets import load_target, parse_target
 
 SRC = pathlib.Path(crafting_system.__file__).parent
 FAMILY = {"ActionError", "NotApplicableError", "OutOfScopeError"}
-GAME, GAP, RECORDS, EITHER = "game", "gap", "records", "either"
+GAME, GAP, RECORDS, EITHER, LISTS = "game", "gap", "records", "either", "lists"
 
 # Every `except` clause of `src` that names a refusal, with the family it means (the scan is `clauses_found`).
 # GAME: the game refuses and the clause is about that alone, so a model gap goes through it. GAP: only a model gap. RECORDS: a pair of clauses, the
-# game refusal skipped silently and the model gap written in `Abstraction.gaps` (the plan says so). EITHER: both families, named, and why.
+# game refusal skipped silently and the model gap written in `Abstraction.gaps` (the plan says so). LISTS: the same in a kind's listing (#511), the
+# model gap said with `listing_gap` (a limit of the kinds), the game refusal silent. EITHER: both families, named, and why.
 CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_bound.py", "reach_bound", ("OutOfScopeError",), GAP, "no bound is given for a pool the model cannot build"),
     ("abstraction/_coarse.py", "Coarsening._run_members", ("NotApplicableError", "OutOfScopeError"), EITHER, "the first refusal is kept and raised again by `variants`; a model gap wins over a game refusal"),
@@ -69,10 +70,15 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_kernel.py", "Abstraction._refusal_depends_on_the_family", ("NotApplicableError",), GAME, "the other families of the fractured type are refused too"),
     ("actions/awakener.py", "_awakeners_orb", ("OutOfScopeError",), GAP, "an item class with no influence key lists no orb"),
     ("actions/contract.py", "Action.burn_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal's own text is returned, whichever family"),
-    ("actions/fossil.py", "usable_fossils", ("NotApplicableError", "OutOfScopeError"), EITHER, "no fossil is listed for the item; a gap met while listing is #511"),
-    ("actions/fossil.py", "usable_fossils", ("NotApplicableError", "OutOfScopeError"), EITHER, "this fossil is not listed for the item; a gap met while listing is #511"),
-    ("actions/fossil.py", "fossil_actions", ("NotApplicableError", "OutOfScopeError"), EITHER, "this set is not listed for the item; a gap met while listing is #511"),
-    ("actions/recombinator.py", "junk_craft_for", ("NotApplicableError", "OutOfScopeError"), EITHER, "a craft that cannot be made on the item is not a candidate, whichever family"),
+    ("actions/fossil.py", "usable_fossils", ("NotApplicableError",), LISTS, "the game: the item takes no resonator, no fossil is listed, silent"),
+    ("actions/fossil.py", "usable_fossils", ("OutOfScopeError",), LISTS, "no rule for the item: no fossil is listed, and the listing is told"),
+    ("actions/fossil.py", "usable_fossils", ("NotApplicableError",), LISTS, "the game: the item refuses this fossil, silent"),
+    ("actions/fossil.py", "usable_fossils", ("OutOfScopeError",), LISTS, "no rule for this fossil on the item: not listed, and the listing is told"),
+    ("actions/fossil.py", "fossil_actions", ("OutOfScopeError",), LISTS, "no rule for the set (two fossils that each force a mod): not listed, and the listing is told once per pair"),
+    ("actions/recombinator.py", "junk_craft_for", ("NotApplicableError",), LISTS, "the game: the bench does not make this craft on the item, not a candidate, silent"),
+    ("actions/recombinator.py", "junk_craft_for", ("OutOfScopeError",), LISTS, "no rule for the craft on the item: not a candidate, and the listing is told"),
+    ("actions/corruption.py", "_vaal_orb", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel: no rule for its pool, no Vaal Orb is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
+    ("actions/locus.py", "_locus", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel, an empty pool or one with no second draw: no Locus is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
     ("actions/socket_colours.py", "ChromaticOrb.burn_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal's own text is returned, whichever family"),
     ("cli/_approx.py", "BlockModel._build", ("NotApplicableError",), RECORDS, "a game refusal in a block: silent"),
     ("cli/_approx.py", "BlockModel._build", ("OutOfScopeError",), RECORDS, "a model gap in a block: written"),
@@ -120,8 +126,8 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_estimate.py", "_Pilot._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),
     ("abstraction/_estimate.py", "_Pilot.walked_kernel", ("ValueError",), NOT_A_REFUSAL, "after the clause for both families: a kernel error that is no refusal makes the forecast refuse (`EstimateRefused`)"),
     ("abstraction/_kernel.py", "Abstraction._refusal_depends_on_the_family", ("ItemError", "ValueError"), NOT_A_REFUSAL, "the item cannot be built with another family: no other family is left to try; no action is called"),
-    ("actions/corruption.py", "_vaal_orb", ("ValueError",), EITHER, "a class with no corrupted pool lists no Vaal Orb, whichever family refuses; a model gap met while listing is #511"),
-    ("actions/locus.py", "_locus", ("ValueError",), EITHER, "a class with no corrupted pool, or a pool with no second draw, lists no Locus of Corruption, whichever family refuses; a model gap met while listing is #511"),
+    ("actions/corruption.py", "_vaal_orb", ("ValueError",), EITHER, "after the clause for a model gap, so no model gap reaches it: a class with no corrupted pool (the game) or a base the data lacks lists no Vaal Orb, silent"),
+    ("actions/locus.py", "_locus", ("ValueError",), EITHER, "after the clause for a model gap, so no model gap reaches it: a class with no corrupted pool (the game) or a base the data lacks lists no Locus of Corruption, silent"),
     ("actions/recombinator.py", "Recombinator.outcomes", ("TypeError", "ValueError", "OverflowError"), NOT_A_REFUSAL, "the exponent of the reading is no number; no action is called"),
     ("cli/_benchmark.py", "benchmark_main", ("DataError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the command"),
     ("cli/_benchmark.py", "run_route", ("ValueError", "OSError", "DataError", "PriceFileNotFound", "ConvergenceError"), EITHER, "`ROUTE_ERRORS`: ValueError is the parent of both families and of every other error of a route; the entry carries the text of whichever"),
@@ -214,6 +220,26 @@ def test_a_clause_that_leaves_an_action_out_of_a_plan_writes_the_gap_and_keeps_t
         assert game[0] == ("NotApplicableError",) and gap[0] == ("OutOfScopeError",), place
         assert not _writes_a_gap(game[1]), place
         assert _writes_a_gap(gap[1]), place
+
+
+def test_a_listing_clause_says_a_model_gap_and_keeps_the_game_refusal_silent():
+    """Ticket #511: a model gap met while a kind lists its actions is told to the listing (`listing_gap`), and a game refusal there is not."""
+    listing = [(file, function, caught, node) for file, function, caught, node in clauses_found() if (file, function, caught) in LISTING_CLAUSES]
+
+    assert len(listing) == len([clause for clause in CLAUSES if clause[3] == LISTS]) == 9  # fossil item x2, fossil x2, set, junk craft x2, Vaal, Locus
+    for file, function, caught, node in listing:
+        assert _says_a_listing_gap(node) is (caught == ("OutOfScopeError",)), (file, function, caught)
+    for file, function, caught, node in clauses_found():  # the clause after a Vaal Orb's or a Locus' gap is the game's: silent
+        if (file, function) in {("actions/corruption.py", "_vaal_orb"), ("actions/locus.py", "_locus")} and caught == ("ValueError",):
+            assert not _says_a_listing_gap(node)
+
+
+LISTING_CLAUSES = {(file, function, caught) for file, function, caught, family, _ in CLAUSES if family == LISTS}
+
+
+def _says_a_listing_gap(handler: ast.ExceptHandler) -> bool:
+    """Whether the clause calls `listing_gap(...)`."""
+    return any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "listing_gap" for node in ast.walk(handler))
 
 
 def _writes_a_gap(handler: ast.ExceptHandler) -> bool:

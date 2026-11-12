@@ -13,7 +13,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing
+from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
@@ -276,7 +276,8 @@ def offers_for(
     named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
     left_out_unwanted: list[str] = []
-    kind_of = _listed(data, start_item, kind_names, label_names)
+    listing_gaps: list[ListingGap] = []
+    kind_of = _listed(data, start_item, kind_names, label_names, listing_gaps)
     if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
         kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
     listed = list(kind_of)
@@ -330,7 +331,7 @@ def offers_for(
         for action, variant in zip(actions, variants):
             offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, "")))
 
-    limits = _kind_limits(kinds_named, kind_names, goal, start_item)
+    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps)
     unlisted = (
         tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.corrupting and entry.name not in kind_names)
         if kind_names is not None and not goal.takes_corrupted
@@ -396,9 +397,14 @@ def offers_for(
 
 
 def _kind_limits(
-    kinds_named: Collection[str] | None, kind_names: frozenset[str] | None, goal: Goal, start_item: Item
+    kinds_named: Collection[str] | None,
+    kind_names: frozenset[str] | None,
+    goal: Goal,
+    start_item: Item,
+    listing_gaps: Collection[ListingGap] = (),
 ) -> tuple[Limit, ...]:
-    """The kinds of the catalog that no plan for this target offers, each group with its reason: not named, opt-in, not built (K1, K2, K4).
+    """The kinds of the catalog that no plan for this target offers, each group with its reason: not named, opt-in, not built (K1, K2, K4),
+    and what the listed kinds left out because the model has no rule for the start item (`listing_gaps`, #511).
 
     A kind that only corrupts is the corrupting limit's when the target takes no corrupted item, and a kind that needs Memory
     Strands, while the start item has none, is the strands limit's (`make_plan`): neither is named here.
@@ -433,6 +439,7 @@ def _kind_limits(
                     **claim("the kinds offered", "A kind left out could be cheaper."),
                 ),
             )
+    found += listing_gap_limits(listing_gaps, goal)
     not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner)
     if not_built:
         found += (
@@ -445,6 +452,36 @@ def _kind_limits(
             ),
         )
     return found
+
+
+def listing_gap_limits(gaps: Collection[ListingGap], goal: Goal) -> tuple[Limit, ...]:
+    """The limit of the actions the listing of their kind left out because the model has no rule for the start item (#511, OR-13).
+
+    Each label is the kind, or the kind and what it left out ("Fossil sets: Hollow Fossil with Glyphic Fossil"); the causes are named once
+    each. A gap of a kind that only corrupts is left out when the target takes no corrupted item: the kind would not be offered anyway (the
+    corrupting limit's). A game refusal while listing writes no gap, so it is not here.
+    """
+    corrupting = {entry.name for entry in kinds() if entry.corrupting}
+    shown = [gap for gap in gaps if goal.takes_corrupted or gap.kind not in corrupting]
+    if not shown:
+        return ()
+    labels = tuple(dict.fromkeys(kind_title(gap.kind) + (f": {gap.subject}" if gap.subject else "") for gap in shown))
+    detail_of: dict[str, str] = {}
+    for gap in shown:
+        detail_of.setdefault(gap.cause, gap.detail or gap.cause)
+    causes = tuple(detail_of)
+    rest = (f"{len(causes) - _limits.SHOWN_CAUSES} more causes",) if len(causes) > _limits.SHOWN_CAUSES else ()  # as the model gaps of the walk
+    return (
+        Limit(
+            _limits.LISTING_GAP,
+            "Not offered",
+            "the model has no rule for them on this item: {names}",
+            labels=labels,
+            names=causes[: _limits.SHOWN_CAUSES] + rest,
+            detail=tuple(detail_of[cause] for cause in causes[: _limits.SHOWN_CAUSES]) + rest,  # one for one with `names`, the count of the rest last
+            **claim("the actions the model can list for this item", "An action the model has no rule for could make it cheaper."),
+        ),
+    )
 
 
 def crafted_mods_limit(labels: tuple[str, ...]) -> Limit:
@@ -491,9 +528,15 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     return frozenset(kind_names), frozenset(name for name in names if name not in exist)
 
 
-def _listed(data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str]) -> dict[Action, str]:
-    """The planner actions of the kinds named, plus those named by label (any planner kind, default or not), each with its kind."""
-    found = catalog_kinds(data, start_item, planner_only=True, names=kind_names)
+def _listed(
+    data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str], gaps: list[ListingGap] | None = None
+) -> dict[Action, str]:
+    """The planner actions of the kinds named, plus those named by label (any planner kind, default or not), each with its kind.
+
+    With `gaps`, the model gaps the kinds named meet while they list are added to it (`catalog_kinds`); a kind searched only for a label
+    adds none, as it is not offered as a kind.
+    """
+    found = catalog_kinds(data, start_item, planner_only=True, names=kind_names, gaps=gaps)
     if label_names:
         usable = {entry.name for entry in kinds(planner_only=True)}
         extra = {a: k for a, k in catalog_kinds(data, start_item, planner_only=True, names=usable).items() if a.label(data) in label_names}

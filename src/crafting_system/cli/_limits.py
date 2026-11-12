@@ -43,6 +43,7 @@ from crafting_system.risk._linear import SAID_ABOVE  # one definition: a certifi
 NOT_NAMED = "kinds-not-named"
 OPT_IN = "kinds-opt-in"
 NOT_BUILT = "kinds-not-built"
+LISTING_GAP = "kinds-model-gap"
 CORRUPTING = "corrupting"
 CORRUPT_ASKED = "corrupting-asked"
 STRANDS = "strands"
@@ -65,6 +66,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (NOT_NAMED, "Methods the target does not name"),
     (OPT_IN, "Methods offered only when the target names them"),
     (NOT_BUILT, "Methods the planner cannot use yet"),
+    (LISTING_GAP, "Methods the model cannot list for this item"),
     (CORRUPTING, "Corrupting methods the target does not ask for"),
     (CORRUPT_ASKED, "Corrupting sets offered only to a target that asks for a corrupted implicit"),
     (STRANDS, "Memory Strands"),
