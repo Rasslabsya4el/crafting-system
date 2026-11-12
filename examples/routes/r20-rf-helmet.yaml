@@ -1,0 +1,94 @@
+# Given route for benchmark route R20: a Shaper/Elder Eternal Burgonet with the Essence of Horror's 30% more Elemental Damage and the
+# Trap and Mine Damage, Burning Damage and Concentrated Effect supports (ticket #150).
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices as the
+# solver's route. In every state the FIRST rule whose conditions match is followed; a goal state is never acted on. The conditions
+# and actions are explained in examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (Reddit, r/pathofexile, post 12vmj60, 2023-04-22, docs/research/2026-10-30-5-reference-routes.md, id R20):
+#   1. Make a dual Shaper/Elder Eternal Burgonet with an Awakener's Orb (the target buys it: batch B3 makes it).
+#   2. Essence of Horror until the Trap and Mine suffix appears beside the essence's 30% more Elemental Damage.
+#   3. If there is a third, unwanted suffix, annul it; if a wanted suffix is removed, back to 2.
+#   4. Craft "Suffixes Cannot Be Changed" and Harvest Reforge Fire for Burning Damage; on a miss, annul to reopen the suffix, otherwise
+#      back to the essence.
+#   5. Wild Bristle Matron for "Suffixes Cannot Be Changed", then Harvest Reforge Influence for Concentrated Effect; repeat while the
+#      prefixes can be reopened.
+#
+# How the steps are read:
+#   * The lock "Suffixes Cannot Be Changed" is a crafted prefix, so it needs a free prefix; a reforge rerolls the prefixes, the lock with
+#     them, so every reforge is preceded by a new lock. When no prefix is free the route annuls, as step 4's "annul to reopen" does.
+#   * "Trap and Mine" and "Burning Damage" are the top tiers (the target, OR-1): a lower tier is not `passing`, so it counts as a miss
+#     (a lower Trap and Mine falls to the essence, a lower Burning Damage fills the third suffix and is annulled).
+#   * Step 5 uses the beast and step 4 the bench, as the guide says (with the suffixes full the Matron can only add the suffix lock;
+#     before Burning is on, a free suffix would let it add another metamod).
+
+name: R20, Reddit guide
+skip_refused: true
+
+rules:
+  # Step 5: the three suffixes are done and locked: Harvest Reforge Influence for Concentrated Effect.
+  - when:
+      crafted_mods: true
+      requirements:
+        - family: Supported
+          status: passing
+        - family: MineSupported
+          status: passing
+        - family: HelmetAilmentUber
+          status: passing
+    do: Harvest Reforge Influence
+  # Step 5: the three suffixes are done, a prefix is free: the Matron locks the suffixes.
+  - when:
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: Supported
+          status: passing
+        - family: MineSupported
+          status: passing
+        - family: HelmetAilmentUber
+          status: passing
+    do: Beastcraft Wild Bristle Matron (add a metamod)
+  # Step 5, the prefixes are full: annul to reopen one (a lost suffix sends the route back).
+  - when:
+      requirements:
+        - family: Supported
+          status: passing
+        - family: MineSupported
+          status: passing
+        - family: HelmetAilmentUber
+          status: passing
+    do: Orb of Annulment
+  # Step 4: the two suffixes are there, the third is free and locked: Harvest Reforge Fire.
+  - when:
+      crafted_mods: true
+      open_suffixes: 1
+      requirements:
+        - family: Supported
+          status: passing
+        - family: MineSupported
+          status: passing
+    do: Harvest Reforge Fire
+  # Step 4: the third suffix is free and so is a prefix: lock the suffixes at the bench.
+  - when:
+      crafted_mods: false
+      open_suffixes: 1
+      open_prefixes: 1
+      requirements:
+        - family: Supported
+          status: passing
+        - family: MineSupported
+          status: passing
+    do: Bench craft Suffixes Cannot Be Changed
+  # Steps 3 and 4: an unwanted third suffix, a missed Burning Damage, or no free prefix for the lock: annul.
+  - when:
+      requirements:
+        - family: Supported
+          status: passing
+        - family: MineSupported
+          status: passing
+    do: Orb of Annulment
+  # Step 2 (and every way back to it): the essence.
+  - when:
+      rarity: rare
+    do: Essence of Horror

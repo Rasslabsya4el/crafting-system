@@ -106,6 +106,7 @@ LOWERED = {
     "r11-reservation-helmet": 81,  # no leaf asks tier 1 any more (#404): the start helmet's fractured Chaos Resistance (tier 1) needs 81
     "r12-lightning-amulet": 75,  # the +1 gem level needs 75; the start amulet already holds the resistance (any tier)
     "r13-life-resist-belt": 84,  # the tier-1 resistances need 84
+    "r20-rf-helmet": 82,  # the tier-1 Burning Damage and Concentrated Effect supports need 82
     "v01-minion-helmet": 64,
 }
 

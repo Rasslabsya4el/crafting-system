@@ -1,0 +1,76 @@
+# Target for benchmark route R20: a Shaper/Elder Eternal Burgonet for a Righteous Fire Trap and Mine build, with the Essence of Horror's
+# 30% more Elemental Damage, Trap and Mine Damage and Burning Damage supports, and the Concentrated Effect support (ticket #150).
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, r/pathofexile, post 12vmj60, 2023-04-22, docs/research/2026-10-30-5-reference-routes.md, id R20):
+#   1. Make a dual Shaper/Elder Eternal Burgonet with an Awakener's Orb.
+#   2. Essence of Horror until the Trap and Mine suffix appears beside the essence's 30% more Elemental Damage ("about 70 essences").
+#   3. If a third, unwanted suffix is there, annul it (if a wanted suffix goes, back to 2).
+#   4. Craft "Suffixes Cannot Be Changed" and Harvest Reforge Fire for Burning Damage ("about 16% for any tier, 5% for the top tier").
+#   5. Wild Bristle Matron for "Suffixes Cannot Be Changed", then Harvest Reforge Influence for Concentrated Effect ("about 15%").
+#
+# How the words are read (OR-1 to OR-4):
+#   * Step 1 is batch B3 (the Awakener's Orb, ADR-0013): in B2 the dual-influenced helmet is bought, a rare whose mods are whatever the
+#     market sells (OR-6, OR-17). No item level is stated; 86 is the highest an influenced helmet drops at and holds every top tier below.
+#   * "30% more Elemental Damage": what the Essence of Horror forces on a helmet, SocketedGemsDealMoreElementalDamageEssence1, exactly (OR-2).
+#   * "Trap and Mine suffix": the Shaper suffix "Socketed Gems are Supported by Level X Trap And Mine Damage"; no tier is stated, so the
+#     top tier the item level allows, MineDamageTrapUber3 (Level 20, item level 80), rolled (OR-1).
+#   * "Burning Damage": the Elder suffix "Socketed Gems are Supported by Level X Burning Damage", top tier IncreasedBurningDamageSupportedUber3
+#     (Level 20, item level 82), rolled (OR-1). The guide's 16% is for any tier, its 5% for this one.
+#   * "Concentrated Effect": the Elder prefix "Socketed Gems are Supported by Level X Concentrated Effect", top tier AreaDamageSupportedUber3
+#     (Level 20, item level 82), rolled (OR-1). The guide's 15% does not say a tier.
+#   * "Craft Suffixes Cannot Be Changed" and "Wild Bristle Matron for Suffixes Cannot Be Changed": the bench craft and the beast; the
+#     metamod is a crafted prefix, so it holds a prefix slot while the reforge runs.
+#   * "Harvest Reforge Fire": the tagged reforge that rerolls the item like a Chaos Orb and guarantees a Fire mod (the item is influenced,
+#     so the Harvest add/remove craft is refused, ADR-0030); with the suffixes locked it keeps the two suffixes and may add the third.
+#
+# The actions line names the kinds and the single actions of the route: the full catalog of a rare influenced helmet would not be solved,
+# and the Matron and the corrupted essences are offered only when a target names them (opt-in). OR-5 is not met here (#759).
+
+base: Eternal Burgonet
+
+# The item level, a whole number from 1 to 100.
+item_level: 86
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord). [] means none.
+influence: [shaper, elder]
+
+# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action.
+actions:
+  - Essence of Horror
+  - annulment-orb
+  - Bench craft Suffixes Cannot Be Changed
+  - Harvest Reforge Fire
+  - wild-bristle-matron
+  - Harvest Reforge Influence
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The Essence of Horror's suffix.
+  - family: Supported
+    mod: SocketedGemsDealMoreElementalDamageEssence1
+
+  # "Trap and Mine suffix", the top tier, rolled.
+  - family: MineSupported
+    mod: MineDamageTrapUber3
+
+  # "Burning Damage", the top tier, rolled.
+  - family: HelmetAilmentUber
+    mod: IncreasedBurningDamageSupportedUber3
+
+  # "Concentrated Effect", the top tier, rolled.
+  - family: AreaDamage
+    mod: AreaDamageSupportedUber3
+
+# Where the crafting starts: a rare Shaper/Elder helmet, its mods whatever the market sells (OR-17).
+start_item:
+  rarity: rare
+
+# The start item is bought. Its buy spec, trade query and price key are computed from this file.
+start: bought
+
+# The price file of this route (a path from this file's folder): #146's 2026-11-12 file plus every beast of the B2 recipes (poe.ninja
+# Standard, the planner's last fallback) and a hand stand-in for the start helmet, an Awakener's Orb and two helmets (#813).
+price_file: ../../tests/fixtures/prices/b2-r20-beasts-2026-11-12.json

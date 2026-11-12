@@ -124,10 +124,10 @@ def subjects(export):
     return benchmark_subjects(export["base_items"])
 
 
-def test_the_benchmark_names_many_bases_and_two_influenced_ones(export, subjects):
-    assert len(_yaml_files(TARGETS_DIR)) == 16
+def test_the_benchmark_names_many_bases_and_three_influenced_ones(export, subjects):
+    assert len(_yaml_files(TARGETS_DIR)) == 17
     assert len({base_id for base_id, _ in subjects}) >= 14  # the computed buy specs name a base each (the old category-only ones accepted 16 rings and 88 amulets)
-    assert sum(1 for _, influences in subjects if influences) == 2  # the Hunter belt and the Hunter bow
+    assert sum(1 for _, influences in subjects if influences) == 3  # the Hunter belt, the Hunter bow and the Shaper/Elder helmet (R20)
 
 
 # --- 1. the ladders both built are the same ladders ------------------------------------------------------------------
@@ -228,7 +228,7 @@ def test_the_cobalt_jewel_is_the_one_base_where_a_mod_of_the_other_domain_would_
 def test_an_influence_adds_ladders_of_its_own_and_changes_no_tier_of_a_ladder_that_exists_without_it(export, subjects):
     mods, bases = export["mods"], export["base_items"]
     influenced = [(base_id, influences) for base_id, influences in subjects if influences]
-    assert {base_id.split("/")[-1] for base_id, _ in influenced} == {"Belt4", "Bow16"}
+    assert {base_id.split("/")[-1] for base_id, _ in influenced} == {"Belt4", "Bow16", "HelmetStr11"}
     for base_id, influences in influenced:
         domain = bases[base_id]["domain"]
         plain = shared.natural_ladders(mods, shared.item_tags(bases[base_id]["tags"]), domain)
@@ -296,7 +296,7 @@ def test_the_old_oracle_rule_and_the_shared_rule_name_the_same_base_for_every_na
     bases = export["base_items"]
     references = [target["base"] for target in _yaml_files(TARGETS_DIR)] + [spec["base_type"] for spec in _yaml_files(BUY_DIR) if spec.get("base_type")]
 
-    assert len(references) == 16 + 14  # the computed specs: one per bought start item, the two R10 files sharing one
+    assert len(references) == 17 + 15  # the computed specs: one per bought start item, the two R10 files sharing one
     for reference in references:
         merged = shared.base_ids_of(bases, reference)
         assert merged and oracle_base_v411(bases, reference) in merged

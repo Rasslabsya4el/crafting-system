@@ -75,6 +75,8 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r14-hunter-bow", "price.rarity"): ("#601", "OR-3", "the target starts magic, the price entry searched any non-unique item (the exact item has no market)", "magic", "nonunique"),
         ("r07-minion-wand", "price.item_level"): ("#758", "OR-3", "the hand stand-in records no item level: the check cannot tell (Allflame has left the trade site)", "84", "cannot tell (label 84)"),
         ("r07-minion-wand", "price.source"): ("#758", "OR-7", "the start price is a hand stand-in: Allflame has left the trade site (2026-11-12)", "trade-api", "hand"),
+        ("r20-rf-helmet", "price.item_level"): ("#758", "OR-3", "the hand stand-in records no item level: the check cannot tell (Allflame has left the trade site)", "86", "cannot tell (label 86)"),
+        ("r20-rf-helmet", "price.source"): ("#758", "OR-7", "the start price is a hand stand-in: Allflame has left the trade site (2026-11-12)", "trade-api", "hand"),
         ("r24-avoid-shock-boots", "price.item_level"): ("#758", "OR-3", "the hand stand-in records no item level: the check cannot tell (Allflame has left the trade site)", "86", "cannot tell (label 86)"),
         ("r24-avoid-shock-boots", "price.source"): ("#758", "OR-7", "the start price is a hand stand-in: Allflame has left the trade site (2026-11-12)", "trade-api", "hand"),
         ("v01-minion-helmet", "price.item_level"): ("#425", "OR-3", "the hand price records no item level: the check cannot tell", "84", "cannot tell (label 84)"),
