@@ -10,7 +10,8 @@ parts, one per question of ADR-0041:
   `max(0, s - x)` *after* the cut, which used the count before (claim `memory_strands.cut_uses_strands_before_spend`). A spend larger
   than the count empties it; the count never goes below 0. Every law is a uniform whole number on 0 to a ceiling (claim
   `memory_strands.spend_law_uniform`, `approximate`); the ceiling may depend on the number of mods on the item before the craft
-  (the Exalted Orb: `SpendLaw.by_mods`).
+  (the Exalted Orb: `SpendLaw.by_mods`). One law is not uniform: the Orb of Unravelling uses every strand (`SpendLaw.everything`), and its
+  odds read the count before the craft (`StrandUse.spending_all`, ticket #281).
 
 **An undeclared action is refused on an item with one strand or more** (`OutOfScopeError`, the default of ADR-0004), so no later action
 can silently ignore strands; at 0 strands it behaves as it always did. The refusal and the spend are made by `Action` itself, around
@@ -41,7 +42,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from crafting_system.data import GameData
-from crafting_system.items import Item
+from crafting_system.items import MAX_MEMORY_STRANDS, Item
 from crafting_system.rules import Rule, get_rule
 
 from .cut import (
@@ -110,11 +111,20 @@ class SpendLaw:
     `ceilings` has one entry for a ceiling that does not depend on the item, or one per number of explicit mods the item holds before
     the craft (index 0, 1, 2, ...; a larger number takes the last): the Exalted Orb's. The count after the craft is
     `max(0, s - x)`, so a spend larger than the count empties it and a count of 0 stays 0.
+
+    `empties` is the one law that is not uniform: the craft uses every strand the item has, so the count after it is 0 (an Orb of
+    Unravelling, claim `memory_strands.unravelling_effect`; ticket #281). Build it with `everything`; it has no ceilings of its own, and
+    `ceiling` answers the largest count an item can hold.
     """
 
     ceilings: tuple[int, ...]
+    empties: bool = False
 
     def __post_init__(self) -> None:
+        if self.empties:
+            if self.ceilings:
+                raise ValueError(f"a law that uses every strand has no ceilings: {self.ceilings!r}")
+            return
         if not self.ceilings or any(type(ceiling) is not int or ceiling < 1 for ceiling in self.ceilings):
             raise ValueError(f"a spend law has at least one ceiling, each a whole number from 1: {self.ceilings!r}")
 
@@ -128,17 +138,27 @@ class SpendLaw:
         """A uniform whole number whose ceiling is `ceilings[n]` for an item that holds `n` explicit mods before the craft."""
         return cls(tuple(ceilings))
 
+    @classmethod
+    def everything(cls) -> "SpendLaw":
+        """Every strand the item has: the count after the craft is 0, whatever it was."""
+        return cls((), empties=True)
+
     def ceiling(self, mods_before: int = 0) -> int:
-        """The largest spend of a craft on an item with `mods_before` explicit mods."""
+        """The largest spend of a craft on an item with `mods_before` explicit mods (for `empties`, the largest count an item holds)."""
+        if self.empties:
+            return MAX_MEMORY_STRANDS
         return self.ceilings[min(max(mods_before, 0), len(self.ceilings) - 1)]
 
     def after(self, strands: int, mods_before: int = 0) -> Mapping[int, Fraction]:
         """The exact distribution of the count after the craft, from `strands` before it: `max(0, strands - x)` for `x` uniform on 0 to the ceiling.
 
-        The chances sum to exactly 1; a count of 0 stays 0, and a spend larger than the count lands on 0.
+        The chances sum to exactly 1; a count of 0 stays 0, and a spend larger than the count lands on 0. A law that `empties` gives 0
+        with chance 1.
         """
         if type(strands) is not int or strands < 0:
             raise ValueError(f"a strand count is a whole number from 0, got {strands!r}")
+        if self.empties:
+            return {0: Fraction(1)}
         ceiling = self.ceiling(mods_before)
         share = Fraction(1, ceiling + 1)
         counts: dict[int, Fraction] = {}
@@ -148,7 +168,9 @@ class SpendLaw:
         return dict(sorted(counts.items()))
 
     def sample_after(self, rng: random.Random, strands: int, mods_before: int = 0) -> int:
-        """One count after the craft, drawn with `rng`."""
+        """One count after the craft, drawn with `rng` (0 for a law that `empties`, which draws nothing)."""
+        if self.empties:
+            return 0
         return max(0, strands - rng.randrange(self.ceiling(mods_before) + 1))
 
 
@@ -158,12 +180,17 @@ class StrandUse:
 
     `spend` is None for an action that leaves the count alone (a fossil, a Harvest craft, a Scouring Orb). `claims` are the ids of the
     registry claims the declaration rests on, listed on an answer that considers strands. Build one with `cutting` (an action that
-    cuts and spends) or `untouched` (one that does neither).
+    cuts and spends), `untouched` (one that does neither) or `spending_all` (an Orb of Unravelling).
+
+    `count_sets_odds`: the chances of the mods the action leaves depend on the count the item has before the craft other than through a
+    cut (an Orb of Unravelling raises each mod with a chance that grows with the count, ADR-0044). Such an action is not the same craft
+    at 0 strands, so nothing may compare its result with the one it gives (or refuses) on the item with none.
     """
 
     cuts: bool = False
     spend: SpendLaw | None = None
     claims: frozenset[str] = frozenset()
+    count_sets_odds: bool = False
 
     @classmethod
     def cutting(cls, spend: SpendLaw, *rules: Rule) -> "StrandUse":
@@ -175,10 +202,15 @@ class StrandUse:
         """An action that neither cuts nor spends: the strands of the item stay as they are. `rules` are the claims that say so."""
         return cls(False, None, frozenset(rule.id for rule in rules))
 
+    @classmethod
+    def spending_all(cls, *rules: Rule) -> "StrandUse":
+        """An action that uses every strand of the item and whose odds read the count it had (`count_sets_odds`); it does not cut."""
+        return cls(False, SpendLaw.everything(), frozenset(rule.id for rule in rules), count_sets_odds=True)
+
     @property
     def reads_count(self) -> bool:
-        """Whether the result depends on the count the item has: a cut reads it, and so does a spend (the count after is a function of it)."""
-        return self.cuts or self.spend is not None
+        """Whether the result depends on the count the item has: a cut reads it, a spend does (the count after is a function of it), and so do odds that grow with it."""
+        return self.cuts or self.spend is not None or self.count_sets_odds
 
     @property
     def changes_count(self) -> bool:
