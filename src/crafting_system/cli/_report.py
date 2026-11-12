@@ -19,7 +19,7 @@ from crafting_system.items import Rarity, Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN, plain_base_names
 
-from ._interval import IntervalAnswer
+from ._interval import IntervalAnswer, build_interval_answer
 from ._limits import HEADING, PERCENTILE_WORDS, figures, limit_document, limit_text, ordered, unresolved
 from ._marking import (
     ApproximateInput,
@@ -342,7 +342,7 @@ def name_states(ids: Mapping[CompressedState, str], states: Iterable[CompressedS
 
 
 def build_report(plan: Plan, data: GameData) -> Report:
-    """Number the reachable states and collect what each one does."""
+    """Number the reachable states and collect what each one does; a plan solved at every reading of a rule axis carries its interval (#589)."""
     order = policy_states(plan.start, plan.view_policy, plan.is_goal)
     ids = number_states(plan)
     reach = reach_probabilities(plan.start, plan.view_policy, plan.is_goal)
@@ -379,12 +379,15 @@ def build_report(plan: Plan, data: GameData) -> Report:
 
     steps, step_of = report_steps(plan, data)
     uses = price_uses(plan, plan.view_policy)
-    return Report(
+    report = Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
         approximate_inputs(plan, plan.view_policy, data, uses),
         None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
         data=data, steps=steps, step_of=step_of, prices_used=uses,
     )  # fmt: skip
+    if plan.readings is None:
+        return report
+    return with_interval(report, build_interval_answer(plan.readings, plan, data, start=plan.start, is_goal=plan.is_goal))
 
 
 def _leaf_chance(plan: Plan, share: WeightShare) -> float | None:

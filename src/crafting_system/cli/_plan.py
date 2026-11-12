@@ -11,6 +11,7 @@ its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023).
 is always exact, as before.
 """
 
+import itertools
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -19,16 +20,18 @@ from fractions import Fraction
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights, pattern_refusal
 from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
+from crafting_system.actions.contract import Axis, Reading
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
-from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
+from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, is_free_cost, solve_readings
 from crafting_system.solver import Action, ConvergenceError, Outcome, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
+from ._axes import axis_what
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from . import _limits
@@ -133,6 +136,7 @@ class Plan:
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
+    readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
 
     def __post_init__(self) -> None:
         # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13)
@@ -438,30 +442,36 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
-    # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); the rest wait for #589
-    axes = sorted({axis.name for p in priced for axis in p.offer.action.rule_axes(data) if not axis.planned})
-    if axes:
+    # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
+    # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading
+    axes = interval_axes(data, priced)
+    if axes and solver not in ("auto", "object"):
         raise PlanError(
-            f"an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading "
-            "of it with the interval yet"
+            f"an offered action reads a rule the sources leave open ({', '.join(axis_what(axis.name) for axis in axes)}), so the plan is "
+            f"made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that"
         )
-    abstraction = Abstraction(
-        data,
-        goal,
-        target.base_id,
-        target.item_level,
-        enabled,
-        metamods=holds_metamod,
-        enchantment=target.start_item.enchantment,
-        allow_inputs=False,
-    )
+    def model(reading: Reading | None = None) -> Abstraction:
+        """The abstraction of the target at `reading` of the rule axes (None: the plan reading, ADR-0033)."""
+        return Abstraction(
+            data,
+            goal,
+            target.base_id,
+            target.item_level,
+            enabled,
+            metamods=holds_metamod,
+            enchantment=target.start_item.enchantment,
+            allow_inputs=False,
+            reading=reading,
+        )
+
+    abstraction = model()
     start = abstraction.compress(listing or target.start_item)
     shape = abstraction.compress(target.start_item) if listing is not None else None  # the item the start opens into: what the pruning bounds the offers on (ADR-0064)
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
-    refusal = pattern_refusal(abstraction)
+    refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
     # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
     # Nor, for now, with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the bound pruning that already existed, not a new cut-off): on
@@ -469,7 +479,7 @@ def make_plan(
     # exact (OR-11, OR-12), and #742 carries removing this exception.
     many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
     envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not many_offers)
-    if budget is not None and not envelope:
+    if budget is not None and not envelope and not axes:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -504,8 +514,12 @@ def make_plan(
     began = time.perf_counter()
     pruned = None
     packed = None
+    readings = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
-    if many and not envelope and solver != "packed":
+    if axes:
+        readings = solve_each_reading(abstraction, model, start, priced, axes)
+        solution = readings.solution
+    elif many and not envelope and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
@@ -545,8 +559,43 @@ def make_plan(
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings,
     ))
+
+
+def interval_axes(data: GameData, priced: Iterable[PricedOffer]) -> tuple[Axis, ...]:
+    """The rule axes the offered actions read that are not `planned` (ADR-0033), by name: the ones the plan is solved at every reading of (#589)."""
+    found: dict[str, Axis] = {}
+    for each in priced:
+        for axis in each.offer.action.rule_axes(data):
+            if not axis.planned:
+                found.setdefault(axis.name, axis)
+    return tuple(found[name] for name in sorted(found))
+
+
+def solve_each_reading(
+    abstraction: Abstraction,
+    model: Callable[[Reading], Abstraction],
+    start: CompressedState,
+    priced: Sequence[PricedOffer],
+    axes: Sequence[Axis],
+) -> IntervalReport[CompressedState, Reading]:
+    """Solve the plan once for each reading of `axes` and cross-evaluate the routes (`risk.solve_readings`, ADR-0012, ADR-0022; #589).
+
+    A reading is one value of each axis (their product, the plan reading first); an axis that is `planned` stays at its plan value in every
+    one (OR-11). `abstraction` is the model of the plan reading (its `reading` None); each other reading gets its own, `model(reading)`, of the
+    same target and enabled actions, so every kernel is taken at that reading. Each model is solved whole by the object solver: the envelope search
+    and the packed walk take no reading. The solve is exact; no comparison route is asked, since the planner offers no action with inputs.
+    """
+    names = [axis.name for axis in axes]
+    plan = Reading.of({axis.name: axis.plan for axis in axes})
+    every = [Reading.of(dict(zip(names, values))) for values in itertools.product(*(axis.readings for axis in axes))]
+
+    models = {reading: _Model(abstraction if reading == plan else model(reading), start, priced) for reading in (plan, *(r for r in every if r != plan))}
+    try:
+        return solve_readings(models, start, plan=plan)
+    except (OutOfScopeError, ConvergenceError) as error:
+        raise PlanError(f"the plan could not be made at every reading of the rule axis {', '.join(names)}: {error}") from error
 
 
 def envelope_refusal(solver: str, error: Exception) -> str:
