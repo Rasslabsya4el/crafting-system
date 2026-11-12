@@ -51,14 +51,11 @@ ENTRY_POINTS = (
 )
 
 # the modules the audit says are built and not wired: (what it is, module, finding ids, the public names it lists or None for all of them).
-# `with_interval` lives in `cli._report`, a module the command uses, so only the name that is built and not wired is listed from it.
 BUILT_MODULES = (
     ("the market rule", f"{PACKAGE}.prices.trade_market", "INPUTS-2", None),
     ("the price-source rule", f"{PACKAGE}.prices.price_source", "INPUTS-2, PLANNING-6", None),
     ("the item-level floor", f"{PACKAGE}.targets.floor", "TARGETS-3, PLANNING-8, ROUTES-13", None),
     ("the donor loop of two-input actions", f"{PACKAGE}.cli._donors", "ACT2-11", None),
-    ("the interval driver (wiring: ticket #589)", f"{PACKAGE}.cli._interval", "PRES-15", ("build_interval_answer",)),
-    ("the interval driver (wiring: ticket #589)", f"{PACKAGE}.cli._report", "PRES-15", ("with_interval",)),
 )
 
 # the findings of the audit that touch a kind, for the reader: ids only, no claim (the claim is the audit's)

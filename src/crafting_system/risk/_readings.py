@@ -52,7 +52,7 @@ import math
 from collections.abc import Callable, Hashable, Mapping
 from dataclasses import dataclass
 
-from ..solver import Action, Model, solve
+from ..solver import Action, Model, Solution, solve
 from ._mean import INFINITE, policy_mean
 from ._moments import interval
 from ._report import Estimate
@@ -106,6 +106,8 @@ class IntervalReport[S, R]:
     * `lower`, `upper`: the certified bracket `lower <= W* <= upper` of the robust optimum; `upper` is the worst case of
       `robust`. `gap` is `upper - lower` and `proven_optimal` says it is closed.
     * `baseline`: the best route without the actions left out, or None when none were.
+    * `solution`: the whole solution of the plan reading (its values and policy at every state solved), the one `plan.policy`
+      is taken from: the planner reports it as the plan (#589). None only for a report built by hand.
     """
 
     readings: tuple[R, ...]
@@ -117,6 +119,7 @@ class IntervalReport[S, R]:
     lower: Estimate
     upper: Estimate
     baseline: Baseline[S] | None
+    solution: Solution[S] | None = None
 
     @property
     def robust_differs(self) -> bool:
@@ -334,5 +337,6 @@ def solve_readings[S, R: Hashable](
         lower=lower,
         upper=routes[chosen].worst,
         baseline=baseline,
+        solution=solutions[plan],
     )
 
