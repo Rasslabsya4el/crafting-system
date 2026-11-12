@@ -259,11 +259,12 @@ def envelope_result(
     from . import _packed
 
     say = progress or _packed.PROGRESS or (lambda _text: None)
-    with parallel.memory_net(net.memory_mb if net is not None else None):  # the pool's workers are watched by the memory net too (#626, OR-12)
-        packed = _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item)
-    if (reason := getattr(abstraction, "prime_stopped", None)) is not None:
-        say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
-    return packed
+    try:
+        with parallel.memory_net(net.memory_mb if net is not None else None):  # the pool's workers are watched by the memory net too (#626, OR-12)
+            return _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item)
+    finally:  # said on a refusal too
+        if (reason := getattr(abstraction, "prime_stopped", None)) is not None:
+            say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
 
 
 def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item) -> PackedResult:

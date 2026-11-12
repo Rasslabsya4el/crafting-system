@@ -250,8 +250,12 @@ class WorkerPool:
             left = None if deadline is None else max(0.0, deadline - time.monotonic())
             step = left if _memory_net is None else WATCH_SECONDS if left is None else min(left, WATCH_SECONDS)
             _, waiting = wait(waiting, timeout=step, return_when=FIRST_EXCEPTION)
-            if any(future.done() and future.exception() is not None for future in futures):
-                return  # the caller's `result()` raises it, as a plain map does
+            failed = next((future for future in futures if future.done() and not future.cancelled() and future.exception() is not None), None)
+            if failed is not None:  # raised now, not after a chunk that may hang: its workers are stopped as at the timeout (#535)
+                error = failed.exception()
+                if waiting:
+                    self.abandon()
+                raise error
             if not waiting:
                 return
             if _memory_net is not None and (held := held_mb()) is not None and held >= _memory_net:

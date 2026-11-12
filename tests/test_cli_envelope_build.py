@@ -31,6 +31,7 @@ from crafting_system.cli import _envelope_plan
 from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.cli._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.cli._bound_prune import solve_pruned
 from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
 from crafting_system.actions import unopened_listing
 from crafting_system.cli._offers import BuyStartItem, listing_draw
@@ -458,6 +459,15 @@ def test_the_envelope_search_from_an_unopened_start_with_the_floors_gives_the_fu
     info = result.info["envelope"]
     assert info.exact and info.bound_stopped is None and math.isfinite(info.lower)
     assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE) == pytest.approx(exact[start], rel=TOLERANCE)
+
+
+@pytest.mark.parametrize("restart_price", [3.0, 0.05])
+def test_the_pruned_walk_from_an_unopened_start_gives_the_exact_mean(restart_price):
+    """The bound pruning shares `through_listing` with the floors: from a listing, with a dear or a cheap restart, its certificate holds (#626)."""
+    _, start, opened, offers, exact = listing_world(restart_price)
+    fresh = abstraction()
+    pruned = solve_pruned(fresh, fresh.compress(unopened_listing(DATA, opened)), offers, opened, min_offers=0, shape=fresh.compress(opened))
+    assert pruned.solution.values[start] == pytest.approx(exact[start], rel=TOLERANCE)
 
 
 def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):

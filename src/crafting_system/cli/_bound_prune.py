@@ -434,19 +434,14 @@ def _run(
 def through_listing(abstraction: Abstraction, start: CompressedState, shape: CompressedState, chosen: Sequence[int], entries: Sequence[_Entry]) -> None:
     """Count each restart with the draw that follows it when the start is an unopened listing (ADR-0064; see the module text, pbar).
 
-    The restart buys the listing, where only the draw works, so a policy that restarts pays the draw too (the cheapest one offered) and lands in E
-    with the draw's chance; a draw outcome of another shape counts as landing (the argument is cut there, as at a terminal offer). No draw offered,
-    or a listing that is a goal, leaves the restart as it was.
+    The restart buys the listing, where only a draw works, so a policy that restarts pays a draw too and lands in E with that draw's chance: the
+    least cost of the draws offered and the largest of their chances bound every one of them. A draw outcome of another shape counts as landing (the
+    argument is cut there, as at a terminal offer). No draw offered, or a listing that is a goal, leaves the restart as it was.
     """
     if not getattr(start.flags, "unopened", False) or abstraction.is_goal(start):  # the light tests' states carry plain flags
         return
     draws = [entry for entry in entries if getattr(entry.priced.offer.action, "opens_listing", False)]
     if not draws:
-        return
-    draw = min(draws, key=lambda entry: (entry.priced.cost, entry.index))
-    try:
-        outcomes = abstraction.kernel(start, draw.priced.offer.action)
-    except (NotApplicableError, OutOfScopeError):
         return
     held = (shape.flags, shape.fractured)
 
@@ -457,10 +452,19 @@ def through_listing(abstraction: Abstraction, start: CompressedState, shape: Com
             and not all(state.status[index] is Status.PASSING for index in chosen)
         )
 
-    landing = ONE - sum((chance for state, chance in outcomes.items() if outside(state)), ZERO)
+    landing = ZERO
+    for draw in draws:
+        try:
+            outcomes = abstraction.kernel(start, draw.priced.offer.action)
+        except NotApplicableError:
+            continue  # refused at the listing: never used after a restart
+        except OutOfScopeError:
+            return  # no rule for it: the restart stays as it was, and the walk writes its gap
+        landing = max(landing, ONE - sum((chance for state, chance in outcomes.items() if outside(state)), ZERO))
+    cheapest = min(draw.priced.cost for draw in draws)
     for entry in entries:
         if isinstance(entry.priced.offer.action, BuyStartItem):
-            entry.pbar, entry.extra = landing, draw.priced.cost
+            entry.pbar, entry.extra = landing, cheapest
 
 
 def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:

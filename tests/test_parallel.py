@@ -199,3 +199,23 @@ def test_the_memory_held_counts_the_workers():
         during = parallel.held_mb()
         assert [future.result() for future in futures] == [[200 * 2**20]] * 2
     assert during >= alone + 300, (alone, during)
+
+
+def sleeps_or_fails(piece: int) -> int:
+    if piece == 2:
+        raise KeyError(piece)
+    threading.Event().wait(30)
+    return piece
+
+
+@pytest.mark.parametrize("net", [None, 10_000])
+def test_a_failed_chunk_ends_the_wait_at_once_and_kills_the_hung_one(monkeypatch, net):
+    """A chunk that raises while another hangs: the caller gets the error now, not after the hung one, and its workers are stopped (#535 kept)."""
+    monkeypatch.setattr(parallel, "held_mb", lambda: 100.0)
+    began = time.monotonic()
+    with parallel.memory_net(net):
+        with WorkerPool(make_base, (0,), workers=2) as pool:
+            with pytest.raises(KeyError):
+                pool.map(sleeps_or_fails, [1, 2], chunk=1, timeout=20.0)
+            assert pool._executor is None
+    assert time.monotonic() - began < 15
