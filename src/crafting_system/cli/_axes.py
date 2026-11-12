@@ -48,6 +48,14 @@ AXIS_WORDS: dict[str, AxisWords] = {
             "chris_wilson_2014": "the 2014 table of a Grinding Gear Games staff member",
         },
     ),
+    "corruption.vaal_brick": AxisWords(
+        "Vaal brick",
+        "what a Vaal Orb keeps when it turns the item into a rare with six random mods",
+        {
+            "wiki": "the fractured mods and a side locked by a bench craft stay (the wiki)",
+            "coe": "every mod goes, fractured ones too, and no lock holds (Craft of Exile)",
+        },
+    ),
     "elemental_cap": AxisWords(
         "elemental recipe cap",
         "the best tier the vendor recipes that raise an elemental damage mod can reach (tier 1 is the best)",
