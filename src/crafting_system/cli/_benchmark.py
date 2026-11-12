@@ -268,6 +268,17 @@ BENCHMARKS = (
     ),
 )
 
+def reads_own_prices(bench: BenchmarkRoute, root: Path) -> bool:
+    """Whether a heavy script must let the route read the price file its target names instead of the committed snapshot of the routes.
+
+    True for a route that starts from a vendor recipe (V01) and for a target that names its own price file (a top-level `price_file:`;
+    R17, whose beasts and start Talisman are not in the snapshot, #223).
+    """
+    if bench.start is not None:
+        return True
+    return any(line.startswith("price_file:") for line in (root / bench.target).read_text(encoding="utf-8").splitlines())
+
+
 class _Skipped(Exception):
     """A heavy route that `benchmark` leaves unsolved; its entry already says why."""
 

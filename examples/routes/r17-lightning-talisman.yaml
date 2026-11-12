@@ -21,7 +21,8 @@
 #      prefixes locked the craft removes one of the three metamods (the only mods it may take: Harvest add/remove claims), and the
 #      guide names no re-craft, so the craft is simply repeated, as written. A Talisman whose free prefixes are gone is a gap: the
 #      craft has no room to add and the guide names no way on. Should a later craft take the +1 (its prefix lock taken first),
-#      step 6's restore applies, as the guide's own rule for a lost +1.
+#      step 6's restore applies, as the guide's own rule for a lost +1. A Talisman back at 2 free prefixes after its prefix lock and
+#      its Lightning prefix were taken meets step 7's rules again; where the bench refuses the craft there, it is a gap.
 #
 # Counting mods: "only the +1" is 2 free prefixes and 3 free suffixes (the +1 is a prefix); the three metamods are suffixes.
 name: R17, Reddit guide

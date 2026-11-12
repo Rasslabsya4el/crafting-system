@@ -40,7 +40,7 @@ def main(argv: list[str]) -> int:
         return 2
     chosen = [bench for bench in every if bench.id in wanted]
     root = find_project_root()
-    own = [bench for bench in chosen if bench.start is None and names_price_file(root / bench.target)]
+    own = [bench for bench in chosen if bench.start is None and _benchmark.reads_own_prices(bench, root)]
     out = Path(argv[1])
     code = 0
     for folder, group, prices in (

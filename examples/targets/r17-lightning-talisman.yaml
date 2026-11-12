@@ -19,7 +19,9 @@
 #     make the implicit, and no later step touches it (an Alteration, a Regal, an Annulment, the imprint and the Harvest craft all
 #     keep the implicit), so the plan starts from the bought Talisman and the implicit is not a requirement. The planner cannot
 #     read a target that names an implicit yet (#159), and none is needed for the route's decisions.
-#   * The start item is a Normal Croaker Talisman of item level 85 (the Talismans sell at 85; the +1 to all Skill Gems needs 75).
+#   * The start item is a Normal Croaker Talisman of item level 85 (the Talismans sell at 85; the +1 to all Skill Gems needs 75), priced
+#     by the poe.ninja line of that base, which tells no implicit apart: a Talisman with a sought implicit may cost more. Both the plan
+#     and the given route pay the same price for it, so the comparison does not depend on it.
 #     The guide's step 4 is an Orb of Alteration, which works on a Magic item only, so the one Orb of Transmutation that makes the
 #     bought Talisman Magic is a step the game forces before it (OR-16), named below.
 #   * "+1 all skills": "+1 to Level of all Skill Gems", the one tier of its mod (GlobalSkillGemLevel1), rolled (OR-1).
