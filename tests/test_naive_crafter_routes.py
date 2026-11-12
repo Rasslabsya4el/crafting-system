@@ -32,7 +32,7 @@ bracket `(low, high)` from a cost grid whose horizon is 64 of the smallest costs
 own uses say about 10% of plays reach the last two crafts (issue #683). The tests: the share of naive plays that finish lies inside the recorded bracket (widened by K standard
 errors), the share of the recorded heavy run too, and a strict xfail tied to #683 says that the planner's printed value equals the heavy share (it flips when the fix is recorded).
 
-The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (none now); a test makes it refuse each with a message that names the
+The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24 and R07, #775); a test makes it refuse each with a message that names the
 mechanic, and another makes the lists together hold every route file of `examples/routes/`.
 
 R13 plays about 100,000 orb uses per finish (its mean is 12,000 Chaos), so the run of this file plays only `CI_RUNS` of it and its standard
@@ -93,8 +93,11 @@ GAPPED = {
     "R04": ("r04-penetrating-quiver", 2000),
     "R14": ("r14-hunter-bow", 2000),
 }
-# the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it); filed as issues (OR-29). None now.
-NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {}
+# the routes this player cannot play yet, with the mechanic each lacks (the message of `Unsupported` must say it); filed as issues (OR-29).
+NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {
+    "R24": ("r24-avoid-shock-boots", ("Veiled Chaos Orb", "Unveil", "lock a side", "Harvest Add Remove Fire")),  # #775
+    "R07": ("r07-minion-wand", ("Veiled Chaos Orb", "Unveil", "lock a side", "Corroded Fossil", "no bench option")),  # #775
+}
 RECORDED = ROOT / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
 HEAVY = bool(os.environ.get("NAIVE_HEAVY"))
 RUNS_OVERRIDE = int(os.environ["NAIVE_RUNS"]) if os.environ.get("NAIVE_RUNS") else None
