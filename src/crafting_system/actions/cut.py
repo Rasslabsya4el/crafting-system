@@ -21,12 +21,17 @@ ADR-0041; the action passes `self.cut_of(data, item)` to its pool), and a fossil
 a Harvest craft or a beast never does. Fixed mods (an essence's guaranteed mod, a crafted mod) are not drawn from a tier table by
 chance and are not cut either; the caller adds them outside the pool.
 
+The reading a draw uses is the plan reading unless a caller asks for another around the draw (`kept_tier_weights(reading)`, ticket #277):
+`Cut.of` reads it, so a model of another reading (`Abstraction(weights=...)`) reaches every cutting pool without an action knowing of it.
+
 The claims this module holds are not among `Action.claims`: a declaration cites them through `Action.strand_claims` (`strand_use.py`), so
 no answer that does not consider strands lists the (approximate) strand claims, however many actions import from this module.
 """
 
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import StrEnum
 from fractions import Fraction
@@ -67,6 +72,19 @@ class WeightReading(StrEnum):
 
 
 PLAN_READING = WeightReading(WEIGHTS_OF_KEPT_TIERS.value["reading"])
+_READING: ContextVar[WeightReading] = ContextVar("kept_tier_weights", default=PLAN_READING)
+
+
+@contextmanager
+def kept_tier_weights(reading: WeightReading) -> Iterator[None]:
+    """Within the block, `Cut.of` gives a draw the weight reading `reading` instead of the plan's (ADR-0042; ticket #277)."""
+    if not isinstance(reading, WeightReading):
+        raise ValueError(f"the reading of the kept tiers is a WeightReading, got {reading!r}")
+    token = _READING.set(reading)
+    try:
+        yield
+    finally:
+        _READING.reset(token)
 
 
 def strand_rating(strands: int, foulborn: bool = False) -> int:
@@ -111,9 +129,12 @@ class Cut:
             raise ValueError(f"the reading of a cut is a WeightReading, got {self.reading!r}")
 
     @classmethod
-    def of(cls, item: Item, *, foulborn: bool = False, reading: WeightReading = PLAN_READING) -> "Cut":
-        """The cut of a draw on `item` as it stands (its count is the one before the craft)."""
-        return cls(item.memory_strands, foulborn, reading)
+    def of(cls, item: Item, *, foulborn: bool = False, reading: WeightReading | None = None) -> "Cut":
+        """The cut of a draw on `item` as it stands (its count is the one before the craft).
+
+        `reading` None is the reading of the caller's `kept_tier_weights` block, the plan reading outside one.
+        """
+        return cls(item.memory_strands, foulborn, _READING.get() if reading is None else reading)
 
     @property
     def active(self) -> bool:
@@ -168,6 +189,7 @@ __all__ = [
     "PLAN_READING",
     "WeightReading",
     "cut_weights",
+    "kept_tier_weights",
     "rollable_tiers",
     "strand_rating",
 ]

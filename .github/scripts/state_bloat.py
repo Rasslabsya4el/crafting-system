@@ -58,7 +58,7 @@ from crafting_system.cli._route import evaluate_route, load_route
 from crafting_system.cli._starts import plan_with_starts
 from crafting_system.targets import load_target
 
-PARTS = ("flags", "fractured", "status", "slots", "implicits", "quality", "offer", "imprints")
+PARTS = ("flags", "fractured", "status", "slots", "implicits", "quality", "offer", "imprints", "strands")
 JUNK = "junk_names"
 COLUMNS = (*PARTS, JUNK)
 ORDER = ("R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01")
@@ -75,6 +75,7 @@ RUSSIAN = {
     "quality": "качества",
     "offer": "предложения раскрытия",
     "imprints": "слепков",
+    "strands": "числа нитей памяти",
     JUNK: "имён мусорных модов",
 }
 

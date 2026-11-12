@@ -15,7 +15,7 @@ is imported or tested for here.
   imports nothing of `targets`. `Goal.leaves` is the depth-first, file-order list of leaves and the
   order of `CompressedState.status`; `Goal.is_met(statuses)` needs `Status.PASSING` for a leaf.
 * `Status`: ABSENT < BELOW < PASSING, what an item gives one leaf; the best of several mods wins.
-* `CompressedState(flags, fractured, status, slots, implicits, quality, offer, imprints)`: `Flags` (rarity, corrupted, influences), the
+* `CompressedState(flags, fractured, status, slots, implicits, quality, offer, imprints, strands)`: `Flags` (rarity, corrupted, influences), the
   fractured mods as `FracturedMod(canonical id, contribution to each leaf)` sorted, the status of
   each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last four
   are the item state beyond the explicit mods (ADR-0027, ticket #142), empty unless an enabled action reads or
@@ -85,6 +85,16 @@ is imported or tested for here.
   `kernel(state, action)` is the action run on the concrete items the item's state and the donor's state stand for, averaged over where the
   names lie (`_inputs.py`; the two inputs placed independently, uniformly, no two slots of one input in a family). The implicits and
   the quality of the chosen base are in the states and copied by the action.
+* Memory Strands (ticket #277, ADR-0040, ADR-0042). `CompressedState.strands` is the item's count, exact (the spend depends on the
+  exact count), kept for every item: a count that no action changes stays the start item's and adds no state, and at 0 the hash, the
+  order key and the text of a state are what they were before. The items the kernel rebuilds hold the count, so an action that cuts
+  draws from the pool cut at the count before the craft (`Action.cut_of`); a spending action's result (`actions.Spent`) is spread over
+  the counts its spend leaves (`Spent.strands_after`, independent of the mods drawn), and any other result keeps the count of its
+  retained item. The label distribution is cached by pool signature, and the signature reads the cut pool: the counts of one cut class
+  share one distribution. `Abstraction(..., weights=...)` is what the kept tiers weigh in every cutting draw (`actions.cut.WeightReading`;
+  the plan reading of the claim `memory_strands.weights_of_kept_tiers` by default), passed to the pool through `kept_tier_weights`. The
+  pattern bound, the pilot count and the coarse state carry the count as part of `CompressedState.held`; the cut classes as coarse blocks
+  are ticket #283.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 

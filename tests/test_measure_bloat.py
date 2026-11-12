@@ -42,6 +42,7 @@ def state(**changes) -> CompressedState:
         "quality": None,
         "offer": (),
         "imprints": (),
+        "strands": 0,
     }
     fields.update(changes)
     return CompressedState(**fields)
@@ -56,6 +57,7 @@ OTHER = {
     "quality": PlainQuality(20),
     "offer": (OfferedMod("a", (ABSENT,)),),
     "imprints": (state(slots=()),),
+    "strands": 40,
 }
 
 
