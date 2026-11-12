@@ -11,16 +11,17 @@ successful runs, the mean number of steps and the cost of every run, from which 
 reads a quantile and `cvar(level)` the mean of the worst share. A policy is a function from a
 concrete item to a `Step` (an action and what one use of it costs) or to None to stop. The
 intervals are normal approximations, good for thousands of runs. A `Step` may list `inputs` (ticket #222, ADR-0022): second
-items made by nested runs before the action is applied, each an `Input` with its own sub-policy; see `_simulate`.
+items made by nested runs before the action is applied, each an `Input` with its own sub-policy; see `_simulate`. A policy may also name a `Lock` (ticket #297, ADR-0054): every option is thrown on a copy of the
+item and the acceptance set picks the result, or the fallback is applied.
 
-Public names: `Action`, `DonorMismatchError`, `Input`, `Policy`, `SampledEstimate`, `Sampler`, `SimulationReport`, `Step`, `simulate`.
+Public names: `Action`, `DonorMismatchError`, `Input`, `Lock`, `Policy`, `SampledEstimate`, `Sampler`, `SimulationReport`, `Step`, `simulate`.
 """
 
 from ._estimate import SampledEstimate
 from ._report import SimulationReport
 from ._simulate import simulate
-from ._step import Action, DonorMismatchError, Input, Policy, Sampler, Step
+from ._step import Action, DonorMismatchError, Input, Lock, Policy, Sampler, Step
 
 __all__ = [
-    "Action", "DonorMismatchError", "Input", "Policy", "SampledEstimate", "Sampler", "SimulationReport", "Step", "simulate",
+    "Action", "DonorMismatchError", "Input", "Lock", "Policy", "SampledEstimate", "Sampler", "SimulationReport", "Step", "simulate",
 ]  # fmt: skip
