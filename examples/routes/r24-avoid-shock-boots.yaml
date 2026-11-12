@@ -1,0 +1,153 @@
+# Given route for benchmark route R24: fractured-Mana boots with Avoid Shock, Spell Suppression, a resistance and an unveiled
+# Movement Speed + Onslaught (ticket #146).
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices as the
+# solver's route. In every state the FIRST rule whose conditions match is followed; a goal state is never acted on. The conditions
+# and actions are explained in examples/routes/r12-lightning-amulet.yaml; `veil` and `offer` in src/crafting_system/cli/_route.py.
+#
+# The route (Reddit, r/PathOfExileBuilds, 2026-04-03, docs/research/2026-10-30-5-reference-routes.md, id R24):
+#   1. Fracture or purchase Mana (the target buys the boots).
+#   2. Spam the Avoid Shock essence until T1 Suppress.
+#   3. Ensure one open prefix and one open suffix, annulling if necessary; if Suppress or Avoid Shock is annulled, back to 2.
+#   4. Reforge Fire/Cold/Lightning for a T2+ resistance; on a bad one annul it; if a core suffix is lost, back to 2.
+#   5. Lock suffixes.
+#   6. Veiled Chaos for Movement Speed + Onslaught; repeat the locked veiled stage until it is offered.
+#
+# How the steps are read:
+#   * Step 4 is the Harvest craft that adds a Fire-tagged mod (and removes another): of the three elements it is the cheapest at these
+#     prices. The guide names no element, so the file takes one.
+#   * Step 5: the lock "Suffixes Cannot Be Changed" sits on a prefix, so it needs a free prefix (the guide's step 3: one open prefix);
+#     with the prefixes full the route annuls, as step 3 says.
+#   * Step 6: the unveil shows up to three mods; the route picks Movement Speed + Onslaught wherever it is shown. When it is not
+#     shown, the guide's "repeat the locked veiled stage": any mod is picked (the first the game allows; there is no decline),
+#     the suffixes are locked again and the next Veiled Chaos Orb rerolls the prefixes, the picked mod with them.
+#   * `skip_refused: true` only lets a pick the game refuses (the mod would clash with the item) fall to the next pick.
+#   * The veil always lands on a prefix: the three suffixes are full and locked when the Veiled Chaos Orb is used.
+
+name: R24, Reddit guide
+skip_refused: true
+
+rules:
+  # Step 6: the wanted mod is on offer: take it.
+  - when:
+      offer:
+        shows: {family: MovementVelocity}
+        at: 1
+    do: Pick 1
+  - when:
+      offer:
+        shows: {family: MovementVelocity}
+        at: 2
+    do: Pick 2
+  - when:
+      offer:
+        shows: {family: MovementVelocity}
+        at: 3
+    do: Pick 3
+  # Step 6, it is not on offer: there is no decline, so take another and go round the locked veiled stage again.
+  - when:
+      offer: drawn
+    do: Pick 1
+  - when:
+      offer: drawn
+    do: Pick 2
+  - when:
+      offer: drawn
+    do: Pick 3
+  # Step 6: a veil is on the item: unveil it.
+  - when:
+      veil: any
+      offer: none
+    do: Unveil
+  # Step 6: the suffixes are done and locked: Veiled Chaos Orb.
+  - when:
+      crafted_mods: true
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+    do: Veiled Chaos Orb
+  # Step 5: the three suffixes are done: lock them (one rule per resistance that can be the T2+ one).
+  - when:
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+        - family: FireResistance
+          status: passing
+    do: Bench craft Suffixes Cannot Be Changed
+  - when:
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+        - family: ColdResistance
+          status: passing
+    do: Bench craft Suffixes Cannot Be Changed
+  - when:
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: Bench craft Suffixes Cannot Be Changed
+  # Step 4, a bad resistance: annul it (the annulment takes any mod that is not fractured; a lost core suffix sends the route back to 2).
+  - when:
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+        - family: FireResistance
+          status: below
+    do: Orb of Annulment
+  - when:
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+        - family: ColdResistance
+          status: below
+    do: Orb of Annulment
+  - when:
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+        - family: LightningResistance
+          status: below
+    do: Orb of Annulment
+  # Step 4: the core suffixes are there with a free suffix: add a Fire resistance.
+  - when:
+      open_suffixes: 1
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+    do: Harvest Add Remove Fire
+  # Step 3: no free suffix, or no free prefix for the lock: annul.
+  - when:
+      requirements:
+        - family: ReducedShockChance
+          status: passing
+        - family: ChanceToSuppressSpells
+          status: passing
+    do: Orb of Annulment
+  # Step 2 (and every way back to it): the essence.
+  - when:
+      rarity: rare
+    do: Deafening Essence of Torment

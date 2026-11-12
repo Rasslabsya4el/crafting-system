@@ -76,6 +76,7 @@ __all__ = [
     "VeiledExaltedOrb",
     "offer_distribution",
     "offer_pool",
+    "unveil_pool_families",
 ]
 
 CHAOS_REROLLS_WITH_ONE_VEILED_MOD = get_rule("veiled.chaos_reforge_with_one_veiled_mod")
@@ -294,25 +295,37 @@ class VeiledExaltedOrb(Action):
         return Finite(data, item, tuple(results))
 
 
+def _side_pool(data: GameData, base_id: str, generation_type: str) -> tuple[tuple[Mod, int], ...]:
+    """The mods of the unveiled domain on one side with a spawn weight above 0 on the tags of the base, with their weights, in data order."""
+    tags = data.base_items[base_id].tags
+
+    def build() -> tuple[tuple[Mod, int], ...]:
+        return tuple(
+            (mod, weight)
+            for mod in data.mods.values()
+            if mod.domain == UNVEILED_DOMAIN and mod.generation_type == generation_type and (weight := spawn_weight(mod, tags)) > 0
+        )
+
+    return _cached(data, ("pool", base_id, generation_type), build)
+
+
+def unveil_pool_families(data: GameData, base_id: str) -> frozenset[str]:
+    """The families an unveil on the base `base_id` can offer, on either side: a mod of one of them on the item leaves the offer.
+
+    A bench craft of such a family is an unveil block (ADR-0026, ticket #146): the planner offers it to a target that unveils even when
+    its mod counts toward no requirement. A family whose unveiled mods all have weight 0 on the base (R07's Trigger) is not one.
+    """
+    return frozenset(family for side in Side for mod, _ in _side_pool(data, base_id, side.value) for family in mod.families)
+
+
 def offer_pool(data: GameData, item: Item, placeholder: Mod) -> tuple[tuple[Mod, int], ...]:
     """The mods the unveil of `placeholder` can offer on `item`, with their weights on the base, in data order.
 
     The mods of the unveiled domain on the side of the placeholder with a spawn weight above 0 on the tags of the base,
     without a mod whose family is on the item (bench crafts included). The item level and the metamods do not filter it.
     """
-    tags = data.base_items[item.base_id].tags
     taken = item.families(data)
-
-    def build() -> tuple[tuple[Mod, int], ...]:
-        return tuple(
-            (mod, weight)
-            for mod in data.mods.values()
-            if mod.domain == UNVEILED_DOMAIN
-            and mod.generation_type == placeholder.generation_type
-            and (weight := spawn_weight(mod, tags)) > 0
-        )
-
-    side_pool = _cached(data, ("pool", item.base_id, placeholder.generation_type), build)
+    side_pool = _side_pool(data, item.base_id, placeholder.generation_type)
     return tuple((mod, weight) for mod, weight in side_pool if taken.isdisjoint(mod.families))
 
 
