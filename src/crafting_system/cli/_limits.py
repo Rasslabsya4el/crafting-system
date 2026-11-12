@@ -377,6 +377,29 @@ def unresolved(risk, estimate) -> bool:
     return math.isinf(estimate.value) and risk.success_probability.value >= 1.0 and not risk.grid.cause
 
 
+UNRESOLVED = "not computed (the cost of the whole craft is far above its cheapest step)"
+
+
+NOT_COMPUTED = {
+    "subcritical": "not computed: the plan starts more runs of its inputs than it finishes, so its cost has no finite mean",
+    "undecided": "not computed: the chances of the plan are so close to 1 that the arithmetic could not fix the cost to within 1%",
+    "unordered": "not computed: the inputs of the plan depend on each other in a cycle",
+    "improper": "not computed: the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle",
+    "stuck": "not computed: the plan can reach a state from which it cannot finish, so its cost has no finite mean",
+}  # by the cause of `GridInfo` (M7, #506) and of `risk.Expected` (#512); the text report, the route page and the interval say the same words
+
+
+def not_shown(risk, estimate) -> str | None:
+    """Why a quantile of `risk` is not shown, in the words the text report and the route page share (#512); None when it is a number to show.
+
+    Its own cause (M7) when the report has one and the quantile is infinite; `UNRESOLVED` when only the grid could not reach it (the odds
+    are 1); None otherwise, a finite quantile or one of a plan that may not finish (each reader words that case itself).
+    """
+    if risk.grid.cause and math.isinf(estimate.value):  # its own cause, not the grid's; a quantile the grid did compute is shown
+        return NOT_COMPUTED[risk.grid.cause]
+    return UNRESOLVED if unresolved(risk, estimate) else None
+
+
 PERCENTILE_WORDS = {
     "success": "the success chance",
     "mean": "the mean cost",

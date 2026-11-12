@@ -29,6 +29,7 @@ from crafting_system.risk import Estimate, IntervalReport, Route, expected_total
 from crafting_system.solver import Action
 
 from ._axes import axis_what, reading_pair
+from ._limits import NOT_COMPUTED
 from ._marking import ApproximateInput, approximate_inputs_of, number_text
 from ._plan import Plan
 
@@ -63,6 +64,7 @@ class ReadingRow:
     reading: str
     plan_cost: Estimate
     best_cost: Estimate | None
+    cause: str = ""  # why `plan_cost` is infinite, when it is (`risk.Expected.cause`, M7, #512)
 
 
 @dataclass(frozen=True)
@@ -111,6 +113,8 @@ class IntervalAnswer:
     prices: tuple[PriceLine, ...]
     cost_rule_mean: tuple[Estimate, Estimate] | None  # the plan's mean with every combine at the low and at the high end of the cost rule
     approximate_inputs: tuple[ApproximateInput, ...]
+    plan_cause: str = ""  # why `plan` is infinite, when it is (M7, #512)
+    recombinations_cause: str = ""  # why `recombinations` is infinite, when it is
 
     @property
     def gap(self) -> float:
@@ -124,7 +128,7 @@ class IntervalAnswer:
         grid = ", ".join(row.reading for row in self.rows)
         out: list[tuple[str, list[str]]] = [
             ("Rule axis", [f"{names}; the plan is made at {self.plan_reading}; the grid is {grid}"]),
-            ("Plan", [f"{money(self.plan.value)} Chaos ({self.plan.value / divine:.3g} Divine) at {self.plan_reading}"]),
+            ("Plan", [self._plan_line(divine)]),
         ]
         if self.best.value == self.worst.value:
             spread = [f"{money(self.best.value)} Chaos: the plan costs the same at every reading of the grid"]
@@ -135,7 +139,8 @@ class IntervalAnswer:
             ]
         for row in self.rows:
             best = "" if row.best_cost is None else f"; the best route for it costs {money(row.best_cost.value)}"
-            spread.append(f"{row.reading}: the plan costs {money(row.plan_cost.value)}{best}")
+            cost = f"the plan costs {money(row.plan_cost.value)}" if not _said(row.plan_cost, row.cause) else f"the plan's cost is {NOT_COMPUTED[row.cause]}"
+            spread.append(f"{row.reading}: {cost}{best}")
         spread.append(FORMAT_NOTE)
         out.append(("Interval", spread))
         if self.baseline is not None:
@@ -147,16 +152,20 @@ class IntervalAnswer:
             out.append(("Dust and Gold prices", self._price_lines()))
         return out
 
+    def _plan_line(self, divine: float) -> str:
+        if _said(self.plan, self.plan_cause):
+            return f"at {self.plan_reading}: {NOT_COMPUTED[self.plan_cause]}"
+        return f"{money(self.plan.value)} Chaos ({self.plan.value / divine:.3g} Divine) at {self.plan_reading}"
+
     def _baseline_lines(self) -> list[str]:
         assert self.baseline is not None
         if math.isinf(self.baseline.value):
             return ["no route without recombinators reaches the goal"]
-        low = min(row.plan_cost.value for row in self.rows) - self.baseline.value
-        high = max(row.plan_cost.value for row in self.rows) - self.baseline.value
-        lines = [
-            f"{money(self.baseline.value)} Chaos: the best route that uses none",
-            f"plan minus this route: {low:+,.2f} to {high:+,.2f} Chaos over the grid (below 0 the plan is cheaper)",
-        ]
+        lines = [f"{money(self.baseline.value)} Chaos: the best route that uses none"]
+        finite = [row.plan_cost.value for row in self.rows if not _said(row.plan_cost, row.cause)]  # a reading with a cause says it in its row (#512)
+        if finite:
+            low, high = min(finite) - self.baseline.value, max(finite) - self.baseline.value
+            lines.append(f"plan minus this route: {low:+,.2f} to {high:+,.2f} Chaos over the grid (below 0 the plan is cheaper)")
         if self.cost_rule_mean is not None and self.cost_rule_mean[1].value > self.baseline.value >= self.plan.value:
             lines.append(
                 f"the cost of a recombination is approximate too: at the high end of its reports the plan costs "
@@ -185,6 +194,8 @@ class IntervalAnswer:
     def _combine_lines(self) -> list[str]:
         assert self.recombinations is not None
         uses = self.recombinations
+        if _said(uses, self.recombinations_cause):  # no count, so no uses of each and no mean at the ends of the cost rule (#512)
+            return [f"at {self.plan_reading}: {NOT_COMPUTED[self.recombinations_cause]}"]
         lines = [f"{uses.value:,.2f} expected for the plan at {self.plan_reading}" + self._certified(uses)]
         for row in self.combines:
             goods = " + ".join(f"{count:,} {name}" for name, count in row.resources)
@@ -232,17 +243,20 @@ class IntervalAnswer:
     def document(self) -> dict:
         """The JSON `interval` block; costs in Chaos with the start item, `null` for infinity."""
 
-        def est(e: Estimate) -> dict:
-            return {"value": _number(e.value), "low": _number(e.low), "high": _number(e.high)}
+        def est(e: Estimate, cause: str = "") -> dict:
+            found = {"value": _number(e.value), "low": _number(e.low), "high": _number(e.high)}
+            if _said(e, cause):  # the cause travels with the infinite value (M7, #512); a finite one has no key, as before
+                found["cause"] = cause
+            return found
 
         return {
             "rule_axes": [{"axis": axis, "words": axis_what(axis)} for axis in self.axes],
             "plan_reading": self.plan_reading,
             "readings": [
-                {"reading": row.reading, "plan_cost": est(row.plan_cost), "best_route_cost": None if row.best_cost is None else est(row.best_cost)}
+                {"reading": row.reading, "plan_cost": est(row.plan_cost, row.cause), "best_route_cost": None if row.best_cost is None else est(row.best_cost)}
                 for row in self.rows
             ],
-            "plan_cost": est(self.plan),
+            "plan_cost": est(self.plan, self.plan_cause),
             "plan_interval": {
                 "best": est(self.best),
                 "best_reading": self.best_reading,
@@ -266,7 +280,7 @@ class IntervalAnswer:
             "recombinations": None
             if self.recombinations is None
             else {
-                "expected": est(self.recombinations),
+                "expected": est(self.recombinations, self.recombinations_cause),
                 "at_reading": self.plan_reading,
                 "by_action": [
                     {
@@ -284,6 +298,11 @@ class IntervalAnswer:
                 "prices": [{"name": p.name, "chaos_each": p.chaos_each, "source": p.source} for p in self.prices],
             },
         }
+
+
+def _said(estimate: Estimate, cause: str) -> bool:
+    """Whether an infinite figure has a cause to say in place of "never" (M7, #512)."""
+    return bool(cause) and math.isinf(estimate.value)
 
 
 # --- building it from the interval driver's result ---------------------------------------------------------------------
@@ -361,6 +380,7 @@ def build_interval_answer[S, R: Hashable](
             name,
             shifted(plan_row[members[0]]),
             shifted(result.values[members[0]]) if len(members) == 1 else None,
+            plan_row[members[0]].cause,
         )
         for name, members in groups.items()
     )
@@ -369,11 +389,13 @@ def build_interval_answer[S, R: Hashable](
     combine_labels = {a.label for a in plan_actions if is_combine(a)}
 
     recombinations = None
+    recombinations_cause = ""
     combines: list[CombineRow] = []
     prices: dict[str, PriceLine] = {}
     cost_rule_mean = None
     if combine_labels:
-        recombinations = expected_total(result.plan.policy, start, is_goal, lambda a: 1.0 if is_combine(a) else 0.0)
+        counted = expected_total(result.plan.policy, start, is_goal, lambda a: 1.0 if is_combine(a) else 0.0)
+        recombinations, recombinations_cause = counted.estimate, counted.cause
         points: dict[str, tuple[float, float]] = {}  # label -> (chaos at the low end, chaos at the high end) of one use
         for name in sorted(combine_labels):
             priced = plan.offer_of(next(a for a in plan_actions if a.label == name))
@@ -383,7 +405,7 @@ def build_interval_answer[S, R: Hashable](
             low = sum(count * units[good][0] for good, count in low_goods.items() if good in units)
             high = sum(count * units[good][0] for good, count in high_goods.items() if good in units)
             points[name] = (min(low, priced.cost), max(high, priced.cost))
-            uses = expected_total(result.plan.policy, start, is_goal, lambda a, n=name: 1.0 if a.label == n else 0.0)
+            uses = expected_total(result.plan.policy, start, is_goal, lambda a, n=name: 1.0 if a.label == n else 0.0).estimate
             goods = tuple((good, count) for good, count, _, _ in priced.parts if count)
             combines.append(CombineRow(priced.label, uses, goods, priced.cost, *points[name]))
             for good in (DUST, GOLD):
@@ -398,10 +420,11 @@ def build_interval_answer[S, R: Hashable](
             lambda a: points[a.label][1] - plan.offer_of(a).cost if a.label in points else 0.0,
         )  # fmt: skip
         mean = shifted(result.plan.costs[result.plan.reading])
-        cost_rule_mean = (
-            Estimate(mean.value - below.value, mean.low - below.high, mean.high - below.low),
-            Estimate(mean.value + above.value, mean.low + above.low, mean.high + above.high),
-        )
+        if not _said(recombinations, recombinations_cause):  # with no finite count the mean at the ends of the cost rule is not a number either (#512)
+            cost_rule_mean = (
+                Estimate(mean.value - below.value, mean.low - below.high, mean.high - below.low),
+                Estimate(mean.value + above.value, mean.low + above.low, mean.high + above.high),
+            )
 
     actions = [*plan_actions, *robust_actions, *baseline_actions]
     return IntervalAnswer(
@@ -426,6 +449,8 @@ def build_interval_answer[S, R: Hashable](
         prices=tuple(prices.values()),
         cost_rule_mean=cost_rule_mean,
         approximate_inputs=approximate_inputs_of(plan, actions, data),
+        plan_cause=result.plan.costs[result.plan.reading].cause,
+        recombinations_cause=recombinations_cause,
     )
 
 

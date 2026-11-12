@@ -12,7 +12,8 @@ from crafting_system.targets import plain_base_names
 
 from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
 from ._price_marks import price_uses
-from ._report import ROW_WIDTH, UNRESOLVED, Report, _estimate, _row, _shifted, describe_state, interval, name_states, percent, unresolved
+from ._limits import UNRESOLVED, unresolved
+from ._report import ROW_WIDTH, Report, _estimate, _quantile_text, _row, _shifted, describe_state, interval, name_states, percent
 from ._route import Route, RouteResult
 
 
@@ -49,8 +50,8 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
         _row("success", f"{percent(risk.success_probability.value)}   (policy {percent(solver.success_probability.value)})"),
     ]
     for name, given, found in (("mean", risk.mean, solver.mean), ("p50", risk.p50, solver.p50), ("p90", risk.p90, solver.p90)):  # the words of `PERCENTILE_WORDS` (#633)
-        lines.append(_row(name, _interval(given, shift, divine, risk)))
-        lines.append(f"  {'':<{ROW_WIDTH}}(policy {_interval(found, shift, divine, solver)})")
+        lines.append(_row(name, _interval(name, given, shift, divine, risk)))
+        lines.append(f"  {'':<{ROW_WIDTH}}(policy {_interval(name, found, shift, divine, solver)})")
     uses = price_uses(plan, result.policy, risk.mean.value)  # the route's own mean bounds what it buys, not the plan's optimum (#616)
     lines.extend(approximate_lines(approximate_inputs(plan, result.policy, data, uses)))
     lines.append("")
@@ -73,8 +74,10 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
     return plain_base_names(data, "\n".join(lines) + "\n")  # a base by its game name, never its id (#553, #604)
 
 
-def _interval(estimate, shift: float, divine: float, risk) -> str:
-    return UNRESOLVED if unresolved(risk, estimate) else interval(_shifted(estimate, shift), divine)
+def _interval(name: str, estimate, shift: float, divine: float, risk) -> str:
+    if name == "mean":  # as before #512: the mean has no sentence of its own here
+        return UNRESOLVED if unresolved(risk, estimate) else interval(_shifted(estimate, shift), divine)
+    return _quantile_text(risk, estimate, shift, divine)  # a cause of its own (M7) in the words of the planner's report and the page (#512)
 
 
 def route_document(report: Report, route: Route, result: RouteResult, data: GameData, *, file_name: str) -> dict:
