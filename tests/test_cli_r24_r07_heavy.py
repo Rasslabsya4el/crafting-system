@@ -14,7 +14,6 @@ import datetime
 import io
 import os
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -47,14 +46,13 @@ def cli(tmp_path_factory, data, route_id):
     stem = FILES[route_id]
     out = tmp_path_factory.mktemp(route_id) / "policy.json"
     printed = io.StringIO()
-    began = time.perf_counter()
     with contextlib.redirect_stdout(printed):
         code = main(
             [str(ROOT / "examples" / "targets" / f"{stem}.yaml"), "--json", str(out), "--verify", "--runs", str(RUNS), "--progress",
              "--route", str(ROOT / "examples" / "routes" / f"{stem}.yaml")],
             data=data, prices=load_price_file(PRICES), env={}, today=datetime.date(2026, 11, 12),
         )  # fmt: skip
-    print(f"{route_id}: the CLI took {time.perf_counter() - began:.0f} s, exit {code}", file=sys.stderr)
+    print(f"{route_id}: the CLI exit {code} (its times are in the --progress lines)", file=sys.stderr)
     print(printed.getvalue(), file=sys.stderr)
     return code, read_json(out), printed.getvalue()
 
