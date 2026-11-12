@@ -38,6 +38,16 @@ same action under every reading.
 
 Without any axis there is one model: the driver solves it once, the plan is that solution, and the interval is a point.
 
+Hinekora's Lock (ADR-0054, ticket #297). A reading's model may offer a `Peek`; each reading is then solved by `solve_peek`, and its
+candidate is its policy together with its **acceptance sets** (`Route.reactions`). Under another reading the candidate's acceptance
+sets stay as they are and only the chances are recomputed from that reading's kernels (`solver.ExpandedModel`, lenient): the Lock
+leads to the same "apply a" and "give up" pseudo-states with the chances of that reading, an option is matched across readings by its
+label, a pair whose result that reading cannot throw drops out, a result the set does not hold is not accepted, and a state at which the
+candidate did not take the Lock keeps its plain actions only. A pseudo-state the candidate never reached under its own reading (its
+chance was 0 there) takes its only action, or at "give up" the fallback that is best by the candidate's own values. The baseline is
+solved by `solve_peek` too, with the actions left out removed from the Peeks' options and fallbacks. A model without a Peek is solved
+and walked exactly as before.
+
 Known limits:
 * A completion round solves every model again (the optima do not change, only the starts grow); a model set whose
   readings reach many states the others do not pays for the extra rounds. The first round is the only one when the
@@ -50,9 +60,9 @@ Known limits:
 
 import math
 from collections.abc import Callable, Hashable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from ..solver import Action, Model, Solution, solve
+from ..solver import GIVE_UP, Action, ExpandedModel, Model, Peek, PeekNode, Reaction, Solution, action_value, solve_peek
 from ._mean import INFINITE, policy_mean
 from ._moments import interval
 from ._report import Estimate, Expected
@@ -65,7 +75,9 @@ FIRST = object()  # `plan` default: the first reading of `models` (None can be a
 class Route[S, R]:
     """The optimal policy of one reading, and what it costs under every reading.
 
-    `policy` is the solver's, state to the action of `reading`'s own model. `costs[r']` is its mean cost from the start under
+    `policy` is the solver's, state to the action of `reading`'s own model (with the Lock's pseudo-states, `solver.PeekNode`, when
+    it takes the Lock). `reactions` holds the acceptance set of every state at which its reading's model offers the Lock (empty
+    without a Lock); under another reading those sets stay and only the chances change. `costs[r']` is its mean cost from the start under
     reading `r'` (an `Expected`: an `Estimate` and, when it is infinite, its cause, M7 #512). `best` and `worst` are the least and the
     greatest of the points over the readings, as intervals: `value` is the point, `low` and `high` hold for the true number
     whatever the float rounding. `best_reading` and `worst_reading` name where they sit.
@@ -78,6 +90,7 @@ class Route[S, R]:
     worst_reading: R
     best: Estimate
     worst: Estimate
+    reactions: Mapping[S, Reaction] = field(default_factory=dict)
 
     @property
     def interval(self) -> tuple[float, float]:
@@ -177,7 +190,7 @@ class _Memo[S]:
 
 
 class _Without[S]:
-    """A model with some actions left out."""
+    """A model with some actions left out; a Peek keeps the options and fallback actions that are not, and goes when no option is left."""
 
     def __init__(self, memo: _Memo[S], drop: Callable[[Action], bool]) -> None:
         self.memo = memo
@@ -187,7 +200,34 @@ class _Without[S]:
         return self.memo.is_goal(state)
 
     def actions(self, state: S) -> tuple:
-        return tuple(a for a in self.memo.actions(state) if not self.drop(a))
+        found = []
+        for action in self.memo.actions(state):
+            if isinstance(action, Peek):
+                options = tuple(a for a in action.options if not self.drop(a))
+                if options:
+                    found.append(Peek(action.label, action.cost, options, tuple(a for a in action.fallback if not self.drop(a))))
+            elif not self.drop(action):
+                found.append(action)
+        return tuple(found)
+
+
+def _peek_at(memo: _Memo, state: Hashable) -> Peek | None:
+    return next((a for a in memo.actions(state) if isinstance(a, Peek)), None)
+
+
+def _translated(reactions: Mapping, own: _Memo, other: _Memo) -> dict:
+    """A candidate's acceptance sets as they read in another reading's model: each option matched by its label (a pair whose option that
+    model does not offer at the state drops out, as does every pair of a state where it offers no Lock)."""
+    found = {}
+    for state, reaction in reactions.items():
+        mine, theirs = _peek_at(own, state), _peek_at(other, state)
+        if mine is None or theirs is None:
+            continue
+        index: dict = {}
+        for b, option in enumerate(theirs.options):
+            index.setdefault(option.label, b)
+        found[state] = tuple((index[mine.options[a].label], r) for a, r in reaction if mine.options[a].label in index)
+    return found
 
 
 def _estimate(value: float, error: float) -> Estimate:
@@ -197,12 +237,13 @@ def _estimate(value: float, error: float) -> Estimate:
 
 
 def _walk[S](
-    candidate: Mapping[S, Action[S]], start: S, memo: _Memo[S], own: bool
+    candidate: Mapping[S, Action[S]], start: S, memo: _Memo[S], own: bool, values: Mapping[S, float] | None = None
 ) -> tuple[dict[S, Action[S]], list[S]]:
     """The candidate as a policy of the model `memo`, over the states it reaches there, and the reached states it does not cover.
 
     `own` says the candidate was made for this very model: its actions are used as they are. Otherwise each action is
     looked up by label; one the model does not offer leaves its state stuck (no entry, and not reported as uncovered).
+    A Lock's pseudo-state the candidate does not hold takes its only action, or the one best by the candidate's `values`.
     """
     actions: dict[S, Action[S]] = {}
     uncovered: list[S] = []
@@ -213,10 +254,14 @@ def _walk[S](
         if memo.is_goal(state):
             continue
         chosen = candidate.get(state)
+        as_is = own
+        if chosen is None and isinstance(state, PeekNode):
+            chosen, as_is = _node_action(state, memo, values or {}), True
         if chosen is None:
-            uncovered.append(state)
+            if not isinstance(state, PeekNode):
+                uncovered.append(state)
             continue
-        action = chosen if own else memo.by_label(state, chosen.label)
+        action = chosen if as_is else memo.by_label(state, chosen.label)
         if action is None:
             continue
         actions[state] = action
@@ -228,8 +273,16 @@ def _walk[S](
     return actions, uncovered
 
 
-def _key(policy: Mapping) -> frozenset:
-    return frozenset((state, action.label) for state, action in policy.items())
+def _node_action(node: PeekNode, memo: _Memo, values: Mapping) -> Action | None:
+    """The action of a Lock's pseudo-state that the candidate never reached: an "apply" node's one action, or the fallback best by `values`."""
+    offered = memo.actions(node)
+    if len(offered) <= 1 or node.kind != GIVE_UP:
+        return offered[0] if offered else None
+    return min(offered, key=lambda action: action_value(action, values))
+
+
+def _key(policy: Mapping, reactions: Mapping) -> tuple[frozenset, frozenset]:
+    return frozenset((state, action.label) for state, action in policy.items()), frozenset(reactions.items())
 
 
 def _best_and_worst[R](costs: Mapping[R, Expected]) -> tuple[R, R, Estimate, Estimate]:
@@ -278,20 +331,34 @@ def solve_readings[S, R: Hashable](
         "value_ceiling": value_ceiling,
     }
     memos = {r: _Memo(models[r]) for r in order}
+    views: dict[tuple, _Memo] = {}  # (candidate key, reading) -> the reading's model under the candidate's acceptance sets
+
+    def view(c: R, r2: R) -> _Memo:
+        reactions = solutions[c].reactions
+        if not reactions:
+            return memos[r2]
+        slot = (keys[c], r2)
+        if slot not in views:
+            fixed = reactions if c == r2 else _translated(reactions, memos[c], memos[r2])
+            views[slot] = _Memo(ExpandedModel(memos[r2], fixed, lenient=True))
+        return views[slot]
 
     # the optimum of every reading, from starts enlarged until each optimum is total under every other reading
     starts: dict[S, None] = {start: None}
-    walks: dict[tuple[frozenset, R], tuple[dict[S, Action[S]], list[S]]] = {}
+    walks: dict[tuple, tuple[dict[S, Action[S]], list[S]]] = {}
     while True:
-        solutions = {r: solve(memos[r], list(starts), **options) for r in order}
-        keys = {r: _key(solutions[r].policy) for r in order}
+        solutions = {r: solve_peek(memos[r], list(starts), **options) for r in order}
+        keys = {r: _key(solutions[r].policy, solutions[r].reactions) for r in order}
         walks.clear()
+        views.clear()
         grown = False
         for r in order:
             for r2 in order:
                 if (keys[r], r2) in walks:
                     continue
-                walk = walks[(keys[r], r2)] = _walk(solutions[r].policy, start, memos[r2], own=r == r2)
+                walk = walks[(keys[r], r2)] = _walk(
+                    solutions[r].policy, start, view(r, r2), own=r == r2, values=solutions[r].values
+                )
                 for state in walk[1]:
                     if state not in starts:
                         starts[state] = None
@@ -304,7 +371,7 @@ def solve_readings[S, R: Hashable](
     def cost(c: R, r2: R) -> Expected:
         slot = (keys[c], r2)
         if slot not in means:
-            means[slot] = policy_mean(walks[slot][0], start, memos[r2].is_goal)
+            means[slot] = policy_mean(walks[slot][0], start, view(c, r2).is_goal)
         return means[slot]
 
     table = {c: {r2: cost(c, r2) for r2 in order} for c in order}
@@ -312,7 +379,7 @@ def solve_readings[S, R: Hashable](
     routes = {}
     for c in order:
         best_reading, worst_reading, best, worst = _best_and_worst(table[c])
-        routes[c] = Route(c, solutions[c].policy, table[c], best_reading, worst_reading, best, worst)
+        routes[c] = Route(c, solutions[c].policy, table[c], best_reading, worst_reading, best, worst, solutions[c].reactions)
 
     chosen = plan
     for c in order:
@@ -325,7 +392,7 @@ def solve_readings[S, R: Hashable](
     baseline = None
     if without is not None:
         kept = _Without(memos[plan], without)
-        found = solve(kept, [start], **options)
+        found = solve_peek(kept, [start], **options)
         baseline = Baseline(_estimate(found.values[start], found.error_bound), found.policy)
     return IntervalReport(
         readings=tuple(order),

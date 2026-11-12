@@ -1,4 +1,4 @@
-"""What a policy hands the simulator: a step, that is an action and the price of using it once, with the runs it consumes."""
+"""What a policy hands the simulator: a step, that is an action and the price of using it once, with the runs it consumes; or a Lock."""
 
 import math
 import random
@@ -98,5 +98,49 @@ class Step:
         object.__setattr__(self, "cost", cost)
 
 
-Policy = Callable[[Item], Step | None]
-"""A concrete item to the step to take on it, or None to stop. Called only on items that are not a goal."""
+@dataclass(frozen=True, slots=True)
+class Lock:
+    """Hinekora's Lock on the item in hand (ADR-0054; ticket #297, ADR-0057 layer 2): look at every option, then use the best one or give up.
+
+    Every use pays `cost` and counts as one click. Then each option of `options` (a `Step` without inputs, in order) is thrown
+    on a copy of the item in hand, each independently (the owner's rule of ADR-0054: one preview tells nothing of another).
+    `accept(a, result)` is the acceptance set: the rank of the result `result` of option `a` (smaller is better, any
+    comparable value), or None when that result is not taken. The option holding the best accepted result is used: its
+    `cost` is paid, it counts as one more click and its result, the one shown, replaces the item; a tie goes to the earlier
+    option. With nothing accepted the `fallback` step is applied to the item as it was (a burn, an unpreviewed action, a
+    restart), or, with no fallback, the run stops. Looking is free: an option that is not used costs nothing.
+
+    The simulator checks the arithmetic of the Lock (which result the player takes and what it costs), not the independence,
+    which is the owner's rule.
+    """
+
+    cost: float
+    options: tuple[Step, ...]
+    accept: Callable[[int, Item], object | None]
+    fallback: Step | None = None
+
+    def __post_init__(self) -> None:
+        options = tuple(self.options)
+        if not options:
+            raise ValueError("a Lock needs at least one option")
+        for option in options:
+            if not isinstance(option, Step):
+                raise ValueError(f"a Lock option is a Step, got {option!r}")
+            if option.inputs:
+                raise ValueError("a Lock option never consumes another item (ADR-0054)")
+        if not callable(self.accept):
+            raise ValueError(f"accept must be a function from (option index, result) to a rank or None, got {self.accept!r}")
+        if self.fallback is not None and not isinstance(self.fallback, Step):
+            raise ValueError(f"a Lock fallback is a Step or None, got {self.fallback!r}")
+        cost = self.cost
+        if isinstance(cost, bool) or not isinstance(cost, Real):
+            raise ValueError(f"Lock cost must be a real number, got {cost!r}")
+        cost = float(cost)
+        if not math.isfinite(cost) or cost < 0.0:
+            raise ValueError(f"Lock cost must be finite and not negative, got {self.cost!r}")
+        object.__setattr__(self, "options", options)
+        object.__setattr__(self, "cost", cost)
+
+
+Policy = Callable[[Item], Step | Lock | None]
+"""A concrete item to the step to take on it (a `Step` or a `Lock`), or None to stop. Called only on items that are not a goal."""
