@@ -22,10 +22,10 @@ from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal,
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
-from crafting_system.prices import PriceFile, planned_price
+from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, is_free_cost, solve_readings
-from crafting_system.solver import Action, ConvergenceError, Outcome, Solution, solve
+from crafting_system.solver import Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
@@ -33,6 +33,7 @@ from ._approx import Approximation, climb
 from ._axes import axis_what
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
+from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, listing_draw, offers_for, price_offers, split_usable
@@ -136,6 +137,7 @@ class Plan:
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
     readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
+    foresight: Foresight | None = None  # what the plan found about Hinekora's Lock (ticket #296, ADR-0057); None for a plan that was not solved
 
     def __post_init__(self) -> None:
         # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13)
@@ -167,7 +169,7 @@ class Plan:
         return self.view_policy is not self.policy
 
     def is_goal(self, state: CompressedState) -> bool:
-        return self.abstraction.is_goal(state)
+        return not isinstance(state, PeekNode) and self.abstraction.is_goal(state)  # a Lock's pseudo-state (ADR-0054) is no goal
 
     def offer_of(self, action: Action[CompressedState]) -> PricedOffer:
         """The priced offer a policy action stands for (the action label is the offer label); `restart` is one."""
@@ -506,14 +508,16 @@ def make_plan(
         if decision.action == "approximate":
             try:
                 solved = climb(decision, start, merged)
-            except ValueError as error:
+                burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+                foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
+            except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
                 raise PlanError(str(error)) from error
             limits += skipped_level_limits(solved.skipped)
             if merged_twins:
                 limits += (twins_limit(merged_twins),)  # G17: the approximate answer is made of the offers left after the twins
             return finished(Plan(
                 target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, limits,
-                solved.solution, None, solved.seconds, 0.0, solved.approximation,
+                solved.solution, None, solved.seconds, 0.0, solved.approximation, foresight=foresight,
             ))  # fmt: skip
 
     began = time.perf_counter()
@@ -525,10 +529,12 @@ def make_plan(
         readings, others = solve_each_reading(abstraction, model, start, priced, axes)
         solution = readings.solution
         limits += reading_limits(abstraction, others, budget is not None)
+        offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     elif many and not envelope and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
+        offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     else:
         offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
         if twins:
@@ -546,9 +552,17 @@ def make_plan(
         solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
         if packed is not None:
             limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
-    solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
+    foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
+    if with_lock is not None and readings is not None:
+        raise PlanError(
+            "the cheapest plan takes Hinekora's Lock, and a plan made once for each reading of a rule the sources leave open "
+            "cannot take the Lock yet. To see the best plan without the Lock, name the kinds to use in the target's `actions:` without `hinekora-lock`"
+        )
+    if with_lock is not None:  # the plan takes the Lock: its policy is the second solve's, on the object solver (ADR-0054)
+        solution, packed = with_lock, None
+    solve_seconds = time.perf_counter() - began
 
     risk, risk_seconds = None, 0.0
     if with_risk:
@@ -556,7 +570,7 @@ def make_plan(
         if packed is not None:
             risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
         else:
-            risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
+            risk = evaluate_risk(solution.policy, start, lambda state: not isinstance(state, PeekNode) and abstraction.is_goal(state), solution.values[start], free_cost=free_action_cost(priced))
             risk_found = risk_limits(risk)
         limits += risk_found
         risk_seconds = time.perf_counter() - began
@@ -565,7 +579,7 @@ def make_plan(
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight,
     ))
 
 
@@ -638,6 +652,43 @@ def reading_limits(abstraction: Abstraction, others: Iterable[Abstraction], budg
             "The answer is exact at every reading; only the time it takes is not bounded.",
         ))  # fmt: skip
     return tuple(found)
+
+
+
+def plan_foresight(
+    data: GameData,
+    target: Target,
+    prices: PriceFile,
+    abstraction: Abstraction,
+    start: CompressedState,
+    solution: Solution[CompressedState],
+    priced: Sequence[PricedOffer],
+    offered: Sequence[PricedOffer] | None,
+    pruned: Pruned | None,
+    price_source: str = DEFAULT_PRICE_SOURCE,
+) -> tuple[Foresight, Solution | None]:
+    """Hinekora's Lock of an exact plan (`_foresight.foresee`): its status, N and, when the plan takes it, the solution with the Lock.
+
+    The options come from the full list `priced`; the fallback of the gains for N reads the offers the Lock-free solve used (`offered`, or the offers
+    the bound pruning kept, a subset whose fallback is never cheaper, so N is never overstated); the second solve and the fallback of its Peeks read the
+    offers after the twins, with no bound pruning (`offered`, or the twins merged from `priced`). Nothing is built for a Lock the target switched off.
+    """
+    lock = lock_price(prices, price_source)
+    if not lock_wanted(target.actions):  # switched off: nothing is built
+        return Foresight(LockStatus.SWITCHED_OFF, lock), None
+    burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+    cache: dict = {}
+    plain = offered if offered is not None else (pruned.used if pruned is not None else priced)
+    sites = PlanSites(abstraction, priced, plain, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
+
+    def second_solve():
+        second = offered if offered is not None else tuple(merge_twins(data, target.start_item, priced)[0])
+        peeks = sites if second is plain else PlanSites(abstraction, priced, second, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
+        return _Model(abstraction, start, second, cache), peeks
+
+    return foresee(
+        abstraction, start, solution, sites, second_solve, lock=lock, c_min=cheapest_cost(priced, burn), is_goal=abstraction.is_goal,
+    )  # fmt: skip
 
 
 def envelope_refusal(solver: str, error: Exception) -> str:
@@ -826,7 +877,7 @@ def add_risk(plan: Plan) -> Plan:
     if plan.packed is not None:
         risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
     else:
-        risk = evaluate_risk(plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free)
+        risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, plan.solution.values[plan.start], free_cost=free)
         found = risk_limits(risk)
     return replace(plan, risk=risk, limits=with_limits(plan.limits, found, _limits.RISK), risk_seconds=time.perf_counter() - began)
 

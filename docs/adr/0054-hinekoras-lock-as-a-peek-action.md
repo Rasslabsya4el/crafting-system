@@ -68,3 +68,13 @@ Besides the Lock's own node there are `m + 1` pseudo-states per Lock state (the 
 - The one-look model: needed only for a shared draw, which the owner excluded.
 
 Origin: [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106) (round 1, answer 2, and the main chat's technical decisions in the round draft); [Hinekora's Lock in 3.29](../research/2026-10-31-hinekora-lock.md) sections 4 and 6; ADR-0005, ADR-0009, ADR-0010, ADR-0022, ADR-0023, ADR-0031.
+
+## Amendment: what the build of the planner's side decided (ticket [#296](https://github.com/Rasslabsya4el/crafting-system/issues/296), B8-4, 2026-11-12)
+
+`cli/_foresight.py` is the planner's side of this ADR. Three choices of the build, each exact or erring against the Lock:
+
+- **`c_min` is the cheapest action of the whole plan** (every priced offer and the burn), not of each state. It is at most the cheapest option or fallback action of any state, and of any member of a block (the optimistic offer of the coarse level), so the pruning stays exact; it needs no kernel, and at the Lock's price the difference is nothing.
+- **The second solve takes the plain offers after the twins, without the bound pruning** of ADR-0031: that pruning is proved for the Lock-free model (its lower bound `rho` holds for policies without a Lock), so the solve with a Lock does not use it. The fallback of the gains for N reads the offers the Lock-free solve used, the ones the bound pruning kept on that path: a smaller fallback is never cheaper, so N is never overstated.
+- **N is found by branch and bound** over the visited states in falling `V(s)`, with `g(s) <= V(s) - c_min`, and stops after `GAIN_STATES` states on a plan that visits more (it is then not shown to be the largest gain; every gain found is still a true "would pay below"). The report says so (ticket #298).
+
+A burn is a self-loop: the planner refuses a target that names quality, sockets, implicits or an enchantment, so no state keeps what a burn changes.
