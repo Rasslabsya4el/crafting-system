@@ -8,18 +8,17 @@ that is exact (ADR-0058, "What the state keeps"): a link group shorter than the 
 held as groups of one), because no action grows a group or reads a short one. The real colours and the positions are kept. Item level,
 class and quality are constants of the problem; the quality is compared at two levels (`solve_finish`).
 
-**The kernels** are the formulas of the socket actions, read through their public helpers (`jeweller_weights`, `fusing_links`,
-`resized_sockets`, `colour_roll`), on the state as an item would hold it. `FinishModel.kernel` gives one exactly (`Fraction`s that sum to 1);
-layer 1 compares it with the action itself run on every concrete socket assignment (`tests/test_socket_finish.py`). An action whose kernel
-on a state is "stay where you are" for certain is no action there: it can only cost (the concrete item may refuse it or let it change
-links that are forgotten).
+**The kernels** come from the actions alone (the contract, ticket #108): each finish action gives its `SocketRule` (`Action.socket_rule`) for the
+base, item level, quality and reading, so no mechanic of a socket action is written here. A rule with a `shape` changes the count or the links
+(its results are listed: at most 32); a rule with a `roll` changes the colours, and is one **shared table** per (step, count, link groups), the roll
+before the exclusion. `FinishModel.kernel` gives one kernel exactly (`Fraction`s that sum to 1); layer 1 compares it with the action itself run
+on every concrete socket assignment (`tests/test_socket_finish.py`). An action whose kernel on a state is "stay where you are" for certain is no
+action there: it can only cost (the concrete item may refuse it or let it change links that are forgotten).
 
-* Jeweller's Orb, Omen of the Jeweller, Orb of Fusing, Omen of Connections, the bench count and link crafts: at most 32 outcomes, listed.
-* Chromatic Orb, Omen of Trichromatism, the bench colour crafts: one **shared table** per (roll, count, link groups), the roll before the
-  exclusion. A Chromatic Orb never returns the item's colours (ADR-0047): with `e` the table's chance of the state's own colours and
-  `S` the table summed over all outcomes at the current values, its backup is `cost + (S - e V(s)) / (1 - e)`, which is exactly the roll
-  conditioned on other colours. A bench colour craft excludes nothing, so its own colours are a self-loop: `(cost + S - e V(s)) / (1 - e)`.
-  A sweep costs the states plus the table entries, not the states times the outcomes (ADR-0058, decision 1).
+A roll that `excludes_current` (a Chromatic Orb never returns the item's colours, ADR-0047): with `e` the table's chance of the state's own colours
+and `S` the table summed over all outcomes at the current values, its backup is `cost + (S - e V(s)) / (1 - e)`, exactly the roll conditioned on
+other colours. A roll that excludes nothing (a bench colour craft) has its own colours as a self-loop: `(cost + S - e V(s)) / (1 - e)`. A sweep
+costs the states plus the table entries, not the states times the outcomes (ADR-0058, decision 1).
 
 **The solve** is value iteration over these backups with Anderson acceleration (depth 6, a step accepted only when it lowers the Bellman
 residual), from below, until the largest Bellman residual is below `TOLERANCE` of the largest value. A listed action's self-loop is solved out
@@ -27,8 +26,9 @@ residual), from below, until the largest Bellman residual is below `TOLERANCE` o
 certain are found (they keep an infinite value) and every action that may lead to one is left out. `solver.solve` is not used (ADR-0058,
 decision 3; `abstraction` may not import `solver`).
 
-**Readings** (ADR-0047): the Jeweller's table and the forced colour of a one-coloured target have a second reading; the finish is solved at the
-plan's, and the second reading's number is the plan's policy evaluated at it (not a re-solve), as ADR-0045 says.
+**Readings** (ADR-0047): an action the plan's policy takes may read a rule axis (`Action.rule_axes`: the Jeweller's table, the forced colour); the
+finish is solved at the plan's reading, and each other reading's number is the plan's policy evaluated at it (not a re-solve), as ADR-0045 says.
+A reading that changes no number (the forced colour of a target that needs two coloured sockets or more) is not listed.
 
 **The bound flag** of Orb of Binding (ADR-0048, ticket #232) is a second start of the same problem: `FinishValues.of` gives the value of any
 state the solve reached, and `solve_finish` takes the start it is given.
@@ -45,29 +45,7 @@ from math import inf
 
 import numpy as np
 
-from crafting_system.actions.contract import Action, Reading
-from crafting_system.actions.errors import OutOfScopeError
-from crafting_system.actions.quality_currency import MAX_CURRENCY_QUALITY, ApplyQualityCurrency, expected_quality_currency
-from crafting_system.actions.socket_colours import (
-    CHROMATIC_FORCED_COLOUR,
-    FLATTER_SECOND_READING,
-    OMEN_MINIMUM_SOCKETS,
-    BenchSocketColours,
-    ChromaticOrb,
-    colour_roll,
-)
-from crafting_system.actions.socket_orbs import (
-    DEVELOPER_2014_TABLE,
-    FUSING_MIN_QUALITY,
-    JEWELLER_TABLE,
-    BenchSocketCount,
-    BenchSocketLinks,
-    JewellersOrb,
-    OrbOfFusing,
-    fusing_links,
-    item_level_gate,
-    jeweller_weights,
-)
+from crafting_system.actions import MAX_CURRENCY_QUALITY, Action, OutOfScopeError, Reading, SocketRule, expected_quality_currency
 from crafting_system.data import GameData
 from crafting_system.items import SocketColour, Sockets, class_maximum
 
@@ -195,8 +173,9 @@ class FinishValues:
 class FinishModel:
     """The finish of one target on one base at one item level and plain quality, with the finish actions offered (ADR-0045, ADR-0058).
 
-    `steps` are the actions with their costs; an action of a kind the finish does not know is `OutOfScopeError`. `reading` is the reading of
-    the rule axes the kernels are taken at (None: the plan's). A base with no socket table is `OutOfScopeError`.
+    `steps` are the actions with their costs (labels distinct); each is asked its `SocketRule` here, and one with none on this base at this
+    quality is not offered. `reading` is the reading of the rule axes the rules are taken at (None: the plan's). A base with no socket table is
+    `OutOfScopeError`.
     """
 
     def __init__(
@@ -211,41 +190,27 @@ class FinishModel:
         reading: Reading | None = None,
     ) -> None:
         base = data.base_items[base_id]
-        most = class_maximum(base)
-        if most is None:
+        if class_maximum(base) is None:
             raise OutOfScopeError(f"a {base.item_class} takes no sockets, so it has no socket finish")
+        labels = [step.label for step in steps]
+        if len(set(labels)) != len(labels):
+            raise ValueError("the finish steps need distinct labels")
         for step in steps:
-            if not isinstance(step.action, (JewellersOrb, OrbOfFusing, BenchSocketCount, BenchSocketLinks, ChromaticOrb, BenchSocketColours)):
-                raise OutOfScopeError(f"{step.label} is not an action of the socket finish")
             if not step.cost > 0:
-                raise ValueError(f"a finish step costs more than 0, got {step.cost!r} for {step.label}")
+                raise ValueError("every finish step costs more than 0")
+            if not step.action.adds(data).only_sockets:
+                raise ValueError("a finish step is an action that changes the sockets and nothing else")
         self.data = data
         self.base_id = base_id
         self.item_level = item_level
         self.wanted = wanted
         self.quality = quality
         self.reading = reading
-        self.most = most
-        self.reach = min(most, item_level_gate(item_level))
-        self.item_class = base.item_class
-        self.coloured = any(base.attribute_requirements)  # a base that asks for no attribute has no colour weights in any admitted rule (ADR-0047)
-        if not self.coloured and any(wanted.named):
-            raise OutOfScopeError(
-                "the base asks for no attribute, and the model has no rule for the colours of its sockets",
-                detail="the base asks for no attribute, and no admitted rule weights the colours of its sockets (ADR-0047)",
-            )
-        self.steps = tuple(step for step in steps if self._offered(step.action))
-
-    def _offered(self, action: Action) -> bool:
-        """Whether the action can be used on this base at all: the bench offers the craft for its class, and a colour action needs colour weights."""
-        if isinstance(action, (ChromaticOrb, BenchSocketColours)) and not self.coloured:
-            return False
-        if isinstance(action, (BenchSocketCount, BenchSocketLinks, BenchSocketColours)):
-            try:
-                return self.item_class in action.option(self.data).item_classes
-            except ValueError:
-                return False
-        return True
+        rules = [(step, step.action.socket_rule(data, base_id, item_level, quality, reading)) for step in steps]
+        self.steps = tuple(step for step, rule in rules if rule is not None)
+        self.rules: dict[str, SocketRule] = {step.label: rule for step, rule in rules if rule is not None}
+        self._shapes: dict = {}
+        self._tables: dict = {}
 
     # --- the state --------------------------------------------------------------------------------------
 
@@ -267,109 +232,51 @@ class FinishModel:
 
     # --- the kernels -------------------------------------------------------------------------------------
 
-    @cached_property
-    def _fusing(self) -> dict[int, tuple[tuple[tuple[int, ...], Fraction], ...]]:
-        found = {}
-        for count in range(2, self.most + 1):
-            merged: dict[tuple[int, ...], Fraction] = {}
-            for links, chance in fusing_links(count).items():
-                reduced = self.reduce(((WHITE,) * count, links))[1]
-                merged[reduced] = merged.get(reduced, Fraction(0)) + chance
-            found[count] = tuple(merged.items())
-        return found
+    def shape_kernel(self, step: FinishStep, count: int, links: tuple[int, ...]) -> tuple[tuple[int, tuple[int, ...], Fraction], ...] | None:
+        """The kernel of a step whose rule has a `shape` on `count` sockets in the reduced `links`, its results' links reduced and merged; None
+        where the game refuses it. Cached by its arguments."""
+        key = (step.label, count, links)
+        if key not in self._shapes:
+            found = self.rules[step.label].shape(count, links)
+            if found is None:
+                self._shapes[key] = None
+            else:
+                merged: dict[tuple[int, tuple[int, ...]], Fraction] = {}
+                for new, new_links, chance in found:
+                    reduced = (new, self.reduce(((WHITE,) * new, tuple(new_links)))[1])
+                    merged[reduced] = merged.get(reduced, Fraction(0)) + chance
+                self._shapes[key] = tuple((new, new_links, chance) for (new, new_links), chance in merged.items())
+        return self._shapes[key]
 
-    def _rolls(self, action: Action, count: int) -> Mapping[tuple[int, ...], Fraction] | None:
-        """The table of a colour action on `count` sockets before the exclusion (None where the action is refused on that many sockets)."""
-        key = (type(action), getattr(action, "omen", None), getattr(action, "minimum", None), count)
-        cache = self.__dict__.setdefault("_roll_cache", {})
-        if key in cache:
-            return cache[key]
-        table: Mapping[tuple[int, ...], Fraction] | None
-        if isinstance(action, ChromaticOrb):
-            if action.omen and count < OMEN_MINIMUM_SOCKETS:
-                table = None
-            else:
-                roll = colour_roll(self.data, self.base_id, self.item_level, self.quality, count, self.reading, forced=not action.omen)
-                numbered = {tuple(_COLOUR_OF[c] for c in colours): chance for colours, chance in roll.items()}
-                table = _condition(numbered, lambda colours: all(n in colours for n in (RED, GREEN, BLUE))) if action.omen else numbered
-        else:  # a bench colour craft: the roll with no forced socket, conditioned on enough non-white sockets
-            if count < action.minimum:
-                table = None
-            else:
-                roll = colour_roll(self.data, self.base_id, self.item_level, self.quality, count, forced=False)
-                numbered = {tuple(_COLOUR_OF[c] for c in colours): chance for colours, chance in roll.items()}
-                table = _condition(numbered, lambda colours: sum(n != WHITE for n in colours) >= action.minimum)
-        cache[key] = table
-        return table
+    def roll_table(self, step: FinishStep, count: int) -> Mapping[tuple[int, ...], Fraction] | None:
+        """The roll of a step whose rule has a `roll` on `count` sockets, colours as numbers; None where the game refuses it. Cached."""
+        key = (step.label, count)
+        if key not in self._tables:
+            found = self.rules[step.label].roll(count)
+            self._tables[key] = None if found is None else {tuple(_COLOUR_OF[colour] for colour in colours): chance for colours, chance in found.items()}
+        return self._tables[key]
 
     def kernel(self, state: State, step: FinishStep) -> dict[State, Fraction] | None:
         """The exact kernel of `step` on the reduced `state`: each reduced result with its chance (they sum to 1), or None where it is no action.
 
         None means the game refuses it there, or every result is the state itself (an action that can only cost)."""
-        found = self._kernel(state, step.action)
+        found = self._kernel(state, step)
         if found is None or found == {state: Fraction(1)}:
             return None
         return found
 
-    def shape_kernel(self, action: Action, count: int, links: tuple[int, ...]) -> tuple[tuple[int, tuple[int, ...], Fraction], ...] | None:
-        """The kernel of a listed action (one that changes the count or the links) on `count` sockets with the reduced `links`, whatever the colours.
-
-        Each result is `(new count, new reduced links, chance)`: the colours of the result are the item's, cut or grown with white sockets to the new
-        count (ADR-0046), so they are not needed here. None where the game refuses the action. Cached by its arguments."""
-        key = (action, count, links)
-        cache = self.__dict__.setdefault("_shape_cache", {})
-        if key not in cache:
-            cache[key] = self._shape(action, count, links)
-        return cache[key]
-
-    def _shape(self, action: Action, count: int, links: tuple[int, ...]) -> tuple[tuple[int, tuple[int, ...], Fraction], ...] | None:
-        blank = ((WHITE,) * count, links)  # the colours do not decide the links of a result
-
-        def resized(new: int, chance: Fraction) -> tuple[int, tuple[int, ...], Fraction]:
-            return new, self.reduce(_resized(blank, new))[1], chance
-
-        if isinstance(action, JewellersOrb):
-            if count in (self.most, self.reach):
-                return None
-            if action.omen:
-                return (resized(self.reach, Fraction(1)),)
-            weights = jeweller_weights(self.most, self.reading)
-            rolls = {new: weights[new - 1] for new in range(1, self.reach + 1) if new != count}
-            total = sum(rolls.values())
-            return tuple(resized(new, Fraction(weight, total)) for new, weight in rolls.items())
-        if isinstance(action, OrbOfFusing):
-            if count == 1 or len(links) == 1:
-                return None
-            if action.omen:
-                return ((count, self.reduce((blank[0], (count,)))[1], Fraction(1)),)
-            if self.quality < FUSING_MIN_QUALITY:
-                return None  # no table below 20% (ADR-0047): the finish buys quality first
-            return tuple((count, new, chance) for new, chance in self._fusing[count])
-        if isinstance(action, BenchSocketCount):
-            if action.count > self.most or action.count == count:
-                return None
-            return (resized(action.count, Fraction(1)),)
-        if isinstance(action, BenchSocketLinks):
-            if action.links > count:
-                return None
-            linked = (action.links, *([1] * (count - action.links)))
-            if linked == links:
-                return None
-            return ((count, self.reduce((blank[0], linked))[1], Fraction(1)),)
-        raise OutOfScopeError(f"{action!r} has no listed kernel in the socket finish")
-
-    def _kernel(self, state: State, action: Action) -> dict[State, Fraction] | None:
+    def _kernel(self, state: State, step: FinishStep) -> dict[State, Fraction] | None:
         colours, links = state
-        count = len(colours)
-        if not isinstance(action, (ChromaticOrb, BenchSocketColours)):
-            shape = self.shape_kernel(action, count, links)
+        rule = self.rules[step.label]
+        if rule.shape is not None:
+            shape = self.shape_kernel(step, len(colours), links)
             if shape is None:
                 return None
             return _merged(((_recoloured(colours, new), new_links), chance) for new, new_links, chance in shape)
-        table = self._rolls(action, count)
+        table = self.roll_table(step, len(colours))
         if table is None:
             return None
-        if isinstance(action, ChromaticOrb):  # never the colours the item has
+        if rule.excludes_current:  # never the colours the item has
             own = table.get(colours, Fraction(0))
             if own == 1:
                 return None
@@ -401,14 +308,6 @@ def _merged(pairs: Iterable[tuple[State, Fraction]]) -> dict[State, Fraction]:
     for state, chance in pairs:
         found[state] = found.get(state, Fraction(0)) + chance
     return found
-
-
-def _condition(table: Mapping[tuple[int, ...], Fraction], keep) -> dict[tuple[int, ...], Fraction] | None:
-    kept = {colours: chance for colours, chance in table.items() if keep(colours)}
-    total = sum(kept.values(), Fraction(0))
-    if total == 0:
-        return None
-    return {colours: chance / total for colours, chance in kept.items()}
 
 
 class _Graph:
@@ -448,16 +347,16 @@ class _Graph:
                 for number, step in enumerate(model.steps):
                     if policy is not None and step.label != wanted_label:
                         continue
-                    action = step.action
-                    if isinstance(action, (ChromaticOrb, BenchSocketColours)):
-                        key = (type(action), getattr(action, "omen", None), getattr(action, "minimum", None), len(colours), links)
+                    rule = model.rules[step.label]
+                    if rule.roll is not None:
+                        key = (step.label, len(colours), links)
                         table = tables.get(key)
-                        if table is None:
-                            chances = model._rolls(action, len(colours))
+                        if table is None and key not in tables:
+                            chances = model.roll_table(step, len(colours))
                             if chances is None:
                                 tables[key] = None  # type: ignore[assignment]
                                 continue
-                            table = tables[key] = _Table(chances, isinstance(action, ChromaticOrb))
+                            table = tables[key] = _Table(chances, rule.excludes_current)
                             table.targets = [add((new, links)) for new in chances]
                             table_numbers[key] = len(table_numbers)
                         if table is None:
@@ -473,7 +372,7 @@ class _Graph:
                         continue
                     shape = shapes.get((number, len(colours), links), False)
                     if shape is False:
-                        found = model.shape_kernel(action, len(colours), links)
+                        found = model.shape_kernel(step, len(colours), links)
                         shape = shapes[(number, len(colours), links)] = None if found is None else tuple((new, new_links, float(chance)) for new, new_links, chance in found)
                     if shape is None:
                         continue
@@ -699,8 +598,8 @@ def solve_finish(
 ) -> Finish:
     """The finish of `wanted` from the sockets `start` with the finish actions `steps`, at the item's own `quality` and, with a `quality_step`
     (a Whetstone or a Scrap and its price) below 20%, also at 20% after buying it; the cheaper (ADR-0049). Its second readings beside it."""
-    if quality_step is not None and not isinstance(quality_step.action, ApplyQualityCurrency):
-        raise OutOfScopeError(f"{quality_step.label} is not a quality currency")
+    if quality_step is not None and not quality_step.action.adds(data).only_quality:
+        raise ValueError("the quality step of the finish is an action that sets the quality and nothing else")
 
     def level(percent: int, reading: Reading | None = None) -> FinishModel:
         return FinishModel(data, base_id, item_level, wanted, steps, quality=percent, reading=reading)
@@ -718,11 +617,12 @@ def solve_finish(
     model, solution, value, bought, quality_cost = choice
     seconds_readings: dict[str, float] = {}
     taken = set(solution.policy.values())
-    actions = {step.label: step.action for step in model.steps}
-    reads_jeweller = any(isinstance(actions[label], JewellersOrb) and not actions[label].omen for label in taken) and model.most != 4
-    reads_forced = sum(wanted.named) == 1 and any(isinstance(actions[label], ChromaticOrb) and not actions[label].omen for label in taken)
-    for axis, second, reads in ((JEWELLER_TABLE.name, DEVELOPER_2014_TABLE, reads_jeweller), (CHROMATIC_FORCED_COLOUR.name, FLATTER_SECOND_READING, reads_forced)):
-        if reads:
-            other = level(model.quality, Reading.of({axis: second}))
-            seconds_readings[axis] = other.solve([origin], policy=solution.policy).values[origin] + quality_cost
+    axes = {axis.name: axis for step in model.steps if step.label in taken for axis in step.action.rule_axes(data)}
+    for name, axis in sorted(axes.items()):
+        for other in axis.readings:
+            if other == axis.plan:
+                continue
+            evaluated = level(model.quality, Reading.of({name: other})).solve([origin], policy=solution.policy).values[origin] + quality_cost
+            if abs(evaluated - value) > 1e-9 * max(1.0, abs(value)):  # a reading that changes no number is not listed
+                seconds_readings[name] = evaluated
     return Finish(value, origin, model, solution, bought, quality_cost, quality_step, seconds_readings)

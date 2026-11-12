@@ -58,7 +58,7 @@ from crafting_system.rules import get_rule
 
 from .bench import CurrencyCost
 from .catalog import kind
-from .contract import Action, Adds, Axis, Reading, Reads
+from .contract import Action, Adds, Axis, Reading, Reads, SocketRule
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, StrandUse
@@ -220,6 +220,21 @@ def fusing_links(count: int) -> Mapping[tuple[int, ...], Fraction]:
     return _link_chances(count)
 
 
+def _class_maximum_of(data: GameData, base_id: str) -> int | None:
+    base = data.base_items.get(base_id)
+    return class_maximum(base) if base is not None else None
+
+
+def _blank(count: int, links: tuple[int, ...]) -> Sockets:
+    """White sockets in the groups `links`: the colours do not decide the count or the links of a result."""
+    return Sockets((SocketColour.WHITE,) * count, links)
+
+
+def _bench_offers(data: GameData, base_id: str, option: BenchOption) -> bool:
+    base = data.base_items.get(base_id)
+    return base is not None and class_maximum(base) is not None and base.item_class in option.item_classes
+
+
 def _cost(data: GameData, option: BenchOption) -> tuple[CurrencyCost, ...]:
     entries = []
     for entry in option.cost:
@@ -294,6 +309,26 @@ class JewellersOrb(Action):
         total = sum(rolls.values())
         return _outcomes(data, item, {resized_sockets(sockets, count): Fraction(weight, total) for count, weight in rolls.items()})
 
+    def socket_rule(self, data: GameData, base_id: str, item_level: int, quality: int, reading: Reading | None = None) -> SocketRule | None:
+        """The counts `outcomes` rolls, on any count and links: refused at the class maximum and at the item-level gate (quality has no effect)."""
+        most = _class_maximum_of(data, base_id)
+        if most is None:
+            return None
+        reach = min(most, item_level_gate(item_level))
+        weights = jeweller_weights(most, reading)
+
+        def shape(count: int, links: tuple[int, ...]):
+            if count in (most, reach):
+                return None
+            blank = _blank(count, links)
+            if self.omen:
+                return ((reach, resized_sockets(blank, reach).links, ONE),)
+            rolls = {new: weights[new - 1] for new in range(1, reach + 1) if new != count}
+            total = sum(rolls.values())
+            return tuple((new, resized_sockets(blank, new).links, Fraction(weight, total)) for new, weight in rolls.items())
+
+        return SocketRule(shape=shape)
+
 
 @dataclass(frozen=True)
 class OrbOfFusing(Action):
@@ -353,6 +388,20 @@ class OrbOfFusing(Action):
             chances[Sockets(sockets.colours, links)] = chance
         return _outcomes(data, item, chances)
 
+    def socket_rule(self, data: GameData, base_id: str, item_level: int, quality: int, reading: Reading | None = None) -> SocketRule | None:
+        """The links `outcomes` leaves; None below 20% quality without the Omen (no table: the finish buys quality first)."""
+        if _class_maximum_of(data, base_id) is None or (quality < FUSING_MIN_QUALITY and not self.omen):
+            return None
+
+        def shape(count: int, links: tuple[int, ...]):
+            if count == 1 or len(links) == 1:
+                return None
+            if self.omen:
+                return ((count, (count,), ONE),)
+            return tuple((count, new, chance) for new, chance in fusing_links(count).items())
+
+        return SocketRule(shape=shape)
+
 
 @dataclass(frozen=True)
 class BenchSocketCount(Action):
@@ -408,6 +457,22 @@ class BenchSocketCount(Action):
         if self.count == sockets.count:
             raise NotApplicableError(f"the item already has {self.count} sockets, so the craft would change nothing")
         return _outcomes(data, item, {resized_sockets(sockets, self.count): ONE})
+
+    def socket_rule(self, data: GameData, base_id: str, item_level: int, quality: int, reading: Reading | None = None) -> SocketRule | None:
+        """The count `outcomes` sets; None where the bench does not offer it for the class or the class holds fewer sockets."""
+        try:
+            option = self.option(data)
+        except ValueError:  # the bench data has no such option
+            return None
+        if not _bench_offers(data, base_id, option) or self.count > (_class_maximum_of(data, base_id) or 0):
+            return None
+
+        def shape(count: int, links: tuple[int, ...]):
+            if count == self.count:
+                return None
+            return ((self.count, resized_sockets(_blank(count, links), self.count).links, ONE),)
+
+        return SocketRule(shape=shape)
 
 
 @dataclass(frozen=True)
@@ -466,6 +531,23 @@ class BenchSocketLinks(Action):
         if linked == sockets:
             raise NotApplicableError(f"the first {self.links} sockets of the item are already one group and the rest unlinked, so the craft would change nothing")
         return _outcomes(data, item, {linked: ONE})
+
+    def socket_rule(self, data: GameData, base_id: str, item_level: int, quality: int, reading: Reading | None = None) -> SocketRule | None:
+        """The links `outcomes` sets; None where the bench does not offer it for the class."""
+        try:
+            option = self.option(data)
+        except ValueError:  # the bench data has no such option
+            return None
+        if not _bench_offers(data, base_id, option):
+            return None
+
+        def shape(count: int, links: tuple[int, ...]):
+            if self.links > count:
+                return None
+            linked = (self.links, *([1] * (count - self.links)))
+            return None if linked == links else ((count, linked, ONE),)
+
+        return SocketRule(shape=shape)
 
 
 @kind("jewellers-orb", order=100, planner=False, why_not=WHY_NOT_PLANNER, applies_only_to="weapon and armour")

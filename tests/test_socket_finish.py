@@ -9,7 +9,6 @@ links, 44.60 for the fixture, the state counts of ADR-0058) are checked as writt
 
 import itertools
 import math
-import time
 from fractions import Fraction
 
 import numpy as np
@@ -226,16 +225,20 @@ def test_the_second_reading_of_the_jeweller_s_table_is_the_plan_s_policy_at_the_
     assert "chromatic_forced_colour" not in finish.second_readings  # no colour asked
 
 
-def test_the_forced_colour_has_a_second_reading_only_for_a_target_of_one_coloured_socket():
+def test_a_second_reading_is_listed_wherever_it_changes_the_cost():
     """On the dexterity-intelligence helmet of `colour_data` (red is the missing colour, 0.1 of a coloured socket), where the flatter reading of the
-    forced colour differs from Siveran's weights; on a base asking the three alike the two readings are the same thirds."""
+    forced colour differs from Siveran's weights. ADR-0047 says it matters only for a target of one coloured socket; it also moves a target of two
+    (790.4 against 817.6 orbs), because the next Chromatic Orb excludes the item's colours and the forced colour decided them. A target that asks
+    no colour reads no forced colour, so the reading is not listed."""
     data = colour_data()
     chromatic = [FinishStep("Chromatic Orb", ChromaticOrb(), 1.0)]
     one = solve_finish(data, HELMET, 84, SocketWanted(red=1), Sockets.unlinked((W,) * 2), chromatic, quality=20)
-    assert set(one.second_readings) == {"chromatic_forced_colour"}
-    assert one.second_readings["chromatic_forced_colour"] < one.value  # the flatter reading forces red more often than Siveran's weights
+    assert round(one.value, 2) == 7.25 and round(one.second_readings["chromatic_forced_colour"], 2) == 4.57
     two = solve_finish(data, HELMET, 84, SocketWanted(red=2), Sockets.unlinked((W,) * 2), chromatic, quality=20)
-    assert two.second_readings == {}
+    assert round(two.value, 1) == 790.4 and round(two.second_readings["chromatic_forced_colour"], 1) == 817.6
+    fusing = [FinishStep("Orb of Fusing", OrbOfFusing(), 1.0)]
+    links = solve_finish(finish_data(), BODY, 84, SocketWanted(links=2), Sockets.unlinked((W,) * 2), fusing, quality=20)
+    assert links.second_readings == {}  # Fusing reads no rule axis
 
 
 def test_a_start_that_meets_the_target_costs_nothing():
@@ -275,7 +278,7 @@ def test_a_policy_of_the_finish_reaches_the_goal_from_every_state_it_acts_in():
 
 # --- the budget of ADR-0058 ---------------------------------------------------------------------------------------------------------------
 
-BUDGET_SECONDS = 60.0  # ADR-0058 keeps ADR-0010's goal of a minute for the finish
+MAX_SWEEPS_IN_BUDGET = 1_000  # ADR-0058's runs took 93 to 378 sweeps; no test asserts on time (ADR-0014), so the budget is held by the work done
 
 
 @pytest.mark.parametrize(
@@ -285,11 +288,10 @@ BUDGET_SECONDS = 60.0  # ADR-0058 keeps ADR-0010's goal of a minute for the fini
 )
 def test_six_sockets_with_three_named_colours_solve_within_the_budget(links, states):
     """ADR-0058, "Measured": six sockets, red, green and blue (in a group of `links`), every finish action, Omens at 50, from one white socket; the
-    states the routine reaches that are not finished are the ADR's counts."""
+    states the routine reaches that are not finished are the ADR's counts, and the solve takes the sweeps of the prototype's order. The time
+    (about 2, 9 and 0.5 seconds on the development PC, within ADR-0058's minute) is measured outside the tests (ADR-0014)."""
     data = finish_data()
-    began = time.perf_counter()
     finish = solve_finish(data, BODY, 84, SocketWanted(count=6, links=links, red=1, green=1, blue=1), Sockets.unlinked((W,)), all_steps(data, omen=50.0), quality=20)
-    seconds = time.perf_counter() - began
     assert finish.solution.open_states == states
     assert math.isfinite(finish.value)
-    assert seconds < BUDGET_SECONDS
+    assert finish.solution.sweeps < MAX_SWEEPS_IN_BUDGET

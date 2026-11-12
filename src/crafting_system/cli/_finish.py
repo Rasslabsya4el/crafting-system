@@ -26,7 +26,7 @@ from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Finish, FinishStep, SocketWanted, solve_finish
-from crafting_system.actions.catalog import catalog_kinds
+from crafting_system.actions import catalog_kinds
 from crafting_system.data import GameData
 from crafting_system.items import PlainQuality
 from crafting_system.prices import PriceFile
@@ -158,7 +158,7 @@ def finish_limits(plan_finish: PlanFinish, mods_mean: float, *, mods_at_most: bo
         costs = "costs at most" if mods_at_most else "costs"
         why = (
             f"the sockets are finished on their own once the mods are made: {finish.value:,.2f} Chaos on average{bought}{others}, "
-            f"so the whole craft {costs} {total:,.2f} Chaos on average after the start item; the mean and the percentiles shown here are of the mods alone"
+            f"so the whole craft {costs} {total:,.2f} Chaos on average after the start item; every other figure of this answer is of the mods alone"
         )
     found = (
         Limit(

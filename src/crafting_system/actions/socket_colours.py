@@ -49,9 +49,9 @@ from crafting_system.items import Item, PlainQuality, SocketColour, Sockets, cla
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Axis, BurnKeeps, Reading, Reads
+from .contract import Action, Adds, Axis, BurnKeeps, Reading, Reads, SocketRule
 from .errors import NotApplicableError, OutOfScopeError
-from .socket_orbs import SocketOutcomes, _accept, _cost, _offered, _outcomes
+from .socket_orbs import SocketOutcomes, _accept, _bench_offers, _class_maximum_of, _cost, _offered, _outcomes
 from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, StrandUse
 
 __all__ = [
@@ -213,6 +213,13 @@ def colour_roll(
     return roll_colours(count, nonwhite_chance(item_level, quality), weights, forced_weights)
 
 
+def _kept(roll: Mapping[Colours, Fraction], keep: Callable[[Colours], bool]) -> dict[Colours, Fraction] | None:
+    """`_conditioned` for a rule: None where no result of the roll meets the condition, instead of the refusal."""
+    kept = {colours: chance for colours, chance in roll.items() if keep(colours)}
+    total = sum(kept.values(), Fraction(0))
+    return None if total == 0 else {colours: chance / total for colours, chance in kept.items()}
+
+
 def _roll_of(data: GameData, item: Item, sockets: Sockets, reading: Reading | None, *, forced_rule: bool) -> Mapping[Colours, Fraction]:
     """The roll of a Chromatic Orb (`forced_rule`) or of the bench on `item`: `colour_roll` at the item's item level and plain quality."""
     percent = item.quality.percent if isinstance(item.quality, PlainQuality) else 0
@@ -319,6 +326,21 @@ class ChromaticOrb(Action):
             chances = _conditioned(roll, lambda colours: colours != sockets.colours)
         return _colour_outcomes(data, item, sockets, chances)
 
+    def socket_rule(self, data: GameData, base_id: str, item_level: int, quality: int, reading: Reading | None = None) -> SocketRule | None:
+        """The roll `outcomes` makes before it excludes the item's colours (with the Omen, conditioned on red, green and blue); None for a base that
+        asks for no attribute, and the Omen refused below three sockets."""
+        base = data.base_items.get(base_id)
+        if _class_maximum_of(data, base_id) is None or base is None or not any(base.attribute_requirements):
+            return None
+
+        def roll(count: int):
+            if self.omen and count < OMEN_MINIMUM_SOCKETS:
+                return None
+            rolled = colour_roll(data, base_id, item_level, quality, count, reading, forced=not self.omen)
+            return _kept(rolled, lambda colours: all(colour in colours for colour in COLOURS)) if self.omen else rolled
+
+        return SocketRule(roll=roll, excludes_current=True)
+
 
 @dataclass(frozen=True)
 class BenchSocketColours(Action):
@@ -374,6 +396,25 @@ class BenchSocketColours(Action):
         roll = _roll_of(data, item, sockets, None, forced_rule=False)
         chances = _conditioned(roll, lambda colours: sum(colour is not SocketColour.WHITE for colour in colours) >= self.minimum)
         return _colour_outcomes(data, item, sockets, chances)
+
+    def socket_rule(self, data: GameData, base_id: str, item_level: int, quality: int, reading: Reading | None = None) -> SocketRule | None:
+        """The roll `outcomes` makes (conditioned on enough coloured sockets, nothing excluded); None where the bench does not offer the craft for
+        the class or the base asks for no attribute."""
+        try:
+            option = self.option(data)
+        except ValueError:  # the bench data has no such option
+            return None
+        base = data.base_items.get(base_id)
+        if not _bench_offers(data, base_id, option) or base is None or not any(base.attribute_requirements):
+            return None
+
+        def roll(count: int):
+            if count < self.minimum:
+                return None
+            rolled = colour_roll(data, base_id, item_level, quality, count, forced=False)
+            return _kept(rolled, lambda colours: sum(colour is not SocketColour.WHITE for colour in colours) >= self.minimum)
+
+        return SocketRule(roll=roll)
 
 
 def _minimum_of(option: BenchOption) -> int | None:
