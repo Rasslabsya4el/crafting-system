@@ -661,6 +661,9 @@ class Abstraction:
         """
         if not self._tracks_imprints:
             raise ValueError(f"{action!r} moves the imprints of the item, and the state does not keep them: declare `imprints` in its reads and adds")
+        use = action.strand_use(self.data)
+        if state.strands and use is not None and use.changes_count:  # the move is applied here, not through `outcomes`, so a spend would be lost (#277)
+            raise ValueError(f"{action!r} moves the imprints and declares a strand spend, which the kernel of an imprint move does not apply")
         bare = replace(state, imprints=())
         held = list(state.imprints)
         if move.restore:
