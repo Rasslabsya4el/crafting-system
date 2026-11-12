@@ -49,7 +49,7 @@ from crafting_system.items.implicits import BASE_GRADE
 from crafting_system.items.words import base_words, mod_words
 from crafting_system.rules import get_rule
 
-from .catalog import kind
+from .catalog import kind, listing_gap
 from .contract import Action, Adds, Reads
 from .corrupted_pool import CorruptedImplicitPool, corrupted_implicit_pool
 from .corruption import dead_end
@@ -262,6 +262,9 @@ def _locus(data: GameData, item: Item):
         return
     try:
         TwoImplicitDraw.for_item(data, item)
+    except OutOfScopeError as error:  # a Cluster or Timeless Jewel, an empty pool or one with no second draw: no rule, and the listing is told (#511)
+        listing_gap(error)
+        return
     except ValueError:
-        return  # no pool (NotApplicableError), a Cluster or Timeless Jewel, an empty pool or one with no second draw (OutOfScopeError), an unknown base
+        return  # no pool (NotApplicableError, the game) or an unknown base: the Locus is not listed
     yield LocusOfCorruption()

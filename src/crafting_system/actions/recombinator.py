@@ -84,7 +84,7 @@ from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, Side, capa
 from crafting_system.rules import get_rule
 
 from .bench import BenchCraft, bench_crafts
-from .catalog import kind
+from .catalog import kind, listing_gap
 from .contract import Action, Adds, Axis, Need, Reading, Reads
 from .draw import jewel_class
 from .errors import NotApplicableError, OutOfScopeError
@@ -218,7 +218,10 @@ def junk_craft_for(data: GameData, item: Item) -> BenchCraft | None:
             continue
         try:
             craft.outcomes(data, item)
-        except (NotApplicableError, OutOfScopeError):
+        except NotApplicableError:  # the game: the bench does not make this craft on the item
+            continue
+        except OutOfScopeError as error:  # the model has no rule for the craft on the item: not a candidate, and the listing is told (#511)
+            listing_gap(error, craft.label(data))
             continue
         key = (mod.required_level, sum(entry.count for entry in craft.cost(data)), craft.mod_id)
         if best is None or key < best[0]:
