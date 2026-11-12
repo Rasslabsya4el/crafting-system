@@ -508,3 +508,13 @@ def feeder_donors_limit() -> Limit:
             "Recombining an item that also holds some other mod could make it cheaper.",
         ),
     )
+
+
+def lock_with_donors_limit() -> Limit:
+    """The limit of a plan that makes second items while the target allows Hinekora's Lock (ticket #225): the Lock is not offered there."""
+    return Limit(
+        SOLVE,
+        "Hinekora's Lock is not offered",
+        "the plan makes second items for its recombinations, and the planner cannot weigh the Lock in such a plan yet",
+        **claim("the plans without Hinekora's Lock", "Taking the Lock could make it cheaper."),
+    )

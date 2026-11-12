@@ -603,12 +603,9 @@ def make_plan(
             limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
-    if donor_plan is not None:
+    if donor_plan is not None:  # the Lock's second solve has no product of donors yet (#225): it is not offered, and the answer says so
         if lock_wanted(target.actions):
-            raise PlanError(
-                "the plan makes donors, and a plan with donors cannot take Hinekora's Lock yet. Name the kinds to use in the target's "
-                "`actions:` without `hinekora-lock`"
-            )
+            limits += (_limits.lock_with_donors_limit(),)
         foresight, with_lock = Foresight(LockStatus.SWITCHED_OFF, lock_price(prices, price_source)), None
     else:
         foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)

@@ -1,0 +1,41 @@
+# Target for benchmark route R28: a +2 amulet with three prefixes and two suffixes, every mod made on its own and recombined.
+#
+# This file says WHAT you want to end with. It does not say how to craft it: the planner finds
+# that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, 2026-02, "Crafting +2 amulet", docs/research/2026-10-30-5-reference-routes.md, id R28): make one-affix feeders of
+# every target mod with Orbs of Alteration, recombine them into a two-prefix and a two-suffix item, those into a 2-prefix/2-suffix item,
+# and onward to the 3-prefix/2-suffix amulet. The post names the kind of mods ("two desired +1 skill-gem prefixes", "third desired
+# prefix", "two desired suffixes"), not the mods; an agent picks them (OR-27) for a fire caster on an Onyx Amulet of item level 86: the
+# two "+1" prefixes that make the amulet "+2" (all skill gems, and fire skill gems), tier-1 spell damage, and the tier-1 cast speed and
+# critical strike multiplier suffixes. An unstated tier is the top tier (OR-1); each "+1" mod has one tier.
+
+base: Onyx Amulet
+item_level: 86
+
+# A Normal Onyx Amulet the player holds (OR-6). The post buys "many cheap rare amulet bases"; the planner makes the second items of a
+# recombination from a Normal base it does not price (issue filed with the pull request of #225), so the target's own base is given
+# too and the two are counted alike.
+start_item:
+  rarity: normal
+start: given
+
+# The post's orbs; the recombinator is offered only when a target names it, and its second items hold only the target's mods.
+actions: [transmutation-orb, alteration-orb, augmentation-orb, recombinator]
+
+requirements:
+  # P1: "+1 to Level of all Skill Gems" (one tier).
+  - family: GlobalSkillGemLevel
+    mod: GlobalSkillGemLevel1
+  # P2: "+1 to Level of all Fire Skill Gems", one mod of the family of the elemental "+1" mods (OR-2 reads a named mod exactly).
+  - family: GlobalDamageTypeGemLevel
+    mod: GlobalFireGemLevel1_
+  # P3: "(23-26)% increased Spell Damage", tier 1.
+  - family: SpellDamage
+    min_tier: 1
+  # S1: "(17-20)% increased Cast Speed", tier 1.
+  - family: IncreasedCastSpeed
+    min_tier: 1
+  # S2: "+(35-38)% to Global Critical Strike Multiplier", tier 1.
+  - family: CriticalStrikeMultiplier
+    min_tier: 1

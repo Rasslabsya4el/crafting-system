@@ -1,0 +1,146 @@
+# Given route for benchmark route R28: a +2 amulet with every mod made on its own and recombined.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices as the solver's
+# route. In every state the FIRST rule whose conditions match is followed (see examples/routes/r12-lightning-amulet.yaml and, for the
+# second items of a recombination and `making:`, examples/routes/r25-energy-shield-regalia.yaml). Every second item starts as a Normal
+# Onyx Amulet, as the planner makes it.
+#
+# The route (Reddit, 2026-02, docs/research/2026-10-30-5-reference-routes.md, id R28):
+#   1. Buy many cheap rare amulet bases, scour them and make them magic (here: a Normal base and an Orb of Transmutation).
+#   2. Use Orbs of Alteration to make one-affix feeder bases for each target mod.
+#   3. Recombine feeders into two-suffix and two-prefix items.
+#   4. Recombine into a 2-prefix/2-suffix item.
+#   5. Recombine onward until a 3-prefix/2-suffix finished amulet is produced; recycle useful outputs.
+#
+# P1 = +1 to Level of all Skill Gems, P2 = +1 to Level of all Fire Skill Gems, P3 = tier-1 spell damage, S1 = tier-1 cast speed, S2 =
+# tier-1 critical strike multiplier (examples/targets/r28-plus-two-amulet.yaml). The post does not say how step 5 goes on: this route adds
+# the third prefix's single-mod item to the 2-prefix/2-suffix item, and recombines every other output of wanted mods with the two-prefix
+# item. A recombination is used only on items that hold nothing but wanted mods (the post's feeders, and what the planner keeps to), so on
+# an item that holds anything else the rule's recombination is refused and the route goes on to the next rule (`skip_refused`): the Orb
+# of Alteration of step 2.
+
+name: R28, Reddit post
+skip_refused: true
+
+rules:
+  # Step 5: the 2-prefix/2-suffix item in hand, recombined onward with the third prefix's single-mod item.
+  - when:
+      making: target
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: SpellDamage
+          status: [absent, below]
+        - family: IncreasedCastSpeed
+          status: passing
+        - family: CriticalStrikeMultiplier
+          status: passing
+    do: "Recombinator with a donor of (23-26)% increased Spell Damage"
+
+  # Step 4: the two-prefix item in hand, recombined with the two-suffix second item.
+  - when:
+      making: target
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: "Recombinator with a donor of (17-20)% increased Cast Speed, +(35-38)% to Global Critical Strike Multiplier"
+
+  # Step 4, read the other way: the two suffixes in hand, recombined with the two-prefix second item.
+  - when:
+      making: target
+      requirements:
+        - family: IncreasedCastSpeed
+          status: passing
+        - family: CriticalStrikeMultiplier
+          status: passing
+    do: "Recombinator with a donor of +1 to Level of all Fire Skill Gems, +1 to Level of all Skill Gems"
+
+  # Step 3 on the target's own item: the +1 prefix in hand gets the other with its single-mod item.
+  - when:
+      making: target
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: [absent, below]
+    do: "Recombinator with a donor of +1 to Level of all Fire Skill Gems"
+
+  # The same, the other +1 prefix in hand.
+  - when:
+      making: target
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: [absent, below]
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: "Recombinator with a donor of +1 to Level of all Skill Gems"
+
+  # Any other item of wanted mods in hand ("recycle useful outputs"): recombined with the two-prefix second item.
+  - when:
+      making: target
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: [absent, below]
+        - family: GlobalDamageTypeGemLevel
+          status: [absent, below]
+    do: "Recombinator with a donor of +1 to Level of all Fire Skill Gems, +1 to Level of all Skill Gems"
+
+  # Step 3: the two-prefix second item, from a single-mod item of one +1 prefix and one of the other.
+  - when:
+      making:
+        - family: GlobalSkillGemLevel
+        - family: GlobalDamageTypeGemLevel
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: [absent, below]
+    do: "Recombinator with a donor of +1 to Level of all Fire Skill Gems"
+
+  # The same, the other way round.
+  - when:
+      making:
+        - family: GlobalSkillGemLevel
+        - family: GlobalDamageTypeGemLevel
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: [absent, below]
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: "Recombinator with a donor of +1 to Level of all Skill Gems"
+
+  # Step 3: the two-suffix second item, from a single-mod item of one suffix and one of the other.
+  - when:
+      making:
+        - family: IncreasedCastSpeed
+        - family: CriticalStrikeMultiplier
+      requirements:
+        - family: IncreasedCastSpeed
+          status: passing
+        - family: CriticalStrikeMultiplier
+          status: [absent, below]
+    do: "Recombinator with a donor of +(35-38)% to Global Critical Strike Multiplier"
+
+  # The same, the other way round.
+  - when:
+      making:
+        - family: IncreasedCastSpeed
+        - family: CriticalStrikeMultiplier
+      requirements:
+        - family: IncreasedCastSpeed
+          status: [absent, below]
+        - family: CriticalStrikeMultiplier
+          status: passing
+    do: "Recombinator with a donor of (17-20)% increased Cast Speed"
+
+  # Steps 1 and 2: a Normal base is made magic, and a magic one is altered until it is a feeder the rules above use.
+  - when:
+      rarity: normal
+    do: Orb of Transmutation
+  - when:
+      rarity: magic
+    do: Orb of Alteration
