@@ -6,6 +6,9 @@ is offered only to a target that wants it), and a Talisman for the fractures. Ea
 price file, which prices every beast the recipes consume (`beastcraft.recipe_beasts`): from poe.ninja's Standard economy, the planner's
 own last fallback, because Allflame's beast prices are gone, and The Black Morrigan by a hand placeholder (#813). Skips without the
 cached dump.
+
+Not here: the beast influence recipes (`beast-influence-recipe`) and the influenced Exalted Orbs are `planner=False` until a goal built
+from a target names an influenced mod (ADR-0030, amendment of #155), so no plan offers them yet.
 """
 
 import textwrap
@@ -33,7 +36,13 @@ BOOTS = {
     "Beastcraft Add Suffix Remove Prefix": 1.0 + 3,  # Farric Lynx Alpha
     "Beastcraft Wild Bristle Matron (add a metamod)": 254.0 + 3,
 }
-ASPECT = {"Beastcraft Aspect of the Cat (level 30)": 20.0 + 100.0 + 2}  # Farrul, The Black Morrigan and two rare beasts
+# an aspect: its beast and three rare beasts at level 20, its beast, The Black Morrigan and two rare beasts at level 30
+ASPECT_BEASTS = {"Bird": ("Avian", 1.0), "Cat": ("Cat", 20.0), "Crab": ("Crab", 2.7), "Spider": ("Spider", 30.0)}
+ASPECTS = [
+    (f"Grants{word}AspectCrafted{'' if level == 20 else 30}", f"Beastcraft Aspect of the {name} (level {level})", beast + (3 if level == 20 else 100.0 + 2))
+    for word, (name, beast) in ASPECT_BEASTS.items()
+    for level in (20, 30)
+]
 TALISMAN = {
     "Beastcraft Fracture a Talisman Modifier": 1.0 + 3,  # Farric Frost Hellion Alpha
     "Beastcraft Fracture two Talisman Modifiers": 761.2 + 100.0 + 2,  # Fenumal Plagued Arachnid and The Black Morrigan
@@ -88,21 +97,22 @@ def test_the_harvest_crafts_the_side_swaps_and_the_matron_on_rare_boots(data, tm
     check_offered_and_priced(plan, BOOTS)
 
 
-def test_an_aspect_for_a_target_that_wants_it(data, tmp_path):
-    plan = plan_of(data, tmp_path, """
+@pytest.mark.parametrize(("mod_id", "label", "cost"), ASPECTS, ids=[mod_id for mod_id, *_ in ASPECTS])
+def test_each_aspect_for_a_target_that_wants_it(data, tmp_path, mod_id, label, cost):
+    plan = plan_of(data, tmp_path, f"""
         base: Murder Boots
         item_level: 86
         influence: []
         actions: [aspect-beast]
         requirements:
           - family: GrantedSkill
-            mod: GrantsCatAspectCrafted30
+            mod: {mod_id}
         start_item:
           rarity: rare
         start: given
     """)
 
-    check_offered_and_priced(plan, ASPECT)
+    check_offered_and_priced(plan, {label: cost})
 
 
 def test_the_talisman_fractures_on_a_talisman(data, tmp_path):

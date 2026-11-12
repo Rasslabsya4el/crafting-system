@@ -17,7 +17,8 @@
 # How the steps are read:
 #   * The lock "Suffixes Cannot Be Changed" is a crafted prefix, so it needs a free prefix; a reforge rerolls the prefixes, the lock with
 #     them, so every reforge is preceded by a new lock. When no prefix is free the route annuls, as step 4's "annul to reopen" does.
-#   * "Trap and Mine" and "Burning Damage" are the top tiers (the target, OR-1): a lower tier counts as a miss (`below`).
+#   * "Trap and Mine" and "Burning Damage" are the top tiers (the target, OR-1): a lower tier is not `passing`, so it counts as a miss
+#     (a lower Trap and Mine falls to the essence, a lower Burning Damage fills the third suffix and is annulled).
 #   * Step 5 uses the beast and step 4 the bench, as the guide says (with the suffixes full the Matron can only add the suffix lock;
 #     before Burning is on, a free suffix would let it add another metamod).
 
