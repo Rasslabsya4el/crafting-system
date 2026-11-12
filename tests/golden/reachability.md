@@ -128,7 +128,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
 
-- `Abstraction(..., allow_inputs=bool(donated)) in make_plan`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.
+- `Abstraction(..., allow_inputs=bool(donated)) in make_plan`: an action that consumes other items is planned only when it reads a rule axis, with the second items the planner offers (the recombinator: the target's isolated feeders); one without an axis is refused by the kernel.
 - `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (asked for by `--strands` or in the planner settings), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
 - Targets that take a corrupted item (`allow_corrupted`, or a corrupted implicit): none; offers of a corrupting action over all entries: 0.
 - Fossil sets that use the Bloodstained Fossil (offered only when the target asks for a corrupted implicit): up to 2302 listed for one start item, 0 offered by any entry.
