@@ -24,7 +24,7 @@ ROUTES = {
     "R07": ("examples/targets/r07-minion-wand.yaml", "examples/routes/r07-minion-wand.yaml"),
 }
 START = {
-    "R24": "Murder Boots, item level 86-100, fractured +(74-78) to maximum Mana",
+    "R24": "Murder Boots, item level 86-100, fractured +(69-73) to maximum Mana",
     "R07": "Convoking Wand, item level 84",
 }
 ROUTE_ACTIONS = {
@@ -38,7 +38,8 @@ ROUTE_ACTIONS = {
         "Veiled Chaos Orb", "Unveil", "Pick 1", "Pick 2", "Pick 3",
     },
 }
-# a craft that counts toward no requirement, offered only because its family is in the base's unveiled pool (ADR-0026)
+# an unveil block (ADR-0026): offered only with the whole bench-craft kind, which these targets do not name (their bench crafts are named
+# by label, the guides' own); the blocks themselves are tested in test_cli_unveil_blocks_real.py
 BLOCKS = {
     "R24": "Bench craft +(15-25) to maximum Life",
     "R07": "Bench craft Minions have (14-15)% increased Attack Speed / Minions have (14-15)% increased Cast Speed",
@@ -81,10 +82,11 @@ def test_the_start_item_costs_its_committed_stand_in_price(unsolved, route_id):
     assert unsolved.start_price.chaos == pytest.approx(entry.chaos)
 
 
-def test_the_plan_offers_the_route_actions_and_the_unveil_blocks_all_priced(unsolved, route_id):
+def test_the_plan_offers_the_route_actions_all_priced_and_no_unveil_block(unsolved, route_id):
     labels = {priced.label for priced in unsolved.offers}
     assert ROUTE_ACTIONS[route_id] <= labels
-    assert BLOCKS[route_id] in labels
+    assert BLOCKS[route_id] not in labels
+    assert {label for label in labels if label.startswith("Bench craft")} <= ROUTE_ACTIONS[route_id]
     assert not [limit for limit in unsolved.limits if limit.kind == "unpriced"]
     assert {priced.label: priced.cost for priced in unsolved.offers}["Veiled Chaos Orb"] == pytest.approx(146.5)
 
@@ -112,7 +114,7 @@ def rule_of(plan, data, when: str):
 
 
 def test_veil_tells_the_side_of_the_placeholder(r24, data):
-    mana = roll(data, "IncreasedMana13", fractured=True)
+    mana = roll(data, "IncreasedMana12", fractured=True)
     prefix = r24.abstraction.compress(boots(data, mana, veiled_placeholder(data, "VeiledPrefix")))
     suffix = r24.abstraction.compress(boots(data, mana, veiled_placeholder(data, "VeiledSuffix")))
     plain = r24.abstraction.compress(boots(data, mana))
@@ -129,7 +131,7 @@ def test_veil_tells_the_side_of_the_placeholder(r24, data):
 
 
 def test_offer_tells_whether_an_offer_is_drawn_and_where_a_wanted_mod_is_shown(r24, data):
-    mana = roll(data, "IncreasedMana13", fractured=True)
+    mana = roll(data, "IncreasedMana12", fractured=True)
     veil = veiled_placeholder(data, "VeiledPrefix")
     drawn = r24.abstraction.compress(boots(data, mana, veil, veil_offer=tuple(sorted((MS_ONSLAUGHT, LIFE_REGEN)))))
     other = r24.abstraction.compress(boots(data, mana, veil, veil_offer=(LIFE_REGEN,)))
@@ -153,6 +155,7 @@ def test_offer_tells_whether_an_offer_is_drawn_and_where_a_wanted_mod_is_shown(r
         ("{veil: left}", "must be one of"),
         ("{offer: maybe}", "must be one of"),
         ("{offer: {shows: {family: MovementVelocity}, at: 4}}", "must be 1, 2 or 3"),
+        ("{offer: {shows: {family: MovementVelocity}, at: 1.0}}", "must be 1, 2 or 3"),
         ("{offer: {at: 1}}", "shows: this key is required"),
         ("{offer: {shows: {family: Strength}}}", "Strength"),
     ],

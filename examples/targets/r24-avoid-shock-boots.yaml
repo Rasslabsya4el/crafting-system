@@ -15,8 +15,9 @@
 # How the words are read (OR-1 to OR-4):
 #   * "Rare Boots": no base is named. The suffixes need a Dexterity base (Spell Suppression) and the guide's Mana says nothing of armour,
 #     so the file takes Murder Boots, a top Evasion/Energy Shield base; every Dexterity/Intelligence boot base has the same pool.
-#     Item level 86: tier 1 of Spell Suppression needs 85 and the top Mana needs 85.
-#   * "fractured Mana": no tier is stated, so the top tier the item level allows (OR-1), IncreasedMana13, +(74-78); it is the bought
+#     Item level 86: tier 1 of Spell Suppression needs 85.
+#   * "fractured Mana": no tier is stated, so the top tier boots can roll (OR-1), IncreasedMana12, +(69-73) (the +(74-78) tier spawns on
+#     rings and amulets only); it is the bought
 #     item's fractured mod and the trade price is taken for that tier (OR-3). "Fracture or purchase": the file buys it.
 #   * "Movement Speed + Onslaught veil": the unveiled mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill, exactly (OR-2: an unveil
 #     gives that one mod).
@@ -28,8 +29,9 @@
 #   * "Lock suffixes": the bench craft "Suffixes Cannot Be Changed".
 #
 # The actions line names the kinds and the single actions of the route, because the veiled kinds are offered only when a target
-# names them (opt-in) and the full catalog would not be solved (OR-5 is not met here: see the PR of #146). Bench crafts of a family the
-# boots' unveiled pool holds are offered too, as unveil blocks (ADR-0026), through the bench-craft kind.
+# names them (opt-in) and the full catalog would not be solved (OR-5 is not met here: see the PR of #146). The bench is named by its one
+# craft, the lock: with the whole bench-craft kind, about 80 crafts of the families the boots' unveiled pool holds would be offered as
+# unveil blocks (ADR-0026), which the guide never uses; how big that plan is, is its own issue (see the PR of #146).
 
 base: Murder Boots
 
@@ -46,7 +48,6 @@ actions:
   - Harvest Add Remove Fire
   - Harvest Add Remove Cold
   - Harvest Add Remove Lightning
-  - bench-craft
   - Bench craft Suffixes Cannot Be Changed
   - remove-crafted-mods
   - veiled-chaos-orb
@@ -57,7 +58,7 @@ actions:
 requirements:
   # The fractured Mana of the bought boots, the top tier.
   - family: IncreasedMana
-    mod: IncreasedMana13
+    mod: IncreasedMana12
 
   # Movement Speed + Onslaught, unveiled.
   - family: MovementVelocity
@@ -89,8 +90,8 @@ requirements:
 start_item:
   rarity: rare
   mods:
-    - mod: IncreasedMana13
-      values: [74]
+    - mod: IncreasedMana12
+      values: [69]
       fractured: true
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file.

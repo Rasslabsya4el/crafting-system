@@ -401,7 +401,7 @@ class _Reader:
                 position = None
                 if "at" in value:
                     position = value["at"]
-                    if isinstance(position, bool) or position not in (1, 2, 3):
+                    if type(position) is not int or position not in (1, 2, 3):
                         self.fail(value.key_lines["at"], f"{where}.at", f"must be 1, 2 or 3 (the mod `Pick 1`, `Pick 2` or `Pick 3` takes), got {describe(position)}")
                 fields["offer_shows"] = (leaf, position)
                 fields["offer"] = "drawn"

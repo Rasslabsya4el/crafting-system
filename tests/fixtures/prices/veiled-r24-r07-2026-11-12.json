@@ -3644,7 +3644,7 @@
         "league": "Allflame"
       }
     },
-    "Murder Boots, item level 86-100, fractured +(74-78) to maximum Mana": {
+    "Murder Boots, item level 86-100, fractured +(69-73) to maximum Mana": {
       "chaos": 50.0,
       "source": "hand",
       "note": "hand stand-in for benchmark route R24 (ticket #146): the trade site no longer lists Allflame (2026-11-12) and no snapshot has a line for these boots; to be priced with the next league's snapshot"

@@ -14,8 +14,10 @@
 #   6. Veiled Chaos for Movement Speed + Onslaught; repeat the locked veiled stage until it is offered.
 #
 # How the steps are read:
-#   * Step 4 is the Harvest craft that adds a Fire mod (and removes another): of the three elements it is the cheapest at these prices,
-#     and on boots the Fire tag adds the Fire Resistance only. The guide names no element, so the file takes one.
+#   * Step 4 is the Harvest craft that adds a Fire-tagged mod (and removes another): of the three elements it is the cheapest at these
+#     prices. The guide names no element, so the file takes one.
+#   * Step 5: the lock "Suffixes Cannot Be Changed" sits on a prefix, so it needs a free prefix (the guide's step 3: one open prefix);
+#     with the prefixes full the route annuls, as step 3 says.
 #   * Step 6: the unveil shows up to three mods; the route picks Movement Speed + Onslaught wherever it is shown. When it is not
 #     shown, the guide's "repeat the locked veiled stage": any mod is picked (the first the game allows; there is no decline),
 #     the suffixes are locked again and the next Veiled Chaos Orb rerolls the prefixes, the picked mod with them.
@@ -69,6 +71,7 @@ rules:
   # Step 5: the three suffixes are done: lock them (one rule per resistance that can be the T2+ one).
   - when:
       crafted_mods: false
+      open_prefixes: 1
       requirements:
         - family: ReducedShockChance
           status: passing
@@ -79,6 +82,7 @@ rules:
     do: Bench craft Suffixes Cannot Be Changed
   - when:
       crafted_mods: false
+      open_prefixes: 1
       requirements:
         - family: ReducedShockChance
           status: passing
@@ -89,6 +93,7 @@ rules:
     do: Bench craft Suffixes Cannot Be Changed
   - when:
       crafted_mods: false
+      open_prefixes: 1
       requirements:
         - family: ReducedShockChance
           status: passing
@@ -134,7 +139,7 @@ rules:
         - family: ChanceToSuppressSpells
           status: passing
     do: Harvest Add Remove Fire
-  # Step 3: no free suffix: annul.
+  # Step 3: no free suffix, or no free prefix for the lock: annul.
   - when:
       requirements:
         - family: ReducedShockChance
