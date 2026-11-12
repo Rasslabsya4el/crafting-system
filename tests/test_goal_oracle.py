@@ -430,6 +430,24 @@ def test_an_item_holds_the_implicit_of_its_base_at_the_low_end_of_its_range_unle
     assert not g.Oracle(export, present).implicit_met(present.implicits[0], replaced)
 
 
+def test_on_a_two_implicit_base_a_corrupted_implicit_keeps_the_other_base_implicit_and_an_eldritch_one_drops_both():
+    """Ticket #528 (#533), from the game text alone: a Vaal implicit replaces one of two implicits at random, so the game keeps the other; an Ember
+    replaces every implicit but the other side's Eldritch one."""
+    export = tiny_export()
+    export.mods["RingImplicit2"] = implicit("RingImplicit2", "RingLife", "unique", [("base_life", 3, 7)], "+(3-7) to maximum Life", spawn=())
+    export.base_items[RING] = {**export.base_items[RING], "implicits": ["RingImplicit1", "RingImplicit2"]}
+    oracle = g.Oracle(export, target(LIFE))
+    vaal = g.OImplicit("ShockCorruption", (15,))
+
+    assert [entry.mod_id for entry in oracle.held_implicits(g.OItem(()))] == ["RingImplicit1", "RingImplicit2"]
+    kept = g.OItem((), (vaal, g.OImplicit("RingImplicit2", (6,))))
+    assert [entry.mod_id for entry in oracle.held_implicits(kept)] == ["ShockCorruption", "RingImplicit2"]
+    with pytest.raises(ValueError, match="stayed"):
+        oracle.held_implicits(g.OItem((), (vaal,)))  # one of the two stayed, and the list does not say which
+    embered = g.OItem((), (g.OImplicit("ShockEldritchImplicit2", (36,)),))
+    assert [entry.mod_id for entry in oracle.held_implicits(embered)] == ["ShockEldritchImplicit2"]
+
+
 def test_an_implicit_requirement_is_asked_of_every_entry():
     spec = target(LIFE, extra="implicits:\n  - family: RingResist\n  - family: ShockAvoid\n")
     oracle = g.Oracle(tiny_export(), spec)

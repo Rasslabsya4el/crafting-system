@@ -80,7 +80,7 @@ UNVEIL_START = Item.build(
     mods=(placeholder(),),
     veil_offer=tuple(UNVEIL_TEXTS),
     quality=Quality(CatalystType.PRISMATIC, 12),
-    implicits=(implicit("StrengthImplicitBelt1"), implicit("AvoidShockEldritchImplicit2", 2)),
+    implicits=(implicit("AvoidShockEldritchImplicit2", 2),),  # an Ember took the base implicit (no item holds both, ticket #528)
 )
 SHOCK_IMPLICIT = ImplicitRequirement(
     "AvoidShock", None, frozenset({"AvoidShockEldritchImplicit2", "AvoidShockEldritchImplicit3"}), min_grade=2

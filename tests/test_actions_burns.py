@@ -20,7 +20,7 @@ from types import SimpleNamespace
 
 import pytest
 from abstraction_pool import LIFE_1
-from burn_support import AVOID_SHOCK_1, DATA, JEWEL, RANGED_RING, RING, STRENGTH, belt, build, helmet, sword
+from burn_support import AVOID_SHOCK_1, DATA, JEWEL, RANGED_RING, RING, belt, build, helmet, sword
 from contract_support import check_action
 from implicits_support import BELT, BOOTS, implicit
 from items_support import AMULET
@@ -42,7 +42,7 @@ from crafting_system.actions import (
 )
 from crafting_system.cli._marking import approximate_inputs_of
 from crafting_system.cli._offers import offers_for
-from crafting_system.items import ImplicitMod, Item, Rarity
+from crafting_system.items import Item, Rarity
 from crafting_system.prices.price_names import ARMOURERS_SCRAP, BLACKSMITHS_WHETSTONE, CLEAR_OIL
 from crafting_system.rules import rule_by_id
 
@@ -233,8 +233,8 @@ def test_a_blessed_burn_is_refused_when_a_requirement_reads_the_implicit():
 def test_a_blessed_burn_is_refused_with_an_eldritch_implicit():
     eldritch = implicit(AVOID_SHOCK_1, 1)
     boots = Item.build(DATA, base_id=BOOTS, item_level=84, rarity=Rarity.RARE, implicits=(eldritch,))
-    with_ranged = build(BELT, implicits=(eldritch, ImplicitMod(STRENGTH, 0, (30,))))
-    for item in (boots, with_ranged):
+    embered_belt = build(BELT, implicits=(eldritch,))  # a belt whose ranged base implicit an Ember took (no item holds both, #528)
+    for item in (boots, embered_belt):
         for keeps in (BurnKeeps(), BurnKeeps(quality=True)):
             reason = BlessedOrb().burn_refusal(DATA, item, keeps)
             assert reason is not None and "Eldritch" in reason

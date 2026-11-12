@@ -8,7 +8,8 @@ not about presence. Checked here, on the real 3.29.3.3 data:
   planner and holds the rule written from #449), both ways: 25 does not meet 35, 35 does, and a belt whose implicit was replaced does not;
 * a Vaal Orb's implicit outcome replaces the base implicit and its other outcomes keep it; a Scouring Orb keeps it; a Bloodstained draw
   chooses among the implicits the item lists, the base's included;
-* the item a state stands for carries the base implicit no requirement names, and loses it to an Eldritch implicit or the corruption.
+* the item a state stands for carries the base implicit no requirement names, and loses it to an Eldritch implicit or to a corrupted implicit,
+  not to the corruption alone (#528).
 """
 
 from fractions import Fraction
@@ -134,6 +135,23 @@ def test_the_item_a_state_stands_for_carries_the_base_implicit_no_requirement_na
     assert ability.compress(rebuilt) == state
     corrupted = ability.compress(rare_belt.changed(real, corrupted=True, implicits=()))
     assert ability._item_of(corrupted, False)[0].implicits == ()  # the corruption took its place; a corrupted item is final
+
+
+def test_a_vaal_outcome_that_keeps_the_base_implicit_survives_compress_then_item_of_and_the_implicit_outcome_replaces_it(real, rare_belt):
+    """Ticket #528 (#531): the state says which base implicits a corrupted item no longer holds, so it does not read "corrupted" as "replaced"."""
+    ability = Abstraction(real, Goal((), (ImplicitWanted(frozenset({"AvoidShockEldritchImplicit1"})),)), rare_belt.base_id, 75, [VaalOrb()])
+    strength = ImplicitMod(STRENGTH, 0, (25,))
+    kept = replaced = Fraction(0)
+    for chance, item in VaalOrb().outcomes(real, rare_belt).results:
+        rebuilt = ability._item_of(ability.compress(item), False)[0]
+        if strength in item.implicits:
+            assert rebuilt.implicits == (strength,)
+            kept += chance
+        else:
+            assert rebuilt.implicits == ()  # the corrupted implicit took its place; the state keeps no corrupted implicit (ADR-0036)
+            replaced += chance
+        assert ability.compress(rebuilt) == ability.compress(item)
+    assert (kept, replaced) == (Fraction(3, 4), Fraction(1, 4))
 
 
 def test_a_state_keeps_the_named_base_implicit_and_its_roll(real, rare_belt):
