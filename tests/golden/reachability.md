@@ -3,7 +3,7 @@
 What a plan can reach today, read from the planner's own code (ticket #414, audit #396 class 3). Made by `.github/scripts/reachability_report.py`; the committed copy is `tests/golden/reachability.md`, and a test fails with a diff when this text changes, so a kind that becomes reachable shows up in review. Nothing here solves a plan.
 
 - Game data: repoe-fork 3.29.3.3 (commit ee2084de).
-- Targets: the 14 files of `examples/targets/`, each through `make_plan(..., solve_it=False)` (the gates, `offers_for`, the pricing and the abstraction, nothing solved), and each start option `vendor_recipe_starts` lists for it.
+- Targets: the 16 files of `examples/targets/`, each through `make_plan(..., solve_it=False)` (the gates, `offers_for`, the pricing and the abstraction, nothing solved), and each start option `vendor_recipe_starts` lists for it.
 - Prices: `tests/fixtures/prices/routes-allflame-2026-10-31.json`, or the target's own `price_file`; they only decide which offers are dropped for lack of a price.
 - A run of the entry that outlasts `--target-seconds` is reported as "not measured, too slow" (none did).
 
@@ -14,10 +14,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | Action kinds in the catalog | 60 |
 | - with `planner=False` (no plan can use them) | 28 |
 | - with `planner=True` | 32 |
-| - `planner=True` and offered by at least one target (reachable) | 15 |
-| - `planner=True` and offered by no target | 17 |
-| Benchmark targets | 14 |
-| - the planner entry plans them | 12 |
+| - `planner=True` and offered by at least one target (reachable) | 19 |
+| - `planner=True` and offered by no target | 13 |
+| Benchmark targets | 16 |
+| - the planner entry plans them | 14 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
 | Settings and flags the planner accepts | 29 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 2 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 45 of 60 (28 closed by `planner=False`, 17 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 41 of 60 (28 closed by `planner=False`, 13 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -35,17 +35,17 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 |---|---|---|---|---|---|
 | `chaos-orb` | yes |  | j01, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `harvest-reforge` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
-| `harvest-reforge-influence` | yes |  | none | not named in the target's `actions:` (8 of 15 entries); the kind lists no action for this start item (5 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `harvest-reforge-influence` | yes |  | none | not named in the target's `actions:` (10 of 17 entries); the kind lists no action for this start item (5 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `harvest-reforge-likelihood` | **no** |  | none | `planner=False`: reads every junk family, so a state is a set of family types and every kernel has all-distinct weights; not in the B1 offer set until pruning (#118) decides | ACT1-4 |
-| `harvest-add-remove` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `harvest-resistance-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `harvest-damage-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `harvest-add-remove` | yes | opt-in | r24 |  |  |
+| `harvest-resistance-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `harvest-damage-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `harvest-quality-enchant` | **no** | only: weapon and body armour | none | `planner=False`: a finish step, priced by the finish cost of ADR-0050, never searched over |  |
-| `essence` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
+| `essence` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
 | `corrupted-essence` | yes | opt-in | r04 |  |  |
-| `bench-craft` | yes |  | r04, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14 |  |  |
-| `remove-crafted-mods` | yes |  | r04, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14 |  |  |
-| `fossil-set` | yes | opt-in | r08, r09 |  |  |
+| `bench-craft` | yes |  | r04, r07, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14, r24 |  |  |
+| `remove-crafted-mods` | yes |  | r04, r07, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14, r24 |  |  |
+| `fossil-set` | yes | opt-in | r07, r08, r09 |  |  |
 | `alchemy-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
 | `transmutation-orb` | yes |  | v01 |  |  |
 | `alteration-orb` | yes |  | r13, r14, v01 |  |  |
@@ -53,23 +53,23 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `regal-orb` | yes |  | r13, r14, v01 |  |  |
 | `exalted-orb` | yes | opt-in | r04, r14 |  |  |
 | `influenced-exalted-orb` | **no** | reads: implicits | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the orb's result since ticket #155) |  |
-| `veiled-chaos-orb` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `veiled-chaos-orb` | yes | opt-in, reads: any | r07, r24 |  |  |
 | `orb-of-dominance` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced or an Elevated mod yet (the compressed state tells them apart since ticket #155); the kind lists no action for any benchmark start item |  |
-| `veiled-exalted-orb` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `unveil` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `pick` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `veiled-exalted-orb` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `unveil` | yes | opt-in, reads: any | r07, r24 |  |  |
+| `pick` | yes | opt-in, reads: any | r07, r24 |  |  |
 | `scouring-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
-| `annulment-orb` | yes | opt-in | r04, r14 |  |  |
+| `annulment-orb` | yes | opt-in | r04, r07, r14, r24 |  |  |
 | `fracturing-orb` | yes | opt-in | r04 |  |  |
-| `talisman-fracture` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `aspect-beast` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `beast-side-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `wild-bristle-matron` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `talisman-fracture` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `aspect-beast` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `beast-side-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `wild-bristle-matron` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `divine-orb` | yes |  | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
-| `awakeners-orb` | **no** |  | none | `planner=False`: the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built'); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 14 start items list such actions) | ACT2-11 |
+| `awakeners-orb` | **no** |  | none | `planner=False`: the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built'); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 16 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
-| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (10 of 14 start items list such actions) | ACT2-11 |
+| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (12 of 16 start items list such actions) | ACT2-11 |
 | `catalyst` | **no** | reads: any | none | `planner=False`: the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158) |  |
 | `eldritch-implicit-currency` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
 | `eldritch-chaos-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
@@ -80,19 +80,19 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `tailoring` | **no** | only: body armour | none | `planner=False`: the planner prices the orb through the finish cost of a target that names an enchantment (ADR-0050), it does not search over its clicks; the kind lists no action for any benchmark start item |  |
 | `imprint` | **no** | reads: any | none | `planner=False`: the end-to-end ticket #223 wires R15 and R17 and measures the state growth of imprints |  |
 | `restore` | **no** | reads: any | none | `planner=False`: the end-to-end ticket #223 wires R15 and R17 and measures the state growth of imprints |  |
-| `foulborn-augmentation-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `foulborn-augmentation-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `jewellers-orb` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
-| `foulborn-regal-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `foulborn-regal-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `orb-of-fusing` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
-| `foulborn-exalted-orb` | yes | opt-in, needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `foulborn-exalted-orb` | yes | opt-in, needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
-| `vaal` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-1 |
+| `vaal` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-1 |
 | `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `quality-currency` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0049), bought before the orbs; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `re-anoint` | **no** | burns | none | `planner=False`: a burn only (ticket #295, ADR-0056): as a plain action it changes nothing the state keeps and gives a target nothing; the Peek of a Lock takes it as a fallback |  |
-| `locus` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (13 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `locus` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 
 ## 2. The planner entry, target by target
 
@@ -103,6 +103,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
+| r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 10672 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 10672 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r10-fractured-boots | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
@@ -111,6 +112,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r12 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r13 | plans | 5 names | 6 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
 | r14 | plans | 9 names | 11 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
+| r24 | plans | 10 names | 12 | 0 | 0 | 8 | annulment-orb, bench-craft, essence, harvest-add-remove, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | v01 | plans | 4 names | 4 | 0 | 0 | 4 | alteration-orb, augmentation-orb, regal-orb, transmutation-orb |
 | v01 (recipe start) | plans | 4 names | 3 | 0 | 0 | 3 | alteration-orb, augmentation-orb, regal-orb |
 

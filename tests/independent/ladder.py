@@ -102,6 +102,7 @@ TRADE_CATEGORY = {
     "Shield": "armour.shield",
     "Quiver": "armour.quiver",
     "Bow": "weapon.bow",
+    "Wand": "weapon.wand",
 }
 
 
