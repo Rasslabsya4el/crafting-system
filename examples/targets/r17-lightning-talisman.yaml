@@ -1,0 +1,71 @@
+# Target for benchmark route R17: a +2 Lightning rare Talisman made with the rare-Talisman imprint (3.29).
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft it: the
+# planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, r/pathofexile, comments/1vtv3u0, 2026; docs/research/2026-10-30-5-reference-routes.md, id R17):
+#   1. Buy a bunch of Croaker Talismans with the implicit you want.
+#   2-3. Gilded Fossil, then Vesper to replace the implicit with Ukatoa's Ducat (left out, see below).
+#   4. Orb of Alteration until "+1 to Level of all Skill Gems".
+#   5. Regal Orb.
+#   6. Imprint (the Fenumal Plagued Arachnid, on a rare Talisman) and Orb of Annulment until only the +1 is left;
+#      on a failure restore the imprint and try again.
+#   7. Craft "Can have up to 3 Crafted Modifiers", "Prefixes Cannot Be Changed" and "Cannot roll Attack Modifiers".
+#   8. Harvest: add a Lightning modifier and remove a random one, until "+1 to Level of all Lightning Skill Gems".
+#   9-10. Imprint the +2 and Exalted Orbs for the "desired" other mods (left out, see below).
+#
+# How the words of the guide are read (each reading is a choice and can be changed here):
+#   * The start (ADR-0013, B3 amendment: "R17 starts from a bought Talisman with the wanted implicit"): the guide's steps 1 to 3
+#     make the implicit, and no later step touches it (an Alteration, a Regal, an Annulment, the imprint and the Harvest craft all
+#     keep the implicit), so the plan starts from the bought Talisman and the implicit is not a requirement. The planner cannot
+#     read a target that names an implicit yet (#159), and none is needed for the route's decisions.
+#   * The start item is a Normal Croaker Talisman of item level 85 (the Talismans sell at 85; the +1 to all Skill Gems needs 75).
+#     The guide's step 4 is an Orb of Alteration, which works on a Magic item only, so the one Orb of Transmutation that makes the
+#     bought Talisman Magic is a step the game forces before it (OR-16), named below.
+#   * "+1 all skills": "+1 to Level of all Skill Gems", the one tier of its mod (GlobalSkillGemLevel1), rolled (OR-1).
+#   * "+1 all Lightning skills": "+1 to Level of all Lightning Skill Gems", the one tier (GlobalLightningGemLevel1), added by the
+#     Harvest craft, so rolled, never crafted.
+#   * Steps 9 and 10 ask for "desired" Exalted mods the guide never names; with nothing named there is no requirement to plan for
+#     (OR-4: the guide's own words), so the target ends at the +2. The metamods may stay on the finished Talisman.
+
+# The base item. Its implicit (whichever the market sells) is kept by every step of the route.
+base: Croaker Talisman
+
+item_level: 85
+
+# The actions the planner may use: the guide's orbs, the imprint and its restore, the Lightning Harvest craft and the three
+# metamods of step 7 (they count toward no requirement, so they are named by their label), and the Augmentation Orb that
+# goes with every Alteration loop. The plan is the cheapest among these; the report lists what was left out.
+actions:
+  - transmutation-orb
+  - alteration-orb
+  - augmentation-orb
+  - regal-orb
+  - annulment-orb
+  - imprint
+  - restore
+  - Harvest Add Remove Lightning
+  - Bench craft Can have up to 3 Crafted Modifiers
+  - Bench craft Prefixes Cannot Be Changed
+  - Bench craft Cannot roll Attack Modifiers
+
+# Everything below must be present on the finished Talisman.
+requirements:
+  # Guide, step 4: "Alteration spam for +1 all skills". One tier.
+  - family: GlobalSkillGemLevel
+    not_crafted: true
+  # Guide, step 8: "Harvest augment a new Lightning modifier ... until +1 all Lightning skills". One tier.
+  # Its family (GlobalDamageTypeGemLevel) holds the gem levels of every damage type, so the mod is named.
+  - family: GlobalDamageTypeGemLevel
+    mod: GlobalLightningGemLevel1
+    not_crafted: true
+
+# Where the crafting starts: a Normal Croaker Talisman, bought (see above).
+start_item:
+  rarity: normal
+
+# Its own price file: the beasts of the imprint and the Talisman are priced from poe.ninja (Allflame, 2026-11-10), the
+# currency from the snapshot of the same day (tests/fixtures/prices/routes-allflame-2026-11-10.json).
+price_file: ../../tests/fixtures/prices/r17-allflame-2026-11-10.json
+
+start: bought

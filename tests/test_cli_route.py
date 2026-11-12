@@ -559,6 +559,63 @@ def test_the_route_composes_with_verify(tmp_path, capsys):
     assert "Given route" in capsys.readouterr().out
 
 
+# --- imprints held (ticket #223) -----------------------------------------------------------------
+
+
+def test_imprints_is_refused_when_the_plan_offers_no_imprint(plan):
+    message = error_of(f"rules:\n  - when:\n      imprints: 1\n    do: {REFORGE}\n", plan)
+
+    assert message.startswith("route.yaml:3: rules[0].when.imprints: ")
+    assert "no imprint" in message
+
+
+def test_imprints_counts_the_imprints_the_item_holds():
+    """`imprints: n` matches a state that holds exactly n imprints (ADR-0060: at most `max_imprints`, default 1)."""
+    from items_support import item, roll
+
+    from crafting_system.actions import AlterationOrb, Imprint, Restore
+    from crafting_system.cli import Offer
+    from crafting_system.items import Rarity
+
+    target = parse_target(
+        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - stat: \"+1 to Level of all Lightning Skill Gems\"\n"
+        "start_item:\n  rarity: magic\nstart: given\n",
+        DATA,
+        source="amulet.yaml",
+    )
+    croaker = "Craicic Croaker"
+    prices = price_file()
+    prices.prices[croaker] = PriceEntry(20.0, "poe.ninja")
+    prices.prices["Orb of Alteration"] = PriceEntry(0.1, "poe.ninja")
+    offers = [
+        Offer("Orb of Alteration", AlterationOrb(), {"Orb of Alteration": 1}),
+        Offer("Imprint with the Craicic Croaker", Imprint("magic"), {croaker: 1}),
+        Offer("Restore imprint 1", Restore(0), {}),
+    ]
+    amulet_plan = make_plan(DATA, target, prices, offers=offers, judges_route=True)
+    route = read(
+        """
+        rules:
+          - when:
+              imprints: 1
+            do: Restore imprint 1
+          - when:
+              imprints: 0
+            do: Imprint with the Craicic Croaker
+        """,
+        amulet_plan,
+    )
+    magic = item(roll("IncreasedLife1"), base_id=target.base_id, item_level=84, rarity=Rarity.MAGIC)
+    bare = amulet_plan.abstraction.compress(magic)
+    (held,) = amulet_plan.abstraction.kernel(bare, Imprint("magic"))
+
+    assert bare.imprints == () and len(held.imprints) == 1
+    assert [rule.when.matches(bare, DATA) for rule in route.rules] == [False, True]
+    assert [rule.when.matches(held, DATA) for rule in route.rules] == [True, False]
+    message = error_of("rules:\n  - when:\n      imprints: -1\n    do: Restore imprint 1\n", amulet_plan)
+    assert message.startswith("route.yaml:3: rules[0].when.imprints: must be a whole number")
+
+
 # --- open slots (ticket #60) ---------------------------------------------------------------------
 
 

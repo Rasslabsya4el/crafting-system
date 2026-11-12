@@ -14,6 +14,7 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
                                       # or {without: [{family: Pierce}]}: some mod is fractured and none of the listed families is
           crafted_mods: false         # the item holds a crafted mod or metamod
           open_suffixes: 1            # at least this many free suffixes (open_prefixes likewise); needs a bench action offered
+          imprints: 1                 # exactly this many imprints held (ADR-0060; 0 for none); needs an imprint action offered (#223)
           requirements:               # the status of a requirement of the target, named by its selector
             - stat: "+1 to Level of all Lightning Skill Gems"    # or `family: ID`, as the target writes it
               status: absent          # absent, below or passing, or a list of them
@@ -63,7 +64,7 @@ from ._reach import policy_states
 RESTART = "restart"
 TOP_KEYS = ("name", "skip_refused", "rules")
 RULE_KEYS = ("when", "do")
-WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "requirements")
+WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "imprints", "requirements")
 REQUIREMENT_KEYS = ("stat", "family", "status")
 RARITIES = tuple(rarity.value for rarity in Rarity)
 STATUSES = tuple(status.name.lower() for status in Status)
@@ -92,6 +93,7 @@ class When:
     unopened: bool | None = None  # the bought listing whose mods are not drawn yet (ADR-0064): the one state the draw is taken in
     statuses: tuple[tuple[int, frozenset[Status]], ...] = ()  # (index of the requirement leaf, statuses allowed)
     open_slots: tuple[tuple[Side, int, int], ...] = ()  # (side, capacity of the side, free slots wanted at least)
+    imprints: int | None = None  # the number of imprints held, exactly (#223)
 
     def matches(self, state: CompressedState, data: GameData) -> bool:
         if self.rarities is not None and state.flags.rarity not in self.rarities:
@@ -103,6 +105,8 @@ class When:
         if self.unopened is not None and state.flags.unopened != self.unopened:
             return False
         if self.no_fractured and state.fractured:
+            return False
+        if self.imprints is not None and len(state.imprints) != self.imprints:
             return False
         if self.fractured_families:  # a mod fractured mid-route may be held as its family type ("~3"): it names no family here
             held = {family for entry in state.fractured if entry.mod_id in data.mods for family in data.mods[entry.mod_id].families}
@@ -319,6 +323,8 @@ class _Reader:
         open_slots = self.read_open_slots(when, path)
         if open_slots:
             fields["open_slots"] = open_slots
+        if "imprints" in when:
+            fields["imprints"] = self.read_imprints(when, f"{path}.imprints")
         if "fractured" in when:
             fields.update(self.read_fractured(when["fractured"], f"{path}.fractured", when.key_lines["fractured"]))
         if "requirements" in when:
@@ -345,6 +351,19 @@ class _Reader:
             room = capacity(self.data, self.plan.target.base_id, Rarity.RARE).of(side)
             found.append((side, room, value))
         return tuple(found)
+
+    def read_imprints(self, when: LineMap, path: str) -> int:
+        value, line = when["imprints"], when.key_lines["imprints"]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            self.fail(line, path, f"must be a whole number of imprints held, 0 or more, got {describe(value)}")
+        if not self.plan.abstraction.tracks_imprints:
+            self.fail(
+                line,
+                path,
+                "the states of this plan hold no imprint (no imprint action is offered: name `imprint` and `restore` in the target's "
+                "`actions:`), so the imprints cannot be counted; leave the condition out",
+            )
+        return value
 
     def read_rarities(self, when: LineMap, path: str) -> frozenset[Rarity]:
         value, line = when["rarity"], when.key_lines["rarity"]
