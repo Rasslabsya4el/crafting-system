@@ -11,24 +11,26 @@ its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023).
 is always exact, as before.
 """
 
+import itertools
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
-from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights, pattern_refusal
-from crafting_system.actions import BLOCKING, OutOfScopeError, kinds, unopened_listing
+from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal
+from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
-from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
+from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, is_free_cost, solve_readings
 from crafting_system.solver import Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
+from ._axes import axis_what
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
@@ -134,6 +136,7 @@ class Plan:
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
+    readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
     foresight: Foresight | None = None  # what the plan found about Hinekora's Lock (ticket #296, ADR-0057); None for a plan that was not solved
 
     def __post_init__(self) -> None:
@@ -186,11 +189,17 @@ class _Model:
     """
 
     def __init__(
-        self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer], cache: dict | None = None
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        offers: Iterable[PricedOffer],
+        cache: dict | None = None,
+        merge_equal: bool | None = None,
     ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
+        self.merge_equal = MERGE_EQUAL if merge_equal is None else merge_equal
         self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
         self.chosen: dict[CompressedState, list[PricedOffer]] = {}  # the offers chosen at the queued states (`prefetch` made the choice)
 
@@ -211,7 +220,7 @@ class _Model:
             if self.abstraction.is_goal(state):
                 continue
             chosen = self.chosen[state] = chosen_offers(
-                self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING
+                self.abstraction, self.offers, state, self.start, merge_equal=self.merge_equal, prune_corrupting=PRUNE_CORRUPTING
             )
             for priced in chosen:
                 if self.cache is None or (state, priced.label, priced.cost) not in self.cache:
@@ -223,7 +232,7 @@ class _Model:
         chosen = self.chosen.pop(state, None)
         return solver_actions(
             self.abstraction, self.offers, state, self.start,
-            merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache, chosen=chosen,
+            merge_equal=self.merge_equal, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache, chosen=chosen,
         )  # fmt: skip
 
 
@@ -440,30 +449,36 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
-    # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); the rest wait for #589
-    axes = sorted({axis.name for p in priced for axis in p.offer.action.rule_axes(data) if not axis.planned})
-    if axes:
+    # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
+    # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading
+    axes = interval_axes(data, priced)
+    if axes and solver not in ("auto", "object"):
         raise PlanError(
-            f"an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading "
-            "of it with the interval yet"
+            f"an offered action reads a rule the sources leave open ({', '.join(axis_what(axis.name) for axis in axes)}), so the plan is "
+            f"made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that"
         )
-    abstraction = Abstraction(
-        data,
-        goal,
-        target.base_id,
-        target.item_level,
-        enabled,
-        metamods=holds_metamod,
-        enchantment=target.start_item.enchantment,
-        allow_inputs=False,
-    )
+    def model(reading: Reading | None = None) -> Abstraction:
+        """The abstraction of the target at `reading` of the rule axes (None: the plan reading, ADR-0033)."""
+        return Abstraction(
+            data,
+            goal,
+            target.base_id,
+            target.item_level,
+            enabled,
+            metamods=holds_metamod,
+            enchantment=target.start_item.enchantment,
+            allow_inputs=False,
+            reading=reading,
+        )
+
+    abstraction = model()
     start = abstraction.compress(listing or target.start_item)
     shape = abstraction.compress(target.start_item) if listing is not None else None  # the item the start opens into: what the pruning bounds the offers on (ADR-0064)
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
-    refusal = pattern_refusal(abstraction)
+    refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
     # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
     # Nor, for now, with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the bound pruning that already existed, not a new cut-off): on
@@ -471,7 +486,7 @@ def make_plan(
     # exact (OR-11, OR-12), and #742 carries removing this exception.
     many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
     envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not many_offers)
-    if budget is not None and not envelope:
+    if budget is not None and not envelope and not axes:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -508,8 +523,14 @@ def make_plan(
     began = time.perf_counter()
     pruned = None
     packed = None
+    readings = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
-    if many and not envelope and solver != "packed":
+    if axes:
+        readings, others = solve_each_reading(abstraction, model, start, priced, axes)
+        solution = readings.solution
+        limits += reading_limits(abstraction, others, budget is not None)
+        offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
+    elif many and not envelope and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
@@ -534,6 +555,11 @@ def make_plan(
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
     foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
+    if with_lock is not None and readings is not None:
+        raise PlanError(
+            "the cheapest plan takes Hinekora's Lock, and a plan made once for each reading of a rule the sources leave open "
+            "cannot take the Lock yet. To see the best plan without the Lock, name the kinds to use in the target's `actions:` without `hinekora-lock`"
+        )
     if with_lock is not None:  # the plan takes the Lock: its policy is the second solve's, on the object solver (ADR-0054)
         solution, packed = with_lock, None
     solve_seconds = time.perf_counter() - began
@@ -553,8 +579,80 @@ def make_plan(
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, foresight=foresight,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight,
     ))
+
+
+def interval_axes(data: GameData, priced: Iterable[PricedOffer]) -> tuple[Axis, ...]:
+    """The rule axes the offered actions read that are not `planned` (ADR-0033), by name: the ones the plan is solved at every reading of (#589)."""
+    found: dict[str, Axis] = {}
+    for each in priced:
+        for axis in each.offer.action.rule_axes(data):
+            if not axis.planned:
+                found.setdefault(axis.name, axis)
+    return tuple(found[name] for name in sorted(found))
+
+
+def solve_each_reading(
+    abstraction: Abstraction,
+    model: Callable[[Reading], Abstraction],
+    start: CompressedState,
+    priced: Sequence[PricedOffer],
+    axes: Sequence[Axis],
+) -> tuple[IntervalReport[CompressedState, Reading], tuple[Abstraction, ...]]:
+    """Solve the plan once for each reading of `axes` and cross-evaluate the routes (`risk.solve_readings`, ADR-0012, ADR-0022; #589).
+
+    A reading is one value of each axis (their product, the plan reading first); an axis that is `planned` stays at its plan value in every
+    one (OR-11). `abstraction` is the model of the plan reading (its `reading` None); each other reading gets its own, `model(reading)`, of the
+    same target and enabled actions, so every kernel is taken at that reading. Each model is solved whole by the object solver: the envelope search
+    and the packed walk take no reading. The solve is exact; no comparison route is asked, since the planner offers no action with inputs.
+    Offers with an equal kernel are not merged (`merge_equal`): the routes are compared across readings by their offers' labels, and an offer
+    merged away at one reading could leave a route with no action there. Returns the driver's report and the abstractions of the other readings.
+    """
+    names = [axis.name for axis in axes]
+    plan = Reading.of({axis.name: axis.plan for axis in axes})
+    every = [Reading.of(dict(zip(names, values))) for values in itertools.product(*(axis.readings for axis in axes))]
+
+    models = {
+        reading: _Model(abstraction if reading == plan else model(reading), start, priced, merge_equal=False)
+        for reading in (plan, *(r for r in every if r != plan))
+    }
+    try:
+        report = solve_readings(models, start, plan=plan)
+    except (OutOfScopeError, ConvergenceError) as error:
+        raise PlanError(f"the plan could not be made at every reading of the rule axis {', '.join(names)}: {error}") from error
+    return report, tuple(each.abstraction for reading, each in models.items() if reading != plan)
+
+
+def reading_limits(abstraction: Abstraction, others: Iterable[Abstraction], budgeted: bool) -> tuple[Limit, ...]:
+    """What the solves of the other readings left out, beyond what the plan reading's own model says (`finished` adds that), and the budget.
+
+    A gap of an action the plan reading's model has no gap for, and a pruning limit it does not give, are said once (OR-13). With a time
+    budget the run says that it did not apply: each reading is solved whole and exactly, however long that takes.
+    """
+    others = tuple(others)
+    own = {gap.label for gap in abstraction.gaps.entries()}
+    gaps: dict[str, Gap] = {}
+    for other in others:
+        for gap in other.gaps.entries():
+            if gap.label not in own:
+                gaps.setdefault(gap.label, gap)
+    found = list(model_gap_limits(gaps.values()))
+    seen = set(pruning_limits(abstraction.prunings))
+    for other in others:
+        for limit in pruning_limits(other.prunings):
+            if limit not in seen:
+                seen.add(limit)
+                found.append(limit)
+    if budgeted:
+        found.append(Limit(
+            _limits.SOLVE,
+            "The time budget was not applied",
+            "an offered action reads a rule the sources leave open, so the plan is solved whole at each reading of that rule",
+            "The answer is exact at every reading; only the time it takes is not bounded.",
+        ))  # fmt: skip
+    return tuple(found)
+
 
 
 def plan_foresight(

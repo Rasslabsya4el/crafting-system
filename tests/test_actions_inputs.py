@@ -29,7 +29,7 @@ from crafting_system.actions import (
     model_readings,
     registered,
 )
-from crafting_system.cli import PlanError, make_plan
+from crafting_system.cli import make_plan
 from crafting_system.cli._offers import offers_for, price_offers
 from crafting_system.items import Rarity
 from crafting_system.prices import PriceEntry
@@ -178,10 +178,13 @@ def test_the_planner_does_not_price_a_donor_as_free(items):
     assert plan.abstraction.inputs(plan.start, ToyGraft(with_axis=False)) == (Need(donor_start(), donor_want()),)  # but can be asked what it needs
 
 
-def test_the_planner_refuses_an_offered_axis_until_the_interval_driver_exists(graft_registered):
+def test_the_planner_solves_an_offered_axis_at_every_reading_and_still_takes_no_donor(graft_registered):
+    # #589: the axis is no longer refused; the plan is made at each reading of it, and the graft stays out of the route (it consumes a donor)
     prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.5, "test")})
-    with pytest.raises(PlanError, match="toy.pick"):
-        make_plan(CONTRACT_DATA, load_target(R12, CONTRACT_DATA), prices)
+    plan = make_plan(CONTRACT_DATA, load_target(R12, CONTRACT_DATA), prices)
+    assert plan.readings is not None
+    assert [reading[PICK.name] for reading in plan.readings.readings] == [Fraction(1, 2), Fraction(1, 4), Fraction(3, 4)]
+    assert "Toy Graft" not in {action.label for action in plan.policy.values()}
 
 
 def _offers_with(action):
