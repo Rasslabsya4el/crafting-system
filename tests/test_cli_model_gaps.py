@@ -85,6 +85,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
     ("cli/_donors.py", "DonorModel._candidate", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_donors.py", "DonorModel._candidate", ("OutOfScopeError",), RECORDS, "a model gap: written"),
+    ("cli/_foresight.py", "PlanSites._build", ("NotApplicableError", "OutOfScopeError"), EITHER, "an option of a Hinekora's Lock the game refuses or the model has no rule for is no option there; it errs against the Lock and nothing is written (#762)"),
     ("cli/_main.py", "main", ("TargetError", "DataError", "PriceFileNotFound", "PlanError", "NotApplicableError", "OutOfScopeError", "ConvergenceError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the run"),
     ("cli/_offers.py", "_roll_limit_can_matter", ("NotApplicableError", "OutOfScopeError"), EITHER, "a pool that cannot be built is no proof the mod is out of reach, so the orb stays and nothing is left out"),
     ("cli/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
