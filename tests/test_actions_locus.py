@@ -350,3 +350,18 @@ def test_the_contract_suite_runs_on_the_kind():
     for name in ("none", "fractured", "normal", "one", "two"):
         assert check_action(LOCUS, STARTS[name], DATA)
     assert not check_action(LOCUS, STARTS["none"].changed(DATA, corrupted=True), DATA)
+
+
+def test_the_report_names_the_free_share_of_a_locus_use_as_the_planner_charged_it():
+    """The report's free-action price is the one `price_offers` charged: a Locus use at its default is one, not 0 (checker on #262)."""
+    from types import SimpleNamespace
+
+    from crafting_system.cli._report import free_action_price
+
+    start = STARTS["none"]
+    offers = [o for o in offers_for(DATA, Goal((Wanted(RESISTS),), asks_corrupted=True), start.base_id, start).offers if o.label in ("Locus of Corruption", "Vaal Orb")]
+    priced, _ = price_offers(offers, _prices())
+    charged = {entry.label: entry.cost for entry in priced}["Locus of Corruption"]
+    assert free_action_price(SimpleNamespace(offers=priced)) == charged > 0
+    dearer, _ = price_offers(offers, _prices(**{PRICE_NAME: PriceEntry(4.0, "override")}))
+    assert free_action_price(SimpleNamespace(offers=dearer)) == 0.0  # no free action left
