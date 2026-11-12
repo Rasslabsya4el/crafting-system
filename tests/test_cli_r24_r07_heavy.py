@@ -4,7 +4,7 @@
 are listed. The plans walk the veiled kinds with the junk told apart by family (ADR-0026), so they are heavy runs, not a CI shard or a PC:
 
     python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 2 --timeout-minutes 60 \
-        --command 'CRAFTING_ROUTES=$([ "$RUNNER_INDEX" = 0 ] && echo R24 || echo R07) CRAFTING_HEAVY=1 uv run --no-sync pytest -q -s -p no:cacheprovider tests/test_cli_r24_r07_heavy.py'
+        --command 'CRAFTING_ROUTES=$([ "$RUNNER_INDEX" = 1 ] && echo R24 || echo R07) CRAFTING_HEAVY=1 uv run --no-sync pytest -q -s -p no:cacheprovider tests/test_cli_r24_r07_heavy.py'
 
 Without `CRAFTING_HEAVY` they skip, and without the cached dump the data fixture skips. The CLI runs with its default budget.
 """
