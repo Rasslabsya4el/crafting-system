@@ -190,7 +190,10 @@ class _Memo[S]:
 
 
 class _Without[S]:
-    """A model with some actions left out; a Peek keeps the options and fallback actions that are not, and goes when no option is left."""
+    """A model with some actions left out; a Peek keeps the options and fallback actions that are not, and goes when no option is left.
+
+    `drop` is asked about ordinary actions only, never about the Peek itself: the Lock cannot be switched off here (a target's
+    `actions:` does that before the model is built)."""
 
     def __init__(self, memo: _Memo[S], drop: Callable[[Action], bool]) -> None:
         self.memo = memo
@@ -243,7 +246,8 @@ def _walk[S](
 
     `own` says the candidate was made for this very model: its actions are used as they are. Otherwise each action is
     looked up by label; one the model does not offer leaves its state stuck (no entry, and not reported as uncovered).
-    A Lock's pseudo-state the candidate does not hold takes its only action, or the one best by the candidate's `values`.
+    A Lock's "apply" pseudo-state takes its one action from `memo` (an option's index may differ between readings, its node is
+    never looked up in the candidate); a "give up" node the candidate does not hold takes the fallback best by the candidate's `values`.
     """
     actions: dict[S, Action[S]] = {}
     uncovered: list[S] = []
@@ -255,7 +259,8 @@ def _walk[S](
             continue
         chosen = candidate.get(state)
         as_is = own
-        if chosen is None and isinstance(state, PeekNode):
+        if isinstance(state, PeekNode) and (chosen is None or state.kind != GIVE_UP):
+            # an "apply" node holds the option's one action, whatever index the option has in this reading (#297)
             chosen, as_is = _node_action(state, memo, values or {}), True
         if chosen is None:
             if not isinstance(state, PeekNode):

@@ -123,3 +123,27 @@ def test_the_comparison_route_drops_an_action_from_the_lock():
     kept = solve_readings({"only": peek_model(spec)}, 0, without=lambda action: action.label == "burn")
     alone = spec._replace(fallback=[])
     assert kept.baseline.value.value == pytest.approx(solve_peek(peek_model(alone), [0]).values[0])
+
+
+def two_options(order):
+    """State 0 offers the Lock with options A and B (in `order`), a burn of 5 back to 0; 1 finishes for 30, 2 for 500."""
+    options = {
+        "A": ("A", Fraction(1), [(3, 1), (1, 2), (2, 3)]),
+        "B": ("B", Fraction(2), [(3, 2), (1, 1), (2, 1)]),
+    }
+    return PeekSpec(
+        3,
+        {0: [("restart", Fraction(200), [(3, 1)])], 1: [("finish", Fraction(30), [(3, 1)])], 2: [("finish", Fraction(500), [(3, 1)])]},
+        0, Fraction(2), [options[label] for label in order], [("burn", Fraction(5), [(0, 1)])], 0,
+    )  # fmt: skip
+
+
+def test_options_listed_in_another_order_are_matched_by_label():
+    """The same kernels with the options swapped: every route costs under one reading what it costs under the other."""
+    report = solve_readings({"AB": peek_model(two_options("AB")), "BA": peek_model(two_options("BA"))}, 0, plan="AB")
+    assert report.plan.policy[0].label == "lock"
+    for c in ("AB", "BA"):
+        costs = report.table[c]
+        assert math.isfinite(costs["AB"].value)
+        assert costs["BA"].value == pytest.approx(costs["AB"].value, rel=1e-9)
+    assert report.plan.interval[0] == pytest.approx(report.plan.interval[1], rel=1e-9)
