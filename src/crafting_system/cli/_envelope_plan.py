@@ -25,6 +25,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from crafting_system import parallel
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
 from crafting_system.abstraction._pattern import SINK, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
@@ -121,6 +122,8 @@ class CraftingProblem:
                 continue  # the model holds the offer and no member of the key can take it
             if self.floors is not None:
                 low = max(low, self.floors.lower(position, klass))  # a floor of the same class as the state's: the bound of the state (`lower`) never exceeds the least of these
+                if low == math.inf:
+                    continue  # refused at this state (an unopened listing takes the draw alone)
             out.append((low, position))
         return out
 
@@ -256,6 +259,15 @@ def envelope_result(
     from . import _packed
 
     say = progress or _packed.PROGRESS or (lambda _text: None)
+    with parallel.memory_net(net.memory_mb if net is not None else None):  # the pool's workers are watched by the memory net too (#626, OR-12)
+        packed = _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item)
+    if (reason := getattr(abstraction, "prime_stopped", None)) is not None:
+        say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
+    return packed
+
+
+def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item) -> PackedResult:
+    """The body of `envelope_result`, under the run's memory net."""
     began = time.perf_counter()
     if bound is None:
         bound = pattern_lower_bound(abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began))
