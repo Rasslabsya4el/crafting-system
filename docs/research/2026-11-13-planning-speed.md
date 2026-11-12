@@ -213,9 +213,11 @@ The search needs three things of a method: a state, the kernels of its actions, 
 | C7, the route page on the full chain | **stays** | lumping the shown plan's chain with the page's labels is independent of the search |
 | C8, one budget | **stays, and becomes central** | an anytime search is stopped by the budget; the report names what bound it |
 
-## 9. The tickets, in order (not created; the owner decides first)
+## 9. The tickets, in order (proposed on #822; not created until the owner has answered)
 
 Each ticket is accepted on the generated family of section 10, and the benchmark routes are measured after it, never the acceptance (#812). At most five tickets with heavy runs at once (CLAUDE.md).
+
+**Effort, estimated** from the comparable tickets (from filing to closing: the walk-free bound #497 five hours, the switch of the default to the envelope search #535 four and a half days, the envelope search #377 six days including its wait on #376 and #497): tickets 1 to 3 about three to five days in all, after which R04 and R14 plan in minutes once C7 has landed too; ticket 4 one to three days per family, eight families, at most five at once, so about two to four weeks; tickets 5 to 7 and the three reshaped tickets about a week, partly beside ticket 4. These are estimates, not measurements.
 
 1. **The generated-family benchmark** (research tooling, first). The generator and the measurements of section 10, run through `make_plan` on runners; it records today's behaviour as the baseline. Every later ticket is accepted on it.
 2. **The upper side and the stop at a stated gap** (`cli/_envelope.py`, `_envelope_plan.py`). The bound's greedy plan (or a given route, #536) evaluated exactly on its reach as the first `U`; `U` kept as the search goes (realized actions plus the incumbent's action plus the restart); the stop at `U <= (1 + eps) L(root)`, or exact within the time budget; the report says which (OR-13). `eps` is a setting whose default the owner sets (question 1); with `eps = 0` nothing changes. Rules: OR-11, OR-12, OR-13.
