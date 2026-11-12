@@ -111,13 +111,15 @@ def base_implicit() -> ImplicitMod:
 
 
 def starts() -> dict[str, Item]:
-    """Rare boots with no implicit, one Eldritch implicit, both, and (on a base with one) the base implicit with an Eldritch one, or replaced by it."""
+    """Rare boots with no implicit, one Eldritch implicit, both, and (on a base with one) the base implicit, or an Eldritch one in its place.
+
+    No item holds a base implicit beside an Eldritch one (an Ember or an Ichor replaces it, `Item.validate`, ticket #528)."""
     mods = (roll("LifeA"), roll("CasterA"))
     return {
         "none": boots(*mods),
         "one": boots(*mods, implicits=(exarch(),)),
         "two": boots(*mods, implicits=(exarch(), eater())),
-        "base-and-eldritch": boots(*mods, base=IMPLICIT_BOOTS, implicits=(base_implicit(), eater())),
+        "base-implicit": boots(*mods, base=IMPLICIT_BOOTS, implicits=(base_implicit(),)),  # as it is bought: its base implicit
         "replaced-base-implicit": boots(*mods, base=IMPLICIT_BOOTS, implicits=(eater(),)),  # the base has one that an Ember replaced (#484): the item lists the Eater one alone
         "fractured": boots(roll("CasterA", fractured=True), roll("LifeA"), implicits=(exarch(),)),
     }

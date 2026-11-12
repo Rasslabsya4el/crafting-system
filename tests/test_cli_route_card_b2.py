@@ -94,13 +94,14 @@ def test_a_stored_base_implicit_shows_its_rolled_value_once_and_has_no_note_or_m
     assert plain_card(item).implicits == (Slot("+30 to Strength", "implicit"),)
 
 
-def test_a_stored_base_implicit_beside_an_eldritch_one_does_not_repeat_the_base_implicit():
-    item = build(implicits=(ImplicitMod(STRENGTH, 0, (30,)), ImplicitMod("AvoidShockEldritchImplicit1", 1, (34,))))
+def test_a_stored_base_implicit_is_shown_once_and_an_eldritch_one_in_its_place_alone():
+    """No item holds a base implicit beside an Eldritch one (an Ember took it, ticket #528)."""
+    stored = plain_card(build(implicits=(ImplicitMod(STRENGTH, 0, (30,)),))).implicits
+    embered = plain_card(build(implicits=(ImplicitMod("AvoidShockEldritchImplicit1", 1, (34,)),))).implicits
 
-    implicits = plain_card(item).implicits
-
-    assert [slot.text for slot in implicits] == ["+30 to Strength", "34% chance to Avoid being Shocked"]
-    assert implicits[1].note == "grade 1 (Lesser)"
+    assert [slot.text for slot in stored] == ["+30 to Strength"]
+    assert [slot.text for slot in embered] == ["34% chance to Avoid being Shocked"]
+    assert embered[0].note == "grade 1 (Lesser)"
 
 
 def test_a_card_that_is_not_rolled_still_shows_the_rolled_value_of_a_stored_implicit_with_its_grade():

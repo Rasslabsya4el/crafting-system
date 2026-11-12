@@ -86,7 +86,6 @@ SETS = [
     ("Opulent", "Gilded"),
 ]
 STARTS = list(starts())
-REACHABLE = [start for start in STARTS if start != "base-and-eldritch"]  # no game route holds a base implicit beside an Eldritch one (an Ember replaces it, #484): the state cannot tell it apart
 
 
 def the_plain_reroll(others: tuple[str, ...]) -> Action:
@@ -138,7 +137,7 @@ def enumerated(others: tuple[str, ...], start: str):
 # --- Done when 1: layer 1 -------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("start", REACHABLE)
+@pytest.mark.parametrize("start", STARTS)
 @pytest.mark.parametrize("others", SETS, ids=lambda others: "+".join(("Bloodstained", *others)))
 def test_the_kernel_equals_the_brute_force_of_the_fossil_times_the_implicit_cases(others, start):
     """Layer 1. The compressed state keeps no corrupted implicit (ADR-0036), so the drawn mod collapses in it; what the draw leaves of the
@@ -267,12 +266,6 @@ def test_a_gilded_fossil_replaces_every_implicit():
     outcomes = bloodstained("Gilded").outcomes(DATA, starts()["two"])
     assert outcomes.chance_all([EXARCH]) == 0  # nothing stays
     assert bloodstained("Scorched").outcomes(DATA, starts()["two"]).chance_all([EXARCH]) == Fraction(1, 2)
-
-
-def test_the_base_implicit_is_replaced_like_any_other():
-    outcomes = bloodstained().outcomes(DATA, starts()["base-and-eldritch"])
-    assert outcomes.chance_all([BASE_IMPLICIT]) == Fraction(1, 2)
-    assert outcomes.chance_all([BASE_IMPLICIT, "EldritchEaterImplicit2"]) == 0  # one of the two goes
 
 
 def test_an_item_whose_base_implicit_was_replaced_has_the_eldritch_one_alone_to_lose():

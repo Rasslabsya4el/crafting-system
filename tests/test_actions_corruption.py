@@ -170,7 +170,7 @@ def test_the_item_level_gates_the_pool_and_the_chances_follow():
     assert high.chance_all([LATE]) == QUARTER * Fraction(200, 1950)
 
 
-@pytest.mark.parametrize("name", [name for name in STARTS if name != "belt-both"])  # the state drops a base implicit beside an Eldritch one: an Ember replaced it (#484)
+@pytest.mark.parametrize("name", STARTS)
 def test_the_kernel_equals_the_hand_items(name):
     goal = Goal((Wanted(RESISTS), Wanted(frozenset({LIFE_1, LIFE_2}))), asks_corrupted=True)
     item = STARTS[name]

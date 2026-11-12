@@ -2,22 +2,25 @@
 
 `DATA` is `corruption_support.DATA` plus `TWIN`, a corrupted implicit of weight 500 in the family of `ALL_RES`, on the same amulet, boots
 and belt; the pool of those bases is then ALL_RES 1000, SECOND 500, THIRD 250, LATE 200 (level 75) and TWIN 500, and ALL_RES and TWIN
-are one group. `oracle` writes ADR-0038's rules again as plain fractions, never calling `actions.locus` or the pool.
+are one group. `THREE_BELT` is a belt with three implicits of its own (`THREE_IMPLICITS`; no real base has three), so that the altar has
+two of three implicits to replace: no item holds a base implicit beside an Eldritch one (ticket #528). `oracle` writes ADR-0038's rules again as plain fractions, never calling `actions.locus` or the pool.
 """
 
 import dataclasses
 from fractions import Fraction
 from itertools import combinations
 
-from corruption_support import ALL_RES, LATE, LEVEL, POOL, SECOND, THIRD
+from corruption_support import ALL_RES, BASE_IMPLICIT, BELT, LATE, LEVEL, POOL, SECOND, THIRD
 from corruption_support import DATA as VAAL_DATA
 
-from crafting_system.data import Weight
+from crafting_system.data import StatRange, Weight
 
 TWIN = "VaalAllResTwin"
 GROUPS = {ALL_RES: "VaalAllResFamily", TWIN: "VaalAllResFamily", SECOND: "VaalTwoStatsFamily", THIRD: "VaalThirdFamily", LATE: "VaalLateFamily"}
 WEIGHTS = {**{mod_id: weight for mod_id, (weight, *_) in POOL.items()}, TWIN: 500}
 LEVELS = {**{mod_id: level for mod_id, (_, level, *_) in POOL.items()}, TWIN: 1}
+THREE_BELT = "Metadata/Items/Belts/LocusTestThreeImplicits"
+THREE_IMPLICITS = (BASE_IMPLICIT, "LocusTestImplicitB", "LocusTestImplicitC")
 
 
 def _world():
@@ -29,7 +32,13 @@ def _world():
         text=TWIN,
         spawn_weights=tuple(Weight(tag, weight) for tag, weight in (("amulet", 500), ("boots", 500), ("belt", 500), ("default", 0))),
     )
-    return dataclasses.replace(VAAL_DATA, mods={**VAAL_DATA.mods, TWIN: twin})
+    base_mod = VAAL_DATA.mods[BASE_IMPLICIT]
+    extra = {
+        mod_id: dataclasses.replace(base_mod, id=mod_id, type=mod_id, families=(mod_id,), stats=(StatRange(f"{mod_id}_stat", 1, 3),))
+        for mod_id in THREE_IMPLICITS[1:]
+    }
+    three = dataclasses.replace(VAAL_DATA.base_items[BELT], id=THREE_BELT, implicits=THREE_IMPLICITS)
+    return dataclasses.replace(VAAL_DATA, mods={**VAAL_DATA.mods, TWIN: twin, **extra}, base_items={**VAAL_DATA.base_items, THREE_BELT: three})
 
 
 DATA = _world()

@@ -216,8 +216,11 @@ def test_an_ember_replaces_the_exarch_implicit_keeps_the_eater_one_and_drops_the
     from crafting_system.items import ImplicitMod
 
     base_implicit = ImplicitMod(BASE_IMPLICIT, 0, low(BASE_IMPLICIT))
-    item = boots(roll(LIFE), implicits=(base_implicit, exarch(2), eater(1)))
-    assert {entry.mod_id for entry in item.implicits} == {BASE_IMPLICIT, exarch(2).mod_id, eater(1).mod_id}
+    fresh = boots(roll(LIFE), implicits=(base_implicit,))
+    for _, result in EldritchImplicitCurrency(EXARCH_SIDE, 1).outcomes(DATA, fresh).results:
+        assert len(result.implicits) == 1 and implicits_of(result)["exarch"] in POOLS[(BOOTS, EXARCH_SIDE, 1)]  # the base implicit went
+        assert result.mods == fresh.mods
+    item = boots(roll(LIFE), implicits=(exarch(2), eater(1)))  # no item holds the base implicit beside them (ticket #528)
     for _, result in EldritchImplicitCurrency(EXARCH_SIDE, 1).outcomes(DATA, item).results:
         assert implicits_of(result)["eater"] == eater(1).mod_id
         assert len(result.implicits) == 2 and implicits_of(result)["exarch"] in POOLS[(BOOTS, EXARCH_SIDE, 1)]

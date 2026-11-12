@@ -439,6 +439,13 @@ class Item:
                     ImplicitError,
                 )
             self._check_values(entry.mod_id, entry.values, mod)
+        own = [entry.mod_id for entry in self.implicits if entry.mod_id in base.implicits]
+        if held and own:
+            raise self._error(
+                f"implicit {own[0]} is an implicit of the base and {next(iter(held.values()))} an Eldritch implicit: an Ember or an Ichor"
+                " replaces every implicit but the other side's Eldritch one, so no item holds both (ticket #528)",
+                ImplicitError,
+            )
 
     def _check_corrupted_implicit(self, entry: ImplicitMod, mod: Mod, base: BaseItem) -> None:
         """A corrupted implicit sits only on a corrupted item, at grade 0, and only a mod the base's corrupted pool holds (ADR-0036)."""

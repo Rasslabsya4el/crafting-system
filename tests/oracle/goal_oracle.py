@@ -576,14 +576,28 @@ class Oracle:
         return True
 
     def held_implicits(self, item: OItem) -> tuple[OImplicit, ...]:
-        """The implicits the item holds: the listed ones, and the base's own that it does not list at the low end of their ranges,
-        unless a listed implicit is not one of the base's own (it took their place, so the list is the whole of it)."""
+        """The implicits the item holds: the listed ones, and the base's own that it does not list at the low end of their ranges, but those a
+        listed implicit that is not the base's own took (#484, #528), written from the game text:
+
+        * an Ember or an Ichor "replaces any existing implicit modifiers other than" the other side's Eldritch ones: beside an Eldritch implicit
+          the list is the whole of it;
+        * a Vaal implicit replaces one implicit, "if it has more than one, one of them at random": each corrupted implicit listed took one, so
+          the base's own the list leaves out were taken when there are no more of them than corrupted implicits, and more of them leave unsaid
+          which stayed (`ValueError`);
+        * any other implicit that is not the base's own is taken as a replacer of all.
+        """
         own = [mod_id for mod_id in self.export.base_items[self.base_id].get("implicits", []) if mod_id in self.export.mods]
-        if any(entry.mod_id not in own for entry in item.implicits):
-            return item.implicits
         listed = {entry.mod_id for entry in item.implicits}
+        left_out = [mod_id for mod_id in own if mod_id not in listed]
+        others = [self.export.mods.get(entry.mod_id) for entry in item.implicits if entry.mod_id not in own]
+        if others:
+            if any(mod is None or mod["generation_type"] != "corrupted" for mod in others):
+                return item.implicits
+            if len(left_out) > len(others):
+                raise ValueError(f"the item lists {len(others)} corrupted implicit(s) and leaves out {left_out}: which of them stayed is unsaid")
+            return item.implicits
         low = lambda mod_id: tuple(min(stat["min"], stat["max"]) for stat in self.export.mods[mod_id]["stats"])  # noqa: E731
-        return (*item.implicits, *(OImplicit(mod_id, low(mod_id)) for mod_id in own if mod_id not in listed))
+        return (*item.implicits, *(OImplicit(mod_id, low(mod_id)) for mod_id in left_out))
 
     def implicit_met(self, req: OImplicitReq, item: OItem) -> bool:
         return any(self.implicit_counts(req, entry) for entry in self.held_implicits(item))
