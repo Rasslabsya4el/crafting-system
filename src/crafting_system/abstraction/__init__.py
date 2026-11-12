@@ -15,7 +15,7 @@ is imported or tested for here.
   imports nothing of `targets`. `Goal.leaves` is the depth-first, file-order list of leaves and the
   order of `CompressedState.status`; `Goal.is_met(statuses)` needs `Status.PASSING` for a leaf.
 * `Status`: ABSENT < BELOW < PASSING, what an item gives one leaf; the best of several mods wins.
-* `CompressedState(flags, fractured, status, slots, implicits, quality, offer, imprints, strands)`: `Flags` (rarity, corrupted, influences), the
+* `CompressedState(flags, fractured, status, slots, implicits, quality, offer, imprints, strands, replaced)`: `Flags` (rarity, corrupted, influences), the
   fractured mods as `FracturedMod(canonical id, contribution to each leaf)` sorted, the status of
   each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last four
   are the item state beyond the explicit mods (ADR-0027, ticket #142), empty unless an enabled action reads or
@@ -95,6 +95,10 @@ is imported or tested for here.
   the plan reading of the claim `memory_strands.weights_of_kept_tiers` by default), passed to the pool through `kept_tier_weights`. The
   pattern bound, the pilot count and the coarse state carry the count as part of `CompressedState.held`; the cut classes as coarse blocks
   are ticket #283.
+* The base implicits of a corrupted item (ticket #528). `CompressedState.replaced` names the implicits of the base that no requirement
+  names and that a corrupted item lost to a corrupted implicit while it holds no Eldritch implicit (the state keeps no corrupted
+  implicit, ADR-0036); it is empty for every other item, and then the hash, the order key and the text of a state are what they were
+  before. `_item_of` gives the base implicits by the one rule, `items.with_base_implicits`, with those it names left out.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 

@@ -86,16 +86,37 @@ def base_implicits(data: GameData, base: BaseItem) -> tuple[ImplicitMod, ...]:
     )
 
 
-def with_base_implicits(data: GameData, base: BaseItem, listed: tuple[ImplicitMod, ...]) -> tuple[ImplicitMod, ...]:
-    """`listed` plus every implicit of the base it does not list, at the low end, unless a replacer is listed.
+def with_base_implicits(
+    data: GameData, base: BaseItem, listed: tuple[ImplicitMod, ...], gone: frozenset[str] = frozenset()
+) -> tuple[ImplicitMod, ...]:
+    """`listed` plus the implicits of the base it leaves out that the item still holds, at the low end: the one rule for which implicits of its
+    base an item holds (ticket #528, OR-26; an item carries every implicit of its base until a replacer takes its place, #484).
 
-    An implicit that is not one of the base's (an Eldritch or a corrupted one) is a replacer: it is in the place of the base's
-    own (`Ember`, `Vaal Orb`, ADR-0027 amendment #484), so a list that holds one says the whole of what the item holds.
+    * Beside an Eldritch implicit, none: an Ember or an Ichor replaces every implicit but the other side's Eldritch one
+      (`eldritch.ember_replaces_implicits`; `Item.validate` refuses a base implicit beside one), so the list is the whole of it.
+    * Beside corrupted implicits, each took the place of one implicit, chosen at random (`corruption.implicit_replaces_existing`), so the
+      base implicits the list leaves out are the ones taken when there are no more of them than corrupted implicits. More of them (a base
+      with two implicits and a list that names neither) leave unsaid which one stayed: `ImplicitError`.
+    * Otherwise every one the list leaves out, but those in `gone`: the caller knows a replacer took them (`Abstraction._item_of`: the
+      state keeps no corrupted implicit, only which base implicits it took).
+
+    Any other implicit that is not one of the base's (one the game data does not hold) is taken as a replacer of all: `Item.validate`
+    reports it.
     """
-    if any(entry.mod_id not in base.implicits for entry in listed):
-        return listed
     held = {entry.mod_id for entry in listed}
-    return (*listed, *(entry for entry in base_implicits(data, base) if entry.mod_id not in held))
+    missing = tuple(entry for entry in base_implicits(data, base) if entry.mod_id not in held and entry.mod_id not in gone)
+    replacers = [data.mods.get(entry.mod_id) for entry in listed if entry.mod_id not in base.implicits]
+    if not replacers:
+        return (*listed, *missing)
+    if any(mod is None or not is_corrupted_implicit(mod) for mod in replacers):
+        return listed  # an Eldritch implicit took every base implicit
+    if len(missing) > len(replacers):
+        raise ImplicitError(
+            f"{len(replacers)} corrupted implicit(s) took the place of as many implicits, and {base.name} has {len(missing)} of its own the item"
+            f" does not list ({', '.join(entry.mod_id for entry in missing)}): {len(missing) - len(replacers)} of them stayed;"
+            " list the base implicit that stayed"
+        )
+    return listed
 
 
 def eldritch_side(mod: Mod) -> EldritchSide | None:

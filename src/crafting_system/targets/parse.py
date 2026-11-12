@@ -1100,9 +1100,9 @@ class _Reader:
                 )
             fields["corrupted"] = start["corrupted"]
         base = self.data.base_items.get(base_id)
-        # an item carries every implicit of its base, at the low end, unless the file lists one that takes its place (#484, #449)
-        held = implicits if base is None else with_base_implicits(self.data, base, implicits)
         try:
+            # an item carries every implicit of its base, at the low end, but those a listed implicit took (#484, #449, #528)
+            held = implicits if base is None else with_base_implicits(self.data, base, implicits)
             return Item.build(
                 self.data,
                 base_id=base_id,

@@ -191,13 +191,13 @@ def test_an_item_with_no_implicit_with_a_range_is_refused():
         BlessedOrb().outcomes(DATA, _item(FIXED_RING, implicits=(ImplicitMod(FIXED, 0, (3,)),)))
 
 
-def test_an_eldritch_implicit_is_out_of_scope_whatever_else_the_item_holds():
+def test_an_eldritch_implicit_is_out_of_scope_whatever_the_base():
     eldritch = implicit(AVOID_SHOCK_1, 1)
     boots = Item.build(DATA, base_id=BOOTS, item_level=84, rarity=Rarity.RARE, implicits=(eldritch,))
     with pytest.raises(OutOfScopeError, match="Eldritch"):
         BlessedOrb().outcomes(DATA, boots)
-    with pytest.raises(OutOfScopeError, match="Eldritch"):  # a ranged base implicit next to it does not change that
-        BlessedOrb().outcomes(DATA, _item(BELT, implicits=(eldritch, ImplicitMod(STRENGTH, 0, (30,)))))
+    with pytest.raises(OutOfScopeError, match="Eldritch"):  # a belt whose ranged base implicit an Ember took (no item holds both, #528)
+        BlessedOrb().outcomes(DATA, _item(BELT, implicits=(eldritch,)))
 
 
 # --- the declarations and the contract ------------------------------------------------------------------
@@ -289,7 +289,7 @@ def test_the_kind_does_not_list_an_item_the_orb_would_refuse():
     assert catalog(DATA, stored_fixed, names={"blessed-orb"}) == ()
     eldritch = implicit(AVOID_SHOCK_1, 1)
     assert catalog(DATA, Item.build(DATA, base_id=BOOTS, item_level=84, rarity=Rarity.RARE, implicits=(eldritch,)), names={"blessed-orb"}) == ()
-    with_eldritch = _item(BELT, implicits=(eldritch, ImplicitMod(STRENGTH, 0, (30,))))
+    with_eldritch = _item(BELT, implicits=(eldritch,))  # its base implicit went to the Ember (#528)
     assert catalog(DATA, with_eldritch, names={"blessed-orb"}) == ()
     mixed = _item(RING, implicits=(ImplicitMod(FIXED, 0, (3,)), ImplicitMod(TWO_STAT, 0, (1, 5))))
     assert catalog(DATA, mixed, names={"blessed-orb"}) == (BlessedOrb(),)  # a stored ranged implicit next to a fixed one is listed
