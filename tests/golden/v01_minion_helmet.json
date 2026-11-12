@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds this target does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 23,
+      "count": 24,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -192,7 +192,8 @@
         "Aspect beast",
         "Beast side swap",
         "Wild Bristle Matron",
-        "Divine Orb"
+        "Divine Orb",
+        "Recombinators"
       ],
       "names": []
     },
@@ -201,7 +202,7 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 28,
+      "count": 27,
       "labels": [
         "Harvest reforges that favour a mod",
         "Harvest quality enchants",
@@ -212,7 +213,6 @@
         "Awakener's Orb",
         "Beast influence recipe",
         "Blessed Orb",
-        "Recombinators",
         "Catalysts",
         "Eldritch implicit currency",
         "Eldritch Chaos Orb",
