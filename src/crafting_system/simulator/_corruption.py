@@ -28,7 +28,7 @@ implicit draw on top of it is written here (`corruption.bloodstained_fossil_impl
 added, independently of the reroll).
 
 Each sampler fits the `Action` protocol of this package (`outcomes(data, item)` returns an object with `sample(rng)`), so a `Step` takes it. A corrupted
-item is refused with `ValueError`, as is a base with no pool or an empty pool at the item level: the samplers model no refusal of the game,
+item is refused with `ValueError`, as is a base with no pool, an empty pool at the item level, a Cluster or a Timeless jewel and a Locus share outside (0, 1]: the samplers model no refusal of the game,
 they stand for an action the caller already knows applies.
 """
 
@@ -40,7 +40,7 @@ from itertools import combinations
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import ImplicitMod, Item, Rarity, spawn_weight
-from crafting_system.items.implicits import BASE_GRADE, corrupted_pool_domain
+from crafting_system.items.implicits import BASE_GRADE, CLUSTER_JEWEL_DOMAIN, TIMELESS_JEWEL_NAME, corrupted_pool_domain
 from crafting_system.rules import get_rule
 
 
@@ -83,6 +83,8 @@ UNIQUE_JEWELS = frozenset({"Cobalt Jewel", "Crimson Jewel", "Viridian Jewel"})
 def corrupted_pool(data: GameData, item: Item) -> tuple[tuple[Mod, int], ...]:
     """The corrupted implicits `item` can draw, each with its weight, in the order of the game data; `ValueError` when there are none."""
     base = data.base_items[item.base_id]
+    if base.domain == CLUSTER_JEWEL_DOMAIN or base.name == TIMELESS_JEWEL_NAME:
+        raise ValueError(f"{base.name}: the pools of Cluster and Timeless jewels are not checked (ADR-0037), so no sampler is written for them")
     domain = corrupted_pool_domain(base)
     pool = []
     for mod in data.mods.values():
@@ -209,6 +211,8 @@ class SampledLocus:
     def outcomes(self, data: GameData, item: Item) -> _LocusDraw:
         _refuse_corrupted(item, "the Locus of Corruption")
         share = Fraction(str(LOCUS_SHARE.value["share"])) if self.share is None else Fraction(self.share)
+        if not 0 < share <= 1:
+            raise ValueError(f"the two-implicit share of the Locus lies in (0, 1], got {share}")
         names = list(LOCUS_FOUR.value)  # two_implicits, sockets_non_white, influenced_rare, destroyed
         shares = {name: share if name == "two_implicits" else (1 - share) / 3 for name in names}
         return _LocusDraw(data, item, corrupted_pool(data, item), shares)
@@ -242,8 +246,9 @@ class SampledBloodstained:
 
     def outcomes(self, data: GameData, item: Item) -> _BloodstainedDraw:
         _refuse_corrupted(item, "a Bloodstained resonator")
+        pool = corrupted_pool(data, item)  # first, so that an empty pool is this sampler's ValueError, not the action's refusal
         given = self.resonator.outcomes(data, item)
         reroll, draw = getattr(given, "reroll", None), getattr(given, "draw", None)
         if reroll is None or draw is None:
             raise ValueError(f"{self.resonator!r} holds no Bloodstained Fossil")
-        return _BloodstainedDraw(data, reroll, corrupted_pool(data, item), bool(draw.replaces_all))
+        return _BloodstainedDraw(data, reroll, pool, bool(draw.replaces_all))

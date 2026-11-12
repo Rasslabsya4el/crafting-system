@@ -100,6 +100,18 @@ def test_a_base_with_no_pool_and_a_corrupted_item_are_refused():
         SampledLocus().outcomes(locus.DATA, vaal.amulet().changed(vaal.DATA, corrupted=True))
 
 
+@pytest.mark.parametrize("share", [Fraction(0), Fraction(3, 2), Fraction(-1, 4)])
+def test_a_locus_share_outside_zero_to_one_is_refused(share):
+    with pytest.raises(ValueError):
+        SampledLocus(share).outcomes(locus.DATA, vaal.starts()["none"])
+
+
+def test_a_bloodstained_resonator_on_an_empty_pool_is_this_sampler_s_value_error():
+    jewel = blood.boots(base=blood.JEWEL, item_level=30, rarity=Rarity.NORMAL)
+    with pytest.raises(ValueError, match="no corrupted implicit"):
+        SampledBloodstained(blood.bloodstained()).outcomes(blood.DATA, jewel)
+
+
 def test_the_real_ring_pool_is_adr_0039_s():
     data = real_game_data()
     ring = next(base for base in data.base_items.values() if base.item_class == "Ring" and not base.implicits)
