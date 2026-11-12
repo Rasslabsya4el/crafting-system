@@ -13,14 +13,20 @@ concrete item to a `Step` (an action and what one use of it costs) or to None to
 intervals are normal approximations, good for thousands of runs. A `Step` may list `inputs` (ticket #222, ADR-0022): second
 items made by nested runs before the action is applied, each an `Input` with its own sub-policy; see `_simulate`.
 
-Public names: `Action`, `DonorMismatchError`, `Input`, `Policy`, `SampledEstimate`, `Sampler`, `SimulationReport`, `Step`, `simulate`.
+The three corrupting actions have samplers of their own written from the claims (`SampledVaalOrb`, `SampledLocus`, `SampledBloodstained`,
+`_corruption.py`, ticket #264, ADR-0039), because the actions' own samplers draw from the very lists the kernel is built from.
+
+Public names: `Action`, `DonorMismatchError`, `Input`, `Policy`, `SampledBloodstained`, `SampledEstimate`, `SampledLocus`, `SampledVaalOrb`,
+`Sampler`, `SimulationReport`, `Step`, `corrupted_pool`, `simulate`.
 """
 
+from ._corruption import SampledBloodstained, SampledLocus, SampledVaalOrb, corrupted_pool
 from ._estimate import SampledEstimate
 from ._report import SimulationReport
 from ._simulate import simulate
 from ._step import Action, DonorMismatchError, Input, Policy, Sampler, Step
 
 __all__ = [
-    "Action", "DonorMismatchError", "Input", "Policy", "SampledEstimate", "Sampler", "SimulationReport", "Step", "simulate",
+    "Action", "DonorMismatchError", "Input", "Policy", "SampledBloodstained", "SampledEstimate", "SampledLocus", "SampledVaalOrb",
+    "Sampler", "SimulationReport", "Step", "corrupted_pool", "simulate",
 ]  # fmt: skip
