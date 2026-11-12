@@ -42,7 +42,7 @@ from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, pub
 from ._inputs import load_target_prices, write_json
 from ._offers import default_offers
 from ._plan import Plan, make_plan
-from ._report import money, name_states, number_states, percent
+from ._report import interval_answer_of, money, name_states, number_states, percent
 from ._route import RouteResult, evaluate_route, load_route
 from ._shares import weight_share
 from ._start_report import first_step_document
@@ -368,6 +368,7 @@ def run_route(
         "solver_not_dearer": None,
         "completed_route": None,
         "solver_not_dearer_than_completed": None,
+        "interval": None,
         "timings_seconds": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
@@ -396,6 +397,9 @@ def run_route(
         entry["solver"]["seconds"] = plan.solve_seconds
         timings["solver"], timings["risk_evaluate"] = plan.solve_seconds, plan.risk_seconds
         entry["published_odds"] += published_odds(data, plan, bench)
+        answer = interval_answer_of(plan, data)
+        if answer is not None:  # a plan that reads a rule axis (a recombinator, #225): approximate, with its cost at every reading and the route without it
+            entry["interval"] = {"approximate": True, **answer.document()}
 
         if bench.route is not None:
             route = load_route(root / bench.route, plan, data)
@@ -644,6 +648,8 @@ def render_summary(document: dict) -> str:
                 continue
             verdict = "matches" if odds["matches"] else "DIFFERS"
             lines.append(f"  published odds {odds['published']} ({odds['on']}): computed {odds['computed']}, {verdict}")
+        if entry.get("interval") is not None:
+            lines.extend(_interval_summary(entry["interval"]))
         if entry["solver_not_dearer"] is not None:
             lines.append("  solver not dearer than the guide: " + ("yes" if entry["solver_not_dearer"] else "NO"))
         if entry["solver_not_dearer_than_completed"] is not None:
@@ -654,6 +660,24 @@ def render_summary(document: dict) -> str:
             lines.append(f"  add to {entry['missing_price']['overrides_file']} under [prices]:")
             lines.append(f"    {entry['missing_price']['override_line']}")
     return "\n".join(lines)
+
+
+def _interval_summary(interval: dict) -> list[str]:
+    """The interval of an approximate answer (#225): the plan's cost over the grid of the rule axis and the route without recombinators."""
+    spread = interval["plan_interval"]
+    lines = [
+        f"  approximate  the plan reads {', '.join(axis['words'] for axis in interval['rule_axes'])}; made at {interval['plan_reading']}",
+        f"  interval     {money(_finite_or_inf(spread['best']['value']))} to {money(_finite_or_inf(spread['worst']['value']))} Chaos over the grid "
+        f"(cheapest at {spread['best_reading']}, dearest at {spread['worst_reading']})",
+    ]
+    without = interval["without_recombinators"]
+    if without is not None:
+        lines.append(f"  without recombinators  {money(_finite_or_inf(without['value']))} Chaos")
+    return lines
+
+
+def _finite_or_inf(value: float | None) -> float:
+    return float("inf") if value is None else value
 
 
 def _review_summary(label: str, totals: dict) -> list[str]:

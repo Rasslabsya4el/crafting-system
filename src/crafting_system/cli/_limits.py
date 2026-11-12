@@ -514,3 +514,40 @@ def with_limits(limits: Sequence[Limit], added: Iterable[Limit], kind: str | Non
     """`limits` with `added` after them; with `kind`, the limits already there of that kind are replaced."""
     kept = [limit for limit in limits if kind is None or limit.kind != kind]
     return (*kept, *added)
+
+
+def feeder_donors_limit() -> Limit:
+    """The limit of a plan that makes donors (ticket #225, ADR-0062 decision 4): the donors offered are the target's own mods only (OR-13).
+
+    A recombination is offered only when the item in hand and its second item both hold nothing but mods the target asks for (one alone, or a
+    few together: the single-mod and two-mod items the guides build first). Recombining an item with some other mod could in principle be cheaper.
+    """
+    return Limit(
+        CONSUMES,
+        "Recombinations only of items made of wanted mods",
+        "a recombination is offered only when both items hold nothing but mods the target asks for, at a tier it accepts",
+        **claim(
+            "the plans that recombine only items made of wanted mods",
+            "Recombining an item that also holds some other mod could make it cheaper.",
+        ),
+    )
+
+
+def lock_with_donors_limit() -> Limit:
+    """The limit of a plan that makes second items while the target allows Hinekora's Lock (ticket #225): the Lock is not offered there."""
+    return Limit(
+        SOLVE,
+        "Hinekora's Lock is not offered",
+        "the plan makes second items for its recombinations, and the planner cannot weigh the Lock in such a plan yet",
+        **claim("the plans without Hinekora's Lock", "Taking the Lock could make it cheaper."),
+    )
+
+
+def second_items_shown_limit() -> Limit:
+    """What the steps of a plan that makes second items leave out (ticket #225): how each second item is made is not drawn yet."""
+    return Limit(
+        DISPLAY,
+        "How each second item is made is not shown",
+        "the steps show the target's own item; a recombination's second item is made by its own run of orbs, which the steps do not draw yet",
+        "The costs and the odds count every second item and every orb used to make it.",
+    )
