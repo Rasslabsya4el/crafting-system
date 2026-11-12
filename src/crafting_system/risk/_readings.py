@@ -55,7 +55,7 @@ from dataclasses import dataclass
 from ..solver import Action, Model, Solution, solve
 from ._mean import INFINITE, policy_mean
 from ._moments import interval
-from ._report import Estimate
+from ._report import Estimate, Expected
 
 GAP_TOLERANCE = 1e-9  # relative: a bracket this narrow counts as closed (`IntervalReport.proven_optimal`)
 FIRST = object()  # `plan` default: the first reading of `models` (None can be a reading, e.g. the empty one)
@@ -66,14 +66,14 @@ class Route[S, R]:
     """The optimal policy of one reading, and what it costs under every reading.
 
     `policy` is the solver's, state to the action of `reading`'s own model. `costs[r']` is its mean cost from the start under
-    reading `r'` (an `Estimate`; infinite when the policy cannot finish there). `best` and `worst` are the least and the
+    reading `r'` (an `Expected`: an `Estimate` and, when it is infinite, its cause, M7 #512). `best` and `worst` are the least and the
     greatest of the points over the readings, as intervals: `value` is the point, `low` and `high` hold for the true number
     whatever the float rounding. `best_reading` and `worst_reading` name where they sit.
     """
 
     reading: R
     policy: Mapping[S, Action[S]]
-    costs: Mapping[R, Estimate]
+    costs: Mapping[R, Expected]
     best_reading: R
     worst_reading: R
     best: Estimate
@@ -115,7 +115,7 @@ class IntervalReport[S, R]:
     robust: Route[S, R]
     routes: Mapping[R, Route[S, R]]
     values: Mapping[R, Estimate]
-    table: Mapping[R, Mapping[R, Estimate]]
+    table: Mapping[R, Mapping[R, Expected]]
     lower: Estimate
     upper: Estimate
     baseline: Baseline[S] | None
@@ -232,7 +232,7 @@ def _key(policy: Mapping) -> frozenset:
     return frozenset((state, action.label) for state, action in policy.items())
 
 
-def _best_and_worst[R](costs: Mapping[R, Estimate]) -> tuple[R, R, Estimate, Estimate]:
+def _best_and_worst[R](costs: Mapping[R, Expected]) -> tuple[R, R, Estimate, Estimate]:
     best_reading = min(costs, key=lambda r: costs[r].value)
     worst_reading = max(costs, key=lambda r: costs[r].value)
     best = Estimate(
@@ -299,9 +299,9 @@ def solve_readings[S, R: Hashable](
         if not grown:
             break
 
-    means: dict[tuple[frozenset, R], Estimate] = {}
+    means: dict[tuple[frozenset, R], Expected] = {}
 
-    def cost(c: R, r2: R) -> Estimate:
+    def cost(c: R, r2: R) -> Expected:
         slot = (keys[c], r2)
         if slot not in means:
             means[slot] = policy_mean(walks[slot][0], start, memos[r2].is_goal)

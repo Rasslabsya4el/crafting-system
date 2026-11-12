@@ -16,19 +16,27 @@ actions left out.
 
 `expected_total(policy, start, is_goal, weight)` is the expected total of a weight over the executions of a fixed policy, the
 runs of its inputs included: with weight 1 on the recombinations, the expected number of recombinations (ticket #221).
+It returns an `Expected`, as the interval driver's mean of a fixed policy does: the number and, when it is infinite, the cause
+(`SUBCRITICAL`, `UNDECIDED`, `STUCK`), which travels with the value to the text, the page and the JSON (M7, ticket #512).
 """
 
 from ._evaluate import evaluate
 from ._free import is_free as is_free_cost
 from ._lump import Lumped, lump
 from ._readings import Baseline, IntervalReport, Route, has_inputs, solve_readings
-from ._report import Estimate, GridInfo, RiskReport
+from ._report import IMPROPER, STUCK, SUBCRITICAL, UNDECIDED, UNORDERED, Estimate, Expected, GridInfo, RiskReport
 from ._visits import expected_total, expected_totals
 
 __all__ = [
     "Baseline",
     "Estimate",
+    "Expected",
     "GridInfo",
+    "IMPROPER",
+    "STUCK",
+    "SUBCRITICAL",
+    "UNDECIDED",
+    "UNORDERED",
     "IntervalReport",
     "Lumped",
     "RiskReport",

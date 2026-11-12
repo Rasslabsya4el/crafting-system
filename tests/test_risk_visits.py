@@ -60,7 +60,7 @@ def test_a_weight_is_a_number_not_below_zero():
 
 
 def test_a_start_that_is_a_goal_does_nothing():
-    assert expected_total(POLICY, "goal", is_goal, lambda action: 1.0) == Estimate(0.0, 0.0, 0.0)
+    assert expected_total(POLICY, "goal", is_goal, lambda action: 1.0).estimate == Estimate(0.0, 0.0, 0.0)
 
 
 def test_a_policy_that_cannot_finish_has_no_finite_count():

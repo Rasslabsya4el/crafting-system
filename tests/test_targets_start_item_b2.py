@@ -54,13 +54,11 @@ def test_a_written_grade_is_kept_and_checked_by_the_item():
     assert item.implicits[0].grade == 2
 
 
-def test_an_eldritch_implicit_on_each_side_is_allowed_with_a_base_implicit():
+def test_an_eldritch_implicit_on_each_side_is_allowed_and_the_base_implicit_is_gone():
     item = parse(
         start(
             f"""
             implicits:
-              - mod: StrengthImplicitBelt1
-                values: 25
               - mod: {SHOCK}1
                 values: 33
               - mod: ChanceToShockEldritchImplicit2
@@ -69,11 +67,24 @@ def test_an_eldritch_implicit_on_each_side_is_allowed_with_a_base_implicit():
         )
     ).start_item
 
-    assert {entry.mod_id: entry.grade for entry in item.implicits} == {
-        "StrengthImplicitBelt1": 0,
-        f"{SHOCK}1": 1,
-        "ChanceToShockEldritchImplicit2": 2,
-    }
+    assert {entry.mod_id: entry.grade for entry in item.implicits} == {f"{SHOCK}1": 1, "ChanceToShockEldritchImplicit2": 2}  # an Ember took it
+
+
+def test_a_base_implicit_beside_an_eldritch_one_is_refused():
+    """Ticket #528: an Ember or an Ichor replaces every implicit but the other side's Eldritch one, so no item holds both."""
+    message = parse_error(
+        start(
+            f"""
+            implicits:
+              - mod: StrengthImplicitBelt1
+                values: 25
+              - mod: {SHOCK}1
+                values: 33
+            """
+        )
+    )
+
+    assert_error(message, 9, "start_item.implicits[1]", "an implicit of the base", "an Eldritch implicit", "Ember")
 
 
 def test_implicits_of_the_start_item_must_be_a_list():

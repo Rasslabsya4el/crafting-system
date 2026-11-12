@@ -68,11 +68,11 @@ from crafting_system.solver import Action
 from crafting_system.targets import plain_base_names
 
 from ._interval import IntervalAnswer
-from ._limits import SHOWN_LABELS, STRANDS, grouped, limit_text, more_labels
+from ._limits import SHOWN_LABELS, STRANDS, grouped, limit_text, more_labels, not_shown
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
 from ._price_marks import price_uses, use_line
 from ._plan import GIVEN_SOURCE, Plan
-from ._report import UNRESOLVED, Report
+from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
 from ._route_chain import chain_of_packed_policy
@@ -707,9 +707,8 @@ class _View:
             return f"{money(value + shift)} ({_divine(value + shift, divine)})"
 
         mean = total(risk.mean.value) if math.isfinite(risk.mean.value) else (GAPS if self.inp.reasons else NEVER)
-        p90 = f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else (
-            UNRESOLVED if risk.success_probability.value >= 1.0 else "no finish in 9 runs of 10"
-        )
+        said = not_shown(risk, risk.p90)  # the sentence of the text report, its own cause first (M7, #512)
+        p90 = said if said is not None else f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
         success = risk.success_probability.value
         interval = self.inp.interval
         uses = price_uses(plan, self.inp.policy, risk.mean.value)  # each price the policy buys with, its source and marks (#616, OR-7, OR-23)

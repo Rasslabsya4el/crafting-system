@@ -963,3 +963,33 @@ def test_a_page_drawn_from_a_fixture_plan_has_the_part_what_this_answer_leaves_o
 
     assert section.goal.leaves_out
     assert "Memory Strands" in [field.label for field in section.goal.leaves_out]
+
+
+# --- ticket #512: a quantile with a cause of its own (M7) reads the same sentence on the page and in the text report ------------------------
+
+
+def _subcritical_risk():
+    """The risk of a small policy that starts two runs of its input per attempt while half of them come back: no finite mean (`subcritical`)."""
+    from crafting_system.solver import Action
+
+    policy = {
+        "A": Action("a", 1.0, (("goal", 1), ("A", 1)), extra_inputs=("B", "B")),
+        "B": Action("b", 1.0, (("donor_done", 1), ("A", 1))),
+    }
+    return evaluate(policy, "A", lambda state: state == "goal" or state.endswith("done"))
+
+
+def test_512_the_page_and_the_text_report_give_the_same_sentence_for_a_subcritical_policy(r12_plan):
+    from crafting_system.cli._report import NOT_COMPUTED, PERCENTILE_WORDS, ROW_WIDTH
+
+    risk = _subcritical_risk()
+    assert risk.grid.cause == "subcritical" and math.isinf(risk.p90.value)
+    plan = dataclasses.replace(r12_plan, risk=risk)
+
+    fields = {field.label: field.lines[0].text for field in build_section(route_input(plan), DATA).goal.fields}
+    text = render_text(build_report(plan, DATA))
+    (row,) = [line for line in text.splitlines() if line.startswith(f"  {PERCENTILE_WORDS['p90']:<{ROW_WIDTH}}")]
+
+    assert fields["9 runs in 10"] == NOT_COMPUTED["subcritical"]
+    assert row[2 + ROW_WIDTH :] == fields["9 runs in 10"]
+    assert not re.search(r"#\d", fields["9 runs in 10"])  # no ticket number reaches the player

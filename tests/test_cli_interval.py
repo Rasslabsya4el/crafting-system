@@ -10,6 +10,8 @@ the claims say, and a plan whose smallest worst case is another route names that
 """
 
 import json
+import math
+import re
 import random
 from dataclasses import replace
 from fractions import Fraction
@@ -24,6 +26,7 @@ from interval_support import (
     Tiny,
     gamble_answer,
     tiny_answer,
+    tiny_result,
     toy_report_plan,
 )
 from items_support import DATA
@@ -280,3 +283,52 @@ def test_the_unused_axis_of_a_plan_is_not_named():
     assert "group_conflict" not in "\n".join(answer.text_lines(300.0))
     assert all(row.best_cost is None for row in answer.rows)  # the best route of a merged row is not one number: not shown
     assert BUY_P  # the labels of the case are the ones of the support module
+
+
+# --- ticket #512: a cost or a count with no finite mean says why (M7), in the text, on the page and in the JSON ----------------------------
+
+
+def _lost_at(alpha: Fraction):
+    """The tiny result with the plan's cost under `alpha` replaced by a mean that is not finite because the plan starts more runs of its
+    donors than it finishes (what `policy_mean` returns for such a policy, `test_risk_mean_cause`)."""
+    from crafting_system.risk import SUBCRITICAL, Estimate, Expected
+
+    result, start, is_goal = tiny_result()
+    lost = Expected(Estimate(math.inf, math.inf, math.inf), SUBCRITICAL)
+    costs = dict(result.plan.costs) | {reading(alpha): lost}
+    return replace(result, plan=replace(result.plan, costs=costs)), start, is_goal, lost
+
+
+def test_512_a_reading_where_the_plan_has_no_finite_mean_says_the_cause_in_its_row_and_in_the_json():
+    from crafting_system.cli._limits import NOT_COMPUTED
+
+    result, start, is_goal, _ = _lost_at(Fraction(8, 5))
+
+    answer = build_interval_answer(result, toy_report_plan(), DATA, start=start, is_goal=is_goal)
+    text = "\n".join(answer.text_lines(300.0))
+    document = answer.document()
+
+    assert f"alpha = 1.6: the plan's cost is {NOT_COMPUTED['subcritical']}" in text
+    assert "costs never" not in text and "inf" not in text and not re.search(r"#\d", text)
+    (row,) = [row for row in document["readings"] if row["reading"] == "alpha = 1.6"]
+    assert row["plan_cost"] == {"value": None, "low": None, "high": None, "cause": "subcritical"}
+    assert "cause" not in document["plan_cost"]  # a finite cost has no cause key, as before
+
+
+def test_512_a_plan_with_no_finite_mean_at_its_own_reading_says_the_cause_for_its_cost_and_its_recombinations(monkeypatch):
+    from crafting_system.cli import _interval
+    from crafting_system.cli._limits import NOT_COMPUTED
+
+    result, start, is_goal, lost = _lost_at(Fraction(1))
+    monkeypatch.setattr(_interval, "expected_total", lambda *args, **kwargs: lost)  # the same policy at the same reading: no finite count either
+
+    answer = build_interval_answer(result, toy_report_plan(), DATA, start=start, is_goal=is_goal)
+    text = "\n".join(answer.text_lines(300.0))
+    document = answer.document()
+
+    said = NOT_COMPUTED["subcritical"]
+    assert f"Plan: at alpha = 1: {said}" in text
+    assert f"Recombinations: at alpha = 1: {said}" in text
+    assert "never" not in text and "inf" not in text
+    assert document["plan_cost"]["cause"] == "subcritical" and document["recombinations"]["expected"]["cause"] == "subcritical"
+    assert answer.cost_rule_mean is None

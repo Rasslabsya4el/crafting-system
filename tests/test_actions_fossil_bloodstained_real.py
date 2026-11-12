@@ -114,7 +114,7 @@ def test_the_kernel_of_a_resonator_with_the_fossil_is_the_one_without_it_made_co
 
     assert sum(kernel.values()) == 1
     assert all(state.flags.corrupted for state in kernel)
-    uncorrupted = {dataclasses.replace(state, flags=dataclasses.replace(state.flags, corrupted=False), implicits=()): mass for state, mass in kernel.items()}
+    uncorrupted = {dataclasses.replace(state, flags=dataclasses.replace(state.flags, corrupted=False), implicits=(), replaced=()): mass for state, mass in kernel.items()}
     assert uncorrupted == dict(plain)  # the same states with the same masses, corrupted
 
 
