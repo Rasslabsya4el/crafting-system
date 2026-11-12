@@ -66,10 +66,10 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `beast-side-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `wild-bristle-matron` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 15 entries); not named in the target's `actions:` (8 of 15 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `divine-orb` | yes |  | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
-| `awakeners-orb` | **no** |  | none | `planner=False`: the solver takes no donors yet (#211, #212) and the interval over its rule axis does not exist (#220); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 14 start items list such actions) | ACT2-11 |
+| `awakeners-orb` | **no** |  | none | `planner=False`: the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built'); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 14 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
-| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so are the lazy offer loop, #212, and the interval driver, #220, #221); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (10 of 14 start items list such actions) | ACT2-11 |
+| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (10 of 14 start items list such actions) | ACT2-11 |
 | `catalyst` | **no** | reads: any | none | `planner=False`: the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158) |  |
 | `eldritch-implicit-currency` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
 | `eldritch-chaos-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
@@ -124,7 +124,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | `target.implicits or target.quality is not None` | the target asks for implicits or quality, which the planner cannot plan yet | r03, r06 |
 | `target.sockets is not None` | the target asks for sockets, which the planner cannot plan yet: the finish of sockets is not built, so an answer would silently ignore them | no benchmark target |
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
-| `axes` | an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading of it with the interval yet | no benchmark target |
+| `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
 
 - `Abstraction(..., allow_inputs=False) in make_plan`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.
 - `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (asked for by `--strands` or in the planner settings), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
@@ -202,8 +202,6 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `takes_inputs` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
-| the interval driver (wiring: ticket #589) | `build_interval_answer` | `cli/_interval.py` | nothing | **no** | PRES-15 |
-| the interval driver (wiring: ticket #589) | `with_interval` | `cli/_report.py` | nothing | **no** | PRES-15 |
 
 ## 6. Target keys
 
