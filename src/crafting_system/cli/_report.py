@@ -20,7 +20,7 @@ from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN, plain_base_names
 
 from ._interval import IntervalAnswer, build_interval_answer
-from ._limits import HEADING, PERCENTILE_WORDS, figures, limit_document, limit_text, ordered, unresolved
+from ._limits import HEADING, NOT_COMPUTED, PERCENTILE_WORDS, UNRESOLVED, figures, limit_document, limit_text, not_shown, ordered, unresolved
 from ._marking import (
     ApproximateInput,
     approximate_inputs,
@@ -438,17 +438,6 @@ def interval(estimate: Estimate, divine: float) -> str:
     return text
 
 
-UNRESOLVED = "not computed (the cost of the whole craft is far above its cheapest step)"
-
-
-NOT_COMPUTED = {
-    "subcritical": "not computed: the plan starts more runs of its inputs than it finishes, so its cost has no finite mean",
-    "undecided": "not computed: the chances of the plan are so close to 1 that the arithmetic could not fix the cost to within 1%",
-    "unordered": "not computed: the inputs of the plan depend on each other in a cycle",
-    "improper": "not computed: the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle",
-}
-
-
 def _row(name: str, value: str) -> str:
     """One row of the result block: the figure in the words of `PERCENTILE_WORDS`, then its value."""
     return f"  {PERCENTILE_WORDS[name]:<{ROW_WIDTH}}{value}"
@@ -460,9 +449,8 @@ def _mark_key(marks: tuple[tuple[str, str], ...], resource: str) -> dict[str, st
 
 
 def _quantile_text(risk, estimate: Estimate, shift: float, divine: float) -> str:
-    if risk.grid.cause and math.isinf(estimate.value):  # its own cause (M7), not the grid's; a quantile the grid did compute is shown
-        return NOT_COMPUTED[risk.grid.cause]
-    return UNRESOLVED if unresolved(risk, estimate) else interval(_shifted(estimate, shift), divine)
+    said = not_shown(risk, estimate)  # the same sentence as the route page (#512)
+    return interval(_shifted(estimate, shift), divine) if said is None else said
 
 
 def _shifted(estimate: Estimate, shift: float) -> Estimate:

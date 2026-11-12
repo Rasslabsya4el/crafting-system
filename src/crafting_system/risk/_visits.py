@@ -13,24 +13,24 @@ from collections.abc import Callable, Mapping, Sequence
 from ..solver import Action
 from . import _inputs, _moments
 from ._chain import build_chain
-from ._mean import INFINITE, ZERO
-from ._report import Estimate
+from ._mean import ZERO, no_mean
+from ._report import Estimate, Expected
 
 
 def expected_total[S](
     policy: Mapping[S, Action[S]], start: S, is_goal: Callable[[S], bool], weight: Callable[[Action[S]], float]
-) -> Estimate:
+) -> Expected:
     """The expected `sum of weight(action)` over every execution of `policy` from `start`, runs of inputs included.
 
-    `weight` is not negative (a negative one is `ValueError`). The answer is `Estimate(value, low, high)`; all infinite when the
-    policy has no finite mean (it can get stuck, loops without a way out, or needs more runs than it makes), zero when `start`
-    is a goal.
+    `weight` is not negative (a negative one is `ValueError`). The answer is an `Expected` of `Estimate(value, low, high)`; all infinite,
+    with the cause, when the policy has no finite mean (it can get stuck or loops without a way out, `STUCK`; it needs more runs than it
+    makes, `SUBCRITICAL`; the arithmetic could not certify it, `UNDECIDED`: M7, #512), zero when `start` is a goal.
     """
     chain = build_chain(policy, start, is_goal)
     if chain.goal[0]:
-        return ZERO
+        return Expected(ZERO)
     if not chain.can_finish[0] or not chain.proper:
-        return INFINITE
+        return no_mean(None)
     weights = []
     for action in chain.action:
         found = 0.0 if action is None else float(weight(action))
@@ -39,20 +39,20 @@ def expected_total[S](
         weights.append(found)
     try:
         values, error = _inputs.solve_costs(chain, _moments.real_costs(chain))
-    except _inputs.NotSubcritical:
-        return INFINITE
-    return Estimate(*_inputs.weighted_visits(chain, values, error, weights))
+    except _inputs.NotSubcritical as stopped:
+        return no_mean(stopped)
+    return Expected(Estimate(*_inputs.weighted_visits(chain, values, error, weights)))
 
 
 def expected_totals[S](
     policy: Mapping[S, Action[S]], start: S, is_goal: Callable[[S], bool], weights: Sequence[Callable[[Action[S]], float]]
-) -> list[Estimate]:
-    """`expected_total` for several weights from one solve of the visits: one `Estimate` per weight, in order."""
+) -> list[Expected]:
+    """`expected_total` for several weights from one solve of the visits: one `Expected` per weight, in order."""
     chain = build_chain(policy, start, is_goal)
     if chain.goal[0]:
-        return [ZERO for _ in weights]
+        return [Expected(ZERO) for _ in weights]
     if not chain.can_finish[0] or not chain.proper:
-        return [INFINITE for _ in weights]
+        return [no_mean(None) for _ in weights]
     arrays = []
     for weight in weights:
         column = []
@@ -64,6 +64,6 @@ def expected_totals[S](
         arrays.append(column)
     try:
         values, error = _inputs.solve_costs(chain, _moments.real_costs(chain))
-    except _inputs.NotSubcritical:
-        return [INFINITE for _ in weights]
-    return [Estimate(*each) for each in _inputs.weighted_visits_many(chain, values, error, arrays)]
+    except _inputs.NotSubcritical as stopped:
+        return [no_mean(stopped) for _ in weights]
+    return [Expected(Estimate(*each)) for each in _inputs.weighted_visits_many(chain, values, error, arrays)]
