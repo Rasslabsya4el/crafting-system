@@ -18,8 +18,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from crafting_system.cli._packed import PackedResult
-from crafting_system.cli._plan import packed_risk
+from crafting_system.planner._packed import PackedResult
+from crafting_system.planner._plan import packed_risk
 from crafting_system.solver import Action, Outcome
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "chains"

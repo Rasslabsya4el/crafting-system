@@ -17,9 +17,9 @@ The synthetic graphs are those of `tests/test_cli_envelope.py`.
 import pytest
 from envelope_support import ExplicitProblem, dense_optimum, random_graph
 
-from crafting_system.cli import _envelope
-from crafting_system.cli._envelope import FALL_LIMIT, Search
-from crafting_system.cli._envelope_plan import BoundError
+from crafting_system.planner import _envelope
+from crafting_system.planner._envelope import FALL_LIMIT, Search
+from crafting_system.planner._envelope_plan import BoundError
 from crafting_system.solver._certify import ConvergenceError
 
 SEEDS = range(12)

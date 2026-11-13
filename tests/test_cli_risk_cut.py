@@ -8,9 +8,9 @@ import math
 
 import pytest
 
-from crafting_system.cli import _plan
+from crafting_system.planner import _plan
 from crafting_system.cli._report import UNRESOLVED, _quantile_text, unresolved
-from crafting_system.cli._plan import evaluate_risk
+from crafting_system.planner._plan import evaluate_risk
 from crafting_system.solver import Action, Outcome
 
 GOAL = "goal"

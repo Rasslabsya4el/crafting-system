@@ -6,8 +6,9 @@ The clock is a fake one, set by hand: a test of the real planner does not read t
 from test_vendor_starts import TOY, bought_boots, prices, toy_target, vendor_recipe_starts  # the toy world of the start options
 
 from crafting_system import budget
-from crafting_system.cli import StartList, _starts, plan_with_starts
-from crafting_system.cli._envelope import Net
+from crafting_system.cli import StartList, plan_with_starts
+from crafting_system.planner import _starts
+from crafting_system.planner._envelope import Net
 
 
 class Clock:

@@ -27,7 +27,7 @@ from limits_support import notes, of_kind
 
 from crafting_system.actions import DRAW_LABEL, ApplyFossils, BenchCraft
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
-from crafting_system.cli._decide import Rates
+from crafting_system.planner._decide import Rates
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 

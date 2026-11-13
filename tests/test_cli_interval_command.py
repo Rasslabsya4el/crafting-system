@@ -17,7 +17,7 @@ from items_support import DATA, roll
 
 from crafting_system.actions import Action, Adds, Axis, Finite, Kind, NotApplicableError, OutOfScopeError, Reading, Reads, registered
 from crafting_system.cli import PlanError, build_report, make_plan
-from crafting_system.cli._axes import AXIS_WORDS, AxisWords
+from crafting_system.planner._axes import AXIS_WORDS, AxisWords
 from crafting_system.cli._main import main
 from crafting_system.cli._reach import policy_states
 from crafting_system.data import GameData

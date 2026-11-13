@@ -20,8 +20,8 @@ from crafting_system.actions.contract import BurnKeeps
 from crafting_system.actions.socket_colours import ChromaticOrb
 from crafting_system.actions.socket_orbs import JewellersOrb, OrbOfFusing
 from crafting_system.cli import make_plan
-from crafting_system.cli._limits import FINISH, NOT_BUILT
-from crafting_system.cli._plan import PlanError
+from crafting_system.planner._limits import FINISH, NOT_BUILT
+from crafting_system.planner._plan import PlanError
 from crafting_system.data import BaseItem
 from crafting_system.items import SocketColour, Sockets
 from crafting_system.prices import PriceEntry, PriceFile

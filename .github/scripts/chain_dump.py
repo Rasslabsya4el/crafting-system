@@ -22,9 +22,11 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from packed_routes import inputs, peak_mb, risk_row  # noqa: E402
 
-from crafting_system.cli import _packed, make_plan  # noqa: E402
-from crafting_system.cli._limits import limit_document  # noqa: E402
-from crafting_system.cli._plan import add_risk  # noqa: E402
+from crafting_system.cli import make_plan  # noqa: E402
+
+from crafting_system.planner import _packed
+from crafting_system.planner._limits import limit_document  # noqa: E402
+from crafting_system.planner._plan import add_risk  # noqa: E402
 
 
 def dump(plan, path: Path) -> dict:

@@ -20,7 +20,7 @@ import yaml
 from abstraction_support import real_game_data
 
 from crafting_system.cli import RESTART, make_plan
-from crafting_system.cli._plan import PlanError, resolve_start_price
+from crafting_system.planner._plan import PlanError, resolve_start_price
 from crafting_system.cli._route_trade import buy_step
 from crafting_system.prices import load_price_file
 from crafting_system.prices.trade_query import TradeSpecError, build_query

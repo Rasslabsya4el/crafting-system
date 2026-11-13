@@ -3,7 +3,7 @@
 A goal may want a quality (`QualityWanted`: a catalyst type at a percent, or the plain quality of a weapon or armour). The state then holds the
 quality as the item stores it, and the goal is met when every other requirement is and the quality is too. Catalysts change no odds, so an action
 declared as a quality action (`Adds.only_quality`) is an action of a state only when every other requirement passes there and the quality does not
-yet (`Abstraction.quality_offer_pruned`; `cli._prune.chosen_offers` applies it). Checked here:
+yet (`Abstraction.quality_offer_pruned`; `planner._prune.chosen_offers` applies it). Checked here:
 
 * the goal: the quality is a requirement of its own, of the type asked, met at the percent asked or more; the plain quality has no type;
 * **catalysts are not offered while another requirement fails and are offered once only the quality fails** (the offer, by the prune of the
@@ -27,8 +27,8 @@ from items_support import BODY
 
 from crafting_system.abstraction import Abstraction, Goal, ImplicitWanted, QualityWanted, Status, Wanted, integer_weights
 from crafting_system.actions import ActionError, Adds, ApplyCatalyst, ChaosOrb, expected_catalysts_for
-from crafting_system.cli._offers import Offer, PricedOffer, offer_of
-from crafting_system.cli._prune import chosen_offers
+from crafting_system.planner._offers import Offer, PricedOffer, offer_of
+from crafting_system.planner._prune import chosen_offers
 from crafting_system.items import CatalystType, ImplicitMod, Item, PlainQuality, Quality, Rarity
 from crafting_system.solver import Action as SolverAction
 from crafting_system.solver import Outcome, solve
@@ -128,7 +128,7 @@ def test_catalysts_are_not_offered_while_another_requirement_fails_and_are_offer
 
 
 def test_k13_a_catalyst_left_out_of_a_state_is_written_so_that_the_answer_can_say_it():
-    from crafting_system.cli._limits import pruning_limits
+    from crafting_system.planner._limits import pruning_limits
 
     found = ability(actions=[CATALYST, ChaosOrb()])
     failing = found.compress(amulet(roll(LIFE_1)))

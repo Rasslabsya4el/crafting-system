@@ -21,8 +21,8 @@ from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.cli._benchmark_outcomes import PublishedOutcome, published_outcomes
-from crafting_system.cli._decide import decide
-from crafting_system.cli._plan import _packed_note
+from crafting_system.planner._decide import decide
+from crafting_system.planner._plan import _packed_note
 from crafting_system.cli._route_sim import route_policy, simulate_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
@@ -211,8 +211,8 @@ def test_the_decision_finds_no_approximate_level_and_the_planner_goes_on_to_the_
 
 def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_target_once(data, prices, route_id):
     """The CLI compares the start options (ADR-0059); with none but the plain item it is one plan, not several 10-minute walks."""
-    from crafting_system.cli._start_options import StartContext, combine
-    from crafting_system.cli._starts import SOURCES
+    from crafting_system.planner._start_options import StartContext, combine
+    from crafting_system.planner._starts import SOURCES
 
     target = load_target(ROOT / ROUTES[route_id][0], data)
 

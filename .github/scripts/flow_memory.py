@@ -22,7 +22,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packed_routes as P  # noqa: E402
 
-from crafting_system.cli import _plan, _route_flow, make_plan  # noqa: E402
+from crafting_system.cli import _route_flow, make_plan  # noqa: E402
+
+from crafting_system.planner import _plan
 
 
 def status_mb(field: str) -> int:

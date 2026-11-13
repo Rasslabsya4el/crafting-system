@@ -35,9 +35,9 @@ import crafting_system
 from crafting_system.abstraction import Abstraction, Coarsening, Gap, ModelGaps
 from crafting_system.actions import ActionError, ChaosOrb, ConsumesInputsError, NotApplicableError, OutOfScopeError
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
-from crafting_system.cli import _approx, _bound_prune, _donors, _plan
-from crafting_system.cli._limits import SHOWN_LABELS, WITHIN_GAP, limit_text, model_gap_limits
-from crafting_system.cli._offers import offer_of
+from crafting_system.planner import _approx, _bound_prune, _donors, _plan
+from crafting_system.planner._limits import SHOWN_LABELS, WITHIN_GAP, limit_text, model_gap_limits
+from crafting_system.planner._offers import offer_of
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.prices import PriceEntry
@@ -81,35 +81,35 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("actions/locus.py", "_locus", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel, an empty pool or one with no second draw: no Locus is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
     ("actions/scope.py", "base_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "refused before the base was asked, whichever family: this probe item proves nothing, the next is asked (#848); `UnmodelledBase` is caught before it"),
     ("actions/socket_colours.py", "ChromaticOrb.burn_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal's own text is returned, whichever family"),
-    ("cli/_approx.py", "BlockModel._build", ("NotApplicableError",), RECORDS, "a game refusal in a block: silent"),
-    ("cli/_approx.py", "BlockModel._build", ("OutOfScopeError",), RECORDS, "a model gap in a block: written"),
-    ("cli/_approx.py", "ExactModel.actions", ("NotApplicableError",), RECORDS, "a game refusal in an expanded state: silent"),
-    ("cli/_approx.py", "ExactModel.actions", ("OutOfScopeError",), RECORDS, "a model gap in an expanded state: written"),
+    ("planner/_approx.py", "BlockModel._build", ("NotApplicableError",), RECORDS, "a game refusal in a block: silent"),
+    ("planner/_approx.py", "BlockModel._build", ("OutOfScopeError",), RECORDS, "a model gap in a block: written"),
+    ("planner/_approx.py", "ExactModel.actions", ("NotApplicableError",), RECORDS, "a game refusal in an expanded state: silent"),
+    ("planner/_approx.py", "ExactModel.actions", ("OutOfScopeError",), RECORDS, "a model gap in an expanded state: written"),
     ("cli/_benchmark_use.py", "per_use_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the action cannot be used at the divergence state, for either reason: the row of the benchmark says so in the words of the refusal and goes on"),
     ("cli/_benchmark_use.py", "one_step_short", ("NotApplicableError", "OutOfScopeError"), EITHER, "a bench craft that cannot be used on this state is not a sure step to the target; nothing is left out of a plan and nothing is written"),
-    ("cli/_bound_prune.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
-    ("cli/_bound_prune.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
-    ("cli/_bound_prune.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
-    ("cli/_bound_prune.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
-    ("cli/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
-    ("cli/_donors.py", "DonorModel._candidate", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
-    ("cli/_donors.py", "DonorModel._candidate", ("OutOfScopeError",), RECORDS, "a model gap: written"),
-    ("cli/_foresight.py", "PlanSites._build", ("NotApplicableError", "OutOfScopeError"), EITHER, "an option of a Hinekora's Lock the game refuses or the model has no rule for is no option there; it errs against the Lock and nothing is written (#762)"),
+    ("planner/_bound_prune.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
+    ("planner/_bound_prune.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
+    ("planner/_bound_prune.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
+    ("planner/_bound_prune.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
+    ("planner/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
+    ("planner/_donors.py", "DonorModel._candidate", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
+    ("planner/_donors.py", "DonorModel._candidate", ("OutOfScopeError",), RECORDS, "a model gap: written"),
+    ("planner/_foresight.py", "PlanSites._build", ("NotApplicableError", "OutOfScopeError"), EITHER, "an option of a Hinekora's Lock the game refuses or the model has no rule for is no option there; it errs against the Lock and nothing is written (#762)"),
     ("cli/_main.py", "main", ("TargetError", "DataError", "PriceFileNotFound", "PlanError", "NotApplicableError", "OutOfScopeError", "ConvergenceError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the run"),
-    ("cli/_offers.py", "_roll_limit_can_matter", ("NotApplicableError", "OutOfScopeError"), EITHER, "a pool that cannot be built is no proof the mod is out of reach, so the orb stays and nothing is left out"),
-    ("cli/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
-    ("cli/_packed.py", "walk", ("OutOfScopeError",), RECORDS, "a model gap: written"),
-    ("cli/_envelope_plan.py", "CraftingProblem.kernel_key", ("NotApplicableError",), RECORDS, "a game refusal: silent (the search leaves the offer out of the state, as the walk does)"),
-    ("cli/_envelope_plan.py", "CraftingProblem.kernel_key", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`, the offer is left out of the state"),
-    ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
-    ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
-    ("cli/_plan.py", "_make_plan", ("FinishRefused", "OutOfScopeError", "ArithmeticError"), GAP, "the socket finish cannot be planned (#231): its start sockets are not stated, the goal is corrupted, a mod action changes sockets, no offered action completes it, the base has no colour weights, or it did not settle; the text becomes the `PlanError`"),
-    ("cli/_plan.py", "_make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
-    ("cli/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
-    ("cli/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
-    ("cli/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
-    ("cli/_prune.py", "solver_actions", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
-    ("cli/_prune.py", "solver_actions", ("OutOfScopeError",), RECORDS, "a model gap: written"),
+    ("planner/_offers.py", "_roll_limit_can_matter", ("NotApplicableError", "OutOfScopeError"), EITHER, "a pool that cannot be built is no proof the mod is out of reach, so the orb stays and nothing is left out"),
+    ("planner/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
+    ("planner/_packed.py", "walk", ("OutOfScopeError",), RECORDS, "a model gap: written"),
+    ("planner/_envelope_plan.py", "CraftingProblem.kernel_key", ("NotApplicableError",), RECORDS, "a game refusal: silent (the search leaves the offer out of the state, as the walk does)"),
+    ("planner/_envelope_plan.py", "CraftingProblem.kernel_key", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`, the offer is left out of the state"),
+    ("planner/_envelope_plan.py", "CraftingProblem.kernel", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
+    ("planner/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
+    ("planner/_plan.py", "_make_plan", ("FinishRefused", "OutOfScopeError", "ArithmeticError"), GAP, "the socket finish cannot be planned (#231): its start sockets are not stated, the goal is corrupted, a mod action changes sockets, no offered action completes it, the base has no colour weights, or it did not settle; the text becomes the `PlanError`"),
+    ("planner/_plan.py", "_make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
+    ("planner/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
+    ("planner/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
+    ("planner/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
+    ("planner/_prune.py", "solver_actions", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
+    ("planner/_prune.py", "solver_actions", ("OutOfScopeError",), RECORDS, "a model gap: written"),
     ("cli/_route.py", "_decide", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route's rule cannot be used here, and the line says why"),
     ("cli/_route_completion.py", "losses_at_item.refused", ("NotApplicableError", "OutOfScopeError"), EITHER, "the action cannot be used on this item, for either reason: the check of a completed route counts it as refused"),
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route has no action here; the gap line says the game refuses it or the walk left it out"),
@@ -117,7 +117,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_route_sim.py", "route_policy.policy", ("NotApplicableError", "OutOfScopeError"), EITHER, "the rule's action cannot be used on this item: a gap of the route"),
     ("targets/corrupted.py", "CorruptedResolver._pools", ("NotApplicableError", "OutOfScopeError"), EITHER, "the target cannot ask for `corrupted: true` here, and the error says why"),
     ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
-    ("cli/_bought_starts.py", "needed_influence_sets", ("OutOfScopeError",), GAP, "an item class with no influence key lists no influenced base, and the refusal says so"),
+    ("planner/_bought_starts.py", "needed_influence_sets", ("OutOfScopeError",), GAP, "an item class with no influence key lists no influenced base, and the refusal says so"),
     ("targets/floor.py", "_change_points", ("NotApplicableError", "OutOfScopeError"), EITHER, "no pool to read, so every level counts and nothing is left out"),
 ]
 # Clauses that catch the refusals through their parent `ValueError` (both families are ValueErrors) or through a tuple constant (`ROUTE_ERRORS`), in the
@@ -138,16 +138,16 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("actions/recombinator.py", "Recombinator.outcomes", ("TypeError", "ValueError", "OverflowError"), NOT_A_REFUSAL, "the exponent of the reading is no number; no action is called"),
     ("cli/_benchmark.py", "benchmark_main", ("DataError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the command"),
     ("cli/_benchmark.py", "run_route", ("ValueError", "OSError", "DataError", "PriceFileNotFound", "ConvergenceError"), EITHER, "`ROUTE_ERRORS`: ValueError is the parent of both families and of every other error of a route; the entry carries the text of whichever"),
-    ("cli/_decide.py", "measure_solve_rate_detail", ("ConvergenceError", "ValueError"), NOT_A_REFUSAL, "the solver on the pilot graph; it calls no action. Written as the reason the rate was guessed (M2)"),
-    ("cli/_plan.py", "_make_plan", ("ValueError",), EITHER, "`offers_for` failed: the text becomes the `PlanError`, whichever family or error it was"),
-    ("cli/_plan.py", "_make_plan", ("ValueError",), EITHER, "`climb` found no level: the text becomes the `PlanError`, whichever family or error it was"),
+    ("planner/_decide.py", "measure_solve_rate_detail", ("ConvergenceError", "ValueError"), NOT_A_REFUSAL, "the solver on the pilot graph; it calls no action. Written as the reason the rate was guessed (M2)"),
+    ("planner/_plan.py", "_make_plan", ("ValueError",), EITHER, "`offers_for` failed: the text becomes the `PlanError`, whichever family or error it was"),
+    ("planner/_plan.py", "_make_plan", ("ValueError",), EITHER, "`climb` found no level: the text becomes the `PlanError`, whichever family or error it was"),
     ("cli/_main.py", "_limit", ("ValueError",), NOT_A_REFUSAL, "a `--time-limit` or `--memory-limit` that is not a number: the command says so (#825)"),
     ("cli/_report.py", "_leaf_chance", ("ValueError",), EITHER, "the chance of one use is left out of the line; display only, no plan is changed"),
     ("cli/_route_view.py", "_View.leaf_text", ("ValueError",), NOT_A_REFUSAL, "the trade site's stat list: no action is called"),
     ("cli/_route_view.py", "_trade_stats", ("OSError", "ValueError", "AttributeError"), NOT_A_REFUSAL, "the recorded stat list on disk: no action is called"),
     ("cli/_trade.py", "trade_main", ("TradeError", "TargetError", "DataError", "PriceFileNotFound", "ValueError", "OSError"), NOT_A_REFUSAL, "the trade command: no action is called"),
 ]
-SCOPE = {"abstraction", "actions", "cli", "risk", "solver", "targets", "simulator"}  # the packages that walk, solve and plan
+SCOPE = {"abstraction", "actions", "planner", "cli", "risk", "solver", "targets", "simulator"}  # the packages that walk, solve and plan
 
 
 def _names(node) -> tuple[str, ...]:

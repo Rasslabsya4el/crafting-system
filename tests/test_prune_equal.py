@@ -1,7 +1,7 @@
 """Equal kernels at a state: only the cheapest offer stays, and the plan does not change (ticket #118, piece B).
 
 `Abstraction.kernel_key(state, a) == kernel_key(state, b)` must imply `kernel(state, a) == kernel(state, b)`
-exactly; the converse is not required. `cli._prune.solver_actions` keeps, of the offers with one key at a
+exactly; the converse is not required. `planner._prune.solver_actions` keeps, of the offers with one key at a
 state, the cheapest (the earliest on a tie). Exact means the optimal values and the policy are those of the
 plan without the merge: the fixture R12 plan has numbers written from the run before the change, and R10 on
 the real dump (it skips without the cache) is planned twice, with and without the merge, and compared.
@@ -29,9 +29,10 @@ from crafting_system.actions import (
     RemoveCraftedMods,
     catalog,
 )
-from crafting_system.cli import Offer, _plan, default_offers, make_plan
-from crafting_system.cli._offers import price_offers
-from crafting_system.cli._prune import solver_actions
+from crafting_system.cli import Offer, default_offers, make_plan
+from crafting_system.planner import _plan
+from crafting_system.planner._offers import price_offers
+from crafting_system.planner._prune import solver_actions
 from crafting_system.prices import PriceEntry, load_price_file
 from crafting_system.targets import load_target
 

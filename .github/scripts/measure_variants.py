@@ -45,10 +45,10 @@ from crafting_system.actions import (
     bench_crafts,
 )
 from crafting_system.cli import PlanError
-from crafting_system.cli._approx import Solved, climb, solve_level
-from crafting_system.cli._decide import Candidate, Decision, Level, Rates, coarse_refusal, decide
-from crafting_system.cli._offers import Offer, PricedOffer, offer_of
-from crafting_system.cli._plan import offer_action
+from crafting_system.planner._approx import Solved, climb, solve_level
+from crafting_system.planner._decide import Candidate, Decision, Level, Rates, coarse_refusal, decide
+from crafting_system.planner._offers import Offer, PricedOffer, offer_of
+from crafting_system.planner._plan import offer_action
 from crafting_system.data import GameData, load_game_data
 from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity
 from crafting_system.solver import solve

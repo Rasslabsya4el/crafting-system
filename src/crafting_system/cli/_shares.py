@@ -14,8 +14,8 @@ from fractions import Fraction
 from crafting_system.actions import build_pool
 from crafting_system.data import GameData
 from crafting_system.items import Item
+from crafting_system.planner import Offer
 
-from ._offers import Offer
 
 
 @dataclass(frozen=True)

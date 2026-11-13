@@ -20,7 +20,7 @@ from abstraction_support import real_game_data
 import family_bench_support as F
 from crafting_system.cli import make_plan
 from crafting_system.actions.pool import tiers_of
-from crafting_system.cli._plan import PlanError
+from crafting_system.planner._plan import PlanError
 from crafting_system.items.model import Item, Rarity
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -990,7 +990,7 @@ def test_the_plan_of_a_socket_target_is_refused_because_the_planner_would_ignore
 
 
 def test_a_socket_target_is_planned_by_its_finish_and_a_start_item_that_states_no_sockets_is_refused(r12_target):
-    """Since #231 the planner plans a target with sockets (the socket finish, `cli/_finish.py`): it no longer refuses it as "cannot plan yet".
+    """Since #231 the planner plans a target with sockets (the socket finish, `planner/_finish.py`): it no longer refuses it as "cannot plan yet".
     The finish starts from the start item's sockets, so a start item that states none is refused with that reason."""
     asked = dataclasses.replace(r12_target, sockets=SocketRequirement(6, 6, 2, 2, 2))
 

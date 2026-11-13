@@ -21,11 +21,9 @@ from crafting_system.actions import Action
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SampledEstimate, SimulationReport, Step, simulate
+from crafting_system.planner import PackedPolicy, Plan, PricedOffer
 
 from ._lift import lift
-from ._offers import PricedOffer
-from ._packed import PackedPolicy
-from ._plan import Plan
 
 DEFAULT_RUNS = 10_000
 DEFAULT_SEED = 1

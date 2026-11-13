@@ -8,6 +8,8 @@ Built in [R12 end to end: CLI, JSON policy and text tree](https://github.com/Ras
 
 Origin: [Design grill round 2: data, batches, repo](https://github.com/Rasslabsya4el/crafting-system/issues/3) Q15.
 
+Since ticket [#880](https://github.com/Rasslabsya4el/crafting-system/issues/880) the library has two parts where this ADR said "report / cli" (ADR-0018, its amendment). The **planner** (`crafting_system.planner`) is the library proper: `plan_target(data, target, prices, settings)` returns the plan and does no input or output. The **report / cli** module (`crafting_system.cli`) is the command line around it: it reads the YAML target and the price file, calls the planner's entry, and writes the three outputs named above (the text tree, the JSON policy, the route view). What this ADR says of the inputs and the outputs is unchanged.
+
 ## Considered options
 
 - The old prototype's HTML report and an HTTP service: out of v1; Docker comes only with an HTTP service (ADR-0014). The one HTML file of the route view is the exception, because the owner reads only the chat and the look he accepted needs a page.

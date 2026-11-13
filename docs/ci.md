@@ -382,7 +382,7 @@ A job the caps stopped is looked at again with more time: `actions_key.py jobs -
 `.github/scripts/bound_build.py profile --route R08 --variant kept|all --cap-minutes N --out DIR [--search]` builds the walk-free bound alone for a route (with `--search` the search runs on to the end of the plan under the same sampler) (the first thing `make_plan(solver="envelope")` does)
 with a sampler of the main thread's stack and a timer around the stages of the build (`Pattern.members`, `Abstraction.kernel_key`, `Abstraction.kernel`, the fracture entries, the packing, the solve),
 and writes `profile-ROUTE-VARIANT.txt` and `.json`. `actions_key.py` records, for an envelope job, `bound_keys`, `bound_expanded`, `bound_offers`, `bound_seconds` and `bound_stopped` (the net that
-ended the bound's build, if one did). The build takes at most a quarter of the time net (#825: it stops when the time left is at most `SEARCH_PER_BUILD` = 3 times what it has taken; a hand-set share, set from the search/build ratio on R04 (3.7) and R14 (6.2)) and all of the memory net (`cli/_envelope_plan.py`, `build_stop`).
+ended the bound's build, if one did). The build takes at most a quarter of the time net (#825: it stops when the time left is at most `SEARCH_PER_BUILD` = 3 times what it has taken; a hand-set share, set from the search/build ratio on R04 (3.7) and R14 (6.2)) and all of the memory net (`planner/_envelope_plan.py`, `build_stop`).
 
 ### The cycles of a route's chain (#572, #490, #584, #600)
 

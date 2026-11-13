@@ -35,7 +35,7 @@ def held_mb() -> float:
 
 def main(stem: str, prices_path: str, mode: str, out: str, solver: str = "auto") -> None:
     from crafting_system.cli import make_plan
-    from crafting_system.cli._plan import PlanError
+    from crafting_system.planner._plan import PlanError
     from crafting_system.config import load_config
     from crafting_system.data import load_game_data
     from crafting_system.prices import load_price_file

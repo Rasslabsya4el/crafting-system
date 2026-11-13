@@ -27,7 +27,7 @@ from crafting_system.cli._marking import (
     approximate_page_line,
     approximate_page_lines,
 )
-from crafting_system.cli._plan import Plan, StartPrice, leaf_labels, offer_action
+from crafting_system.planner._plan import Plan, StartPrice, leaf_labels, offer_action
 from crafting_system.cli._report import Report, build_report, policy_document, render_text
 from crafting_system.cli._route import Route, RouteResult
 from crafting_system.cli._route_report import render_route_text, route_document

@@ -272,7 +272,7 @@ def improper_in_a_cycle():
 
 
 def test_m7_a_policy_that_starts_more_runs_than_it_finishes_says_so_and_a_cycle_of_inputs_says_that():
-    from crafting_system.cli._limits import limit_text, risk_limits, unresolved
+    from crafting_system.planner._limits import limit_text, risk_limits, unresolved
     from crafting_system.cli._report import NOT_COMPUTED, _quantile_text
 
     for policy, start, cause in ((supercritical(), "A", "subcritical"), (cyclic_but_finite(), "A", "unordered"), (improper_in_a_cycle(), "A", "improper")):
@@ -288,7 +288,7 @@ def test_m7_a_policy_that_starts_more_runs_than_it_finishes_says_so_and_a_cycle_
 
 def test_m7_the_guarantee_of_each_cause_is_true_of_the_report_it_is_attached_to():
     """`unordered` means a proper policy: its mean and variance are exact. An improper policy has an infinite mean and a success chance between 0 and 1."""
-    from crafting_system.cli._limits import risk_limits
+    from crafting_system.planner._limits import risk_limits
 
     unordered = evaluate(cyclic_but_finite(), "A", is_goal)
     improper = evaluate(improper_in_a_cycle(), "A", is_goal)
@@ -305,7 +305,7 @@ def test_m7_the_guarantee_of_each_cause_is_true_of_the_report_it_is_attached_to(
 def test_m7_a_quantile_the_grid_did_compute_is_shown_and_only_an_infinite_one_gets_the_cause():
     import dataclasses
 
-    from crafting_system.cli._limits import risk_limits
+    from crafting_system.planner._limits import risk_limits
     from crafting_system.cli._report import NOT_COMPUTED, _quantile_text
     from crafting_system.risk import Estimate
 

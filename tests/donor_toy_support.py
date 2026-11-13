@@ -25,7 +25,7 @@ from inputs_support import TOY_ORB, ToyGraft, donor_start, donor_want
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import Action, Adds, Finite, Kind, Need, NotApplicableError, Reads, registered
-from crafting_system.cli._offers import offers_for, price_offers
+from crafting_system.planner._offers import offers_for, price_offers
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry

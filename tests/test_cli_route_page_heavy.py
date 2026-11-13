@@ -80,7 +80,7 @@ def test_the_plan_is_shown_by_its_lumped_chain_and_the_page_is_made_from_item_st
 
 @HEAVY
 def test_the_share_of_runs_entering_a_step_is_solved_for_a_big_plan_and_no_limit_says_it_is_left_out(plan, data):
-    from crafting_system.cli._limits import STEPS
+    from crafting_system.planner._limits import STEPS
     from crafting_system.cli._route_flow import DENSE_LIMIT, flow_limits
 
     chain = chain_of_packed_policy(plan.policy)

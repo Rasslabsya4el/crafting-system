@@ -19,7 +19,9 @@ from pathlib import Path
 import numpy as np
 from packed_routes import inputs, peak_mb, watch_memory
 
-from crafting_system.cli import _packed, make_plan
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _packed
 from crafting_system.cli._route_chain import chain_of_plan
 from crafting_system.cli._route_flow import _can_finish, _entries, _entry_chance, _solved, _system, reach_of
 from crafting_system.solver._packed_chain import _row_groups, _without_rows, components

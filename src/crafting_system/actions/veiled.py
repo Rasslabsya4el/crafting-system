@@ -15,7 +15,7 @@ Four actions, one file:
   placeholder's side, by the weight of the base, without replacement, one mod per family, after removing the families of the
   mods on the item. The offer is drawn once and stays on the item (`Item.veil_offer`); there is no offer filter and no item
   level gate. It is free (`unveil.is_free_and_in_place`), so `resources` is empty: the planner counts it at a small positive
-  cost (`cli._offers.FREE_ACTION_SHARE`, ticket #145), which the solver needs.
+  cost (`planner._offers.FREE_ACTION_SHARE`, ticket #145), which the solver needs.
 * `Pick(k)`, k = 1 to 3: the choice node. It replaces the placeholder with the k-th mod of the offer in mod id order, at
   its lowest values. There is no decline.
 

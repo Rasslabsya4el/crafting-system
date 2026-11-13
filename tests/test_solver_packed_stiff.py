@@ -148,7 +148,7 @@ def test_the_old_count_is_not_read_and_a_memory_that_does_not_hold_the_cycles_is
 
 
 def test_what_remains_when_the_cycles_do_not_fit_is_a_limit_that_names_the_memory_they_needed(monkeypatch):
-    from crafting_system.cli._packed import evaluation_limits
+    from crafting_system.planner._packed import evaluation_limits
     from crafting_system.solver import _packed_chain
 
     graph, policy = ring_policy(BLOCKS, 10**9)

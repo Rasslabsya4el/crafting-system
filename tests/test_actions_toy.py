@@ -27,7 +27,7 @@ from crafting_system.actions import (
     registered,
 )
 from crafting_system.cli import make_plan
-from crafting_system.cli._offers import offer_of, offers_for, price_offers
+from crafting_system.planner._offers import offer_of, offers_for, price_offers
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry

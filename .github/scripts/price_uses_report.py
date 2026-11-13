@@ -24,7 +24,7 @@ GROUPS = ("R12,R10,R11", "R05,R13", "R08,R09", "R04", "R14")  # what one runner 
 
 def main(argv: list[str]) -> int:
     from crafting_system.cli import _benchmark, make_plan, plan_with_starts
-    from crafting_system.cli._decide import Rates
+    from crafting_system.planner._decide import Rates
     from crafting_system.cli._price_marks import price_uses
     from crafting_system.config import find_project_root, load_config
     from crafting_system.data import load_game_data

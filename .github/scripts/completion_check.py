@@ -20,7 +20,8 @@ PRICES = "tests/fixtures/prices/routes-allflame-2026-07-31.json"
 
 
 def main(argv: list[str]) -> int:
-    from crafting_system.cli import _benchmark, _packed, load_route, make_plan
+    from crafting_system.cli import _benchmark, load_route, make_plan
+    from crafting_system.planner import _packed
     from crafting_system.cli._report import describe_state
     from crafting_system.cli._route_completion import walked_losses
     from crafting_system.config import find_project_root

@@ -44,7 +44,7 @@ from crafting_system.actions import (
     imprints_held_at_most,
     kinds,
 )
-from crafting_system.cli._offers import FREE_ACTION_SHARE, offer_of, price_offers
+from crafting_system.planner._offers import FREE_ACTION_SHARE, offer_of, price_offers
 from crafting_system.config import load_config
 from crafting_system.data import BaseItem
 from crafting_system.items import ExplicitMod, Influence, Item, ImprintError, Rarity

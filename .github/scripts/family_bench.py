@@ -246,7 +246,7 @@ def case_head(case) -> dict:
 
 def install_search_hooks(per_round: list, upper_per_round: bool) -> None:
     """Record the envelope search's figures per round (the hook of `gap_trace.py`), without changing what it does."""
-    from crafting_system.cli import _envelope
+    from crafting_system.planner import _envelope
 
     original = _envelope.Search._net
     started: dict[int, float] = {}
@@ -328,9 +328,10 @@ def estimate(value) -> dict | None:
 
 
 def run_plan_child(args) -> None:
-    from crafting_system.cli import _packed, make_plan
-    from crafting_system.cli._envelope import Net
-    from crafting_system.cli._plan import PlanError, add_risk
+    from crafting_system.cli import make_plan
+    from crafting_system.planner import _packed
+    from crafting_system.planner._envelope import Net
+    from crafting_system.planner._plan import PlanError, add_risk
     from crafting_system.data import load_game_data
 
     import family_bench_support as F
@@ -356,7 +357,7 @@ def run_plan_child(args) -> None:
     net = Net(seconds=args.plan_seconds)
     try:
         if case.vendor_starts:
-            from crafting_system.cli._starts import plan_with_starts
+            from crafting_system.planner._starts import plan_with_starts
 
             # `plan_with_starts` measures the risk of the start it keeps itself (`with_risk` is its own argument to `make_plan`): the risk's
             # seconds are then inside this stage, and `breakdown` takes them out
@@ -477,8 +478,9 @@ def pooled(totals: dict, computed: float, seconds: float) -> dict:
 
 
 def run_walk_child(args) -> None:
-    from crafting_system.cli import _packed, make_plan
-    from crafting_system.cli._plan import PlanError
+    from crafting_system.cli import make_plan
+    from crafting_system.planner import _packed
+    from crafting_system.planner._plan import PlanError
     from crafting_system.data import load_game_data
 
     import family_bench_support as F
@@ -496,7 +498,7 @@ def run_walk_child(args) -> None:
     watch.start("walk", args.walk_seconds)
     try:
         if case.vendor_starts:
-            from crafting_system.cli._starts import plan_with_starts
+            from crafting_system.planner._starts import plan_with_starts
 
             plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, solver="packed")
         else:

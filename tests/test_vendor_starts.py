@@ -59,9 +59,9 @@ from crafting_system.cli import (
     vendor_recipe_starts,
     verify,
 )
-from crafting_system.cli import _starts as starts_module
-from crafting_system.cli._start_options import combine, gem_price_name, good_name
-from crafting_system.cli._start_types import (
+from crafting_system.planner import _starts as starts_module
+from crafting_system.planner._start_options import combine, gem_price_name, good_name
+from crafting_system.planner._start_types import (
     CAP_BELOW_ASKED,
     DOMINATED,
     ITEM_LEVEL_TOO_LOW,

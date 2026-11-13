@@ -4,7 +4,7 @@ A new family of actions edits **no file that another family's PR also edits**. E
 
 | What | Where | What not to edit |
 | --- | --- | --- |
-| The action, its kind, its claims | `src/crafting_system/actions/<module>.py`, registered with `@kind(...)` | the catalog, `abstraction`, `cli`, `simulator` |
+| The action, its kind, its claims | `src/crafting_system/actions/<module>.py`, registered with `@kind(...)` | the catalog, `abstraction`, `planner`, `cli`, `simulator` |
 | The public names | a list `__all__ = [...]` in the module; `actions/__init__.py` imports every module in sorted order and exports each `__all__` | `actions/__init__.py` |
 | The docs of the family | the docstring of the module itself (what the family does, its refusals, its tickets and ADRs) | `actions/__init__.py`, whose docstring is a short index that names no family |
 | What the family does with Memory Strands | `strand_use(self, data)` on each action, returning a `StrandUse` (`StrandUse.cutting(SpendLaw.uniform(n), claim)` for a draw that cuts and spends, `StrandUse.untouched(claim)` for one that does neither; `actions/strand_use.py`, ADR-0041). An action that draws at random gives its pool `self.cut_of(data, item)`. The spend and the refusal are applied by `Action` itself around `outcomes`; the claims behind the declaration are listed by `strand_claims`, not `claims` | `contract.py`, `cut.py`, the catalog. **An action with no `strand_use` is refused on an item with one strand or more** (`OutOfScopeError`) and the contract suite asks it about the stranded fixture items (`tests/contract_fixtures_strands.py`); it behaves as it did at 0 strands |

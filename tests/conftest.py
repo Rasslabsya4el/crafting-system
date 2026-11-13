@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 import shard_support
 
+import crafting_system.cli  # noqa: F401  (it names the page to the planner: a test that imports only `crafting_system.planner` still finishes its plans, issue #882)
+
 os.environ.setdefault("CRAFTING_WORKERS", "1")  # ticket #250: the suite is serial inside a CI slot (4 slots run at once); a test of the pool sets its own size
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})

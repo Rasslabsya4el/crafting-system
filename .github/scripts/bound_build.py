@@ -28,7 +28,7 @@ ROUTES = actions_key.ROUTES
 
 
 def resident_mb() -> int | None:
-    from crafting_system.cli._envelope import resident_mb as read
+    from crafting_system.planner._envelope import resident_mb as read
 
     found = read()
     return None if found is None else int(found)
@@ -91,8 +91,8 @@ STAGES = (
     ("crafting_system.abstraction._kernel", "Abstraction", "kernel_key"),
     ("crafting_system.abstraction._kernel", "Abstraction", "kernel"),
     ("crafting_system.abstraction._kernel", "Abstraction", "_fracture_entries"),
-    ("crafting_system.cli._pattern_bound", None, "pack_pattern_model"),
-    ("crafting_system.cli._pattern_bound", None, "solve_packed"),
+    ("crafting_system.planner._pattern_bound", None, "pack_pattern_model"),
+    ("crafting_system.planner._pattern_bound", None, "solve_packed"),
 )
 
 
@@ -120,7 +120,7 @@ def install_timers(table: dict[str, list[float]]) -> None:
 
 
 def profile_command(arguments: argparse.Namespace) -> int:
-    from crafting_system.cli import _envelope_plan, _packed
+    from crafting_system.planner import _envelope_plan, _packed
     from crafting_system.data import load_game_data
 
     out = Path(arguments.out)

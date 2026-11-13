@@ -14,7 +14,7 @@ from coarse_support import CHAOS, CRAFTS, DATA, HYBRID_CRAFT, MANA, REMOVE
 from abstraction_pool import MANA_1
 
 from crafting_system.cli import Offer, build_report, make_plan, policy_document
-from crafting_system.cli._decide import Rates
+from crafting_system.planner._decide import Rates
 from crafting_system.prices import PriceFile
 from crafting_system.targets import parse_target
 

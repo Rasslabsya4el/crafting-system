@@ -21,7 +21,7 @@ Scope, in priority order (a wrong line here silently changes what a route costs 
   5. the other actions, where a wrong line changes one orb's result.
   6. targets (when is the item done), the item model, prices (what an action costs).
   7. every other module of the package (page rendering, data loading, the CLI): last, to fill the machines.
-The ticket names `cli/_route_packed.py`; the file is `cli/_packed.py` (the packed solve of a plan).
+The ticket names `cli/_route_packed.py`; the file is `planner/_packed.py` (the packed solve of a plan).
 
 Order: tier by tier; inside a tier the files are interleaved by position (the first 1% of every file, then the next
 1%), so a stop at the deadline leaves every file of the tier partly measured, not one file whole and one untouched.
@@ -56,7 +56,7 @@ TIERS: list[tuple[int, str, list[str]]] = [
         "abstraction/_inputs.py", "abstraction/_bound.py", "abstraction/_kinds.py", "abstraction/__init__.py",
     ]),
     (3, "solver", ["solver/*.py"]),
-    (4, "risk and route", ["risk/_evaluate.py", "risk/*.py", "cli/_packed.py", "cli/_decide.py", "cli/_plan.py"]),
+    (4, "risk and route", ["risk/_evaluate.py", "risk/*.py", "planner/_packed.py", "planner/_decide.py", "planner/_plan.py"]),
     (5, "other actions", ["actions/*.py", "abstraction/*.py"]),
     (6, "targets, items, prices", ["targets/*.py", "items/*.py", "prices/price_file.py", "prices/trade_pricing.py"]),
     (7, "the rest of the package", ["**/*.py"]),

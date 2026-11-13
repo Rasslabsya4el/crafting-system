@@ -318,7 +318,7 @@ def test_a_bad_fallback_is_a_value_error(bad):
 
 
 def test_c24_a_free_component_too_large_to_fold_is_written_in_the_grid_info(monkeypatch):
-    from crafting_system.cli._limits import risk_limits
+    from crafting_system.planner._limits import risk_limits
 
     within = evaluate(with_a_free_loop(1e-6), "start", is_goal, free_cost=1e-6, max_bins=5_000)
     monkeypatch.setattr(_fold, "FOLD_LIMIT", 1)

@@ -33,7 +33,7 @@ def hybrid_tools(plan, data):
     import numpy as np
 
     from crafting_system.cli import _route_packed as packed
-    from crafting_system.cli._packed import lumped_policy
+    from crafting_system.planner._packed import lumped_policy
     from crafting_system.solver import lump_policy
     from crafting_system.solver._packed_merge import exact_classes, quotient
 
@@ -96,7 +96,8 @@ def hybrid_tools(plan, data):
 
 
 def main(argv: list[str]) -> int:
-    from crafting_system.cli import _benchmark, _packed, evaluate_route, load_route, make_plan
+    from crafting_system.cli import _benchmark, evaluate_route, load_route, make_plan
+    from crafting_system.planner import _packed
     from crafting_system.cli._report import describe_state, number_states
     from crafting_system.cli._route_chain import chain_of_plan
     from crafting_system.cli._route_flow import flow_of

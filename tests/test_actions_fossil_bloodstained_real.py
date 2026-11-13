@@ -21,7 +21,7 @@ from abstraction_support import real_game_data
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import ApplyFossils, corrupted_implicit_pool, fossil_actions, usable_fossils
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import Item, Rarity, spawn_weight
 
 BLOODSTAINED = "Bloodstained Fossil"

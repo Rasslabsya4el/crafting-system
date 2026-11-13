@@ -3,7 +3,7 @@
 The Lock is a priced, used-up resource: one use consumes one `Hinekora's Lock` of the price file (`HinekoraLock.resources`, claim
 `hinekora_lock.cost`), and a relock pays it again. The file dates it (poe.ninja's Currency overview lists the Lock). With **no price for the Lock it is
 dropped**, as any action whose price is missing (ADR-0007): `lock_missing` names what is missing, and the planner gives the Lock to
-`cli._offers.price_offers` as an `Offer`, which drops it and lists it among the actions "dropped for lack of a price".
+`planner._offers.price_offers` as an `Offer`, which drops it and lists it among the actions "dropped for lack of a price".
 
 A **burn** is priced like any action, by its resources. `cheapest_burn` picks, among the legal burns of a state (`actions.burns_at`), the one that costs
 least at the prices of the file, which is the burn the Peek of a Lock takes as its fallback; a burn whose currency has no price is not a candidate. Ties
@@ -42,7 +42,7 @@ class PricedBurn:
 def resource_cost(resources: Mapping[str, int], prices: PriceFile, price_source: str = "both") -> tuple[float, tuple[str, ...]]:
     """What `resources` cost at `prices` in Chaos Orbs, and the names that have no price (sorted); the cost is meaningful only when none is missing.
 
-    `price_source` is the profile setting `planned_price` reads the prices under, as the plan's offers are (`cli._offers.price_offers`).
+    `price_source` is the profile setting `planned_price` reads the prices under, as the plan's offers are (`planner._offers.price_offers`).
     """
     total, missing = 0.0, []
     for name, count in resources.items():

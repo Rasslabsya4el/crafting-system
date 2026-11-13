@@ -98,7 +98,7 @@ from crafting_system.actions import (
     strands_after,
 )
 from crafting_system.data import BaseItem, Weight
-from crafting_system.cli._offers import FREE_ACTION_SHARE, offer_of, price_offers
+from crafting_system.planner._offers import FREE_ACTION_SHARE, offer_of, price_offers
 from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, SocketColour, Sockets, is_corrupted_implicit, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 from crafting_system.rules import rule_by_id
@@ -678,7 +678,7 @@ def check_corruption_declarations(action, reads: Reads, adds: Adds, items, given
     * without `adds.corrupts` every result is corrupted exactly when the item was;
     * with it every result is corrupted, and no action of the catalog applies to a result (it is the goal or a dead end);
     * with `adds.keeps_mods` as well, from an item whose state misses a requirement no result is a goal of the same goal made to
-      ask for a corrupted implicit (the exactness of the pruning of `cli._prune`).
+      ask for a corrupted implicit (the exactness of the pruning of `planner._prune`).
     """
     if not adds.corrupts:
         for _, result in items:

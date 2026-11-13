@@ -27,10 +27,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packed_routes as P  # noqa: E402  (the inputs of a route, the memory watch)
 
-from crafting_system.cli import _envelope, _packed, make_plan  # noqa: E402
-from crafting_system.cli._envelope import Net  # noqa: E402
-from crafting_system.cli._envelope_plan import certificate_gap, route_incumbent  # noqa: E402
-from crafting_system.cli._limits import limit_text  # noqa: E402
+from crafting_system.cli import make_plan  # noqa: E402
+
+from crafting_system.planner import _envelope, _packed
+from crafting_system.planner._envelope import Net  # noqa: E402
+from crafting_system.planner._envelope_plan import certificate_gap, route_incumbent  # noqa: E402
+from crafting_system.planner._limits import limit_text  # noqa: E402
 from crafting_system.cli._route import load_route  # noqa: E402
 
 ROOT = P.ROOT

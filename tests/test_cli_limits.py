@@ -36,10 +36,10 @@ from test_cli_approximate import RATES as APPROX_RATES
 from test_cli_approximate import TARGET as APPROX_TARGET
 
 from crafting_system.cli import Limit, build_report, make_plan, offers_for, policy_document, render_text
-from crafting_system.cli import _plan
-from crafting_system.cli._limits import GROUPS, SHOWN_LABELS, WITHIN_GAP, approximate_limits, claim, grouped, kind_title, limit_document, limit_text, risk_limits
-from crafting_system.cli._offers import offer_of
-from crafting_system.cli._plan import add_risk
+from crafting_system.planner import _plan
+from crafting_system.planner._limits import GROUPS, SHOWN_LABELS, WITHIN_GAP, approximate_limits, claim, grouped, kind_title, limit_document, limit_text, risk_limits
+from crafting_system.planner._offers import offer_of
+from crafting_system.planner._plan import add_risk
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, PageError, build_section, route_input
 from crafting_system.abstraction import Coarsening, Goal, Wanted

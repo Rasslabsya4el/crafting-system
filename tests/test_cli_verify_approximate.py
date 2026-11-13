@@ -15,9 +15,9 @@ from coarse_support import COLD, DATA, MANA
 from test_cli_approximate import OFFERS, PRICES, RATES, TARGET, candidate, priced
 
 from crafting_system.abstraction import Coarsening
-from crafting_system.cli import _main, build_report, main, make_plan, policy_document, render_text, verify
-from crafting_system.cli._approx import climb
-from crafting_system.cli._decide import Decision
+from crafting_system.cli import _main, build_report, main, make_plan, plan_with_starts, policy_document, render_text, verify
+from crafting_system.planner._approx import climb
+from crafting_system.planner._decide import Decision
 from crafting_system.cli._lift import lift
 from crafting_system.cli._marking import SIMULATED
 from crafting_system.cli._verify import CVAR_LEVEL
@@ -118,8 +118,7 @@ def command(tmp_path, monkeypatch):
     """The command on the fixture amulet; the plan is made with the fixture's offers and rates."""
     path = tmp_path / "amulet.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    real = _main.plan_with_starts
-    monkeypatch.setattr(_main, "plan_with_starts", lambda *a, **k: real(*a, **{**k, "offers": OFFERS, "rates": RATES}))
+    monkeypatch.setattr(_main, "plan_target", lambda data, target, prices, settings: plan_with_starts(data, target, prices, **vars(settings), offers=OFFERS, rates=RATES))  # the entry takes no offers and no rates (#880)
     monkeypatch.setattr(_main, "write_route_page", lambda path, *a, **k: path)
 
     def run(*arguments):

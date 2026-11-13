@@ -36,19 +36,17 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
+from crafting_system.planner import Plan, PlanSettings, default_offers, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
-from ._offers import default_offers
-from ._plan import Plan, make_plan
 from ._report import interval_answer_of, money, name_states, number_states, percent
 from ._route import RouteResult, evaluate_route, load_route
 from ._shares import weight_share
 from ._start_report import first_step_document
 from ._start_step import first_step
-from ._starts import plan_with_starts
 
 FORMAT = "crafting-system-benchmark/1"
 FILE_NAME = "benchmark.json"
@@ -411,7 +409,7 @@ def run_route(
         if missing is not None:
             raise ValueError(_missing_message(missing))
         judged = bench.route is not None  # the guide's route is judged against the plan: `auto` walks (#535, #732)
-        plan = make_plan(data, target, loaded, judges_route=judged) if bench.start is None else plan_with_starts(data, target, loaded, judges_route=judged)
+        plan = plan_target(data, target, loaded, PlanSettings(recipe_starts=bench.start is not None, judges_route=judged))  # a route with no start entry plans from the target's own item
         entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos
         risk = plan.risk

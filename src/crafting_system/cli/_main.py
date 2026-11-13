@@ -1,7 +1,7 @@
 """The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--solver auto|object|packed|envelope] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
 
-This is the one place of the planner that reads the clock and the environment. It loads the game
-data from the cache, the target, and the price file with its hand overrides, makes the plan, prints
+This is the one place that reads the day and the settings of the environment for a plan (the planner is given both; it only times its own stages). It loads the game
+data from the cache, the target, and the price file with its hand overrides, asks the planner for the plan (`planner.plan_target`), prints
 the text tree, writes the JSON policy and, with `--verify`, runs the simulator against the computed
 mean. Exit code 0 is a plan (and, with `--verify`, an agreeing simulation), 1 an error, 2 a
 simulation that does not agree. With `--route` the given route (a YAML file of rules, see `_route`)
@@ -43,18 +43,14 @@ from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
+from crafting_system.planner import BUDGET_SECONDS, SOLVERS, PlanError, PlanSettings, plan_target, progress, say_progress_to
 
-from . import _packed
-from ._packed import SOLVERS
 from ._benchmark import benchmark_main
-from ._decide import BUDGET_SECONDS
 from ._inputs import load_target_prices, write_json
-from ._plan import PlanError
 from ._report import build_report, policy_document, render_text
 from ._route import evaluate_route, load_route
 from ._route_report import render_route_text, route_document
 from ._route_view import write_route_page
-from ._starts import plan_with_starts
 from ._trade import trade_main
 from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 
@@ -159,7 +155,7 @@ def main(
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")
     args = parser.parse_args(arguments)
-    previous_progress = _packed.PROGRESS
+    previous_progress = progress()
     setting = ExitStack()
 
     try:
@@ -182,14 +178,15 @@ def main(
                 print(f"[{time.perf_counter() - began:8.1f} s{f', {memory:,} MB' if memory else ''}] {text}", file=sys.stderr, flush=True)
 
         if args.progress:
-            _packed.PROGRESS = stage
+            say_progress_to(stage)
         # a given route is written for the target's own start item, so `--route` plans from that item alone
-        plan = plan_with_starts(
-            game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
+        settings = PlanSettings(
+            recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, price_source=args.price_source or config.price_source,
             price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit),
             strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
         )  # fmt: skip
+        plan = plan_target(game, target, price_file, settings)
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact to get an exact one")
         stage(f"plan made: mean {plan.mean_remaining:,.4f} Chaos, {len(plan.solution.values):,} states solved")
@@ -228,7 +225,7 @@ def main(
         print(f"Error: {error}", file=sys.stderr)
         return 1
     finally:
-        _packed.PROGRESS = previous_progress
+        say_progress_to(previous_progress)
         setting.close()
     if check is not None and not check.agrees:
         return 2

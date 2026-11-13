@@ -19,8 +19,8 @@ import numpy as np
 from crafting_system.abstraction import CompressedState
 from crafting_system.solver import Action, Outcome
 from crafting_system.solver._packed import expand_ranges
+from crafting_system.planner import PackedPolicy, Walked
 
-from ._packed import PackedPolicy, Walked
 from ._route_flow import Chain, Kernels, chain_of_policy, empty_chain
 
 

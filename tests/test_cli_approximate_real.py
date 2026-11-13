@@ -17,8 +17,8 @@ from limits_support import notes, of_kind
 from crafting_system.actions import BLOCKING, ApplyEssence, RemoveCraftedMods
 from crafting_system.actions.bench import bench_crafts
 from crafting_system.cli import make_plan
-from crafting_system.cli._decide import Rates
-from crafting_system.cli._offers import offer_of
+from crafting_system.planner._decide import Rates
+from crafting_system.planner._offers import offer_of
 from crafting_system.prices import load_price_file
 from crafting_system.targets import parse_target
 

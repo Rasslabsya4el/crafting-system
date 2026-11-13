@@ -35,8 +35,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".github" / "scripts"))
 import packed_routes as P  # noqa: E402  (the inputs of a route and its prices; `ROUTE_PRICES` names another snapshot)
 
-from crafting_system.cli import _envelope, _envelope_plan, _packed, make_plan  # noqa: E402
-from crafting_system.cli._envelope import Refused, Search  # noqa: E402
+from crafting_system.cli import make_plan  # noqa: E402
+from crafting_system.planner import _envelope, _envelope_plan, _packed  # noqa: E402
+from crafting_system.planner._envelope import Refused, Search  # noqa: E402
 from crafting_system.data import load_game_data  # noqa: E402
 from crafting_system.solver import policy_reach  # noqa: E402
 from crafting_system.solver._packed_solve import solve_graph  # noqa: E402

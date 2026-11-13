@@ -27,8 +27,8 @@ from listing_support import (
 from crafting_system.abstraction import Status
 from crafting_system.actions import DRAW_LABEL, AlterationOrb, NotApplicableError, OpenListing, unopened_listing
 from crafting_system.cli import evaluate_route, make_plan, parse_route
-from crafting_system.cli._offers import DRAW_COST_SHARE, RESTART
-from crafting_system.cli._plan import PlanError
+from crafting_system.planner._offers import DRAW_COST_SHARE, RESTART
+from crafting_system.planner._plan import PlanError
 from crafting_system.items import Item, ItemError, Rarity
 from crafting_system.items.quality import PlainQuality
 from crafting_system.items.sockets import SocketColour, Sockets
@@ -309,7 +309,7 @@ def test_a_simulated_craft_starts_from_the_listing_and_agrees_with_the_computed_
 
 def test_the_bound_pruning_bounds_the_offers_on_the_opened_item_and_keeps_the_draw(monkeypatch):
     """The pruning of many offers (R08, R09) sees the unopened start as the item it opens into: the same values as the unpruned solve."""
-    from crafting_system.cli import _plan
+    from crafting_system.planner import _plan
 
     data = RARE
     aim = target(data, rarity="rare", actions="chaos-orb", wanted=("ToyP3", "ToyS3"))

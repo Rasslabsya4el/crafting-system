@@ -11,8 +11,8 @@ module when it is called and not at the top.
 
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
+from crafting_system.planner import Plan
 
-from ._plan import Plan
 from ._report import ReportStep, StepOutcome, state_parts
 from ._route_view import _View, route_input
 

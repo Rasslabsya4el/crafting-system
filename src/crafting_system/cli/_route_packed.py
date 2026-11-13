@@ -24,11 +24,8 @@ from crafting_system.data import GameData
 from crafting_system.solver import PackedGraph, lump_policy
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.solver._packed_merge import exact_classes, quotient
+from crafting_system.planner import BuyStartItem, PackedResult, Plan, free_action_cost, lumped_policy, lumped_view, packed_risk, progress
 
-from ._offers import BuyStartItem, free_action_cost
-from . import _packed
-from ._packed import PackedResult, lumped_policy, lumped_view
-from ._plan import Plan, packed_risk
 from ._route_chain import chain_of_route
 
 
@@ -149,7 +146,7 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
 
     began = time.perf_counter()
     walked = plan.policy.walked
-    say = _packed.PROGRESS or (lambda _text: None)
+    say = progress() or (lambda _text: None)
     chosen, labels, cost, gaps = route_actions(plan, route, data)
     found_gaps = tuple(Gap(walked.states[i], reason) for i, reason in gaps)
     say(f"route read on the walked graph: {int((chosen >= 0).sum()):,} states act, {len(gaps):,} gaps ({time.perf_counter() - began:.1f} s)")

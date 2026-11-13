@@ -8,9 +8,18 @@ changes the cheapest total, the cheapest total at each of its readings with thei
 
 import math
 
-from ._axes import axis_name, reading_pair, value_text
+from crafting_system.planner import (
+    NO_TARGET_MOD,
+    SOURCE_PLAIN,
+    ConsideredStart,
+    RefusedStart,
+    StartChoice,
+    StartReading as Reading,
+    axis_name,
+    reading_pair,
+    value_text,
+)
 from ._start_step import FirstStep
-from ._start_types import NO_TARGET_MOD, SOURCE_PLAIN, ConsideredStart, Reading, RefusedStart, StartChoice
 
 OFF_HOW = "the option `--no-recipe-starts`, or the recipe starts setting in the planner settings, turns recipe starts off"
 

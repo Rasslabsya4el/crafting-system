@@ -18,7 +18,9 @@ from abstraction_support import real_game_data
 
 from report_steps_support import assert_report_is_the_page, blocks_of
 
-from crafting_system.cli import _plan, build_report, make_plan, render_text
+from crafting_system.cli import build_report, make_plan, render_text
+
+from crafting_system.planner import _plan
 from crafting_system.cli._route_chain import chain_of_packed_policy
 from crafting_system.cli._route_flow import build_flow, flow_of
 from crafting_system.cli._route_view import build_section, route_input

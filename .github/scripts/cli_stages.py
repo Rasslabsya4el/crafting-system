@@ -16,8 +16,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from packed_routes import inputs, peak_mb  # noqa: E402
 
-from crafting_system.cli import _packed, make_plan  # noqa: E402
-from crafting_system.cli._plan import add_risk  # noqa: E402
+from crafting_system.cli import make_plan  # noqa: E402
+
+from crafting_system.planner import _packed
+from crafting_system.planner._plan import add_risk  # noqa: E402
 from crafting_system.cli._report import build_report, policy_document, render_text  # noqa: E402
 from crafting_system.cli._route import evaluate_route, load_route
 from crafting_system.cli._route_report import render_route_text, route_document  # noqa: E402

@@ -22,7 +22,7 @@ from targets_support import DATA
 from crafting_system.actions import Action as GameAction
 from crafting_system.actions import ChaosOrb, Kind, Previewable, registered
 from crafting_system.cli import PlanError, make_plan
-from crafting_system.cli._foresight import (
+from crafting_system.planner._foresight import (
     LOCK_KIND,
     LOCK_LABEL,
     LockModel,
@@ -33,7 +33,7 @@ from crafting_system.cli._foresight import (
     lock_gain,
     survives,
 )
-from crafting_system.cli._offers import Offer, PricedOffer
+from crafting_system.planner._offers import Offer, PricedOffer
 from crafting_system.cli._report import build_report
 from crafting_system.prices import PriceEntry
 from crafting_system.solver import Action, Outcome, TabularModel, solve, solve_peek
@@ -355,7 +355,7 @@ class ToyBlind(GameAction):
 
 
 def test_on_the_bound_pruning_path_the_lock_plan_equals_the_one_solved_without_that_pruning(r12):
-    from crafting_system.cli._offers import offers_for
+    from crafting_system.planner._offers import offers_for
     from crafting_system.abstraction import Goal
 
     base = offers_for(DATA, Goal.from_target(r12), r12.base_id, r12.start_item, r12.actions).offers
@@ -374,7 +374,7 @@ def test_a_burn_is_a_fallback_that_leads_back_to_the_state_and_a_plan_with_it_so
     prices = dataclasses.replace(with_lock(price_file(), 0.05), prices={**with_lock(price_file(), 0.05).prices, "Clear Oil": PriceEntry(0.01, "test")})
     plan = make_plan(DATA, r12, prices)  # an amulet: the re-anoint (three Clear Oils) is its burn
 
-    from crafting_system.cli._foresight import plan_burn
+    from crafting_system.planner._foresight import plan_burn
 
     burn = plan_burn(DATA, r12.start_item, plan.abstraction, prices)
     assert burn is not None and burn.label == "Burn with Re-anoint" and burn.cost == pytest.approx(0.03)

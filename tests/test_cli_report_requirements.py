@@ -12,7 +12,7 @@ from abstraction_support import real_game_data
 from items_support import DATA
 from route_view_support import COLD_REQ, LIFE, belt
 
-from crafting_system.cli._plan import leaf_labels
+from crafting_system.planner._plan import leaf_labels
 from crafting_system.cli._report import FORMAT, requirements_document, requirements_text
 from crafting_system.targets import KOfN, StartKind, Target, load_target
 

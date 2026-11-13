@@ -42,12 +42,13 @@ FIXED_DAY = date(2026, 11, 6)  # the day the start sources are asked on, so the 
 TARGET_SECONDS = 30.0
 BY_NAME_LIMIT = 3  # a method found by its name alone counts only when at most this many classes have a method of that name
 
-# the places a plan starts from: the command line, the planner entry and the start choice
+# the places a plan starts from: the command line, the planner's entry (#880), and the plan and the start choice under it
 ENTRY_POINTS = (
     (f"{PACKAGE}.cli._main", "main"),
     (f"{PACKAGE}.cli._benchmark", "benchmark_main"),
-    (f"{PACKAGE}.cli._plan", "make_plan"),
-    (f"{PACKAGE}.cli._starts", "plan_with_starts"),
+    (f"{PACKAGE}.planner._entry", "plan_target"),
+    (f"{PACKAGE}.planner._plan", "make_plan"),
+    (f"{PACKAGE}.planner._starts", "plan_with_starts"),
 )
 
 # the modules the audit says are built and not wired: (what it is, module, finding ids, the public names it lists or None for all of them).
@@ -55,7 +56,7 @@ BUILT_MODULES = (
     ("the market rule", f"{PACKAGE}.prices.trade_market", "INPUTS-2", None),
     ("the price-source rule", f"{PACKAGE}.prices.price_source", "INPUTS-2, PLANNING-6", None),
     ("the item-level floor", f"{PACKAGE}.targets.floor", "TARGETS-3, PLANNING-8, ROUTES-13", None),
-    ("the donor loop of two-input actions", f"{PACKAGE}.cli._donors", "ACT2-11", None),
+    ("the donor loop of two-input actions", f"{PACKAGE}.planner._donors", "ACT2-11", None),
 )
 
 # the findings of the audit that touch a kind, for the reader: ids only, no claim (the claim is the audit's)
@@ -377,7 +378,7 @@ class SourceIndex:
 
 
 def _node_name(key: tuple) -> str:
-    """A node as the report writes it: `cli/_plan.py: make_plan`."""
+    """A node as the report writes it: `planner/_plan.py: make_plan`."""
     return f"{key[1]}:{key[2]}" if key[0] != "mod" else key[1]
 
 
@@ -848,7 +849,7 @@ def first_sentence(text: str) -> str:
 def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targets_dir: Path = TARGETS_DIR) -> list[Probe]:
     from crafting_system.actions import kinds
     from crafting_system.cli import StartContext, make_plan, vendor_recipe_starts
-    from crafting_system.cli._plan import PlanError, StartPrice
+    from crafting_system.planner._plan import PlanError, StartPrice
     from crafting_system.prices import load_price_file
     from crafting_system.targets import StartKind, load_target
 
@@ -901,7 +902,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
 
 def offered_kinds(probe: Probe) -> dict[str, int]:
     """kind -> number of offers of that kind in the plan of the probe (the restart offer is not an action of the catalog)."""
-    from crafting_system.cli._offers import BuyStartItem
+    from crafting_system.planner._offers import BuyStartItem
 
     counts: Counter = Counter()
     for priced in probe.plan.offers:  # type: ignore[attr-defined]
@@ -912,7 +913,7 @@ def offered_kinds(probe: Probe) -> dict[str, int]:
     return dict(counts)
 
 
-ACTION_LIMITS = frozenset({"crafts", "fixed-mod", "rolls", "proved-unneeded"})  # the limits (`cli/_limits.py`) whose labels are actions
+ACTION_LIMITS = frozenset({"crafts", "fixed-mod", "rolls", "proved-unneeded"})  # the limits (`planner/_limits.py`) whose labels are actions
 
 
 def why_not_offered(data, kind, probe: Probe) -> str:
@@ -972,7 +973,7 @@ def _message_text(node: ast.AST) -> str:
 def entry_gates(index: SourceIndex) -> list[tuple[str, str]]:
     """(condition, message) of each `if ...: raise PlanError(...)` of `make_plan` before it builds the abstraction, as the code writes them
     (in `_make_plan`, the body `make_plan` runs on the run's clock, #825)."""
-    func = index.funcs[("func", f"{PACKAGE}.cli._plan", "_make_plan")]
+    func = index.funcs[("func", f"{PACKAGE}.planner._plan", "_make_plan")]
     gates = []
     for statement in func.node.body:  # type: ignore[attr-defined]
         if any(isinstance(n, ast.Call) and ast.unparse(n.func) == "Abstraction" for n in ast.walk(statement)):
@@ -986,7 +987,7 @@ def entry_gates(index: SourceIndex) -> list[tuple[str, str]]:
 
 def closed_inputs(index: SourceIndex) -> list[str]:
     """Where `make_plan` builds the abstraction with `allow_inputs=False`, as the code writes it (in `_make_plan`, #825)."""
-    func = index.funcs[("func", f"{PACKAGE}.cli._plan", "_make_plan")]
+    func = index.funcs[("func", f"{PACKAGE}.planner._plan", "_make_plan")]
     found = []
     for node in ast.walk(func.node):
         if isinstance(node, ast.Call) and ast.unparse(node.func) == "Abstraction":
@@ -1071,7 +1072,7 @@ def built_module_rows(index: SourceIndex, reach: dict, built: Iterable[tuple[str
 def build_report(data, seconds: float = TARGET_SECONDS, src_root: Path = SRC, log: Callable[[str], None] = lambda text: None) -> str:
     from crafting_system.abstraction import Goal
     from crafting_system.actions import kinds
-    from crafting_system.cli._plan import PlanError, make_plan
+    from crafting_system.planner._plan import PlanError, make_plan
     from crafting_system.data import PIN
     from crafting_system.prices import load_price_file
 

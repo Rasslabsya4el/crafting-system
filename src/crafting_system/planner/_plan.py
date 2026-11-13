@@ -44,10 +44,8 @@ from . import _packed
 from ._envelope import Net, NoPolicy
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
-from ._route_chain import chain_of_plan
-from ._route_flow import flow_limits
+from ._presenter import presenter_limits
 from ._prune import chosen_offers, solver_actions
-from ._reach import reach_limit
 from ._start_types import StartChoice
 
 VIEW_FROM_STATES = 1_000  # a packed plan whose policy visits more item states than this is shown by its lumped chain (ticket #70)
@@ -228,7 +226,7 @@ class Plan:
         """What the socket finish adds to every goal state (ADR-0045): its mean from the start item's sockets, 0 for a target with no sockets.
 
         One value for every goal state (no mod action changes sockets; Orb of Binding, which gives a goal a second one, is ticket #232), so the plan
-        of the mods is the cheapest with the finish too and only its mean grows (`cli/_finish.py`)."""
+        of the mods is the cheapest with the finish too and only its mean grows (`_finish.py`)."""
         return 0.0 if self.finish is None else self.finish.value
 
     def value_of(self, state: CompressedState) -> float:
@@ -967,11 +965,8 @@ def finished(plan: Plan) -> Plan:
 
 def display_limits(plan: Plan) -> tuple[Limit, ...]:
     """What the text report, the JSON and the page leave out of a state's description (V4) and of its reach chance (C15, V8)."""
-    found = [states_limit(plan.abstraction.keeps_junk)]
-    reach = reach_limit(plan.start, plan.view_policy, plan.is_goal)
-    if reach is not None:
-        found.append(reach)
-    return (*found, *flow_limits(chain_of_plan(plan)))  # what the route page cannot say of the steps of the policy (#466)
+    # the reach chance and the steps of the policy are the presenter's to tell (#466; the page's maths, asked through `_presenter`, #880)
+    return (states_limit(plan.abstraction.keeps_junk), *presenter_limits(plan))
 
 
 def states_limit(tracked: bool) -> Limit:

@@ -13,7 +13,7 @@ import pytest
 from start_support import with_start
 from targets_support import DATA, parse
 
-from crafting_system.cli._plan import PlanError, resolve_start_price
+from crafting_system.planner._plan import PlanError, resolve_start_price
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.prices.trade_query import BuyMod, BuySpec, TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod

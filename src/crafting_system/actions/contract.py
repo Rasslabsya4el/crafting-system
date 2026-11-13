@@ -513,7 +513,7 @@ class Axis:
     `planned` says that the planner answers at the `plan` reading alone: one exact answer (OR-11), the claim behind the other
     readings named among its approximate inputs (OR-23, ADR-0028), as for any approximate claim. The other readings stay for the
     contract suite. An axis without it is solved by the planner at every reading of its grid (`risk.solve_readings` through
-    `cli._plan.solve_each_reading`, #589), and the answer shows the plan's cost interval over them. The Vaal brick's axis is planned (ticket #260).
+    `planner._plan.solve_each_reading`, #589), and the answer shows the plan's cost interval over them. The Vaal brick's axis is planned (ticket #260).
     """
 
     name: str
@@ -817,7 +817,7 @@ class Action(ABC):
 
         A corrupting action whose outcome is a dead end for a target that asks for a corrupted implicit can reach the goal of one that only
         allows corruption (the Vaal Orb's brick, a full rare, ADR-0037, ticket #260). The catalog lists the action a target that asks gets;
-        the offer filter (`cli._offers.offers_for`) asks this of every corrupting action for a target that only allows, and offers the answer.
+        the offer filter (`planner._offers.offers_for`) asks this of every corrupting action for a target that only allows, and offers the answer.
         The answer has the same label, so a route names it alike.
         """
         return self
