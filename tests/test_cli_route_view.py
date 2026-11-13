@@ -521,8 +521,8 @@ def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step
     solved = _route_flow._visits
 
     def unsolvable(*arguments):  # the one place the numbers can still stop: a chance per use lost in the float
-        visits, _, _ = solved(*arguments)
-        return visits * 0.0, False, None
+        visits, _, _, _ = solved(*arguments)
+        return visits * 0.0, False, None, float("inf")
 
     monkeypatch.setattr(_route_flow, "_visits", unsolvable)
 
@@ -788,8 +788,8 @@ def test_two_branches_that_read_alike_say_what_the_player_does_next_and_the_plai
     solved = _route_flow._visits
 
     def unsolvable(*arguments):
-        visits, _, _ = solved(*arguments)
-        return visits * 0.0, False, None
+        visits, _, _, _ = solved(*arguments)
+        return visits * 0.0, False, None, float("inf")
 
     monkeypatch.setattr(_route_flow, "_visits", unsolvable)
     rows = build_section(hand_input(START, LIFE_GOAL, chaos_for_life), DATA).rows

@@ -18,8 +18,9 @@ import math
 
 import numpy as np
 
-from ..solver import _packed_linear
-from ..solver._packed_linear import EPS, REFINEMENTS, SETTLED  # noqa: F401  (read by the risk's tests and callers)
+from ..solver import linear_solve as _packed_linear
+
+EPS, REFINEMENTS, SETTLED = _packed_linear.EPS, _packed_linear.REFINEMENTS, _packed_linear.SETTLED  # (read by the risk's tests and callers)
 
 SAID_ABOVE = 1e-4  # a relative error above this is said to the reader: the report prints a cost to more digits than that supports
 REFUSED_ABOVE = 1e-2  # above this a number is not shown: a cost not known to within one in a hundred is not one a reader can plan with
