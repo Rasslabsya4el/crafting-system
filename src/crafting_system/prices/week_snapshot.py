@@ -171,6 +171,7 @@ def _drift(name: str, label: str, names: dict[str, tuple[str, PriceEntry]], pric
         for other, (other_label, entry) in names.items()
         if other_label == label and group_of(other) == group and (found := prices.get(other)) is not None and found.source == HISTORY_SOURCE and entry.chaos > 0
         and entry.source != RECIPE_SOURCE  # a template's recipe row is no market reading of its day: it says nothing of how far the market moved
+        and not _is_beast(entry) and not _is_beast(found)  # a beast is no currency: its stash line moves with its own market (#885)
     ]
     return (statistics.median(ratios), len(ratios)) if ratios else (1.0, 0)
 
