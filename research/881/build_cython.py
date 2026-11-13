@@ -26,7 +26,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-FOLDERS = ("abstraction", "actions", "items", "data", "rules", "solver", "cli")  # where a plan spends its time
+FOLDERS = ("abstraction", "actions", "items", "data", "rules", "solver", "planner", "cli")  # where a plan spends its time
 
 
 def cythonize(path: Path, cwd: Path, *directives: str) -> tuple[bool, str, float]:

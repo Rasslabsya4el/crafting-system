@@ -39,7 +39,7 @@ if os.environ.get("CRAFTING_SOURCE"):  # a copy of the package to plan with inst
 # (module, class or None, name): the stages of a plan. A function is looked up where it is defined and replaced wherever a module of the
 # package holds it by name.
 TIMED = [
-    ("crafting_system.cli._pattern_bound", None, "pattern_lower_bound"),
+    ("crafting_system.planner._pattern_bound", None, "pattern_lower_bound"),
     ("crafting_system.abstraction._pattern", "PatternBuilder", "_offers_of_key"),
     ("crafting_system.abstraction._pattern", "Pattern", "members"),
     ("crafting_system.abstraction._pattern", "Pattern", "key"),
@@ -63,20 +63,20 @@ TIMED = [
     ("crafting_system.abstraction._inputs", None, "input_kernel"),
     ("crafting_system.actions.draw", None, "exact_distribution"),
     ("crafting_system.solver._packed_solve", None, "solve_graph"),
-    ("crafting_system.cli._envelope", "Search", "intern"),
-    ("crafting_system.cli._envelope", "Search", "expand"),
-    ("crafting_system.cli._envelope", "Search", "realize"),
-    ("crafting_system.cli._envelope", "Search", "_kernel"),
-    ("crafting_system.cli._envelope", "Search", "_fresh_equal"),
-    ("crafting_system.cli._envelope", "Search", "_q"),
-    ("crafting_system.cli._envelope", "Search", "_self_mass"),
-    ("crafting_system.cli._envelope", "Search", "_graph"),
-    ("crafting_system.cli._envelope", "Search", "run"),
-    ("crafting_system.cli._envelope_plan", "CraftingProblem", "candidates"),
-    ("crafting_system.cli._envelope_plan", "CraftingProblem", "lower"),
-    ("crafting_system.cli._envelope_plan", "CraftingProblem", "kernel_key"),
-    ("crafting_system.cli._envelope_plan", "CraftingProblem", "kernel"),
-    ("crafting_system.cli._envelope_plan", None, "solve_walked"),
+    ("crafting_system.planner._envelope", "Search", "intern"),
+    ("crafting_system.planner._envelope", "Search", "expand"),
+    ("crafting_system.planner._envelope", "Search", "realize"),
+    ("crafting_system.planner._envelope", "Search", "_kernel"),
+    ("crafting_system.planner._envelope", "Search", "_fresh_equal"),
+    ("crafting_system.planner._envelope", "Search", "_q"),
+    ("crafting_system.planner._envelope", "Search", "_self_mass"),
+    ("crafting_system.planner._envelope", "Search", "_graph"),
+    ("crafting_system.planner._envelope", "Search", "run"),
+    ("crafting_system.planner._envelope_plan", "CraftingProblem", "candidates"),
+    ("crafting_system.planner._envelope_plan", "CraftingProblem", "lower"),
+    ("crafting_system.planner._envelope_plan", "CraftingProblem", "kernel_key"),
+    ("crafting_system.planner._envelope_plan", "CraftingProblem", "kernel"),
+    ("crafting_system.planner._envelope_plan", None, "solve_walked"),
 ]
 EXACT = re.compile(r"fractions\.py|built-in method math\.(gcd|lcm)")
 BITS = (53, 63, 127, 255, 1023)  # a float's mantissa, int64, int128, and beyond
@@ -168,7 +168,7 @@ class KernelShapes:
         return f">{BITS[-1]}"
 
     def install(self) -> None:
-        from crafting_system.cli import _envelope_plan
+        from crafting_system.planner import _envelope_plan
 
         original = _envelope_plan.integer_weights
 
@@ -243,7 +243,8 @@ def main() -> None:
     parser.add_argument("--top", type=int, default=60)
     parser.add_argument("--tag", default="", help="added to the name of the files written")
     args = parser.parse_args()
-    from crafting_system.cli import _envelope, make_plan
+    from crafting_system.cli import make_plan
+    from crafting_system.planner import _envelope
 
     data, target, prices, start_price, solver = inputs(args)
     name = f"{(args.case or args.route).replace('/', '__')}.{args.mode}{args.tag}"

@@ -316,7 +316,8 @@ def main() -> None:
     parser.add_argument("--repeat", type=int, default=5)
     parser.add_argument("--out")
     args = parser.parse_args()
-    from crafting_system.cli import _envelope, make_plan
+    from crafting_system.cli import make_plan
+    from crafting_system.planner import _envelope
 
     data, target, prices, start_price, solver = profile_plan.inputs(args)
     name = (args.case or args.route).replace("/", "__")
