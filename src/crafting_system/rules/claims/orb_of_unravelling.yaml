@@ -1,0 +1,24 @@
+# Mechanic family: orb_of_unravelling (what one use of an Orb of Unravelling consumes; ADR-0044, ticket #281). Its effect, limits, chance
+# and destination are claims of memory_strands.yaml (unravelling_*); this file holds the price-file name only, kept apart so that the
+# fixed list of the strand claims (tests/test_memory_strands_claims.py) does not change.
+rules:
+  - id: orb_of_unravelling.cost
+    statement: One use of an Orb of Unravelling consumes one Orb of Unravelling item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRemoveZanaInfluence: name "Orb of Unravelling"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-12
+    value: {Orb of Unravelling: 1}
+
+  - id: orb_of_unravelling.raises_natural_mods_only
+    statement: 'Approximate. The plan raises only a mod of the item''s own pool, a natural prefix or suffix of its base, item level and influences that the pool can roll; an essence-only, delve or unveiled mod, and an Elevated mod, are left as they are. The player fit and the calculator built on it cover natural affixes only; the emulator gives essence and influenced mods another form of the chance, min(1, s / 25 * W_up / W_group), which no source tests (claim memory_strands.unravelling_side_weight_is_whole_pool). An influence mod of the pool takes the ordinary formula, as ADR-0044 says.'
+    source_kind: experiment
+    url: https://unravel.port8080.sh/
+    quote: Only natural equipment affixes are supported
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: No source covers an Unravelling of an essence-only, delve or unveiled mod; the emulator's other form for essence and influenced mods is untested.
+    page_statement: "An Orb of Unravelling is modelled as raising only the mods an item can roll naturally; an essence-only, delve or unveiled mod stays as it is."
+    page_source: "the strands player fit and its calculator, which cover natural affixes only"

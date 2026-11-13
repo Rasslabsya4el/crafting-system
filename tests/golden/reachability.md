@@ -11,11 +11,11 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 
 |  | Count |
 |---|---|
-| Action kinds in the catalog | 61 |
+| Action kinds in the catalog | 62 |
 | - with `planner=False` (no plan can use them) | 26 |
-| - with `planner=True` | 35 |
+| - with `planner=True` | 36 |
 | - `planner=True` and offered by at least one target (reachable) | 21 |
-| - `planner=True` and offered by no target | 14 |
+| - `planner=True` and offered by no target | 15 |
 | Benchmark targets | 17 |
 | - the planner entry plans them | 15 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 1 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 40 of 61 (26 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 41 of 62 (26 closed by `planner=False`, 15 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -94,6 +94,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `quality-currency` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0049), bought before the orbs when that is cheaper: solved with the finish of a target that names sockets (`cli/_finish.py`), never searched over as a step of the mods |  |
 | `re-anoint` | **no** | burns | none | `planner=False`: a burn only (ticket #295, ADR-0056): as a plain action it changes nothing the state keeps and gives a target nothing; the Peek of a Lock takes it as a fallback |  |
 | `locus` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `unravelling-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 
 ## 2. The planner entry, target by target
 
