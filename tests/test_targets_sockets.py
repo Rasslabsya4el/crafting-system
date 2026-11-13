@@ -989,10 +989,12 @@ def test_the_plan_of_a_socket_target_is_refused_because_the_planner_would_ignore
         make_plan(FIXTURE_DATA, asked, price_file())
 
 
-def test_the_refusal_of_a_socket_target_says_the_planner_cannot_plan_it_yet(r12_target):
+def test_a_socket_target_is_planned_by_its_finish_and_a_start_item_that_states_no_sockets_is_refused(r12_target):
+    """Since #231 the planner plans a target with sockets (the socket finish, `cli/_finish.py`): it no longer refuses it as "cannot plan yet".
+    The finish starts from the start item's sockets, so a start item that states none is refused with that reason."""
     asked = dataclasses.replace(r12_target, sockets=SocketRequirement(6, 6, 2, 2, 2))
 
-    with pytest.raises(PlanError, match=r"cannot plan yet.*sockets"):
+    with pytest.raises(PlanError, match=r"start item does not say which"):
         make_plan(FIXTURE_DATA, asked, price_file())
 
 

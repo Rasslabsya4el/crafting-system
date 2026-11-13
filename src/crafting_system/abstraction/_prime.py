@@ -8,6 +8,9 @@ computes them in worker processes and stores them in the caches the kernels read
 ready. A distribution is a function of its pool alone, so the cache holds the same values whichever process made them
 and in whatever order, and `kernel` returns the same dict: nothing here can change an answer.
 
+Under a run's memory net (`parallel.memory_net`) the wait on the workers reads their memory too; once it passes the limit the workers
+are killed, nothing is stored, and `abstraction.prime_stopped` keeps the reason so that no pool is forked again for this model (#626).
+
 Workers are forked, one pool per call, so they inherit the abstraction as it is (its caches warm) and the jobs without
 pickling anything that goes out; only the distributions come back. Where there is no fork (Windows) `prime` does nothing.
 """
@@ -38,7 +41,7 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
     A request that `kernel` would refuse is left to `kernel`, which raises it in its own order.
     """
     workers = parallel.worker_count() if workers is None else workers
-    if workers < 2 or not parallel.can_inherit():
+    if workers < 2 or not parallel.can_inherit() or getattr(abstraction, "prime_stopped", None) is not None:
         return 0
     jobs: dict[tuple, tuple] = {}
     for state, action in requests:
@@ -66,6 +69,9 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
     try:
         with parallel.WorkerPool(_hold, (abstraction, listed), workers=min(workers, len(listed))) as pool:
             results = pool.map(_compute, range(len(listed)), chunk=1)
+    except parallel.MemoryNetReached as reached:  # the run's memory net killed the workers (#626): no pool again for this model, the kernels compute alone
+        abstraction.prime_stopped = str(reached)
+        return 0
     except Exception:  # a worker failed (a refusal, a dead process): store nothing, the kernel call computes and raises as a serial run does
         return 0
     for ((kind, key), _), result in zip(listed, results):

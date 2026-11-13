@@ -12,21 +12,81 @@ pieces makes a `WorkerPool(factory, args)` and `map`s a module-level function ov
   between workers, so what a piece returns may depend only on the piece and on what the factory built from `args`;
 * a piece never draws from a random stream shared with another piece (a random job gives each piece its own seed).
 
+A run with a memory net (`memory_net(mb)`, ticket #626, OR-12) reads, while it waits on the workers, the memory of this process and its
+workers together (`held_mb`): the workers are processes of their own, and a net that read this process alone let four of them take a
+runner's 16 GB while the caller held 0.7 GB. Past the limit the workers are killed and `MemoryNetReached` says so.
+
 Where `fork` exists (Linux, macOS) the workers are forked, so `args` are inherited and not pickled; elsewhere (Windows)
 they are spawned and `args` are pickled once per worker, which is why the game data's read-only mappings get a pickler
 here (`types.MappingProxyType` has none).
 """
 
+import contextlib
 import copyreg
 import multiprocessing
 import os
 import sys
 from collections.abc import Callable, Iterable, Sequence
-from concurrent.futures import ProcessPoolExecutor, wait
+import time
+from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
 from types import MappingProxyType
 
 WORKERS_ENV = "CRAFTING_WORKERS"
 MIN_CHUNK = 1  # a chunk is never smaller than this many pieces
+WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory while a memory net is set
+
+_memory_net: float | None = None  # the limit in MB of the run's memory net (`memory_net`), None when no net is set
+
+
+class MemoryNetReached(Exception):
+    """The memory of this process and its workers passed the run's memory net while it waited on them; the workers were killed."""
+
+
+@contextlib.contextmanager
+def memory_net(mb: float | None):
+    """Set the run's memory net (MB) for the block: every pool `map` inside it watches `held_mb` while it waits (None sets no net)."""
+    global _memory_net
+    saved, _memory_net = _memory_net, mb
+    try:
+        yield
+    finally:
+        _memory_net = saved
+
+
+def active_memory_net() -> float | None:
+    """The limit of the memory net set now, or None."""
+    return _memory_net
+
+
+def _proc_mb(pid: int | str) -> float | None:
+    """The proportional resident size (PSS) of a process in MB from /proc, or its resident size where PSS is not given; None without /proc."""
+    for name, field in (("smaps_rollup", "Pss:"), ("status", "VmRSS:")):
+        try:
+            with open(os.path.join(os.sep, "proc", str(pid), name), encoding="utf-8") as handle:
+                for line in handle:
+                    if line.startswith(field):
+                        return int(line.split()[1]) / 1024
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def held_mb() -> float | None:
+    """The memory this process and its live workers hold, in MB, or None where it cannot be read.
+
+    On Linux the sum of the proportional sizes (a page that a fork shares is counted once, split between the processes that share it); elsewhere
+    this process's own peak, as before (a spawned worker on Windows is not seen; `prime` forks nothing there).
+    """
+    own = _proc_mb("self")
+    if own is not None:
+        return own + sum(_proc_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+    try:
+        import resource
+
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return peak / (1024 * 1024) if sys.platform == "darwin" else peak / 1024
+    except ImportError:
+        return None
 
 _context: object = None  # the state of this process's worker (set by `_initialise`)
 
@@ -172,18 +232,38 @@ class WorkerPool:
         chunks = [items[start : start + size] for start in range(0, len(items), size)]
         executor = self._start()
         results: list = []
-        if timeout is None:
+        if timeout is None and _memory_net is None:
             for part in executor.map(_run_chunk, [function] * len(chunks), chunks):
                 results.extend(part)
             return results
         futures = [executor.submit(_run_chunk, function, part) for part in chunks]
-        _, waiting = wait(futures, timeout=max(0.0, timeout))
-        if waiting:
-            self.abandon()
-            raise TimeoutError(f"{len(waiting)} of {len(futures)} chunks did not come back in {timeout:.0f} s; their workers were stopped")
+        self._wait(futures, timeout)
         for future in futures:
             results.extend(future.result())
         return results
+
+    def _wait(self, futures: list, timeout: float | None) -> None:
+        """Wait on the futures; past `timeout` raise `TimeoutError`, past the memory net `MemoryNetReached`, the workers killed either way."""
+        deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
+        waiting = futures
+        while waiting:
+            left = None if deadline is None else max(0.0, deadline - time.monotonic())
+            step = left if _memory_net is None else WATCH_SECONDS if left is None else min(left, WATCH_SECONDS)
+            _, waiting = wait(waiting, timeout=step, return_when=FIRST_EXCEPTION)
+            failed = next((future for future in futures if future.done() and not future.cancelled() and future.exception() is not None), None)
+            if failed is not None:  # raised now, not after a chunk that may hang: its workers are stopped as at the timeout (#535)
+                error = failed.exception()
+                if waiting:
+                    self.abandon()
+                raise error
+            if not waiting:
+                return
+            if _memory_net is not None and (held := held_mb()) is not None and held >= _memory_net:
+                self.abandon()
+                raise MemoryNetReached(f"this process and its workers held {held:,.0f} MB, the limit is {_memory_net:,.0f} MB; the workers were stopped")
+            if deadline is not None and time.monotonic() >= deadline:
+                self.abandon()
+                raise TimeoutError(f"{len(waiting)} of {len(futures)} chunks did not come back in {timeout:.0f} s; their workers were stopped")
 
     def map_chunks(self, function: Callable, pieces: Iterable, *, chunk: int) -> list:
         """`[function(c) for c in chunks]`, where the chunks are consecutive runs of `chunk` pieces (the last may be shorter).
@@ -203,4 +283,8 @@ class WorkerPool:
             finally:
                 _context = saved
         executor = self._start()
-        return list(executor.map(_run_whole, [function] * len(chunks), chunks))
+        if _memory_net is None:
+            return list(executor.map(_run_whole, [function] * len(chunks), chunks))
+        futures = [executor.submit(_run_whole, function, part) for part in chunks]
+        self._wait(futures, None)
+        return [future.result() for future in futures]

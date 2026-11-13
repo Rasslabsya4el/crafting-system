@@ -57,6 +57,7 @@ from collections.abc import Hashable, Mapping, Sequence
 from fractions import Fraction
 
 from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, guaranteed_candidates, partners
+from crafting_system.budget import checkpoint
 from crafting_system.data import Mod
 from crafting_system.items import Side
 
@@ -304,6 +305,7 @@ def reach_bound(
     cannot be bounded: it reads the junk (it does not erase it), a part of its result is a `Fixed`
     or a `Rerolled` one, it fractures a mod, or a leaf of `leaves` limits the roll of a mod in its pool.
     """
+    checkpoint()  # the run's net (#825, #702): the bound pruning raises thousands of these, in pool workers too (they inherit the run's clock by fork)
     leaves = tuple(leaves)
     if not leaves:
         raise ValueError("leaves must not be empty")
@@ -350,6 +352,7 @@ def _exact_part(abstraction: Abstraction, part, leaves: Sequence[int], retained:
 
     total = ZERO
     for outcome, chance in part.distribution(label).items():
+        checkpoint()
         if all(
             retained[index] is Status.PASSING or any(flags[position] for flags, _ in outcome)
             for position, index in enumerate(leaves)

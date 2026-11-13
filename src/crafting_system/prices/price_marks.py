@@ -7,7 +7,8 @@ its depth in units is at least the units the plan expects to use. Every other pr
 * "price on N units" (the depth is below the plan's expected uses, or no depth was recorded);
 * "previous league's price" (a price of an earlier league or of Standard);
 * "price of a wider item; the exact item has K listings at P" (a stand-in);
-* "price of league X" or "price of an earlier day";
+* "price of league X", "price of an earlier day", or a price of a day more than a week after the file's (a snapshot of an earlier
+  day that keeps a later reading as its stand-in, #838);
 * "few offers: the mean of the cheapest units of the N offers there are" and "old price, read on <date>, the market has few
   offers now" (a thin trade book, OR-8 as amended by #718: its own mean, or the league's last deep price in its place);
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
@@ -50,6 +51,7 @@ EARLIER = "earlier-league"
 STAND_IN = "wider-item"
 OTHER_LEAGUE = "other-league"
 OLD = "old"
+LATER = "later-day"
 NO_DEPTH = "no-depth"
 NOT_RECORDED = "not-recorded"
 NOT_RECORDED_WORDS = "where this price comes from is not recorded"
@@ -105,6 +107,8 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(OTHER_LEAGUE, f"price of league {p.league} ({p.date})"))
     elif p.recorded and p.market != OLD_PRICE and _days_before(p.date, price_file) > MAX_AGE_DAYS:  # an old price says its day in its own mark
         found.append(PriceMark(OLD, f"price of {p.date}, {_days_before(p.date, price_file)} days before the file"))
+    elif p.recorded and p.market != OLD_PRICE and -_days_before(p.date, price_file) > MAX_AGE_DAYS:  # a snapshot of an earlier day keeping a later reading (#838)
+        found.append(PriceMark(LATER, f"price of {p.date}, {-_days_before(p.date, price_file)} days after the file"))
     if p.recorded and p.market == THIN_MARKET:
         found.append(PriceMark(THIN, f"few offers: the mean of the cheapest units of the {p.book} {'offer' if p.book == 1 else 'offers'} there are"))
     elif p.recorded and p.market == OLD_PRICE:

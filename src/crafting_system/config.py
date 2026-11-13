@@ -29,6 +29,12 @@ stale (ADR-0061 decision 2, ticket #357).
 The setting `price_gap_percent` (same table, a number above zero, default 20) is the gap between the trade price and the poe.ninja
 price above which the answer flags it; 20 means 20%.
 
+The settings `time_limit_seconds` and `memory_limit_mb` (same table) are the stop-and-say-so net of one plan (OR-33, tickets #537, #825): the time
+(a number above zero, default 600, OR-33's 10 minutes) and the memory (a number of MB above zero, default `"share"`: 80% of the machine's memory,
+`budget.MEMORY_SHARE`) after which the planner stops and says what it found and where it stopped; `"none"` sets no limit of that kind. The command
+line has `--time-limit` and `--memory-limit` for one run. The defaults are `crafting_system.budget`'s, written here again because this module
+imports nothing (`tests/test_budget.py` checks they agree).
+
 The setting `review_ratio` (table `[benchmark]`, a number above 0 and at most 1, default 0.5, ticket #554) is the review line of `benchmark`:
 a route whose planner mean is below this share of the guide's mean prints a "needs a human" row. It is a prompt for a person to look,
 never a cut of the search or a verdict (OR-12).
@@ -55,7 +61,12 @@ _PATH_SETTINGS = {
     "output": ("CRAFTING_OUTPUT_DIR", "local/output"),
 }
 
-_PLANNER_SETTINGS = ("memory_strands", "recipe_starts", "recombinator_junk_craft", "max_imprints", "price_source", "price_gap_percent")
+_PLANNER_SETTINGS = (
+    "memory_strands", "recipe_starts", "recombinator_junk_craft", "max_imprints", "price_source", "price_gap_percent", "time_limit_seconds", "memory_limit_mb",
+)  # fmt: skip
+TIME_LIMIT_SECONDS = 600.0  # `budget.NET_SECONDS` (OR-33)
+NO_LIMIT = "none"  # the value of a limit setting that sets no limit
+MEMORY_SHARE_SETTING = "share"  # the default memory limit: `budget.MEMORY_SHARE` of the machine's memory
 
 # values of the `price_source` setting (ADR-0061 decision 2); kept here, not imported from prices/, because this module imports nothing
 PRICE_SOURCES = ("ninja", "trade", "both")
@@ -74,6 +85,8 @@ class Config:
     price_gap_percent: float = 20.0
     benchmark_review_ratio: float = 0.5
     benchmark_review_tolerance: float = 0.2
+    time_limit_seconds: float | None = TIME_LIMIT_SECONDS  # None: no time limit
+    memory_limit_mb: float | str | None = MEMORY_SHARE_SETTING  # a number of MB, `MEMORY_SHARE_SETTING`, or None: no memory limit
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -122,7 +135,18 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         price_gap_percent=float(planner.get("price_gap_percent", 20.0)),
         benchmark_review_ratio=float(benchmark.get("review_ratio", 0.5)),
         benchmark_review_tolerance=float(benchmark.get("review_tolerance", 0.2)),
+        time_limit_seconds=_limit(planner.get("time_limit_seconds", TIME_LIMIT_SECONDS)),
+        memory_limit_mb=_limit(planner.get("memory_limit_mb", MEMORY_SHARE_SETTING)),
     )
+
+
+def _limit(value: object) -> float | str | None:
+    """A limit setting as read (`_read_planner` checked it): `NO_LIMIT` is None, a number a float, the memory share as it is."""
+    if value == NO_LIMIT:
+        return None
+    if value == MEMORY_SHARE_SETTING:
+        return value
+    return float(value)  # type: ignore[arg-type]
 
 
 def _is_blank(value: str | None) -> bool:
@@ -209,6 +233,11 @@ def _read_planner(path: Path, planner: object) -> dict[str, object]:
         elif key == "price_source":
             if type(value) is not str or value not in PRICE_SOURCES:
                 raise ValueError(f"{path}: [planner] {key!r}: must be one of ninja, trade, both")
+        elif key in ("time_limit_seconds", "memory_limit_mb"):
+            allowed = (NO_LIMIT, MEMORY_SHARE_SETTING) if key == "memory_limit_mb" else (NO_LIMIT,)
+            if value not in allowed and not _is_percent(value):
+                words = " or ".join(f'"{each}"' for each in allowed)
+                raise ValueError(f"{path}: [planner] {key!r}: must be a number above zero or {words}")
         elif key == "price_gap_percent":
             if not _is_percent(value):
                 raise ValueError(
