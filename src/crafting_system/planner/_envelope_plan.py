@@ -257,6 +257,7 @@ class EnvelopeInfo:
     first_plan: int = 0  # actions built along the first plan's chain, before the first round
     upper_refused: int = 0  # rounds in which the plan in hand could not be solved to a certified cost, so the stop at the gap waited (#769)
     upper_seconds: float = 0.0
+    held: bool = False  # a net's stop kept an earlier plan, because the plan in hand could not be solved to a certified cost
 
 
 def envelope_result(
@@ -333,7 +334,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
         result.exact, result.stopped, result.lower, mean, stats.rounds, stats.touched, stats.expanded, stats.realized, stats.candidates,
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
-        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds,
+        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held,
     )  # fmt: skip
     return packed
 
@@ -393,7 +394,8 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             _limits.SOLVE,
             "The search was stopped",
             f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} states looked at"
-            + ("; the plan restarts from the start item wherever the search had not looked" if info.restarts else ""),
+            + ("; the plan restarts from the start item wherever the search had not looked" if info.restarts else "")
+            + ("; the cost of the last plan it had could not be worked out to a certified figure, so the plan shown is the one before it" if info.held else ""),
             f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, exactly. " + certificate_text(info),
         ),
     )

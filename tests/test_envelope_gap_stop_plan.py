@@ -282,3 +282,60 @@ def test_the_command_line_has_the_gap_as_a_percent(tmp_path):
     for wrong in ("-1", "nan", "inf", "one"):
         with pytest.raises(Exception, match="percent"):
             _main._percent(wrong)
+
+
+# ---- a net's stop on a plan the solver cannot certify, and the start options ------------------------------------------------------------
+
+
+def test_a_net_stop_whose_last_plan_cannot_be_certified_gives_the_plan_before_it_and_says_so(light, monkeypatch):
+    from test_envelope_gap_stop import refuse_upper_solves
+
+    from crafting_system.planner._envelope import Net
+
+    start, _, optimum, _ = light
+    refuse_upper_solves(monkeypatch, 2)  # the first plan is certified, the plan in hand at the net is not
+    result = searched(light, net=Net(states=100))
+    info = result.info["envelope"]
+    assert not info.exact and info.held and "limit is 100" in info.stopped
+    mean = result.solution.values[start]
+    assert mean == info.upper and mean >= optimum * (1 - 1e-9) and info.lower <= optimum * (1 + 1e-9)
+    assert mean == pytest.approx(chain_mean(result, start), rel=1e-9)
+    text = limit_text(envelope_limits(info)[0])
+    assert "could not be worked out to a certified figure, so the plan shown is the one before it" in text
+
+
+def test_a_start_option_whose_plan_is_only_proved_within_a_gap_says_so_and_the_answer_claims_no_cheapest_plan(monkeypatch):
+    """A start not chosen whose plan is within 1% of its cheapest could be cheaper than shown by that much: its row says what was proved, and no
+    limit of the answer claims the cheapest plan. The toy world's plans are all proved exact, so the row's words are planted here."""
+    from test_vendor_starts import TOY, bought_boots, prices, toy_target, vendor_recipe_starts
+
+    from crafting_system.cli import StartList, plan_with_starts
+    from crafting_system.cli._start_report import _row
+    from crafting_system.planner import _starts
+
+    sources = (vendor_recipe_starts, lambda context: StartList((bought_boots(5.0),)))
+    exact = plan_with_starts(TOY, toy_target(), prices(), sources=sources)
+    assert all(not row.note for row in exact.starts.considered if row.outcome in ("chosen", "planned"))
+    assert any("is the cheapest" in limit.guarantee for limit in exact.limits)
+    monkeypatch.setattr(_starts, "_proved", lambda plan: "" if plan.start_price.chaos == exact.start_price.chaos else "proved at most 0.70% above the cheapest plan from it")
+    loose = plan_with_starts(TOY, toy_target(), prices(), sources=sources)
+    noted = [row for row in loose.starts.considered if row.note and row.outcome == "planned"]
+    assert noted and all("(proved at most 0.70% above the cheapest plan from it)" in _row(row) for row in noted)
+    assert not [limit for limit in loose.limits if "is the cheapest" in limit.guarantee]
+    assert loose.mean_remaining == exact.mean_remaining
+
+
+def test_what_a_start_options_row_says_of_a_plan_not_proved_the_cheapest():
+    from types import SimpleNamespace
+
+    from crafting_system.planner._starts import _proved
+
+    def plan(info):
+        return SimpleNamespace(search=info)
+
+    exact = EnvelopeInfo(True, None, 99.5, 99.5, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None)
+    within = EnvelopeInfo(False, None, 99.3, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None, within=0.01)
+    no_figure = EnvelopeInfo(False, "the time limit of 600 seconds was reached", 0.0, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None)
+    assert _proved(plan(None)) == "" and _proved(plan(exact)) == ""
+    assert _proved(plan(within)) == "the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"
+    assert _proved(plan(no_figure)).endswith("which is not proved the cheapest")

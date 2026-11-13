@@ -92,7 +92,9 @@ waited). Before `gap_after` only the exact stop ends the search ("exact when the
 None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
 
 **The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
-round and inside the first plan's chain; the answer is then the best executable policy and `exact` is False, with `stopped` saying which net. A given start whose plan has not closed has no answer
+round and inside the first plan's chain (the state net waits for the first round, so the first plan's reach can pass it); the answer is then the
+best executable policy and `exact` is False, with `stopped` saying which net. When the plan in hand at the stop cannot be solved to a certified cost
+(#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal. A given start whose plan has not closed has no answer
 (`NoPolicy`).
 """
 
@@ -205,7 +207,8 @@ class SearchResult[S]:
     `lower` is `L(root)` less its certified error (the `LB` of the certificate `[LB, U]`). `upper` is the certified upper figure of the plan in
     `graph` (its value with the solver's error added; the caller solves the graph for the exact mean), None for an exact answer, where the mean
     is pinned by the lower graph itself. `within` is the gap setting when the search ended at a proved gap (OR-32): then `stopped` is None,
-    `exact` is False and `upper <= (1 + within) * lower`.
+    `exact` is False and `upper <= (1 + within) * lower`. `held` says that the plan is an earlier one, kept because the plan in hand at a net's stop
+    could not be solved to a certified cost: `states` and `index` are then the states that plan knew.
     """
 
     states: list[S]
@@ -218,6 +221,7 @@ class SearchResult[S]:
     stats: SearchStats
     upper: float | None = None
     within: float | None = None
+    held: bool = False
 
 
 @dataclass(frozen=True)
@@ -342,6 +346,7 @@ class Search[S]:
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
         self.watch = watch
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
+        self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on
         self.standing: Standing | None = None
         self.incumbent = incumbent
         self.say = progress or (lambda _text: None)
@@ -662,8 +667,10 @@ class Search[S]:
             self.stats.upper_seconds += time.perf_counter() - mark
         value = float(core.value[0])
         certified = value * (1.0 + core.certificate.bound) if math.isfinite(value) else math.inf
-        if math.isfinite(certified) and (self.upper is None or certified < self.upper):
-            self.upper = certified
+        if math.isfinite(certified):
+            self.held = graph, certified
+            if self.upper is None or certified < self.upper:
+                self.upper = certified
         return graph, value, certified
 
     def plan_now(self) -> SearchResult[S] | None:
@@ -822,7 +829,14 @@ class Search[S]:
             lower = float(self.lb[0])  # the net ended the first plan's chain before any round: the start's own bound is the lower figure
         try:
             plan, _, upper = self._upper()
-        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies: say so, with the bound
+        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies
+            if self.held is not None:  # an earlier plan was certified: it is the answer (OR-33), over the states it knew
+                plan, upper = self.held
+                self.say(f"  the plan in hand at the stop could not be solved to a certified cost ({error}): the last plan that could is kept, at most {upper!r}")
+                self._stand(lower, began)
+                known = plan.n
+                index = {state: i for state, i in self.index.items() if i < known}
+                return SearchResult(self.states[:known], index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None, True)
             raise NoPolicy(
                 f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
                 f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"

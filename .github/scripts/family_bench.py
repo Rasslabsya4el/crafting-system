@@ -257,7 +257,7 @@ def install_search_hooks(per_round: list, upper_per_round: bool) -> None:
     original = _envelope.Search._net
     started: dict[int, float] = {}
 
-    def traced(self, began):
+    def traced(self, began, *args, **kwargs):  # `_net` is also asked inside the first plan's chain, with what to leave unread (#826)
         key = id(self)
         started.setdefault(key, began)
         stats = self.stats
@@ -272,7 +272,7 @@ def install_search_hooks(per_round: list, upper_per_round: bool) -> None:
                 except Exception as error:  # noqa: BLE001 - a stiff graph the solver cannot certify: recorded, not fatal
                     row["upper_error"] = repr(error)[:200]
             per_round.append(row)
-        return original(self, began)
+        return original(self, began, *args, **kwargs)
 
     _envelope.Search._net = traced
 

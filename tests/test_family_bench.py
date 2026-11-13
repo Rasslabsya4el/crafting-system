@@ -222,3 +222,23 @@ def test_the_relation_is_fitted_on_the_envelope_plans_and_recovers_rates_it_was_
     assert found["seconds"]["rates"] == pytest.approx([0.5, 0.001, 0.002, 0.0005], rel=1e-6) and found["seconds"]["r2"] == pytest.approx(1.0)
     assert found["peak_mb"]["rates"] == pytest.approx([100.0, 0.0, 0.01, 0.0], abs=1e-6)
     assert module.relation(rows[:3]) is None  # too few plans to fit four rates
+
+
+def test_the_search_runs_under_the_benchmarks_hook_and_its_rounds_are_recorded():
+    """The hook wraps `Search._net`, which the search also asks inside its first plan's chain with what to leave unread (#826): the hook passes it on."""
+    from envelope_support import ExplicitProblem, dense_optimum, random_graph
+
+    from crafting_system.planner import _envelope
+
+    module = bench_script()
+    original = _envelope.Search._net
+    per_round: list = []
+    try:
+        module.install_search_hooks(per_round, upper_per_round=True)
+        graph = random_graph(3, 60)
+        value, _ = dense_optimum(graph)
+        result = _envelope.Search(ExplicitProblem(graph, value, 0.5), net=_envelope.Net(states=10**9)).run()
+    finally:
+        _envelope.Search._net = original
+    assert result.exact and per_round and per_round[-1]["round"] == result.stats.rounds - 1  # the net is asked after every round but the one that ends exact
+    assert all("upper" in row for row in per_round)

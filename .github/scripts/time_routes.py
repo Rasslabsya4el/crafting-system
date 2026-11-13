@@ -4,6 +4,7 @@
 
 Prints where the time goes (the bound pruning's progress, a stack dump every 3 minutes) and writes `<route>.json`. `--solver` defaults to `auto`, what the
 player gets (the envelope search since #535, which prints its own progress lines); `object` is the bound pruning the script was written to watch.
+With `--budget` (60 by default, the planner's aim) a plan the envelope search makes past that time is one proved within 1% of the cheapest (#826); `--exact` keeps the exact proof.
 """
 
 import argparse

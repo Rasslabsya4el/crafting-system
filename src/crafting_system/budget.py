@@ -55,7 +55,8 @@ class Budget:
     """The time and memory one run may take (see the module text). None for a figure means no limit of that kind.
 
     `aim_seconds` is what the plan aims at (the forecast of `_decide` reads it, and #826's stop at a proved 1%); `seconds` and `memory_mb` are the
-    net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements).
+    net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
+    its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure.
     `gap` is the proof the run owes once it is past its aim (OR-32): the plan proved to cost at most this share more than the cheapest; before the
     aim, and with no aim, the proof is exact, and 0 keeps it exact whatever the time. Every figure is a setting of the machine and the user the
     run is for, never a constant sized for one machine.

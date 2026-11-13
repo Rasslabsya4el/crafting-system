@@ -8,6 +8,7 @@ the mean cost from the start, the certified error bound, the numbers of the pack
 seconds of each phase), the risk (odds, p50, p90) and the peak memory. With `--aim-seconds S` the plan has OR-32's budget (ticket #826): past `S` seconds
 the envelope search stops once its plan is proved within `--gap` (a share, the planner's 1% by default) of the cheapest; `search` in the JSON says how the
 search ended (exact, or within the gap), its lower and upper figures, its rounds and the first plan's cost. `--no-risk` leaves the percentiles out.
+V01 is planned as the benchmark plans it: with the start items a vendor recipe makes, at the price file its target names.
 
 `check` makes the production plan with the object solver (`solver="object"`), then solves the same offers on packed arrays and
 prints the relative difference of the mean cost, p50 and p90; for R08 the packed solve takes the offers the bound pruning
@@ -31,6 +32,7 @@ from crafting_system.budget import PROOF_GAP, Budget
 from crafting_system.cli import make_plan
 
 from crafting_system.planner import _packed
+from crafting_system.planner._starts import plan_with_starts
 from crafting_system.data import load_game_data
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.targets import load_target, parse_target
@@ -48,6 +50,7 @@ TARGETS = {
     "r13": "r13-life-resist-belt",
     "r14": "r14-hunter-bow",
 }
+WITH_STARTS = {"v01"}  # planned with its start options, as the benchmark plans it (the risk is then always measured)
 STRAND_TARGET = ROOT / "docs" / "research" / "2026-11-01-strand-routes-files" / "targets" / "s02-fire-res-ring-showcase.yaml"
 STRAND_KINDS = ("remembrance-orb", "unravelling-orb")
 
@@ -101,7 +104,10 @@ def inputs(route: str):
         text = re.sub(r"\b(?:%s)\b,? ?" % "|".join(STRAND_KINDS), "", text)
         prices = PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, FlatPrices())
         return data, parse_target(text, data, source="s02"), prices, 10.0
-    return data, load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data), load_price_file(ROOT / os.environ["ROUTE_PRICES"] if os.environ.get("ROUTE_PRICES") else PRICES), None
+    target = load_target(ROOT / "examples" / "targets" / f"{TARGETS[route]}.yaml", data)
+    # `ROUTE_PRICES` first, then the price file the target names itself (V01's vendor snapshot), then the routes' snapshot
+    prices = ROOT / os.environ["ROUTE_PRICES"] if os.environ.get("ROUTE_PRICES") else target.price_file or PRICES
+    return data, target, load_price_file(prices), None
 
 
 def risk_row(plan) -> dict | None:
@@ -138,7 +144,10 @@ def main() -> None:
     result: dict = {"route": arguments.route, "mode": arguments.mode}
     if arguments.mode == "plan":
         budget = None if arguments.aim_seconds is None else Budget(aim_seconds=arguments.aim_seconds, seconds=None, memory_mb=None, gap=arguments.gap)
-        plan = make_plan(data, target, prices, start_price=start_price, budget=budget, solver=arguments.solver, with_risk=not arguments.no_risk)
+        if arguments.route in WITH_STARTS:  # the benchmark's plan of this route compares the start items a vendor recipe makes (ADR-0059)
+            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=start_price, budget=budget, solver=arguments.solver)
+        else:
+            plan = make_plan(data, target, prices, start_price=start_price, budget=budget, solver=arguments.solver, with_risk=not arguments.no_risk)
         search = plan.search
         if search is not None:
             keep = ("exact", "within", "stopped", "lower", "upper", "rounds", "touched", "expanded", "realized", "candidates", "first_upper", "first_plan",

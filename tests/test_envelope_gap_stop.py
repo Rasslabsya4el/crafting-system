@@ -400,3 +400,49 @@ def test_the_gap_is_a_share_zero_or_more():
 def test_the_slack_of_an_offers_bound_never_decides_a_hand_worked_figure():
     assert SLACK <= 1e-8  # the figures above are compared to 1e-8: the search lowers each `la` by `SLACK`
     assert isinstance(Graph, type)  # the support's graph is what `world` builds on
+
+
+def refuse_upper_solves(monkeypatch, from_solve: int) -> list:
+    """Make the solver refuse every solve of the upper graph from the `from_solve`-th on (1 is the first plan's); returns the list of the refused."""
+    real_graph = Search._graph
+    real_solve = _envelope.solve_graph
+    last: list = []
+    upper: list = []
+    refused: list = []
+
+    def noting(self, mode):
+        last.append(mode)
+        return real_graph(self, mode)
+
+    def refusing(packed, **options):
+        if last[-1] == "upper":
+            upper.append(packed.n)
+            if len(upper) >= from_solve:
+                refused.append(packed.n)
+                raise ConvergenceError("the solve certifies only a relative bound of 4.7e-4", 4.7e-4)
+        return real_solve(packed, **options)
+
+    monkeypatch.setattr(Search, "_graph", noting)
+    monkeypatch.setattr(_envelope, "solve_graph", refusing)
+    return refused
+
+
+def test_a_net_keeps_the_last_plan_the_solver_certified_when_the_plan_in_hand_cannot_be(monkeypatch):
+    """OR-33: a stop returns a plan, not a refusal. The first plan is certified; the search grows; at the net the plan in hand is refused by the solver
+    (#769's cases): the answer is the first plan, over the states it knew, and it says so. With nothing certified before, the stop is the refusal it was."""
+    graph, value, _ = world(2, 0.5)
+    plain = Search(Noisy(graph, value, 0.5), net=Net(states=30)).run()
+    assert not plain.exact and not plain.held and len(plain.states) >= 30
+    refused = refuse_upper_solves(monkeypatch, 2)
+    search = Search(Noisy(graph, value, 0.5), net=Net(states=30))
+    result = search.run()
+    assert refused and not result.exact and result.held and "limit is 30" in result.stopped
+    assert result.graph.n == len(result.states) == len(result.index) < len(search.states)  # the states the kept plan knew: a prefix of the search's
+    assert result.states == search.states[: result.graph.n]
+    mean, _ = answer(result)
+    assert math.isfinite(mean) and mean >= value[0] * (1 - 1e-9) and result.upper >= mean * (1 - 1e-12)
+    assert result.upper == pytest.approx(result.stats.first_upper) and result.lower <= value[0] * (1 + 1e-9)
+    monkeypatch.undo()
+    refuse_upper_solves(monkeypatch, 1)  # not even the first plan is certified: nothing to keep
+    with pytest.raises(NoPolicy, match="cannot be solved to a certified cost"):
+        Search(Noisy(graph, value, 0.5), net=Net(states=30)).run()

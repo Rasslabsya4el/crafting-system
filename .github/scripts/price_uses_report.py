@@ -35,7 +35,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("routes")
     parser.add_argument("out")
     parser.add_argument("--prices", default=PRICES)
-    parser.add_argument("--budget", type=float, default=None, help="seconds the plan may take (the decision of `make_plan`: exact when the forecast fits, else approximate; the envelope search that `auto` is since #535 wherever its bound can be built ignores it), as the real-route tests plan R08 and R09")
+    parser.add_argument("--budget", type=float, default=None, help="seconds the plan may take (the decision of `make_plan`: exact when the forecast fits, else approximate; the envelope search that `auto` is since #535 wherever its bound can be built makes no approximate answer: past the budget it stops once its plan is proved within 1% of the cheapest, #826), as the real-route tests plan R08 and R09")
     args = parser.parse_args(argv)
     if args.routes == "split":
         index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))

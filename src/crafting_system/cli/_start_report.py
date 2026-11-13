@@ -56,6 +56,8 @@ def _row(row: ConsideredStart) -> str:
         if candidate.price_mark:
             start += f" [{candidate.price_mark}]"
         words = f"{money(row.total)} Chaos = start {start} + crafting {money(row.mean_remaining)}{approximate}"
+        if row.note:  # a plan the search did not prove the cheapest from this start (#826): what it proved
+            words += f" ({row.note})"
         return f"  {'chosen' if row.outcome == 'chosen' else 'planned'}: {head}: {words}"
     if row.outcome == "failed":
         return f"  failed: {head}: {row.note}"

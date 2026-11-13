@@ -103,7 +103,7 @@ def approximate_options(monkeypatch):
     forecast = exact.abstraction.estimate([exact.start], [offer.action for offer in OFFERS])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
-    return dict(budget=budget, rates=Rates(1.0, 1.0), solver="object")  # the approximate answer is the walk-and-solve path's (#535: `auto` is the always exact envelope search)
+    return dict(budget=budget, rates=Rates(1.0, 1.0), solver="object")  # the approximate answer is the walk-and-solve path's (#535: `auto` is the envelope search, which never answers by the ladder of coarse levels)
 
 
 def test_an_approximate_answer_is_byte_identical_for_one_and_many_workers(monkeypatch):

@@ -115,6 +115,32 @@ def test_a_bound_that_falls_is_refused_at_the_round_it_falls():
     assert refused >= 3, refused
 
 
+def test_a_bound_that_falls_in_a_later_round_is_refused_at_that_round():
+    """The same fault with the start's bound left exact, and a first plan that names no action, so that the rounds replace the fake actions one layer at
+    a time as they did before #826: the root's bound falls rounds after the first, against the last round's value, and the search refuses there."""
+
+    class Scaled(ExplicitProblem):
+        def _scale(self, state):
+            return 1.0 + 0.8 * ((state * 31) % 7) / 7.0
+
+        def lower(self, state):
+            return super().lower(state) * self._scale(state)
+
+        def candidates(self, state):
+            return [(la * self._scale(state), offer) for la, offer in super().candidates(state)]
+
+    refused = 0
+    for seed in SEEDS:
+        graph, value, _ = problem(seed)
+        search = Search(Scaled(graph, value, 1.0), incumbent=lambda state: [])
+        try:
+            search.run()
+        except BoundError as error:
+            assert "fell" in str(error) and search.stats.largest_fall > FALL_LIMIT and search.stats.rounds >= 2
+            refused += 1
+    assert refused >= 3, refused
+
+
 def test_the_guard_can_be_turned_off_for_the_tests_that_plant_a_bound():
     _, _, planted = problem(2, 1.0, planted=1.5)
     result = Search(planted, guard=False).run()
