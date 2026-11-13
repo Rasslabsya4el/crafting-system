@@ -8,6 +8,9 @@ overview). For each name of the templates, in order:
 1. A bulk name (currency, fossil, resonator, essence, oil: an entry that is neither a stored trade search nor a stash line) is its
    exchange rate on the day, or on the latest traded day of the week ending on it (`reading_on`), with the units traded that day
    as its depth, source `poe.ninja-history`. The file is dated on that day, so such a price is of the file's own day.
+   A **beast** has no exchange row: it is its stash line's value on the day (`beast_rows_of`, #885; poe.ninja keeps the daily rows
+   of a finished league's beasts while its Beast overview lists them), with the listings poe.ninja saw that day as its depth, in
+   observations. A day with fewer than 5 listings is no reading (`MIN_COUNT`, as in every stash reading).
 2. A bulk name the league has no row for (an item that left the overview before the league ended has no history any more) is read
    from the previous league at the same league age, the fetcher's own fallback (`previous_league`), marked as that league's price.
 3. Anything else keeps the first template's reading as a stand-in (OR-7): a trade search and a stash line have no daily history
@@ -37,13 +40,13 @@ from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 
 from .essence_recipe import RECIPE_SOURCE, apply_upgrade_recipe
-from .fallbacks import HISTORY_DAYS
-from .ninja_history import DayRow, window_ending
+from .fallbacks import HISTORY_DAYS, MIN_COUNT
+from .ninja_history import DayRow, StashDay, window_ending
 from .poe_ninja import HISTORY_SOURCE, history_slug
-from .ninja_items import STASH_TYPES
+from .ninja_items import BEAST, STASH_TYPES
 from .previous_league import PREVIOUS_SOURCE
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
-from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
+from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
 
 __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
 
@@ -53,10 +56,11 @@ CURRENCY_GROUP = "currency"
 BULK_KINDS = (EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, RECIPE)
 
 RowsOf = Callable[[str, str], Sequence[DayRow]]  # (league, poe.ninja details id) -> that item's traded days
+BeastRowsOf = Callable[[str, str], Sequence[StashDay]]  # (league, beast name) -> the days of its stash line; empty for a name that is no beast there
 Previous = tuple[str, date, date]  # the previous league, its first day, and its day of the same league age
 
 
-def reading_on(rows: Sequence[DayRow], as_of: date, days: int = HISTORY_DAYS) -> DayRow | None:
+def reading_on[Row: (DayRow, StashDay)](rows: Sequence[Row], as_of: date, days: int = HISTORY_DAYS) -> Row | None:
     """The row of `as_of`, else the latest row of the `days` days ending on it; None when that week has none."""
     first, last = window_ending(as_of, days)
     inside = [row for row in rows if first <= row.day <= last]
@@ -94,13 +98,15 @@ def build_snapshot(
     as_of: date,
     previous: tuple[str, date] | None,
     wanted: Sequence[str] = (),
+    beast_rows_of: BeastRowsOf | None = None,
 ) -> tuple[PriceFile, list[str]]:
     """The snapshot of `league` on `as_of` (the module docstring) and its notes: one per stand-in ("<name>: stand-in, ..."), one per
     wanted name left without a price ("<name>: no price, ..."), one per row the upgrade recipe wrote ("<name>: vendor recipe, ...").
 
     `templates` are (label, file) pairs, the first of them first for a stand-in; `start` is the league's first day, so `as_of` is
     league day `(as_of - start).days`; `previous` is the previous league and its first day, or None to skip that step; `wanted`
-    are names to price whether or not a template holds them.
+    are names to price whether or not a template holds them; `beast_rows_of` gives the daily rows of a beast's stash line (None:
+    no beast is read, and a template's beast stays a stand-in).
     """
     names: dict[str, tuple[str, PriceEntry]] = {}
     leagues = {label: template.league for label, template in templates}  # the league each template's readings are of
@@ -122,7 +128,7 @@ def build_snapshot(
     for name, (label, entry) in names.items():
         if name == CHAOS_ORB:
             continue
-        found = _read(name, rows_of, league, start, as_of, back) if wants_history(entry) else None
+        found = _read(name, rows_of, league, start, as_of, back, beast_rows_of) if wants_history(entry) or _is_beast(entry) else None
         if found is None:
             left.append(name)
         prices[name] = found  # a stand-in's place is kept; it is made below, from what was read on the day
@@ -134,7 +140,7 @@ def build_snapshot(
     for name in dict.fromkeys(wanted):
         if name in prices:
             continue
-        found = _read(name, rows_of, league, start, as_of, back)
+        found = _read(name, rows_of, league, start, as_of, back, beast_rows_of)
         if found is None:
             unpriced.append(name)
         else:
@@ -168,8 +174,56 @@ def _drift(name: str, label: str, names: dict[str, tuple[str, PriceEntry]], pric
     return (statistics.median(ratios), len(ratios)) if ratios else (1.0, 0)
 
 
-def _read(name: str, rows_of: RowsOf, league: str, start: date, as_of: date, previous: Previous | None) -> PriceEntry | None:
+def _is_beast(entry: PriceEntry) -> bool:
+    return (entry.detail or {}).get("category") == BEAST
+
+
+def _read(
+    name: str, rows_of: RowsOf, league: str, start: date, as_of: date, previous: Previous | None, beast_rows_of: BeastRowsOf | None = None
+) -> PriceEntry | None:
+    """The reading of `name` on the day: its exchange row or its stash line's row in the league, else the same in the previous league."""
+    found = _read_exchange(name, rows_of, league, start, as_of, None)
+    if found is None and beast_rows_of is not None:
+        found = _read_beast(name, beast_rows_of, league, start, as_of, None)
+    if found is None and previous is not None:
+        found = _read_exchange(name, rows_of, league, start, as_of, previous)
+    if found is None and previous is not None and beast_rows_of is not None:
+        found = _read_beast(name, beast_rows_of, league, start, as_of, previous)
+    return found
+
+
+def _read_beast(name: str, beast_rows_of: BeastRowsOf, league: str, start: date, as_of: date, previous: Previous | None) -> PriceEntry | None:
+    """The stash line of the beast `name` on the day in `league` (`previous` None), or in the previous league at the same league age."""
+    if previous is None:
+        row = reading_on(beast_rows_of(league, name), as_of)
+        if row is None:
+            return None
+        note = f"poe.ninja daily value of the beast on {row.day.isoformat()} (league day {(row.day - start).days}), {row.count:,} listings seen that day"
+        if row.day != as_of:
+            note += f"; {as_of.isoformat()} had no row of {MIN_COUNT} listings or more"
+        detail = {"league": league, "date": row.day.isoformat(), "category": BEAST, "as_of": as_of.isoformat(), "league_day": (as_of - start).days}
+        return PriceEntry(row.chaos, HISTORY_SOURCE, note, detail, Provenance(HISTORY, league, row.day.isoformat(), float(row.count), OBSERVATIONS))
+    old, old_start, same_age = previous
+    row = reading_on(beast_rows_of(old, name), same_age)
+    if row is None:
+        return None
+    note = (
+        f"poe.ninja daily value of the beast on {row.day.isoformat()} in {old} (its league day {(row.day - old_start).days}, the same age),"
+        f" {row.count:,} listings seen that day: {league} has no daily row {_window(as_of)}"
+    )
+    detail = {"league": old, "date": row.day.isoformat(), "category": BEAST, "current_league": league, "age_days": (as_of - start).days}
+    return PriceEntry(row.chaos, PREVIOUS_SOURCE, note, detail, Provenance(PREVIOUS_LEAGUE, old, row.day.isoformat(), float(row.count), OBSERVATIONS))
+
+
+def _read_exchange(name: str, rows_of: RowsOf, league: str, start: date, as_of: date, previous: Previous | None) -> PriceEntry | None:
+    """The exchange row of `name` on the day in `league` (`previous` None), or in the previous league at the same league age."""
     slug = history_slug(name)
+    if previous is None:
+        return _league_row(name, slug, rows_of, league, start, as_of)
+    return _previous_row(slug, rows_of, league, start, as_of, previous)
+
+
+def _league_row(name: str, slug: str, rows_of: RowsOf, league: str, start: date, as_of: date) -> PriceEntry | None:
     row = reading_on(rows_of(league, slug), as_of)
     if row is not None:
         note = f"poe.ninja daily exchange rate of {row.day.isoformat()} (league day {(row.day - start).days}), {_units_text(_units(row))} units traded that day"
@@ -177,8 +231,10 @@ def _read(name: str, rows_of: RowsOf, league: str, start: date, as_of: date, pre
             note += f"; {as_of.isoformat()} had no traded row"
         detail = {"league": league, "date": row.day.isoformat(), "exchange": slug, "as_of": as_of.isoformat(), "league_day": (as_of - start).days}
         return PriceEntry(row.chaos, HISTORY_SOURCE, note, detail, Provenance(HISTORY, league, row.day.isoformat(), _units(row)))
-    if previous is None:
-        return None
+    return None
+
+
+def _previous_row(slug: str, rows_of: RowsOf, league: str, start: date, as_of: date, previous: Previous) -> PriceEntry | None:
     old, old_start, same_age = previous
     row = reading_on(rows_of(old, slug), same_age)
     if row is None:

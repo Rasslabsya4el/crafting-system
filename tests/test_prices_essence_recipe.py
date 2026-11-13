@@ -10,8 +10,8 @@ from datetime import UTC, datetime
 import pytest
 
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, load_prices, write_price_file
-from crafting_system.prices.essence_recipe import PER_UPGRADE, RECIPE_SOURCE, TIERS, apply_upgrade_recipe, has_recipe_rows, tier_of
-from crafting_system.prices.price_marks import DEPTH, EARLIER, FROM_RECIPE, NO_DEPTH, NOT_RECORDED, price_marks
+from crafting_system.prices.essence_recipe import PER_UPGRADE, RECIPE_SOURCE, TIERS, apply_upgrade_recipe, has_recipe_rows, tier_of, tiers_below
+from crafting_system.prices.price_marks import DEPTH, EARLIER, FROM_RECIPE, NO_DEPTH, NOT_RECORDED, judged_depth, price_marks, recipe_anchor
 from crafting_system.prices.provenance import HISTORY, PREVIOUS_LEAGUE, RECIPE, TRADE, Provenance
 from crafting_system.rules import get_rule
 
@@ -286,3 +286,63 @@ def test_a_file_with_no_recipe_row_is_read_with_its_overrides_and_nothing_else_c
 
     assert merged.prices["Shrieking Essence of Fear"] == old.prices["Shrieking Essence of Fear"]
     assert merged.prices["Deafening Essence of Fear"].chaos == 9.0
+
+
+# --- what a recipe price rests on (the checker's second round) --------------------------------------------------------------------
+
+
+def test_the_depth_a_recipe_price_is_judged_by_is_its_anchors_in_units_of_its_own_tier():
+    """Deafening Fear traded 100 units: that is 300 Shrieking, 900 Screaming. A market row is judged by its own depth; a row with none, or
+    whose anchor is gone, by none."""
+    after, _ = apply_upgrade_recipe(
+        file_of({"Deafening Essence of Fear": of_the_day(2.7, depth=100.0), "Shrieking Essence of Fear": later_stand_in(4.0), "Screaming Essence of Fear": later_stand_in(4.0)})
+    )
+
+    assert judged_depth(after.prices["Deafening Essence of Fear"], after) == 100.0
+    assert judged_depth(after.prices["Shrieking Essence of Fear"], after) == 300.0
+    assert judged_depth(after.prices["Screaming Essence of Fear"], after) == 900.0
+    assert recipe_anchor(after.prices["Screaming Essence of Fear"], after) == ("Deafening Essence of Fear", after.prices["Deafening Essence of Fear"], 9.0)
+    assert recipe_anchor(after.prices["Deafening Essence of Fear"], after) is None
+    orphan = file_of({"Shrieking Essence of Fear": after.prices["Shrieking Essence of Fear"]})
+    assert judged_depth(orphan.prices["Shrieking Essence of Fear"], orphan) is None
+    assert judged_depth(later_stand_in(4.0), after) is None  # a trade reading with no recorded depth
+
+
+def test_with_no_uses_solved_a_recipe_price_is_judged_for_one_unit_of_its_own_tier():
+    """Deafening Fear on half a unit is 1.5 Shrieking: enough for the one unit a plan that takes the action buys at least, and not for 2."""
+    after, _ = apply_upgrade_recipe(file_of({"Deafening Essence of Fear": of_the_day(2.7, depth=0.5), "Shrieking Essence of Fear": later_stand_in(4.0)}))
+    row = after.prices["Shrieking Essence of Fear"]
+
+    assert [mark.code for mark in price_marks(row, after, None)] == [FROM_RECIPE]
+    assert [mark.code for mark in price_marks(row, after, 1.0)] == [FROM_RECIPE]
+    assert [(mark.code, mark.reason) for mark in price_marks(row, after, 2.0)][1:] == [(DEPTH, "Deafening Essence of Fear: price on 0.5 units")]
+
+
+def test_a_recipe_row_with_an_unreadable_record_of_its_tiers_is_judged_one_for_one_and_an_unknown_anchor_says_what_it_is():
+    after, _ = apply_upgrade_recipe(file_of({"Deafening Essence of Fear": of_the_day(2.7, depth=100.0), "Shrieking Essence of Fear": later_stand_in(4.0)}))
+    row = after.prices["Shrieking Essence of Fear"]
+    for steps in (100000, -1, True, "1", None):
+        odd = PriceEntry(row.chaos, row.source, row.note, {**row.detail, "steps": steps}, row.provenance)
+        assert judged_depth(odd, after) == 100.0, steps  # no OverflowError: a hand-edited record is not believed
+        assert [mark.code for mark in price_marks(odd, after, 150.0)] == [FROM_RECIPE, DEPTH]
+    made_up = file_of({"Deafening Essence of Fear": PriceEntry(2.7, "made-up"), "Shrieking Essence of Fear": row})
+    assert [(mark.code, mark.reason) for mark in price_marks(row, made_up, 1.0)][1:] == [
+        (NOT_RECORDED, "Deafening Essence of Fear: where this price comes from is not recorded")
+    ]  # the anchor is in the file: what is unknown is its source
+
+
+def test_a_hand_price_of_a_type_the_file_does_not_price_reaches_the_tiers_below_it(tmp_path):
+    """Deafening Envy 6 by hand on a file built under the rule that has no Envy row: Shrieking 2, Screaming 2 / 3, and so on down."""
+    built, _ = apply_upgrade_recipe(file_of({"Deafening Essence of Fear": of_the_day(2.7), "Shrieking Essence of Fear": later_stand_in(4.0)}))
+    path, overrides = tmp_path / "prices.json", tmp_path / "price_overrides.toml"
+    write_price_file(path, built)
+    overrides.write_text('[prices]\n"Deafening Essence of Envy" = 6\n"Exalted Orb" = 2\n', encoding="utf-8")
+
+    merged = load_prices(path, overrides)
+
+    assert merged.prices["Shrieking Essence of Envy"].chaos == pytest.approx(2.0)
+    assert merged.prices["Screaming Essence of Envy"].chaos == pytest.approx(2.0 / 3)
+    assert merged.prices["Whispering Essence of Envy"].chaos == pytest.approx(6.0 / 3**6)
+    assert merged.prices["Exalted Orb"].chaos == 2.0
+    assert tiers_below("Wailing Essence of Envy") == ["Weeping Essence of Envy", "Muttering Essence of Envy", "Whispering Essence of Envy"]
+    assert tiers_below("Whispering Essence of Envy") == [] and tiers_below("Exalted Orb") == []

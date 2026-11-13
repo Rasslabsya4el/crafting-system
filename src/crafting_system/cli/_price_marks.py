@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB
-from crafting_system.prices.price_marks import PriceMark, chaos_text, price_marks, provenance_of, units_text
+from crafting_system.prices.price_marks import PriceMark, chaos_text, judged_depth, price_marks, provenance_of, units_text
 from crafting_system.prices.provenance import WIDER
 from crafting_system.risk import expected_totals
 from crafting_system.solver import Action
@@ -86,8 +86,8 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
     need: list[str] = []
     for name in names:
         entry = prices.prices[name]
-        provenance = provenance_of(entry, prices)
-        if provenance is not None and provenance.recorded and provenance.depth is not None and provenance.depth < ceiling / entry.chaos:
+        depth = judged_depth(entry, prices)  # a recipe price is as deep as the market price it rests on (#885)
+        if depth is not None and depth < ceiling / entry.chaos:
             need.append(name)
     if all_uses:
         need = list(names)

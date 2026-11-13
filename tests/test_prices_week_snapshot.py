@@ -14,7 +14,7 @@ import pytest
 
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write_price_file
 from crafting_system.prices.http_json import SourceError
-from crafting_system.prices.ninja_history import exchange_readings, exchange_rows
+from crafting_system.prices.ninja_history import StashDay, exchange_readings, exchange_rows, stash_readings
 from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, NO_DEPTH, OLD, OLD_THIN, price_marks
 from crafting_system.prices.provenance import EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STASH, TRADE, Provenance
 from crafting_system.prices.week_snapshot import DayRow, build_snapshot, reading_on, wants_history
@@ -421,3 +421,89 @@ def test_a_templates_recipe_row_does_not_count_in_the_rise_of_its_kind():
     assert snapshot.prices["Essence of Horror"].chaos == pytest.approx(30.0)
     assert snapshot.prices["Essence of Horror"].detail["sample"] == 1
     assert snapshot.prices["Shrieking Essence of Fear"].chaos == pytest.approx(0.9)  # its own row of the day (3.0) does not win
+
+
+# --- beasts: the daily rows of a stash line (#885) ------------------------------------------------------------------
+
+
+def stash_days(*rows):
+    """A stash `history` answer: (daysAgo, value, count) rows."""
+    return [{"daysAgo": ago, "value": value, "count": count} for ago, value, count in rows]
+
+
+def test_a_stash_reading_keeps_the_count_beside_the_value_and_dates_it_from_the_last_day_of_data():
+    """Allflame's data ends on 2026-11-11 (`daysAgo` 0), so 2026-07-31 is 103 days before it; a day with fewer than 5 listings is no reading."""
+    end = date(2026, 11, 11)
+    data = stash_days((103, 45.0, 121), (104, 40.0, 4), (0, 362.0, 194))
+
+    assert stash_readings(data, end, date(2026, 7, 25), AS_OF) == [StashDay(AS_OF, 45.0, 121)]
+    assert stash_readings(data, end, date(2000, 1, 1), date(2100, 1, 1)) == [StashDay(AS_OF, 45.0, 121), StashDay(end, 362.0, 194)]
+    assert stash_readings({"not": "a list"}, end, date(2026, 7, 25), AS_OF) == []
+
+
+BEASTS = {
+    ("Allflame", "Wild Bristle Matron"): [StashDay(AS_OF, 45.0, 121), StashDay(date(2026, 11, 11), 362.0, 194)],
+    ("Allflame", "Farric Wolf Alpha"): [StashDay(date(2026, 7, 28), 3.0, 40)],
+    ("Mirage", "Farrul, First of the Plains"): [StashDay(date(2026, 3, 13), 900.0, 12)],
+    ("Allflame", "Exalted Orb"): [StashDay(AS_OF, 999.0, 50)],  # never read: the exchange prices the name first
+}
+
+
+def beast_rows_of(league, name):
+    return BEASTS.get((league, name), [])
+
+
+def test_a_beast_is_its_stash_lines_value_on_the_day_with_the_listings_seen_as_its_depth():
+    snapshot, notes = build_snapshot(
+        [("routes-allflame-2026-11-10.json", end_file())], rows_of, "Allflame", START, AS_OF, MIRAGE,
+        wanted=["Wild Bristle Matron", "Farric Wolf Alpha", "Farrul, First of the Plains", "The Black Mórrígan"], beast_rows_of=beast_rows_of,
+    )  # fmt: skip
+
+    matron, wolf, farrul = snapshot.prices["Wild Bristle Matron"], snapshot.prices["Farric Wolf Alpha"], snapshot.prices["Farrul, First of the Plains"]
+    assert (matron.chaos, matron.source, matron.provenance) == (45.0, "poe.ninja-history", Provenance(HISTORY, "Allflame", "2026-07-31", 121.0, "observations"))
+    assert matron.detail == {"league": "Allflame", "date": "2026-07-31", "category": "Beast", "as_of": "2026-07-31", "league_day": 7}
+    assert matron.note == "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 121 listings seen that day"
+    assert (wolf.chaos, wolf.provenance.date) == (3.0, "2026-07-28")
+    assert wolf.note == "poe.ninja daily value of the beast on 2026-07-28 (league day 4), 40 listings seen that day; 2026-07-31 had no row of 5 listings or more"
+    assert (farrul.chaos, farrul.source, farrul.provenance) == (900.0, "poe.ninja-previous-league", Provenance(PREVIOUS_LEAGUE, "Mirage", "2026-03-13", 12.0, "observations"))
+    assert farrul.note == (
+        "poe.ninja daily value of the beast on 2026-03-13 in Mirage (its league day 7, the same age), 12 listings seen that day:"
+        " Allflame has no daily row from 2026-07-25 to 2026-07-31"
+    )
+    assert snapshot.prices["Exalted Orb"].chaos == 2.5
+    assert "The Black Mórrígan" not in snapshot.prices and sum(": no price, " in note for note in notes) == 1
+    assert [mark.reason for mark in price_marks(matron, snapshot, 200.0)] == ["price on 121 observations"] and price_marks(matron, snapshot, 100.0) == ()
+    assert [mark.code for mark in price_marks(farrul, snapshot, 1.0)] == [EARLIER]
+
+
+def test_a_templates_beast_is_read_from_its_stash_line_again_and_stays_a_stand_in_when_no_reader_is_given():
+    end = end_file()
+    end.prices["Wild Bristle Matron"] = PriceEntry(362.0, "poe.ninja", None, {"category": "Beast"}, Provenance(STASH, "Allflame", "2026-11-10", 194.0, "observations"))
+
+    read, _ = build_snapshot([("t.json", end)], rows_of, "Allflame", START, AS_OF, MIRAGE, beast_rows_of=beast_rows_of)
+    kept, notes = build_snapshot([("t.json", end)], rows_of, "Allflame", START, AS_OF, MIRAGE)
+
+    assert read.prices["Wild Bristle Matron"].chaos == 45.0
+    assert kept.prices["Wild Bristle Matron"].chaos == 362.0
+    assert "Wild Bristle Matron: stand-in, the reading of 2026-11-10 from t.json" in notes
+
+
+def test_the_scripts_beast_reader_asks_the_overview_once_and_the_history_of_a_listed_beast_only(script):
+    asked = []
+    overview = {"lines": [{"name": "Wild Bristle Matron", "chaosValue": 362.0, "count": 194, "id": 101094}]}
+
+    def get(url):
+        asked.append(url)
+        if "item/overview" in url and "league=Allflame" in url:
+            return overview
+        if "item/history" in url and "id=101094" in url:
+            return stash_days((103, 45.0, 121), (0, 362.0, 194))
+        raise SourceError(f"HTTP 404 from {url}")
+
+    rows = script.beast_reader(get, {"Allflame": date(2026, 11, 11), "Mirage": date(2026, 7, 20)})
+
+    assert rows("Allflame", "Wild Bristle Matron") == [StashDay(AS_OF, 45.0, 121), StashDay(date(2026, 11, 11), 362.0, 194)]
+    assert rows("Allflame", "Exalted Orb") == [] and rows("Allflame", "Wild Bristle Matron")[0].chaos == 45.0
+    assert rows("Mirage", "Wild Bristle Matron") == [] and rows("Mirage", "Farric Wolf Alpha") == []  # its overview answers 404: asked once
+    assert rows("Standard", "Wild Bristle Matron") == []  # a league with no last day given is not asked at all
+    assert sum("item/overview" in url for url in asked) == 2 and sum("item/history" in url for url in asked) == 2

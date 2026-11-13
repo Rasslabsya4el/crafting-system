@@ -27,7 +27,8 @@ left to anchor them. A type the file prices at no tier stays unpriced, and the c
 Insanity) and Essence of Desolation, which have no tier, are not touched.
 
 The hand prices live in a file of their own and are laid over the price file when it is read (`load_prices`), after any fetch: a
-file that holds recipe rows has the rule applied again there, so an override of one tier reaches the tiers below it.
+file that holds recipe rows has the rule applied again there, so an override of one tier reaches the tiers below it (every
+tier below a hand price is wanted there, a type the file did not price before included).
 Pure: no I/O, no clock. Applying the rule twice gives the same file.
 """
 
@@ -40,7 +41,7 @@ from .price_file import PriceEntry, PriceFile
 from .price_marks import provenance_of
 from .provenance import DEFAULT, OVERRIDE, RECIPE, Provenance
 
-__all__ = ["PER_UPGRADE", "RECIPE_SOURCE", "TIERS", "apply_upgrade_recipe", "has_recipe_rows", "tier_of"]
+__all__ = ["PER_UPGRADE", "RECIPE_SOURCE", "TIERS", "apply_upgrade_recipe", "has_recipe_rows", "tier_of", "tiers_below"]
 
 VENDOR_UPGRADE_RECIPE = get_rule("essence.vendor_upgrade_recipe")
 TIERS = ("Whispering", "Muttering", "Weeping", "Wailing", "Screaming", "Shrieking", "Deafening")  # lowest first, as the game names them
@@ -56,6 +57,13 @@ def tier_of(name: str) -> tuple[int, str] | None:
     if not middle or word not in TIERS or not kind:
         return None
     return TIERS.index(word), f"Essence of {kind}"
+
+
+def tiers_below(name: str) -> list[str]:
+    """The names of the tiers below a tiered essence, of its type, the nearest first; empty for any other name. The game has no essence
+    of some of the lowest names (a type may start at Weeping): a row for one is never asked for."""
+    found = tier_of(name)
+    return [] if found is None else [f"{TIERS[index]} {found[1]}" for index in range(found[0] - 1, -1, -1)]
 
 
 def has_recipe_rows(price_file: PriceFile) -> bool:
