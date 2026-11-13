@@ -178,17 +178,21 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
-    last = [began, 0.0]  # the clock at the last ask, the largest piece of work between two asks
+    last: list[float | None] = [None, 0.0]  # the clock at the last ask (None before the first: the setup before it is no step), the longest step so far
 
     def stop() -> str | None:
         now = time.perf_counter()
-        last[1], last[0] = max(last[1], now - last[0]), now
+        if last[0] is not None:
+            last[1] = max(last[1], now - last[0])
+        last[0] = now
         if net.seconds is not None:
             left = net.seconds - (now - began)
+            if left <= 0.0:
+                return f"the time limit of {net.seconds:g} seconds was reached"
             if left <= BUILD_PIECES * last[1]:
                 return (
-                    f"of the {net.seconds:g} seconds of the time limit, {max(left, 0.0):.0f} were left, less than the room for its next step and a "
-                    f"round of the search after it ({BUILD_PIECES} x {last[1]:.1f} s, its longest step so far)"
+                    f"only {left:.0f} of the {net.seconds:g} seconds of the time limit were left, not enough for its next step and a first round of "
+                    f"the search after it (its longest step so far took {last[1]:.0f} seconds)"
                 )
         if net.memory_mb is not None:
             used = resident_mb()

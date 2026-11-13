@@ -138,19 +138,23 @@ def test_the_build_takes_the_time_by_its_own_measure_and_all_of_the_memory(monke
     clock.perf_counter = lambda: clock.now
     monkeypatch.setattr(_envelope_plan, "time", clock)
     stop = build_stop(Net(seconds=100.0), 0.0)
-    for now in (1.0, 2.0, 12.0, 13.0):  # steps of 1, 1, 10 and 1 s: the longest is 10 s, so the build needs 20 s of room
+    for now in (40.0, 41.0, 42.0, 52.0, 53.0):  # 40 s of setup before the first ask (no step), then steps of 1, 1, 10 and 1 s: 20 s of room needed
         clock.now = now
         assert stop() is None
-    clock.now = 79.0  # a step of 66 s: 21 s left, under 2 x 66
+    clock.now = 79.0  # a step of 26 s: 21 s left, under 2 x 26
     said = stop()
-    assert said is not None and "21 were left" in said and "2 x 66.0 s" in said
+    assert said == (
+        "only 21 of the 100 seconds of the time limit were left, not enough for its next step and a first round of the search after it "
+        "(its longest step so far took 26 seconds)"
+    )
     stop = build_stop(Net(seconds=100.0), 0.0)
-    for now in (10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0):  # steps of 10 s: room for two is 20 s
+    for now in (10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0):  # steps of 10 s from the first ask: room for two is 20 s
         clock.now = now
         assert stop() is None  # at 70 s, 30 s are left
     clock.now = 80.0
-    assert "20 were left" in stop()  # 20 s left: no room for its next step and a round of the search
+    assert "only 20 of the 100 seconds" in stop()  # 20 s left: no room for its next step and a round of the search
     clock.now = 0.0
+    assert build_stop(Net(seconds=0.0), 0.0)() == "the time limit of 0 seconds was reached"  # a net of 0 s: at the first ask
     monkeypatch.setattr(_envelope_plan, "resident_mb", lambda: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)
     assert "5,000 MB" in build_stop(Net(memory_mb=1000.0), 0.0)()
     assert build_stop(Net(memory_mb=10_000.0), 0.0)() is None

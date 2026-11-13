@@ -1,6 +1,6 @@
 """A process pool that gives the same answers for any number of workers (ticket #250).
 
-Shared infrastructure, outside the eleven modules: it imports none of them (like `config.py`).
+Shared infrastructure, outside the eleven modules: it imports none of them (like `config.py`), only `budget`, which imports nothing.
 
 `worker_count()` is the pool size: the cores of the machine, or `CRAFTING_WORKERS` (1 means serial: no process is
 started and the callers run their own serial code, unchanged). A caller that can split a job into independent
@@ -86,6 +86,7 @@ def held_mb() -> float | None:
     if own is None:
         return None
     return own + sum(budget.process_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+
 
 def _watched_clock() -> "budget.Clock | None":
     """The run's clock when a pool's wait must watch it: a run with a time or memory net, in a stage that stops at checkpoints (#825)."""

@@ -409,3 +409,36 @@ def test_a_pool_past_the_runs_net_is_stopped_with_the_runs_stop_not_a_worker_err
                 except Exception:  # noqa: BLE001 (what `raise_together` does with a failed pool)
                     pytest.fail("the run's stop was taken for a failed worker")
     assert stop.value.binding.stage == "the bound pruning" and clock.bindings == [stop.value.binding]
+
+
+def test_a_stage_stopped_early_to_leave_room_says_so():
+    assert Binding("the search", TIME, 600.0, 590.0, "kept").words() == (
+        "the search stopped 10 s before the time limit of 600 s, to leave room for what follows (590 s spent): kept"
+    )
+
+
+@pytest.mark.skipif(not __import__("crafting_system.parallel", fromlist=["can_inherit"]).can_inherit(), reason="a pool of forked workers")
+def test_a_pool_that_watches_the_runs_net_gives_the_same_list_in_the_same_order():
+    from crafting_system import parallel
+
+    with budget.running(Budget(seconds=3_600.0, memory_mb=None).start()), budget.stage("the bound pruning"):
+        assert parallel._watched_clock() is not None
+        with parallel.WorkerPool(lambda: None, (), workers=2) as pool:
+            assert pool.map(abs, [-k for k in range(40)], chunk=3) == list(range(40))
+
+
+def test_the_risk_stage_keeps_its_plan_when_the_run_is_past_its_net(coarse, fake):  # noqa: F811
+    """The percentiles refine a plan already in hand (OR-34): past the net their ladder stops itself and says so; the plan is never lost to it."""
+    target, prices, full = coarse
+
+    def spent(*args, **kwargs):
+        fake.now += 10_000.0  # the plan took past the whole net before the percentiles began
+        return real(*args, **kwargs)
+
+    real = _plan.plan_foresight
+    _plan.plan_foresight = spent
+    try:
+        plan = make_plan(COARSE, target, prices, start_price=5.0, solver="packed", budget=Budget(seconds=600.0, memory_mb=None))
+    finally:
+        _plan.plan_foresight = real
+    assert plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-12) and plan.risk is not None

@@ -699,7 +699,7 @@ def _make_plan(
     risk, risk_seconds = None, 0.0
     if with_risk:
         began = time.perf_counter()
-        with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745, `risk._evaluate`)
+        with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745, `risk._evaluate`)
             if packed is not None:
                 risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
             else:
@@ -1007,7 +1007,7 @@ def add_risk(plan: Plan) -> Plan:
         return plan
     began = time.perf_counter()
     free = free_action_cost(plan.offers)
-    with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745)
+    with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745)
         if plan.packed is not None:
             risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
         else:

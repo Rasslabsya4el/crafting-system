@@ -102,13 +102,16 @@ class Binding:
 
     def words(self) -> str:
         """The binding in a player's words: "the search stopped at the time limit of 600 s (601 s spent): no plan found yet"."""
-        if self.limit == TIME:
+        if self.limit == TIME and self.reached < self.given:  # a stage that stopped early to leave room for what follows it (the bound's build)
+            figure = f"{self.given - self.reached:,.0f} s before the time limit of {self.given:,.0f} s, to leave room for what follows ({self.reached:,.0f} s spent)"
+        elif self.limit == TIME:
             figure = f"the time limit of {self.given:,.0f} s ({self.reached:,.0f} s spent)"
         elif self.limit == MEMORY:
             figure = f"the memory limit of {self.given:,.0f} MB ({self.reached:,.0f} MB held)"
         else:
             figure = f"the limit of {self.given:,.0f} {self.limit} ({self.reached:,.0f} reached)"
-        return f"{self.stage} stopped at {figure}" + (f": {self.what}" if self.what else "")
+        early = self.limit == TIME and self.reached < self.given
+        return f"{self.stage} stopped {'' if early else 'at '}{figure}" + (f": {self.what}" if self.what else "")
 
 
 class BudgetExceeded(BaseException):
