@@ -150,8 +150,8 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_main.py: main (passed to `imprints_held_at_most` (outside src); on the planning path) |
 | `price_source` | [planner] | `both` | read | cli/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
 | `price_gap_percent` | [planner] | `20.0` | read | cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); cli/_main.py: main (used as an index or container; on the planning path); and 9 more |
-| `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.left (compared; on the planning path); and 3 more |
-| `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.over (compared; on the planning path); and 6 more |
+| `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 5 more |
+| `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 4 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
@@ -159,7 +159,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
 | `--k` | command `trade` |  | read | prices/deepen.py: _deep_reading (an attribute or method of it is used; not on the planning path); prices/price_file.py: _entry_to_json (compared; on the planning path); and 12 more |
 | `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
-| `--memory-limit` | command `plan` |  | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.over (compared; on the planning path); and 6 more |
+| `--memory-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
@@ -172,7 +172,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--solver` | command `plan` |  | read | cli/_packed.py: packed_result (compared; on the planning path); cli/_packed.py: packed_result (formatted into text; on the planning path); and 5 more |
 | `--start-price` | command `plan` |  | read | cli/_plan.py: _override (compared; on the planning path); cli/_plan.py: _override (formatted into text; on the planning path); and 2 more |
 | `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
-| `--time-limit` | command `plan` |  | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.left (compared; on the planning path); and 4 more |
+| `--time-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 6 more |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 
 Code that takes a never-read setting by its own name:

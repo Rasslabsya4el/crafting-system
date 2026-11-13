@@ -362,3 +362,88 @@ def test_the_command_stops_at_its_time_limit_and_says_so(tmp_path, capsys):
     error = capsys.readouterr().err
     assert code != 0
     assert re.search(rf"Error: stopped after \d+ s: {WALK_STAGE} stopped at the time limit of 0 s \(\d+ s spent\): no plan found yet", error), error
+
+
+# ---- part 2: the pool's wait and the memory of the workers (#825, #540, #702) -------------------------------------------------------------
+
+
+def test_the_memory_held_with_the_workers_is_read_on_this_os():
+    """#540: before #825 the memory net of the search and the build read nothing on Windows (`parallel.held_mb` read /proc only)."""
+    from crafting_system import parallel
+
+    held = parallel.held_mb()
+    assert held is not None and held > 1.0
+
+
+def test_a_pool_watches_the_runs_net_only_in_a_stage_that_stops(fake):
+    from crafting_system import parallel
+
+    assert parallel._watched_clock() is None  # outside a run
+    with budget.running(Budget(seconds=None, memory_mb=None).start()):
+        assert parallel._watched_clock() is None  # a run with no net
+    clock = Budget(seconds=60.0, memory_mb=None).start()
+    with budget.running(clock):
+        assert parallel._watched_clock() is clock
+        with budget.stage("the search", stops=False):
+            assert parallel._watched_clock() is None  # the search stops at its own net and keeps its plan
+
+
+def hangs(piece: int) -> int:
+    import threading
+
+    threading.Event().wait()
+    return piece
+
+
+@pytest.mark.skipif(not __import__("crafting_system.parallel", fromlist=["can_inherit"]).can_inherit(), reason="a pool of forked workers")
+def test_a_pool_past_the_runs_net_is_stopped_with_the_runs_stop_not_a_worker_error():
+    """#702: the bound pruning waited on its pool past every limit. A wait past the run's net kills the workers and raises the run's stop."""
+    from crafting_system import parallel
+
+    clock = Budget(seconds=0.0, memory_mb=None).start()
+    with budget.running(clock), budget.stage("the bound pruning"):
+        with pytest.raises(BudgetExceeded) as stop:
+            with parallel.WorkerPool(lambda: None, (), workers=2) as pool:
+                try:
+                    pool.map(hangs, range(4), chunk=1)
+                except Exception:  # noqa: BLE001 (what `raise_together` does with a failed pool)
+                    pytest.fail("the run's stop was taken for a failed worker")
+    assert stop.value.binding.stage == "the bound pruning" and clock.bindings == [stop.value.binding]
+
+
+def test_a_stage_stopped_early_to_leave_room_says_so():
+    assert Binding("the search", TIME, 600.0, 590.0, "kept").words() == (
+        "the search stopped 10 s before the time limit of 600 s, to leave room for what follows (590 s spent): kept"
+    )
+    assert Binding("the walk", TIME, 600.0, 599.99).words() == "the walk stopped at the time limit of 600 s (600 s spent)"  # a clock step short of it
+
+
+@pytest.mark.skipif(not __import__("crafting_system.parallel", fromlist=["can_inherit"]).can_inherit(), reason="a pool of forked workers")
+def test_a_pool_that_watches_the_runs_net_gives_the_same_list_in_the_same_order():
+    from crafting_system import parallel
+
+    with budget.running(Budget(seconds=3_600.0, memory_mb=None).start()), budget.stage("the bound pruning"):
+        assert parallel._watched_clock() is not None
+        with parallel.WorkerPool(lambda: None, (), workers=2) as pool:
+            assert pool.map(abs, [-k for k in range(40)], chunk=3) == list(range(40))
+
+
+def test_the_risk_stage_keeps_its_plan_when_the_run_is_past_its_net(coarse, fake):  # noqa: F811
+    """The percentiles refine a plan already in hand (OR-34): past the net their ladder stops itself and says so; the plan is never lost to it."""
+    target, prices, full = coarse
+
+    def spent(*args, **kwargs):
+        fake.now += 10_000.0  # the plan took past the whole net before the percentiles began
+        return real(*args, **kwargs)
+
+    from crafting_system import parallel
+
+    with budget.running(Budget(seconds=600.0, memory_mb=None).start()), budget.stage(_plan.RISK_STAGE, _plan.RISK_KEPT, stops=False):
+        assert parallel._watched_clock() is None  # no pool of the risk stage is stopped by the run's net: its ladder stops itself
+    real = _plan.plan_foresight
+    _plan.plan_foresight = spent
+    try:
+        plan = make_plan(COARSE, target, prices, start_price=5.0, solver="packed", budget=Budget(seconds=600.0, memory_mb=None))
+    finally:
+        _plan.plan_foresight = real
+    assert plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-12) and plan.risk is not None
