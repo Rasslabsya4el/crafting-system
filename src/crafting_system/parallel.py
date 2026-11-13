@@ -31,6 +31,8 @@ import time
 from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
 from types import MappingProxyType
 
+from crafting_system import budget
+
 WORKERS_ENV = "CRAFTING_WORKERS"
 MIN_CHUNK = 1  # a chunk is never smaller than this many pieces
 WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory while a memory net is set
@@ -74,19 +76,24 @@ def _proc_mb(pid: int | str) -> float | None:
 def held_mb() -> float | None:
     """The memory this process and its live workers hold, in MB, or None where it cannot be read.
 
-    On Linux the sum of the proportional sizes (a page that a fork shares is counted once, split between the processes that share it); elsewhere
-    this process's own peak, as before (a spawned worker on Windows is not seen; `prime` forks nothing there).
+    On Linux the sum of the proportional sizes (a page that a fork shares is counted once, split between the processes that share it); on Windows
+    and macOS the sum of the resident sizes (`budget.process_mb`: the working set, the resident size; #540, #825), workers included.
     """
     own = _proc_mb("self")
     if own is not None:
         return own + sum(_proc_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
-    try:
-        import resource
-
-        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        return peak / (1024 * 1024) if sys.platform == "darwin" else peak / 1024
-    except ImportError:
+    own = budget.process_mb()
+    if own is None:
         return None
+    return own + sum(budget.process_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+
+def _watched_clock() -> "budget.Clock | None":
+    """The run's clock when a pool's wait must watch it: a run with a time or memory net, in a stage that stops at checkpoints (#825)."""
+    clock = budget.active()
+    if clock is None or not clock.stops or (clock.budget.seconds is None and clock.budget.memory_mb is None):
+        return None
+    return clock
+
 
 _context: object = None  # the state of this process's worker (set by `_initialise`)
 
@@ -217,6 +224,10 @@ class WorkerPool:
         (`abandon`) and `TimeoutError` is raised; the chunks that did come back are dropped with the rest. A worker that dies
         raises `BrokenProcessPool` either way. Without
         workers (`workers` below 2) the pieces run here and `timeout` is not applied.
+
+        Inside a run with a time or memory net (`budget.running`, in a stage that stops at checkpoints) the wait watches it too: past the net, with
+        this process's and the workers' memory read by `held_mb`, the workers are killed and the run's stop is raised (`budget.BudgetExceeded`,
+        which no `except Exception` of the caller takes for a failed worker; #702, #825).
         """
         items = list(pieces)
         if self.workers < 2 or len(items) < 2:
@@ -232,23 +243,26 @@ class WorkerPool:
         chunks = [items[start : start + size] for start in range(0, len(items), size)]
         executor = self._start()
         results: list = []
-        if timeout is None and _memory_net is None:
+        clock = _watched_clock()
+        if timeout is None and _memory_net is None and clock is None:
             for part in executor.map(_run_chunk, [function] * len(chunks), chunks):
                 results.extend(part)
             return results
         futures = [executor.submit(_run_chunk, function, part) for part in chunks]
-        self._wait(futures, timeout)
+        self._wait(futures, timeout, clock)
         for future in futures:
             results.extend(future.result())
         return results
 
-    def _wait(self, futures: list, timeout: float | None) -> None:
-        """Wait on the futures; past `timeout` raise `TimeoutError`, past the memory net `MemoryNetReached`, the workers killed either way."""
+    def _wait(self, futures: list, timeout: float | None, clock: "budget.Clock | None" = None) -> None:
+        """Wait on the futures; past `timeout` raise `TimeoutError`, past the memory net `MemoryNetReached`, past the run's net (`clock`) the run's
+        stop, the workers killed in every case."""
         deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
         waiting = futures
         while waiting:
             left = None if deadline is None else max(0.0, deadline - time.monotonic())
-            step = left if _memory_net is None else WATCH_SECONDS if left is None else min(left, WATCH_SECONDS)
+            watching = _memory_net is not None or clock is not None
+            step = left if not watching else WATCH_SECONDS if left is None else min(left, WATCH_SECONDS)
             _, waiting = wait(waiting, timeout=step, return_when=FIRST_EXCEPTION)
             failed = next((future for future in futures if future.done() and not future.cancelled() and future.exception() is not None), None)
             if failed is not None:  # raised now, not after a chunk that may hang: its workers are stopped as at the timeout (#535)
@@ -261,6 +275,9 @@ class WorkerPool:
             if _memory_net is not None and (held := held_mb()) is not None and held >= _memory_net:
                 self.abandon()
                 raise MemoryNetReached(f"this process and its workers held {held:,.0f} MB, the limit is {_memory_net:,.0f} MB; the workers were stopped")
+            if clock is not None and (found := clock.over(clock.stage, clock.what, held=held_mb() if clock.budget.memory_mb is not None else None)) is not None:
+                self.abandon()
+                raise budget.BudgetExceeded(clock.bind(found))
             if deadline is not None and time.monotonic() >= deadline:
                 self.abandon()
                 raise TimeoutError(f"{len(waiting)} of {len(futures)} chunks did not come back in {timeout:.0f} s; their workers were stopped")

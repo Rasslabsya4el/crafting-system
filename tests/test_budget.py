@@ -362,3 +362,50 @@ def test_the_command_stops_at_its_time_limit_and_says_so(tmp_path, capsys):
     error = capsys.readouterr().err
     assert code != 0
     assert re.search(rf"Error: stopped after \d+ s: {WALK_STAGE} stopped at the time limit of 0 s \(\d+ s spent\): no plan found yet", error), error
+
+
+# ---- part 2: the pool's wait and the memory of the workers (#825, #540, #702) -------------------------------------------------------------
+
+
+def test_the_memory_held_with_the_workers_is_read_on_this_os():
+    """#540: before #825 the memory net of the search and the build read nothing on Windows (`parallel.held_mb` read /proc only)."""
+    from crafting_system import parallel
+
+    held = parallel.held_mb()
+    assert held is not None and held > 1.0
+
+
+def test_a_pool_watches_the_runs_net_only_in_a_stage_that_stops(fake):
+    from crafting_system import parallel
+
+    assert parallel._watched_clock() is None  # outside a run
+    with budget.running(Budget(seconds=None, memory_mb=None).start()):
+        assert parallel._watched_clock() is None  # a run with no net
+    clock = Budget(seconds=60.0, memory_mb=None).start()
+    with budget.running(clock):
+        assert parallel._watched_clock() is clock
+        with budget.stage("the search", stops=False):
+            assert parallel._watched_clock() is None  # the search stops at its own net and keeps its plan
+
+
+def hangs(piece: int) -> int:
+    import threading
+
+    threading.Event().wait()
+    return piece
+
+
+@pytest.mark.skipif(not __import__("crafting_system.parallel", fromlist=["can_inherit"]).can_inherit(), reason="a pool of forked workers")
+def test_a_pool_past_the_runs_net_is_stopped_with_the_runs_stop_not_a_worker_error():
+    """#702: the bound pruning waited on its pool past every limit. A wait past the run's net kills the workers and raises the run's stop."""
+    from crafting_system import parallel
+
+    clock = Budget(seconds=0.0, memory_mb=None).start()
+    with budget.running(clock), budget.stage("the bound pruning"):
+        with pytest.raises(BudgetExceeded) as stop:
+            with parallel.WorkerPool(lambda: None, (), workers=2) as pool:
+                try:
+                    pool.map(hangs, range(4), chunk=1)
+                except Exception:  # noqa: BLE001 (what `raise_together` does with a failed pool)
+                    pytest.fail("the run's stop was taken for a failed worker")
+    assert stop.value.binding.stage == "the bound pruning" and clock.bindings == [stop.value.binding]

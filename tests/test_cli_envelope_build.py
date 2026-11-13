@@ -131,13 +131,26 @@ def test_a_plan_with_no_net_has_a_complete_build(world):
     assert "count itself was stopped" not in certificate_text(dataclasses.replace(info, exact=False, stopped="x"))
 
 
-def test_the_net_of_the_build_is_a_share_of_the_time_and_all_of_the_memory(monkeypatch):
+def test_the_build_takes_the_time_by_its_own_measure_and_all_of_the_memory(monkeypatch):
+    """#825: no fixed share. The build stops when the time left no longer holds two of its longest steps (its next one and a round of the search)."""
     assert build_stop(None, 0.0) is None and build_stop(Net(), 0.0) is None
-    clock = SimpleNamespace(now=10.0)  # a clock set by hand: ten seconds have passed since the build began (tests/test_no_timing.py)
+    clock = SimpleNamespace(now=0.0)  # a clock set by hand (tests/test_no_timing.py)
     clock.perf_counter = lambda: clock.now
     monkeypatch.setattr(_envelope_plan, "time", clock)
-    assert build_stop(Net(seconds=100.0), 0.0)() is None  # 10 s of 100: under half
-    assert "time limit" in build_stop(Net(seconds=15.0), 0.0)()  # 10 s of 15: over half
+    stop = build_stop(Net(seconds=100.0), 0.0)
+    for now in (1.0, 2.0, 12.0, 13.0):  # steps of 1, 1, 10 and 1 s: the longest is 10 s, so the build needs 20 s of room
+        clock.now = now
+        assert stop() is None
+    clock.now = 79.0  # a step of 66 s: 21 s left, under 2 x 66
+    said = stop()
+    assert said is not None and "21 were left" in said and "2 x 66.0 s" in said
+    stop = build_stop(Net(seconds=100.0), 0.0)
+    for now in (10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0):  # steps of 10 s: room for two is 20 s
+        clock.now = now
+        assert stop() is None  # at 70 s, 30 s are left
+    clock.now = 80.0
+    assert "20 were left" in stop()  # 20 s left: no room for its next step and a round of the search
+    clock.now = 0.0
     monkeypatch.setattr(_envelope_plan, "resident_mb", lambda: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)
     assert "5,000 MB" in build_stop(Net(memory_mb=1000.0), 0.0)()
     assert build_stop(Net(memory_mb=10_000.0), 0.0)() is None

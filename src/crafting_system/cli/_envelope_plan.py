@@ -164,20 +164,32 @@ class CraftingProblem:
         self.ab._prepared_by.clear()
 
 
-BUILD_SHARE = 0.5  # the share of a time net the bound's build may take: the search and the solve of the graph it ends with come after it
+BUILD_PIECES = 2  # the pieces of work the build leaves room for when it stops: its own next one, and one round of the search after it (#825)
 
 
 def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None:
-    """The net of the bound's build (OR-12): the time net's share `BUILD_SHARE` and the memory net as it is (the state net counts the search's states).
+    """The net of the bound's build (OR-12): the time it takes by its own measure, and the memory net as it is (the state net counts the search's states).
 
-    `began` is the clock reading when `envelope_result` started. The build asks it between two offers; it returns the reason once one is reached.
+    `began` is the clock reading when `envelope_result` started. The build asks it between two pieces of its work (two offers, or before a solve of
+    its model); it returns the reason once one is reached. No fixed share of the net (#825, which replaced `BUILD_SHARE = 0.5`): the build measures
+    the largest piece of its work so far (the time between two asks) and stops when the time left would no longer hold `BUILD_PIECES` of them: one
+    for its own next piece, which it would not finish, and one for a round of the search, which solves a graph of the size of the build's model.
+    A build that ends early leaves the search all the rest; one that would run past the net stops while the search can still answer with it.
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
+    last = [began, 0.0]  # the clock at the last ask, the largest piece of work between two asks
 
     def stop() -> str | None:
-        if net.seconds is not None and time.perf_counter() - began >= net.seconds * BUILD_SHARE:
-            return f"the time limit of {net.seconds * BUILD_SHARE:g} seconds (half of the {net.seconds:g} of the net) was reached"
+        now = time.perf_counter()
+        last[1], last[0] = max(last[1], now - last[0]), now
+        if net.seconds is not None:
+            left = net.seconds - (now - began)
+            if left <= BUILD_PIECES * last[1]:
+                return (
+                    f"of the {net.seconds:g} seconds of the time limit, {max(left, 0.0):.0f} were left, less than the room for its next step and a "
+                    f"round of the search after it ({BUILD_PIECES} x {last[1]:.1f} s, its longest step so far)"
+                )
         if net.memory_mb is not None:
             used = resident_mb()
             if used is not None and used >= net.memory_mb:
