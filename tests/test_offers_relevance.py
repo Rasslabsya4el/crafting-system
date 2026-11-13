@@ -249,6 +249,8 @@ def test_an_unveil_is_kept_for_a_start_item_that_holds_a_placeholder_and_cut_wit
     assert split_usable(data, plain, [ChaosOrb(), Unveil()]) == ([ChaosOrb()], [Unveil()])
     assert split_usable(data, veiled, [ChaosOrb(), Unveil()]) == ([ChaosOrb(), Unveil()], [])
     assert split_usable(data, plain, [VeiledChaosOrb(), Unveil()]) == ([VeiledChaosOrb(), Unveil()], [])
+    imprinted = dataclasses.replace(plain, imprints=(veiled,))  # a Restore brings the placeholder back (the checker of #848)
+    assert split_usable(data, imprinted, [ChaosOrb(), Unveil()]) == ([ChaosOrb(), Unveil()], [])
 
 
 # --- the base refusal is a property of the base ---------------------------------------------------------------------------------------

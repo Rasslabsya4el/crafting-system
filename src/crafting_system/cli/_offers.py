@@ -675,10 +675,12 @@ def _only_crafts(data: GameData, item: Item, action: Action) -> bool:
 def split_usable(data: GameData, start_item: Item, actions: Iterable[Action]) -> tuple[list[Action], list[Action]]:
     """(`actions` without those that can never be used, those removed): an action that needs a crafted mod when neither the start item
     nor another of them gives one, and one that needs a veiled placeholder when the start item holds none and no other of them may put
-    one there (`Adds.veils`, #848). Both are exact: no state the plan reaches can hold what the action needs."""
+    one there (`Adds.veils`, #848); an imprint of the start item that holds one counts, as a Restore brings it back. Both are exact: no state
+    the plan reaches can hold what the action needs."""
     actions = list(actions)
     crafted = bool(start_item.crafted_mods) or any(action.adds(data, start_item).crafted for action in actions)
-    veiled = holds_placeholder(data, start_item) or any(action.adds(data, start_item).veils for action in actions)
+    veiled = any(holds_placeholder(data, held) for held in (start_item, *start_item.imprints))  # a Restore may bring an imprint's back
+    veiled = veiled or any(action.adds(data, start_item).veils for action in actions)
 
     def never(action: Action) -> bool:
         reads = action.reads(data)
