@@ -223,8 +223,7 @@ def test_the_envelope_refusal_of_a_target_is_a_record_not_a_crash():
 
     found = key.measure("J01", "all", "envelope", data)
 
-    # since #225 "all" offers the recombinator, whose rule axis the envelope search does not take: the plan is refused before the search
-    assert not found["finished"] and "`--solver envelope` does not do that" in found["error"]
+    assert not found["finished"] and "envelope search cannot answer" in found["error"]
 
 
 def test_v01_is_planned_from_its_recipe_start_in_the_bloat_step_and_here():
