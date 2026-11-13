@@ -119,6 +119,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
     ("planner/_bought_starts.py", "needed_influence_sets", ("OutOfScopeError",), GAP, "an item class with no influence key lists no influenced base, and the refusal says so"),
     ("targets/floor.py", "_change_points", ("NotApplicableError", "OutOfScopeError"), EITHER, "no pool to read, so every level counts and nothing is left out"),
+    ("prices/spends.py", "spends", ("NotApplicableError", "OutOfScopeError"), EITHER, "the walk only collects the names a kind spends, and no plan is made from it: a kind that cannot list one probe item, for either reason, is asked on the others, and the test of the walk holds that every kind in scope is reached (#885)"),
 ]
 # Clauses that catch the refusals through their parent `ValueError` (both families are ValueErrors) or through a tuple constant (`ROUTE_ERRORS`), in the
 # packages that walk, solve and plan. Listed so they are not forgotten; `NOT_A_REFUSAL` says no action is called inside, or that the error is not a refusal.
