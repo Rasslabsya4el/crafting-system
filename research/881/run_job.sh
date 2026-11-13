@@ -10,7 +10,7 @@ uv pip install numba==0.68.1 cython==3.3.1 setuptools
 py() { uv run --no-sync python -u "$@"; }
 whole() {  # $@: the plan's arguments
   py research/881/profile_plan.py "$@" --mode plain --tag .as-is --out "$out"
-  py research/881/build_cython.py source --out "$PWD/compiled-source"
+  py research/881/build_cython.py source --out "$PWD/compiled-source" --smoke r13
   cp compiled-source/compiled.json "$out/compiled.json"
   CRAFTING_SOURCE="$PWD/compiled-source" py research/881/profile_plan.py "$@" --mode plain --tag .compiled --out "$out"
 }
