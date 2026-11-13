@@ -20,6 +20,9 @@
    action cost at s, k(s) the cost of the greedy action, e(s) = (TV - V)+ and d(s) = (V - TV)+ (each widened by the
    float64 rounding of the sum, (m + 2) eps of it, m the terms of the sum), the values satisfy
    a_lo V <= V* <= a_hi V with a_lo = min g/(g + d) and a_hi = max k/(k - e) (infinite when some e >= k).
+   g and k are the margins of h = 0; `certify` also measures d and e against the margins of the cost ahead (ticket #769),
+   so that a state whose actions are all free (an unveil, a pick) is measured against the paid step after them and not
+   against its own epsilon, which its rounding alone exceeds; each side takes the better of the two.
    The operator is the one WITHOUT the self-loop compiled out, so the certificate is also an independent check of the
    merge and of the solve: it is run on the unmerged graph with the class values copied back to the members.
 
@@ -47,6 +50,9 @@ ACCEPT_BOUND = 1e-6  # a certified relative bound above this raises `Convergence
 DENSE_LIMIT = 1500  # policies of at most this many states are evaluated by a dense solve, larger ones by BiCGSTAB
 CHUNK_EDGES = 4_000_000
 HEAVY_SELF = 0.5  # an action whose kernel puts more than this chance on its own state is summed edge by edge: taking the own term off a shared sum would lose digits
+AHEAD_FIRST = 2  # the first window of the cost ahead that `certify` also measures a state's error against (#769): a free step and the paid one after it; it doubles while the bound is above the one wanted (`certify`). It decides no answer, only how tight the bound is
+AHEAD_LIMIT = 64  # the longest window of the cost ahead: a stop-and-say-so rail (OR-12) on its cost, one sweep of the graph a step; the refusal names it
+AHEAD_WEIGHT = 0.5  # w of `certify`'s cost ahead: a paid state keeps at least 1 - w of its own cost as its margin, a free state gets w / L of the paid steps in its window
 SHARE_MIN = 64  # a kernel with fewer edges than this is summed edge by edge for the action too (nothing to save), as the own term of its shared sum would be a rounding
 
 
@@ -57,8 +63,11 @@ class Certificate:
     bound: float
     lower: float
     upper: float
-    residual: float  # max over states of max(e, d) / g, rounding allowance not included
+    residual: float  # max over states of max(e, d) / max(g, the margin of the cost ahead), rounding allowance not included
     at_floor: bool  # every residual is within the rounding allowance of its state
+    own_bound: float | None = None  # the bound measured against each state's own cheapest cost alone (h = 0, the certificate before #769)
+    own_cost: float | None = None  # the cheapest action cost of the state that sets `own_bound` (a free action's epsilon on R24)
+    window: int = 0  # the steps of the cost ahead that the bound given is measured against (0: each state's own cost, `certify`)
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -202,13 +211,55 @@ class Work:
         return out
 
 
+def _own_text(certificate: Certificate) -> str:
+    """What the certificate against each state's own cheapest cost alone gives, when that is not the bound given (#769)."""
+    if certificate.own_bound is None or certificate.window == 0:
+        return ""
+    return (
+        f" (measured against the cost of the next {certificate.window} steps; against each state's own cheapest cost alone: {certificate.own_bound:.3g}, "
+        f"set at a state whose cheapest action costs {certificate.own_cost:.3g}; the cost ahead is measured over at most {AHEAD_LIMIT} steps)"
+    )
+
+
 def _settled(certificate: Certificate, tolerance: float) -> bool:
-    """Whether the residual is within `tolerance` of the cheapest cost, or at the rounding floor: more evaluation cannot help."""
+    """Whether the residual is within `tolerance` of its margin (the cheapest cost, or the cost ahead where that is larger), or at the rounding floor: more evaluation cannot help."""
     return certificate.residual <= tolerance or certificate.at_floor
 
 
-def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Work | None = None) -> Certificate:
-    """The certificate of the module docstring for candidate `value` on the states `solved` (the others are dead)."""
+def _shares(error: np.ndarray, margin: np.ndarray) -> np.ndarray:
+    """`error / margin` per state, for an error that is at least 0: 0 where the error is 0 and the margin is not negative (nothing to carry), infinite
+    where a positive error meets a margin that is not positive or a negative margin meets anything (no `t >= 0` makes `error <= t * margin` there)."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        share = error / np.where(margin > 0.0, margin, 1.0)
+    return np.where(margin > 0.0, share, np.where((error == 0.0) & (margin == 0.0), 0.0, INF))
+
+
+def _sides(d: np.ndarray, e: np.ndarray, gamma: np.ndarray, kappa: np.ndarray) -> tuple[float, float, np.ndarray]:
+    """`(lower, upper, share)` of the module docstring for the margins `gamma` (every action) and `kappa` (the greedy one): `lower = 1 / (1 + max d / gamma)`,
+    `upper = 1 / (1 - max e / kappa)` (infinite unless every `e < kappa`, which is also what proves the greedy policy proper); `share` is each state's larger share."""
+    low, high = _shares(d, gamma), _shares(e, kappa)
+    t_low, t_high = float(np.max(low)), float(np.max(high))
+    lower = 1.0 / (1.0 + t_low) if math.isfinite(t_low) else 0.0
+    upper = 1.0 / (1.0 - t_high) if t_high < 1.0 else INF
+    return lower, upper, np.maximum(low, high)
+
+
+def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Work | None = None, wanted: float = ACCEPT_BOUND) -> Certificate:
+    """The certificate of the module docstring for candidate `value` on the states `solved` (the others are dead).
+
+    Both sides are measured against a margin. With `h` any vector that is at least 0 and is 0 at the goals and at the states outside `solved`, every
+    action `a` of a state `s` satisfies `c_a + P_a h - h[s] >= gamma[s] := (T h - h)[s]`, so for every proper policy `nu`, `(I - P_nu)^-1 gamma <= V^nu - h
+    <= V^nu`. A residual `d <= t gamma` then gives `V* >= V / (1 + t)`; on the upper side `kappa := T_mu h - h` of the greedy policy `mu`, with
+    `e < kappa` everywhere, proves `mu` proper (`V - h` falls by `kappa - e > 0` a step) and gives `V^mu <= V / (1 - max e / kappa)`. `gamma` and `kappa`
+    are taken lowered by the rounding of their sums and of the subtraction, so the inequalities hold of the exact numbers.
+
+    `h = 0` gives `gamma = g` and `kappa = k`, the cost of the cheapest and of the greedy action: the certificate before #769, kept as `own_bound`. It
+    fails at a state whose actions are all free (an unveil, a pick: ADR-0026), whose rounding `(m + 2) eps V` alone is far larger than its own epsilon.
+    The certificate also takes `h` = the cost ahead (`_ahead`): `w / L` times the sum of the cheapest `j`-step costs `C_j = T^j 0` for `j = 1..L`.
+    Since `c_a + P_a C_j >= C_(j+1)`, its margin is at least `(1 - w) c_a + (w / L) (C_(L+1) - g)`: at a free state the paid step ahead, at a paid
+    state at least `1 - w` of its own cost. Each side takes the better of the two (both are bounds). The cost ahead is measured only when the own
+    cost does not give a bound within `wanted` (the bound the caller accepts), and over the windows of `AHEAD_FIRST` to `AHEAD_LIMIT` steps.
+    """
     work = work or Work(graph)
     n, goal = work.n, graph.goal
     targets = ~goal & solved
@@ -217,26 +268,61 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
     v = np.where(solved, value, 0.0)
     bad = kernel_any(graph, ~solved)
     ok = ~bad[graph.act_kernel]
-    sums = kernel_sums(graph, v)
-    q = np.where(ok, graph.act_cost + sums[graph.act_kernel], INF)
-    tv = work.state_min(q)
+
+    def backup(f: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """`(q, Tf)`: every action's cost plus its expected `f` (infinite for an action that may leave the solved states), and their least per state."""
+        q = np.where(ok, graph.act_cost + kernel_sums(graph, f)[graph.act_kernel], INF)
+        return q, work.state_min(q)
+
+    q, tv = backup(v)
     if not np.all(np.isfinite(tv[targets])):
         return Certificate(INF, 0.0, INF, INF, False)
-    greedy = work.state_argmin(q, tv)
-    k_mu = np.where(greedy >= 0, graph.act_cost[np.maximum(greedy, 0)], 1.0)
-    g = work.state_min(np.where(ok, graph.act_cost, INF))
+    greedy = np.maximum(work.state_argmin(q, tv), 0)
+    g_all = work.state_min(np.where(ok, graph.act_cost, INF))
     terms = work.state_reduce(np.maximum, np.where(ok, work.asize + 1, 0).astype(np.float64), 0.0)
     rho = (terms + 2.0) * EPS
-    delta = rho / (1.0 - rho) * np.where(np.isfinite(tv), tv, 0.0)
+    grow = rho / (1.0 - rho)  # a computed sum of nonnegative terms is within this share of itself from the exact one
+    delta = grow * np.where(np.isfinite(tv), tv, 0.0)
     e0 = np.maximum(tv - v, 0.0)[targets]
     d0 = np.maximum(v - tv, 0.0)[targets]
-    delta, g, k_mu = delta[targets], g[targets], k_mu[targets]
-    e, d = e0 + delta, d0 + delta
-    lower = float(np.min(g / (g + d)))
-    upper = INF if np.any(e >= k_mu) else float(np.max(k_mu / (k_mu - e)))
+    e, d = e0 + delta[targets], d0 + delta[targets]
+    g, k = g_all[targets], graph.act_cost[greedy][targets]
+
+    def lowered(sum_: np.ndarray, h: np.ndarray) -> np.ndarray:
+        """`sum_ - h` less the rounding of the sum (`grow` of it) and of the subtraction: at most the exact difference."""
+        s, h, r = sum_[targets], h[targets], grow[targets]
+        return s - r * s - h - 2.0 * EPS * (s + h)
+
+    own_lower, own_upper, own_share = _sides(d, e, g, k)
+    best = (own_lower, own_upper, g, 0)
+    last = max(1.0 - own_lower, own_upper - 1.0)
+    window, step, total, steps = AHEAD_FIRST, np.where(targets, g_all, 0.0), np.where(targets, g_all, 0.0), 1
+    longest = min(AHEAD_LIMIT, int(targets.sum()))  # a window as long as the states are many cannot meet a paid step it has not met
+    while not max(1.0 - best[0], best[1] - 1.0) <= wanted and window // 2 < longest:  # (the last window tried is the first at least `longest`)
+        # The cost ahead is measured only when each state's own cost does not carry the bound wanted, so a plan that certifies on it keeps its
+        # numbers. The window doubles while the bound is above `wanted` and the doubling does not make it clearly worse: a run of free steps with
+        # epsilon costs gives the same margin to every window until the window reaches the paid step after it, and then a far larger one.
+        while steps < window:
+            step = np.where(targets, backup(step)[1], 0.0)
+            total += step
+            steps += 1
+        h = total * (AHEAD_WEIGHT / window)
+        qh, th = backup(h)
+        gamma, kappa = lowered(th, h), lowered(qh[greedy], h)
+        lower, upper, _ = _sides(d, e, gamma, kappa)
+        if lower > best[0] or upper < best[1]:
+            best = (max(lower, best[0]), min(upper, best[1]), np.maximum(gamma, 0.0), window)
+        now = max(1.0 - lower, upper - 1.0)
+        if window > AHEAD_FIRST and not now <= 2.0 * last:
+            break
+        last = now
+        window *= 2
+    lower, upper, margin, used = best
     bound = max(1.0 - lower, upper - 1.0)
-    residual = float(np.max(np.maximum(e0, d0) / g))
-    return Certificate(bound, lower, upper, residual, bool(np.all(np.maximum(e0, d0) <= delta)))
+    own_bound = max(1.0 - own_lower, own_upper - 1.0)
+    residual = float(np.max(_shares(np.maximum(e0, d0), np.maximum(margin, g))))
+    setter = int(np.argmax(own_share))
+    return Certificate(bound, lower, upper, residual, bool(np.all(np.maximum(e0, d0) <= delta[targets])), own_bound, float(g[setter]), used)
 
 
 # ---- proper states and the start policy -----------------------------------------------------------------------------
@@ -775,21 +861,22 @@ def solve_graph(
         policy = np.where(better, work.state_argmin(q, best), policy)
     info["rounds"] = rounds
     mark = _tick()
-    certificate = certify(graph, value, inside, work)
+    certificate = certify(graph, value, inside, work, accept_bound)
     info["seconds_certify"] = _tick() - mark
     refinements = 0
     while not _settled(certificate, tolerance) and refinements < 3:
         refinements += 1
         value = evaluate_policy(work, leave, policy, value, dense_limit, 1e-15, info)
-        certificate = certify(graph, value, inside, work)
+        certificate = certify(graph, value, inside, work, accept_bound)
     info["refinements"] = refinements
     if not certificate.bound <= accept_bound:  # also false for an infinite or undefined bound
         raise ConvergenceError(
             f"the policy iteration on {n:,} states certifies only a relative bound of {certificate.bound:.3g} "
-            f"(asked: tolerance {tolerance}, accepted: {accept_bound}; residual {certificate.residual:.3g} of the cheapest cost)",
+            f"(asked: tolerance {tolerance}, accepted: {accept_bound}; residual {certificate.residual:.3g} of its margin){_own_text(certificate)}",
             certificate.bound,
         )
-    say(f"certificate on the quotient: bound {certificate.bound:.3g} ({time.perf_counter() - began:.1f} s)")
+    info["quotient_own_bound"], info["quotient_own_cost"] = certificate.own_bound, certificate.own_cost
+    say(f"certificate on the quotient: bound {certificate.bound:.3g}{_own_text(certificate)} ({time.perf_counter() - began:.1f} s)")
     value = np.where(inside, value, INF)
     return Core(value, inside, np.where(inside & ~graph.goal, policy, -1), certificate)
 
@@ -830,16 +917,17 @@ def solve_packed(
     value = core.value[cls]
     solved = core.solved[cls]
     mark = time.perf_counter()
-    certificate = certify(graph, value, solved)
+    certificate = certify(graph, value, solved, wanted=accept_bound)
     info["certify_seconds"] = round(time.perf_counter() - mark, 2)
     info["quotient_bound"] = core.certificate.bound
     if not certificate.bound <= accept_bound:
         raise ConvergenceError(
             f"the values of the merged graph do not satisfy the Bellman equation of the whole graph to {accept_bound} "
-            f"(bound {certificate.bound:.3g}, residual {certificate.residual:.3g} of the cheapest cost): the merge or the solve is wrong",
+            f"(bound {certificate.bound:.3g}, residual {certificate.residual:.3g} of its margin): the merge or the solve is wrong",
             certificate.bound,
         )
-    say(f"certificate on the whole graph: bound {certificate.bound:.3g} ({info['certify_seconds']} s)")
+    info["own_bound"], info["own_cost"] = certificate.own_bound, certificate.own_cost
+    say(f"certificate on the whole graph: bound {certificate.bound:.3g}{_own_text(certificate)} ({info['certify_seconds']} s)")
     action = lift_policy(graph, reduced, kernel_map, cls, core.action)
     info["seconds"] = round(time.perf_counter() - began, 2)
     return PackedSolution(value, action, certificate.bound, classes.count, reduced, cls, core.action, info)
