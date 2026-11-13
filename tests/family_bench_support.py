@@ -52,7 +52,7 @@ from crafting_system.items.enchantments import POOL_FAMILIES, enchant_class, is_
 from crafting_system.items.sockets import class_maximum
 from crafting_system.items.spawn import spawn_weight
 from crafting_system.items.vendor_recipes import RECIPES
-from crafting_system.prices.price_file import PriceEntry, PriceFile, load_price_file
+from crafting_system.prices.price_file import PriceFile, load_price_file
 from crafting_system.targets import parse_target
 from crafting_system.targets.model import Target
 
@@ -91,7 +91,8 @@ SIZES = (
 )
 ESSENCES_KEPT = (2, 6, 1000)  # essences priced, by size (1000: every essence the class takes)
 FOSSILS_KEPT = (4, 7, 12)  # fossils priced, by size: up to 15, 98 and 793 sets of one to four fossils
-STRANDS = (1, 50, 100)  # Memory Strands on the start item, by size
+STRANDS = (1, 50, 100)  # Memory Strands on the start item, by size (the strand families)
+STRANDS_GROWING = (0, 50, 100)  # the same in the last growing method set: 0 to 100
 
 
 @dataclass(frozen=True)
@@ -337,6 +338,21 @@ def strands_item(draw: Draw) -> dict:
     return {"memory_strands": STRANDS[draw.size.scale]}
 
 
+def growing_strands_item(draw: Draw) -> dict:
+    count = STRANDS_GROWING[draw.size.scale]
+    return {"memory_strands": count} if count else {}
+
+
+def keep_all(*hooks):
+    """A `keep` hook that keeps a price name when every hook keeps it (a method set with essences and fossils draws both)."""
+
+    def hook(draw: Draw, prices: PriceFile) -> Callable[[str], bool]:
+        tests = [h(draw, prices) for h in hooks]
+        return lambda name: all(test(name) for test in tests)
+
+    return hook
+
+
 def fractured_item(draw: Draw) -> dict:
     return {"mods": [mod_entry(draw.data, draw.wanted_mods[0], fractured=True)]}
 
@@ -347,6 +363,16 @@ def given_item(draw: Draw) -> dict:
 
 BASIC = ("transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "chaos-orb", "exalted-orb", "annulment-orb")
 REROLL = ("chaos-orb", "exalted-orb", "annulment-orb")
+GROWING = (  # (name, the actions this step adds)
+    ("basic", BASIC),
+    ("essences", ("essence",)),
+    ("fossils", ("fossil-set", "bench-craft", "remove-crafted-mods")),
+    ("harvest", ("harvest-reforge", "harvest-add-remove", "harvest-resistance-swap")),
+    ("unveil", ("veiled-chaos-orb", "unveil", "pick")),
+    ("lock", ("hinekora-lock",)),
+    ("donors", ("recombinator", "awakeners-orb")),
+    ("strands", ("foulborn-exalted-orb",)),
+)
 
 METHODS: tuple[Method, ...] = (
     # B1
@@ -393,6 +419,14 @@ METHODS: tuple[Method, ...] = (
     Method("start-fractured", "start", "rare", REROLL, start_item=fractured_item),
     Method("start-vendor-recipe", "start", "normal", BASIC, classes=with_recipe, vendor_starts=True),
     Method("start-given", "start", "rare", REROLL, start="given", start_item=given_item),
+    # method sets growing by batch (research note, section 10): basic orbs; plus essences; plus fossil sets; plus Harvest; plus unveil;
+    # plus the Lock; plus donors; plus strands 0 to 100. Each set holds the one before it, so a ticket sees what a method costs inside a set
+    *(
+        Method(f"growing-{index + 1}-{name}", "growing", "normal", tuple(a for step in GROWING[: index + 1] for a in step[1]),
+               keep=(keep_all(keep_some(is_essence_for, ESSENCES_KEPT), keep_some(is_fossil, FOSSILS_KEPT)) if index >= 2 else keep_some(is_essence_for, ESSENCES_KEPT) if index == 1 else None),
+               veiled=index >= 4, start_item=growing_strands_item if index >= 7 else (lambda draw: {}))
+        for index, (name, _) in enumerate(GROWING)
+    ),
 )
 
 
@@ -562,12 +596,16 @@ def merged_snapshots() -> dict[str, PriceFile]:
 def merge(snapshots: Mapping[str, PriceFile], primary: str) -> PriceFile:
     """The primary snapshot, with every name it lacks taken from the latest other snapshot that has it."""
     base = snapshots[primary]
-    prices: dict[str, PriceEntry] = {}
-    for name in SNAPSHOTS:  # date order: a later snapshot overwrites an earlier one, the primary last of all
-        if name != primary:
-            prices.update(snapshots[name].prices)
-    prices.update(base.prices)
-    return dataclasses.replace(base, prices=dict(sorted(prices.items())))
+
+    def merged(field_name: str) -> dict:
+        found: dict = {}
+        for name in SNAPSHOTS:  # date order: a later snapshot overwrites an earlier one, the primary last of all
+            if name != primary:
+                found.update(getattr(snapshots[name], field_name))
+        found.update(getattr(base, field_name))
+        return dict(sorted(found.items()))
+
+    return dataclasses.replace(base, prices=merged("prices"), ninja=merged("ninja"), deep=merged("deep"), markets=merged("markets"))
 
 
 def factor(price_seed: str, name: str) -> float:
@@ -580,12 +618,21 @@ def prices_for(case: Case) -> PriceFile:
     """The case's prices: the merged snapshots, every currency but the unit scaled by its seeded factor, only `keep` when it is set."""
     merged = merge(merged_snapshots(), case.primary_snapshot)
     kept = None if case.keep is None else set(case.keep)
-    scaled = {
-        name: entry if name == UNIT else dataclasses.replace(entry, chaos=entry.chaos * factor(case.price_seed, name))
-        for name, entry in merged.prices.items()
-        if kept is None or name in kept
-    }
-    return dataclasses.replace(merged, prices=scaled)
+
+    def scale(name: str, record):
+        if name == UNIT or getattr(record, "chaos", None) is None:
+            return record
+        return dataclasses.replace(record, chaos=record.chaos * factor(case.price_seed, name))
+
+    def table(entries: Mapping) -> dict:
+        return {name: scale(name, entry) for name, entry in entries.items() if kept is None or name in kept}
+
+    # every table a price can be read from (the trade or poe.ninja price, the poe.ninja row beside a trade price, the last deep reading, a
+    # thin market's mean) takes the same factor per name, and the Divine Orb's rate takes the Divine Orb's
+    return dataclasses.replace(
+        merged, prices=table(merged.prices), ninja=table(merged.ninja), deep=table(merged.deep), markets=table(merged.markets),
+        chaos_per_divine=merged.chaos_per_divine * factor(case.price_seed, "Divine Orb"),
+    )  # fmt: skip
 
 
 def target_of(case: Case, data: GameData) -> Target:

@@ -7,7 +7,7 @@
 It is the acceptance of every planning-speed ticket of #822 (research note `docs/research/2026-11-13-planning-speed.md`, section 10): a
 benchmark route is a measurement, never the acceptance (#812). A heavy run, never on a PC (CLAUDE.md, "Heavy runs"):
 
-    python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 16 --min-runners 8 --command \\
+    python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 16 --command \\
       'uv run --no-sync python -u .github/scripts/family_bench.py run --part $RUNNER_INDEX/$RUNNER_COUNT --out $OUT_DIR'
 
 **`run`** takes the cases of its part (every N-th of the seed's list, so each part gets small, medium and large ones) and, per case, starts
@@ -27,8 +27,9 @@ one child process per measurement, so that the memory of one case is its own and
 **The nets** are measurement settings, not planner defaults (OR-12): `PLAN_SECONDS` is the 10-minute net of OR-33. The envelope search
 honours it itself and says so; the other paths of today have no net, so the watchdog ends the stage `GRACE_SECONDS` after it and records
 "stopped by the benchmark's net, no plan". `MEMORY_MB` stops a stage whose process tree passes it ("stopped at the memory cap") before the
-runner's 16 GB kill the whole part. A part stops starting cases when what is left of `--deadline-minutes` is less than a case's worst time,
-and records the rest as "not run" (run them again with `--only`).
+runner's 16 GB kill the whole part. A part starts no case with less than `MIN_START_SECONDS` left of `--deadline-minutes`, and gives a case at most
+what is left; a case the deadline cuts, and the cases it never started, are recorded "not run": run them again with `--only ID,ID` (the
+summary takes a later record of a case over a "not run" one).
 
 **`summary`** reads the records of one or more runs and writes one JSON (the committed baseline is `tests/fixtures/family_bench/`): per case
 the record, and per method family and size the checks of section 10: `L(root) <= V* <= U` where the walk held, the mean equal to `V*` to
@@ -54,9 +55,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests"))
 
 PLAN_SECONDS = 600.0  # OR-33: the 10-minute net
-GRACE_SECONDS = 60.0  # past the net, before the watchdog ends a stage whose path has no net of its own
+GRACE_SECONDS = 300.0  # past the net, before the watchdog ends the plan stage: what follows the search (the plan's solve, limits, lumping), or a path with no net of its own
 SIM_SECONDS = 120.0
-SIM_BLOCK = 200  # plays per `verify` call
+SIM_GRACE_SECONDS = 120.0  # one block may run past `SIM_SECONDS`
+SIM_FIRST_BLOCK = 100  # plays of the first `verify` call; each next block doubles, up to `SIM_BLOCK`
+SIM_BLOCK = 2000  # the simulator's own block
 SIM_MAX_RUNS = 20_000
 RISK_SECONDS = 300.0
 WALK_SECONDS = 300.0
@@ -66,40 +69,62 @@ SIGMAS = 4.0  # OR-30
 TOLERANCE = 1e-9
 SETUP_SECONDS = 180.0
 CASE_SLACK = 120.0
+MIN_START_SECONDS = 480.0  # a part starts no case with less than this left before its deadline
 
 
 # -- memory ------------------------------------------------------------------------------------------------------------------------------
 
 
-def tree_rss_mb(pid: int) -> float | None:
-    """The resident memory of `pid` and every process under it, in MB (Linux `/proc`); None where `/proc` is not there."""
+def tree_memory_mb(pid: int) -> float | None:
+    """The memory of `pid` and every process under it, in MB (Linux `/proc`); None where `/proc` is not there.
+
+    Each process counts its proportional set size (`Pss` of `smaps_rollup`): a page that forked workers share copy-on-write with their
+    parent is split among them, so the sum is what the tree really holds, not the resident size of each counted again (`VmRSS` is the
+    fallback where `smaps_rollup` cannot be read).
+    """
     proc = Path("/proc")
     if not proc.is_dir():
         return None
     parent: dict[int, int] = {}
-    rss: dict[int, int] = {}
     for entry in proc.iterdir():
         if not entry.name.isdigit():
             continue
         try:
-            text = (entry / "status").read_text()
-        except OSError:
+            text = (entry / "stat").read_text()
+            parent[int(entry.name)] = int(text.rsplit(")", 1)[1].split()[1])  # the field after the state, past the command in parentheses
+        except (OSError, ValueError, IndexError):
             continue
-        fields = dict(line.split(":", 1) for line in text.splitlines() if ":" in line)
-        try:
-            parent[int(entry.name)] = int(fields["PPid"].strip())
-            rss[int(entry.name)] = int(fields.get("VmRSS", "0 kB").split()[0])
-        except (KeyError, ValueError):
-            continue
-    total, todo, seen = 0, [pid], set()
+    tree, todo = set(), [pid]
     while todo:
         current = todo.pop()
-        if current in seen:
+        if current in tree:
             continue
-        seen.add(current)
-        total += rss.get(current, 0)
+        tree.add(current)
         todo.extend(child for child, up in parent.items() if up == current)
+    total = 0
+    for current in tree:
+        total += _kb(proc / str(current) / "smaps_rollup", "Pss:") or _kb(proc / str(current) / "status", "VmRSS:") or 0
     return total / 1024
+
+
+def _kb(path: Path, key: str) -> int | None:
+    try:
+        for line in path.read_text().splitlines():
+            if line.startswith(key):
+                return int(line.split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def kill_tree() -> None:
+    """End this process's group (the child is its own session: `child` starts it so), workers included, then this process."""
+    if hasattr(os, "killpg"):
+        try:
+            os.killpg(os.getpgid(0), 9)
+        except OSError:
+            pass
+    os._exit(4)
 
 
 class Watch:
@@ -131,30 +156,41 @@ class Watch:
     def _loop(self) -> None:
         while True:
             time.sleep(SAMPLE_SECONDS)
-            mb = tree_rss_mb(os.getpid())
-            with self.lock:
-                if self.stage is None:
-                    continue
-                if mb is not None:
-                    self.peak = max(self.peak, mb)
-                spent = time.perf_counter() - self.stage_began
-                why = None
-                if mb is not None and mb > self.memory_mb:
-                    why = f"stopped at the memory cap: {mb:,.0f} MB in the {self.stage} stage (cap {self.memory_mb:,.0f} MB)"
-                elif spent > self.limit:
-                    why = f"stopped by the benchmark's net: the {self.stage} stage passed {self.limit:g} s"
-                if why is None:
-                    continue
-                entry = self.record["stages"][self.stage]
-                entry.update(seconds=round(spent, 2), peak_mb=round(self.peak, 1), done=False, stopped=why)
-                self.record.setdefault("stopped", why)
-                if self.stage in ("plan", "walk", "setup"):
-                    self.record["status"] = "stopped"
-                    self.record["reason"] = why
-                self.record["progress_tail"] = PROGRESS[-40:]
-                write(self.path, self.record)
-                say(why)
-                os._exit(4)
+            try:
+                self._check()
+            except Exception as error:  # noqa: BLE001 - the watch must outlive any error of one sample (a record mutated while written)
+                print(f"watch: {error!r}", flush=True)
+
+    def _check(self) -> None:
+        mb = tree_memory_mb(os.getpid())
+        with self.lock:
+            if self.stage is None:
+                return
+            if mb is not None:
+                self.peak = max(self.peak, mb)
+            spent = time.perf_counter() - self.stage_began
+            if mb is not None and mb > self.memory_mb:
+                why = f"stopped at the memory cap: {mb:,.0f} MB in the {self.stage} stage (cap {self.memory_mb:,.0f} MB)"
+            elif spent > self.limit:
+                why = f"stopped by the benchmark's net: the {self.stage} stage passed {self.limit:g} s"
+            else:
+                return
+            entry = self.record["stages"][self.stage]
+            entry.update(seconds=round(spent, 2), peak_mb=round(self.peak, 1), done=False, stopped=why)
+            self.record.setdefault("stopped", why)
+            if self.stage in ("plan", "walk", "setup"):
+                self.record["status"] = "stopped"
+                self.record["reason"] = why
+                self.record["no_plan"] = self.stage != "walk"
+            self.record["progress_tail"] = PROGRESS[-40:]
+            say(why)
+            for _ in range(5):  # the main thread may be changing the record while it is written: try again
+                try:
+                    write(self.path, self.record)
+                    break
+                except RuntimeError:
+                    time.sleep(0.05)
+            kill_tree()
 
 
 def peak_mb_self() -> float | None:
@@ -248,6 +284,42 @@ def path_of(plan) -> str:
     return "full walk (object solver)"
 
 
+def describe_plan(plan, record: dict):
+    """Write the plan's figures into `record` (path, mean, states, reach, the search's or the pruning's counts, `L` and `U`); return its `EnvelopeInfo` or None."""
+    info = plan.packed.info.get("envelope") if plan.packed is not None else None
+    mean = float(plan.mean_remaining)
+    record["path"] = path_of(plan)
+    try:
+        start_label = plan.policy.offer(plan.start).label if hasattr(plan.policy, "offer") else plan.offer_of(plan.policy[plan.start]).label
+    except (KeyError, AttributeError):  # the start is already a goal, or the policy has no action there
+        start_label = None
+    record["plan"] = {
+        "mean_remaining": mean, "start_price": plan.start_price.chaos, "mean_total": plan.start_price.chaos + mean,
+        "error_bound": getattr(plan.solution, "error_bound", None), "states_known": len(plan.solution.values),
+        "reach": len(plan.policy), "shown_reach": len(plan.view_policy), "offers": len(plan.offers), "solve_seconds": round(plan.solve_seconds, 2),
+        "limits": [limit.what for limit in plan.limits], "start_label": start_label,
+        "start_option": None if plan.starts is None else repr(plan.starts)[:500], "lock": None if plan.foresight is None else repr(plan.foresight)[:300],
+    }  # fmt: skip
+    if plan.pruned is not None:
+        pruned = plan.pruned
+        record["pruned"] = {
+            "rounds": pruned.rounds, "used": len(pruned.used), "bounded": len(pruned.bounded), "twins": len(pruned.twins), "inapplicable": len(pruned.inapplicable),
+            "fell_back": pruned.fell_back, "why": pruned.why[:300], "phases": [[name, round(seconds, 2)] for name, seconds in pruned.phases],
+        }  # fmt: skip
+    if info is not None:
+        env = dataclasses.asdict(info)
+        env["gap"] = None if not info.lower else info.upper / info.lower - 1.0
+        record["envelope"] = env
+        record["status"] = "planned" if info.exact else "stopped"
+        record["reason"] = None if info.exact else f"the envelope search stopped: {info.stopped}"
+        record["lower"], record["upper"] = info.lower, info.upper
+    else:
+        record["status"] = "planned"
+        record["reason"] = None
+        record["lower"] = record["upper"] = mean  # an exact solve: the bound and the plan's mean are one number
+    return info
+
+
 def estimate(value) -> dict | None:
     if value is None:
         return None
@@ -285,10 +357,12 @@ def run_plan_child(args) -> None:
         if case.vendor_starts:
             from crafting_system.cli._starts import plan_with_starts
 
-            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, net=net, with_risk=False)
+            # `plan_with_starts` measures the risk of the start it keeps itself (`with_risk` is its own argument to `make_plan`): the risk's
+            # seconds are then inside this stage, and `breakdown` takes them out
+            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, net=net)
         else:
             plan = make_plan(data, target, prices, start_price=case.start_price, with_risk=False, net=net)
-    except (PlanError, ValueError) as error:  # what the planner says when it refuses: the reason is the record
+    except PlanError as error:  # what the planner says when it refuses: the reason is the record
         text = f"{type(error).__name__}: {error}"[:2000]
         # a net that ended the search before any plan closed (a given start: no restart to fall back on) is OR-33's "stopped, no plan
         # found yet", not a refusal of the method: `_envelope_plan.envelope_result` words it "the search stopped (...)"
@@ -305,39 +379,25 @@ def run_plan_child(args) -> None:
         record["progress_tail"] = PROGRESS[-40:]
         write(path, record)
         return
-    info = plan.packed.info.get("envelope") if plan.packed is not None else None
-    mean = float(plan.mean_remaining)
-    record["path"] = path_of(plan)
-    record["plan"] = {
-        "mean_remaining": mean, "start_price": plan.start_price.chaos, "mean_total": plan.start_price.chaos + mean,
-        "error_bound": getattr(plan.solution, "error_bound", None), "states_known": len(plan.solution.values), "reach": len(plan.policy),
-        "offers": len(plan.offers), "solve_seconds": round(plan.solve_seconds, 2), "limits": [limit.what for limit in plan.limits],
-        "start_label": plan.policy.offer(plan.start).label if hasattr(plan.policy, "offer") else None,
-        "start_option": None if plan.starts is None else repr(plan.starts)[:500],
-    }  # fmt: skip
-    if info is not None:
-        env = dataclasses.asdict(info)
-        env["gap"] = None if not info.lower else info.upper / info.lower - 1.0
-        record["envelope"] = env
-        record["status"] = "planned" if info.exact else "stopped"
-        record["reason"] = None if info.exact else f"the envelope search stopped: {info.stopped}"
-        record["lower"], record["upper"] = info.lower, info.upper
-    else:
-        record["status"] = "planned"
-        record["reason"] = None
-        record["lower"] = record["upper"] = mean  # an exact solve: the bound and the plan's mean are one number
+    try:
+        info = describe_plan(plan, record)
+    except Exception as error:  # noqa: BLE001 - the plan exists; a figure that cannot be read is recorded, the rest stands
+        info = None
+        record.setdefault("status", "planned")
+        record["describe_error"] = f"{type(error).__name__}: {error}"[:1000]
     record["envelope_rounds"] = per_round
     watch.end()
     spent = record["stages"]["plan"]["seconds"]
+    risk_inside = round(plan.risk_seconds, 2) if plan.risk is not None else 0.0  # a vendor-recipe plan comes with its risk measured
     record["breakdown"] = (  # the plan stage split: the bound's build, the search (with the solve of what it expanded), the rest (limits, lumping)
-        {"bound": round(info.bound_seconds, 2), "search": round(info.seconds - info.bound_seconds, 2), "after_search": round(spent - info.seconds, 2)}
+        {"bound": round(info.bound_seconds, 2), "search": round(info.seconds - info.bound_seconds, 2), "after_search": round(spent - info.seconds - risk_inside, 2), "risk": risk_inside}
         if info is not None
-        else {"solve": round(plan.solve_seconds, 2), "rest": round(spent - plan.solve_seconds, 2)}
+        else {"solve": round(plan.solve_seconds, 2), "rest": round(spent - plan.solve_seconds - risk_inside, 2), "risk": risk_inside}
     )
     write(path, record)
 
-    watch.start("simulate", args.sim_seconds + GRACE_SECONDS)
-    record["simulate"] = simulate(data, plan, args.sim_seconds)
+    watch.start("simulate", args.sim_seconds + SIM_GRACE_SECONDS)
+    simulate(data, plan, args.sim_seconds, record, path)
     watch.end()
 
     watch.start("risk", args.risk_seconds)
@@ -354,8 +414,12 @@ def run_plan_child(args) -> None:
     write(path, record)
 
 
-def simulate(data, plan, seconds: float) -> dict:
-    """The plan's policy played on concrete items (`verify`), pooled over blocks until `seconds`: the mean, its standard error and |z|."""
+def simulate(data, plan, seconds: float, record: dict, path: Path) -> None:
+    """The plan's policy played on concrete items (`verify`), pooled over blocks until `seconds`: the mean, its standard error and z.
+
+    The blocks grow from `SIM_FIRST_BLOCK` to `SIM_BLOCK` plays (a cheap plan plays thousands a second, R04's kind half a second a play), and
+    the pooled figures are written into `record["simulate"]` after every block, so a net that ends the stage keeps what was played.
+    """
     from types import SimpleNamespace
 
     from crafting_system.cli._verify import verify
@@ -363,32 +427,44 @@ def simulate(data, plan, seconds: float) -> dict:
     if plan.risk is None:  # `verify` reads the p90 for its own report only; the risk stage runs after this one, under its own net
         plan = dataclasses.replace(plan, risk=SimpleNamespace(p90=SimpleNamespace(value=math.nan)))
     began = time.perf_counter()
-    n = 0
-    total = squares = 0.0
-    unfinished = stopped = 0
-    block = 0
+    totals = {"n": 0, "sum": 0.0, "squares": 0.0, "unfinished": 0, "stopped": 0}
     computed = plan.start_price.chaos + float(plan.mean_remaining)
+    size, block = SIM_FIRST_BLOCK, 0
     try:
-        while n < SIM_MAX_RUNS and time.perf_counter() - began < seconds:
-            check = verify(data, plan, runs=SIM_BLOCK, seed=1 + block)
-            report = check.report
-            runs = SIM_BLOCK
+        while totals["n"] < SIM_MAX_RUNS and time.perf_counter() - began < seconds:
+            report = verify(data, plan, runs=size, seed=1 + block).report
             mean, se = report.cost.value, report.cost.standard_error
-            total += runs * mean
-            squares += (runs - 1) * runs * se * se + runs * mean * mean
-            unfinished += report.unfinished
-            stopped += report.stopped
-            n += runs
+            totals["sum"] += size * mean
+            totals["squares"] += (size - 1) * size * se * se + size * mean * mean  # (n - 1) sd^2 + n mean^2 of the block: the sum of squares
+            totals["unfinished"] += report.unfinished
+            totals["stopped"] += report.stopped
+            totals["n"] += size
             block += 1
-    except Exception as error:  # noqa: BLE001 - recorded
-        return {"error": f"{type(error).__name__}: {error}"[:1000], "runs": n}
+            size = min(2 * size, SIM_BLOCK)
+            record["simulate"] = pooled(totals, computed, time.perf_counter() - began)
+            write(path, record)
+    except Exception as error:  # noqa: BLE001 - recorded with what was played before it
+        record["simulate"] = {**pooled(totals, computed, time.perf_counter() - began), "error": f"{type(error).__name__}: {error}"[:1000]}
+        return
+    record["simulate"] = pooled(totals, computed, time.perf_counter() - began)
+
+
+def pooled(totals: dict, computed: float, seconds: float) -> dict:
+    """The pooled mean, its standard error and z = (simulated - computed) / standard error of the plays so far."""
+    n = totals["n"]
     if n == 0:
-        return {"runs": 0}
-    mean = total / n
-    variance = max(squares - n * mean * mean, 0.0) / max(n - 1, 1)
+        return {"runs": 0, "computed": computed}
+    mean = totals["sum"] / n
+    variance = max(totals["squares"] - n * mean * mean, 0.0) / max(n - 1, 1)
     se = math.sqrt(variance / n)
-    z = 0.0 if se == 0 and abs(mean - computed) <= TOLERANCE * max(1.0, abs(computed)) else (math.inf if se == 0 else (mean - computed) / se)
-    return {"runs": n, "mean": mean, "standard_error": se, "computed": computed, "z": z, "unfinished": unfinished, "stopped": stopped, "seconds": round(time.perf_counter() - began, 1)}
+    if se == 0:
+        z = 0.0 if abs(mean - computed) <= TOLERANCE * max(1.0, abs(computed)) else math.inf
+    else:
+        z = (mean - computed) / se
+    return {
+        "runs": n, "mean": mean, "standard_error": se, "computed": computed, "z": z, "unfinished": totals["unfinished"], "stopped": totals["stopped"],
+        "seconds": round(seconds, 1),
+    }  # fmt: skip
 
 
 def run_walk_child(args) -> None:
@@ -417,12 +493,22 @@ def run_walk_child(args) -> None:
         else:
             plan = make_plan(data, target, prices, start_price=case.start_price, solver="packed", with_risk=False)
         record.update(status="solved", optimum=float(plan.mean_remaining), states=len(plan.solution.values), reason=None)
-    except (PlanError, ValueError) as error:
+    except PlanError as error:
         record.update(status="refused", reason=f"{type(error).__name__}: {error}"[:1000])
     except Exception as error:  # noqa: BLE001
         record.update(status="error", reason=f"{type(error).__name__}: {error}"[:1000], trace=traceback.format_exc()[-3000:])
     watch.end()
     write(path, record)
+
+
+def run_sleep_child(args) -> None:
+    """A child that outlives its stage's limit (`--plan-seconds`): the watch must write its record and end it (the quick test of `Watch`)."""
+    record: dict = {"mode": "sleep", "status": "running", "settings": settings(args)}
+    watch = Watch(record, Path(args.out) / "cases" / f"{args.case.replace('/', '__')}.sleep.json", args.memory_mb)
+    watch.start("plan", args.plan_seconds)
+    time.sleep(60)
+    record["status"] = "not stopped"
+    watch.end()
 
 
 def settings(args) -> dict:
@@ -445,24 +531,41 @@ def child(args, case_id: str, mode: str, wall: float) -> dict:
     path = Path(args.out) / "cases" / f"{case_id.replace('/', '__')}.{mode}.json"
     log = Path(args.out) / "logs" / f"{case_id.replace('/', '__')}.{mode}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
+    path.unlink(missing_ok=True)  # a record of an earlier run in the same folder is not this one's
     began = time.perf_counter()
     with open(log, "w", encoding="utf-8") as handle:
-        process = subprocess.Popen(command, stdout=handle, stderr=subprocess.STDOUT, cwd=ROOT)
+        # its own session, so that the child's pool workers (`parallel.py` forks them) end with it: `kill_tree` in the child, `_end_group` here
+        process = subprocess.Popen(command, stdout=handle, stderr=subprocess.STDOUT, cwd=ROOT, start_new_session=True)
         try:
             code = process.wait(timeout=wall)
         except subprocess.TimeoutExpired:
-            process.kill()
+            _end_group(process)
             process.wait()
             code = "killed"
+        _end_group(process)  # workers a finished child left behind
     record = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"mode": mode}
     record["exit"] = code
     record["wall_seconds"] = round(time.perf_counter() - began, 1)
     if record.get("status") in (None, "running"):
-        tail = log.read_text(encoding="utf-8", errors="replace").splitlines()[-30:]
-        record["status"] = "stopped" if code in ("killed", 4, -9, 137) else "error"
-        record["reason"] = record.get("stopped") or (f"the process was killed after {wall:g} s" if code == "killed" else f"exit {code} with no record")
-        record["log_tail"] = tail
+        record["log_tail"] = log.read_text(encoding="utf-8", errors="replace").splitlines()[-30:]
+        if code == "killed":
+            record["status"], record["reason"] = "stopped", f"the benchmark's wall of {wall:g} s for the whole case was reached"
+        elif code in (-9, 137):
+            record["status"], record["reason"] = "stopped", "killed by the system, probably out of memory (no record was written)"
+        else:
+            record["status"], record["reason"] = "error", f"exit {code} with no record"
+        record.setdefault("no_plan", record.get("plan") is None)
     return record
+
+
+def _end_group(process: subprocess.Popen) -> None:
+    if hasattr(os, "killpg"):
+        try:
+            os.killpg(process.pid, 9)
+        except OSError:  # the group is gone already
+            pass
+    else:
+        process.kill()
 
 
 def run_part(args) -> None:
@@ -476,25 +579,27 @@ def run_part(args) -> None:
     if args.only:
         wanted = set(args.only.split(","))
         found = [c for c in found if c.id in wanted]
-        mine = found[part - 1 :: parts]
-    else:
-        mine = found[part - 1 :: parts]
+    mine = found[part - 1 :: parts]
+    args.out = str(Path(args.out).resolve())  # the children run from the repository root
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     deadline = BEGAN + args.deadline_minutes * 60
-    worst = SETUP_SECONDS + args.plan_seconds + GRACE_SECONDS + args.sim_seconds + GRACE_SECONDS + args.risk_seconds + CASE_SLACK
+    worst = SETUP_SECONDS + args.plan_seconds + GRACE_SECONDS + args.sim_seconds + SIM_GRACE_SECONDS + args.risk_seconds + CASE_SLACK
     say(f"part {part}/{parts}: {len(mine)} of {len(found)} cases; a case takes at most {worst:.0f} s, plus {args.walk_seconds + SETUP_SECONDS:.0f} s of walk")
     records = []
     for case in mine:
         left = deadline - time.perf_counter()
         head = case_head(case)
-        if left < worst:
-            records.append({"case": head, "status": "not run", "reason": f"the part's deadline: {left:.0f} s left, a case may take {worst:.0f} s"})
+        if left < MIN_START_SECONDS:
+            records.append({"case": head, "status": "not run", "reason": f"the part's deadline: {left:.0f} s left"})
             say(f"{case.id}: not run (deadline)")
             continue
-        say(f"{case.id}: plan ...")
-        planned = child(args, case.id, "plan", worst)
+        wall = min(worst, left - CASE_SLACK)
+        say(f"{case.id}: plan (wall {wall:.0f} s) ...")
+        planned = child(args, case.id, "plan", wall)
         planned.setdefault("case", head)
+        if wall < worst and planned.get("exit") == "killed":  # the part's deadline cut it, not a net of the measurement: run it again (`--only`)
+            planned.update(status="not run", reason=f"the part's deadline cut the case after {wall:.0f} s")
         walk = None
         full = planned.get("path", "").startswith("full walk")
         left = deadline - time.perf_counter()
@@ -550,7 +655,7 @@ def summarize(args) -> None:
                     records[key] = record
     rows = []
     for key in sorted(records):
-        record = records[key]
+        record = {k: v for k, v in records[key].items() if k not in ("progress_tail", "log_tail", "trace")}  # those stay in the run's artifact
         record["checks"] = checks(record)
         rows.append(record)
     by_family: dict[str, dict] = {}
@@ -610,7 +715,7 @@ def main() -> None:
     one = sub.add_parser("one")
     common(one)
     one.add_argument("--case", required=True)
-    one.add_argument("--mode", choices=("plan", "walk"), required=True)
+    one.add_argument("--mode", choices=("plan", "walk", "sleep"), required=True)  # sleep: the watch's own test (`tests/test_family_bench.py`)
     one.add_argument("--out", required=True)
     summary = sub.add_parser("summary")
     summary.add_argument("--dir", action="append", required=True)
@@ -630,7 +735,7 @@ def main() -> None:
     elif args.command == "run":
         run_part(args)
     elif args.command == "one":
-        (run_plan_child if args.mode == "plan" else run_walk_child)(args)
+        {"plan": run_plan_child, "walk": run_walk_child, "sleep": run_sleep_child}[args.mode](args)
     else:
         summarize(args)
 

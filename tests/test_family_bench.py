@@ -5,6 +5,7 @@ The quick tests work on a small subset of the families (a few seconds); `test_th
 of the game data, the parser or the generator that changes a case shows here and the baseline is re-run with it.
 """
 
+import argparse
 import dataclasses
 import importlib.util
 import json
@@ -35,6 +36,8 @@ TICKET_FAMILIES = {
     "B8": {"hinekora-lock"},
     "start": {"start-bought", "start-fractured", "start-vendor-recipe", "start-given"},
 }
+# The method sets growing by batch of the research note, section 10 (each holds the one before it).
+GROWING = ("basic", "essences", "fossils", "harvest", "unveil", "lock", "donors", "strands")
 SUBSET = ("basic-orbs", "essences", "veiled", "eldritch", "remembrance", "start-given")
 
 
@@ -59,7 +62,11 @@ def test_every_family_of_the_ticket_is_generated_at_three_sizes_or_more():
     assert F.FOSSILS_KEPT == (4, 7, 12)  # up to 15, 98 and 793 sets: 10 to 1,000 sets
     assert sum(math.comb(F.FOSSILS_KEPT[0], k) for k in range(1, 5)) == 15
     assert sum(math.comb(F.FOSSILS_KEPT[2], k) for k in range(1, 5)) == 793
-    assert F.STRANDS[-1] == 100
+    assert F.STRANDS[-1] == 100 and F.STRANDS_GROWING == (0, 50, 100)
+    growing = [m for m in F.METHODS if m.batch == "growing"]
+    assert [m.name for m in growing] == [f"growing-{i + 1}-{name}" for i, name in enumerate(GROWING)]
+    for smaller, larger in zip(growing, growing[1:]):
+        assert set(smaller.actions) < set(larger.actions), larger.name
 
 
 def test_the_same_seed_gives_the_same_cases_and_another_seed_others(data):
@@ -144,11 +151,29 @@ def test_the_baseline_names_its_runs_and_covers_every_case():
     assert all(r.get("status") in ("planned", "stopped", "refused", "error") for r in baseline["records"]), "a case was not run"
 
 
-def test_the_summary_checks_read_a_record():
+def bench_script():
     spec = importlib.util.spec_from_file_location("family_bench", ROOT / ".github" / "scripts" / "family_bench.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules.setdefault("family_bench", module)
     spec.loader.exec_module(module)
+    return module
+
+
+def test_a_stage_past_its_limit_is_stopped_and_says_so(tmp_path):
+    """The parent's `child` runs a child that sleeps past its 1-second stage: the watch writes the record and ends it within seconds."""
+    module = bench_script()
+    args = argparse.Namespace(
+        out=str(tmp_path), seed=824, plan_seconds=1.0, sim_seconds=1.0, risk_seconds=1.0, walk_seconds=1.0, memory_mb=1e9, upper_per_round=False,
+    )  # fmt: skip
+    record = module.child(args, "sleep/test", "sleep", wall=40)
+    assert record["status"] == "stopped", record
+    assert "passed 1 s" in record["reason"]
+    assert record["stages"]["plan"]["done"] is False
+    assert record["wall_seconds"] < 30
+
+
+def test_the_summary_checks_read_a_record():
+    module = bench_script()
     record = {
         "case": {"refused": None}, "status": "planned", "lower": 99.0, "upper": 100.0, "walk": {"optimum": 100.0},
         "simulate": {"z": -1.5, "unfinished": 0, "stopped": 0},
