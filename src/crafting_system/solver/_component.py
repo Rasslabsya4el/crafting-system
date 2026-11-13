@@ -4,7 +4,7 @@ import math
 from array import array
 from dataclasses import dataclass, field
 
-from ._certify import own_multipliers, relative_error, rounding_allowance
+from ._certify import ACCEPT_BOUND, AHEAD_LIMIT, AHEAD_WEIGHT, lowered, own_multipliers, relative_error, rounding_allowance, sides, widen
 from ._graph import Graph
 from ._sparse import WORK_LIMIT, solve_substochastic
 
@@ -178,6 +178,82 @@ def _certify(bellman: Bellman, values: list[float]) -> tuple[float, float, float
         elif -gap > d:
             d = -gap
     return e, d, top, greedy
+
+
+def _ahead(
+    bellman: Bellman, values: list[float], greedy: list[int], lower: float, upper: float, wanted: float
+) -> tuple[float, float, int]:
+    """`(lower, upper, window)`: the better, on each side, of the multipliers `lower`, `upper` on `g` alone and of the cost ahead (#842, as
+    `_packed_solve.certify` does since #769; `_certify.widen`).
+
+    On the component's own operator `T f = min_a (base_a + P_a f)` (the successors outside it are in `base`, so `h` is 0 there): `h = (w / L)
+    (C_1 + ... + C_L)` with `C_j = T^j 0`, which depends on the operator only, not on `values`. Per state, `d = (V - T V)^+` and `e = (T_mu V -
+    V)^+` for the greedy action indices `greedy`, each plus the rounding `grow` of its sum (`rho` of the component's longest sum). A state with
+    `e = kappa = 0` is carried when its greedy action leaves the component or leads (through its outcomes) to a state that is carried or of
+    positive margin; in a branching component none is (an input inside is no move). `window` is 0 when `g` alone was the better on both sides.
+    The argument holds for a branching component too: it needs only that each action's backup is its constant plus nonnegative multiples of
+    the values, as the bound on `g` does, and, on the upper side, a nonnegative supersolution (`V >= h`, checked)."""
+    size = len(values)
+    if not all(math.isfinite(v) for v in values):
+        return lower, upper, 0
+    astart, tptr, inside, prob, base = bellman.astart, bellman.tptr, bellman.inside, bellman.prob, bellman.base
+
+    def q(f: list[float], a: int) -> float:
+        total = base[a]
+        for j, p in zip(inside[tptr[a] : tptr[a + 1]], prob[tptr[a] : tptr[a + 1]]):
+            total += p * f[j]
+        return total
+
+    def least(f: list[float]) -> list[float]:
+        return [min(q(f, a) for a in range(astart[local], astart[local + 1])) for local in range(size)]
+
+    rho = rounding_allowance(bellman.terms)
+    grow = rho / (1.0 - rho)  # a computed sum of nonnegative terms is within this share of itself from the exact one
+    tv = least(values)
+    mu = [q(values, a) for a in greedy]
+    d = [max(v - t, 0.0) + grow * t for v, t in zip(values, tv)]
+    e = [max(m - v, 0.0) + grow * m for v, m in zip(values, mu)]
+
+    def escapes(zero: list[bool]) -> list[bool]:
+        if bellman.branching:
+            return [False] * size
+        carried = [not z or bool(bellman.has_exit[a]) for z, a in zip(zero, greedy)]
+        leads: list[list[int]] = [[] for _ in range(size)]  # the zero-margin states whose greedy action may lead to each state
+        for local in range(size):
+            if zero[local]:
+                a = greedy[local]
+                for j, p in zip(inside[tptr[a] : tptr[a + 1]], prob[tptr[a] : tptr[a + 1]]):
+                    if p > 0.0:
+                        leads[j].append(local)
+        frontier = [local for local in range(size) if carried[local]]
+        while frontier:
+            for local in leads[frontier.pop()]:
+                if not carried[local]:
+                    carried[local] = True
+                    frontier.append(local)
+        return carried
+
+    first = [min(base[a] for a in range(astart[local], astart[local + 1])) for local in range(size)]  # C_1 = T 0
+    step, total, steps = first, list(first), 1
+
+    def ahead(window: int) -> list[float]:
+        nonlocal step, total, steps
+        while steps < window:
+            step = least(step)
+            total = [t + s for t, s in zip(total, step)]
+            steps += 1
+        return [t * (AHEAD_WEIGHT / window) for t in total]
+
+    def measure(h: list[float]) -> tuple[float, float, int, None]:
+        gamma = [lowered(t, x, grow) for t, x in zip(least(h), h)]
+        kappa = [lowered(q(h, a), x, grow) for a, x in zip(greedy, h)]
+        found_lower, found_upper, stuck = sides(d, e, gamma, kappa, escapes)
+        if any(x > v for x, v in zip(h, values)):  # the supersolution (V - t h) / (1 - t) must be nonnegative (V >= h >= t h), or it bounds no
+            found_upper = math.inf  # least fixed point (a branching component's matrix need not be a contraction); h <= w V* keeps it so in practice
+        return found_lower, found_upper, stuck, None
+
+    found = widen(ahead, measure, (lower, upper, None, 0), wanted, min(AHEAD_LIMIT, size))
+    return found[0], found[1], found[3]
 
 
 def _attractor(bellman: Bellman) -> tuple[list[int], list[int]]:
@@ -373,8 +449,12 @@ def solve_cyclic(
         delta = rho * top
         iteration = relative_error(*own_multipliers(bellman.g, e, d))
         lower, upper = own_multipliers(bellman.g, e + delta, d + delta)
-        error = relative_error(lower, upper)
         stop = iteration <= tolerance or (e <= delta and d <= delta)  # or at the rounding floor
+        if stop and not relative_error(lower, upper) <= ACCEPT_BOUND:
+            # g alone does not carry the bound (a free action in the component, #842): the cost ahead too. Only for the result, so the sweeps,
+            # the moment policy iteration starts and the values are those of before, and a component that certified on g keeps its numbers
+            lower, upper, _ = _ahead(bellman, candidate, greedy, lower, upper, ACCEPT_BOUND)
+        error = relative_error(lower, upper)
         certified, greedy_now = upper != math.inf, greedy
         if stop or best is None or error < best_error:
             best_error = error
