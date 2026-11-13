@@ -335,6 +335,22 @@ def stalled(it: int, marked_at: int, longest: int) -> bool:
     return it - marked_at >= STALL * max(STALL, longest)
 
 
+class _Flats:
+    """The flats of one run's best residual, read step by step (`stalled`): the step it last halved at and the longest flat it came out of. A fall of
+    several halvings in one step ends one flat."""
+
+    def __init__(self, first: float) -> None:
+        self.marked, self.marked_at, self.longest = first, 0, 0
+
+    def stalled(self, it: int, best: float) -> bool:
+        if best <= 0.5 * self.marked:
+            self.longest = max(self.longest, it - self.marked_at)
+            while best <= 0.5 * self.marked:
+                self.marked *= 0.5
+            self.marked_at = it
+        return stalled(it, self.marked_at, self.longest)
+
+
 def _bicgstab_run(matvec, b, x0, tol, max_iter):
     """`(best iterate by the recurrence, iterations, true norm of b - A x0, the relative residual the recurrence claims for it, stagnated)`.
 
@@ -352,14 +368,9 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
     v = np.zeros_like(b)
     p = np.zeros_like(b)
     it = 0
-    marked, marked_at, longest = rnorm, 0, 0
+    flats = _Flats(rnorm)
     while it < max_iter and rnorm > tol * bnorm:
-        if best <= 0.5 * marked:  # a halving ends the flat since the last one
-            longest = max(longest, it - marked_at)
-            while best <= 0.5 * marked:
-                marked *= 0.5
-            marked_at = it
-        if stalled(it, marked_at, longest):
+        if flats.stalled(it, best):
             return best_x, it, first, best / bnorm, True
         it += 1
         rho_new = float(r_hat @ r)
@@ -460,7 +471,7 @@ def solve(
         for _ in range(BICGSTAB_RESTARTS):  # a run whose recurrence claimed its aim while the TRUE residual did not reach it (#584): a fresh recurrence from there
             if stagnated or residual <= 10 * iterate_tol or iterations >= BICGSTAB_ITERATIONS:
                 break
-            x, residual, more, stagnated = bicgstab(matvec, b, x, iterate_tol)
+            x, residual, more, stagnated = bicgstab(matvec, b, x, iterate_tol, BICGSTAB_ITERATIONS - iterations)  # (the rail is the runs' together)
             iterations += more
         best_iterate = x
 

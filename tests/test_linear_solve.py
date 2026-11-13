@@ -318,6 +318,28 @@ def test_a_run_has_stagnated_when_its_flat_is_stall_times_the_longest_flat_it_ca
     # (the 100,000 stiff states of #671, at 0.94 from step 2 on, are the first case: they reach the exact solve at step 36, in the test below)
 
 
+def stall_step(bests: list[float]) -> int | None:
+    """The step at which `_Flats` reads a stagnation in a run whose best residual is `bests[it]` at the top of step `it` (None: never)."""
+    flats = lin._Flats(bests[0])
+    return next((it for it, best in enumerate(bests) if flats.stalled(it, best)), None)
+
+
+def test_the_flats_of_a_run_are_read_from_its_best_residual_step_by_step(monkeypatch):
+    monkeypatch.setattr(lin, "STALL", 6)
+    # never a halving: the first flat, measured against STALL steps, ends the run at step 36
+    assert stall_step([1.0] + [0.94] * 100) == 36
+    # a halving at every step to step 10 (flats of 1 step, counted as 6), then flat: 36 steps after step 10
+    assert stall_step([0.5**it for it in range(11)] + [0.5**10] * 100) == 46
+    # a fall of twenty halvings in one step at step 3 ends one flat of 3 steps; flat after it: step 3 + 36
+    assert stall_step([1.0, 0.9, 0.8, 1e-6] + [1e-6] * 100) == 39
+    # flat for 15 steps, a halving at step 15, then flat: the next flat may last 6 x 15 = 90 steps, to step 105
+    assert stall_step([1.0] * 15 + [0.4] * 200) == 105
+    # a run that keeps halving within its flats never stagnates
+    assert stall_step([0.5 ** (it // 10) for it in range(400)]) is None
+    # a fall short of a halving (1.0 to 0.6) does not end a flat
+    assert stall_step([1.0, 0.6, 0.6, 0.6] + [0.6] * 100) == 36
+
+
 # --- the solve: dense, iterate, exact ------------------------------------------------------------------------------------------------------------------
 
 
