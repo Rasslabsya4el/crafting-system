@@ -332,3 +332,67 @@ def test_the_snapshot_writes_and_reads_back_in_the_format_of_the_others(tmp_path
 
     assert load_price_file(path) == snapshot
     assert json.loads(path.read_text(encoding="utf-8"))["fetched_at"] == "2026-07-31T00:00:00Z"
+
+
+# --- wanted names and the upgrade recipe (#885) -------------------------------------------------------------------
+
+
+def test_a_wanted_name_no_template_holds_is_read_from_the_rows_and_one_with_no_row_gets_no_price_and_a_note():
+    """What a method spends is priced whether or not an earlier snapshot held it: Allflame's row of the day, else Mirage's of the same
+    league age (marked); a name neither league has a row for has no reading to stand in, so it stays unpriced and the notes say so."""
+    rows = {
+        **ROWS,
+        ("Allflame", "awakeners-orb"): [DayRow(AS_OF, 300.0, 6000.0)],
+        ("Mirage", "orb-of-conflict"): [DayRow(date(2026, 3, 13), 40.0, 400.0)],
+    }
+
+    snapshot, notes = build_snapshot(
+        [("routes-allflame-2026-11-10.json", end_file())], lambda league, slug: rows.get((league, slug), []), "Allflame", START, AS_OF, MIRAGE,
+        wanted=["Awakener's Orb", "Orb of Conflict", "Wild Bristle Matron", "Exalted Orb", "Chaos Orb", "Awakener's Orb"],
+    )  # fmt: skip
+
+    awakener, conflict = snapshot.prices["Awakener's Orb"], snapshot.prices["Orb of Conflict"]
+    assert (awakener.chaos, awakener.source, awakener.provenance) == (300.0, "poe.ninja-history", Provenance(HISTORY, "Allflame", "2026-07-31", 20.0))
+    assert (conflict.chaos, conflict.source, conflict.provenance) == (40.0, "poe.ninja-previous-league", Provenance(PREVIOUS_LEAGUE, "Mirage", "2026-03-13", 10.0))
+    assert "Wild Bristle Matron" not in snapshot.prices
+    assert snapshot.prices["Exalted Orb"].chaos == 2.5 and snapshot.prices["Chaos Orb"] == PriceEntry(1.0, "poe.ninja")  # a template's name is read once
+    assert notes[-1] == (
+        "Wild Bristle Matron: no price, no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13"
+        " and no template holds it"
+    )
+    assert sum(": no price, " in note for note in notes) == 1
+
+
+def test_the_lower_essence_tiers_of_a_snapshot_are_a_third_of_the_next_tier_up_not_stand_ins():
+    """Deafening Essence of Fear traded at 2.7 on the day. Shrieking has no row: its reading of the league's end (4.0) would stand in at
+    4.0 / 3 (the essences rose x3: 8.1 / 2.7), but the recipe prices it at 2.7 / 3 = 0.9, and the wanted Screaming tier at 0.3."""
+    end = PriceFile(
+        "Allflame", END, 516.2,
+        {
+            "Divine Orb": PriceEntry(516.2, "poe.ninja"),
+            "Deafening Essence of Fear": PriceEntry(8.1, "poe.ninja", None, None, Provenance(EXCHANGE, "Allflame", "2026-11-10", 50.0)),
+            "Shrieking Essence of Fear": PriceEntry(4.0, "trade-api", None, {"exchange": "shrieking-essence-of-fear"}, Provenance(TRADE, "Allflame", "2026-11-10", 2.0)),
+            "Essence of Horror": PriceEntry(90.0, "trade-api", None, {"exchange": "essence-of-horror"}, Provenance(TRADE, "Allflame", "2026-11-10", 2.0)),
+        },
+    )  # fmt: skip
+    rows = {("Allflame", "divine-orb"): [DayRow(AS_OF, 176.6, 1766.0)], ("Allflame", "deafening-essence-of-fear"): [DayRow(AS_OF, 2.7, 270.0)]}
+
+    snapshot, notes = build_snapshot([("end.json", end)], lambda league, slug: rows.get((league, slug), []), "Allflame", START, AS_OF, None, wanted=["Screaming Essence of Fear"])
+
+    shrieking, screaming = snapshot.prices["Shrieking Essence of Fear"], snapshot.prices["Screaming Essence of Fear"]
+    assert (shrieking.chaos, shrieking.source) == (pytest.approx(0.9), "upgrade-recipe")
+    assert shrieking.detail["replaced"] == {"chaos": pytest.approx(4.0 / 3), "source": "trade-api"}
+    assert (screaming.chaos, screaming.source, screaming.detail["of"]) == (pytest.approx(0.3), "upgrade-recipe", "Shrieking Essence of Fear")
+    assert [mark.code for mark in price_marks(shrieking, snapshot, 1.0)] == ["upgrade-recipe"]
+    assert snapshot.prices["Essence of Horror"].chaos == pytest.approx(30.0)  # no tier: it stays the scaled stand-in it was
+    assert notes == [
+        "Essence of Horror: stand-in, the reading of 2026-11-10 from end.json, divided by 3",
+        "Shrieking Essence of Fear: vendor recipe, 0.9 Chaos, one third of Deafening Essence of Fear; before: 1.333 Chaos (trade-api)",
+        "Screaming Essence of Fear: vendor recipe, 0.3 Chaos, one third of Shrieking Essence of Fear; before: no row",
+    ]
+
+
+def test_a_templates_recipe_row_is_read_from_the_rows_again():
+    recipe_row = PriceEntry(0.9, "upgrade-recipe", None, {"of": "Deafening Essence of Fear"}, Provenance("upgrade-recipe", "Allflame", "2026-11-10"))
+
+    assert wants_history(recipe_row)

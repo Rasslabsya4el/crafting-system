@@ -11,6 +11,8 @@ its depth in units is at least the units the plan expects to use. Every other pr
   day that keeps a later reading as its stand-in, #838);
 * "few offers: the mean of the cheapest units of the N offers there are" and "old price, read on <date>, the market has few
   offers now" (a thin trade book, OR-8 as amended by #718: its own mean, or the league's last deep price in its place);
+* "priced from the vendor recipe: one third of <the next tier up>" (a lower essence tier, `essence_recipe.py`, #885; beside it the
+  league or the day of the price it rests on, when that is not the file's own);
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
 
 There is no fixed cut that drops a route (OR-12): a price on few units is kept, marked, and the plan is solved with it.
@@ -33,6 +35,7 @@ from .provenance import (
     OLD_PRICE,
     OVERRIDE,
     PREVIOUS_LEAGUE,
+    RECIPE,
     STANDARD,
     STASH,
     THIN_MARKET,
@@ -58,6 +61,7 @@ NOT_RECORDED_WORDS = "where this price comes from is not recorded"
 TRADE_UNREAD = "trade-unread"
 THIN = "thin-market"
 OLD_THIN = "old-price"
+FROM_RECIPE = "upgrade-recipe"
 
 
 @dataclass(frozen=True)
@@ -113,6 +117,9 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(THIN, f"few offers: the mean of the cheapest units of the {p.book} {'offer' if p.book == 1 else 'offers'} there are"))
     elif p.recorded and p.market == OLD_PRICE:
         found.append(PriceMark(OLD_THIN, f"old price, read on {p.date}, the market has few offers now"))
+    if p.kind == RECIPE:
+        upper = (entry.detail or {}).get("of")
+        found.append(PriceMark(FROM_RECIPE, f"priced from the vendor recipe: one third of {upper if isinstance(upper, str) else 'the next tier up'}"))
     if p.recorded and p.item == WIDER:
         found.append(PriceMark(STAND_IN, _stand_in_words(p)))
     if p.recorded and p.kind in MARKET_KINDS and p.kind not in EARLIER_LEAGUE and p.market != OLD_PRICE:  # an old price's depth was not kept; its mark says what it is

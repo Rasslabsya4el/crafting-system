@@ -154,3 +154,22 @@ def test_a_missing_wanted_file_is_an_error_not_a_crash(ninja, tmp_path, capsys):
 
     assert code == 1
     assert "nope.txt" in capsys.readouterr().err
+
+
+def test_fetch_prices_the_lower_essence_tiers_from_the_upgrade_recipe_last(ninja, tmp_path, capsys):
+    """#885: the overview's own rows of the lower tiers are replaced unless they are cheaper than a third of the next tier up."""
+    from crafting_system.prices.essence_recipe import TIERS, tier_of  # noqa: PLC0415
+
+    code = run(["fetch", "--wanted-file", write_wanted(tmp_path, "Screaming Essence of Zeal")], tmp_path, ninja)
+
+    assert code == 0
+    saved = load_price_file(tmp_path / "data" / "prices.json")
+    tiered = {name: tier_of(name) for name in saved.prices if tier_of(name) is not None}
+    lower = [name for name, (index, kind) in tiered.items() if f"{TIERS[index + 1] if index + 1 < len(TIERS) else ''} {kind}" in saved.prices]
+    assert lower  # the recorded overview holds more than one tier of a type
+    for name in lower:
+        index, kind = tiered[name]
+        assert saved.prices[name].chaos <= saved.prices[f"{TIERS[index + 1]} {kind}"].chaos / 3 + 1e-12, name
+    from_recipe = [name for name in saved.prices if saved.prices[name].source == "upgrade-recipe"]
+    assert from_recipe
+    assert f"{len(from_recipe)} lower essence tiers are priced from the vendor upgrade recipe" in capsys.readouterr().out

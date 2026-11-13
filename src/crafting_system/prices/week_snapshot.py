@@ -20,6 +20,14 @@ overview). For each name of the templates, in order:
    better. A scaled stand-in keeps its reading's day (marked as a later day's) and no depth (marked as such), and its `detail`
    holds the reading, the divisor and the sample.
 
+A **wanted** name (what a method spends, `spends.py`, #885) that no template holds is read by steps 1 and 2 only: with no template
+reading there is nothing to stand in, so a name neither league has a row for gets no price and a note that says so. A hand-made
+template is how such a name gets a marked stand-in.
+
+Last, the lower essence tiers are priced from the vendor upgrade recipe (`essence_recipe.py`, #885): a third of the next tier up,
+unless the tier's own row of the day is cheaper. It replaces the stand-ins and the previous league's rows of those tiers, and
+gives a row to every wanted tier the file lacks.
+
 The Chaos Orb is 1 and the Divine Orb's reading on the day is the file's `chaos_per_divine`. Pure: the rows come from `rows_of`.
 """
 
@@ -28,19 +36,21 @@ from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 
+from .essence_recipe import apply_upgrade_recipe
 from .fallbacks import HISTORY_DAYS
 from .ninja_history import DayRow, window_ending
 from .poe_ninja import HISTORY_SOURCE, history_slug
 from .ninja_items import STASH_TYPES
 from .previous_league import PREVIOUS_SOURCE
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
-from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, PREVIOUS_LEAGUE, STANDARD, STASH, TRADE, WATCH, Provenance
+from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
 
 __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
 
 GROUP_WORDS = (("Essence", "essence"), ("Fossil", "fossil"), ("Resonator", "resonator"), (" Oil", "oil"))
 CURRENCY_GROUP = "currency"
-BULK_KINDS = (EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE)  # a stash line (STASH) is told by its kind or its category
+# a stash line (STASH) is told by its kind or its category; a template's recipe row (RECIPE) is a bulk name too: its own rows are read again
+BULK_KINDS = (EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, RECIPE)
 
 RowsOf = Callable[[str, str], Sequence[DayRow]]  # (league, poe.ninja details id) -> that item's traded days
 Previous = tuple[str, date, date]  # the previous league, its first day, and its day of the same league age
@@ -83,11 +93,14 @@ def build_snapshot(
     start: date,
     as_of: date,
     previous: tuple[str, date] | None,
+    wanted: Sequence[str] = (),
 ) -> tuple[PriceFile, list[str]]:
-    """The snapshot of `league` on `as_of` (the module docstring) and one note per stand-in.
+    """The snapshot of `league` on `as_of` (the module docstring) and its notes: one per stand-in ("<name>: stand-in, ..."), one per
+    wanted name left without a price ("<name>: no price, ..."), one per row the upgrade recipe wrote ("<name>: vendor recipe, ...").
 
     `templates` are (label, file) pairs, the first of them first for a stand-in; `start` is the league's first day, so `as_of` is
-    league day `(as_of - start).days`; `previous` is the previous league and its first day, or None to skip that step.
+    league day `(as_of - start).days`; `previous` is the previous league and its first day, or None to skip that step; `wanted`
+    are names to price whether or not a template holds them.
     """
     names: dict[str, tuple[str, PriceEntry]] = {}
     leagues = {label: template.league for label, template in templates}  # the league each template's readings are of
@@ -103,7 +116,8 @@ def build_snapshot(
 
     back = None if previous is None else (previous[0], previous[1], previous[1] + timedelta(days=age))
     prices: dict[str, PriceEntry | None] = {CHAOS_ORB: PriceEntry(1.0, "poe.ninja")}
-    notes: list[str] = []
+    stand_ins: dict[str, str] = {}
+    unpriced: list[str] = []
     left: list[str] = []
     for name, (label, entry) in names.items():
         if name == CHAOS_ORB:
@@ -116,8 +130,20 @@ def build_snapshot(
         label, entry = names[name]
         drift = _drift(name, label, names, prices) if wants_history(entry) else None
         prices[name] = _stand_in(entry, label, league, as_of, back, name, drift, leagues[label])
-        notes.append(f"{name}: stand-in, the reading of {_day_of(entry, label)} from {label}" + ("" if drift is None or drift[1] == 0 else f", divided by {drift[0]:.4g}"))
-    return PriceFile(league, datetime(as_of.year, as_of.month, as_of.day, tzinfo=UTC), divine.chaos, prices), notes
+        stand_ins[name] = f"{name}: stand-in, the reading of {_day_of(entry, label)} from {label}" + ("" if drift is None or drift[1] == 0 else f", divided by {drift[0]:.4g}")
+    for name in dict.fromkeys(wanted):
+        if name in prices:
+            continue
+        found = _read(name, rows_of, league, start, as_of, back)
+        if found is None:
+            unpriced.append(name)
+        else:
+            prices[name] = found
+    snapshot, recipe = apply_upgrade_recipe(PriceFile(league, datetime(as_of.year, as_of.month, as_of.day, tzinfo=UTC), divine.chaos, prices), wanted)
+    notes = [note for name, note in stand_ins.items() if snapshot.prices[name] is prices[name]]  # a stand-in the recipe replaced is one no longer
+    notes += [f"{name}: no price, no poe.ninja daily row in {league} {_window(as_of)}" + ("" if back is None else f" nor in {back[0]} {_window(back[2])}") + " and no template holds it" for name in unpriced if name not in snapshot.prices]
+    notes += [note.replace(": ", ": vendor recipe, ", 1) for note in recipe]
+    return snapshot, notes
 
 
 def group_of(name: str) -> str:
