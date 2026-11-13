@@ -9,7 +9,8 @@ on the planner as it is, and some on a planner broken on purpose.
 prices scaled per currency by a seeded factor. The committed family itself (`tests/fixtures/family_bench/cases-seed824.json`) takes from under a
 second to 9 minutes a plan on a runner, and a relation needs up to ten plans of one case, so the cases here are the generator's own draw at one or
 two wanted mods (`SIZES`) over the method sets that plan in about a second or less (`METHODS`): the orbs of a Magic item, the same with
-the Regal Orb, essences, the Chaos Orb. A case is named by its method set, size and seed (`case`). Nothing here records a number of a route, and no value here is chosen for one case.
+the Regal Orb, essences, the Chaos Orb. A case is named by its method set, size and seed (`case`). Nothing here records a number of a route; the seeds the tests name are chosen
+for one thing only, a draw the planner finishes in about a second (some draws have no plan at all, some take ten times longer).
 
 **The tolerance** of every comparison of two costs is the one value `GAP`, and a plan that says it stopped at a proved gap (OR-32) is
 compared at the figure it proved (`Cost.proved`), so no comparison is loosened for the plans that are exact. The simulator's own test is
@@ -186,15 +187,23 @@ class Cost:
 
     @property
     def gap(self) -> float:
-        return 0.0 if self.stated == self.proved else self.stated / self.proved - 1.0
+        """How far the stated cost is above the proved one, as a share of it; infinite where nothing above 0 is proved."""
+        if self.stated == self.proved:
+            return 0.0
+        return self.stated / self.proved - 1.0 if self.proved > 0 else math.inf
 
 
 NONE = Cost(math.inf, math.inf)
 
 
 def cost_of(plan: Plan) -> Cost:
+    """The plan's cost and what its search proved. `lower` and `upper` are remaining costs, without the start price; a `lower` that is
+    not above 0 (or is no number) proves nothing, so only the start price is proved."""
     info = plan.packed.info.get("envelope") if plan.packed is not None else None
-    share = info.lower / info.upper if info is not None and 0 <= info.lower < info.upper else 1.0
+    if info is None or not info.upper > 0 or info.lower >= info.upper:
+        share = 1.0  # exact: no search with two sides, a start that is the target already, or two sides that met
+    else:
+        share = info.lower / info.upper if info.lower > 0 else 0.0
     return Cost(total(plan), plan.start_price.chaos + float(plan.mean_remaining) * share)
 
 
@@ -218,7 +227,10 @@ class Runs:
             settings = PlanSettings(recipe_starts=case.generated.vendor_starts, start_price=start)
             try:
                 target = parse_target(yaml.safe_dump(dict(doc), sort_keys=False, allow_unicode=True, width=1000), self.data, source=f"<{case.id}>")
-                self.made[key] = (prices, plan_target(self.data, target, prices, settings))  # the prices are held so that their `id` stays theirs
+                plan = plan_target(self.data, target, prices, settings)
+                if cost_of(plan).gap > PROVED_GAP_LIMIT:  # every run a relation reads, not only a case's own: a run that proves little would make its comparisons empty
+                    raise AssertionError(f"{case.id}: a plan states {cost_of(plan).stated!r} and proves {cost_of(plan).proved!r}, further apart than OR-32 allows")
+                self.made[key] = (prices, plan)  # the prices are held so that their `id` stays theirs
             except PlanError as error:
                 if not any(words in str(error) for words in NO_PLAN):
                     raise  # any other refusal is the planner failing, not a cost: it must not pass as "infinitely dear"

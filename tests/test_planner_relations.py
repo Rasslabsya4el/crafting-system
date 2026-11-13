@@ -24,7 +24,9 @@ from abstraction_support import real_game_data
 import planner_relations_support as R
 from crafting_system.planner import PlanError, _entry, _plan
 
-# The generated cases: (method set, size, seed). Each relation runs on every one of them.
+# The generated cases: (method set, size, seed). Each relation runs on every one of them. The seeds are the first ones whose draw has a
+# plan and is planned in about a second (`essences/one/2` has none; a weapon's draw takes several seconds a plan), not chosen by what
+# a relation gives on them.
 CASES = (
     ("magic-orbs", "one", 1),
     ("magic-orbs", "one", 2),
@@ -266,6 +268,37 @@ def test_a_plan_that_stopped_at_a_proved_gap_is_compared_at_what_it_proved():
     assert not R.not_above(R.Cost(101.0, 100.5), exact)  # proved above the other run's plan
     assert not R.not_above(R.Cost(100.001, 100.001), exact) and R.not_above(R.Cost(100.00001, 100.00001), exact)  # `GAP`
     assert R.not_above(exact, R.NONE) and not R.not_above(R.NONE, exact) and R.not_above(R.NONE, R.NONE)
+
+
+def stopped_at(plan, lower):
+    """`plan` as the envelope search returns it when it stops with `lower` proved (`EnvelopeInfo`)."""
+    info = dataclasses.replace(plan.packed.info["envelope"], exact=False, lower=lower)
+    return dataclasses.replace(plan, packed=dataclasses.replace(plan.packed, info={**plan.packed.info, "envelope": info}))
+
+
+def test_what_a_stopped_plan_proved_is_read_from_the_search(runs, broken_case):
+    """`cost_of` on a plan that stopped: the proved cost is the start price and the search's lower side, and a lower side that is no bound proves nothing."""
+    plan = runs.plan(broken_case)
+    start, mean = plan.start_price.chaos, plan.mean_remaining
+    assert plan.packed.info["envelope"].upper == pytest.approx(mean, rel=1e-9) and start > 0
+
+    stopped = R.cost_of(stopped_at(plan, 0.995 * mean))
+
+    assert stopped.stated == R.total(plan) and stopped.proved == pytest.approx(start + 0.995 * mean)
+    assert 0.004 < stopped.gap < 0.005  # 0.5% of the remaining cost, less of the total
+    for nothing in (0.0, -1.0, float("nan")):
+        assert R.cost_of(stopped_at(plan, nothing)).proved == start
+    assert R.cost_of(stopped_at(plan, 0.5 * mean)).gap > R.PROVED_GAP_LIMIT
+    assert R.Cost(5.0, 0.0).gap == float("inf") and R.Cost(0.0, 0.0).gap == 0
+
+
+def test_a_run_that_proves_too_little_is_refused(monkeypatch, data, broken_case):
+    """Every plan a relation reads is held to OR-32's 1%: a run that proved half its cost would pass any comparison."""
+    real = _entry.plan_with_starts
+    monkeypatch.setattr(_entry, "plan_with_starts", lambda *given, **settings: (lambda plan: stopped_at(plan, 0.5 * plan.mean_remaining))(real(*given, **settings)))
+
+    with pytest.raises(AssertionError, match="further apart than OR-32 allows"):
+        R.Runs(data).plan(broken_case)
 
 
 def test_a_refusal_that_is_not_no_plan_is_not_a_cost(monkeypatch, data, broken_case):
