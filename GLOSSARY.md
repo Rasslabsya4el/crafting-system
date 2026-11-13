@@ -202,7 +202,7 @@ The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods
 _Avoid_: second craft slot
 
 **Finish cost**:
-A cost added to the value of a goal state because nothing earlier changes it: the expected catalysts for a target quality (ADR-0029) and the expected cost of the target's enchantment (ADR-0050). A restart that buys a new base pays it again.
+A cost added to the value of a goal state because nothing earlier changes it: the expected catalysts for a target quality (ADR-0029), the expected cost of the target's enchantment (ADR-0050) and the **socket finish**, the cheapest expected cost of the sockets, links and colours a target asks for, solved on its own from the goal item's sockets (ADR-0045, ADR-0058). A restart that buys a new base pays it again.
 
 **Locus of Corruption**:
 The Corruption Altar of a tier 3 Incursion room: corrupts one item with one of four equal outcomes (two corrupted implicits, every white socket non-white, an influenced rare, destroyed). It has no currency price; the planner reads an owner-editable entry, default 0 Chaos. Its double-implicit share is 25% by the owner's decision, marked approximate (ADR-0038).
