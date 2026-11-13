@@ -37,7 +37,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the exact proof gives way to the stop at a proved 1% (#826)
-PROOF_GAP = 0.01  # OR-32: past the aim the search stops when its plan is proved to cost at most this share more than the cheapest; 0 keeps the exact proof (#826)
+PROOF_GAP = 0.01  # OR-32, OR-39: the search stops by itself when its plan is proved to cost at most this share more than the cheapest, whatever the time; 0 keeps the exact proof (#826)
 NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every method family has its bound (#822, ticket 4)
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
@@ -57,9 +57,10 @@ class Budget:
     `aim_seconds` is what the plan aims at (the forecast of `_decide` reads it, and #826's stop at a proved 1%); `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure.
-    `gap` is the proof the run owes once it is past its aim (OR-32): the plan proved to cost at most this share more than the cheapest; before the
-    aim, and with no aim, the proof is exact, and 0 keeps it exact whatever the time. Every figure is a setting of the machine and the user the
-    run is for, never a constant sized for one machine.
+    `gap` is the proof the run owes (OR-32 as narrowed by OR-39): the envelope search stops by itself once its plan is proved to cost at most this
+    share more than the cheapest, whatever the time; 0 keeps the proof exact. The aim does not choose between two kinds of answer (OR-39): a proof
+    that closes is the same answer with a gap of 0. Every figure is a setting of the machine and the user the run is for, never a constant sized
+    for one machine (OR-40).
     """
 
     aim_seconds: float | None = AIM_SECONDS
@@ -78,8 +79,8 @@ class Budget:
 
     @classmethod
     def unlimited(cls) -> "Budget":
-        """No aim and no net: every stage runs to its end (a library call, a measurement, a test of the exact answer)."""
-        return cls(None, None, None, None)
+        """No aim, no net and no gap: every stage runs to its end and every proof is exact (a library call, a measurement, a test of the exact answer)."""
+        return cls(None, None, None, None, 0.0)
 
     @classmethod
     def default(cls) -> "Budget":

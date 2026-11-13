@@ -16,8 +16,8 @@
 the report and the risk read) and returns the `PackedResult` that `make_plan` takes from the packed walk, with the search's numbers in `info["envelope"]`.
 `envelope_limits` is the `Limit` the report shows: which cut ran and what it guarantees (OR-13).
 
-The search ends in one of three ways, and `EnvelopeInfo` says which (ticket #826, OR-32, OR-33): *exact* (the plan is proved the cheapest); *at a
-proved gap* (`within`: past the run's aim, the plan is proved to cost at most that share more than the cheapest); *stopped by a net* (`stopped`: the
+The search ends in one of three ways, and `EnvelopeInfo` says which (ticket #826, OR-32, OR-39, OR-33): *exact* (the plan is proved the cheapest); *at a
+proved gap* (`within`: the plan is proved to cost at most that share more than the cheapest); *stopped by a net* (`stopped`: the
 best plan found, with the gap that was proved). In all three the mean is the exact mean of the plan returned: the graph the search ended with is
 solved again here, and that solve, not the search's upper figure, is the mean shown.
 """
@@ -279,8 +279,9 @@ def envelope_result(
 ) -> PackedResult:
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
 
-    `gap` and `gap_after` are the stop at a proved gap (OR-32, `_envelope`): once `gap_after` seconds of this call have passed (the bound's build
-    counts), the search ends when its plan is proved to cost at most `gap` more than the cheapest; `gap` 0 or `gap_after` None is the exact search.
+    `gap` and `gap_after` are the stop at a proved gap (OR-32, OR-39, `_envelope`): once `gap_after` seconds of this call have passed (the bound's build
+    counts; the planner passes 0, the stop applies whatever the time), the search ends when its plan is proved to cost at most `gap` more than the
+    cheapest; `gap` 0 or `gap_after` None is the exact search.
     `watch` is told where the search stands after the first plan and after each round (`_envelope.Standing`: the best plan's cost so far and the
     figure no plan can cost less than).
 
@@ -384,7 +385,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             Limit(
                 _limits.SOLVE,
                 "The search stopped once the plan was proved close to the cheapest",
-                f"the plan took longer than the time it aims at, so the search stopped, after {info.rounds:,} rounds and {info.expanded:,} states looked at, "
+                f"the search stopped by itself, after {info.rounds:,} rounds and {info.expanded:,} states looked at, "
                 f"as soon as its plan was proved to cost at most {certificate_gap_text(info.within)} more than the cheapest possible (the gap this run allows)"
                 + (", buying the start item again wherever it had not looked" if info.restarts else "")
                 + waited,

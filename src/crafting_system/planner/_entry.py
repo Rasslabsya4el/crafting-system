@@ -29,8 +29,8 @@ class PlanSettings:
     * `recipe_starts`: also compare the start items a vendor recipe can make (ADR-0059); off, the plan starts from the target's own item.
     * `start_price`: what the target's own start item costs in Chaos for this run; None reads the price file.
     * `price_source`, `price_gap_percent`, `today`: how a bought start item is priced (`ninja`, `trade` or `both`; ticket #357).
-    * `budget`: the run's aim and its net of time and memory (`crafting_system.budget`, OR-33), and the proof it owes past the aim (`Budget.gap`,
-      OR-32: the plan proved at most 1% above the cheapest); None is no aim and no net, and the proof is exact.
+    * `budget`: the run's aim and its net of time and memory (`crafting_system.budget`, OR-33), and the proof it owes (`Budget.gap`,
+      OR-32, OR-39: the search stops once its plan is proved at most 1% above the cheapest); None is no aim and no net, and the proof is exact.
     * `watch`: told where the search stands, from its first executable plan on (`Standing`: the best plan's cost so far and the figure no plan
       can cost less than, both after the start item), so a caller can show a plan while the proof goes on; with start options, once per option.
     * `strands`: consider Memory Strands.

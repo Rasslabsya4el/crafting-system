@@ -53,7 +53,7 @@ def test_the_figures_are_or33s_and_the_memory_net_is_a_share_of_the_machine(monk
     assert Budget.default() == Budget(aim_seconds=60.0, seconds=600.0, memory_mb=12_800.0)  # a runner of 16 GB stops at 12.8 GB, not killed at 16
     monkeypatch.setattr(budget, "physical_mb", lambda: None)
     assert Budget.default().memory_mb is None  # where the machine does not say, no memory net rather than a guessed one
-    assert Budget.unlimited() == Budget(None, None, None, None)
+    assert Budget.unlimited() == Budget(None, None, None, None, 0.0)  # no gap either: every proof exact (#826, OR-39)
 
 
 def test_a_budget_figure_is_a_number_zero_or_more_or_none():

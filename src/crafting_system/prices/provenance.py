@@ -6,7 +6,10 @@ a plain fact or an approximate input; this module only holds the record, writes 
 
 * `kind`: where the number is from (`KINDS`): the poe.ninja exchange overview of the league, the poe.ninja daily
   rows of the league (history), the poe.ninja rows of an earlier league (previous league, Standard), poe.watch,
-  the trade site's instant-buyout listings, a hand price, or a default.
+  the trade site's instant-buyout listings, a hand price, a default, or the vendor upgrade recipe (a lower essence tier priced as
+  one third of the next tier up, `essence_recipe.py`, #885: its `league` and `date` are those of the price it rests on), or an
+  estimate (a number set by hand for an item no market lists, such as The Black Mórrígan, which poe.ninja has no line for: OR-23's
+  best estimate, always marked; its `note` says what it rests on; `league` and `date` say for which economy and day it was set).
 * `league`, `date`: the league and the UTC day the reading is of.
 * `depth` and `depth_unit`: how much stood behind the number. For an exchange line it is the units traded on the day
   (poe.ninja's `volumePrimaryValue`, in Chaos, divided by the price), unit `units`. For a trade price it is the units
@@ -43,7 +46,9 @@ WATCH = "poe-watch"
 TRADE = "trade"
 OVERRIDE = "override"
 DEFAULT = "default"
-KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVERRIDE, DEFAULT)
+RECIPE = "upgrade-recipe"
+ESTIMATE = "estimate"
+KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVERRIDE, DEFAULT, RECIPE, ESTIMATE)
 
 UNITS = "units"
 OBSERVATIONS = "observations"
@@ -67,6 +72,8 @@ SOURCE_WORDS = {
     TRADE: "trade site, instant buyout",
     OVERRIDE: "hand price",
     DEFAULT: "default price",
+    RECIPE: "vendor upgrade recipe",
+    ESTIMATE: "estimate, no market lists it",
 }  # in a player's words, for the page and the report
 
 # the source strings of a price entry (`PriceEntry.source`) and the kind each one means
@@ -81,6 +88,8 @@ KIND_OF_SOURCE = {
     "override": OVERRIDE,
     "hand": OVERRIDE,
     "default": DEFAULT,
+    "upgrade-recipe": RECIPE,
+    "estimate": ESTIMATE,
 }
 
 

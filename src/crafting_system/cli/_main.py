@@ -10,9 +10,9 @@ is evaluated as a fixed policy at the same prices and printed next to the policy
 
 `--solver` picks the search (ticket #535): `auto` (the default) is the envelope search wherever its bound can be built and the older
 walk-and-solve path where the target is outside it (`make_plan` says which); `envelope`, `packed` and `object` name one. The envelope
-search proves its plan the cheapest while the whole plan takes at most `--budget` seconds (about a minute by default); past that it stops as
-soon as its plan is proved to cost at most `--gap` percent (1 by default) more than the cheapest, and says so beside the plan's exact mean
-(OR-32, ticket #826). `--exact`, or `--gap 0`, keeps the exact proof however long it takes.
+search stops by itself as soon as its plan is proved to cost at most `--gap` percent (1 by default) more than the cheapest, whatever the time,
+and says so beside the plan's exact mean (OR-32, OR-39, ticket #826); a proof that closes is the exact answer. `--exact`, or `--gap 0`, keeps
+the exact proof however long it takes.
 
 A query that the walk-and-solve path would run longer than `--budget` seconds is
 answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`);
@@ -105,7 +105,7 @@ def run_budget(
     config: Config, aim: float | None, time_limit: object = _FROM_SETTINGS, memory_limit: object = _FROM_SETTINGS, gap: float = PROOF_GAP
 ) -> Budget:
     """The run's budget (#825, OR-33): the aim (`--budget`, None with `--exact`), the net from the command line, else the planner settings, and
-    the proof the search owes past the aim (`--gap` as a share, OR-32)."""
+    the proof the search owes (`--gap` as a share, 0 with `--exact`; OR-32, OR-39)."""
     seconds = config.time_limit_seconds if time_limit is _FROM_SETTINGS else time_limit
     memory = config.memory_limit_mb if memory_limit is _FROM_SETTINGS else memory_limit
     if memory == MEMORY_SHARE_SETTING:
@@ -154,8 +154,8 @@ def main(
         "With --exact the answer is the same exact mean whichever is chosen",
     )  # fmt: skip
     parser.add_argument("--exact", action="store_true", help="prove the plan the cheapest however long it takes: no approximate answer and no stop at --gap; the time and memory limits still stop it and say so, unless --time-limit none and --memory-limit none")
-    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the plan aims at (default {BUDGET_SECONDS:g}): a plan that takes longer stops once it is proved within --gap of the cheapest (the search that auto and envelope use), or is answered approximately (a walk of the whole graph: packed, object, or auto where that search cannot be built)")
-    parser.add_argument("--gap", type=_percent, default=PROOF_GAP * 100.0, metavar="PERCENT", help=f"past --budget, stop once the plan is proved to cost at most this many percent more than the cheapest, and say so beside its exact mean (default {PROOF_GAP * 100.0:g}); 0 keeps the exact proof")
+    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the plan aims at (default {BUDGET_SECONDS:g}): a walk of the whole graph (packed, object, or auto where the search of auto and envelope cannot be built) that would take longer is answered approximately; that search does not read it (it stops at --gap)")
+    parser.add_argument("--gap", type=_percent, default=PROOF_GAP * 100.0, metavar="PERCENT", help=f"stop the search once the plan is proved to cost at most this many percent more than the cheapest, and say so beside its exact mean (default {PROOF_GAP * 100.0:g}); 0 keeps the exact proof")
     parser.add_argument(
         "--time-limit", type=_limit, default=_FROM_SETTINGS, metavar="SECONDS",
         help="stop the plan after this many seconds and say what it found and where it stopped, or none for no limit (default: the planner settings, 600)",
@@ -197,7 +197,7 @@ def main(
         settings = PlanSettings(
             recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, price_source=args.price_source or config.price_source,
-            price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit, args.gap / 100.0),
+            price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit, 0.0 if args.exact else args.gap / 100.0),
             strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
         )  # fmt: skip
         plan = plan_target(game, target, price_file, settings)

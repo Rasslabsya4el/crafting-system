@@ -1,0 +1,4 @@
+--route r04 --mode plain
+--route r04 --mode timers
+--case essences/medium --mode plain
+--case essences/medium --mode timers

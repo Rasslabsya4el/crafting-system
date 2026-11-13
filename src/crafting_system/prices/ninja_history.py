@@ -72,8 +72,23 @@ def exchange_rows(data: Any, first: date, last: date) -> list[tuple[date, float]
     return [(row.day, row.chaos) for row in exchange_readings(data, first, last)]
 
 
+@dataclass(frozen=True)
+class StashDay:
+    """One day of a stash line (a beast, a base): its Chaos value and how many listings poe.ninja saw that day (`count`)."""
+
+    day: date
+    chaos: float
+    count: int
+
+
 def stash_rows(data: Any, anchor: date, first: date, last: date) -> list[tuple[date, float]]:
     """Chaos values of the days with `count >= MIN_COUNT` of a stash `history` answer inside the window."""
+    return [(row.day, row.chaos) for row in stash_readings(data, anchor, first, last)]
+
+
+def stash_readings(data: Any, anchor: date, first: date, last: date) -> list[StashDay]:
+    """`stash_rows` with each day's count (#885). `anchor` is the day `daysAgo` 0 stands for: today for a running league, the last day
+    poe.ninja has data for (`maxDate` of its league dump) for a finished one."""
     if not isinstance(data, list):
         return []
     rows = []
@@ -87,7 +102,7 @@ def stash_rows(data: Any, anchor: date, first: date, last: date) -> list[tuple[d
             continue
         day = anchor - timedelta(days=ago)
         if first <= day <= last:
-            rows.append((day, float(value)))
+            rows.append(StashDay(day, float(value), count))
     return rows
 
 
@@ -120,9 +135,14 @@ def stash_history(
     get_json: GetJson, league: str, kind: str, line_id: int, anchor: date, first: date, last: date
 ) -> list[tuple[date, float]]:
     """Rows of the stash line `line_id` (`kind` is "BaseType" or "Beast") in `league`."""
+    return [(row.day, row.chaos) for row in stash_history_readings(get_json, league, kind, line_id, anchor, first, last)]
+
+
+def stash_history_readings(get_json: GetJson, league: str, kind: str, line_id: int, anchor: date, first: date, last: date) -> list[StashDay]:
+    """`stash_history` with each day's count of listings."""
     url = _url("stash/current/item/history", league=league, type=kind, id=line_id)
     try:
-        return stash_rows(get_json(url), anchor, first, last)
+        return stash_readings(get_json(url), anchor, first, last)
     except SourceError:
         return []
 

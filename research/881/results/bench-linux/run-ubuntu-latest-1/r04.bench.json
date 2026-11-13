@@ -1,0 +1,288 @@
+{
+ "name": "r04",
+ "platform": "linux",
+ "machine": "x86_64",
+ "cpus": 4,
+ "python": "3.14.4",
+ "numpy": "2.5.4",
+ "plan_seconds_with_hooks": 430.6,
+ "mean_remaining": 31900.076587073483,
+ "search": {
+  "stats": {
+   "rounds": 51,
+   "touched": 138797,
+   "expanded": 138782,
+   "realized": 618816,
+   "candidates": 671002,
+   "kernels": 220617,
+   "largest_fall": 0.0,
+   "first_upper": null,
+   "solve_seconds": 24.96445465800025,
+   "build_seconds": 9.095026256999944,
+   "expand_seconds": 275.8106398949997,
+   "verified": 117,
+   "peak_mb": 1242.3037109375
+  }
+ },
+ "stages_by_kind": {
+  "ApplyEssence": {
+   "_item_of": {
+    "calls": 306479,
+    "seconds": 20.22
+   },
+   "_outcomes": {
+    "calls": 304541,
+    "seconds": 55.62
+   },
+   "_prepare": {
+    "calls": 301920,
+    "seconds": 90.97
+   },
+   "_signatures_of": {
+    "calls": 291938,
+    "seconds": 50.16
+   },
+   "_splits_of": {
+    "calls": 291938,
+    "seconds": 6.62
+   },
+   "kernel_key": {
+    "calls": 301746,
+    "seconds": 152.58
+   },
+   "kernel": {
+    "calls": 174,
+    "seconds": 6.1
+   }
+  },
+  "ExaltedOrb": {
+   "_item_of": {
+    "calls": 131291,
+    "seconds": 8.14
+   },
+   "_outcomes": {
+    "calls": 127133,
+    "seconds": 29.88
+   },
+   "_prepare": {
+    "calls": 223137,
+    "seconds": 42.68
+   },
+   "kernel_key": {
+    "calls": 121421,
+    "seconds": 61.75
+   },
+   "_signatures_of": {
+    "calls": 203432,
+    "seconds": 16.21
+   },
+   "_splits_of": {
+    "calls": 203432,
+    "seconds": 1.57
+   },
+   "kernel": {
+    "calls": 101716,
+    "seconds": 10.24
+   }
+  },
+  "AnnulmentOrb": {
+   "_item_of": {
+    "calls": 155508,
+    "seconds": 10.09
+   },
+   "_outcomes": {
+    "calls": 155503,
+    "seconds": 25.97
+   },
+   "_prepare": {
+    "calls": 310049,
+    "seconds": 38.99
+   },
+   "kernel_key": {
+    "calls": 155496,
+    "seconds": 47.46
+   },
+   "_signatures_of": {
+    "calls": 310007,
+    "seconds": 0.3
+   },
+   "_splits_of": {
+    "calls": 310007,
+    "seconds": 5.45
+   },
+   "kernel": {
+    "calls": 154553,
+    "seconds": 7.94
+   }
+  },
+  "FracturingOrb": {
+   "_item_of": {
+    "calls": 282995,
+    "seconds": 11.29
+   },
+   "_outcomes": {
+    "calls": 243867,
+    "seconds": 10.87
+   },
+   "_prepare": {
+    "calls": 219477,
+    "seconds": 23.95
+   },
+   "kernel_key": {
+    "calls": 184349,
+    "seconds": 27.48
+   },
+   "_signatures_of": {
+    "calls": 70256,
+    "seconds": 0.07
+   },
+   "_splits_of": {
+    "calls": 70256,
+    "seconds": 2.04
+   },
+   "kernel": {
+    "calls": 35128,
+    "seconds": 2.21
+   }
+  },
+  "BenchCraft": {
+   "_item_of": {
+    "calls": 23457,
+    "seconds": 1.11
+   },
+   "_outcomes": {
+    "calls": 20577,
+    "seconds": 1.22
+   },
+   "_prepare": {
+    "calls": 20970,
+    "seconds": 2.75
+   },
+   "kernel_key": {
+    "calls": 16779,
+    "seconds": 3.03
+   },
+   "_signatures_of": {
+    "calls": 8382,
+    "seconds": 0.01
+   },
+   "_splits_of": {
+    "calls": 8382,
+    "seconds": 0.13
+   },
+   "kernel": {
+    "calls": 4191,
+    "seconds": 0.1
+   }
+  },
+  "RemoveCraftedMods": {
+   "_item_of": {
+    "calls": 23511,
+    "seconds": 1.04
+   },
+   "_outcomes": {
+    "calls": 20631,
+    "seconds": 0.6
+   },
+   "_prepare": {
+    "calls": 21059,
+    "seconds": 1.84
+   },
+   "kernel_key": {
+    "calls": 16833,
+    "seconds": 2.03
+   },
+   "_signatures_of": {
+    "calls": 8472,
+    "seconds": 0.01
+   },
+   "_splits_of": {
+    "calls": 8472,
+    "seconds": 0.06
+   },
+   "kernel": {
+    "calls": 4226,
+    "seconds": 0.1
+   }
+  },
+  "(outside a kernel)": {
+   "_item_of": {
+    "calls": 194934,
+    "seconds": 8.51
+   }
+  }
+ },
+ "pools": {
+  "group_pool_calls": 514260,
+  "group_pool_seconds": 48.15,
+  "pool_signature_calls": 393479,
+  "pool_signature_seconds": 55.99,
+  "kept_every": 8,
+  "two_sided_not_kept": 0,
+  "kept_without_their_group_pool": 0
+ },
+ "exact_draws": {
+  "exact_calls": 9018,
+  "exact_seconds": 6.368,
+  "float_seconds_same_calls": 2.322,
+  "float_calls_by_planner": 0,
+  "outcomes": 116431,
+  "worst_relative_error": 4.535465193475722e-16,
+  "worst_total_error": 1.1102230246251565e-16,
+  "keys_differ": 0,
+  "denominator_bits": {
+   "<=255": 2,
+   "<=53": 8983,
+   "<=127": 33
+  },
+  "numerator_bits": {
+   "<=127": 5448,
+   "<=63": 11011,
+   "<=53": 98474,
+   "<=255": 1498
+  },
+  "max_denominator_bits": 169
+ },
+ "hot_loop": {
+  "pools": 49184,
+  "candidates_in_them": 6065302,
+  "mean_candidates": 123.3,
+  "distinct_signatures_today": 6508,
+  "flat_tables": {
+   "entries": 29,
+   "families": 23,
+   "labels": 18,
+   "weights": 6,
+   "heads": 19
+  },
+  "rows": {
+   "python_today": {
+    "seconds": 12.3163,
+    "pools_per_second": 3993.4,
+    "of_which_signature_seconds": 7.6407
+   },
+   "flat_python": {
+    "seconds": 0.71839,
+    "pools_per_second": 68464.2,
+    "speed_up": 17.1,
+    "same_split_as_today": true,
+    "distinct_signatures": 6508
+   },
+   "numba": {
+    "seconds": 0.11809,
+    "pools_per_second": 416500.9,
+    "speed_up": 104.3,
+    "same_split_as_today": true,
+    "distinct_signatures": 6508,
+    "first_call_seconds": 2.65
+   },
+   "cython": {
+    "seconds": 0.10044,
+    "pools_per_second": 489693.0,
+    "speed_up": 122.6,
+    "same_split_as_today": true,
+    "distinct_signatures": 6508
+   }
+  }
+ }
+}

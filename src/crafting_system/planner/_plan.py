@@ -8,9 +8,9 @@ are reported (the budget DP of `risk.evaluate` is pure Python and can be slow on
 With a `budget` the plan first forecasts its size (`_decide.decide`): a query that fits runs exactly, a
 larger one is answered by the ladder of coarse levels (`_approx`) and the `Plan` then has an `approximation`,
 its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023). Without a `budget` the plan
-is always exact, as before. Where the envelope search makes the plan there is no forecast: the search proves its plan the cheapest until the
-budget's aim has passed, and from then on stops once the plan is proved within the budget's gap of the cheapest (OR-32, #826); the `Plan` then
-has no `approximation` (its mean is the exact mean of the plan shown) and `Plan.search` says how the search ended.
+is always exact, as before. Where the envelope search makes the plan there is no forecast: under a budget the search stops by itself once its
+plan is proved within the budget's gap of the cheapest, whatever the time (OR-32, OR-39, #826); the `Plan` then has no `approximation` (its mean
+is the exact mean of the plan shown) and `Plan.search` says how the search ended.
 """
 
 import itertools
@@ -420,8 +420,9 @@ def make_plan(
 ) -> Plan:
     """Solve the target and measure the risk of the policy, under one budget of time and memory (`crafting_system.budget`, #825).
 
-    Past the budget's aim the envelope search stops once its plan is proved to cost at most the budget's `gap` more than the cheapest (OR-32,
-    #826); with no aim (a number of seconds is an aim; None and `Budget.unlimited()` have none) or a gap of 0 the proof is exact. `watch` is told
+    Under a budget the envelope search stops by itself once its plan is proved to cost at most the budget's `gap` more than the cheapest, whatever
+    the time (OR-32, OR-39, #826; a number of seconds is a budget with the default gap); with no budget, `Budget.unlimited()` or a gap of 0 the
+    proof is exact. `watch` is told
     where that search stands, from its first executable plan on and after each round (`_envelope.Standing`: the best plan's cost so far and the
     figure no plan can cost less than), so a caller can show a plan while the proof goes on.
 
@@ -496,11 +497,12 @@ def search_net(clock: Clock | None) -> Net | None:
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
-    """The envelope search's stop at a proved gap from the run's clock (OR-32): the budget's gap, and the seconds until the run's aim has passed (0 once
-    it has: a later start option, or a search after a long build). `(0, None)`, the exact search, for a run with no clock or no aim."""
-    if clock is None or clock.budget.aim_seconds is None:
+    """The envelope search's stop at a proved gap from the run's budget (OR-32 as narrowed by OR-39): the budget's gap, applying from the first
+    round, whatever the time (the aim is what a plan aims at, not the switch between two kinds of answer). `(0, None)`, the exact search, for a
+    run with no budget or a gap of 0 (`Budget.unlimited()`)."""
+    if clock is None or not clock.budget.gap > 0.0:
         return 0.0, None
-    return clock.budget.gap, max(clock.budget.aim_seconds - clock.elapsed(), 0.0)
+    return clock.budget.gap, 0.0
 
 
 def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
@@ -596,8 +598,8 @@ def _make_plan(
     "envelope" is the same search asked for by name: it refuses with `PlanError` an abstraction the bound cannot be built for (#507). It is the
     exact branch-and-bound of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds
     only the actions, the bound cannot rule out (`_envelope`); it gives the same plan and mean as "packed" and says so in `Plan.limits` (which
-    cut ran, what it guarantees). It takes the offers after the twins are merged, as "packed" does, and makes no forecast: with no aim it is exact
-    whatever the size, and past the run's aim it stops once its plan is proved within the budget's gap of the cheapest (`search_gap`, OR-32,
+    cut ran, what it guarantees). It takes the offers after the twins are merged, as "packed" does, and makes no forecast: with no budget it is exact
+    whatever the size, and under one it stops once its plan is proved within the budget's gap of the cheapest (`search_gap`, OR-32, OR-39,
     #826), so a test or a measurement that needs the ladder's approximate answer or the budget refusal names `solver="packed"` or `"object"`. `incumbent` (a state to
     the labels of the offers it takes) is the policy the search completes with a restart for its
     first upper bound (`_envelope_plan.route_incumbent` reads a given route as one); `clock` is the run's clock (`make_plan`), whose net the search

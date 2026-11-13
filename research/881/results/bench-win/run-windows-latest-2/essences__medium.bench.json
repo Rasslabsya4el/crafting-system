@@ -1,0 +1,198 @@
+{
+ "name": "essences__medium",
+ "platform": "win32",
+ "machine": "AMD64 Family 25 Model 17 Stepping 1, AuthenticAMD",
+ "cpus": 4,
+ "python": "3.14.10",
+ "numpy": "2.5.4",
+ "plan_seconds_with_hooks": 118.1,
+ "mean_remaining": 20105.412833731243,
+ "search": {
+  "stats": {
+   "rounds": 48,
+   "touched": 20117,
+   "expanded": 20092,
+   "realized": 151487,
+   "candidates": 152258,
+   "kernels": 31633,
+   "largest_fall": 0.0,
+   "first_upper": null,
+   "solve_seconds": 5.735144700000092,
+   "build_seconds": 2.617984499999693,
+   "expand_seconds": 88.42519990000011,
+   "verified": 49,
+   "peak_mb": 388.73046875
+  }
+ },
+ "stages_by_kind": {
+  "ApplyEssence": {
+   "_item_of": {
+    "calls": 100418,
+    "seconds": 2.43
+   },
+   "_outcomes": {
+    "calls": 100418,
+    "seconds": 20.29
+   },
+   "_prepare": {
+    "calls": 103157,
+    "seconds": 23.86
+   },
+   "_signatures_of": {
+    "calls": 102620,
+    "seconds": 16.16
+   },
+   "_splits_of": {
+    "calls": 102620,
+    "seconds": 2.31
+   },
+   "kernel_key": {
+    "calls": 103099,
+    "seconds": 44.2
+   },
+   "kernel": {
+    "calls": 58,
+    "seconds": 7.45
+   }
+  },
+  "ExaltedOrb": {
+   "_item_of": {
+    "calls": 12989,
+    "seconds": 0.84
+   },
+   "_outcomes": {
+    "calls": 12989,
+    "seconds": 5.09
+   },
+   "_prepare": {
+    "calls": 25703,
+    "seconds": 6.13
+   },
+   "kernel_key": {
+    "calls": 12989,
+    "seconds": 8.34
+   },
+   "_signatures_of": {
+    "calls": 25428,
+    "seconds": 1.81
+   },
+   "_splits_of": {
+    "calls": 25428,
+    "seconds": 0.23
+   },
+   "kernel": {
+    "calls": 12714,
+    "seconds": 4.22
+   }
+  },
+  "AnnulmentOrb": {
+   "_item_of": {
+    "calls": 20565,
+    "seconds": 1.36
+   },
+   "_outcomes": {
+    "calls": 20565,
+    "seconds": 4.9
+   },
+   "_prepare": {
+    "calls": 41101,
+    "seconds": 6.69
+   },
+   "kernel_key": {
+    "calls": 20565,
+    "seconds": 8.21
+   },
+   "_signatures_of": {
+    "calls": 41099,
+    "seconds": 0.05
+   },
+   "_splits_of": {
+    "calls": 41099,
+    "seconds": 1.41
+   },
+   "kernel": {
+    "calls": 20536,
+    "seconds": 1.44
+   }
+  },
+  "(outside a kernel)": {
+   "_item_of": {
+    "calls": 18844,
+    "seconds": 0.23
+   }
+  }
+ },
+ "pools": {
+  "group_pool_calls": 112870,
+  "group_pool_seconds": 12.92,
+  "pool_signature_calls": 112595,
+  "pool_signature_seconds": 15.03,
+  "kept_every": 8,
+  "two_sided_not_kept": 0,
+  "kept_without_their_group_pool": 0
+ },
+ "exact_draws": {
+  "exact_calls": 4624,
+  "exact_seconds": 5.627,
+  "float_seconds_same_calls": 2.053,
+  "float_calls_by_planner": 0,
+  "outcomes": 74945,
+  "worst_relative_error": 4.568278549263805e-16,
+  "worst_total_error": 1.1102230246251565e-16,
+  "keys_differ": 0,
+  "denominator_bits": {
+   "<=255": 5,
+   "<=127": 1,
+   "<=53": 4618
+  },
+  "numerator_bits": {
+   "<=53": 63961,
+   "<=63": 1752,
+   "<=127": 9192,
+   "<=255": 40
+  },
+  "max_denominator_bits": 186
+ },
+ "hot_loop": {
+  "pools": 14074,
+  "candidates_in_them": 1451745,
+  "mean_candidates": 103.2,
+  "distinct_signatures_today": 1307,
+  "flat_tables": {
+   "entries": 22,
+   "families": 18,
+   "labels": 19,
+   "weights": 3,
+   "heads": 16
+  },
+  "rows": {
+   "python_today": {
+    "seconds": 3.7433,
+    "pools_per_second": 3759.8,
+    "of_which_signature_seconds": 1.8747
+   },
+   "flat_python": {
+    "seconds": 0.25999,
+    "pools_per_second": 54132.0,
+    "speed_up": 14.4,
+    "same_split_as_today": true,
+    "distinct_signatures": 1307
+   },
+   "numba": {
+    "seconds": 0.03228,
+    "pools_per_second": 435955.7,
+    "speed_up": 116.0,
+    "same_split_as_today": true,
+    "distinct_signatures": 1307,
+    "first_call_seconds": 2.77
+   },
+   "cython": {
+    "seconds": 0.03226,
+    "pools_per_second": 436280.0,
+    "speed_up": 116.0,
+    "same_split_as_today": true,
+    "distinct_signatures": 1307
+   }
+  }
+ }
+}

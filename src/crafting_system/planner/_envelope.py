@@ -88,8 +88,8 @@ facts and nothing else. (1) *The lower side is admissible*: `L(root) <= V*(root)
 is an estimate, a heuristic's value or the value of a policy that reaches a state with no executable action would break (2); a bound that is not
 a lower bound would break (1), and the guard above refuses the ones it can see. A round whose upper solve cannot be certified (`ConvergenceError`:
 the free-action and stiff cases of #769) does not stop: the stop waits for a certified `U` (`SearchStats.upper_refused` counts the rounds it
-waited). Before `gap_after` only the exact stop ends the search ("exact when the whole plan fits in about a minute"); `gap = 0`, or `gap_after`
-None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
+waited). Before `gap_after` only the exact stop ends the search (the planner passes 0: by OR-39 the stop applies whatever the time); `gap = 0`, or
+`gap_after` None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
 
 **The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
 round and inside the first plan's chain (the state net waits for the first round, so the first plan's reach can pass it); the answer is then the
@@ -753,6 +753,8 @@ class Search[S]:
                 raise
             self.stats.solve_seconds += time.perf_counter() - mark
             for name, amount in info.items():
+                if amount is None:  # a figure the solver did not measure in this solve (a graph solved whole in its first evaluation)
+                    continue
                 if isinstance(amount, str):
                     name, amount = f"{name}_{amount}", 1
                 self.stats.solve_info[name] = self.stats.solve_info.get(name, 0) + amount
