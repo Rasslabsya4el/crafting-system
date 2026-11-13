@@ -383,6 +383,7 @@ _TIER_NOTE = re.compile(r"T\d+")
 # of an implicit; a tier too low for the target), then how the target holds it ("at least 1 of 4", "in some" of the states the card shows).
 _ESSENCE_TIERS = "Whispering|Muttering|Weeping|Wailing|Screaming|Shrieking|Deafening"  # the game's seven essence tiers, lowest first
 _ESSENCE_NOTE = rf"(?:(?:{_ESSENCE_TIERS}) essence|Essence of [A-Z][a-z]+)"
+_ESSENCE_SAID = re.compile(rf"^{_ESSENCE_NOTE}(?: or {_ESSENCE_NOTE})*$")
 _NOTE_OK = re.compile(
     rf"^(?:T\d+ or better|T\d+ to T\d+|T\d+|crafted|{_ESSENCE_NOTE}(?: or {_ESSENCE_NOTE})*|essence only|any tier|grade \d[^,]*|tier too low)?"
     r"(?:,? ?(?:at least \d+ of \d+|in some))?$"
@@ -827,9 +828,10 @@ def _target_families(route: Route) -> dict[str, tuple[int, int]] | None:
 
 
 def _target_family_names(route: Route) -> set[str] | None:
-    """Every mod the target wants, tiered or not, as family keys (the wanted lines of the target card); None when the card has a group, as
-    `_target_families`. A line whose note says an essence's tier is a family the target wants although it asks no tier: a step of the route
-    that draws that family by chance (not the essence that forces it) may show its tier line (#895)."""
+    """The mods of the target that a draw can give, as family keys: the wanted lines of the target card whose note asks a tier or says an
+    essence's tier; None when the card has a group, as `_target_families`. A line said by its essence is a family the target wants
+    although it asks no tier number: a step of the route that draws that family by chance (not the essence that forces it) may show its
+    tier line (#895). A crafted line is no such family: the bench adds it, no draw does."""
     if route.target is None:
         return None
     names: set[str] = set()
@@ -838,7 +840,8 @@ def _target_family_names(route: Route) -> set[str] | None:
             continue
         if "at least" in slot.note:
             return None
-        names.add(family_key(slot.text))
+        if asked_tiers(slot.note) is not None or _ESSENCE_SAID.match(slot.note):
+            names.add(family_key(slot.text))
     return names
 
 

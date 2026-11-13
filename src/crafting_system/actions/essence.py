@@ -152,6 +152,14 @@ def _forced_mod_id(essence: Essence, item_class: str) -> str | None:
     return mod_id
 
 
+def forced_mod_id(data: GameData, essence: Essence, base_id: str) -> str | None:
+    """The id of the mod `essence` forces on an item of the base `base_id`, by the rule the action itself applies (`_forced_mod_id`: a Rune
+    Dagger and a Warstaff take the mods of the Dagger and the Staff); None when the base is unknown or its class takes no essence. For a
+    reader of the data that names an essence's mod without using the essence (the route page, #895)."""
+    base = data.base_items.get(base_id)
+    return None if base is None else _forced_mod_id(essence, base.item_class)
+
+
 @kind("corrupted-essence", order=31, opt_in=True)
 def _corrupted_essences(data: GameData, item: Item):
     """The four corrupted essences (Hysteria, Insanity, Horror, Delirium) the item class takes, for a target that names them.

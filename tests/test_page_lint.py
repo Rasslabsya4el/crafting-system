@@ -410,6 +410,12 @@ fixtures(
         "R10, R11: Life asked at any tier and only T1 to T4 marked as the target": page(route(goal(target=R10_TARGET), step(1, "Shrieking Essence of Spite", ("Goal", "+# to maximum Life · any tier"), ("Tier chances", "+# to maximum Life: T1 to T4 ≈10% each (target) · T5 to T9 ≈10% each · none ≈10%")))),
         "a line marks another tier than the target card when its step has no Goal line for the family": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% · T2 ≈10% (target) · T3 to T4 ≈10% each · none ≈60%")))),
         "a tier line of a family the target does not want": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
+        "a tier line of a mod the target wants crafted: the bench adds it, no draw does": page(
+            route(
+                goal(target=item("Sorcerer Boots", suffixes=(slot("(16-20)% chance to Avoid Elemental Ailments", "w", "crafted"), ANY, ANY), target=True)),
+                step(1, "Chaos Orb", ("Tier chances", "#% chance to Avoid Elemental Ailments: T1 ≈1% (target) · T2 to T4 ≈1% each · none ≈96%")),
+            )
+        ),
     },
     example={
         "V01: the target's tier apart, the rest joined": page(route(goal(), *TWO_ACTIONS)),

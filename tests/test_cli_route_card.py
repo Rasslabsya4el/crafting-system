@@ -641,6 +641,11 @@ def test_where_a_mod_comes_from_is_read_from_the_route_not_from_the_target_line(
     base = target.base_id
     assert essence_notes(data, base, (SPITE, "Chaos Orb", "no such essence")) == {"Intelligence8": "Shrieking essence"}
     assert essence_notes(data, base, (ZEAL,)) == {"MovementVelocity5": "Shrieking essence"}  # an essence does force the 30% Movement Speed on boots
+    # the mod is the one the action itself forces: a Rune Dagger takes the Dagger's mod, though the essence's record has no line for its class
+    rune_dagger = next(base_id for base_id, entry in data.base_items.items() if entry.item_class == "Rune Dagger")
+    (essence,) = [each for each in data.essences.values() if each.name == "Whispering Essence of Hatred"]
+    assert essence.mod_for("Rune Dagger") is None and essence.mod_for("Dagger") is not None
+    assert essence_notes(data, rune_dagger, (essence.name,)) == {essence.mod_for("Dagger"): "Whispering essence"}
 
     # no route, or a route with no essence: the Intelligence is the natural mod it also is
     assert card_of_target(data, target).suffixes[0] == Slot("+(43-50) to Intelligence", "wanted", note="T2")

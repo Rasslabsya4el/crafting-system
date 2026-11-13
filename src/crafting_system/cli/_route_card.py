@@ -70,6 +70,7 @@ from typing import Literal
 
 from crafting_system.abstraction import CompressedState, Status, Wanted, status_of
 from crafting_system.abstraction import Slot as StateSlot
+from crafting_system.actions.essence import forced_mod_id
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -266,23 +267,22 @@ def essence_tier(data: GameData, base_id: str, mod_id: str) -> str:
 
     Essences of different tiers that force one mod are joined by " or ", the lowest first.
     """
-    item_class = data.base_items[base_id].item_class
-    found = sorted((essence.level, essence_note(essence.name)) for essence in data.essences.values() if essence.mod_for(item_class) == mod_id)
+    found = sorted((essence.level, essence_note(essence.name)) for essence in data.essences.values() if forced_mod_id(data, essence, base_id) == mod_id)
     return " or ".join(dict.fromkeys(name for _, name in found))
 
 
 def essence_notes(data: GameData, base_id: str, names: Iterable[str]) -> dict[str, str]:
-    """The mods the essences `names` (as the game data names them) force on the base's item class, each with the note of its essence.
+    """The mods the essences `names` (as the game data names them) force on the base, each with the note of its essence.
 
     These are the essences a route uses: a mod line of that route's page that stands for one of these mods says where it comes from
-    (`_leaf_slot`). An essence that forces nothing on the class, and a name that is no essence, give nothing.
+    (`_leaf_slot`). The mod is the one the action itself forces (`actions.essence.forced_mod_id`). An essence that forces nothing on
+    the base, and a name that is no essence, give nothing.
     """
-    item_class = data.base_items[base_id].item_class
     by_name = {essence.name: essence for essence in data.essences.values()}
     found: dict[str, str] = {}
     for name in dict.fromkeys(names):
         essence = by_name.get(name)
-        mod_id = None if essence is None else essence.mod_for(item_class)
+        mod_id = None if essence is None else forced_mod_id(data, essence, base_id)
         if mod_id is not None:
             found[mod_id] = essence_note(name) if mod_id not in found else f"{found[mod_id]} or {essence_note(name)}"
     return found
