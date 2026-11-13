@@ -140,19 +140,33 @@ def test_an_improper_policy_of_a_sound_bound_stays_a_convergence_error(monkeypat
     assert not isinstance(caught.value, BoundError) and len(calls) == 3
 
 
-def test_a_free_action_is_a_convergence_error_not_a_bound_error():
-    """The certificate divides by the cheapest cost of a state: a perfect bound over a graph with a free action cannot be certified (a limit of the solver, not of the bound)."""
-    failed = 0
+def free_cycle(graph) -> bool:
+    """Whether offer 3 alone can keep a run away from the goals forever: a set of states that all have it and that its outcomes never leave."""
+    closed = {s for s in range(graph.n) if s not in graph.goal and 3 in graph.actions[s]}
+    while True:
+        kept = {s for s in closed if all(t in closed for t in graph.actions[s][3])}
+        if kept == closed:
+            return bool(closed)
+        closed = kept
+
+
+def test_a_free_action_is_certified_and_only_a_free_cycle_is_a_convergence_error_not_a_bound_error():
+    """An action of cost exactly 0. The certificate measures a state's error against the cost ahead as well as its own (#769), so a free action certifies
+    when a paid step lies ahead of it. Where the free action can keep a run from the goals forever (here a free self-loop), that run costs 0 and no
+    residual can bound the values from below: a `ConvergenceError` (a limit of the solver, not of the bound), never a `BoundError`."""
+    certified = failed = 0
     for seed in SEEDS:
         graph = random_graph(seed, SIZE)
         graph.costs[3] = 0.0
         value, _ = dense_optimum(graph)
         try:
             Search(ExplicitProblem(graph, value, 1.0)).run()
+            certified += 1
         except ConvergenceError as error:
             assert not isinstance(error, BoundError) and "certifies only" in str(error)
+            assert free_cycle(graph), seed
             failed += 1
-    assert failed >= 6, failed
+    assert certified >= 6 and failed >= 1, (certified, failed)  # before #769 none certified: the free state's own cost was 0
 
 
 def test_a_cost_ratio_of_1e14_between_the_cheapest_action_and_the_values_is_a_convergence_error_not_a_bound_error():
