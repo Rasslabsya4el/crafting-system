@@ -173,6 +173,7 @@ def test_a_stage_past_its_limit_is_stopped_and_says_so(tmp_path):
     module = bench_script()
     args = argparse.Namespace(
         out=str(tmp_path), seed=824, plan_seconds=1.0, sim_seconds=1.0, risk_seconds=1.0, walk_seconds=1.0, memory_mb=1e9, upper_per_round=False,
+        aim_seconds=None, gap=0.01,
     )  # fmt: skip
     record = module.child(args, "sleep/test", "sleep", wall=40)
     assert record["status"] == "stopped", record
@@ -192,3 +193,52 @@ def test_the_summary_checks_read_a_record():
     record.update(lower=101.0, simulate={"z": 4.5, "unfinished": 0, "stopped": 0}, status="refused")
     found = module.checks(record)
     assert found["lower_le_optimum"] is False and found["z_within"] is False and found["mark_agrees"] is False
+
+
+def test_a_plan_that_ended_at_a_proved_gap_is_checked_against_its_gap_not_for_equality():
+    """#826: a search that stopped at a proved 1% is "planned" with `within`; its mean may be above the walk's optimum, by at most that share."""
+    module = bench_script()
+    record = {"status": "planned", "within": 0.01, "lower": 99.3, "upper": 100.0, "walk": {"optimum": 99.5}, "case": {"refused": None}}
+    found = module.checks(record)
+    assert found["within_gap_of_optimum"] is True and "exact_mean_equals_optimum" not in found
+    assert found["lower_le_optimum"] is True and found["optimum_le_upper"] is True
+    record["walk"]["optimum"] = 98.0  # 100 > 1.01 * 98
+    assert module.checks(record)["within_gap_of_optimum"] is False
+    exact = {"status": "planned", "within": None, "lower": 99.5, "upper": 99.5, "walk": {"optimum": 99.5}, "case": {"refused": None}}
+    assert module.checks(exact)["exact_mean_equals_optimum"] is True and "within_gap_of_optimum" not in module.checks(exact)
+    assert module.aim_seconds("none") is None and module.aim_seconds("60") == 60.0
+
+
+def test_the_relation_is_fitted_on_the_envelope_plans_and_recovers_rates_it_was_given():
+    """#826, "Done when" 3: seconds = 0.5 + 0.001 per key + 0.002 per action built + 0.0005 per state of the reach, on made-up records."""
+    module = bench_script()
+    rows = []
+    for keys, built, reach in [(10, 100, 30), (500, 4000, 900), (2000, 300, 50), (80, 9000, 4000), (1500, 1500, 1500), (40, 20, 10)]:
+        seconds = 0.5 + 0.001 * keys + 0.002 * built + 0.0005 * reach
+        rows.append({"path": "envelope search", "status": "planned", "envelope": {"bound_keys": keys, "realized": built, "seconds": seconds, "peak_mb": 100.0 + 0.01 * built}, "plan": {"reach": reach}})
+    rows.append({"path": "full walk (packed)", "status": "planned", "plan": {"reach": 5}})
+    found = module.relation(rows)
+    assert found["cases"] == 6
+    assert found["seconds"]["rates"] == pytest.approx([0.5, 0.001, 0.002, 0.0005], rel=1e-6) and found["seconds"]["r2"] == pytest.approx(1.0)
+    assert found["peak_mb"]["rates"] == pytest.approx([100.0, 0.0, 0.01, 0.0], abs=1e-6)
+    assert module.relation(rows[:3]) is None  # too few plans to fit four rates
+
+
+def test_the_search_runs_under_the_benchmarks_hook_and_its_rounds_are_recorded():
+    """The hook wraps `Search._net`, which the search also asks inside its first plan's chain with what to leave unread (#826): the hook passes it on."""
+    from envelope_support import ExplicitProblem, dense_optimum, random_graph
+
+    from crafting_system.planner import _envelope
+
+    module = bench_script()
+    original = _envelope.Search._net
+    per_round: list = []
+    try:
+        module.install_search_hooks(per_round, upper_per_round=True)
+        graph = random_graph(3, 60)
+        value, _ = dense_optimum(graph)
+        result = _envelope.Search(ExplicitProblem(graph, value, 0.5), net=_envelope.Net(states=10**9)).run()
+    finally:
+        _envelope.Search._net = original
+    assert result.exact and per_round and per_round[-1]["round"] == result.stats.rounds - 1  # the net is asked after every round but the one that ends exact
+    assert all("upper" in row for row in per_round)

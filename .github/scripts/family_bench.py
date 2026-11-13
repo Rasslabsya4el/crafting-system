@@ -14,7 +14,10 @@ benchmark route is a measurement, never the acceptance (#812). A heavy run, neve
 one child process per measurement, so that the memory of one case is its own and a case that runs away is stopped without losing the others:
 
 1. **plan** (`one --mode plan`): the stages `setup` (the target, the scaled prices), `plan` (`make_plan(solver="auto", with_risk=False,
-   net=Net(seconds=PLAN_SECONDS))`, or `plan_with_starts` for a vendor-recipe case: the planner's own path, whatever it picks today),
+   budget=Budget(aim_seconds=AIM, seconds=PLAN_SECONDS, gap=GAP))`, or `plan_with_starts` for a vendor-recipe case: the planner's own path,
+   whatever it picks today; `--aim-seconds none`, the default, is no budget but the net, so every proof is exact, as the baseline of #824 was
+   recorded; any `--aim-seconds` value is a budget, under which the search stops at `--gap` whatever the time (OR-39, ticket #826; the aim
+   itself is read only by the forecast of the walk paths): `--aim-seconds 60 --gap 0.01` is the planner's default),
    `simulate` (the plan's policy played on concrete items, `cli._verify.verify`, in blocks until `SIM_SECONDS`), `risk` (`add_risk`).
    Each stage's seconds and peak memory (the resident memory of the process and its workers, sampled every `SAMPLE_SECONDS`) are written as
    the stage ends. Of the envelope search it records its own figures (`EnvelopeInfo`: rounds, states known and expanded, actions built and
@@ -33,8 +36,9 @@ summary takes a later record of a case over a "not run" one).
 
 **`summary`** reads the records of one or more runs and writes one JSON (the committed baseline is `tests/fixtures/family_bench/`): per case
 the record, and per method family and size the checks of section 10: `L(root) <= V* <= U` where the walk held, the mean equal to `V*` to
-1e-9 when the answer claims to be exact, |z| <= 4 of the simulation (OR-30), and every case whose outcome differs from the generator's
-"refused today" mark. It asserts nothing: it is the record a later ticket is measured against.
+1e-9 when the answer claims to be exact, the mean at most `(1 + gap) V*` when the search stopped at a proved gap (#826), |z| <= 4 of the
+simulation (OR-30), and every case whose outcome differs from the generator's "refused today" mark. It also counts the plans made within the
+aim of a minute (`planned_within_a_minute`). It asserts nothing: it is the record a later ticket is measured against.
 """
 
 from __future__ import annotations
@@ -53,6 +57,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests"))
+
+from crafting_system.budget import AIM_SECONDS as MINUTE  # noqa: E402  (OR-33's "about a minute": what `planned_within_a_minute` counts against)
+from crafting_system.budget import PROOF_GAP, Budget  # noqa: E402
 
 PLAN_SECONDS = 600.0  # OR-33: the 10-minute net
 GRACE_SECONDS = 300.0  # past the net, before the watchdog ends the plan stage: what follows the search (the plan's solve, limits, lumping), or a path with no net of its own
@@ -251,7 +258,7 @@ def install_search_hooks(per_round: list, upper_per_round: bool) -> None:
     original = _envelope.Search._net
     started: dict[int, float] = {}
 
-    def traced(self, began):
+    def traced(self, began, *args, **kwargs):  # `_net` is also asked inside the first plan's chain, with what to leave unread (#826)
         key = id(self)
         started.setdefault(key, began)
         stats = self.stats
@@ -266,9 +273,14 @@ def install_search_hooks(per_round: list, upper_per_round: bool) -> None:
                 except Exception as error:  # noqa: BLE001 - a stiff graph the solver cannot certify: recorded, not fatal
                     row["upper_error"] = repr(error)[:200]
             per_round.append(row)
-        return original(self, began)
+        return original(self, began, *args, **kwargs)
 
     _envelope.Search._net = traced
+
+
+def aim_seconds(text: str) -> float | None:
+    """An `--aim-seconds` value: seconds, zero or more, or `none`."""
+    return None if text.strip().lower() == "none" else float(text)
 
 
 def path_of(plan) -> str:
@@ -311,8 +323,11 @@ def describe_plan(plan, record: dict):
         env = dataclasses.asdict(info)
         env["gap"] = None if not info.lower else info.upper / info.lower - 1.0
         record["envelope"] = env
-        record["status"] = "planned" if info.exact else "stopped"
-        record["reason"] = None if info.exact else f"the envelope search stopped: {info.stopped}"
+        # a search that ended at a proved gap (OR-32, #826) made its plan: "planned", with the gap it was proved within; only a net is "stopped"
+        ended = info.exact or info.within is not None
+        record["status"] = "planned" if ended else "stopped"
+        record["reason"] = None if ended else f"the envelope search stopped: {info.stopped}"
+        record["exact"], record["within"] = info.exact, info.within
         record["lower"], record["upper"] = info.lower, info.upper
     else:
         record["status"] = "planned"
@@ -354,16 +369,19 @@ def run_plan_child(args) -> None:
     watch.end()
 
     watch.start("plan", args.plan_seconds + GRACE_SECONDS)
-    net = Net(seconds=args.plan_seconds)
+    # no aim: the net alone, on an unlimited budget, as before #826 (`_plan.as_budget`); an aim: OR-32's budget, the stop at `gap` past it
+    budget = {"net": Net(seconds=args.plan_seconds)} if args.aim_seconds is None else {
+        "budget": Budget(aim_seconds=args.aim_seconds, seconds=args.plan_seconds, memory_mb=None, gap=args.gap)
+    }  # fmt: skip
     try:
         if case.vendor_starts:
             from crafting_system.planner._starts import plan_with_starts
 
             # `plan_with_starts` measures the risk of the start it keeps itself (`with_risk` is its own argument to `make_plan`): the risk's
             # seconds are then inside this stage, and `breakdown` takes them out
-            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, net=net)
+            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, **budget)
         else:
-            plan = make_plan(data, target, prices, start_price=case.start_price, with_risk=False, net=net)
+            plan = make_plan(data, target, prices, start_price=case.start_price, with_risk=False, **budget)
     except PlanError as error:  # what the planner says when it refuses: the reason is the record
         text = f"{type(error).__name__}: {error}"[:2000]
         # a net that ended the search before any plan closed (a given start: no restart to fall back on) is OR-33's "stopped, no plan
@@ -526,6 +544,7 @@ def settings(args) -> dict:
     return {
         "seed": args.seed, "plan_seconds": args.plan_seconds, "sim_seconds": args.sim_seconds, "risk_seconds": args.risk_seconds,
         "walk_seconds": args.walk_seconds, "memory_mb": args.memory_mb, "upper_per_round": args.upper_per_round,
+        "aim_seconds": args.aim_seconds, "gap": args.gap,
     }  # fmt: skip
 
 
@@ -538,6 +557,7 @@ def child(args, case_id: str, mode: str, wall: float) -> dict:
         sys.executable, "-u", __file__, "one", "--case", case_id, "--mode", mode, "--out", args.out, "--seed", str(args.seed),
         "--plan-seconds", str(args.plan_seconds), "--sim-seconds", str(args.sim_seconds), "--risk-seconds", str(args.risk_seconds),
         "--walk-seconds", str(args.walk_seconds), "--memory-mb", str(args.memory_mb),
+        "--aim-seconds", "none" if args.aim_seconds is None else str(args.aim_seconds), "--gap", str(args.gap),
     ] + (["--upper-per-round"] if args.upper_per_round else [])  # fmt: skip
     path = Path(args.out) / "cases" / f"{case_id.replace('/', '__')}.{mode}.json"
     log = Path(args.out) / "logs" / f"{case_id.replace('/', '__')}.{mode}.log"
@@ -646,8 +666,10 @@ def checks(record: dict) -> dict:
         out["lower_le_optimum"] = lower <= optimum + slack
         out["optimum_le_upper"] = optimum <= upper + slack
         out["gap_to_optimum"] = upper / optimum - 1.0 if optimum else None
-        if record.get("status") == "planned":
+        if record.get("status") == "planned" and record.get("within") is None:
             out["exact_mean_equals_optimum"] = abs(upper - optimum) <= slack
+        elif record.get("status") == "planned":  # ended at a proved gap (#826): the plan costs at most that share more than the walk's optimum
+            out["within_gap_of_optimum"] = upper <= (1.0 + record["within"]) * optimum + slack
     sim = record.get("simulate") or {}
     if sim.get("z") is not None:
         out["z"] = sim["z"]
@@ -656,6 +678,32 @@ def checks(record: dict) -> dict:
     status = record.get("status")
     if status in ("planned", "stopped", "refused", "failed"):
         out["mark_agrees"] = (mark is not None) == (status == "refused")
+    return out
+
+
+def relation(rows: list[dict]) -> dict | None:
+    """The stated relation of #826 ("Done when", 3), fitted on the plans the envelope search made: its seconds and its peak memory as a sum of a
+    constant and of rates per key of the bound, per action built and per state of the shown plan's reach (least squares, no constant per case).
+
+    The figures are a record, not a test: `r2` and the largest residual say how well one set of rates holds over the whole family."""
+    import numpy as np
+
+    found = [r for r in rows if r.get("path") == "envelope search" and r.get("status") == "planned" and r.get("envelope") and r.get("plan")]
+    if len(found) < 5:
+        return None
+    x = np.array([[1.0, r["envelope"]["bound_keys"], r["envelope"]["realized"], r["plan"]["reach"]] for r in found])
+    out: dict = {"cases": len(found), "terms": ["constant", "per key of the bound", "per action built", "per state of the plan's reach"]}
+    for name, values in (("seconds", [r["envelope"]["seconds"] for r in found]), ("peak_mb", [r["envelope"].get("peak_mb") for r in found])):
+        if any(v is None for v in values):
+            continue
+        y = np.array(values, dtype=float)
+        rates, *_ = np.linalg.lstsq(x, y, rcond=None)
+        fitted = x @ rates
+        spread = float(((y - y.mean()) ** 2).sum())
+        out[name] = {
+            "rates": [float(v) for v in rates], "r2": None if spread == 0 else 1.0 - float(((y - fitted) ** 2).sum()) / spread,
+            "largest_residual": float(np.abs(y - fitted).max()), "largest": float(y.max()),
+        }  # fmt: skip
     return out
 
 
@@ -683,6 +731,7 @@ def summarize(args) -> None:
         plan_stage = stages.get("plan") or {}
         entry["sizes"][case["size"]] = {
             "status": record.get("status"), "path": record.get("path"), "plan_seconds": plan_stage.get("seconds"), "plan_peak_mb": plan_stage.get("peak_mb"),
+            "exact": record.get("exact"), "within": record.get("within"),
             "gap": (record.get("envelope") or {}).get("gap"), "reach": (record.get("plan") or {}).get("reach"), "checks": record["checks"],
             "reason": (record.get("reason") or "")[:200],
         }  # fmt: skip
@@ -690,16 +739,23 @@ def summarize(args) -> None:
     counts: dict[str, int] = {}
     for r in rows:
         counts[r.get("status") or "?"] = counts.get(r.get("status") or "?", 0) + 1
+    planned = [r for r in rows if r.get("status") == "planned"]
+    seconds = [((r.get("stages") or {}).get("plan") or {}).get("seconds") for r in planned]
     summary = {
         "ticket": 824, "schema": __import__("family_bench_support").SCHEMA, "run_ids": args.run_id, "commit": args.commit,
         "cases": len(rows), "status_counts": counts, "mark_disagreements": disagreements,
+        "planned_within_a_minute": sum(1 for s in seconds if s is not None and s <= MINUTE),
+        "planned_at_a_proved_gap": [r["case"]["id"] for r in planned if r.get("within") is not None],
+        "gap_violations": [r["case"]["id"] for r in rows if r["checks"].get("within_gap_of_optimum") is False or r["checks"].get("exact_mean_equals_optimum") is False],
+        "relation": relation(rows),
         "z_outside": [r["case"]["id"] for r in rows if r["checks"].get("z_within") is False],
         "bound_violations": [r["case"]["id"] for r in rows if r["checks"].get("lower_le_optimum") is False or r["checks"].get("optimum_le_upper") is False],
         "families": by_family, "records": rows,
     }  # fmt: skip
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(summary, indent=1, sort_keys=True, default=str) + "\n", encoding="utf-8")
-    print(json.dumps({k: summary[k] for k in ("cases", "status_counts", "mark_disagreements", "z_outside", "bound_violations")}, indent=1))
+    shown = ("cases", "status_counts", "planned_within_a_minute", "planned_at_a_proved_gap", "gap_violations", "mark_disagreements", "z_outside", "bound_violations")
+    print(json.dumps({k: summary[k] for k in shown}, indent=1))
 
 
 # -- the command line ----------------------------------------------------------------------------------------------------------------------
@@ -719,6 +775,8 @@ def main() -> None:
         p.add_argument("--walk-seconds", type=float, default=WALK_SECONDS)
         p.add_argument("--memory-mb", type=float, default=MEMORY_MB)
         p.add_argument("--upper-per-round", action="store_true")
+        p.add_argument("--aim-seconds", type=aim_seconds, default=None, help="the plan's aim in seconds: a budget, under which the search stops at --gap whatever the time (OR-39), or none for no budget but the net: every proof exact (default)")
+        p.add_argument("--gap", type=float, default=PROOF_GAP, help="the gap of the stop under a budget, as a share (default: the planner's, 0.01)")
 
     listing = sub.add_parser("list")
     listing.add_argument("--seed", type=int, default=F.DEFAULT_SEED)

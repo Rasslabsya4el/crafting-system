@@ -1,7 +1,9 @@
 """`solver="auto"` is the envelope search wherever its bound can be built, and the command has `--solver` (ticket #535, ADR-0063; OR-11, OR-12, OR-13).
 
 * `pattern_refusal(abstraction)` is the one check: None where the crafted-pattern bound can be built, a text where it cannot, and `Pattern` raises that text;
-* `make_plan(solver="auto")` asks it before any solve: the envelope search where it is None, whatever the `budget` (the answer is exact, never approximate);
+* `make_plan(solver="auto")` asks it before any solve: the envelope search where it is None, whatever the `budget` (never the ladder's approximate
+  answer; R12 is proved the cheapest in its first round, so it is exact at any budget; under a budget a search stops at a proved gap whatever the time, #826, OR-39,
+  `tests/test_envelope_gap_stop_plan.py`);
   where it refuses, the path it was (the budget decision, the walk, the object solver for a small graph);
 * an envelope search that cannot answer under `auto` is a `PlanError` that says why and names `--solver packed`: no silent walk;
 * the command's `--solver` choices are the planner's, `auto` by default, and reach `make_plan` through `plan_with_starts`.
@@ -67,7 +69,7 @@ def test_auto_is_the_envelope_search_where_the_bound_can_be_built_and_gives_the_
     assert [limit for limit in auto.limits if limit.what == "The search expanded only what could matter"]
 
 
-def test_auto_ignores_the_budget_because_the_envelope_search_is_always_exact(packed):
+def test_auto_never_takes_the_ladder_of_coarse_levels_where_the_envelope_search_can_be_built(packed):
     for budget in (0.0, 1e-9, 60.0):
         auto = make_plan(DATA, load_target(R12, DATA), price_file(), budget=budget)
 

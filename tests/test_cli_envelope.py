@@ -10,7 +10,8 @@ The search (`planner/_envelope.py`) is generic, so it is tested on random stocha
 * the control: a lower bound raised above the exact value at some offers (`planted`) makes the search end on a plan that costs more than the optimum, and the same check
   that passes for `alpha <= 1` catches it. A test of the cut that no wrong cut could fail would prove nothing;
 * the bound it reports, `lower`, never passes the exact value and does not fall from round to round; a net ends the search with the best plan it can
-  execute and says it is not exact; a given start item has no restart to fall back on, and then a net ends it with an error that says so.
+  execute and says it is not exact; a given start item has no restart to fall back on, and then a net that ends it before its first plan has
+  closed ends it with an error that says so (the upper side and the stop at a proved gap are `tests/test_envelope_gap_stop.py`, #826).
 
 The crafting problem on a real route (the plan and the mean against the full walk) is `tests/test_cli_envelope_real.py`.
 """
@@ -166,12 +167,15 @@ def test_a_net_ends_the_search_on_an_executable_plan_and_says_it_is_not_exact():
     assert stopped >= 3, (stopped, refused)
 
 
-def test_a_given_start_item_has_no_restart_so_a_stopped_search_says_there_is_no_plan():
+def test_a_given_start_item_has_no_restart_so_a_search_stopped_before_its_first_plan_closed_says_there_is_no_plan():
     graph = random_graph(3, SIZE)
     value, _ = dense_optimum(graph)
     problem = ExplicitProblem(graph, value, 0.5, restart=None)
     with pytest.raises(NoPolicy, match="no restart"):
-        Search(problem, net=Net(states=8)).run()
+        Search(problem, net=Net(seconds=0.0)).run()  # the time net ends the first plan's chain at the start
+    closed = Search(ExplicitProblem(graph, value, 0.5, restart=None), net=Net(states=8)).run()  # the state net waits for the first round: the first plan closed (#826)
+    assert not closed.exact and "limit is 8" in closed.stopped and not closed.restarts
+    assert answer(closed)[0] >= value[0] * (1 - 1e-9) and closed.lower <= value[0] * (1 + 1e-9)
 
 
 def test_a_net_of_seconds_and_of_memory_stops_between_rounds():

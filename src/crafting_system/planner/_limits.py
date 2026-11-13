@@ -179,16 +179,17 @@ def budget_limit(bindings: Sequence[Binding]) -> Limit | None:
     )
 
 
-def claim(among: str, rest: str = "") -> dict[str, str]:
+def claim(among: str, rest: str = "", rest_approximate: str | None = None) -> dict[str, str]:
     """The guarantee "the plan is the cheapest among `among`", and its form for an approximate answer: `Limit(..., **claim("the kinds offered"))`.
 
     A claim of cheapness comes from the solve that made the answer. An exact solve makes it; an approximate one only reaches the cheapest
     to within the gap it states (`Plan` swaps the sentences with `approximate_limits`), so no cheapness claim is written outside this function.
     """
     tail = f" {rest}" if rest else ""
+    loose = tail if rest_approximate is None else f" {rest_approximate}" if rest_approximate else ""  # a `rest` that itself claims the best plan has its own form
     return {
         "guarantee": f"The plan is the cheapest among {among}.{tail}",
-        "approximate": f"The plan is {WITHIN_GAP} among {among}.{tail}",
+        "approximate": f"The plan is {WITHIN_GAP} among {among}.{loose}",
     }
 
 
