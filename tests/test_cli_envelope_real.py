@@ -132,7 +132,9 @@ def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data, monkey
         sys.path.append(str(ROOT / "research" / "312"))
     import exact_classes as E
 
-    _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
+    with pytest.MonkeyPatch.context() as patch:  # the research model reads its own price file; both sides are priced from the same one (#838)
+        patch.setattr(E, "PRICES", PRICES)
+        _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced)
     monkeypatch.setattr(_plan, "unopened_listing", lambda data, start: None)  # the research model starts from the item with no mods: the plan without the draw of a bought item's mods (ADR-0064)
     exact = make_plan(data, load_target(TARGET_R13, data), load_price_file(PRICES), solver="packed", with_risk=False).mean_remaining
