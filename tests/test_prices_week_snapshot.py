@@ -207,9 +207,34 @@ def test_a_bulk_stand_in_is_divided_by_the_median_rise_of_its_kind_and_a_start_i
     assert snapshot.prices[RING].chaos == 2.2
     d = snapshot.prices["Essence of D"]
     assert d.provenance == Provenance(EXCHANGE, "Allflame", "2026-11-10")  # its day kept, the reading's depth gone
-    assert d.detail == {"reading_chaos": 9.0, "reading_date": "2026-11-10", "template": "end.json", "divided_by": 4.0, "sample": 3, "group": "essence"}
+    assert d.detail == {
+        "league": "Allflame", "date": "2026-11-10", "reading_chaos": 9.0, "template": "end.json", "divided_by": 4.0, "sample": 3, "group": "essence",
+    }  # `league` and `date` as every reading's detail has them: the readers of a trade price's day find it (#838)
     assert [mark.code for mark in price_marks(d, snapshot, uses=1.0)] == [LATER, NO_DEPTH]
     assert "Essence of D: stand-in, the reading of 2026-11-10 from end.json, divided by 4" in notes
+
+
+def test_a_scaled_trade_stand_in_keeps_its_source_and_the_day_it_was_read():
+    """The low essences are bulk names the 2026-11-10 file priced from the trade site (26 of them): scaled, each is still that day's
+    trade reading in its detail, so the age rule (`test_price_age_rule.py`) reads its day. Essence B rose x3 (6/2), so 900 stands in at 300."""
+    muttering = PriceEntry(900.0, "trade-api", "mean of the 5 cheapest", {"league": "Allflame", "date": "2026-11-10", "exchange": "muttering-essence-of-fear"}, Provenance(TRADE, "Allflame", "2026-11-10", 2.0))
+    end = PriceFile("Allflame", END, 600.0, {"Divine Orb": PriceEntry(600.0, "poe.ninja"), "Essence of B": PriceEntry(6.0, "poe.ninja"), "Muttering Essence of Fear": muttering})
+    rows = {"divine-orb": 200.0, "essence-of-b": 2.0}
+    snapshot, _ = build_snapshot([("end.json", end)], lambda league, slug: [DayRow(AS_OF, rows[slug], 10.0)] if slug in rows else [], "Allflame", START, AS_OF, None)
+    scaled = snapshot.prices["Muttering Essence of Fear"]
+
+    assert (scaled.chaos, scaled.source, scaled.detail["date"], scaled.detail["league"]) == (pytest.approx(300.0), "trade-api", "2026-11-10", "Allflame")
+
+
+def test_a_scaled_reading_with_no_recorded_day_has_no_date_and_the_league_of_its_template():
+    """An entry with no provenance and no detail: its note says "the day of" its template, but its detail gets no `date`, which a
+    reader would parse; its league is its template's (Mirage here), not the snapshot's."""
+    old = PriceFile("Mirage", END, 600.0, {"Divine Orb": PriceEntry(600.0, "poe.ninja"), "Essence of B": PriceEntry(6.0, "poe.ninja"), "Essence of D": PriceEntry(9.0, "poe.ninja")})
+    rows = {"divine-orb": 200.0, "essence-of-b": 2.0}
+    snapshot, _ = build_snapshot([("old.json", old)], lambda league, slug: [DayRow(AS_OF, rows[slug], 10.0)] if slug in rows else [], "Allflame", START, AS_OF, None)
+    d = snapshot.prices["Essence of D"]
+
+    assert d.chaos == pytest.approx(3.0) and "date" not in d.detail and d.detail["league"] == "Mirage"
 
 
 def test_a_previous_leagues_reading_and_a_zero_price_stay_out_of_the_sample():
