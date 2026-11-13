@@ -291,11 +291,11 @@ SKEW = np.array([[0.0, 1.0], [-1.0, 0.0]])  # v . A v = 0 for every v: the first
 
 
 def test_bicgstab_that_never_halves_its_residual_has_stagnated_after_stall_steps_and_returns_the_start(monkeypatch):
-    monkeypatch.setattr(lin, "STALL", 7)  # before the first halving the pace is one step per halving
+    monkeypatch.setattr(lin, "STALL", 7)  # with no flat to measure against, the run's first flat may last 7 x 7 steps
 
     x, relative_residual, steps, stagnated = lin.bicgstab(lambda v: SKEW @ v, np.array([1.0, 2.0]), np.zeros(2), 1e-13, 1000)
 
-    assert steps == 7 and stagnated and relative_residual == 1.0 and x.tolist() == [0.0, 0.0]
+    assert steps == 49 and stagnated and relative_residual == 1.0 and x.tolist() == [0.0, 0.0]
 
 
 def test_bicgstab_that_cannot_progress_is_cut_by_the_step_limit_when_that_is_sooner_and_that_is_no_stagnation(monkeypatch):
@@ -306,17 +306,16 @@ def test_bicgstab_that_cannot_progress_is_cut_by_the_step_limit_when_that_is_soo
     assert steps == 4 and not stagnated
 
 
-def test_the_pace_of_a_run_is_its_own_steps_per_halving_and_stagnation_is_stall_times_that(monkeypatch):
+def test_a_run_has_stagnated_when_its_flat_is_stall_times_the_longest_flat_it_came_out_of(monkeypatch):
     monkeypatch.setattr(lin, "STALL", 6)
-    # ten halvings by step 30 (a pace of 3 steps per halving): 6 x 3 = 18 steps without a halving would do, but the run must also go as long again
-    # as its progress took, 30 steps: it has stagnated at step 60 and not one step sooner (a pause on the way to convergence is not a stagnation)
-    assert not lin.stalled(59, 30, 10) and lin.stalled(60, 30, 10)
-    # three halvings by step 4, then nothing (a stiff run): 6 x 4/3 = 8 steps, more than the 4 its progress took
-    assert not lin.stalled(11, 4, 3) and lin.stalled(12, 4, 3)
-    # before the first halving the pace is one step: 6 steps without one
-    assert not lin.stalled(5, 0, 0) and lin.stalled(6, 0, 0)
-    # a run that halved once at step 40 (a slow start) waits 6 x 40 steps
-    assert not lin.stalled(279, 40, 1) and lin.stalled(280, 40, 1)
+    # no flat yet (a warm start of R14 that sits at 7.1e-6 for its first 6 steps, then falls to 1e-14 by step 28): 6 x 6 = 36 steps, not 6
+    assert not lin.stalled(6, 0, 0) and not lin.stalled(35, 0, 0) and lin.stalled(36, 0, 0)
+    # fast falls with flats of at most 3 steps, the last halving at step 10, then flat (R14: 1.4e-2 to 7.5e-6 by step 10, 5e-14 by 25): a flat
+    # under 6 counts as 6, so 36 steps after step 10, where a pace of under a step per halving stopped it at step 14
+    assert not lin.stalled(14, 10, 3) and not lin.stalled(45, 10, 3) and lin.stalled(46, 10, 3)
+    # a run that came out of a flat of 15 steps waits 6 x 15 = 90 steps on its next one
+    assert not lin.stalled(129, 40, 15) and lin.stalled(130, 40, 15)
+    # (the 100,000 stiff states of #671, at 0.94 from step 2 on, are the first case: they reach the exact solve at step 36, in the test below)
 
 
 # --- the solve: dense, iterate, exact ------------------------------------------------------------------------------------------------------------------

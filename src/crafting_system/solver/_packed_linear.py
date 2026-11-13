@@ -17,7 +17,7 @@ What is measured, never believed (tickets #584, #642, #699):
   `risk/_inputs`) prove their own bounds from the same pieces.
 
 How a system is solved (`solve`). Dense, refined, for at most `DENSE_LIMIT` states; else BiCGSTAB until it converges or first stagnates (`stalled`: the
-best residual has not halved for `STALL` times the run's own pace, nor for as long as its progress took). A run whose recurrence claims its aim while its
+best residual has stayed flat, not halved, for `STALL` times the longest flat the run already came out of, that flat counted as at least `STALL`). A run whose recurrence claims its aim while its
 true residual is above ten times it is started again from its iterate with a fresh recurrence (the drift of #584, not a stagnation; R04 and R14 reach
 1e-16 so), at most `BICGSTAB_RESTARTS` times. An answer is taken when its forward estimate is
 within `tol`. Otherwise the exact solve by the cycles of the chain (`_packed_chain.ChainSolver`: the components inverted without a subtraction, by
@@ -46,7 +46,7 @@ ACCEPT_ERROR = 1e-6  # the forward error an approximate answer (dense or iterate
 ACCEPT_BACKWARD = 1e-10  # the backward error an exact solve, or an answer when no exact solve can be made, is still taken at (the caller says the rest)
 REFINEMENTS = 4  # steps of refinement of a direct solve (each a residual and one more solve), taken only while the backward error falls
 SETTLED = 8 * EPS  # a backward error this small is the rounding of the product itself: a further step cannot lower it
-STALL = 6  # a BiCGSTAB run has stagnated when its best residual has not halved for this many times its own pace (iterations per halving so far), nor for as long as its progress took
+STALL = 6  # a BiCGSTAB run has stagnated when its best residual has not halved for this many times the longest flat it came out of (at least this many steps): 36 steps with no history
 BICGSTAB_ITERATIONS = 4_000  # a rail on one run (stop and say so), not what decides an answer
 BICGSTAB_RESTARTS = 3  # further runs from the iterate: when its recurrence drifted from the true residual, or after a stagnation when the exact solve cannot be made
 AMPLIFICATION_TOL = 1e-3  # the relative residual the iteration aims at when it measures the amplification: a factor known to 0.1% is plenty
@@ -312,7 +312,7 @@ def bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.n
     The residual returned is the TRUE one, `|b - A x| / |b|` of the iterate returned, made by one more product: the residual of the method's own
     recurrence drifts from it on a stiff system (it can be 1e-21 while the iterate is wrong by a factor of 1e16, tickets #584 and #600), so it only
     decides when the method stops. The iterate returned is the better, by the true residual, of the best the recurrence saw and the start.
-    `stagnated`: the run stopped because its best residual stopped halving at its own pace (`STALL`), not at `tol` or at `max_iter`.
+    `stagnated`: the run stopped because its best residual stayed flat too long (`stalled`), not at `tol` or at `max_iter`.
     """
     with np.errstate(all="ignore"):
         x, iterations, first, _, stagnated = _bicgstab_run(matvec, b, x0, tol, BICGSTAB_ITERATIONS if max_iter is None else max_iter)
@@ -323,21 +323,23 @@ def bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.n
         return x, true / bnorm, iterations, stagnated
 
 
-def stalled(it: int, marked_at: int, marks: int) -> bool:
-    """Whether a run at iteration `it`, whose best residual halved `marks` times by the iteration `marked_at`, has stagnated: it has gone without halving
-    again both `STALL` times its own pace (`marked_at / marks` iterations per halving, 1 before the first) and as long as all its progress took.
+def stalled(it: int, marked_at: int, longest: int) -> bool:
+    """Whether a run at iteration `it`, whose best residual last halved at the iteration `marked_at`, has stagnated: its present flat, `it - marked_at`
+    steps without a halving, is `STALL` times the longest flat it already came out of (`longest`, counted as at least `STALL`).
 
-    The second half keeps a run that converges through a pause: R04 and R14 pause for a dozen steps on their way to a residual of 1e-16 in about a
-    hundred, and stopping them there sent their evaluations to the exact solve (21 s each on R14). A stiff run, whose progress stops after a few early
-    halvings, still stops a few steps after them (#671)."""
-    return it - marked_at >= max(STALL * max(1.0, marked_at / max(marks, 1)), marked_at)
+    BiCGSTAB converges by stairs, not at a pace: on the policies of R04 and R14 a run sits flat for 5 to 15 steps, then falls by several orders in a
+    few (heavy run 43396139799). A pace (steps per halving, averaged over the run) read every such flat as a stagnation and sent 26 of R14's
+    evaluations to the exact solve, 93 s where the run left alone took 2 s. A flat is measured against the flats the run already came out of: with no
+    history, `STALL * STALL` steps. A stiff run, whose residual stops falling for good (the 100,000 states of #671 stay at 0.94 from the second
+    step), stops there: 36 steps, where 4,000 a run and three restarts were spent before."""
+    return it - marked_at >= STALL * max(STALL, longest)
 
 
 def _bicgstab_run(matvec, b, x0, tol, max_iter):
     """`(best iterate by the recurrence, iterations, true norm of b - A x0, the relative residual the recurrence claims for it, stagnated)`.
 
-    Stagnation is read from the run itself: the best residual halved `marks` times by the iteration `marked_at`, so its pace is `marked_at / marks`
-    iterations per halving (1 before the first); a run that goes `STALL` times its pace without halving has stagnated.
+    Stagnation is read from the run itself (`stalled`): the best residual last halved at the iteration `marked_at`, after a flat of `longest` steps
+    at most since the start; a run whose present flat reaches `STALL` times the longest (at least `STALL`) has stagnated.
     """
     x = x0.copy()
     r = b - matvec(x)
@@ -350,11 +352,14 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
     v = np.zeros_like(b)
     p = np.zeros_like(b)
     it = 0
-    marked, marked_at, marks = rnorm, 0, 0
+    marked, marked_at, longest = rnorm, 0, 0
     while it < max_iter and rnorm > tol * bnorm:
-        while best <= 0.5 * marked:
-            marked, marked_at, marks = 0.5 * marked, it, marks + 1
-        if stalled(it, marked_at, marks):
+        if best <= 0.5 * marked:  # a halving ends the flat since the last one
+            longest = max(longest, it - marked_at)
+            while best <= 0.5 * marked:
+                marked *= 0.5
+            marked_at = it
+        if stalled(it, marked_at, longest):
             return best_x, it, first, best / bnorm, True
         it += 1
         rho_new = float(r_hat @ r)
