@@ -261,11 +261,14 @@ def jewel_items(data, base_id: str) -> list[Item]:
     rng = random.Random(base_id)
     rare = Item.build(data, base_id=base_id, item_level=84, rarity=Rarity.RARE)
     items = [rare, Item.build(data, base_id=base_id, item_level=84, rarity=Rarity.MAGIC), Item.build(data, base_id=base_id, item_level=84, rarity=Rarity.NORMAL)]
-    items += [ChaosOrb().outcomes(data, rare).sample(rng) for _ in range(3)]
+    try:
+        items += [ChaosOrb().outcomes(data, rare).sample(rng) for _ in range(3)]
+    except OutOfScopeError:  # a cluster jewel: no orb is modelled on it, so only the empty items are asked
+        pass
     return items
 
 
-@pytest.mark.parametrize("base_id", [COBALT, CRIMSON, VIRIDIAN, "Metadata/Items/Jewels/JewelAbyssMelee"])
+@pytest.mark.parametrize("base_id", [COBALT, CRIMSON, VIRIDIAN, "Metadata/Items/Jewels/JewelAbyssMelee", "Metadata/Items/Jewels/JewelPassiveTreeExpansionLarge"])
 def test_an_action_the_model_refuses_on_one_item_of_a_base_for_its_base_refuses_every_item_of_it(data, base_id):
     """The contract `UnmodelledBase` rests on: its verdict reads the base alone, so one item proves it for all (every planner action)."""
     items = jewel_items(data, base_id)
