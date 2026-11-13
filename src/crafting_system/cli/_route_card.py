@@ -10,7 +10,7 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
   are filled in (a stat the text shows scaled, `(0.2-0.4)%` for 20 to 40, is scaled back).
 * `card_of_item(data, item)`: a concrete item, the start item. With `tiers` its mods carry their tier, with
   `rolled=False` they show the range of the tier, not the roll, and `filler` draws the slots it has no mod for.
-* `card_of_target(data, target, start)`: the goal. Each requirement leaf is a "wanted" slot on its mod's side,
+* `card_of_target(data, target, start, forced)`: the goal. Each requirement leaf is a "wanted" slot on its mod's side,
   the rest `any mod or empty`; a k-of-n group is one heading `at least k of n of these:` with its members under it, each in the one mod
   format with its own tier and no note of the group (`ItemCard.groups`, OR-15). Each implicit
   requirement is a wanted implicit (note `grade 3 or better, roll 30 or more`), the catalyst quality a
@@ -21,10 +21,13 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 
 One format for every mod line: the game's text with its ranges, then the tier as the note, `+(100-114) to
 maximum Life · T1`. The tier is the mod's place among the mods that can spawn on the base
-(`items.tier_table`, 1 is the best); a crafted mod has none and says `crafted` when a leaf can only be met by it. A mod an essence forces says the
-essence's tier, `Shrieking essence`, `Deafening essence` (`essence_tier`, #895): an essence-only mod always, and a mod of the natural ladder when the
-leaf names exactly that mod (`mod:`, the way a target writes a mod its essence forces, OR-2), because the essence's level, not a tier
-of the ladder, is what the player chooses; an essence-only mod no essence of the base's class gives says `essence only`. A leaf that several mods can
+(`items.tier_table`, 1 is the best); a crafted mod has none and says `crafted` when a leaf can only be met by it. A mod that comes from an essence says the
+essence's tier, `Shrieking essence`, `Deafening essence` (#895), because the essence's level, not a tier of the ladder, is what the player
+chooses. Where a mod comes from is a fact of the route, not of the target file: the caller passes `forced`, the mods the essences of the
+route force on this item with the note of each (`essence_notes`), and a leaf that one mod meets says that note when the mod is among
+them (the Shrieking Essence of Spite forces on boots the mod that is also tier 2 of Intelligence; with another route, or no route, the
+line says `T2`). An essence-only mod needs no route to say it: only an essence gives it, so it says the essence of the base's class that
+does (`essence_tier`), and `essence only` when none does. A leaf that several mods can
 meet (the candidates are those that spawn on the base at the item level and that the leaf's tier judgement accepts, `tier_ok`) writes the texts
 of all of them with `#` for the ranges, joined by ` or `, and the note `T2 or better` (`min_tier`) or
 `any tier`, or the tiers the candidates have (`T1 to T3`) when the leaf asked a tier it did not write.
@@ -59,7 +62,7 @@ a mod gives each leaf, to count the tiers a canonical fractured mod stands for).
 
 import re
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from functools import reduce
 from operator import and_
@@ -251,32 +254,38 @@ def _note(*parts: str) -> str:
     return ", ".join(part for part in parts if part)
 
 
-def essence_tier(data: GameData, base_id: str, mod_id: str) -> str:
-    """The tier of the essence that forces `mod_id` on the base's item class, as the note of a mod line: `Shrieking essence`; "" when no essence does.
+def essence_note(name: str) -> str:
+    """The note of a mod an essence gives, from the essence's name: its tier, the first word ("Shrieking Essence of Spite" is `Shrieking essence`);
+    an essence with no such word (the corruption-only ones, "Essence of Horror") is said by its name."""
+    word, sep, _ = name.partition(" Essence of ")
+    return f"{word} essence" if sep else name
 
-    The tier is the first word of the essence's name ("Shrieking Essence of Spite"); an essence with no such word (the corruption-only
-    ones, "Essence of Horror") is said by its name. Essences of different tiers that force one mod are joined by " or ", the lowest first.
+
+def essence_tier(data: GameData, base_id: str, mod_id: str) -> str:
+    """The note of the essence that forces `mod_id` on the base's item class: `Shrieking essence`; "" when no essence does.
+
+    Essences of different tiers that force one mod are joined by " or ", the lowest first.
     """
     item_class = data.base_items[base_id].item_class
-    found = []
-    for essence in data.essences.values():
-        if essence.mod_for(item_class) == mod_id:
-            word, sep, _ = essence.name.partition(" Essence of ")
-            found.append((essence.level, f"{word} essence" if sep else essence.name))
-    return " or ".join(dict.fromkeys(name for _, name in sorted(found)))
+    found = sorted((essence.level, essence_note(essence.name)) for essence in data.essences.values() if essence.mod_for(item_class) == mod_id)
+    return " or ".join(dict.fromkeys(name for _, name in found))
 
 
-def named_essence_tier(data: GameData, base_id: str, mod_ids, tier_ok, fractured: frozenset[str] = frozenset()) -> str:
-    """The essence tier of a leaf that names exactly one mod (`mod:`: one id and no tier judgement) which an essence forces on the base; "" otherwise.
+def essence_notes(data: GameData, base_id: str, names: Iterable[str]) -> dict[str, str]:
+    """The mods the essences `names` (as the game data names them) force on the base's item class, each with the note of its essence.
 
-    OR-2: a target writes the mod its route's essence forces as exactly that mod, so such a leaf is read as the essence's mod and its line
-    says the essence's tier, not a tier of the natural ladder (which the mod may also have: the Shrieking Essence of Spite forces on boots the
-    mod that is tier 2 of Intelligence). A leaf that names a fractured mod of the start item (`fractured`, their ids) is that bought mod.
+    These are the essences a route uses: a mod line of that route's page that stands for one of these mods says where it comes from
+    (`_leaf_slot`). An essence that forces nothing on the class, and a name that is no essence, give nothing.
     """
-    if len(mod_ids) != 1 or tier_ok is not None:
-        return ""
-    (mod_id,) = mod_ids
-    return "" if mod_id in fractured else essence_tier(data, base_id, mod_id)
+    item_class = data.base_items[base_id].item_class
+    by_name = {essence.name: essence for essence in data.essences.values()}
+    found: dict[str, str] = {}
+    for name in dict.fromkeys(names):
+        essence = by_name.get(name)
+        mod_id = None if essence is None else essence.mod_for(item_class)
+        if mod_id is not None:
+            found[mod_id] = essence_note(name) if mod_id not in found else f"{found[mod_id]} or {essence_note(name)}"
+    return found
 
 
 def fractured_meeting(leaf, held: Sequence[ExplicitMod]) -> ExplicitMod | None:
@@ -315,11 +324,11 @@ def _leaf_slot(
     min_tier: int | None,
     item_level: int | None = None,
     tier_ok: frozenset[str] | None = None,
-    fractured: frozenset[str] = frozenset(),
+    forced: Mapping[str, str] | None = None,
 ) -> tuple[Side, str, str]:
     """The side, the text and the tier note of a requirement leaf (see the module docstring).
 
-    `fractured` are the ids of the start item's fractured mods: a leaf that names one of them is that bought mod, not an essence's.
+    `forced` are the mods the route's essences force on this item, each with its essence's note (`essence_notes`); None for no route.
     """
     base_domain = data.base_items[base_id].domain
     sides = {side.value for side in SIDES}
@@ -349,8 +358,7 @@ def _leaf_slot(
         return Side(mod.generation_type), mod_text_of(mod), note
     side = Side(data.mods[candidates[0]].generation_type)
     if len(candidates) == 1:
-        forced_by = named_essence_tier(data, base_id, mod_ids, tier_ok, fractured)
-        return side, mod_text_of(data.mods[candidates[0]]), forced_by or _tier_note(tiers, candidates)
+        return side, mod_text_of(data.mods[candidates[0]]), (forced or {}).get(candidates[0]) or _tier_note(tiers, candidates)
     texts = list(dict.fromkeys(_hashes(mod_text_of(data.mods[mod_id])) for mod_id in candidates))
     limited = tier_ok is not None and any(mod_id not in tier_ok for mod_id in spawning)  # the leaf's tier limit left some spawning mod out
     return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier, limited)
@@ -417,29 +425,30 @@ def card_of_item(
 # --- the card of the target -----------------------------------------------------------------------------
 
 
-def card_of_target(data: GameData, target: Target, start: Item | None = None) -> ItemCard:
+def card_of_target(data: GameData, target: Target, start: Item | None = None, forced: Mapping[str, str] | None = None) -> ItemCard:
     """The goal as an item: a wanted slot per requirement leaf on its mod's side, the rest `any mod or empty`.
 
     A leaf drawn from several mods says `any of N tiers` and writes its ranges as `#`. A k-of-n group is
     said once, in `groups`: its heading and its members, which are not slots of a side (OR-15). An implicit
     requirement is a wanted implicit, the quality requirement a property pill. A leaf that a fractured mod of
     `start` meets (the item the route starts from; the target's own start item when None) is that mod with its
-    tier, marked `fractured`: the finished item holds it, since a fracture never leaves the item (#895).
+    tier, marked `fractured`: the finished item holds it, since a fracture never leaves the item (#895). `forced`
+    are the mods the route's essences force (`essence_notes`): a leaf one of them meets says the essence's tier.
     """
     tiers = tier_table(data, target.base_id)
     wanted: dict[Side, list[Slot]] = {side: [] for side in SIDES}
     groups: list[Group] = []
     held = (target.start_item if start is None else start).fractured_mods
-    held_ids = frozenset(entry.mod_id for entry in held)
 
     def leaf(node, member: bool = False) -> tuple[Side, Slot]:
         """The slot of a leaf; a `member` of a group says its side in words (which of the open slots it would take)."""
         entry = fractured_meeting(node, held)
         if entry is not None:
             mod = data.mods[entry.mod_id]
-            side, text, tier_note, marks = Side(mod.generation_type), mod_text_of(mod), _tier_note(tiers, [mod.id]), ("fractured",)
+            side, text, marks = Side(mod.generation_type), mod_text_of(mod), ("fractured",)
+            tier_note = _tier_note(tiers, [mod.id]) or essence_tier(data, target.base_id, mod.id)  # an essence-only mod has no tier of the ladder
         else:
-            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok, held_ids)
+            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok, forced)
             marks = ()
         return side, Slot(text, "wanted", (*((side.value,) if member else ()), *marks), tier_note)
 
@@ -496,13 +505,15 @@ class _Rows:
 class _StateReader:
     """Reads compressed states of one abstraction into rows; keeps what it looked up."""
 
-    def __init__(self, abstraction, start: Item | None = None) -> None:
-        """`start` is the item the route starts from: its fractured mods are the ones a state's fractured entries of their class are (#895)."""
+    def __init__(self, abstraction, start: Item | None = None, forced: Mapping[str, str] | None = None) -> None:
+        """`start` is the item the route starts from: its fractured mods are the ones a state's fractured entries of their class are (#895).
+        `forced` are the mods the route's essences force, each with its essence's note (`essence_notes`): a leaf line says it."""
         self.ab = abstraction
         self.data: GameData = abstraction.data
         self.tiers = tier_table(self.data, abstraction.base_id)
         self.tracked = tracks_junk(abstraction)
         self._held = tuple(self.data.mods[entry.mod_id] for entry in start.fractured_mods) if start is not None else ()
+        self._forced = dict(forced or {})
         self._leaves: dict[int, tuple[Side, str, str]] = {}
         self._fractured: dict[tuple[str, tuple[Status, ...]], tuple[Side, Slot]] = {}
         self._families: dict[tuple[Side, str], Slot] = {}
@@ -512,9 +523,8 @@ class _StateReader:
         if index not in self._leaves:
             leaf: Wanted = self.ab.goal.leaves[index]
             self._leaves[index] = _leaf_slot(
-                self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier, self.ab.item_level, leaf.tier_ok,
-                frozenset(mod.id for mod in self._held),
-            )  # fmt: skip
+                self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier, self.ab.item_level, leaf.tier_ok, self._forced
+            )
         return self._leaves[index]
 
     def wanted(self, indexes: Sequence[int], status: Status) -> Slot:

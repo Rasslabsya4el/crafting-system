@@ -1,8 +1,10 @@
 # TEST FIXTURE, not a benchmark target: R05 as `examples/targets/r05-strength-ring.yaml` read it before ticket #895
 # ("at least 1 of Life and the three elemental resistances"). The owner fixed the benchmark target to tier 1 Life on
-# 2026-11-13; this copy stays for the tests of how a k-of-n group is said (`tests/test_cli_describe_state.py`,
-# `tests/test_cli_report_requirements.py`): its group of one prefix and three suffixes is the real case those texts were
-# written for. Everything below is the old file, unchanged.
+# 2026-11-13; this copy stays for the tests that need what the old reading had: a real k-of-n group of one prefix and
+# three suffixes (`tests/test_cli_describe_state.py`, `tests/test_cli_report_requirements.py`) and a small real route
+# of 78 states (`tests/test_cli_envelope_real.py`, `tests/test_abstraction_pattern_real.py`; the new R05 has 6).
+# It lives outside `tests/fixtures/` because it is read with the real game data, not the fixture data.
+# Everything below is the old file, unchanged.
 #
 # Target for benchmark route R05: a budget ring with a fractured "+12-16 to All Attributes", the
 # Strength of a Deafening Essence of Rage, and a Life or Resistance modifier.

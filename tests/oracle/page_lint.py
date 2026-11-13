@@ -826,6 +826,22 @@ def _target_families(route: Route) -> dict[str, tuple[int, int]] | None:
     return found
 
 
+def _target_family_names(route: Route) -> set[str] | None:
+    """Every mod the target wants, tiered or not, as family keys (the wanted lines of the target card); None when the card has a group, as
+    `_target_families`. A line whose note says an essence's tier is a family the target wants although it asks no tier: a step of the route
+    that draws that family by chance (not the essence that forces it) may show its tier line (#895)."""
+    if route.target is None:
+        return None
+    names: set[str] = set()
+    for slot in route.target.slots:
+        if slot.tone != "wanted":
+            continue
+        if "at least" in slot.note:
+            return None
+        names.add(family_key(slot.text))
+    return names
+
+
 def check_tier_lines(page: Page) -> list[Fault]:
     """OR-31: each line of "Tier chances" lists the tiers of one family in order and with no gap, joins runs of equal chances
     ("T2 to T10 1.4% each") and never a target tier with one that is not, marks the target tier "(target)" (or says "every tier is the
@@ -836,7 +852,7 @@ def check_tier_lines(page: Page) -> list[Fault]:
     T3 while the Goal says T1 is a fault."""
     faults = []
     for route in page.routes:
-        wanted = _target_families(route)
+        wanted = _target_family_names(route)
         for step in route.steps:
             for line in step.lines("Tier chances"):
                 where = f"step {step.number} ({step.title})"

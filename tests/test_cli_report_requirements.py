@@ -17,7 +17,7 @@ from crafting_system.cli._report import FORMAT, requirements_document, requireme
 from crafting_system.targets import KOfN, StartKind, Target, load_target
 
 # R05 as it was read before #895 ("at least 1 of Life and the three resistances"): the real group these texts were written for
-R05 = Path(__file__).resolve().parent / "fixtures" / "targets" / "r05-life-or-resistance.yaml"
+R05 = Path(__file__).resolve().parent / "real_targets" / "r05-life-or-resistance.yaml"
 
 
 def stand_in(data, target):

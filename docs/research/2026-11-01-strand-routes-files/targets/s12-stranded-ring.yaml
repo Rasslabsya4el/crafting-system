@@ -53,14 +53,11 @@ requirements:
   - family: Strength
     mod: StrengthEssence7_
 
-  # "At least 1 of these 4": Life, or one of the three elemental resistances, each at the top tier
-  # the item level allows (the guide names no tier, so there is no `min_tier`: OR-1, as in R05 since #404).
-  - at_least: 1
-    of:
-      - family: IncreasedLife
-      - family: FireResistance
-      - family: ColdResistance
-      - family: LightningResistance
+  # Life, tier 1, rolled, not crafted: what R05 asks since #895 (the owner's reading of 2026-11-13; before it this was
+  # "at least 1 of Life and the three elemental resistances", which the comments above still describe).
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
 
 # Where the crafting starts: R05's ring (a fractured All Attributes) bought with 60 Memory Strands.
 # `memory_strands` is the key of ADR-0040 and of the amendment of ADR-0008; the target loader does not read

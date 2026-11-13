@@ -27,7 +27,7 @@ from crafting_system.actions import Action
 from crafting_system.items import tier_table
 from crafting_system.items.words import mod_text
 
-from ._route_card import _hashes, named_essence_tier
+from ._route_card import _hashes
 
 
 @dataclass(frozen=True)
@@ -55,20 +55,13 @@ class _Family:
     wanted: frozenset[int]
 
 
-def wanted_families(ab: Abstraction, fractured: frozenset[str] = frozenset()) -> list[_Family]:
-    """The families the target wants, one per (families, side, domain): the ladder of the family and the tiers a leaf accepts.
-
-    A leaf whose line says an essence's tier (`named_essence_tier`: it names exactly the mod an essence forces; `fractured` are the ids of
-    the start item's fractured mods) has no tier to show: the essence adds it every time, and the page says it by the essence, not by a
-    tier of the ladder (#895).
-    """
+def wanted_families(ab: Abstraction) -> list[_Family]:
+    """The families the target wants, one per (families, side, domain): the ladder of the family and the tiers a leaf accepts."""
     data = ab.data
     tiers = tier_table(data, ab.base_id)
     found: dict[tuple, dict[str, int]] = {}
     accepted: dict[tuple, set[int]] = {}
     for index, leaf in enumerate(ab.goal.leaves):
-        if named_essence_tier(data, ab.base_id, leaf.mod_ids, leaf.tier_ok, fractured):
-            continue
         for mod_id in sorted(leaf.mod_ids):
             mod = data.mods.get(mod_id)
             # a mod the item level lets spawn: a higher tier of the table cannot come at all; a crafted mod is no draw
@@ -126,14 +119,15 @@ def _added(outcomes, wanted_ids: frozenset[str]) -> dict[str, Fraction]:
 
 
 def tier_lines(
-    ab: Abstraction, action: Action, states: Sequence[CompressedState], weights: Sequence[float], fractured: frozenset[str] = frozenset()
+    ab: Abstraction, action: Action, states: Sequence[CompressedState], weights: Sequence[float]
 ) -> list[TierLine]:
     """The tier line of every wanted family that `action` can add at some of `states`, mixed by `weights`; none when it adds none.
 
-    The policy takes `action` at each of `states`, so the game does not refuse it there. `fractured`: the ids of the start item's
-    fractured mods (`wanted_families`).
+    The policy takes `action` at each of `states`, so the game does not refuse it there. A family whose mod the action forces at every
+    one of the states (an essence's own mod) gets no line: it comes every time, there is no chance of a tier to show, and the page says
+    that mod by its essence, not by a tier of the ladder (#895). Any other action of the same route that can draw the family keeps its line.
     """
-    families = wanted_families(ab, fractured)
+    families = wanted_families(ab)
     if not families:
         return []
     ids = frozenset(mod_id for family in families for mod_id in family.ladder)
@@ -143,6 +137,7 @@ def tier_lines(
     total = math.fsum(weights)
     sums: list[dict[int, list[float]]] = [{} for _ in families]
     seen: dict[Hashable, dict[str, Fraction]] = {}
+    always: set[str] | None = None  # the mods the action forces at every state taken so far (None: no state yet)
     for state, weight in zip(states, weights, strict=True):
         if weight <= 0.0:
             continue
@@ -150,6 +145,9 @@ def tier_lines(
             outcomes = ab._prepare(state, action).outcomes
         finally:
             ab._prepared_by.clear()  # a policy of thousands of states must not keep a pool for each (the walk clears it after each state too)
+        here = {getattr(part, "forced", None) for _, part in outcomes.components}
+        here = set() if None in here else here  # some part of the use forces nothing
+        always = here if always is None else always & here
         signature = _signature(outcomes)
         if signature is None:
             chance = _added(outcomes, ids)
@@ -163,7 +161,7 @@ def tier_lines(
                     sums[k].setdefault(tier, []).append(weight * float(chance[mod_id]))
     lines = []
     for family, per_tier in zip(families, sums, strict=True):
-        if not per_tier:
+        if not per_tier or (always and not always.isdisjoint(family.ladder)):
             continue
         shares = {tier: math.fsum(each) / total for tier, each in per_tier.items()}
         shown = sorted(tier for tier in {*shares, *family.wanted} if shares.get(tier, 0.0) > 0.0 or tier in family.wanted)

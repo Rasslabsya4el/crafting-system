@@ -15,7 +15,7 @@ from items_support import DATA, item, roll
 from targets_support import EXAMPLES
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
-from crafting_system.actions import BenchCraft, RemoveCraftedMods
+from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods
 from crafting_system.cli._route_card import (
     _leaf_slot,
     Group,
@@ -25,11 +25,13 @@ from crafting_system.cli._route_card import (
     card_of_item,
     card_of_states,
     card_of_target,
+    essence_notes,
     essence_tier,
     mod_text,
     tracks_junk,
 )
 from crafting_system.cli._route_html import _item
+from crafting_system.cli._route_tiers import tier_lines
 from crafting_system.items import ExplicitMod, Influence, Rarity, Side, accepted_by_tier, tier_table
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target
 
@@ -330,6 +332,7 @@ def stub_reader(*mods) -> _StateReader:
     reader.ab = SimpleNamespace(_drawn_contribution=lambda other: ())
     reader._fractured, reader._families = {}, {}
     reader._held = ()  # no start item: a fractured entry is drawn as the tiers it stands for
+    reader._forced = {}  # no essence of a route
     return reader
 
 
@@ -613,22 +616,60 @@ def test_the_real_r12_cards_after_a_step_show_the_start_items_fractured_mod_with
 # --- the real 3.29.3.3 dump: the fractures and the essence tiers of R05, R10, R11 (#895) ---------------
 
 
-def real_card(name: str):
+def real_card(name: str, essences: tuple[str, ...] = ()):
+    """The goal card of a real target as the page of a route that uses `essences` draws it."""
     data = real_game_data()
     target = load_target(EXAMPLES / name, data)
-    return data, target, card_of_target(data, target)
+    return data, target, card_of_target(data, target, forced=essence_notes(data, target.base_id, essences))
+
+
+SPITE, ZEAL = "Shrieking Essence of Spite", "Shrieking Essence of Zeal"
 
 
 def test_the_real_r10_goal_card_marks_the_fractured_movement_speed_and_says_the_essence_of_the_intelligence():
-    data, target, card = real_card("r10-fractured-boots.yaml")
+    data, target, card = real_card("r10-fractured-boots.yaml", (SPITE,))
 
-    # the Shrieking Essence of Zeal forces this very mod on boots, but here it is the bought fractured one
     assert card.prefixes[0] == Slot("30% increased Movement Speed", "wanted", ("fractured",), "T2")
     assert card.prefixes[1] == Slot("+# to maximum Life", "wanted", note="T2 or better")  # tier 1 or tier 2, the owner's target
-    # tier 2 of the natural ladder too, but the target names the mod the Shrieking Essence of Spite forces (OR-2)
+    # the route's essence forces this mod: the line says the essence's tier, not the tier 2 the mod also is on the natural ladder
     assert card.suffixes[0] == Slot("+(43-50) to Intelligence", "wanted", note="Shrieking essence")
     assert card.suffixes[1] == Slot("(16-20)% chance to Avoid Elemental Ailments", "wanted", note="crafted")
-    assert essence_tier(data, target.base_id, "MovementVelocity5") == "Shrieking essence"
+
+
+def test_where_a_mod_comes_from_is_read_from_the_route_not_from_the_target_line():
+    data, target, _ = real_card("r10-fractured-boots.yaml")
+    base = target.base_id
+    assert essence_notes(data, base, (SPITE, "Chaos Orb", "no such essence")) == {"Intelligence8": "Shrieking essence"}
+    assert essence_notes(data, base, (ZEAL,)) == {"MovementVelocity5": "Shrieking essence"}  # an essence does force the 30% Movement Speed on boots
+
+    # no route, or a route with no essence: the Intelligence is the natural mod it also is
+    assert card_of_target(data, target).suffixes[0] == Slot("+(43-50) to Intelligence", "wanted", note="T2")
+    # a route that starts from boots holding the Movement Speed unfractured (the vendor recipe's, #895 review) and uses the Essence of Spite:
+    # no essence of the route gives the Movement Speed, so its line is not an essence's, and nothing marks it fractured
+    recipe_start = dataclasses.replace(target.start_item, mods=(ExplicitMod("MovementVelocity5", (30,)),))
+    card = card_of_target(data, target, recipe_start, essence_notes(data, base, (SPITE,)))
+    assert card.prefixes[0] == Slot("30% increased Movement Speed", "wanted", note="T2")
+    assert card.suffixes[0] == Slot("+(43-50) to Intelligence", "wanted", note="Shrieking essence")
+    # a start item whose fractured mod only an essence gives has no tier of the ladder: the line says its essence
+    reservation = ExplicitMod("ManaReservationEfficiencyEssence6_", (7,), fractured=True)
+    helmet = load_target(EXAMPLES / "r11-reservation-helmet.yaml", data)
+    held = card_of_target(data, helmet, dataclasses.replace(helmet.start_item, mods=(*helmet.start_item.mods, reservation)))
+    (member,) = [slot for group in held.groups for slot in group.members if "fractured" in slot.marks]
+    assert (member.note, member.marks) == ("Shrieking essence", ("suffix", "fractured"))
+
+
+def test_the_tier_line_of_a_family_is_left_out_only_for_the_action_that_forces_its_mod():
+    """OR-31 and #895: the essence adds its Intelligence every time, so that step shows no chances for it; a Chaos Orb draws it by tier and shows them."""
+    data, target, _ = real_card("r10-fractured-boots.yaml")
+    ab = Abstraction(data, Goal.from_target(target), target.base_id, target.item_level)
+    start = ab.compress(target.start_item)
+
+    essence = {line.text for line in tier_lines(ab, ApplyEssence(SPITE), [start], [1.0])}
+    chaos = {line.text: line for line in tier_lines(ab, ChaosOrb(), [start], [1.0])}
+
+    assert essence == {"+# to maximum Life"}
+    assert set(chaos) == {"+# to maximum Life", "+# to Intelligence"}
+    assert [share.tier for share in chaos["+# to Intelligence"].tiers if share.wanted] == [2]  # the mod the target names
 
 
 def test_the_real_r05_goal_card_is_tier_1_life_the_fractured_attributes_and_the_deafening_strength():

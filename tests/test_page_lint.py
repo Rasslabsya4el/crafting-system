@@ -374,6 +374,14 @@ R10_ESSENCE = step(
     ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target", "+# to maximum Life: T1 to T9 ≈10% each · none ≈10% · every tier is the target"),
     ("Note", "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"),
 )
+# R10 as the owner fixed it (#895): Life tier 1 or 2, the Intelligence said by its essence, the bought Movement Speed marked fractured
+R10_OWNER_TARGET = item(
+    "Sorcerer Boots",
+    prefixes=(slot("30% increased Movement Speed", "w", "T2").replace("</div>", '<span class="b">fractured</span></div>'), slot("+# to maximum Life", "w", "T2 or better"), ANY),
+    suffixes=(slot("+(43-50) to Intelligence", "w", "Shrieking essence"), ANY, ANY),
+    target=True,
+)
+R10_OWNER_LIFE_LINE = "+# to maximum Life: T1 and T2 ≈2.6% each (target) · T3 to T9 ≈2.6% each · none ≈77%"  # the line of the new R10 page, step 2
 R05_LIFE_LINE = "+# to maximum Life: T1 ≈2.7% (target) · T2 to T8 ≈2.7% each · none ≈78%"  # the lines of the R05 golden, step 2
 R05_FIRE_LINE = "+#% to Fire Resistance: T2 ≈1% (target) · T3 to T8 ≈1% each · none ≈93%"
 R05_TARGET = item(
@@ -409,6 +417,13 @@ fixtures(
         "R10: Life asked at any tier and every shown tier marked, beside Intelligence at T2": page(route(goal(target=R10_TARGET), R10_ESSENCE)),
         "R05: the Goal asks T1 of Life and T2 of a resistance, and the line marks those tiers": page(route(goal(target=R05_TARGET), R05_ESSENCE)),
         "a Goal that asks T2 or better marks T1 and T2": page(route(goal(), step(1, "Regal Orb", ("Goal", "+# to maximum Life · T2 or better"), ("Tier chances", "+# to maximum Life: T1 and T2 ≈10% each (target) · T3 to T5 ≈10% each · none ≈50%")))),
+        "#895: a line of the target that says its essence's tier is still a family the target wants: a Chaos Orb of the same route shows its tiers": page(
+            route(
+                goal(target=R10_OWNER_TARGET),
+                step(1, "Shrieking Essence of Spite", ("Goal", "+(43-50) to Intelligence · Shrieking essence", "+# to maximum Life · T2 or better"), ("Tier chances", R10_OWNER_LIFE_LINE)),
+                step(2, "Chaos Orb", ("Goal", "+(43-50) to Intelligence · Shrieking essence"), ("Tier chances", "+# to Intelligence: T1 ≈1% · T2 ≈1% (target) · T3 to T9 ≈1% each · none ≈91%")),
+            )
+        ),
     },
 )
 

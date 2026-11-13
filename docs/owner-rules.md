@@ -17,7 +17,7 @@ The document of record for how the owner reads a target, a price, a search and a
 
 A mod whose tier the guide does not state is the top tier of its ladder that the target's item level allows, rolled on the item, not made at the bench.
 
-- **Example.** R05 (`examples/targets/r05-strength-ring.yaml`, item level 75): the guide says only "Maximum Life or Resistances", so the target asked Life tier 1, +(100-114), and each resistance tier 2, +(42-45)%, because their tier 1 needs item level 84. Since [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895) the file asks the tier 1 Life alone (the owner's own reading, OR-4); the old reading is kept as the test fixture `tests/fixtures/targets/r05-life-or-resistance.yaml`.
+- **Example.** R05 (`examples/targets/r05-strength-ring.yaml`, item level 75): the guide says only "Maximum Life or Resistances", so the target asked Life tier 1, +(100-114), and each resistance tier 2, +(42-45)%, because their tier 1 needs item level 84. Since [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895) the file asks the tier 1 Life alone (the owner's own reading, OR-4); the old reading is kept as the test fixture `tests/real_targets/r05-life-or-resistance.yaml`.
 - **Counter-example.** The same file counts a bench craft as "tier 1 of what it crafts whatever its range" (line 26), so a crafted +(26-40) Life meets "Life T1"; R05's mean came out at 12.2 c against the guide route's 135 c. R12 (`r12-lightning-amulet.yaml:28`) writes "every tier of the mod counts, because no minimum tier is given".
 - **Source.** Owner on the R10 page, 2026-10-31 (memory note `owner-route-reading.md`; issue [#96](https://github.com/Rasslabsya4el/crafting-system/issues/96), first comment). Audit #396, "The owner's rules".
 - **Replaces.** The default of ADR-0008 ("any tier, any source"), written on 2026-10-30. Narrowed by OR-4.
@@ -109,7 +109,7 @@ The search keeps no detail that a later decision never sees, like a crafter who 
 
 A good answer is exact among realistic routes; "approximate with an interval" reads as useless.
 
-- **Example.** R12 (56.6 c) is an exact mean that an independent Monte Carlo of the audit matched. (R10's 128 c and R11's 1,110 c are exact for their targets as written, but OR-4 calls those targets too strict.)
+- **Example.** R12 (56.6 c) is an exact mean that an independent Monte Carlo of the audit matched. (R10's 128 c and R11's 1,110 c were exact for their targets as written on 2026-11-02, which OR-4 calls too strict: tiers an agent wrote that nobody had stated. The targets of R05, R10 and R11 since #895 are the owner's own.)
 - **Counter-example.** R04 and R14 at default flags are refused or answered "within a certified 1%" with no route page (audit PLANNING-15).
 - **Source.** Memory note `realism-rails.md`, 2026-11-01.
 - **Replaces.** The resolution of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2 (owner, 2026-10-31): exact when a query fits in about a minute, otherwise an approximate answer marked as such, with an error of at most 1%.

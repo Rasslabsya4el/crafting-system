@@ -121,7 +121,8 @@ _Avoid_: default tier, any tier
 
 **Guide wording**:
 What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft wish ("you are happy with"). The target takes it as written; the top tier of an unstated tier applies only where the guide says nothing about the tier (`docs/owner-rules.md`, OR-4).
-_Avoid_: the owner's reading (it is the guide's words that win)
+Where the owner himself reads a route as a player and states the target, his numbers are the target (OR-4, "The owner's own reading": R05, R10 and R11 since #895).
+_Avoid_: an agent's reading of a tier the guide does not state (it is the guide's words that win, or the owner's own)
 
 **Start item**:
 The concrete item a query starts from. Every target file states it (`start_item:` with its `rarity:`), and the parser makes up none (#545). A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6.

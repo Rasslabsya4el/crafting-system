@@ -27,18 +27,20 @@ import prune_analysis as P  # noqa: E402
 from crafting_system.abstraction._pattern import Pattern  # noqa: E402
 from crafting_system.planner._pattern_bound import pattern_lower_bound  # noqa: E402
 
-# (route, tags): R13 with the key the route calls for and without the tags, R05 (72 offers, no action reads the junk: a state keeps none of it) with the key it calls for
+# (target, tags): R13 with the key the route calls for and without the tags, R05 (72 offers, no action reads the junk: a state keeps none of it) with the key it calls for.
+# R05 is the ring as it was read before #895 ("at least 1 of Life and the three resistances"): its walk has 78 states; the benchmark's R05 has 6 since #895.
+EXAMPLES = ROOT / "examples" / "targets"
 CASES = [
-    pytest.param("r13-life-resist-belt.yaml", None, id="r13-auto"),
-    pytest.param("r13-life-resist-belt.yaml", False, id="r13-no-tags"),
-    pytest.param("r05-strength-ring.yaml", None, id="r05-auto"),
+    pytest.param(EXAMPLES / "r13-life-resist-belt.yaml", None, id="r13-auto"),
+    pytest.param(EXAMPLES / "r13-life-resist-belt.yaml", False, id="r13-no-tags"),
+    pytest.param(ROOT / "tests" / "real_targets" / "r05-life-or-resistance.yaml", None, id="r05-auto"),
 ]
 
 
 @pytest.mark.parametrize(("route", "tags"), CASES)
 def test_the_bound_is_never_above_the_exact_cost_on_the_walked_graph(route, tags):
     real_game_data()  # skips without the dump
-    data, target, goal, abstraction, start, priced, info = E.build_model(ROOT / "examples" / "targets" / route, "twins", True, False)
+    data, target, goal, abstraction, start, priced, info = E.build_model(route, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced, tags=tags)
     g, reason, _ = E.walk(abstraction, start, priced, 0.0, float("inf"), 1e9, 1_000_000, 0)  # no clock: the walk of these routes is short
     assert reason == "finished"
