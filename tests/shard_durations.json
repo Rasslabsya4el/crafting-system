@@ -943,6 +943,10 @@
   "seconds": 1.564,
   "tests": 29
  },
+ "tests/test_offers_relevance.py": {
+  "seconds": 80.0,
+  "tests": 21
+ },
  "tests/test_offers_wanted_only.py": {
   "seconds": 0.008,
   "tests": 4

@@ -163,6 +163,9 @@ class Reads:
     * `needs_crafted`: the action can only be used on an item that holds a crafted mod (Remove
       Crafted Mods). A planner offers it only when the start item holds one or some other offered
       action adds one.
+    * `needs_veiled`: the action can only be used on an item that holds a veiled placeholder (an Unveil, a Pick: the offer goes with its
+      placeholder). A planner offers it only when the start item holds one or some other offered action may put one there
+      (`Adds.veils`); otherwise it could never be used and is left out before the walk (#848), as `needs_crafted` is.
     * `block_invariant`: when the junk families that no requirement and no craft tells apart are
       pooled into blocks, the action's kernel pushed through the block map is the same for every
       member of a block (only its legality may differ). An approximate answer built on blocks (ADR-0023)
@@ -246,6 +249,7 @@ class Reads:
     families: frozenset[str] | None = None
     pool_weight: bool = False
     needs_crafted: bool = False
+    needs_veiled: bool = False
     block_invariant: bool = False
     variants: bool = False
     fractures: bool = False
@@ -345,6 +349,10 @@ class Adds:
     * `imprints`: the action makes, replaces or uses up an imprint of the item (an Imprint, a Restore), so the compressed state stores the
       imprints the item holds (ADR-0060, ticket #219). The default is False, which says the action leaves the imprints it was given alone
       (or, if it builds a new item, drops them); `Action.adds` itself says False too, because the kernel carries them.
+    * `veils`: the action may put a veiled placeholder on an item that holds none (a Veiled Chaos Orb, a Veiled Exalted Orb; #848). The
+      dataclass default is False: an action that keeps the mods it was given, or draws from the ordinary pool, never makes one (the
+      placeholders are mods of the veiled domain, which no pool holds); `Action.adds` itself (an action that declares nothing) says True.
+      A planner reads it to know whether an action that `Reads.needs_veiled` can ever be used.
     * `socket_count`, `socket_links`, `socket_colours`: the action changes the number of sockets (a Jeweller's Orb, a bench craft), the link
       groups (an Orb of Fusing) or the colours (a Chromatic Orb) of the item (ticket #228, ADR-0046). A change of the count changes the other
       two as well, so it needs all three. The default is False, which says the action leaves that part as it was; `Action.adds` itself (an
@@ -373,6 +381,7 @@ class Adds:
     asked_only: bool = False
     erases_fractured: bool = False
     imprints: bool = False
+    veils: bool = False
     socket_count: bool = False
     socket_links: bool = False
     socket_colours: bool = False
@@ -721,12 +730,12 @@ class Action(ABC):
         )
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality, the offer, the enchantment and the sockets.
+        """What the action puts on `item`; the default is mods it does not name (a veiled placeholder among them), and a change of the implicits, the quality, the offer, the enchantment and the sockets.
 
         `data` and `item` may be None for an action whose additions depend on neither (an orb); one
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
-        return Adds(implicits=True, quality=True, offer=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True)
+        return Adds(implicits=True, quality=True, offer=True, enchantment=True, veils=True, socket_count=True, socket_links=True, socket_colours=True)
 
     def previewable(self, data: GameData | None = None) -> Previewable:
         """Whether a Hinekora's Lock previews this action (ADR-0055); `Previewable.NO`, blind, by default.
