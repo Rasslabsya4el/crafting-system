@@ -958,5 +958,8 @@ def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array
     assert peak < 40 * edges, f"{peak / edges:.1f} bytes an edge"
     monkeypatch.undo()
     monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 5000)  # the same visits by one inverse
+    real_inverse, inverted = _route_flow._inverse, []
+    monkeypatch.setattr(_route_flow, "_inverse", lambda system: inverted.append(system.nt) or real_inverse(system))
     dense = _route_flow._solved(dense_edges_chain(states, outcomes, 1))  # every state its own kernel: 3,000 classes, one dense inverse
+    assert inverted == [states]  # the dense path ran, on the 3,000 kernel classes
     assert done.visits == pytest.approx(dense.visits, rel=1e-8)
