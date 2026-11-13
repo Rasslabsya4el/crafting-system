@@ -15,7 +15,7 @@ import pytest
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write_price_file
 from crafting_system.prices.http_json import SourceError
 from crafting_system.prices.ninja_history import exchange_readings, exchange_rows
-from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, OLD, OLD_THIN, price_marks
+from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, NO_DEPTH, OLD, OLD_THIN, price_marks
 from crafting_system.prices.provenance import EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STASH, TRADE, Provenance
 from crafting_system.prices.week_snapshot import DayRow, build_snapshot, reading_on, wants_history
 
@@ -205,8 +205,27 @@ def test_a_bulk_stand_in_is_divided_by_the_median_rise_of_its_kind_and_a_start_i
     assert snapshot.prices["Hinekora's Lock"].chaos == pytest.approx(400.0)
     assert snapshot.prices["Dense Fossil"].chaos == 7.0
     assert snapshot.prices[RING].chaos == 2.2
-    assert snapshot.prices["Essence of D"].provenance.date == "2026-11-10"  # still marked as a reading of a later day
+    d = snapshot.prices["Essence of D"]
+    assert d.provenance == Provenance(EXCHANGE, "Allflame", "2026-11-10")  # its day kept, the reading's depth gone
+    assert d.detail == {"reading_chaos": 9.0, "reading_date": "2026-11-10", "template": "end.json", "divided_by": 4.0, "sample": 3, "group": "essence"}
+    assert [mark.code for mark in price_marks(d, snapshot, uses=1.0)] == [LATER, NO_DEPTH]
     assert "Essence of D: stand-in, the reading of 2026-11-10 from end.json, divided by 4" in notes
+
+
+def test_a_previous_leagues_reading_and_a_zero_price_stay_out_of_the_sample():
+    """Essence A is read only from Mirage (its rise would be 12/1 = 12) and essence Z is priced 0 at the end: neither counts, so the
+    sample is B alone (10/5 = 2) and D stands in at 9 / 2 = 4.5."""
+    end = PriceFile("Allflame", END, 600.0, {
+        "Divine Orb": PriceEntry(600.0, "poe.ninja"), "Essence of A": PriceEntry(12.0, "poe.ninja"), "Essence of B": PriceEntry(10.0, "poe.ninja"),
+        "Essence of Z": PriceEntry(0.0, "poe.ninja"), "Essence of D": PriceEntry(9.0, "poe.ninja"),
+    })  # fmt: skip
+    rows = {("Allflame", "divine-orb"): 200.0, ("Mirage", "essence-of-a"): 1.0, ("Allflame", "essence-of-b"): 5.0, ("Allflame", "essence-of-z"): 1.0}
+
+    snapshot, _ = build_snapshot([("end.json", end)], lambda league, slug: [DayRow(AS_OF if league == "Allflame" else date(2026, 3, 13), rows[league, slug], 10.0)] if (league, slug) in rows else [], "Allflame", START, AS_OF, MIRAGE)
+
+    assert snapshot.prices["Essence of A"].source == "poe.ninja-previous-league"
+    assert snapshot.prices["Essence of D"].chaos == pytest.approx(4.5)
+    assert snapshot.prices["Essence of D"].detail["sample"] == 1
 
 
 def test_a_stash_line_and_a_hand_price_are_kept_and_never_read_from_the_rows():

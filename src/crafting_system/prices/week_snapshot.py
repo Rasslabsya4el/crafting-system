@@ -15,7 +15,10 @@ overview). For each name of the templates, in order:
    A bulk name's stand-in is divided by how far its kind of item (essences, fossils, resonators, oils, other currency) rose from
    the day to the template's: the median over the names of that kind priced on both days (#860, OR-23). Prices rise very unevenly
    over a league (Allflame, 2026-07-31 to 2026-11-10: essences x4.7, other currency x2.3, fossils x1.2, the Divine Orb x2.9), so
-   no single rate such as the Divine Orb's fits them all.
+   no single rate such as the Divine Orb's fits them all. The sample is the names that traded on the day, and a stand-in is a
+   name that did not: the rarer tiers of a kind may have moved otherwise, so the estimate is as good as the evidence and no
+   better. A scaled stand-in keeps its reading's day (marked as a later day's) and no depth (marked as such), and its `detail`
+   holds the reading, the divisor and the sample.
 
 The Chaos Orb is 1 and the Divine Orb's reading on the day is the file's `chaos_per_divine`. Pure: the rows come from `rows_of`.
 """
@@ -37,7 +40,7 @@ __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
 
 GROUP_WORDS = (("Essence", "essence"), ("Fossil", "fossil"), ("Resonator", "resonator"), (" Oil", "oil"))
 CURRENCY_GROUP = "currency"
-BULK_KINDS =(EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE)  # a stash line (STASH) is told by its kind or its category
+BULK_KINDS = (EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE)  # a stash line (STASH) is told by its kind or its category
 
 RowsOf = Callable[[str, str], Sequence[DayRow]]  # (league, poe.ninja details id) -> that item's traded days
 Previous = tuple[str, date, date]  # the previous league, its first day, and its day of the same league age
@@ -132,7 +135,7 @@ def _drift(name: str, label: str, names: dict[str, tuple[str, PriceEntry]], pric
     ratios = [
         entry.chaos / found.chaos
         for other, (other_label, entry) in names.items()
-        if other_label == label and group_of(other) == group and (found := prices.get(other)) is not None and found.source == HISTORY_SOURCE
+        if other_label == label and group_of(other) == group and (found := prices.get(other)) is not None and found.source == HISTORY_SOURCE and entry.chaos > 0
     ]
     return (statistics.median(ratios), len(ratios)) if ratios else (1.0, 0)
 
@@ -192,7 +195,13 @@ def _stand_in(entry: PriceEntry, label: str, league: str, as_of: date, previous:
             f"stand-in (OR-7, OR-23): {why}; the reading of {day} from {label} ({entry.chaos:g} Chaos) divided by {ratio:.4g},"
             f" the median rise of the {count} {group_of(name)} {'name' if count == 1 else 'names'} priced on both days"
         )
-    if entry.note:
-        note += f" ({entry.note})"
-    chaos = entry.chaos if drift is None else entry.chaos / drift[0]
-    return replace(entry, chaos=chaos, note=note)
+    if drift is None or drift[1] == 0:
+        if entry.note:
+            note += f" ({entry.note})"
+        return replace(entry, note=note)
+    # an estimate, not the reading: the reading's own words, depth and counts no longer describe it, so they go and the
+    # estimate is marked as a price with no recorded depth besides its later day (OR-23); `detail` keeps what it was made from
+    ratio, count = drift
+    detail = {"reading_chaos": entry.chaos, "reading_date": day, "template": label, "divided_by": ratio, "sample": count, "group": group_of(name)}
+    kept = None if entry.provenance is None else Provenance(entry.provenance.kind, entry.provenance.league, entry.provenance.date)
+    return replace(entry, chaos=entry.chaos / ratio, note=note, detail=detail, provenance=kept)
