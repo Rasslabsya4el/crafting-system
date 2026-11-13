@@ -564,15 +564,19 @@ def test_the_chance_of_entering_a_step_of_a_stiff_policy_is_good_by_the_inverse_
     assert checked > 20
 
 
-def test_a_stiff_plan_says_in_a_limit_how_many_digits_its_checked_residual_supports_and_an_ordinary_one_says_nothing():
+def test_a_plan_whose_cycles_are_stiff_says_in_a_limit_how_many_digits_its_solves_support_and_a_stiff_self_loop_or_an_ordinary_one_says_nothing():
+    """The digits are the solves' own forward estimates (#841, #853): a ring of two states gone round 1e12 times amplifies the rounding by 1e12, and says so;
+    a state that stays with chance 1 - 1e-12 costs nothing, as its self-loop is divided out (before, the residual 1e-9 times the 1e12 steps of a run said 0 digits)."""
+    ring = {"A": act("a", ("B", 10**12), ("goal", 1)), "B": act("b", ("A", 10**12), ("goal", 1))}
     rng = random.Random(3)
     start, policy = stiff_policy(rng, 5, 12)
     mild_start, mild = hand_policy()
 
-    (limit,) = _route_flow.flow_limits(_route_flow.chain_of_policy(start, policy, is_goal))
+    (limit,) = _route_flow.flow_limits(_route_flow.chain_of_policy("A", ring, is_goal))
 
     assert limit.what == "The numbers of the steps are good to fewer digits than printed" and limit.approximate
-    assert "significant digits" in limit.why and "residual of 1e-09" in limit.guarantee
+    assert "significant digits" in limit.why and "amplifies" in limit.guarantee
+    assert _route_flow.flow_limits(_route_flow.chain_of_policy(start, policy, is_goal)) == ()
     assert _route_flow.flow_limits(_route_flow.chain_of_policy(mild_start, mild, is_goal)) == ()
 
 
@@ -951,7 +955,7 @@ def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array
     before = tracemalloc.get_traced_memory()[0]
     tracemalloc.reset_peak()
     done = _route_flow._solved(chain)
-    reached, unsettled = _route_flow._entries(chain)
+    reached, unsettled, _ = _route_flow._entries(chain)
     peak = tracemalloc.get_traced_memory()[1] - before
     tracemalloc.stop()
     assert done.solved and unsettled == 0 and reached == [1.0]
@@ -963,3 +967,47 @@ def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array
     dense = _route_flow._solved(dense_edges_chain(states, outcomes, 1))  # every state its own kernel: 3,000 classes, one dense inverse
     assert inverted == [states]  # the dense path ran, on the 3,000 kernel classes
     assert done.visits == pytest.approx(dense.visits, rel=1e-8)
+
+
+def random_shared_policy(rng: random.Random):
+    """A policy whose states draw their outcomes from a few kernels (so the kernel classes are a real quotient), with dead ends, loops and weights from 1
+    to 2^62 + 5 (stiff chains: a run goes round some loops up to 1e18 times), as the comparison of the checker of #689 made them (#853)."""
+    size = rng.randint(3, 14)
+    names = [f"s{i}" for i in range(size)]
+    pool = []
+    for _ in range(rng.randint(1, 4)):
+        targets = rng.sample([*names, "goal"], rng.randint(1, min(4, size + 1)))
+        pool.append(tuple((t, rng.choice([1, 2, 3, 10**8, 10**16, 2**62 + 5])) for t in targets))
+    policy = {}
+    for name in names:
+        if rng.random() < 0.1:
+            continue  # a dead end
+        policy[name] = act(rng.choice("ab"), *rng.choice(pool))
+    return names[0], policy
+
+
+@pytest.mark.parametrize("dense_limit", [1500, 0])
+def test_a_stiff_chain_whose_visits_settle_on_its_item_states_settles_on_its_kernel_classes_and_agrees_within_their_error(monkeypatch, dense_limit):
+    """#853: after #689 the visits are solved on the kernel classes, a different linear system than the item states'; which stiff chains settled
+    changed with it. Both now go through the one linear solve, which decides by the error bound, not by a residual: whatever settles on the item
+    states settles on the quotient, and the two agree within the error each estimates of itself."""
+    monkeypatch.setattr(_route_flow, "DENSE_LIMIT", dense_limit)
+    rng = random.Random(853)
+    compared = stiff = unknown = 0
+    for _ in range(300):
+        start, policy = random_shared_policy(rng)
+        if start not in policy:
+            continue
+        chain = _route_flow.chain_of_policy(start, policy, is_goal)
+        direct, lumped = _route_flow._direct(chain), _route_flow._solved(chain)
+        if not direct.solved:
+            continue
+        assert lumped.solved, start
+        error = max(direct.error, lumped.error)
+        if not error < 1.0:  # (a cluster sending 2^62 + 5 to itself has a condition of 1e18 on the item states: no estimate; the classes merge it into one)
+            unknown += 1
+            continue
+        assert np.allclose(lumped.visits, direct.visits, rtol=max(1e-9, 4 * error), atol=0.0), (start, error)
+        compared += 1
+        stiff += float(direct.visits.sum()) > 1e12
+    assert compared > 150 and stiff > 10 and unknown < compared / 10, (compared, stiff, unknown)

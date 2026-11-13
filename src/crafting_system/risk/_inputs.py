@@ -99,6 +99,7 @@ class _System:
     pivot: tuple[float, ...]  # the chance to leave each state less the copies of it among its own inputs (1 - M_ss, a sum of positive terms)
     scaled_rows: tuple[tuple[tuple[int, float], ...], ...]  # P'[s, t] = M[s, t] / pivot[s] for t != s (empty where the pivot is not above zero)
     scaled_cols: tuple[tuple[tuple[int, float], ...], ...]  # the same by columns: scaled_cols[t] = ((s, P'[s, t]), ...)
+    exits: tuple[float | None, ...]  # the share of the row of P' that leaves the state's component (a sum of positive chances over the pivot); None where an input lies inside it
 
 
 def _system(chain: Chain) -> _System:
@@ -136,6 +137,13 @@ def _system(chain: Chain) -> _System:
             scaled[i] = tuple((j, coef / pivot[i]) for j, coef in rows[i] if j != i)
             for j, coef in scaled[i]:
                 scaled_columns[j].append((i, coef))
+    exits: list[float | None] = [None] * size
+    for i in nodes:
+        own = comp_of[i]
+        if not pivot[i] > 0.0 or any(expanded[y] and comp_of[y] == own for y in chain.inputs[i]):
+            continue  # an input inside the component: the row is not chances alone (`_sweep` solves it by LU)
+        out = math.fsum(p for j, p in chain.succ[i] if j != i and not (expanded[j] and comp_of[j] == own)) if chain.can_finish[i] else 1.0
+        exits[i] = out / pivot[i]
     return _System(
         size,
         nodes,
@@ -147,6 +155,7 @@ def _system(chain: Chain) -> _System:
         tuple(pivot),
         tuple(scaled),
         tuple(tuple(c) for c in scaled_columns),
+        tuple(exits),
     )
 
 
@@ -214,9 +223,12 @@ def _sweep(
 ) -> list[float]:
     """Solve x_j - sum_{(k, coef) in edges[j]} coef x_k = base[j], component by component in `order`; `edges` have no entry on the diagonal.
 
-    A state alone in its component is one division-free sum of positive terms. A component is a dense system with a zero diagonal, solved and refined
-    by `_linear.solve`, whose componentwise backward error is measured: above `_linear.REFUSED_ABOVE` after the refinement the sweep raises `Undecided`.
+    `edges` is `system.scaled_rows` (the costs) or `system.scaled_cols` (the visits, the transposed system). A state alone in its component is one
+    division-free sum of positive terms. A component is a dense system with a zero diagonal, solved and refined by `_linear.solve` (the one linear solve of
+    the planner): LU, and where that answer is not good enough and the rows of the component are chances (`system.exits`), the inverse without a
+    subtraction. Its componentwise backward error is measured: above `_linear.REFUSED_ABOVE` the sweep raises `Undecided`.
     """
+    transpose = edges is system.scaled_cols
     values = [0.0] * system.size
     for comp in order:
         if len(comp) == 1:
@@ -226,18 +238,16 @@ def _sweep(
                 raise NotSubcritical("a value is not finite")
             continue
         local = {j: k for k, j in enumerate(comp)}
-        off = np.zeros((len(comp), len(comp)))
+        off = np.zeros((len(comp), len(comp)))  # the rows of P' inside the component (`transpose` solves with its transpose)
         rhs = np.empty(len(comp))
         for j in comp:
             row = local[j]
-            rest = [base[j]]
-            for k, coef in edges[j]:
+            for k, coef in system.scaled_rows[j]:
                 if k in local:
                     off[row, local[k]] += coef
-                else:
-                    rest.append(coef * values[k])
-            rhs[row] = math.fsum(rest)
-        found = _linear.solve(off, rhs)
+            rhs[row] = math.fsum([base[j], *(coef * values[k] for k, coef in edges[j] if k not in local)])
+        exits = [system.exits[j] for j in comp]
+        found = _linear.solve(off, rhs, None if any(e is None for e in exits) else np.array(exits), transpose)
         if found is None:
             raise NotSubcritical("a component is singular")
         solution, error = found
@@ -256,26 +266,73 @@ def _pivots(system: _System) -> None:
             raise NotSubcritical(f"state {i} needs at least as much of itself as it yields")
 
 
+def _measured(system: _System, edges: Sequence[Sequence[tuple[int, float]]], x: Sequence[float], base: Sequence[float]) -> tuple[list[float], list[float]]:
+    """`(lack, scale)` of `x` in `x_j - sum coef x_k = base[j]` (`edges` as in `_sweep`), at every expanded state: `lack` is the residual's size plus the
+    rounding of forming it, `(terms + 3) eps` of the scale, so that the exact residual is at most `lack`; `scale` is `|x| + sum |coef x| + |base|`."""
+    lack, scale = [0.0] * system.size, [0.0] * system.size
+    for j in system.nodes:
+        terms = [coef * x[k] for k, coef in edges[j]]
+        size = abs(x[j]) + math.fsum(abs(t) for t in terms) + abs(base[j])
+        residual = base[j] - x[j] + math.fsum(terms)
+        lack[j] = abs(residual) + (len(terms) + 3) * EPS * size
+        scale[j] = size
+    return lack, scale
+
+
+def _amplified(system: _System, edges: Sequence[Sequence[tuple[int, float]]], order: Sequence[Sequence[int]], scale: Sequence[float]) -> list[float] | None:
+    """A certified upper bound on `(I - P')^-1 scale` (or `(I - P')^-T scale` for `scaled_cols`) at every state, by one more sweep: `y` with
+    `(I - P') y >= (1 - d) scale` checked (`d < 1`, `y >= 0`) gives `y / (1 - d)`, as the inverse is not negative. None when it cannot be shown (#670)."""
+    try:
+        reach = _sweep(system, edges, order, scale)
+    except NotSubcritical:
+        return None
+    lack, _ = _measured(system, edges, reach, scale)
+    short = 0.0
+    for j in system.nodes:
+        if reach[j] < 0.0:
+            return None
+        if scale[j] > 0.0:
+            short = max(short, lack[j] / scale[j])
+        elif lack[j] > 0.0:
+            return None
+    if not short < 1.0:
+        return None
+    return [r / (1.0 - short) for r in reach]
+
+
 def _solve(system: _System, costs: Sequence[float]) -> tuple[list[float], float]:
+    """`(values, e)`: the mean costs and their certified relative error, `|V - V^| <= e V` (module text).
+
+    Two certificates are made and the smaller kept. The first is the residual against the costs (`max (|r| + rounding) / c'`), which is pessimistic by the
+    ratio of the cost to the cost of one action. The second (#670) is the componentwise backward error `b` against the scale of the terms
+    (`s = |V^| + P'|V^| + c'`) times `(I - P')^-1 s`, a bound certified by one more sweep (`_amplified`): `|V - V^| <= b (I - P')^-1 s`, so `V` lies within
+    `e' = b max ((I - P')^-1 s / V^)` of `V^`, which is `e = e' / (1 - e')` of `V`. Either check also proves the mean finite.
+    """
     for i in system.nodes:
         if not (math.isfinite(costs[i]) and costs[i] > 0.0):
             raise ValueError(f"cost of state {i} must be finite and above zero, got {costs[i]!r}")
     _pivots(system)
     scaled = [costs[i] / system.pivot[i] for i in range(system.size)]
     values = _sweep(system, system.scaled_rows, system.comps, scaled)
+    lack, scale = _measured(system, system.scaled_rows, values, scaled)
     worst = 0.0
+    backward = 0.0
     for i in system.nodes:
-        ahead = math.fsum(coef * values[j] for j, coef in system.scaled_rows[i])
-        residual = scaled[i] - values[i] + ahead
-        rounding = (system.terms[i] + 3) * EPS * (values[i] + ahead + scaled[i])
-        worst = max(worst, (abs(residual) + rounding) / scaled[i])
         if not values[i] > 0.0:
             raise NotSubcritical("a value is not positive")
-    if not worst < 1.0:
+        worst = max(worst, lack[i] / scaled[i])
+        backward = max(backward, lack[i] / scale[i])
+    certified = worst
+    reach = _amplified(system, system.scaled_rows, system.comps, scale)
+    if reach is not None:
+        wide = backward * max(reach[i] / values[i] for i in system.nodes)
+        if wide < 1.0:
+            certified = min(certified, wide / (1.0 - wide))
+    if not (worst < 1.0 or reach is not None):
         raise NotSubcritical("the residual is as large as the costs")
-    if not worst <= _linear.REFUSED_ABOVE:
-        raise Undecided(f"the costs are known only to a relative error of {worst:.3g}, not {_linear.REFUSED_ABOVE:g}")
-    return values, worst
+    if not certified <= _linear.REFUSED_ABOVE:
+        raise Undecided(f"the costs are known only to a relative error of {certified:.3g}, not {_linear.REFUSED_ABOVE:g}")
+    return values, certified
 
 
 def solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], float]:
@@ -319,12 +376,14 @@ def mean_and_variance(
     return (m1[0], mean_low, mean_high), (variance, var_low, var_high), m1
 
 
-def expected_visits(chain: Chain, values: Sequence[float], error: float) -> tuple[list[float], float, _System]:
-    """The expected number of visits of every state (all runs together) and a bound on their 1-norm error.
+def expected_visits(chain: Chain, values: Sequence[float], error: float) -> tuple[list[float], float, _System, list[float]]:
+    """The expected number of visits of every state (all runs together), a bound on their 1-norm error, and a bound on each one's error.
 
     `values` and `error` are the mean cost of every state and its bound from `solve_costs` with the real costs. Returns
-    `(visits, slack, system)`: `visits[s]` is row 0 of `(I - M)^-1`, and the sum of the errors of the visits is at most `slack`
-    (infinite when `error` is 1 or more).
+    `(visits, slack, system, errors)`: `visits[s]` is row 0 of `(I - M)^-1`, the sum of the errors of the visits is at most `slack`
+    (infinite when `error` is 1 or more), and the error of `visits[s]` is at most `errors[s]` (#670): the componentwise backward error `b` of
+    `w` (`(I - P')^T w = e_0`, `N = w / pivot`) against its scale `s_w` times `(I - P')^-T s_w`, certified by one more sweep (`_amplified`); infinite
+    where that could not be shown. Each is a bound; a caller takes the smaller of what they give.
     """
     system = _proper_system(chain)
     _pivots(system)
@@ -332,20 +391,21 @@ def expected_visits(chain: Chain, values: Sequence[float], error: float) -> tupl
     base[0] = 1.0
     weights = _sweep(system, system.scaled_cols, tuple(reversed(system.comps)), base)  # (I - P')^T w = e_0
 
-    l1 = 0.0
-    for j in system.nodes:
-        terms = [weights[s] * coef for s, coef in system.scaled_cols[j]]
-        residual = base[j] - weights[j] + math.fsum(terms)
-        rounding = (len(terms) + 3) * EPS * (base[j] + abs(weights[j]) + math.fsum(abs(t) for t in terms))
-        l1 += abs(residual) + rounding
+    lack, scale = _measured(system, system.scaled_cols, weights, base)
+    l1 = math.fsum(lack[j] for j in system.nodes)
     visits = [weights[j] / system.pivot[j] for j in range(system.size)]  # N = w / pivot: the same r' as the unscaled system, formed without a cancellation
+    errors = [math.inf] * system.size
+    backward = max((lack[j] / scale[j] if scale[j] > 0.0 else (0.0 if lack[j] == 0.0 else math.inf) for j in system.nodes), default=0.0)
+    reach = _amplified(system, system.scaled_cols, tuple(reversed(system.comps)), scale) if math.isfinite(backward) else None
+    if reach is not None:
+        errors = [backward * reach[j] / system.pivot[j] if system.pivot[j] > 0.0 else math.inf for j in range(system.size)]
     costs = real_costs(chain)
     if error < 1.0:
         kappa = max(values[i] for i in system.nodes) / (1.0 - error) / min(costs[i] for i in system.nodes)
         slack = kappa * l1
     else:
         slack = math.inf
-    return visits, slack, system
+    return visits, slack, system, errors
 
 
 def expected_uses(
@@ -358,7 +418,7 @@ def expected_uses(
     """
     if chain.goal[0]:
         return {}
-    visits, slack, system = expected_visits(chain, values, error)
+    visits, slack, system, errors = expected_visits(chain, values, error)
 
     users: dict[int, list[tuple[int, int]]] = {}
     for s in system.nodes:
@@ -367,7 +427,7 @@ def expected_uses(
     uses = {}
     for y in sorted(users):
         value = math.fsum(visits[s] * copies for s, copies in users[y])
-        spread = max(copies for _, copies in users[y]) * slack
+        spread = min(max(copies for _, copies in users[y]) * slack, math.fsum(errors[s] * copies for s, copies in users[y]))
         relative = max(MIN_COUNT_ROUNDING, (len(users[y]) + 3) * EPS) * value
         uses[y] = (value, max(0.0, value - spread - relative), value + spread + relative)
     return uses
@@ -386,11 +446,11 @@ def weighted_visits_many(
     """`weighted_visits` for several weights from one solve of the visits (the visits do not depend on the weight)."""
     if chain.goal[0]:
         return [(0.0, 0.0, 0.0) for _ in weights]
-    visits, slack, system = expected_visits(chain, values, error)
+    visits, slack, system, errors = expected_visits(chain, values, error)
     found = []
     for weight in weights:
         value = math.fsum(visits[s] * weight[s] for s in system.nodes)
-        spread = max((weight[s] for s in system.nodes), default=0.0) * slack
+        spread = min(max((weight[s] for s in system.nodes), default=0.0) * slack, math.fsum(errors[s] * weight[s] for s in system.nodes if weight[s]))
         relative = max(MIN_COUNT_ROUNDING, (len(system.nodes) + 3) * EPS) * value
         found.append((value, max(0.0, value - spread - relative), value + spread + relative))
     return found
