@@ -1,8 +1,8 @@
 """The planner's one entry: a target, prices and settings in, a `Plan` out (ticket #880).
 
-`plan_target` is what a caller of the planner calls: the command line, the benchmark command and, later, the website. It reads no
-file, no clock and no environment: the caller loads the game data, the target and the prices, and says in `PlanSettings` what a
-run may do. Today it is `_starts.plan_with_starts` under one name, so the plan is the one the command printed before the planner
+`plan_target` is what a caller of the planner calls: the command line, the benchmark command and, later, the website. It loads no
+file and reads no date: the caller loads the game data, the target and the prices, and says in `PlanSettings` what a
+run may do (the day prices are judged on is `PlanSettings.today`). It times its own stages (the run's budget, `crafting_system.budget`) and takes the number of worker processes from `crafting_system.parallel`. Today it is `_starts.plan_with_starts` under one name, so the plan is the one the command printed before the planner
 left `cli` (with `recipe_starts` off it is `_plan.make_plan`).
 """
 

@@ -283,16 +283,18 @@ def test_real_package_imports_only_earlier_modules():
 
 
 def private_imports_of(tree: ast.AST, own_package: list[str], package_name: str, layer: str) -> list[str]:
-    """The dotted names a parsed module imports from inside `layer`: a submodule of it, or a name of it that starts with an underscore.
+    """The imports by which a parsed module reaches inside `layer`: a submodule of it, a name of it that starts with an underscore, or
+    the module object itself (an attribute of it could be a private file: `layer._mod.NAME`).
 
-    `from pkg.layer import name` and `from ..layer import name` are the public way; `import pkg.layer._mod`, `from pkg.layer._mod import x`,
-    `from ..layer._mod import x` and `from pkg.layer import _mod` are not.
+    `from pkg.layer import name` and `from ..layer import name` are the public way, and the only one. `import pkg.layer._mod`,
+    `from pkg.layer._mod import x`, `from ..layer._mod import x`, `from pkg.layer import _mod`, `import pkg.layer`, `from pkg import layer`
+    and `from .. import layer` are not.
     """
     found: list[str] = []
     prefix = [package_name, layer]
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            found += [alias.name for alias in node.names if alias.name.split(".")[:2] == prefix and len(alias.name.split(".")) > 2]
+            found += [alias.name for alias in node.names if alias.name.split(".")[:2] == prefix]
         elif isinstance(node, ast.ImportFrom):
             if node.level == 0:
                 base = (node.module or "").split(".")
@@ -300,9 +302,11 @@ def private_imports_of(tree: ast.AST, own_package: list[str], package_name: str,
                 base = own_package[: len(own_package) - (node.level - 1)]
                 if node.module:
                     base = base + node.module.split(".")
-            if base[:2] != prefix:
+            if base == [package_name]:
+                found += [f"{package_name}.{alias.name}" for alias in node.names if alias.name == layer]
+            elif base[:2] != prefix:
                 continue
-            if len(base) > 2:
+            elif len(base) > 2:
                 found.append(".".join(base))
             else:
                 found += [f"{'.'.join(base)}.{alias.name}" for alias in node.names if alias.name.startswith("_")]
@@ -310,7 +314,7 @@ def private_imports_of(tree: ast.AST, own_package: list[str], package_name: str,
 
 
 def find_private_imports(package_dir: Path, importer: str, layer: str) -> list[str]:
-    """One line per import by which a file of `importer` reaches inside `layer` instead of reading its public names."""
+    """One line per import by which a file of `importer` reaches inside `layer`, or binds its module object, instead of reading its public names."""
     violations = []
     for path in sorted((package_dir / importer).rglob("*.py")):
         relative = path.relative_to(package_dir)
@@ -331,6 +335,10 @@ def find_private_imports(package_dir: Path, importer: str, layer: str) -> list[s
         "from ..second import _inner",
         "from pkg.second import _inner",
         "def late():\n    from pkg.second._inner import thing\n",
+        "import pkg.second",
+        "import pkg.second as second",
+        "from pkg import second",
+        "from .. import second",
     ],
 )
 def test_an_import_from_inside_another_module_is_reported(tmp_path, source):
@@ -345,13 +353,13 @@ def test_an_import_from_inside_another_module_is_reported(tmp_path, source):
 @pytest.mark.parametrize(
     "source",
     [
-        "import pkg.second",
         "from pkg.second import thing, Other",
         "from ..second import thing",
-        "from .. import second",
-        "from pkg import second",
         "from pkg.first._inner import thing",
+        "from pkg import first",
+        "import pkg.first",
         "from ._inner import thing",
+        "import pkg",
     ],
 )
 def test_a_public_import_of_another_module_is_not_reported(tmp_path, source):

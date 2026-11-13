@@ -1,6 +1,6 @@
 """The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--solver auto|object|packed|envelope] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
 
-This is the one place that reads the clock and the environment for a plan (the planner itself reads neither). It loads the game
+This is the one place that reads the day and the settings of the environment for a plan (the planner is given both; it only times its own stages). It loads the game
 data from the cache, the target, and the price file with its hand overrides, asks the planner for the plan (`planner.plan_target`), prints
 the text tree, writes the JSON policy and, with `--verify`, runs the simulator against the computed
 mean. Exit code 0 is a plan (and, with `--verify`, an agreeing simulation), 1 an error, 2 a
