@@ -24,6 +24,11 @@ is stopped or cut ends the run that asked for it the same way (stopped or unfini
 each other with no click between them end at `MAX_NESTING` (100) levels, the run unfinished. A block still draws from its own
 seeded stream only, so nested runs keep the report the same for any number of workers.
 
+A Lock (`Lock`, ticket #297, ADR-0054, ADR-0057 layer 2). The policy may name a `Lock` instead of a step: its price is paid and it
+counts as one click; every option is drawn on the item in hand, in order, from the same stream; the best result its acceptance
+set takes is used (its price paid, one more click, the item replaced by that result, with no new draw), and with none the fallback
+step is applied to the item as it was, or the run stops when there is no fallback.
+
 With `reading` the simulator samples the actions under that reading of the rule axes (`action.outcomes_under(data, item, reading)`,
 for an action that has it) in every run and every nested run, instead of the plan's value: a reading is one global fact of the
 game (ADR-0033), so a nested run reads the same one as the run that asked for it.
@@ -48,7 +53,7 @@ from crafting_system.items import Item
 
 from ._estimate import critical_value, mean, proportion
 from ._report import SimulationReport
-from ._step import DonorMismatchError, Policy
+from ._step import DonorMismatchError, Lock, Policy
 
 DEFAULT_MAX_STEPS = 100_000
 MAX_NESTING = 100  # levels of inputs that ask for inputs; a deeper chain is cut and the run is unfinished
@@ -159,6 +164,25 @@ class _Tree:
                 return "stopped", item, paid
             if self.steps == self.max_steps:
                 return "unfinished", item, paid
+            if isinstance(step, Lock):
+                paid += step.cost
+                self.steps += 1
+                best = None
+                for a, option in enumerate(step.options):  # every option, on the item in hand, in order
+                    result = _sampler(option.action, self.data, item, self.reading).sample(self.rng)
+                    rank = step.accept(a, result)
+                    if rank is not None and (best is None or rank < best[0]):
+                        best = (rank, a, result)
+                if best is None and step.fallback is None:
+                    return "stopped", item, paid
+                if self.steps == self.max_steps:
+                    return "unfinished", item, paid
+                if best is not None:
+                    paid += step.options[best[1]].cost
+                    item = best[2]
+                    self.steps += 1
+                    continue
+                step = step.fallback
             paid += step.cost
             action = step.action
             if step.inputs:
