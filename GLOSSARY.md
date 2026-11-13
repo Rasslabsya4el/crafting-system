@@ -124,7 +124,7 @@ What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft
 _Avoid_: the owner's reading (it is the guide's words that win)
 
 **Start item**:
-The concrete item a query starts from. Every target file states it (`start_item:` with its `rarity:`), and the parser makes up none (#545). A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6.
+The concrete item a query starts from. Every target file states it (`start_item:` with its `rarity:`), and the parser makes up none (#545). A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6. By OR-42 (owner, 2026-11-13) starting over costs the cheaper of buying it again or wiping the same item, the wipe a shown step; a restart that only buys again is what is built today (#687).
 
 **Listing draw**:
 The draw of the mods of a bought start item whose mods the target does not name. A bought Magic or Rare start item that lists no mod is the item the market sells, so it holds what an Orb of Alteration (Magic: 1 or 2 mods) or an Orb of Alchemy (Rare: 4 to 6) leaves on its base, at the game weights. The plan opens with this free chance step and decides on each outcome; the start price stays the price of the listing (ADR-0064, #640). In the code it is `OpenListing`, and the item it opens is an **unopened listing** (`Item.unopened`): a Normal item with no mod that only the draw works on, which a restart returns to.
@@ -384,8 +384,11 @@ A **Given route** with its gaps filled so that it finishes and has a cost to com
 _Avoid_: restart route, guide with restart
 
 **Batch**:
-One stage of v1's action set (B1 to B4), finished when its benchmark routes pass.
+One stage of the action set (B1 to B8, ADR-0013), finished when its benchmark routes pass. Until 2026-11-13 all of them were v1; since then B1, B2 and B3 without the recombinator are the **beta**, and the rest is deferred (`docs/owner-rules.md`, OR-37).
 _Avoid_: phase, milestone
+
+**Beta**:
+The public website of November 2026 (`docs/owner-rules.md`, OR-35) with the methods of batches B1, B2 and B3 without the recombinator, catalysts included (OR-37). The methods outside it are shown on the site as "coming soon".
 
 **Spend**:
 The strands a craft uses up: a random whole number from 0 to a ceiling that depends on the action, taken after the cut and never below 0 (ADR-0041).
