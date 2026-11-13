@@ -106,6 +106,7 @@ _NAMES = {  # the kinds whose name in the catalog does not read as the game's wo
     "remove-crafted-mods": "Remove Crafted Mods",
     "awakeners-orb": "Awakener's Orb",
     "jewellers-orb": "Jeweller's Orb",
+    "unravelling-orb": "Orb of Unravelling",
     "harvest-reforge": "Harvest reforges",
     "harvest-reforge-influence": "Harvest reforges of an influence",
     "harvest-reforge-likelihood": "Harvest reforges that favour a mod",
