@@ -120,7 +120,7 @@ A requirement that names a mod and no tier because the guide states none. It mea
 _Avoid_: default tier, any tier
 
 **Guide wording**:
-What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft wish ("you are happy with"). The target takes it as written; the top tier of an unstated tier applies only where the guide says nothing about the tier (`docs/owner-rules.md`, OR-4).
+What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft wish ("you are happy with"). The target takes it as written; the top tier of an unstated tier applies only where the guide says nothing about the tier (`docs/owner-rules.md`, OR-4). For a reference target a soft wish does not allow any tier of Life or defences (OR-45, 2026-11-13).
 _Avoid_: the owner's reading (it is the guide's words that win)
 
 **Start item**:
@@ -372,11 +372,11 @@ One thing the player does in the game, shown once on a route page. It stands for
 _Avoid_: row (a row can be one state of the planner), card
 
 **Benchmark route**:
-A published crafting route (R01–R30 in the reference routes research) whose cost and odds a batch must match or beat. Its guide's cost is its **Given route** evaluated at the same prices.
-_Avoid_: test craft, reference craft
+A published crafting route (R01–R30 in the reference routes research) whose cost and odds a batch must match or beat. Its guide's cost is its **Given route** evaluated at the same prices. Since 2026-11-13 OR-45 (`docs/owner-rules.md`) says which routes count and how the guide's cost is read: the guide is a ceiling, the target is an item a player would craft, and not every route of R01 to R30 stays (#901). The owner's word for it is "reference craft".
+_Avoid_: test craft
 
 **Given route**:
-A route written down in a YAML file by an agent from a guide, and evaluated exactly as a fixed policy instead of searched for: ordered rules "when the compressed state matches these conditions, do this action", the first match wins, and a rule may restart by buying the start item again. A reachable state no rule covers is reported as a gap. It gives the guide's cost, which guides do not state, and `--route` also lets users compare their own route with the solver's.
+A route written down in a YAML file by an agent from a guide, and evaluated exactly as a fixed policy instead of searched for: ordered rules "when the compressed state matches these conditions, do this action", the first match wins, and a rule may restart by buying the start item again (by OR-42, 2026-11-13, starting over is the cheaper of that and wiping the same item; the wipe is not built). A reachable state no rule covers is reported as a gap. It gives the guide's cost, which guides do not state, and `--route` also lets users compare their own route with the solver's.
 _Avoid_: guide policy, manual policy
 
 **Completed route**:
@@ -488,7 +488,7 @@ The graph the envelope search solves each round: every known state is a node; an
 A state the envelope search knows (it is a successor of a built action) and has not expanded: no action of it is looked at yet, and the lower graph stands in for it with its pattern bound.
 
 **Approximate answer**:
-A policy with the interval between the optimistic and the pessimistic value, marked as approximate; given when the exact state would not fit in about a minute.
+A policy with the interval between the optimistic and the pessimistic value, marked as approximate; given when the exact state would not fit in about a minute. Being retired: since 2026-11-13 the answer is a plan shown as soon as an executable one exists, with a proof that stops at a proved 1% gap (`docs/owner-rules.md`, OR-39; ADR-0023, its amendment of that date).
 _Avoid_: estimate, heuristic answer
 
 **Certified gap**:

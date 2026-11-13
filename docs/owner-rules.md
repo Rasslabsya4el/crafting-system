@@ -30,7 +30,7 @@ A public website opens in November 2026: the user builds an item as on Craft of 
 
 Every route the site generates is stored and listed on the site, so that other players take a ready one; an identical request is answered from the store. Reusing stored game maths (the outcomes of actions on a base) for other targets is a wanted optimisation after the beta.
 
-- **Example.** None yet: nothing stores a route today.
+- **Example.** None yet: nothing stores a route today, and no ticket builds the store ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** A run that plans again a request already answered; a route that exists only as one file on the machine that ran it (ADR-0015, "one file per query, no server").
 - **Reason.** A route computed once serves every later player and costs nothing the second time.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 2).
@@ -40,8 +40,8 @@ Every route the site generates is stored and listed on the site, so that other p
 
 Batches B1, B2 and B3 without the recombinator are the beta, catalysts included. Corruption, Memory Strands, sockets, enchants, Hinekora's Lock and recombinators are shown as "coming soon" and built later; recombinators wait for players' 3.30 data. Methods of the beta are never cut to gain speed: if medium crafts grow past ten minutes as methods are added, the foundation is reviewed instead.
 
-- **Example.** R06's catalysts are in the beta ([#901](https://github.com/Rasslabsya4el/crafting-system/issues/901)). Of B3 the Awakener's Orb and the beast imprints stay, and the recombinator routes R25 and R28 wait. In the batches of ADR-0013 the later methods are corruption (B4), Memory Strands (B5), sockets (B6), enchants (B7) and Hinekora's Lock (B8).
-- **Counter-example.** The map's destination until this date, "all eight batches (B1–B8) pass their benchmark routes". V01's target, which lists four orbs "because fewer kinds keep the state space small" (OR-5's counter-example): a method cut to gain speed.
+- **Example.** R06's catalysts are in the beta ([#901](https://github.com/Rasslabsya4el/crafting-system/issues/901)). Of B3 the Awakener's Orb and the beast imprints stay, and the recombinator routes R25 to R29 wait. In the batches of ADR-0013 the later methods are corruption (B4), Memory Strands (B5), sockets (B6), enchants (B7) and Hinekora's Lock (B8).
+- **Counter-example.** The map's destination until this date, "all eight batches (B1–B8) pass their benchmark routes". For the second half, a method of the beta cut to gain speed, no case is named here.
 - **Reason.** The beta has to open in November with every method it offers working end to end, and speed is won in the foundation, not by offering less.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 3).
 - **Replaces.** The v1 scope of eight batches (ADR-0013 with [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81); amended there) and the destination of the map #1 (rewritten). Narrows OR-33: its ten minutes are also the mark past which the foundation is reviewed.
@@ -50,7 +50,7 @@ Batches B1, B2 and B3 without the recombinator are the beta, catalysts included.
 
 In November the player may type in what currency and ingredients he owns; reading the stash waits for GGG's approval of the integration.
 
-- **Example.** None yet: the site has no such input. The inputs of a run are [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)'s.
+- **Example.** None yet: the site has no such input. The inputs of a run are [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)'s, and no ticket builds this one ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** A site that cannot open, or cannot serve an SSF player, until the stash integration is approved.
 - **Reason.** GGG's approval is not in the project's hands and November is; typing it in gives the player the same answer without the integration.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 14).
@@ -63,7 +63,7 @@ Patch 3.30 is applied once, at the end of November, with 3.30 week-one prices.
 - **Counter-example.** Moving the data pin or the test prices to 3.30 in the middle of November, while the routes are being fixed against 3.29.
 - **Reason.** One move instead of a moving target: the routes are fixed against one patch and one price file, then moved once.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 18).
-- **Replaces.** The earlier wording "no 3.30 update until v1 is built and tested" (owner, memory note `stay-on-329.md`; the comment "the owner keeps 3.29 until v1 is built" at `tests/family_bench_support.py:63` repeats it): the update now has a date, not a condition.
+- **Replaces.** The earlier wording "no 3.30 update until v1 is built and tested" (owner, memory note `stay-on-329.md`; the comment "the owner keeps 3.29 until v1 is built" at `tests/family_bench_support.py:63` repeats it, [#913](https://github.com/Rasslabsya4el/crafting-system/issues/913)): the update now has a date, not a condition.
 
 ## Reading a target
 
@@ -136,7 +136,7 @@ Every method of the beta is offered to the planner by default, and the player sw
 
 Starting over costs the cheaper of buying the start item again or wiping the same item (an Orb of Scouring, plus an Orb of Transmutation or an Orb of Alchemy when needed); the wipe is a shown step. A fractured mod survives it; a corrupted item cannot be wiped.
 
-- **Example.** None yet: no route page shows a wipe as the way to start over.
+- **Example.** None yet: no route page shows a wipe as the way to start over ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** V01: each of about 107 restarts buys a new helmet where a player scours the old one, and the page says nothing of the old item. R14: the guide's "back to step 1" is priced as buying another start item, 744 Chaos, 48% of the completed route (both [#687](https://github.com/Rasslabsya4el/crafting-system/issues/687)).
 - **Reason.** A player wipes the item in his hand when that is cheaper than buying another.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 8).
@@ -146,7 +146,7 @@ Starting over costs the cheaper of buying the start item again or wiping the sam
 
 Where the guide names no rarity, the start is the cheapest rarity the market sells, and the steps that make it the needed rarity are shown and paid. A bought fractured item is a Rare with random other mods, marked approximate.
 
-- **Example.** None checked against this rule yet; the `crafter` helper asks it of every page it reads (its question 2).
+- **Example.** None checked against this rule yet; the `crafter` helper asks it of every page it reads (its question 2), and no ticket builds the rule for every bought start ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** R06 starts from a Normal Hunter belt with no market, while the guide accepts Hunter or Elder at any rarity ([#515](https://github.com/Rasslabsya4el/crafting-system/issues/515)). The bought fractured starts of R03, R05, R10, R11 and R12: the listing holds mods the target does not name, and the planner holds the fractured mod alone ([#656](https://github.com/Rasslabsya4el/crafting-system/issues/656)).
 - **Reason.** A player buys what is listed cheapest and pays for making it the rarity he needs, and a fractured item on the market is a Rare with other mods on it.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 9).
@@ -247,7 +247,7 @@ When the whole plan fits in about a minute, the plan is proved the cheapest of t
 - **Counter-example.** Today's search on the same route: 364 to 510 s and 165,980 item states spent after the plan is already in hand, to prove the last 0.49% (same note and run). A plan shown "within 1%" whose mean is itself an estimate is a counter-example too: the mean is always exact.
 - **Source.** Owner in the main chat, 2026-11-13, answer (b) to question 1 of [#822](https://github.com/Rasslabsya4el/crafting-system/issues/822); his rule of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2, 2026-10-31.
 - **Replaces.** OR-11 ("exact, never an interval"); keeps its point answer. Narrows OR-12.
-- **Narrowed by** OR-39 and OR-40 (owner, 2026-11-13). OR-39: the plan is shown as soon as an executable one exists and does not wait for the proof; the proof stops at a proved 1% gap whatever the time, so "about a minute" no longer chooses between two kinds of answer. OR-40: "about a minute" is the default of a machine setting. The exact mean of the plan shown and the proof figure as a certificate stand.
+- **Narrowed by** OR-39 and OR-40 (owner, 2026-11-13). OR-39: the plan is shown as soon as an executable one exists and does not wait for the proof, and the proof stops by itself at a proved 1% gap. As #900's chat reads it (OR-39 says why this is a reading), "about a minute" no longer chooses between two kinds of answer: it is the time a plan aims at (OR-33) and, by OR-40, the default of the machine setting that guards against a hang. What stays of OR-32: the 1% tolerance, the exact mean of the plan shown, and the proof figure as a certificate beside it.
 
 ### OR-33. One plan aims at about a minute; a 10-minute net stops it and says so until every method has its bound
 
@@ -276,17 +276,18 @@ A plan is shown as soon as an executable one exists; the proof goes on and stops
 - **Counter-example.** Today's search on the same route spends 364 to 510 s after the plan is in hand and shows nothing meanwhile (OR-32's counter-example). A page that swaps the route the player is reading for one a fraction of a percent cheaper; none is measured yet.
 - **Reason.** A player wants a route he can start on, not to wait for a proof, and not a route that keeps changing under him.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 5).
-- **Narrows.** OR-32: the plan no longer waits for its proof, and "about a minute" no longer chooses between two kinds of answer; the proof stops at a proved gap of 1% whatever the time (a proof that closes completely is the same answer with a gap of 0). What OR-32 says of the exact mean of the plan shown, and of the proof figure as a certificate beside it, stands.
+- **Narrows.** OR-32: the plan no longer waits for its proof, and the proof stops by itself at a proved gap of 1%. The decision does not name OR-32's "about a minute". The reading of the chat that wrote this rule down (#900), not the owner's word: the stop is the 1% gap whatever the time, so the minute no longer chooses between two kinds of answer (a proof that closes completely is the same answer with a gap of 0); it stays the time a plan aims at (OR-33) and the default of the machine setting (OR-40). [#826](https://github.com/Rasslabsya4el/crafting-system/issues/826)'s text still has the minute as that switch (a comment there says so). What OR-32 says of the exact mean of the plan shown, and of the proof figure as a certificate beside it, stands.
+- **Open.** No ticket yet measures the threshold of "notably better" or decides the "keep searching" button ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 
 ### OR-40. A time or memory limit is a setting of the machine and a guard against a hang
 
 A time or memory limit is a setting of the machine, a guard against a hang, never a figure sized for a GitHub runner and never the normal way a simple or medium craft ends.
 
 - **Example.** The planner takes the limits of a run in its settings from whoever calls it (ADR-0018, the amendment of [#880](https://github.com/Rasslabsya4el/crafting-system/issues/880)), and a run that a limit stopped says so in its answer (OR-13).
-- **Counter-example.** R14's finer percentile step, which brought the 16 GB runner to 14.9 GB ([#744](https://github.com/Rasslabsya4el/crafting-system/issues/744), OR-34): a figure sized for a runner. The generated family benchmark, where 6 targets end at the 10-minute net and 21 pass 13 GB ([#871](https://github.com/Rasslabsya4el/crafting-system/issues/871)): the net as the way a craft ends.
+- **Counter-example.** The generated family benchmark, where 6 targets end at the 10-minute net ([#871](https://github.com/Rasslabsya4el/crafting-system/issues/871)): the net as the way a craft ends. A limit chosen so that a run fits a 16 GB GitHub runner; no place is named here.
 - **Reason.** The site runs on its own machine, not on a GitHub runner, and a limit that ends ordinary crafts hides a slow foundation.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 6).
-- **Narrows.** OR-32 and OR-33: "about a minute" and the 10-minute net are no longer fixed figures of the product; they stand as the defaults of that setting until measurements change them. This is about the planner's limits only, not the timeouts of heavy runs or the caps of CI (the dispatcher chat's reading, `CLAUDE.md`, 2026-11-13).
+- **Narrows.** OR-32 and OR-33: "about a minute" and the 10-minute net are no longer fixed figures of the product; they stand as the defaults of that setting until measurements change them. This is about the planner's limits only, not the timeouts of heavy runs or the caps of CI. (Both sentences are the dispatcher chat's, written in `CLAUDE.md` on 2026-11-13 and moved here by #900.)
 
 ## The answer and the page
 
@@ -297,7 +298,7 @@ All mod lines on a page share one format, and a mod never shows a different mod'
 - **Example.** The V01 golden (`tests/golden/v01_minion_helmet.txt`, `.html`): `+(130-144) to maximum Life · T1`, the same shape in every card.
 - **Counter-example.** R05's bench step draws `DexMasterLifeCrafted1` "+(35-44)", a mod no bench option adds; "at least 1 of 4" is flattened into four lines with notes (audit PRES-2, PRES-7).
 - **Source.** Owner on the R10 page, 2026-10-31 (he had asked before); issue #96, first comment.
-- **Narrowed by** OR-47 (owner, 2026-11-13): the format gains the mark of a fractured mod and the essence's tier on an essence's mod, in place of a tier number of the ordinary ladder.
+- **Narrowed by** OR-47 (owner, 2026-11-13): the format gains the mark of a fractured mod, and an essence's mod carries the essence's tier in place of a tier number.
 
 ### OR-16. Every in-game step is shown; none is hidden
 
@@ -363,8 +364,8 @@ The p50 and p90 of a plan are given to within ±10% (the half-width of the brack
 A fractured mod is marked as fractured wherever the item is shown; a mod from an essence is shown with the essence's tier.
 
 - **Example.** None yet ([#895](https://github.com/Rasslabsya4el/crafting-system/issues/895) builds it): R10's Intelligence from the Shrieking Essence of Spite would read as the Shrieking tier's mod.
-- **Counter-example.** The R10 and R11 pages the owner read on 2026-11-13 did not show the fracture, and R10's Intelligence carried "T2", a tier number of the ordinary ladder, which an essence's mod is not on (#895).
-- **Reason.** A player reads a fractured mod as the one he cannot lose and an essence's mod by its essence, and "T2" says something else.
+- **Counter-example.** The R10 and R11 pages the owner read on 2026-11-13 did not show the fracture, and R10's Intelligence from the essence carried "T2" where the owner wants the essence's tier (#895).
+- **Reason.** A player reads a fractured mod as the one he cannot lose, and an essence's mod by its essence.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 13).
 - **Narrows.** OR-15: the one format of a mod line gains these two marks.
 
@@ -377,7 +378,7 @@ Rules are built on the information that exists now, even where old; GGG notes, t
 - **Example.** Harvest follows Craft of Exile's implementation where the documentation is incomplete; the 3.25 recombinator guide still stands.
 - **Counter-example.** Craft of Exile's 3.29.0.3 essence entries, bench prices and removed Harvest crafts were stale against the 3.29.3.3 data and lost.
 - **Source.** Memory note `evidence-ranking.md`, 2026-10-30; ADR-0005.
-- **Narrowed by** OR-46 (owner, 2026-11-13): for the outcome of a single action Craft of Exile's emulator is the reference. For everything else this rule stands.
+- **Narrowed by** OR-46 (owner, 2026-11-13): for the outcome of a single action Craft of Exile's emulator is the reference. For everything else this rule stands, and so does its counter-example: where current game data shows the emulator out of date, the stale source loses (the reading of #900's chat; [#915](https://github.com/Rasslabsya4el/crafting-system/issues/915) asks the owner).
 
 ### OR-22. Every rule carries its source, URL, quote and date
 
@@ -479,11 +480,12 @@ A guide's route is a ceiling, not the truth: the planner may honestly find a che
 
 Every changed route page is read by the `crafter` helper as a player before it lands. The owner gets a short digest at checkpoints (the target, the cost against the guide, the crafter's verdict) and full pages only where the crafter doubts or the cost is far from the guide. Craft of Exile's emulator is the reference for the outcome of a single action, as Path of Building is for builds.
 
-- **Example.** `.claude/agents/crafter.md` and `CLAUDE.md`, "How work is split" ([#888](https://github.com/Rasslabsya4el/crafting-system/issues/888)). Seven emulator cases of 12,000 uses each agreed with the planner's chance of one use of the Exalted Orb on J01 and V01 ([#637](https://github.com/Rasslabsya4el/crafting-system/issues/637); skill `coe-emulator-check`).
-- **Counter-example.** Before #888 a page landed on its tests alone: the R10 and R11 pages read "any tier" for Life, with the roll the player must reach nowhere on the page ([#643](https://github.com/Rasslabsya4el/crafting-system/issues/643), found by the helper's first run).
+- **Example.** `.claude/agents/crafter.md` and `CLAUDE.md`, "How work is split" ([#888](https://github.com/Rasslabsya4el/crafting-system/issues/888)). Seven emulator cases of 12,000 uses each agreed with the planner's chance of one use of the Exalted Orb on J01 and V01 (`docs/research/2026-11-13-637-exalt-key.md`, [#637](https://github.com/Rasslabsya4el/crafting-system/issues/637); skill `coe-emulator-check`).
+- **Counter-example.** Before #888 no one read a page as a player before it landed. The helper's trial run found on R11's recorded page that a helmet with three full suffixes counts as finished, while the guide rolls until an open suffix ([#890](https://github.com/Rasslabsya4el/crafting-system/issues/890)).
 - **Reason.** Tests do not see what a player would call wrong, and the owner does not read every page himself.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 12).
-- **Narrows.** OR-21: for the outcome of a single action the emulator is the reference; for everything else OR-21 stands. Replaces the sentence of `CLAUDE.md` that the dispatcher chat shows the owner every benchmark page at each checkpoint (changed there).
+- **Narrows.** OR-21 (and ADR-0005, amended there): for the outcome of a single action the emulator is the reference, where OR-21 names no ranking of sources. The decision does not say what happens where current game data shows the emulator out of date, the case of OR-21's counter-example. The reading of the chat that wrote this rule down (#900), not the owner's word: there OR-21 still stands, the stale source loses, and the disagreement is filed as an issue; the question is put to the owner in [#915](https://github.com/Rasslabsya4el/crafting-system/issues/915). OR-24 is unchanged: a doubtful mechanic goes beside the emulator first.
+- **Replaces.** The sentence of `CLAUDE.md` that the dispatcher chat shows the owner every benchmark page at each checkpoint (changed there).
 
 ### OR-50. The architecture, the language and the maths are the dispatcher chat's call
 

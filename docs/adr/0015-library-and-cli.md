@@ -16,7 +16,7 @@ Since ticket [#880](https://github.com/Rasslabsya4el/crafting-system/issues/880)
 
 ## Amendment: the product is a website ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), owner rules OR-35 and OR-36 in [`docs/owner-rules.md`](../owner-rules.md), 2026-11-13)
 
-The sentences above that "v1 has no HTTP service", that the route view is "one file per query, no server", and the option below that puts an HTTP service out of v1, are replaced as the description of the product. By the owner's rules of the retro of 2026-11-13:
+The sentences above that "v1 has no HTTP service", that the route view is "one file per query, no server", and the considered option that puts an HTTP service out of v1, are replaced as the description of the product. By the owner's rules of the retro of 2026-11-13:
 
 - **OR-35.** The product is a public website in November 2026: the user builds an item as on Craft of Exile, picks the crafting methods the run may use and an economy mode, starts the run and gets a route page.
 - **OR-36.** Every generated route is stored and listed on the site, and an identical request is answered from the store.
