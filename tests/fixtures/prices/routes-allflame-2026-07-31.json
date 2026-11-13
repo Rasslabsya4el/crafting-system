@@ -1017,19 +1017,21 @@
       "source": "poe.ninja-previous-league"
     },
     "Hinekora's Lock": {
-      "chaos": 225589.0,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 96198.13754208753,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 2.34504540071062,
+        "group": "currency",
+        "league": "Allflame",
+        "reading_chaos": 225589.0,
+        "sample": 23,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (225589 Chaos) divided by 2.345, the median rise of the 23 currency names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 3.3333318557199156,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 152279.0,
-          "depth": 1.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
@@ -1268,98 +1270,78 @@
       "source": "poe.ninja-history"
     },
     "Muttering Essence of Anger": {
-      "chaos": 1.0,
+      "chaos": 0.21089630931458697,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "muttering-essence-of-anger",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 1,
-        "usable": 1,
-        "used": 1
+        "reading_chaos": 1.0,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 1 offers holding 3 units, 1 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (1 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 1,
         "date": "2026-11-10",
-        "depth": 3.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 1,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Muttering Essence of Contempt": {
-      "chaos": 26.2,
+      "chaos": 5.5254833040421785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "muttering-essence-of-contempt",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 4
+        "reading_chaos": 26.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 4 offers holding 10 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (26.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 10.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 4,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Muttering Essence of Fear": {
-      "chaos": 413.40000000000003,
+      "chaos": 87.18453427065026,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "muttering-essence-of-fear",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 2,
-        "usable": 2,
-        "used": 2
+        "reading_chaos": 413.40000000000003,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 4 units, 2 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (413.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 2,
         "date": "2026-11-10",
-        "depth": 4.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Muttering Essence of Greed": {
-      "chaos": 24.2,
+      "chaos": 5.103690685413005,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "muttering-essence-of-greed",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 24.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 8 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (24.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 8.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -1402,26 +1384,21 @@
       "source": "poe.ninja-history"
     },
     "Muttering Essence of Torment": {
-      "chaos": 24.2,
+      "chaos": 5.103690685413005,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "muttering-essence-of-torment",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 24.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 10 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (24.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 10.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -1917,26 +1894,21 @@
       "source": "poe.ninja-history"
     },
     "Screaming Essence of Anger": {
-      "chaos": 15.0,
+      "chaos": 3.1634446397188047,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "screaming-essence-of-anger",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 5,
-        "usable": 5,
-        "used": 1
+        "reading_chaos": 15.0,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 1 offers holding 7 units, 5 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (15 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 5,
         "date": "2026-11-10",
-        "depth": 7.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 1,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -1979,26 +1951,21 @@
       "source": "poe.ninja-history"
     },
     "Screaming Essence of Doubt": {
-      "chaos": 10.0,
+      "chaos": 2.10896309314587,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "screaming-essence-of-doubt",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 7,
-        "usable": 7,
-        "used": 1
+        "reading_chaos": 10.0,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 1 offers holding 8 units, 7 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (10 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 7,
         "date": "2026-11-10",
-        "depth": 8.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 1,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -2060,19 +2027,21 @@
       "source": "poe.ninja-history"
     },
     "Screaming Essence of Greed": {
-      "chaos": 0.2,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 0.0421792618629174,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 4.741666666666667,
+        "group": "essence",
+        "league": "Allflame",
+        "reading_chaos": 0.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 0.8334999999999999,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 9.4,
-          "depth": 5.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
@@ -2153,26 +2122,21 @@
       "source": "poe.ninja-history"
     },
     "Screaming Essence of Scorn": {
-      "chaos": 9.4,
+      "chaos": 1.9824253075571177,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "screaming-essence-of-scorn",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 7,
-        "usable": 7,
-        "used": 3
+        "reading_chaos": 9.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 10 units, 7 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (9.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 7,
         "date": "2026-11-10",
-        "depth": 10.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -2215,26 +2179,21 @@
       "source": "poe.ninja-history"
     },
     "Screaming Essence of Suffering": {
-      "chaos": 8.2,
+      "chaos": 1.729349736379613,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "screaming-essence-of-suffering",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 5,
-        "usable": 5,
-        "used": 2
+        "reading_chaos": 8.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 6 units, 5 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (8.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 5,
         "date": "2026-11-10",
-        "depth": 6.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3074,115 +3033,97 @@
       "source": "poe.ninja-history"
     },
     "Wailing Essence of Anger": {
-      "chaos": 12.4,
+      "chaos": 2.6151142355008785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-anger",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 3,
-        "usable": 3,
-        "used": 2
+        "reading_chaos": 12.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 15 units, 3 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 3,
         "date": "2026-11-10",
-        "depth": 15.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Wailing Essence of Anguish": {
-      "chaos": 8.6,
+      "chaos": 1.813708260105448,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-anguish",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 8.6,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 9 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (8.6 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 9.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Wailing Essence of Contempt": {
-      "chaos": 16.2,
+      "chaos": 3.4165202108963086,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-contempt",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 2
+        "reading_chaos": 16.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 12 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (16.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 12.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Wailing Essence of Doubt": {
-      "chaos": 0.5,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 0.10544815465729349,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 4.741666666666667,
+        "group": "essence",
+        "league": "Allflame",
+        "reading_chaos": 0.5,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.5 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 0.3334,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 16.2,
-          "depth": 21.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
     "Wailing Essence of Fear": {
-      "chaos": 12.4,
+      "chaos": 2.6151142355008785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-fear",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 12.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 15 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 15.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3206,132 +3147,116 @@
       "source": "poe.ninja-history"
     },
     "Wailing Essence of Hatred": {
-      "chaos": 20.0,
+      "chaos": 4.21792618629174,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-hatred",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 2,
-        "usable": 2,
-        "used": 1
+        "reading_chaos": 20.0,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 1 offers holding 17 units, 2 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (20 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 2,
         "date": "2026-11-10",
-        "depth": 17.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 1,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Wailing Essence of Loathing": {
-      "chaos": 0.75,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 0.15817223198594024,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 4.741666666666667,
+        "group": "essence",
+        "league": "Allflame",
+        "reading_chaos": 0.75,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.75 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 0.6666666666666666,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 10.8,
-          "depth": 10.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
     "Wailing Essence of Rage": {
-      "chaos": 4.8,
+      "chaos": 1.0123022847100174,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-rage",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 4.8,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 26 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (4.8 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 26.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Wailing Essence of Sorrow": {
-      "chaos": 0.2,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 0.0421792618629174,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 4.741666666666667,
+        "group": "essence",
+        "league": "Allflame",
+        "reading_chaos": 0.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 0.8334999999999999,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 12.4,
-          "depth": 15.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
     "Wailing Essence of Spite": {
-      "chaos": 12.4,
+      "chaos": 2.6151142355008785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-spite",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 3,
-        "usable": 3,
-        "used": 2
+        "reading_chaos": 12.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 14 units, 3 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 3,
         "date": "2026-11-10",
-        "depth": 14.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Wailing Essence of Suffering": {
-      "chaos": 12.4,
+      "chaos": 2.6151142355008785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-suffering",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 3,
-        "usable": 3,
-        "used": 2
+        "reading_chaos": 12.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 22 units, 3 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 3,
         "date": "2026-11-10",
-        "depth": 22.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3374,26 +3299,21 @@
       "source": "poe.ninja-previous-league"
     },
     "Wailing Essence of Wrath": {
-      "chaos": 14.2,
+      "chaos": 2.994727592267135,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "wailing-essence-of-wrath",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 14.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 20 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (14.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 20.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3417,50 +3337,40 @@
       "source": "poe.ninja-previous-league"
     },
     "Weeping Essence of Anger": {
-      "chaos": 14.2,
+      "chaos": 2.994727592267135,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "weeping-essence-of-anger",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 6,
-        "usable": 6,
-        "used": 3
+        "reading_chaos": 14.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 14 units, 6 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (14.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 6,
         "date": "2026-11-10",
-        "depth": 14.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Weeping Essence of Contempt": {
-      "chaos": 12.4,
+      "chaos": 2.6151142355008785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "weeping-essence-of-contempt",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 2
+        "reading_chaos": 12.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 18 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 18.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3484,50 +3394,40 @@
       "source": "poe.ninja-history"
     },
     "Weeping Essence of Fear": {
-      "chaos": 14.2,
+      "chaos": 2.994727592267135,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "weeping-essence-of-fear",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 4,
-        "usable": 4,
-        "used": 3
+        "reading_chaos": 14.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 16 units, 4 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (14.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 4,
         "date": "2026-11-10",
-        "depth": 16.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Weeping Essence of Greed": {
-      "chaos": 8.6,
+      "chaos": 1.813708260105448,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "weeping-essence-of-greed",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 5,
-        "usable": 5,
-        "used": 3
+        "reading_chaos": 8.6,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 3 offers holding 12 units, 5 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (8.6 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 5,
         "date": "2026-11-10",
-        "depth": 12.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 3,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3551,19 +3451,21 @@
       "source": "poe.ninja-previous-league"
     },
     "Weeping Essence of Rage": {
-      "chaos": 0.2,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 0.0421792618629174,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 4.741666666666667,
+        "group": "essence",
+        "league": "Allflame",
+        "reading_chaos": 0.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 0.8334999999999999,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 20.0,
-          "depth": 20.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
@@ -3606,67 +3508,59 @@
       "source": "poe.ninja-previous-league"
     },
     "Weeping Essence of Torment": {
-      "chaos": 10.4,
+      "chaos": 2.1933216168717045,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "weeping-essence-of-torment",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 6,
-        "usable": 6,
-        "used": 4
+        "reading_chaos": 10.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 4 offers holding 20 units, 6 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (10.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 6,
         "date": "2026-11-10",
-        "depth": 20.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 4,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Weeping Essence of Woe": {
-      "chaos": 0.5,
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "chaos": 0.10544815465729349,
+      "detail": {
+        "date": "2026-11-10",
+        "divided_by": 4.741666666666667,
+        "group": "essence",
+        "league": "Allflame",
+        "reading_chaos": 0.5,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
+      },
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.5 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
         "date": "2026-11-10",
-        "depth": 0.3334,
-        "depth_unit": "units",
         "kind": "ninja-exchange",
-        "league": "Allflame",
-        "other": {
-          "chaos": 12.4,
-          "depth": 25.0,
-          "kind": "trade"
-        }
+        "league": "Allflame"
       },
       "source": "poe.ninja"
     },
     "Weeping Essence of Wrath": {
-      "chaos": 16.2,
+      "chaos": 3.4165202108963086,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "weeping-essence-of-wrath",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 3,
-        "usable": 3,
-        "used": 2
+        "reading_chaos": 16.2,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 15 units, 3 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (16.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 3,
         "date": "2026-11-10",
-        "depth": 15.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
@@ -3690,50 +3584,40 @@
       "source": "poe.ninja-previous-league"
     },
     "Whispering Essence of Greed": {
-      "chaos": 12.4,
+      "chaos": 2.6151142355008785,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "whispering-essence-of-greed",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 2,
-        "usable": 2,
-        "used": 2
+        "reading_chaos": 12.4,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 5 units, 2 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 2,
         "date": "2026-11-10",
-        "depth": 5.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
     "Whispering Essence of Hatred": {
-      "chaos": 18.0,
+      "chaos": 3.7961335676625656,
       "detail": {
         "date": "2026-11-10",
-        "exchange": "whispering-essence-of-hatred",
-        "k": 5,
+        "divided_by": 4.741666666666667,
+        "group": "essence",
         "league": "Allflame",
-        "listings": 2,
-        "usable": 2,
-        "used": 2
+        "reading_chaos": 18.0,
+        "sample": 55,
+        "template": "routes-allflame-2026-11-10.json"
       },
-      "note": "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest units of the trade site's bulk exchange, from 2 offers holding 2 units, 2 offers in all, a thin market, 2026-11-10)",
+      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (18 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
       "provenance": {
-        "book": 2,
         "date": "2026-11-10",
-        "depth": 2.0,
-        "depth_unit": "units",
         "kind": "trade",
-        "league": "Allflame",
-        "listings": 2,
-        "market": "thin"
+        "league": "Allflame"
       },
       "source": "trade-api"
     },
