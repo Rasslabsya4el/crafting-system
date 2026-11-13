@@ -25,6 +25,7 @@ from crafting_system.cli._route_card import (
     card_of_item,
     card_of_states,
     card_of_target,
+    essence_tier,
     mod_text,
     tracks_junk,
 )
@@ -328,6 +329,7 @@ def stub_reader(*mods) -> _StateReader:
     reader.tiers = {mod_id: tier for mod_id, _, tier, _ in mods if tier is not None}
     reader.ab = SimpleNamespace(_drawn_contribution=lambda other: ())
     reader._fractured, reader._families = {}, {}
+    reader._held = ()  # no start item: a fractured entry is drawn as the tiers it stands for
     return reader
 
 
@@ -382,12 +384,32 @@ def test_a_leaf_only_a_crafted_mod_meets_says_crafted():
     assert (side, note) == (Side.SUFFIX, "crafted") and text == mod_text(DATA.mods[PREFIXES_LOCK])
 
 
-def test_a_leaf_only_an_essence_mod_meets_says_essence_only():
+def test_a_leaf_only_an_essence_mod_meets_says_the_essence_that_forces_it():
     tiers = tier_table(DATA, BELT)
+    mod_id = "ElementalPenetrationDuringFlaskEffectEssence1"
 
-    _, text, note = _leaf_slot(DATA, BELT, tiers, {"ElementalPenetrationDuringFlaskEffectEssence1"}, None, BELT_LEVEL)
+    _, text, note = _leaf_slot(DATA, BELT, tiers, {mod_id}, None, BELT_LEVEL)
 
-    assert note == "essence only" and text == mod_text(DATA.mods["ElementalPenetrationDuringFlaskEffectEssence1"])
+    # a corruption-only essence has no tier word, so it is said by its name (#895)
+    assert note == "Essence of Hysteria" and text == mod_text(DATA.mods[mod_id])
+    assert essence_tier(DATA, BELT, mod_id) == "Essence of Hysteria" and essence_tier(DATA, BELT, LIFE) == ""
+
+
+def test_an_essence_only_mod_no_essence_of_the_class_gives_says_essence_only():
+    tiers = tier_table(DATA, AMULET)
+    mod_id = "ElementalPenetrationDuringFlaskEffectEssence1"  # the belt's mod of the Essence of Hysteria; an amulet gets another
+
+    assert essence_tier(DATA, AMULET, mod_id) == ""
+    assert _leaf_slot(DATA, AMULET, tiers, {mod_id}, None, 84)[2] == "essence only"
+
+
+def test_a_fractured_entry_of_the_class_of_the_start_items_fractured_mod_is_drawn_as_that_mod():
+    reader = stub_reader(*FAST)
+    reader._held = (reader.data.mods["Fast2"],)  # the route starts from an item with "30% increased Speed" fractured
+
+    side, slot = reader.fractured("Fast1", ())  # the state names the class by its canonical id
+
+    assert side is Side.PREFIX and slot == Slot("30% increased Speed", "mod", ("fractured",), "T2")
 
 
 def test_the_card_of_a_bought_item_can_show_the_range_of_the_tier_and_any_mod_for_what_it_does_not_know():
@@ -564,13 +586,83 @@ def test_the_real_r12_start_card_is_the_fractured_resistance_with_its_rolled_val
     assert card.suffixes == (Slot("+14% to Lightning Resistance", "mod", ("fractured",)), EMPTY, EMPTY)
 
 
-def test_the_real_r12_goal_card_wants_the_gem_level_and_a_lightning_resistance_of_any_tier(r12):
+def test_the_real_r12_goal_card_wants_the_gem_level_and_the_fractured_lightning_resistance_of_the_start_item(r12):
     data, target, _ = r12
 
     card = card_of_target(data, target)
 
     assert card.prefixes == (Slot(GEM_TEXT, "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
-    assert card.suffixes == (Slot(RESIST_TEXT, "wanted", note="any tier"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    # the leaf takes any tier, and the start amulet's fractured mod meets it: the finished item holds exactly that mod (#895)
+    assert card.suffixes == (Slot("+(12-17)% to Lightning Resistance", "wanted", ("fractured",), "T7"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    # a route that starts from another item (no fractured mod) shows the leaf as the target file says it
+    plain = dataclasses.replace(target.start_item, mods=())
+    assert card_of_target(data, target, plain).suffixes[0] == Slot(RESIST_TEXT, "wanted", note="any tier")
+
+
+def test_the_real_r12_cards_after_a_step_show_the_start_items_fractured_mod_with_its_tier(r12):
+    data, target, ab = r12
+    start = ab.compress(target.start_item)
+
+    with_start = card_of_states(ab, [start], _StateReader(ab, target.start_item))
+    without = card_of_states(ab, [start])
+
+    assert with_start.suffixes[0] == Slot("+(12-17)% to Lightning Resistance", "wanted", ("fractured",), "T7")
+    assert without.suffixes[0] == Slot(RESIST_TEXT, "wanted", ("fractured",), "any tier")  # the state alone stands for every tier
+
+
+# --- the real 3.29.3.3 dump: the fractures and the essence tiers of R05, R10, R11 (#895) ---------------
+
+
+def real_card(name: str):
+    data = real_game_data()
+    target = load_target(EXAMPLES / name, data)
+    return data, target, card_of_target(data, target)
+
+
+def test_the_real_r10_goal_card_marks_the_fractured_movement_speed_and_says_the_essence_of_the_intelligence():
+    data, target, card = real_card("r10-fractured-boots.yaml")
+
+    # the Shrieking Essence of Zeal forces this very mod on boots, but here it is the bought fractured one
+    assert card.prefixes[0] == Slot("30% increased Movement Speed", "wanted", ("fractured",), "T2")
+    assert card.prefixes[1] == Slot("+# to maximum Life", "wanted", note="T2 or better")  # tier 1 or tier 2, the owner's target
+    # tier 2 of the natural ladder too, but the target names the mod the Shrieking Essence of Spite forces (OR-2)
+    assert card.suffixes[0] == Slot("+(43-50) to Intelligence", "wanted", note="Shrieking essence")
+    assert card.suffixes[1] == Slot("(16-20)% chance to Avoid Elemental Ailments", "wanted", note="crafted")
+    assert essence_tier(data, target.base_id, "MovementVelocity5") == "Shrieking essence"
+
+
+def test_the_real_r05_goal_card_is_tier_1_life_the_fractured_attributes_and_the_deafening_strength():
+    _, _, card = real_card("r05-strength-ring.yaml")
+
+    assert card.groups == ()  # no "at least 1 of 4": the Life is asked itself
+    assert card.prefixes == (Slot("+(100-114) to maximum Life", "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.suffixes == (
+        Slot("+(13-16) to all Attributes", "wanted", ("fractured",), "T1"),
+        Slot("+(51-58) to Strength", "wanted", note="Deafening essence"),
+        ANY_OR_EMPTY,
+    )
+
+
+def test_the_real_r11_goal_card_marks_the_fractured_chaos_resistance_and_names_each_essence_of_the_group():
+    _, _, card = real_card("r11-reservation-helmet.yaml")
+
+    assert card.prefixes == (
+        Slot("#% increased Evasion Rating", "wanted", note="T3 or better"),
+        Slot("+(130-144) to maximum Life", "wanted", note="T1"),
+        ANY_OR_EMPTY,
+    )
+    # the leaf takes any tier; the bought helmet's fractured mod is tier 1 and stays on the item
+    assert card.suffixes == (Slot("+(31-35)% to Chaos Resistance", "wanted", ("fractured",), "T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    reservation = "% increased Mana Reservation Efficiency of Skills"
+    assert card.groups == (
+        Group(
+            "at least 1 of 2 of these:",
+            (
+                Slot(f"(7-8){reservation}", "wanted", ("suffix",), "Shrieking essence"),
+                Slot(f"(9-10){reservation}", "wanted", ("suffix",), "Deafening essence"),
+            ),
+        ),
+    )
 
 
 def test_the_real_r12_states_are_the_start_and_the_goal_and_neither_shows_markup(r12):

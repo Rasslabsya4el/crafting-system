@@ -60,7 +60,7 @@ import numpy as np
 from crafting_system.actions import DRAW_LABEL
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
-from crafting_system.items import Rarity
+from crafting_system.items import Item, Rarity
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
@@ -303,12 +303,14 @@ class _View:
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
         self.route_field = route_field
         self.ab = self.plan.abstraction
-        self.reader = _StateReader(self.ab)
         self.chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
         self.flow = steps_of_chain(self.chain)
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
         self.first: FirstStep | None = None if starts is None else first_step(starts.chosen, data, self.plan.target)
+        # the item the route starts from: its fractured mods are marked on the target card and on every card after a step (#895)
+        self.start_item: Item = self.plan.target.start_item if starts is None else starts.chosen.item
+        self.reader = _StateReader(self.ab, self.start_item)
 
     # -- anchors and links ---------------------------------------------------------------------------------
 
@@ -493,7 +495,8 @@ class _View:
         """OR-31: one line per wanted family the step can add, with the chance of each tier, mixed over the step's states."""
         if action.label == RESTART:
             return None
-        lines = tier_lines(self.ab, self.plan.offer_of(action).offer.action, step.states, step.weights)
+        held = frozenset(entry.mod_id for entry in self.start_item.fractured_mods)
+        lines = tier_lines(self.ab, self.plan.offer_of(action).offer.action, step.states, step.weights, held)
         return Field("Tier chances", tuple(Line(self.tier_text(line)) for line in lines)) if lines else None
 
     @staticmethod
@@ -741,7 +744,7 @@ class _View:
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
         leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(limits))
-        return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
+        return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item), leaves_out)
 
 
 def build_section(

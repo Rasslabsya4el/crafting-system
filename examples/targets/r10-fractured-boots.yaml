@@ -28,8 +28,10 @@
 #     int and life, with an open suffix, you're done"; every roll of the essence (43 to 50) is above
 #     the 40, and the 48 is read as the essence's usual roll, not as a minimum (the guide also says
 #     "Whatever additional stats you get is pure bonus"), so no `min_roll` is written for it.
-#   * "Life": "We want at least 70, but more is always better": a Life roll of 70 or more with no tier
-#     (OR-4); see the requirement.
+#   * "Life": tier 1 or tier 2, +(115-129) or +(100-114) on boots of item level 84. This is the owner's reading of 2026-11-13
+#     (ticket #895): he read the page as a player and fixed the target, because nobody crafts or buys boots with a low Life
+#     tier. The guide says "We want at least 70, but more is always better"; before #895 the file read that as a roll of 70 or
+#     more at any tier (tiers 1 to 4). `r10-fractured-boots-70-life.yaml` keeps that reading of the guide's number.
 #   * The guide's priority list also names Lightning Resistance ("roughly 40%, but slightly lower values can do"), which the
 #     steps do not work toward ("Whatever additional stats you get is pure bonus"), so it is not asked.
 #   * "#% chance to Avoid Elemental Ailments": exactly the bench craft the guide uses, (16-20)%.
@@ -64,14 +66,12 @@ requirements:
   - family: Intelligence
     mod: Intelligence8
 
-  # Life with a rolled value of at least 70, rolled by the essence reforge, not crafted.
-  # Guide (poe-vault.com/guides/ice-shot-deadeye-gear-jewels-and-flasks, "Boots"): "+# to maximum life. We want at least 70, but
-  # more is always better." It names a number and no tier (OR-4), so the leaf is a `min_roll` with no tier: any tier whose roll
-  # reaches 70 counts, and the top tier is not asked (it was, as `min_tier: 1`, before #404: 128 c against about 46 c). The
-  # selector is the stat text, not the family: the Life family also holds two-stat mods, and one `min_roll` list cannot fit
-  # mods with different numbers of stats. A Divine Orb rerolls the value inside its tier.
+  # Life, tier 1 or tier 2 (`min_tier: 2` is the worst tier that counts), rolled by the essence reforge, not crafted.
+  # Owner, 2026-11-13 (#895): "Life tier 1 or tier 2 (not any tier, not 70 or more)". The guide's own words are "+# to maximum
+  # life. We want at least 70, but more is always better." (poe-vault.com/guides/ice-shot-deadeye-gear-jewels-and-flasks,
+  # "Boots"). The selector is the stat text, so the two-stat Life hybrids of the family do not count.
   - stat: "+# to maximum Life"
-    min_roll: [70]
+    min_tier: 2
     not_crafted: true
 
   # "#% chance to Avoid Elemental Ailments", exactly the bench craft of the guide, (16-20)%

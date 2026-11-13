@@ -27,7 +27,7 @@ from crafting_system.actions import Action
 from crafting_system.items import tier_table
 from crafting_system.items.words import mod_text
 
-from ._route_card import _hashes
+from ._route_card import _hashes, named_essence_tier
 
 
 @dataclass(frozen=True)
@@ -55,13 +55,20 @@ class _Family:
     wanted: frozenset[int]
 
 
-def wanted_families(ab: Abstraction) -> list[_Family]:
-    """The families the target wants, one per (families, side, domain): the ladder of the family and the tiers a leaf accepts."""
+def wanted_families(ab: Abstraction, fractured: frozenset[str] = frozenset()) -> list[_Family]:
+    """The families the target wants, one per (families, side, domain): the ladder of the family and the tiers a leaf accepts.
+
+    A leaf whose line says an essence's tier (`named_essence_tier`: it names exactly the mod an essence forces; `fractured` are the ids of
+    the start item's fractured mods) has no tier to show: the essence adds it every time, and the page says it by the essence, not by a
+    tier of the ladder (#895).
+    """
     data = ab.data
     tiers = tier_table(data, ab.base_id)
     found: dict[tuple, dict[str, int]] = {}
     accepted: dict[tuple, set[int]] = {}
     for index, leaf in enumerate(ab.goal.leaves):
+        if named_essence_tier(data, ab.base_id, leaf.mod_ids, leaf.tier_ok, fractured):
+            continue
         for mod_id in sorted(leaf.mod_ids):
             mod = data.mods.get(mod_id)
             # a mod the item level lets spawn: a higher tier of the table cannot come at all; a crafted mod is no draw
@@ -119,13 +126,14 @@ def _added(outcomes, wanted_ids: frozenset[str]) -> dict[str, Fraction]:
 
 
 def tier_lines(
-    ab: Abstraction, action: Action, states: Sequence[CompressedState], weights: Sequence[float]
+    ab: Abstraction, action: Action, states: Sequence[CompressedState], weights: Sequence[float], fractured: frozenset[str] = frozenset()
 ) -> list[TierLine]:
     """The tier line of every wanted family that `action` can add at some of `states`, mixed by `weights`; none when it adds none.
 
-    The policy takes `action` at each of `states`, so the game does not refuse it there.
+    The policy takes `action` at each of `states`, so the game does not refuse it there. `fractured`: the ids of the start item's
+    fractured mods (`wanted_families`).
     """
-    families = wanted_families(ab)
+    families = wanted_families(ab, fractured)
     if not families:
         return []
     ids = frozenset(mod_id for family in families for mod_id in family.ladder)

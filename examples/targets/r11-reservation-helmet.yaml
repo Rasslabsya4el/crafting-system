@@ -20,16 +20,17 @@
 #     tier, so the leaf takes any tier (`min_tier: any`, as R12 does for its fractured resistance). The
 #     start item below is the tier-1 one, +(31-35)%, the tier the buy spec prices (OR-3); the guide
 #     accepts a cheaper tier of the fractured mod too, and the file makes up no second start item for it.
-#   * "Evasion/Life prefixes you are happy with" and "Total Evasion On Helmet - Ideally around 1900": the
-#     guide leaves the tier of both prefixes to the crafter (its step ends when they are on the helmet),
-#     which the owner reads as no tier (OR-4: asking tier 1 for them was too strict, 1,110 c). The Evasion
-#     leaf is the percentage prefix "#% increased Evasion Rating" at any tier; the 1900 is a total on the
-#     helmet (its base, quality, flat and percentage mods), not a roll of one mod, so it is not written.
-#     The flat "+# to Evasion Rating" prefix and the hybrids (evasion with life, evasion with stun
-#     recovery) are not counted. Rolled, not from the bench.
-#   * "+# to Maximum Life - Ideally > 95": a Life roll of more than 95, so 96 or more, with no tier
-#     (OR-4, as R10's Life), rolled, not from the bench.
-#   * "Mana Reservation Efficiency from Loathing, at least Shrieking": see the entry below.
+#   * "Evasion/Life prefixes you are happy with", "Total Evasion On Helmet - Ideally around 1900" and "+# to Maximum Life -
+#     Ideally > 95": Evasion tier 1 to tier 3 and Life tier 1. This is the owner's reading of 2026-11-13 (ticket #895): he read
+#     the page as a player and fixed the target, because a helmet with a low Evasion or Life tier is not one a player is happy
+#     with. Before #895 the file read the guide as "any tier" of Evasion and a Life roll above 95 (tiers 1 to 3); before #404
+#     it asked tier 1 of both. The Evasion leaf is the percentage prefix "#% increased Evasion Rating", (68-79)% or more; the
+#     1900 is a total on the helmet (its base, quality, flat and percentage mods), not a roll of one mod, so it is not
+#     written. The flat "+# to Evasion Rating" prefix and the hybrids (evasion with life, evasion with stun recovery) are not
+#     counted. Life tier 1 on a helmet of item level 84 is +(130-144). Both are rolled, not from the bench.
+#   * "Mana Reservation Efficiency from Loathing, at least Shrieking": the guide leaves the essence's tier to the crafter, so
+#     the planner chooses between the Shrieking and the Deafening essence (see the entry below), and the route page shows the
+#     one it chose in its steps, its prices and its finished item (#895).
 #   * The two implicits of the guide (reduced mana cost of attacks, physical taken as lightning) are
 #     Eldritch implicits, a different part of the work, and are left out. So is "finish with a
 #     crafted Resistance or Attribute": the guide gives no number for it ("as needed"), so it asks
@@ -67,19 +68,17 @@ requirements:
       - family: ReducedManaReservationsCost
         mod: ManaReservationEfficiencyEssence7
 
-  # The Evasion prefix: the percentage prefix at any tier. Rolled, not from the bench.
-  # Guide: "until you hit an open Suffix & Evasion/Life prefixes you are happy with" and "Total Evasion On Helmet - Ideally around
-  # 1900". The guide's route ends when the prefix is on the helmet, whatever its tier, so `min_tier: any` (OR-4; it said
-  # `min_tier: 1`, the 1,110 c of the counter-example).
+  # The Evasion prefix: the percentage prefix, tier 1 to tier 3 (`min_tier: 3` is the worst tier that counts), rolled, not
+  # from the bench. Owner, 2026-11-13 (#895): "Evasion tier 1 to tier 3". The guide's own words: "until you hit an open Suffix
+  # & Evasion/Life prefixes you are happy with" and "Total Evasion On Helmet - Ideally around 1900".
   - family: DefencesPercent
-    min_tier: any
+    min_tier: 3
     not_crafted: true
 
-  # Life, a roll above 95, rolled by the essence reforge, not crafted.
-  # Guide: "+# to Maximum Life - Ideally > 95" and "Evasion/Life prefixes you are happy with". A number and no tier, so a `min_roll`
-  # with no tier: 96 is the least roll above 95. The selector is the stat text, as in R10 (the Life family holds two-stat mods).
+  # Life, tier 1, rolled by the essence reforge, not crafted. Owner, 2026-11-13 (#895): "Life tier 1". The guide's own words:
+  # "+# to Maximum Life - Ideally > 95". The selector is the stat text, as in R10 (the Life family holds two-stat mods).
   - stat: "+# to maximum Life"
-    min_roll: [96]
+    min_tier: 1
     not_crafted: true
 
 # Where the crafting starts: a helmet that already has Chaos Resistance fractured.

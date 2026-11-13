@@ -179,10 +179,25 @@ fixtures(
         "a note that is not in the one format": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(130-144) to maximum Life", "w", "tier 1 of 10"), ANY, ANY))))),
         "a bench craft with a spawn tier (R05)": page(route(goal(), step(1, "Benchcraft: +# to maximum Life", after=item(suffixes=(slot("+(35-44) to maximum Life", "c", "T1"), ANY, ANY))))),
         "a base id inside the text": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(35-44) to Dexterity [DexMasterLifeCrafted1]", "m", "T2"), ANY, ANY))))),
+        "an essence tier the game does not have": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(43-50) to Intelligence", "w", "Roaring essence"), ANY, ANY))))),
+        "a tier number beside the essence's tier": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(43-50) to Intelligence", "w", "T2, Shrieking essence"), ANY, ANY))))),
     },
     example={
         "V01: the same shape in every card": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(LIFE, slot("+1 to Level of all Minion Skill Gems", "m", "T2"), ANY))), step(2, "Chaos Orb", after=item(prefixes=(LIFE, slot("(16-20)% chance to Avoid Elemental Ailments", "c", "crafted"), ANY))))),
         "the notes the page uses": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(51-58) to Strength", "w", "essence only"), slot("+# to maximum Life", "w", "tier too low, in some"), slot("36% chance to Avoid being Shocked", "w", "grade 2 (Greater)")))))),
+        "#895: a mod an essence forces says the essence's tier, and a line of several tiers says which": page(
+            route(
+                goal(),
+                step(
+                    1,
+                    "Shrieking Essence of Spite",
+                    after=item(
+                        prefixes=(slot("+# to maximum Life", "w", "T2 or better"), slot("#% increased Evasion Rating", "w", "T1 to T3, in some"), ANY),
+                        suffixes=(slot("+(43-50) to Intelligence", "w", "Shrieking essence"), slot("+(51-58) to Strength", "w", "Deafening essence"), slot("Damage Penetrates 5% Elemental Resistances during any Flask Effect", "w", "Essence of Hysteria")),
+                    ),
+                ),
+            )
+        ),
     },
 )
 
@@ -550,8 +565,6 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
-ISSUE_ROLL_MINIMUM = 643  # found by #598: Life "any tier" with a roll minimum marks only some tiers as the target on the R10 and R11 pages
-
 ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other two, are fixed: no golden page is a known fault of their checks)
 ISSUE_FETCH_TRADE = 672  # the default fetch reads no trade listing for a resource poe.ninja lacks, so the product holds no evidence for it
 WHY = {ISSUE_UNPRICED: f"the fixture price file prices no Harvest good but Primal Crystallised Lifeforce, and the product has no evidence for the others unless a fetch reads their trade listings (#{ISSUE_FETCH_TRADE})"}
@@ -560,7 +573,6 @@ WHY = {ISSUE_UNPRICED: f"the fixture price file prices no Harvest good but Prima
 # is dropped, and the limit says so. The three real pages (R05, R10, R11) price those goods from the snapshot of 2026-11-10, whose evidence is poe.ninja and the trade site's offers.
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it (OR-29)
     **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route")},
-    **{(name, "check_tier_lines"): ISSUE_ROLL_MINIMUM for name in ("real_r10", "real_r11")},
 }
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
 

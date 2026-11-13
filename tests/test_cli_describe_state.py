@@ -89,7 +89,8 @@ def test_the_count_keeps_the_plural_and_both_sides():
 
 # --- a k-of-n group is said once (ticket #644, OR-15) ---------------------------------------------------------------------------
 
-R05 = Path(__file__).resolve().parents[1] / "examples" / "targets" / "r05-strength-ring.yaml"
+# R05 as it was read before #895 ("at least 1 of Life and the three resistances"): the real group these texts were written for
+R05 = Path(__file__).resolve().parent / "fixtures" / "targets" / "r05-life-or-resistance.yaml"
 
 
 def r05_plan():

@@ -1,8 +1,8 @@
-# Target for benchmark route R10, with the guide's "preferably at least 70" Life asked as a roll
-# (ticket #71; since #404 `r10-fractured-boots.yaml` asks the same Life, because that is what the guide says,
-# so the two files differ only in this comment): Intelligence-base boots with a fractured Movement Speed, an Intelligence suffix from a
-# Shrieking Essence of Spite, a Life prefix of at least 70 and a crafted
-# "#% chance to Avoid Elemental Ailments".
+# Target for benchmark route R10, with the guide's "preferably at least 70" Life asked as a roll (ticket #71): the guide's
+# own number, at any tier that reaches it. `r10-fractured-boots.yaml`, the benchmark's target, asked the same Life from #404
+# to #895; since #895 it asks tier 1 or tier 2, the owner's reading of 2026-11-13, and this file stays as the example of a
+# roll with no tier (`min_roll`). Intelligence-base boots with a fractured Movement Speed, an Intelligence suffix from a
+# Shrieking Essence of Spite, a Life prefix of at least 70 and a crafted "#% chance to Avoid Elemental Ailments".
 #
 # This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
 # it: the planner finds that. Lines starting with # are comments and are ignored.
