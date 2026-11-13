@@ -60,7 +60,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = 1  # bump when a case's meaning changes: a baseline is comparable only with cases of its schema
 DEFAULT_SEED = 824
 
-# The committed 3.29 (Allflame) snapshots, in date order (OR-21: today's snapshot; the owner keeps 3.29 until v1 is built).
+# The committed 3.29 (Allflame) snapshots, in date order (OR-21: today's snapshot; the owner keeps 3.29 until v1 is built). The list is
+# explicit: a snapshot added to the folder changes no case until it is named here (`r17-allflame-2026-11-10.json`, one route's own, is not),
+# and naming one changes the cases, so the baseline is measured again with it.
 SNAPSHOTS = (
     "tests/fixtures/prices/routes-allflame-2026-10-31.json",
     "tests/fixtures/prices/bases-allflame-2026-11-01.json",
