@@ -144,16 +144,16 @@ Pruning works on the route as a whole, not only inside one step.
 
 When the whole plan fits in about a minute, the plan is proved the cheapest of the offered methods; otherwise the planner stops when its plan is proved to cost at most 1% more than the cheapest, and the answer says so. In both cases the mean shown is the exact mean of the plan shown, and the proof figure ("no way of crafting this item with the offered methods costs less than Y") is a certificate beside that point answer, not an answer given as an interval.
 
-- **Example.** R04 at the 2026-11-10 prices: the plan made from the walk-free bound alone costs 189,226.57 Chaos on average, exactly, and the bound proves that nothing costs less than 188,299.94, 0.49% less; the answer is that plan, its exact mean and the proof figure, in about 2 minutes (research note `docs/research/2026-11-13-planning-speed.md`, section 3; heavy run 43317321351).
+- **Example.** R04 at the 2026-11-10 prices: the plan made from the walk-free bound alone costs 189,226.57 Chaos on average, exactly, and the bound proves that nothing costs less than 188,299.94, 0.49% less; the answer would be that plan, its exact mean and the proof figure, after the bound's build (99 s) and the plan's evaluation (12 s), once #826 and #689 are built (research note `docs/research/2026-11-13-planning-speed.md`, section 3; heavy run 43317321351). Today the whole plan takes 729 s (heavy run 42955861457).
 - **Counter-example.** Today's search on the same route: 364 to 510 s and 165,980 item states spent after the plan is already in hand, to prove the last 0.49% (same note and run). A plan shown "within 1%" whose mean is itself an estimate is a counter-example too: the mean is always exact.
 - **Source.** Owner in the main chat, 2026-11-13, answer (b) to question 1 of [#822](https://github.com/Rasslabsya4el/crafting-system/issues/822); his rule of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2, 2026-10-31.
 - **Replaces.** OR-11 ("exact, never an interval"); keeps its point answer. Narrows OR-12.
 
 ### OR-33. One plan aims at about a minute; a 10-minute net stops it and says so until every method has its bound
 
-A plan aims to be ready in about a minute. Until every method family has its own bound (#822, ticket 4), a net of 10 minutes ends a longer plan with the best plan found, its exact mean and its proved gap, and says that it stopped (OR-12, OR-13).
+A plan aims to be ready in about a minute. Until every method family has its own bound (#822, ticket 4), a net of 10 minutes ends a longer plan with the best plan found, its exact mean and its proved gap, or with "no plan found yet" when none has closed, and says that it stopped (OR-12, OR-13).
 
-- **Example.** A plan with a method whose bound is not built yet, such as R07's unveil or R08's fossil sets, stops at 10 minutes with "stopped after 10 minutes: this plan costs X on average; nothing costs less than Y".
+- **Example.** R24, whose unveil offer has no bound yet (its walk took 1,838 s, PR #771), would stop at 10 minutes with "stopped after 10 minutes: this plan costs X on average; nothing costs less than Y", or with "stopped after 10 minutes, no plan found yet" if none had closed, as on R08's fossil sets, whose bound alone was not built 16 minutes in (heavy run 43320834722).
 - **Counter-example.** R07 killed out of memory after 7 minutes with no answer ([#770](https://github.com/Rasslabsya4el/crafting-system/issues/770)); R25 runs cancelled after about 50 minutes ([#225](https://github.com/Rasslabsya4el/crafting-system/issues/225)).
 - **Source.** Owner in the main chat, 2026-11-13, answer to question 2 of #822: (a) one minute as the goal, (b) ten minutes as the net until every method family has its bound.
 
@@ -218,11 +218,12 @@ When a step can add a mod of a family the target wants, the page shows the chanc
 
 ### OR-34. p50 and p90 to ±10%, added after the route
 
-The p50 and p90 of a plan are given to within ±10% as a bracket; the route and its exact mean are shown at once, and the percentiles are added when they are done.
+The p50 and p90 of a plan are given to within ±10% (the half-width of the bracket: the bracket is at most 20% of the figure wide); the route and its exact mean are shown at once, and the percentiles are added when they are done.
 
 - **Example.** R14 at the 2026-11-10 prices: p50 7,319 Chaos, between 6,655 and 7,984 (±9%), after about 6 minutes of percentiles (heavy run 42955861457); the route is on the page before them.
 - **Counter-example.** R14's finer step, ±4.8%, which brought the 16 GB runner to 14.9 GB ([#744](https://github.com/Rasslabsya4el/crafting-system/issues/744)); a page held back until the percentiles end.
 - **Source.** Owner in the main chat, 2026-11-13, answer (b) to question 3 of [#822](https://github.com/Rasslabsya4el/crafting-system/issues/822), with research into a method whose precision does not degrade on long crafts. That the bracket is printed is the owner's choice on [#709](https://github.com/Rasslabsya4el/crafting-system/issues/709), 2026-11-12.
+- **Narrows.** The owner's choice (a) on #709, 2026-11-12, which printed the bracket with no required width: the width is now required, ±10%.
 
 ## Evidence
 
