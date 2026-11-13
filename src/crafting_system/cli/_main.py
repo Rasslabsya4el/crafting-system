@@ -28,6 +28,7 @@ option the source prices shows both prices side by side with the gap flag. The p
 """
 
 import argparse
+import math
 import sys
 import time
 from collections.abc import Mapping, Sequence
@@ -35,7 +36,8 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from crafting_system.actions import NotApplicableError, OutOfScopeError
-from crafting_system.config import PRICE_SOURCES, load_config
+from crafting_system.budget import Budget, default_memory_mb
+from crafting_system.config import MEMORY_SHARE_SETTING, NO_LIMIT, PRICE_SOURCES, Config, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
 from crafting_system.solver import ConvergenceError
@@ -74,6 +76,31 @@ def _seconds(text: str) -> float:
     if not value >= 0 or value == float("inf"):
         raise argparse.ArgumentTypeError(f"the budget must be a number of seconds, zero or more, got {text!r}")
     return value
+
+
+def _limit(text: str) -> float | None:
+    """A `--time-limit` or `--memory-limit` value: a number above zero, or `none` for no limit (None)."""
+    if text.strip().lower() == NO_LIMIT:
+        return None
+    try:
+        value = float(text)
+    except ValueError:
+        value = math.nan
+    if not (value > 0 and math.isfinite(value)):
+        raise argparse.ArgumentTypeError(f"a limit is a number above zero, or {NO_LIMIT}; got {text!r}")
+    return value
+
+
+_FROM_SETTINGS = object()  # a limit not given on the command line: the planner settings' value
+
+
+def run_budget(config: Config, aim: float | None, time_limit: object = _FROM_SETTINGS, memory_limit: object = _FROM_SETTINGS) -> Budget:
+    """The run's budget (#825, OR-33): the aim (`--budget`, None with `--exact`), and the net from the command line, else the planner settings."""
+    seconds = config.time_limit_seconds if time_limit is _FROM_SETTINGS else time_limit
+    memory = config.memory_limit_mb if memory_limit is _FROM_SETTINGS else memory_limit
+    if memory == MEMORY_SHARE_SETTING:
+        memory = default_memory_mb()
+    return Budget(aim_seconds=aim, seconds=seconds, memory_mb=memory)  # type: ignore[arg-type]
 
 
 def main(
@@ -118,6 +145,14 @@ def main(
     )  # fmt: skip
     parser.add_argument("--exact", action="store_true", help="where the answer would be approximate, solve exactly however long it takes (the search that auto and envelope use is always exact)")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time a walk of the whole graph (packed, object, or auto where the exact search cannot be built) may take before the answer is approximate (default {BUDGET_SECONDS:g}); the exact search ignores it")
+    parser.add_argument(
+        "--time-limit", type=_limit, default=_FROM_SETTINGS, metavar="SECONDS",
+        help="stop the plan after this many seconds and say what it found and where it stopped, or none for no limit (default: the planner settings, 600)",
+    )  # fmt: skip
+    parser.add_argument(
+        "--memory-limit", type=_limit, default=_FROM_SETTINGS, metavar="MB",
+        help="stop the plan when it holds this many MB of memory and say so, or none for no limit (default: the planner settings, 80%% of the machine's memory)",
+    )  # fmt: skip
     parser.add_argument("--progress", action="store_true", help="print the phases of a long plan (the walk, the merge, the solve, the risk, the report) with their seconds to stderr")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean (an approximate answer: with its certified interval)")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
@@ -149,7 +184,8 @@ def main(
         plan = plan_with_starts(
             game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, price_source=args.price_source or config.price_source,
-            price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
+            price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit),
+            strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
         )  # fmt: skip
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact to get an exact one")

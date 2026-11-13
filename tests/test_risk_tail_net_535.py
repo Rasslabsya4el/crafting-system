@@ -16,9 +16,8 @@ import threading
 import numpy as np
 import pytest
 
-from crafting_system import parallel
+from crafting_system import budget, parallel
 from crafting_system.risk import _budget, _evaluate, _regen
-from crafting_system.risk._regen import ABANDON_MARGIN as ABANDON
 from crafting_system.risk._budget import PLAIN_LIMIT, run_budget
 from crafting_system.risk._chain import Chain
 from crafting_system.solver import Action
@@ -104,19 +103,65 @@ def test_the_ladder_reads_no_clock_and_runs_every_step_until_one_is_narrow_enoug
     assert not hasattr(_evaluate, "time")  # the steps that run cannot depend on the machine's speed
 
 
-def test_each_attempt_run_gets_the_whole_time_net_from_its_own_start(monkeypatch):
-    """Run one after another (no workers), four runs must not share one deadline: the later ones would start past it."""
+def test_every_attempt_run_of_the_ladder_shares_one_deadline(monkeypatch):
+    """#745: one net for the whole ladder. Run one after another (no workers), every run of every step stops at the same deadline, `REGEN_SECONDS`
+    after the ladder began; before, each run had the whole net from its own start (five steps of four runs: twenty nets, about 10 hours)."""
     from test_risk_regen import narrow
 
     monkeypatch.setenv("CRAFTING_WORKERS", "1")
+    monkeypatch.setattr(_evaluate, "REGEN_WIDTH", 0.0)  # no step is narrow enough: every step runs, so several deadlines would show
     given = []
     original = _regen.attempt_pmf
     monkeypatch.setattr(_regen, "attempt_pmf", lambda *a, **k: given.append(dict(k)) or original(*a, **k))
 
     serial = narrow(regenerative=True)
 
-    assert given and all(k["seconds"] == _evaluate.REGEN_SECONDS and "deadline" not in k for k in given)
+    deadlines = {k["deadline"] for k in given}
+    assert len(given) > 4 and len(deadlines) == 1 and "seconds" not in given[0]
     assert not [line for line in serial.grid.gave_up if "time limit" in line]
+
+
+class FakeTime:
+    """A clock that only moves when the test says so (it stands in for the `time` module of `_regen` and of `budget`)."""
+
+    def __init__(self, now: float = 1000.0) -> None:
+        self.now = now
+
+    def monotonic(self) -> float:
+        return self.now
+
+    perf_counter = monotonic
+
+
+def test_the_ladders_net_is_its_own_or_what_the_runs_budget_has_left_when_less(monkeypatch):
+    fake = FakeTime()
+    monkeypatch.setattr(_regen, "time", fake)
+    monkeypatch.setattr(budget, "time", fake)
+
+    assert _regen.ladder_net(1800.0) == _regen.LadderNet(2800.0, 1800.0, False)  # no run budget: the ladder's own net
+
+    clock = budget.Budget(seconds=600.0, memory_mb=None).start()
+    fake.now = 1570.0  # the run has spent 570 of its 600 seconds
+    with budget.running(clock), budget.stage("the cost figures", "kept"):
+        net = _regen.ladder_net(1800.0)
+        assert net == _regen.LadderNet(1600.0, 30.0, True)
+        fake.now = 1601.0
+        said = _regen.ladder_stopped(net, coarser=True)
+    assert said == _regen.time_net_words(30.0, coarser=True) and "30 seconds" in said
+    (bound,) = clock.bindings  # the run's net bound: the one list of the run says so (#378)
+    assert (bound.stage, bound.limit, bound.given, bound.reached) == ("the cost figures", budget.TIME, 600.0, 601.0)
+    assert bound.what == "the figures of the coarser step already worked out are kept"
+
+
+def test_the_ladders_own_net_binding_is_said_but_not_listed_as_the_runs(monkeypatch):
+    fake = FakeTime()
+    monkeypatch.setattr(_regen, "time", fake)
+    monkeypatch.setattr(budget, "time", fake)
+    clock = budget.Budget(seconds=None, memory_mb=None).start()
+    with budget.running(clock):
+        said = _regen.ladder_stopped(_regen.ladder_net(1800.0), coarser=False)
+    assert said == _regen.time_net_words(1800.0, coarser=False) and "30 minutes" in said
+    assert clock.bindings == []
 
 
 class RecordingPool:
@@ -142,15 +187,17 @@ class RecordingPool:
             parallel._context = saved
 
 
-def test_the_pool_waits_one_net_per_run_a_worker_has_to_do_in_turn(monkeypatch):
+def test_the_pool_waits_until_the_ladders_deadline_and_the_margin(monkeypatch):
     monkeypatch.setenv("CRAFTING_WORKERS", "2")
     monkeypatch.setattr(parallel, "can_inherit", lambda: True)
     monkeypatch.setattr(parallel, "WorkerPool", RecordingPool)
     RecordingPool.timeouts.clear()
 
-    assert _regen.run_jobs([(abs, (-k,), {}) for k in range(4)], seconds=100.0) == [0, 1, 2, 3]
+    monkeypatch.setattr(_regen, "time", FakeTime(1000.0))
 
-    assert RecordingPool.timeouts == [(2, 2 * 100.0 + _regen.ABANDON_MARGIN)]  # two workers, four runs: two nets each, then the margin
+    assert _regen.run_jobs([(abs, (-k,), {}) for k in range(4)], deadline=1100.0) == [0, 1, 2, 3]
+
+    assert RecordingPool.timeouts == [(2, 100.0 + _regen.ABANDON_MARGIN)]  # four runs on two workers: still one deadline, then the margin
 
 
 PARENT = os.getpid()
@@ -177,8 +224,9 @@ def never_ends(*args, **options):
 @pytest.mark.skipif(not parallel.can_inherit(), reason="the attempt runs go side by side only where workers are forked")
 def test_workers_that_never_come_back_are_killed_and_the_step_is_refused_and_said(monkeypatch):
     monkeypatch.setenv("CRAFTING_WORKERS", "2")
+    monkeypatch.setattr(_regen, "ABANDON_MARGIN", 0.0)
     with pytest.raises(_regen.TimedOut):
-        _regen.run_jobs([(never_ends, (), {}), (never_ends, (), {})], seconds=-ABANDON)  # no time at all: the wait ends at once
+        _regen.run_jobs([(never_ends, (), {}), (never_ends, (), {})], deadline=-math.inf)  # a deadline long past: the wait is the margin alone
 
     from test_risk_regen import narrow
 
