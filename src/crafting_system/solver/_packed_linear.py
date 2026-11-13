@@ -44,7 +44,7 @@ ACCEPT_ERROR = 1e-6  # the forward error an approximate answer (dense or iterate
 ACCEPT_BACKWARD = 1e-10  # the backward error an exact solve, or an answer when no exact solve can be made, is still taken at (the caller says the rest)
 REFINEMENTS = 4  # steps of refinement of a direct solve (each a residual and one more solve), taken only while the backward error falls
 SETTLED = 8 * EPS  # a backward error this small is the rounding of the product itself: a further step cannot lower it
-STALL = 6  # a BiCGSTAB run has stagnated when its best residual has not halved for this many times its own pace (iterations per halving so far)
+STALL = 6  # a BiCGSTAB run has stagnated when its best residual has not halved for this many times its own pace (iterations per halving so far), nor for as long as its progress took
 BICGSTAB_ITERATIONS = 4_000  # a rail on one run (stop and say so), not what decides an answer
 BICGSTAB_RESTARTS = 3  # further runs from the best iterate, only when the exact solve cannot be made
 AMPLIFICATION_TOL = 1e-3  # the relative residual the iteration aims at when it measures the amplification: a factor known to 0.1% is plenty
@@ -322,9 +322,13 @@ def bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.n
 
 
 def stalled(it: int, marked_at: int, marks: int) -> bool:
-    """Whether a run at iteration `it`, whose best residual halved `marks` times by the iteration `marked_at`, has stagnated: it has gone `STALL` times its
-    own pace (`marked_at / marks` iterations per halving, 1 before the first) without halving again."""
-    return it - marked_at >= STALL * max(1.0, marked_at / max(marks, 1))
+    """Whether a run at iteration `it`, whose best residual halved `marks` times by the iteration `marked_at`, has stagnated: it has gone without halving
+    again both `STALL` times its own pace (`marked_at / marks` iterations per halving, 1 before the first) and as long as all its progress took.
+
+    The second half keeps a run that converges through a pause: R04 and R14 pause for a dozen steps on their way to a residual of 1e-16 in about a
+    hundred, and stopping them there sent their evaluations to the exact solve (21 s each on R14). A stiff run, whose progress stops after a few early
+    halvings, still stops a few steps after them (#671)."""
+    return it - marked_at >= max(STALL * max(1.0, marked_at / max(marks, 1)), marked_at)
 
 
 def _bicgstab_run(matvec, b, x0, tol, max_iter):

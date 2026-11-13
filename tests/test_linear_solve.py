@@ -308,8 +308,11 @@ def test_bicgstab_that_cannot_progress_is_cut_by_the_step_limit_when_that_is_soo
 
 def test_the_pace_of_a_run_is_its_own_steps_per_halving_and_stagnation_is_stall_times_that(monkeypatch):
     monkeypatch.setattr(lin, "STALL", 6)
-    # ten halvings by step 30: a pace of 3 steps per halving, so the run has stagnated 18 steps after its last halving and not one step sooner
-    assert not lin.stalled(47, 30, 10) and lin.stalled(48, 30, 10)
+    # ten halvings by step 30 (a pace of 3 steps per halving): 6 x 3 = 18 steps without a halving would do, but the run must also go as long again
+    # as its progress took, 30 steps: it has stagnated at step 60 and not one step sooner (a pause on the way to convergence is not a stagnation)
+    assert not lin.stalled(59, 30, 10) and lin.stalled(60, 30, 10)
+    # three halvings by step 4, then nothing (a stiff run): 6 x 4/3 = 8 steps, more than the 4 its progress took
+    assert not lin.stalled(11, 4, 3) and lin.stalled(12, 4, 3)
     # before the first halving the pace is one step: 6 steps without one
     assert not lin.stalled(5, 0, 0) and lin.stalled(6, 0, 0)
     # a run that halved once at step 40 (a slow start) waits 6 x 40 steps
