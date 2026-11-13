@@ -42,6 +42,7 @@ __all__ = [
     "influence_spawn_test",
     "partners",
     "tiers_of",
+    "is_table_family",
 ]
 
 DOMAIN_MATCH = get_rule("affix_pool.domain_match")
@@ -107,6 +108,12 @@ class _Table:
 
 _TABLE_LIMIT = 64
 _TABLES: dict[tuple, _Table] = {}  # (id(data), domain, tags, level limit, mod ids of extra, live cut, blocked tags) -> the table
+_TABLE_FAMILIES: dict[int, PoolFamily] = {}  # id -> each family of the tables held (the family is held, so the id stays its own)
+
+
+def is_table_family(family: PoolFamily) -> bool:
+    """Whether `family` is the object a pool table holds, the same for every item of the table: what is known of it can be kept by the object."""
+    return _TABLE_FAMILIES.get(id(family)) is family
 
 
 _POOL_LIMIT = 256
@@ -298,8 +305,11 @@ def _table(data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, 
         candidates.append(Candidate(mod, weight, mod.families[0], Side(mod.generation_type)))
     found = _Table(data, tuple(candidates), group_pool(candidates), tuple(odd))
     if len(_TABLES) >= _TABLE_LIMIT:
-        del _TABLES[next(iter(_TABLES))]
+        dropped = _TABLES.pop(next(iter(_TABLES)), None)
+        for family in dropped.families if dropped is not None else ():
+            _TABLE_FAMILIES.pop(id(family), None)
     _TABLES[key] = found
+    _TABLE_FAMILIES.update((id(family), family) for family in found.families)
     return found
 
 

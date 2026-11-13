@@ -27,10 +27,11 @@ from crafting_system.actions import (
     allowed_by_tags,
     build_pool,
     floating,
+    is_lock,
+    is_table_family,
     partners,
 )
 from crafting_system.actions import PLAN_READING, Recounted, Spent, WeightReading, kept_tier_weights
-from crafting_system.actions.metamods import LOCKED_SIDE
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -117,7 +118,7 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
 
 
 Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
-TYPES_KEPT = 65_536  # the families whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
+TYPES_KEPT = 65_536  # the families of pool tables whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
 SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
 # families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
@@ -686,7 +687,7 @@ class Abstraction:
             return self._imprint_kernel(state, action, move)
         if self._averages_inputs(action):
             return input_kernel(self, state, action, prepared)
-        return self._mixture_kernel(state, prepared)
+        return self._mixture_kernel(prepared)
 
     def _imprint_kernel(self, state: CompressedState, action: Action, move: ImprintMove) -> dict[CompressedState, Fraction]:
         """The one state an imprint or a restore leads to (ADR-0060): the game's refusal has been raised by `_prepared`, the move is applied here.
@@ -751,10 +752,12 @@ class Abstraction:
         key across states; tickets #827, #886). The argument, in three steps:
 
         1. The state is read through its view only. `_prepare` makes the pair from `(action, _view(state))` and from nothing else (`_build`
-           is given the view, a tuple with no other field of the state), and `_mixture_kernel` is given the pair, not the state. The view
-           leaves out the status, which no step reads, and the ordinary slots and the offer where the action erases them (`_erases`: it
-           does not read the junk, `Reads.junk`, and the item has no lock to keep a side). An imprint move and a kernel averaged over
-           inputs do read the whole state, and their key is the kernel itself.
+           is given the view, a tuple with no other field of the state), and `_mixture_kernel` is given the pair, not the state. Before
+           the pair, `_prepare` reads the state twice: to refuse an offer or a listing the action cannot take (no kernel, no key), and
+           to choose the view. The view leaves out the status, which no step reads, and the ordinary slots and the offer where the
+           action erases them (`_erases`: it does not read the junk, `Reads.junk`, and the item has no lock to keep a side; the
+           contract of `Reads.junk` says both). An imprint move and a kernel averaged over inputs do read the whole state, and their
+           key is the kernel itself.
         2. Everything `_mixture_kernel` reads of a pair is in the key. Per part it calls one of `_add_fixed` (the split), `_add_drawn` (the
            split and the distribution of the signature), `_add_rerolled` (the split, the rerolled slots, `("rerolled", lucky)`) and
            `_add_fractured` (the split, the entries of the signature and the forced mod, the families of the pool with their mods and
@@ -1373,8 +1376,7 @@ class Abstraction:
         data has a lock outside the crafted domain the answer is True for every state.
         """
         if self._free_lock is None:
-            sides = {metamod.value for metamod in LOCKED_SIDE}
-            self._free_lock = any(mod.domain != CRAFTED_DOMAIN and sides.intersection(mod.families) for mod in self.data.mods.values())
+            self._free_lock = any(mod.domain != CRAFTED_DOMAIN and is_lock(mod) for mod in self.data.mods.values())
         if self._free_lock:
             return True
         return any(self._is_lock(slot.kind) for slot in state.slots if slot.crafted) or any(
@@ -1384,7 +1386,7 @@ class Abstraction:
     def _is_lock(self, mod_id: str) -> bool:
         found = self._lock_mods.get(mod_id)
         if found is None:
-            found = self._lock_mods[mod_id] = bool({metamod.value for metamod in LOCKED_SIDE}.intersection(self.data.mods[mod_id].families))
+            found = self._lock_mods[mod_id] = is_lock(self.data.mods[mod_id])
         return found
 
     def _erases(self, state: CompressedState, action: Action) -> bool:
@@ -1584,12 +1586,15 @@ class Abstraction:
                     ),
                 )
 
-    def _mixture_kernel(self, state: CompressedState, prepared: _Prepared) -> dict[CompressedState, Fraction]:
+    def _mixture_kernel(self, prepared: _Prepared) -> dict[CompressedState, Fraction]:
         """The kernel of a result that is a mixture of parts: each part gives its states, weighted by its probability.
 
         A part is a fixed result (the mods that stay, the new ones), a rerolled result (the same mods, the
         values of some rolled afresh) or a pool draw (the same, then the new draws seen through the label);
         with a fracture one finished mod also becomes fractured.
+
+        It is given the prepared pair and not the state: what it reads of the state is what `_prepare` put into the pair from the
+        state's view (`kernel_key`, step 1).
         """
         outcomes = prepared.outcomes
         self._check_parts(outcomes)
@@ -1603,7 +1608,7 @@ class Abstraction:
             elif isinstance(part, Rerolled):
                 self._add_rerolled(result, share, part, prepared.origins, split)
             elif outcomes.fractures:
-                self._add_fractured(result, share, state, part, signature, split)
+                self._add_fractured(result, share, part, signature, split)
             else:
                 self._add_drawn(result, share, part, signature, split)
         if isinstance(outcomes, Spent | Recounted):  # a Remembrance sets the count anew: the same spread over its law (#278)
@@ -1795,7 +1800,6 @@ class Abstraction:
         self,
         result: dict[CompressedState, Fraction],
         share: Fraction,
-        state: CompressedState,
         part: Outcomes,
         signature,
         split: _Split,
@@ -1974,16 +1978,21 @@ class Abstraction:
         weight is compared. Nothing but `_family_type` reads a mod here: a compiled loop over the numbers can take this function's place.
         """
         seen = self._types_of
+        numbered = self._type_numbers
         numbers = []
         for family in pool:
             key = (id(family), tag, influences, blocked, lucky)
             found = seen.get(key)
-            if found is None or found[0] is not family:
+            if found is not None and found[0] is family:
+                numbers.append(found[1])
+                continue
+            kind = self._family_type(family, tag, influences, blocked, lucky)
+            number = numbered.setdefault(kind, len(numbered))
+            if is_table_family(family):  # a family made for one call (a pool under fossil weights, a marked pool) is not met again
                 if len(seen) >= TYPES_KEPT:
                     seen.clear()
-                kind = self._family_type(family, tag, influences, blocked, lucky)
-                found = seen[key] = (family, self._type_numbers.setdefault(kind, len(self._type_numbers)))  # the family is held, so its `id` stays its own
-            numbers.append(found[1])
+                seen[key] = (family, number)  # the family is held, so its `id` stays its own
+            numbers.append(number)
         numbers.sort()
         return tuple(numbers)
 

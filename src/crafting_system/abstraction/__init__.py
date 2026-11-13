@@ -180,8 +180,9 @@ Orb enabled. A concrete item's mod is judged by its stored tier and values.
 Metamods, removals, new fractures and influence (#69). `metamods=True` (forced when an enabled action adds a lock
 or an Attack/Caster metamod by name) lets items hold them: every mod is then kept as a slot told apart by family
 type, and its kind also carries the tags an Attack or Caster metamod looks at (`"~3@attack"`; the number of
-the family type, `"~3"`, has none, but the type is told from another by the tags of its mods). No action
-then erases the junk: the item given to a reroll or a Scouring holds every slot, and what the action keeps (the fractured mods and the mods of a locked side) is read back, the rest is
+the family type, `"~3"`, has none, but the type is told from another by the tags of its mods). An action
+that does not read the junk erases it only on an item with no lock (ticket #827): on an item with a lock the item given to a reroll
+or a Scouring holds every slot, and what the action keeps (the fractured mods and the mods of a locked side) is read back, the rest is
 dropped. `compress` of an item that holds a lock or an Attack/Caster metamod raises `OutOfScopeError` when
 `metamods` is False. The multimod ("Can have up to 3 Crafted Modifiers") is only a bench limit.
 The start item's enchantment (`enchantment`, a mod id) is a constant of the problem and is not in the state (ADR-0050, ADR-0053): no

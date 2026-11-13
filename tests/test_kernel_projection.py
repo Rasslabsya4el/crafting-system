@@ -87,7 +87,7 @@ def random_items(data, rng: random.Random, count: int) -> list[Item]:
     while len(items) < count:
         ids = rng.sample(drawable, min(len(drawable), rng.randint(0, 5)))
         ids += rng.sample(crafted, rng.choice((0, 0, 1, 1, 2)))
-        fractured = [mod_id for mod_id in ids[:1] if rng.random() < 0.3 and data.mods[mod_id].domain != "crafted"]
+        fractured = [mod_id for mod_id in (ids[:1] if rng.random() < 0.7 else ids[-1:]) if rng.random() < 0.4]  # the last may be a crafted mod, a lock among them
         try:
             items.append(build(data, BOW, ids, fractured=fractured))
         except (ItemError, ValueError):
@@ -166,6 +166,8 @@ def test_the_kernel_from_the_projection_is_the_kernel_from_the_whole_state(name,
         ab.release_prepared(keep_erased=True)
         whole.release_prepared()
     assert len(states) > 20 and shared > 0  # the case has states, and keys that more than one pair has
+    locks = [state for state in states if ab._holds_lock(state)]
+    assert locks and len(locks) < len(states)  # items with a lock, where a reroll reads the mods of a side, and items without
 
 
 @pytest.mark.parametrize(("name", "seed"), CASES)
@@ -257,6 +259,9 @@ def test_a_lock_is_a_crafted_mod_in_the_game_data():
     assert held and all(mod.domain == "crafted" for mod in held)
     ab = Abstraction(BOW_DATA, GOAL, BOW, LEVEL, ACTIONS, metamods=True)
     assert ab._holds_lock(ab.compress(build(BOW_DATA, BOW, (FIRE, PL)))) and not ab._holds_lock(ab.compress(build(BOW_DATA, BOW, (FIRE, NA))))
+    fractured_lock = ab.compress(build(BOW_DATA, BOW, (FIRE, SL), fractured=(SL,)))
+    assert not any(slot.crafted for slot in fractured_lock.slots) and ab._holds_lock(fractured_lock)  # a lock a Fracturing Orb fractured still locks
+    assert not ab._erases(fractured_lock, ChaosOrb()) and ab._erases(ab.compress(build(BOW_DATA, BOW, (FIRE, NA))), ChaosOrb())
     loose = dataclasses.replace(BOW_DATA, mods={**BOW_DATA.mods, FIRE: dataclasses.replace(BOW_DATA.mods[FIRE], families=("ItemGenerationCannotChangePrefixes",))})
     other = Abstraction(loose, GOAL, BOW, LEVEL, ACTIONS, metamods=True)
     assert other._holds_lock(other.compress(build(loose, BOW, (AS_5,))))  # a lock outside the crafted domain: no state is taken to be without one
