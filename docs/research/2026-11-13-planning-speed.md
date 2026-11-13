@@ -213,7 +213,9 @@ The search needs three things of a method: a state, the kernels of its actions, 
 | C7, the route page on the full chain | **stays** | lumping the shown plan's chain with the page's labels is independent of the search |
 | C8, one budget | **stays, and becomes central** | an anytime search is stopped by the budget; the report names what bound it |
 
-## 9. The tickets, in order (proposed on #822; not created until the owner has answered)
+## 9. The tickets, in order (proposed on #822; cut on 2026-11-13 after the owner's answers)
+
+**As cut**, with GitHub's blocked-by links so that no two tickets that change the same files run at once: ticket 1 is #824, 2 is #826, 3 is #825, 4.1 to 4.8 are #828 to #835, 5 is #827, 6 is #836, 7 is #732; the research into percentiles of OR-34 is #837; C5 is #738 (with #744, #739, #622 folded in), C6 is #769, C7 is #689; the 3.29 price snapshot is #838; #375 is closed as not planned. Start order: #824, #825, #769 and #838 now; #826 after #824 and #825; #827 and #738 after #826 (side by side: no shared file); #689 after #769; #837 after #738; #828 after #827 and #738, then #829 to #835 one after another (#832 also after #225, #833 after #223, #834 after #278 and #281, #835 after #231 and #242); #836 after #835; #732 after #836.
 
 Each ticket is accepted on the generated family of section 10, and the benchmark routes are measured after it, never the acceptance (#812). At most five tickets with heavy runs at once (CLAUDE.md).
 
