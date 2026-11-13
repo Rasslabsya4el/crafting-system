@@ -39,7 +39,7 @@ from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, spli
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, listing_draw, offers_for, price_offers, split_usable
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, unusable_limits
 from . import _packed
 from ._envelope import Net, NoPolicy
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
@@ -574,7 +574,7 @@ def _make_plan(
     usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])
     kept = set(usable)
     if removed:
-        limits += (crafted_mods_limit(tuple(p.label for p in priced if p.offer.action not in kept)),)
+        limits += unusable_limits(data, ((p.label, p.offer.action) for p in priced if p.offer.action not in kept))
     priced = tuple(p for p in priced if p.offer.action in kept)
     limits += start_limits(price_of_start)
     if price_of_start.bought:

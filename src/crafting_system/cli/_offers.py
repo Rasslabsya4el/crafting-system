@@ -13,10 +13,10 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds, open_listing, unveil_pool_families
+from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Item, ItemError, Rarity
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
@@ -261,7 +261,14 @@ def offers_for(
       offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
       It is left out and reported like a craft that counts for nothing.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
-      offered only when the start item holds one or another offered action adds one.
+      offered only when the start item holds one or another offered action adds one. An action that needs a veiled placeholder
+      (`Reads.needs_veiled`, an Unveil, a Pick) likewise, when the start item holds one or another offered action may put one there
+      (`Adds.veils`, the veiled orbs); otherwise it could never be used (#848). Both are said in the answer (`unusable_limits`).
+    * THE KIND-LEVEL RELEVANCE TEST (#848, decided in #637), before the walk and before the bound is built: an action that the model refuses
+      on every item of the target's base (`UnmodelledBase`, asked by `base_refusal`: the Harvest crafts and the veiled orbs on a jewel) is
+      left out of the offers, and the answer says it as a model gap of the listing (#511), kind by kind when the whole kind goes. Both this
+      cut and the one above are exact: such an action could never be used at any state, so no mean changes, while its reads would split the
+      states the walk keeps (J01 with the resistance swaps: 236 states for the 8 of the Chaos Orb alone) and every state would ask it.
     * An action that only changes rolled values (`Adds.needs_roll_limit`, a Divine Orb, #71) is offered only when the goal has a
       roll limit (a leaf with a `min_roll` that asks for some value) on a mod that can occur on the item: the start item
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
@@ -292,6 +299,10 @@ def offers_for(
         """The label a limit names a left-out action by: the label alone, and for one that shares it with others the label and its variant (as the offers do)."""
         label = action.label(data)
         return label if label_count[label] == 1 or not action.variant else f"{label} [{action.variant}]"
+
+    refused = base_refused(data, start_item, listed)  # the kind-level relevance test (#848): no item of this base can take these
+    listing_gaps.extend(refusal_gaps(refused, kind_of, listed, told_apart))
+    listed = [action for action in listed if action not in refused]
 
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
@@ -399,8 +410,50 @@ def offers_for(
             ),
         )
     if unusable:
-        limits += (crafted_mods_limit(tuple(action.label(data) for action in unusable)),)
+        limits += unusable_limits(data, ((told_apart(action), action) for action in unusable))
     return OfferSet(tuple(offers), limits)
+
+
+def _probe_items(data: GameData, start_item: Item) -> tuple[Item, ...]:
+    """The items `base_refusal` asks: the start item, then an empty item of its base and level at each rarity (one may be refused by the game
+    where another reaches the base's verdict: a Harvest swap refuses a normal item before it looks at the base)."""
+    found = [start_item]
+    for rarity in (Rarity.RARE, Rarity.MAGIC, Rarity.NORMAL):
+        try:
+            found.append(Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=rarity))
+        except ItemError:  # a base the item model refuses at that rarity: the start item is asked all the same
+            continue
+    return tuple(found)
+
+
+def base_refused(data: GameData, start_item: Item, actions: Iterable[Action]) -> dict[Action, UnmodelledBase]:
+    """The actions of `actions` that the model refuses on every item of the start item's base, each with its refusal (#848).
+
+    `base_refusal` proves it from the base alone (`draw.refuse_unmodelled`), so leaving them out changes no mean: no state could use them.
+    """
+    items = _probe_items(data, start_item)
+    found = {}
+    for action in actions:
+        refusal = base_refusal(data, action, items)
+        if refusal is not None:
+            found[action] = refusal
+    return found
+
+
+def refusal_gaps(
+    refused: Mapping[Action, UnmodelledBase], kind_of: Mapping[Action, str], listed: Iterable[Action], told_apart: Callable[[Action], str]
+) -> list[ListingGap]:
+    """The base refusals as model gaps of the listing (#511): one per kind when every listed action of the kind is refused, else one per action."""
+    listed_of = Counter(kind_of.get(action, "") for action in listed)
+    refused_of = Counter(kind_of.get(action, "") for action in refused)
+    gaps: list[ListingGap] = []
+    for action, refusal in refused.items():
+        kind = kind_of.get(action, "")
+        whole = refused_of[kind] == listed_of[kind]
+        gap = ListingGap(kind, "" if whole else told_apart(action), refusal.player, refusal.detail)
+        if gap not in gaps:
+            gaps.append(gap)
+    return gaps
 
 
 def _kind_limits(
@@ -502,6 +555,28 @@ def crafted_mods_limit(labels: tuple[str, ...]) -> Limit:
     )
 
 
+def veiled_mod_limit(labels: tuple[str, ...]) -> Limit:
+    """The limit of an action that needs a veiled mod on the item, dropped because neither the start item nor any offered action gives one (#848)."""
+    return Limit(
+        _limits.NO_VEIL,
+        "Not offered",
+        "each of these needs a veiled mod on the item, and neither the start item nor any offered action puts one there",
+        "The plan is unaffected: these could never be used for this target.",
+        labels,
+    )
+
+
+def unusable_limits(data: GameData, removed: Iterable[tuple[str, Action]]) -> tuple[Limit, ...]:
+    """The limits of the actions `split_usable` removed, by label: those that need a crafted mod, and those that need a veiled one."""
+    crafted, veiled = [], []
+    for label, action in removed:
+        (veiled if action.reads(data).needs_veiled else crafted).append(label)
+    return (
+        *((crafted_mods_limit(tuple(crafted)),) if crafted else ()),
+        *((veiled_mod_limit(tuple(veiled)),) if veiled else ()),
+    )
+
+
 def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
     """The kinds that exist only in a plan that considers Memory Strands, when `start_item` has none (as `catalog` lists them)."""
     if start_item.memory_strands >= 1:
@@ -598,14 +673,18 @@ def _only_crafts(data: GameData, item: Item, action: Action) -> bool:
 
 
 def split_usable(data: GameData, start_item: Item, actions: Iterable[Action]) -> tuple[list[Action], list[Action]]:
-    """(`actions` without those that need a crafted mod when neither the start item nor another of them gives one, those removed)."""
+    """(`actions` without those that can never be used, those removed): an action that needs a crafted mod when neither the start item
+    nor another of them gives one, and one that needs a veiled placeholder when the start item holds none and no other of them may put
+    one there (`Adds.veils`, #848). Both are exact: no state the plan reaches can hold what the action needs."""
     actions = list(actions)
-    if start_item.crafted_mods or any(action.adds(data, start_item).crafted for action in actions):
-        return actions, []
-    return (
-        [action for action in actions if not action.reads(data).needs_crafted],
-        [action for action in actions if action.reads(data).needs_crafted],
-    )
+    crafted = bool(start_item.crafted_mods) or any(action.adds(data, start_item).crafted for action in actions)
+    veiled = holds_placeholder(data, start_item) or any(action.adds(data, start_item).veils for action in actions)
+
+    def never(action: Action) -> bool:
+        reads = action.reads(data)
+        return (reads.needs_crafted and not crafted) or (reads.needs_veiled and not veiled)
+
+    return [action for action in actions if not never(action)], [action for action in actions if never(action)]
 
 
 def usable_actions(data: GameData, start_item: Item, actions: Iterable[Action]) -> list[Action]:

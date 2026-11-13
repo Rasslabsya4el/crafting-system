@@ -74,6 +74,7 @@ __all__ = [
     "Unveil",
     "VeiledChaosOrb",
     "VeiledExaltedOrb",
+    "holds_placeholder",
     "offer_distribution",
     "offer_pool",
     "unveil_pool_families",
@@ -140,6 +141,11 @@ def _placeholders(data: GameData, item: Item) -> list[ExplicitMod]:
     return [entry for entry in item.mods if data.mods[entry.mod_id].domain == VEILED_DOMAIN]
 
 
+def holds_placeholder(data: GameData, item: Item) -> bool:
+    """Whether `item` holds a veiled placeholder (a mod of the veiled domain): what an action that `Reads.needs_veiled` needs (#848)."""
+    return any(entry.mod_id in data.mods and data.mods[entry.mod_id].domain == VEILED_DOMAIN for entry in item.mods)
+
+
 def _refuse_out_of_scope_veil(data: GameData, item: Item) -> None:
     """Raise `OutOfScopeError` for an item with a signature placeholder or with two (grill B2: out of v1)."""
     held = _placeholders(data, item)
@@ -186,7 +192,7 @@ class VeiledChaosOrb(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It puts one of two placeholders on the item, so it names neither; it throws away an offer that was drawn.
-        return Adds.erasing(named=None, offer=True)
+        return Adds.erasing(named=None, offer=True, veils=True)
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         # ADR-0041, #284: the random mods are cut (the placeholder is forced and the kept mods are fixed, so not cut) and it spends 0 to 80
@@ -249,7 +255,7 @@ class VeiledExaltedOrb(Action):
         return Reads(junk=True, families=unveil_families(data))
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds(named=None, draws=False)  # one of two placeholders, so none by name; a crafted mod may be the one removed, so it is not erased
+        return Adds(named=None, draws=False, veils=True)  # one of two placeholders, so none by name; a crafted mod may be the one removed, so it is not erased
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         # ADR-0041, #284: the wiki says by name that it does not consume Memory Strands; it draws no tier-table mod, only a placeholder
@@ -374,8 +380,8 @@ class Unveil(Action):
         return {}  # unveiling costs nothing (unveil.is_free_and_in_place)
 
     def reads(self, data: GameData) -> Reads:
-        # The offer depends on the families on the item that the unveiled pool holds, and on the placeholder (a mod of the item).
-        return Reads(junk=True, families=unveil_families(data), offer=True)
+        # The offer depends on the families on the item that the unveiled pool holds, and on the placeholder (a mod of the item), which it needs.
+        return Reads(junk=True, families=unveil_families(data), offer=True, needs_veiled=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, offer=True)
@@ -429,8 +435,9 @@ class Pick(Action):
         return {}  # unveiling costs nothing (unveil.is_free_and_in_place)
 
     def reads(self, data: GameData) -> Reads:
-        # It is refused when the chosen mod shares a family with a mod of the item, so the families of the unveiled pool are told apart.
-        return Reads(junk=True, families=unveil_families(data), offer=True)
+        # It is refused when the chosen mod shares a family with a mod of the item, so the families of the unveiled pool are told apart; it
+        # needs an offer, which goes with its placeholder.
+        return Reads(junk=True, families=unveil_families(data), offer=True, needs_veiled=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=False, offer=True)
