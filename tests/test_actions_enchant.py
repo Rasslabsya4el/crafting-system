@@ -58,7 +58,7 @@ from crafting_system.actions import (
     enchant_pool,
     kinds,
 )
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.items import EnchantClass, Item, Rarity, enchant_info
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.rules import rule_by_id

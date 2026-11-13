@@ -52,7 +52,7 @@ def test_coarse_first_changes_nothing_when_the_ordinary_grid_certainly_reaches()
 
 
 def test_c27_a_coarse_grid_the_dense_engine_cannot_hold_is_written(monkeypatch):
-    from crafting_system.cli._limits import risk_limits
+    from crafting_system.planner._limits import risk_limits
     from crafting_system.risk import _dense
 
     assert not levels(coarse_first=True).grid.gave_up

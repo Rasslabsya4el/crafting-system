@@ -1,4 +1,4 @@
-"""The certificate of `cli/_bound_prune.py` on made-up offers, solver and bounds, with every decision worked out by hand (ticket #413).
+"""The certificate of `planner/_bound_prune.py` on made-up offers, solver and bounds, with every decision worked out by hand (ticket #413).
 
 The measurement week (#399) found 147 of the 206 mutants of `_bound_prune.py` alive: the light suite proves the pieces and the
 exactness on a real world, and the choices in between (which offer joins the set, when a round is the last, what each fallback
@@ -33,9 +33,9 @@ import pytest
 from crafting_system import parallel
 from crafting_system.abstraction import AtLeast, Goal, Status, Wanted
 from crafting_system.actions import NotApplicableError
-from crafting_system.cli import _bound_prune as bp
-from crafting_system.cli import _plan
-from crafting_system.cli._bound_prune import (
+from crafting_system.planner import _bound_prune as bp
+from crafting_system.planner import _plan
+from crafting_system.planner._bound_prune import (
     CRAFT,
     REFUSED,
     REROLL,
@@ -54,7 +54,7 @@ from crafting_system.cli._bound_prune import (
     solve_pruned,
     starting_offers,
 )
-from crafting_system.cli._offers import BuyStartItem, Offer, PricedOffer
+from crafting_system.planner._offers import BuyStartItem, Offer, PricedOffer
 from crafting_system.solver import ConvergenceError
 
 ZERO, ONE = Fraction(0), Fraction(1)

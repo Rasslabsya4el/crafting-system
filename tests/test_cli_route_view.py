@@ -36,7 +36,7 @@ from targets_support import EXAMPLES
 
 from crafting_system.actions import DRAW_LABEL, HarvestReforge
 from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
-from crafting_system.cli._limits import STRANDS
+from crafting_system.planner._limits import STRANDS
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._report import build_report, render_text
 from crafting_system.cli._route_flow import build_flow
@@ -909,7 +909,7 @@ def test_the_text_report_prints_the_line_under_the_start_price():
 
 def test_the_buy_and_restart_titles_name_a_shared_base_in_words_and_never_by_its_id():
     """#553 (#481): a price key says which base is meant by its id (`Name [Id]`); the page says it in words, and the key stays what it was."""
-    from crafting_system.cli._plan import StartPrice
+    from crafting_system.planner._plan import StartPrice
     from route_view_support import BELT
 
     inp = hand_input(START, LIFE_GOAL, chaos_for_life)

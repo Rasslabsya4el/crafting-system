@@ -24,19 +24,19 @@ from test_packed_walk_light import START_ITEM, make_offers
 from crafting_system import parallel
 from crafting_system.abstraction import _pattern
 from crafting_system.abstraction._pattern import Pattern, PatternBuilder, build_pattern_model
-from crafting_system.cli import _packed, _pattern_bound
-from crafting_system.cli import _envelope
-from crafting_system.cli._envelope import Net, NoPolicy
-from crafting_system.cli import _envelope_plan
-from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
-from crafting_system.cli._limits import limit_text
+from crafting_system.planner import _packed, _pattern_bound
+from crafting_system.planner import _envelope
+from crafting_system.planner._envelope import Net, NoPolicy
+from crafting_system.planner import _envelope_plan
+from crafting_system.planner._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
+from crafting_system.planner._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
-from crafting_system.cli._bound_prune import solve_pruned
-from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
+from crafting_system.planner._bound_prune import solve_pruned
+from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
 from crafting_system.actions import unopened_listing
-from crafting_system.cli._offers import BuyStartItem, listing_draw
+from crafting_system.planner._offers import BuyStartItem, listing_draw
 from crafting_system.solver import ConvergenceError
-from crafting_system.cli._pattern_bound import pattern_lower_bound, pattern_offers
+from crafting_system.planner._pattern_bound import pattern_lower_bound, pattern_offers
 
 TOLERANCE = 1e-9
 

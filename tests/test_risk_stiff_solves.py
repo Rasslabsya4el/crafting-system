@@ -239,7 +239,7 @@ def test_a_cycle_that_is_stiff_is_certified_to_the_digits_its_conditioning_leave
 
 
 def test_a_cycle_whose_mean_is_known_to_less_than_four_digits_is_said_in_a_limit():
-    from crafting_system.cli._limits import loose_figures, risk_limits
+    from crafting_system.planner._limits import loose_figures, risk_limits
 
     start, policy = ring(10**11)
     risk = evaluate(policy, start, is_done, resolve_quantiles=False)
@@ -273,7 +273,7 @@ def test_the_refusal_at_one_in_a_hundred_is_an_undecided_not_a_policy_that_needs
     risk = evaluate(policy, start, is_done, resolve_quantiles=False)
 
     assert risk.grid.cause == UNDECIDED and math.isinf(risk.mean.value)
-    from crafting_system.cli._limits import risk_limits
+    from crafting_system.planner._limits import risk_limits
     from crafting_system.cli._report import NOT_COMPUTED
 
     (limit,) = risk_limits(risk)  # the reader is told it is the arithmetic, not the plan, that could not decide

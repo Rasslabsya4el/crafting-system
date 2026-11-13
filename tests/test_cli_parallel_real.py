@@ -16,7 +16,7 @@ from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, Goal
 from crafting_system.actions import ActionError
 from crafting_system.cli import build_report, make_plan, policy_document
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 

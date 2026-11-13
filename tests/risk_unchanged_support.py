@@ -75,7 +75,7 @@ def r12_risk() -> str:
 
 
 def snapshot() -> dict:
-    from crafting_system.cli._plan import evaluate_risk
+    from crafting_system.planner._plan import evaluate_risk
 
     found: dict[str, str] = {}
     for name, (policy, start, mean) in policies().items():

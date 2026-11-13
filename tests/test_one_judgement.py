@@ -194,7 +194,7 @@ JUDGEMENT_PATH = (
     "targets/model.py",
     "targets/floor.py",
     "targets/parse.py",
-    "cli/_offers.py",
+    "planner/_offers.py",
     "cli/_route_card.py",
     "items/tiers.py",
 )

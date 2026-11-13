@@ -16,8 +16,8 @@ from crafting_system import actions
 
 PACKAGE = Path(crafting_system.__file__).parent
 OUTCOME_CLASSES_OF_ONE_ACTION = {"BenchOutcomes", "ScourOutcomes", "FossilOutcomes", "Mixture"}
-LAYERS_THAT_HANDLE_ACTIONS = ("abstraction", "solver", "risk", "simulator", "cli")  # the others know no action
-ALLOWED_ACTION_SUBCLASSES_OUTSIDE = {"BuyStartItem"}  # the restart of the planner (cli/_offers.py): no kind, no catalog entry
+LAYERS_THAT_HANDLE_ACTIONS = ("abstraction", "solver", "risk", "simulator", "planner", "cli")  # the others know no action
+ALLOWED_ACTION_SUBCLASSES_OUTSIDE = {"BuyStartItem"}  # the restart of the planner (planner/_offers.py): no kind, no catalog entry
 
 
 def concrete_names() -> set[str]:

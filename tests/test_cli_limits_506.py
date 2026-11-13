@@ -31,8 +31,9 @@ from targets_support import DATA
 from crafting_system.actions import ChaosOrb
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, EstimateRefused, Gap
 from crafting_system.cli import Limit, build_report, make_plan, policy_document, render_text
-from crafting_system.cli import _decide, _plan, _reach
-from crafting_system.cli._limits import GROUPS, SHOWN_LABELS, STATE_LINE, WITHIN_GAP, grouped, limit_text, model_gap_limits, pruning_limits, risk_limits
+from crafting_system.cli import _reach
+from crafting_system.planner import _decide, _plan
+from crafting_system.planner._limits import GROUPS, SHOWN_LABELS, STATE_LINE, WITHIN_GAP, grouped, limit_text, model_gap_limits, pruning_limits, risk_limits
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.solver import ConvergenceError
@@ -231,7 +232,7 @@ def test_the_new_kinds_have_a_title_and_show_in_the_text_the_json_and_the_page(p
 
 
 def test_the_gapped_form_of_every_new_cheapness_claim_replaces_the_claim_on_an_approximate_answer(plan):
-    from crafting_system.cli._limits import approximate_limits
+    from crafting_system.planner._limits import approximate_limits
 
     for limit in approximate_limits(every_new_limit(plan)):
         assert not limit.guarantee.startswith("The plan is the cheapest")

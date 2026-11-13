@@ -26,9 +26,9 @@ from targets_support import DATA, parse, parse_error
 
 from crafting_system.cli import RESTART, build_report, make_plan, policy_document, render_text
 from crafting_system.cli import _benchmark
-from crafting_system.cli._plan import GIVEN_SOURCE, PlanError, StartPrice, resolve_start_price
+from crafting_system.planner._plan import GIVEN_SOURCE, PlanError, StartPrice, resolve_start_price
 from crafting_system.cli._route_view import build_section, route_input
-from crafting_system.cli._starts import plain_candidate, plan_with_starts
+from crafting_system.planner._starts import plain_candidate, plan_with_starts
 from crafting_system.cli._start_report import start_document, start_lines
 from crafting_system.targets import StartKind, TargetError, load_target
 
@@ -280,7 +280,7 @@ def test_an_unpriced_start_option_is_reported_as_unpriced_not_priced_at_infinity
 
 
 def test_an_unpriced_start_option_has_a_null_price_in_the_json_and_no_infinity_anywhere(bought_target):
-    from crafting_system.cli._start_types import ConsideredStart, ReadingChoice, StartChoice
+    from crafting_system.planner._start_types import ConsideredStart, ReadingChoice, StartChoice
 
     candidate = plain_candidate(DATA, bought_target, price_file(start=None), None)
     choice = StartChoice(candidate, (ConsideredStart(candidate, "failed", None, None, False, candidate.price_source),), (), (), (ReadingChoice((), None, math.inf),), ())
@@ -298,7 +298,7 @@ def test_a_given_plain_start_option_is_given_not_priced_zero(given_target):
 
 
 def test_planning_with_a_bought_start_that_has_no_price_fails_with_the_plain_start_error(bought_target):
-    from crafting_system.cli._start_types import SOURCE_PLAIN  # noqa: F401  (the plain source is the only one with a price in the file)
+    from crafting_system.planner._start_types import SOURCE_PLAIN  # noqa: F401  (the plain source is the only one with a price in the file)
 
     with pytest.raises(PlanError, match="must have a price"):
         plan_with_starts(DATA, bought_target, price_file(start=None))

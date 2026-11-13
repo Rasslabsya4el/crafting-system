@@ -43,7 +43,7 @@ from crafting_system.abstraction import CompressedState
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import GameData, load_game_data
 from crafting_system.prices import PriceFile, load_price_file
-from crafting_system.cli import _packed
+from crafting_system.planner import _packed
 from crafting_system.cli._benchmark import (
     BENCHMARKS,
     ROUTE_ERRORS,
@@ -54,9 +54,9 @@ from crafting_system.cli._benchmark import (
     reads_own_prices,
 )
 from crafting_system.cli._inputs import load_target_prices, write_json
-from crafting_system.cli._plan import Plan, make_plan
+from crafting_system.planner._plan import Plan, make_plan
 from crafting_system.cli._route import evaluate_route, load_route
-from crafting_system.cli._starts import plan_with_starts
+from crafting_system.planner._starts import plan_with_starts
 from crafting_system.targets import load_target
 
 PARTS = ("flags", "fractured", "status", "slots", "implicits", "quality", "offer", "imprints", "strands", "replaced")

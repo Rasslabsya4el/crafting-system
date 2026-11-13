@@ -16,8 +16,8 @@ import pytest
 from envelope_support import ExplicitProblem, Graph, dense_optimum, random_graph
 from test_solver_packed_warm import proper
 
-from crafting_system.cli import _envelope
-from crafting_system.cli._envelope import Search
+from crafting_system.planner import _envelope
+from crafting_system.planner._envelope import Search
 from crafting_system.solver._packed_solve import Work, warm_policy
 
 SIZE = 60

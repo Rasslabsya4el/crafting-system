@@ -1,4 +1,4 @@
-"""How far a route's sound lower bound sits above the least lower bound of its offers, key by key (ticket #539, the guard of `cli/_envelope.py`).
+"""How far a route's sound lower bound sits above the least lower bound of its offers, key by key (ticket #539, the guard of `planner/_envelope.py`).
 
     python .github/scripts/bound_consistency.py --route r05|r13|r14|r04 [--out DIR]
 
@@ -26,9 +26,9 @@ for extra in (ROOT / "research" / "312", ROOT / "research" / "376", ROOT / "src"
 
 import exact_classes as E  # noqa: E402
 
-from crafting_system.cli._envelope import CONSISTENCY_LIMIT  # noqa: E402
-from crafting_system.cli._envelope_plan import CraftingProblem  # noqa: E402
-from crafting_system.cli._pattern_bound import pattern_lower_bound  # noqa: E402
+from crafting_system.planner._envelope import CONSISTENCY_LIMIT  # noqa: E402
+from crafting_system.planner._envelope_plan import CraftingProblem  # noqa: E402
+from crafting_system.planner._pattern_bound import pattern_lower_bound  # noqa: E402
 
 TARGETS = {
     "r04": "r04-penetrating-quiver",

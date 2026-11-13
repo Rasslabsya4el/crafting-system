@@ -1,6 +1,6 @@
 """The envelope search on random graphs (ticket #377, OR-12, OR-13): the exact optimum, a smaller expansion for a strong bound, and a control that fails.
 
-The search (`cli/_envelope.py`) is generic, so it is tested on random stochastic shortest path graphs with cycles and a restart
+The search (`planner/_envelope.py`) is generic, so it is tested on random stochastic shortest path graphs with cycles and a restart
 (`tests/envelope_support.py`), where the optimum is known by a dense solve that shares no code with it:
 
 * with a lower bound `alpha * V*` (and `alpha * Q*` for every offer) for `alpha` from 1 (perfect) to 0 (no information), the mean the search ends
@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from envelope_support import ExplicitProblem, dense_optimum, q_value, random_graph
 
-from crafting_system.cli._envelope import FALL_LIMIT, Net, NoPolicy, Search, resident_mb
+from crafting_system.planner._envelope import FALL_LIMIT, Net, NoPolicy, Search, resident_mb
 from crafting_system.solver import policy_reach, solve_packed
 
 SEEDS = range(12)

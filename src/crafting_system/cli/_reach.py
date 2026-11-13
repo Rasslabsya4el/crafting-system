@@ -11,8 +11,8 @@ in plain Python, O(n^3): enough for the small policies of the slice, and skipped
 from collections.abc import Callable, Hashable, Mapping
 
 from crafting_system.solver import Action
+from crafting_system.planner import STATE_LINE, Limit
 
-from ._limits import STATE_LINE, Limit
 
 MAX_TRANSIENT = 400
 

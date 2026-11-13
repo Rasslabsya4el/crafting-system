@@ -13,7 +13,7 @@ from items_support import AMULET, DATA
 
 from crafting_system.actions import HarvestReforge, HarvestReforgeInfluence, HarvestReforgeLikelihood, kinds
 from crafting_system.cli import make_plan, offers_for
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.targets import load_target

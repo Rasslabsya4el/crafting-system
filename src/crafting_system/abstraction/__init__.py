@@ -66,7 +66,7 @@ is imported or tested for here.
   states of a key that an action stands for (`Pattern.mode_of`: one member for an erasing reroll, one per class for the Annulment and the bench, the
   lightest and the heaviest junk of each class for an addition, every member for the Fracturing Orb and for anything undeclared), and the model
   offers, in a key, the kernel of each such member seen through the key. Its value at a key is at most the exact cost of every state with that key
-  (the module docstring has the argument for each action class). `cli/_pattern_bound.py` solves it.
+  (the module docstring has the argument for each action class). `planner/_pattern_bound.py` solves it.
   `pattern_refusal(abstraction)` is the one check of whether the bound can be built (None) or why not (a text): `Pattern` raises it, and `make_plan` asks it before any solve to route `solver="auto"` (#535).
 * `Abstraction.estimate(starts, actions)` (`_estimate.py`, ADR-0023): the pilot count. The states and transitions of the
   exact graph, found with one kernel per (reroll, key) and the bench legality by sets of families and free slots; an

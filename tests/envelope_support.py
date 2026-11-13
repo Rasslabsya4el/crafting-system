@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from crafting_system.cli._envelope import Refused
+from crafting_system.planner._envelope import Refused
 
 OFFERS = 8
 

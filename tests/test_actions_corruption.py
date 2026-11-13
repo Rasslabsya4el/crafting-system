@@ -63,7 +63,7 @@ from crafting_system.actions import (
     kinds,
 )
 from crafting_system.actions.corruption import VaalOutcomes, dead_end
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import ImplicitMod, Item, Rarity, UnknownBaseError, is_corrupted_implicit, spawn_weight
 
 QUARTER = Fraction(1, 4)

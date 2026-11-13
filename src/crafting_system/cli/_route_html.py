@@ -11,7 +11,7 @@ marks the target and the final state. Deterministic: the same page model gives t
 
 from html import escape
 
-from ._limits import HEADING
+from crafting_system.planner import HEADING
 from ._route_card import ItemCard, Slot
 
 CSS = """\

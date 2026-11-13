@@ -41,7 +41,7 @@ from crafting_system.actions import (
     Reads,
     kinds,
 )
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile

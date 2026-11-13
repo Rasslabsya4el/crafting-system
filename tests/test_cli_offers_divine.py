@@ -1,6 +1,6 @@
 """A planner offers a Divine Orb only for a target with a roll limit on a mod that can occur on the item (ticket #71).
 
-The action declares `Adds.needs_roll_limit`; `cli._offers.offers_for` reads the declaration and names no concrete
+The action declares `Adds.needs_roll_limit`; `planner._offers.offers_for` reads the declaration and names no concrete
 action (`test_actions_no_concrete_imports.py`). A roll limit is a requirement leaf with a `min_roll` that asks for
 some value; a mod can occur on the item when the start item holds it, a draw of the item's pool can give it, or
 an offered action adds it by name.
@@ -14,7 +14,7 @@ from limits_support import labels_of, of_kind
 
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import DivineOrb
-from crafting_system.cli._offers import offer_of, offers_for, price_offers
+from crafting_system.planner._offers import offer_of, offers_for, price_offers
 from crafting_system.items import Rarity
 from crafting_system.prices import PriceEntry, PriceFile
 

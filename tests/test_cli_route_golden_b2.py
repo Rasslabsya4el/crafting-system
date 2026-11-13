@@ -19,7 +19,7 @@ from test_cli_approximate_inputs import RULES, make_rule, toy_plan
 from crafting_system.abstraction import Abstraction, Goal
 from crafting_system.actions import ChaosOrb
 from crafting_system.cli import Offer, _marking, price_offers
-from crafting_system.cli._plan import Plan, StartPrice, leaf_labels, offer_action
+from crafting_system.planner._plan import Plan, StartPrice, leaf_labels, offer_action
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.items import CatalystType, Item, Quality, Rarity

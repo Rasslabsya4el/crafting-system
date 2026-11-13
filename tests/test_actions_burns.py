@@ -41,7 +41,7 @@ from crafting_system.actions import (
     kinds,
 )
 from crafting_system.cli._marking import approximate_inputs_of
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import Item, Rarity
 from crafting_system.prices.price_names import ARMOURERS_SCRAP, BLACKSMITHS_WHETSTONE, CLEAR_OIL
 from crafting_system.rules import rule_by_id

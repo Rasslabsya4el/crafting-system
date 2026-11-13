@@ -62,7 +62,8 @@ def inputs_of(stem: str) -> dict:
 
 
 def plan_route(route_id: str, out: Path) -> Path:
-    from crafting_system.cli import _packed, evaluate_route, load_route, make_plan
+    from crafting_system.cli import evaluate_route, load_route, make_plan
+    from crafting_system.planner import _packed
     from crafting_system.data import load_game_data
     from crafting_system.prices import load_price_file
     from crafting_system.targets import load_target

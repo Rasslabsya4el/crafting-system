@@ -4,7 +4,7 @@ The week's plan (`measure-mutplan` of run 41490953015) picked each mutant's test
 that data is not at hand now. This script builds two small plans for the same modules from the week's plan and results:
 
 * `before`: every mutant that was not killed (survived, timed out, errored) or is new in today's source (ticket #389 changed
-  `cli/_packed.py` and `risk/_coarse.py`), with the tests the week gave it (new ones: the tests that import the module);
+  `planner/_packed.py` and `risk/_coarse.py`), with the tests the week gave it (new ones: the tests that import the module);
 * `after`:  the same mutants, each with the tests of `before` and, in front of them, the new light test files of its module.
 
 A mutant of today's source is matched to a mutant of the week by its text (operator, original, mutated), not by line number.
@@ -15,7 +15,7 @@ Both plans are in the format of `.github/scripts/mutation_plan.py`, so `.github/
 `.github/scripts/mutation_summary.py` merges the results. Only the modules named are in the plan (`files`).
 
     python research/413/mutation_rerun.py --old-plan plan.json --old-results results --out research/413 \
-        --files solver/_packed_solve.py cli/_packed.py ... --extra solver/_packed_solve.py=tests/test_x_light.py ...
+        --files solver/_packed_solve.py planner/_packed.py ... --extra solver/_packed_solve.py=tests/test_x_light.py ...
 
 Locally this only reads files and writes two JSON files (a second or two); nothing is mutated or run.
 """

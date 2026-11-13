@@ -23,12 +23,12 @@ from test_cli_approximate import PRICES as APPROX_PRICES
 from test_cli_approximate import TARGET as APPROX_TARGET
 
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
-from crafting_system.cli._envelope import Net
-from crafting_system.cli._envelope_plan import EnvelopeInfo, certificate_gap, certificate_gap_text, certificate_text
-from crafting_system.cli._limits import SHOWN_LABELS, SOLVE, limit_text
-from crafting_system.cli._plan import PlanError
+from crafting_system.planner._envelope import Net
+from crafting_system.planner._envelope_plan import EnvelopeInfo, certificate_gap, certificate_gap_text, certificate_text
+from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, limit_text
+from crafting_system.planner._plan import PlanError
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._offers import offer_of
+from crafting_system.planner._offers import offer_of
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target
@@ -179,7 +179,7 @@ def test_an_unknown_solver_is_still_refused():
 
 def test_a_target_the_bound_cannot_be_built_for_is_a_plan_error(monkeypatch):
     from crafting_system.actions import OutOfScopeError
-    from crafting_system.cli import _envelope_plan
+    from crafting_system.planner import _envelope_plan
 
     def refuse(*_args, **_kwargs):
         raise OutOfScopeError("a goal with a roll limit has no members")
@@ -190,8 +190,8 @@ def test_a_target_the_bound_cannot_be_built_for_is_a_plan_error(monkeypatch):
 
 
 def test_a_bound_that_falls_is_a_plan_error_not_a_silent_answer(monkeypatch):
-    from crafting_system.cli import _plan
-    from crafting_system.cli._envelope_plan import BoundError
+    from crafting_system.planner import _plan
+    from crafting_system.planner._envelope_plan import BoundError
 
     def refuse(*_args, **_kwargs):
         raise BoundError("the lower bound fell by 3.00% from one round of the search to the next")

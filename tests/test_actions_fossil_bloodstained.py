@@ -64,7 +64,7 @@ from crafting_system.actions import (
     usable_fossils,
 )
 from crafting_system.actions.bloodstained import BloodstainedOutcomes, ImplicitDraw
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import ImplicitMod, Influence, Item, Rarity
 
 FIRE = Wanted(frozenset({"FireA", "FireB"}), min_tier=1)
@@ -585,8 +585,8 @@ def test_the_answer_names_a_bloodstained_set_that_is_left_out_with_the_cause_tha
 def test_a_bloodstained_offer_is_not_pruned_from_a_state_that_misses_a_requirement():
     """It rerolls the explicit mods itself: unlike a Vaal Orb it can reach the goal from any state (ADR-0036)."""
     from crafting_system.cli import PricedOffer
-    from crafting_system.cli._offers import offer_of
-    from crafting_system.cli._prune import corrupting_offer_pruned
+    from crafting_system.planner._offers import offer_of
+    from crafting_system.planner._prune import corrupting_offer_pruned
 
     item = starts()["none"]
     action = bloodstained("Scorched")

@@ -2,7 +2,7 @@
 
     python research/497/pattern_bound.py TARGET.yaml --out DIR [--strand-stripped] [--tags auto,yes,no] [--check] [--seconds S]
 
-Without `--check` it builds the optimistic model of the key from the `Abstraction` and the priced offers (`cli/_pattern_bound.py`, no walk), solves
+Without `--check` it builds the optimistic model of the key from the `Abstraction` and the priced offers (`planner/_pattern_bound.py`, no walk), solves
 it, and writes the number of abstract states, the kernels it evaluated, the start value, the seconds and the peak memory. With `--check` it then
 walks the concrete graph (the research/312 walker), solves it exactly, and reports
 
@@ -34,7 +34,7 @@ import junk_bound as J  # noqa: E402
 import later_stages as L  # noqa: E402
 import prune_analysis as P  # noqa: E402
 from crafting_system.abstraction._pattern import Pattern  # noqa: E402
-from crafting_system.cli._pattern_bound import pattern_lower_bound  # noqa: E402
+from crafting_system.planner._pattern_bound import pattern_lower_bound  # noqa: E402
 
 
 def say(began: float, text: str) -> None:

@@ -36,7 +36,8 @@ from abstraction_support import real_game_data
 from cli_support import read_json
 
 from crafting_system.actions import DRAW_LABEL
-from crafting_system.cli import _packed, main
+from crafting_system.cli import main
+from crafting_system.planner import _packed
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file

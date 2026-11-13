@@ -19,7 +19,7 @@ from ninja_support import ninja  # noqa: F401  (a fixture)
 from test_prices_cli import run
 
 from crafting_system.actions import ApplyQualityCurrency, BlessedOrb, BurnKeeps, ChromaticOrb, HinekoraLock, ReAnoint, burns_at
-from crafting_system.cli._offers import Offer, price_offers
+from crafting_system.planner._offers import Offer, price_offers
 from crafting_system.prices import (
     BURN_PRICE_NAMES,
     FORESIGHT_PRICE_NAMES,

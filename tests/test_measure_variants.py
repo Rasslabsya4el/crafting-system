@@ -26,7 +26,7 @@ from crafting_system.actions import (
     ScouringOrb,
     TransmutationOrb,
 )
-from crafting_system.cli._decide import Rates
+from crafting_system.planner._decide import Rates
 from crafting_system.items import Rarity
 
 SCRIPT = Path(__file__).resolve().parents[1] / ".github" / "scripts" / "measure_variants.py"

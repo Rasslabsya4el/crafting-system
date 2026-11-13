@@ -29,7 +29,9 @@ import yaml
 from abstraction_support import real_game_data
 from test_strand_routes import STRAND_ACTIONS, without_strand_words
 
-from crafting_system.cli import _plan, make_plan
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _plan
 from crafting_system.cli._route import parse_route
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.solver import Solution

@@ -18,7 +18,8 @@ from crafting_system.actions import (
     bench_crafts,
 )
 from crafting_system.abstraction import Goal, Wanted
-from crafting_system.cli import _offers, offers_for
+from crafting_system.cli import offers_for
+from crafting_system.planner import _offers
 from crafting_system.data import MissingDataError, load_game_data
 from crafting_system.items import ExplicitMod, Item, Rarity
 

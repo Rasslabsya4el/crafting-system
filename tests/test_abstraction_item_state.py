@@ -442,8 +442,8 @@ def test_the_pilot_does_not_count_an_action_that_touches_the_item_state_as_a_clo
 
 
 def test_the_pruning_by_bound_cuts_at_an_action_that_reads_the_item_state():
-    from crafting_system.cli._bound_prune import REROLL, TERMINAL, _kind_of
-    from crafting_system.cli._offers import Offer, PricedOffer
+    from crafting_system.planner._bound_prune import REROLL, TERMINAL, _kind_of
+    from crafting_system.planner._offers import Offer, PricedOffer
 
     def kind(action):
         return _kind_of(ITEM_DATA, amulet(roll(RESIST_2)), PricedOffer(Offer(action.label(), action, {}), 1.0, ()))[0]

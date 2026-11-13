@@ -34,7 +34,7 @@ NAME_BUILDERS = {
     "prices/price_names.py::canonical_price_name": "the format of the poe.ninja-style base name: its canonical form",
     "prices/ninja_items.py::_stash_line": "names a poe.ninja stash line by the line's own name, level and variant (no target is involved)",
     "prices/trade_query.py::_parse_spec": "reads a spec file whose name the file gives; it derives nothing",
-    "cli/_decide.py::decide": "`replace(level, name=...)` renames a search level, not a buy spec",
+    "planner/_decide.py::decide": "`replace(level, name=...)` renames a search level, not a buy spec",
     "cli/_route_card.py::_properties": "the words of the route card's item line, not a price name",
     "cli/_route_trade.py::_accepts": "the lines of the page that say what a buy spec accepts, not a price name",
     "prices/query_compare.py::_level_words": "the words that say how two stored searches differ, not a price name",
@@ -163,10 +163,10 @@ def test_a_new_function_in_a_listed_module_fails_the_scan():
 def test_the_callers_that_look_a_start_price_up_get_the_key_from_the_one_place():
     """The modules that read a start price name the key through `start_price_key` / `buy_spec_of` / `base_line_name`, never a typed or built one."""
     callers = {
-        "cli/_plan.py": "buy_spec_of",
+        "planner/_plan.py": "buy_spec_of",
         "cli/_benchmark.py": "start_price_key",
-        "cli/_starts.py": "start_price_key",
-        "cli/_start_options.py": "base_line_name",
+        "planner/_starts.py": "start_price_key",
+        "planner/_start_options.py": "base_line_name",
     }
     for module, function in callers.items():
         called = {

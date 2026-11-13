@@ -222,7 +222,7 @@ def test_the_envelope_refusal_of_a_target_is_a_record_not_a_crash(monkeypatch):
     # The bound refuses as for a goal it cannot build (as `test_cli_envelope_plan.py`): J01 with every kind named no longer refuses by
     # itself since the relevance test of #848 leaves out the Unveil it refused for, and its search then runs for minutes and gigabytes.
     from crafting_system.actions import OutOfScopeError
-    from crafting_system.cli import _envelope_plan
+    from crafting_system.planner import _envelope_plan
 
     def refuse(*_args, **_kwargs):
         raise OutOfScopeError("a goal with a roll limit has no members")

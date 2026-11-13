@@ -60,7 +60,7 @@ from crafting_system.actions import (
     RemoveCraftedMods,
     TransmutationOrb,
 )
-from crafting_system.cli._pattern_bound import pack_pattern_model
+from crafting_system.planner._pattern_bound import pack_pattern_model
 from crafting_system.data import EssenceMod, Weight
 from crafting_system.items import Rarity, Side
 from crafting_system.solver import solve_packed

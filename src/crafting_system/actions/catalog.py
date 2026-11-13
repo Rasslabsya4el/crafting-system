@@ -43,7 +43,7 @@ for an ordinary kind.
 the kind or the whole kind out because the model has no rule for this item (`OutOfScopeError`) says so with `listing_gap(error, subject)`;
 one that leaves it out because the game refuses it (`NotApplicableError`) stays silent. `catalog_kinds(..., gaps=found)` collects what the
 kinds it lists said into `found`, one `ListingGap` per kind, subject and cause, and the planner makes them a limit of the answer
-(`cli/_offers.py`). A listing asked without `gaps` collects nothing: a `listing_gap` there is a no-op.
+(`planner/_offers.py`). A listing asked without `gaps` collects nothing: a `listing_gap` there is a no-op.
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator

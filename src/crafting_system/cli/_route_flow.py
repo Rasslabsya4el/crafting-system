@@ -85,8 +85,8 @@ from crafting_system.solver import _packed_linear
 from crafting_system.solver._packed_chain import ChainSolver, CyclesTooTangled, inverse_diagonal
 from crafting_system.solver._packed_linear import DENSE_LIMIT, Terms, backward_error, forward_estimate, gth_inverse
 from crafting_system.solver._packed_lump import lump_states
+from crafting_system.planner import STEPS, Limit, claim
 
-from ._limits import STEPS, Limit, claim
 from ._reach import policy_states
 
 VISITS_TOLERANCE = 1e-12  # the relative residual BiCGSTAB aims at
@@ -1091,10 +1091,10 @@ def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
     m = chain.m
     if m == 0:
         return [Reach(None, "the chain has no state") for _ in wanted]
-    from . import _packed  # a measuring script sets `_packed.PROGRESS`; the library never does
+    from crafting_system.planner import progress  # a measuring script sets the planner's progress sink; the library never does
 
     began = time.perf_counter()
-    say = _packed.PROGRESS or (lambda _text: None)
+    say = progress() or (lambda _text: None)
     done = _solved(chain)
     say(f"visit chances: the visits of {int(done.finishing.sum()):,} states that can finish solved ({time.perf_counter() - began:.1f} s)")
     found: dict[int, Reach] = {}

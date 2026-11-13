@@ -20,7 +20,7 @@ from test_actions_harvest_swap import COLD_RESIST, FIRE_RESIST, MAX_FIRE, WORLD 
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import AspectBeast
 from crafting_system.cli import build_report, make_plan, render_text
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.targets import load_target

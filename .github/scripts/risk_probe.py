@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crafting_system.cli._plan import evaluate_risk
+from crafting_system.planner._plan import evaluate_risk
 from crafting_system.risk import _regen
 from crafting_system.solver import Action, Outcome
 

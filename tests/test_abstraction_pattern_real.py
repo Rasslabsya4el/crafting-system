@@ -25,7 +25,7 @@ import exact_classes as E  # noqa: E402
 import prune_analysis as P  # noqa: E402
 
 from crafting_system.abstraction._pattern import Pattern  # noqa: E402
-from crafting_system.cli._pattern_bound import pattern_lower_bound  # noqa: E402
+from crafting_system.planner._pattern_bound import pattern_lower_bound  # noqa: E402
 
 # (route, tags): R13 with the key the route calls for and without the tags, R05 (72 offers, no action reads the junk: a state keeps none of it) with the key it calls for
 CASES = [

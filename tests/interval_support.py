@@ -20,7 +20,7 @@ from crafting_system.actions import ChaosOrb
 from crafting_system.actions.recombinator import ALPHA_AXIS, DUST_NAME, GOLD_NAME, Recombinator
 from crafting_system.cli import Offer, price_offers
 from crafting_system.cli._interval import IntervalAnswer, build_interval_answer
-from crafting_system.cli._plan import Plan, StartPrice, leaf_labels, offer_action
+from crafting_system.planner._plan import Plan, StartPrice, leaf_labels, offer_action
 from crafting_system.items import Rarity
 from crafting_system.prices import CHAOS_ORB
 from crafting_system.prices.price_file import PriceEntry

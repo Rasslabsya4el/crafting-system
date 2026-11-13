@@ -202,7 +202,7 @@ def start_price_key(data: GameData, target: Target) -> str:
 def base_line_name(data: GameData, target: Target) -> str:
     """The price name of the target's Normal base at its item level and influences: `Lion Pelt (ilvl 84)`.
 
-    A vendor recipe buys this base and makes the start item from it (`cli/_start_options.py`). The base is named like the start item's base
+    A vendor recipe buys this base and makes the start item from it (`planner/_start_options.py`). The base is named like the start item's base
     in its key: where the name is shared, the base id is in it (`Two-Toned Boots [BootsAtlas1] (ilvl 86)`), so a price of this name is the price of
     this base.
     """

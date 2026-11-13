@@ -16,9 +16,11 @@ import numpy as np
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.cli import _plan, make_plan
-from crafting_system.cli._envelope_plan import BoundError, envelope_result
-from crafting_system.cli._pattern_bound import pattern_lower_bound
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _plan
+from crafting_system.planner._envelope_plan import BoundError, envelope_result
+from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 

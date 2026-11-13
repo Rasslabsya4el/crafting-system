@@ -1,7 +1,7 @@
 """The envelope search on real routes (ticket #377, ADR-0063 point 4, OR-12): the full walk's plan and mean, from a smaller expansion.
 
 R05 and R13 are planned twice on the real 3.29.3.3 dump at the committed prices: `solver="packed"` (the full walk, every state) and `solver="envelope"`
-(the walk-free bound of #497 and the search of `cli/_envelope.py`). The two give the same mean to 1e-9, the same action at every state the envelope's plan
+(the walk-free bound of #497 and the search of `planner/_envelope.py`). The two give the same mean to 1e-9, the same action at every state the envelope's plan
 reaches, and the envelope's plan reaches no state it has not expanded. R13's bound is its exact cost (100%), so the search expands 191 of 2,887 states.
 R04 and R14 are compared in heavy runs (`.github/scripts/envelope_routes.py`; the numbers are in the pull request).
 
@@ -19,15 +19,17 @@ import numpy as np
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.cli import _plan, make_plan
-from crafting_system.cli._envelope import Net
-from crafting_system.cli._plan import add_risk
-from crafting_system.cli._envelope_plan import BoundError, certificate_gap, envelope_result, route_incumbent
-from crafting_system.cli._limits import SHOWN_LABELS, SOLVE, limit_text
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _plan
+from crafting_system.planner._envelope import Net
+from crafting_system.planner._plan import add_risk
+from crafting_system.planner._envelope_plan import BoundError, certificate_gap, envelope_result, route_incumbent
+from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, limit_text
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.cli._route import load_route
-from crafting_system.cli._pattern_bound import pattern_lower_bound
+from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 

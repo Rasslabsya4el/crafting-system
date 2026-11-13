@@ -19,10 +19,11 @@ from test_cli_limit_words import read  # the rule of player words (#481)
 
 from crafting_system import budget
 from crafting_system.budget import MEMORY, STATES, TIME, Binding, Budget, BudgetExceeded
-from crafting_system.cli import _main, _plan, make_plan
-from crafting_system.cli._foresight import Status as LockStatus
-from crafting_system.cli._limits import BUDGET, budget_limit
-from crafting_system.cli._plan import PRUNED_STAGE, SEARCH_STAGE, WALK_STAGE, LOCK_STAGE, PlanError
+from crafting_system.cli import _main, make_plan
+from crafting_system.planner import _plan
+from crafting_system.planner._foresight import Status as LockStatus
+from crafting_system.planner._limits import BUDGET, budget_limit
+from crafting_system.planner._plan import PRUNED_STAGE, SEARCH_STAGE, WALK_STAGE, LOCK_STAGE, PlanError
 from crafting_system.config import TIME_LIMIT_SECONDS, Config, load_config
 
 
@@ -222,7 +223,7 @@ def test_a_stopped_search_keeps_its_plan_and_the_plan_says_which_limit_bound(coa
 
 
 def test_the_old_net_argument_is_the_same_budget(coarse):  # noqa: F811
-    from crafting_system.cli._envelope import Net
+    from crafting_system.planner._envelope import Net
 
     target, prices, _ = coarse
     by_net = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96), with_risk=False)

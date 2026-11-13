@@ -40,7 +40,7 @@ from crafting_system.actions import (
     catalog,
     kinds,
 )
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile
 

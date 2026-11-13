@@ -1,4 +1,4 @@
-"""The packed walk of a plan (`cli/_packed.py`) on the committed fixture pool, checked against the abstraction and the risk module (ticket #413).
+"""The packed walk of a plan (`planner/_packed.py`) on the committed fixture pool, checked against the abstraction and the risk module (ticket #413).
 
 `test_packed_heavy.py` and `test_packed_plan_real.py` check this module on routes R04, R14 and S02, which CI does not run;
 the measurement week (#399) found 29 of its 43 checked mutants alive, and 23 more never run because their test sets failed
@@ -25,7 +25,7 @@ them. This file has no second source for them. The second source is accepted to 
 
 What is not covered is the kernel of this world's own four synthetic crafts and of Remove Crafted Mods by brute force (issue #460).
 
-The conversion of a kernel to integer weights is not shared with the code under test: `cli/_packed.py` imports
+The conversion of a kernel to integer weights is not shared with the code under test: `planner/_packed.py` imports
 `abstraction.integer_weights`, and every expectation here uses `weights_by_hand`, written in this file by another route (the product
 of the denominators, not their least common multiple) and checked on kernels worked out on paper
 (`test_the_weights_by_hand_are_the_ones_worked_out_on_paper`). A bug in `integer_weights` therefore shows as a difference between
@@ -46,8 +46,8 @@ from crafting_system import risk
 from crafting_system.abstraction import integer_weights
 from crafting_system.actions import ActionError
 from crafting_system.cli import Offer
-from crafting_system.cli import _packed
-from crafting_system.cli._offers import RESTART, BuyStartItem, PricedOffer
+from crafting_system.planner import _packed
+from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
 from crafting_system.solver import Action, Outcome, TabularModel, solve, solve_packed
 
 START_ITEM = item(roll(MANA_1))

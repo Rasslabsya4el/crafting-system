@@ -30,7 +30,7 @@ from crafting_system.actions import (
     registered,
 )
 from crafting_system.cli import make_plan
-from crafting_system.cli._offers import offers_for, price_offers
+from crafting_system.planner._offers import offers_for, price_offers
 from crafting_system.items import Rarity
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target
@@ -188,7 +188,7 @@ def test_the_planner_solves_an_offered_axis_at_every_reading_and_still_takes_no_
 
 
 def _offers_with(action):
-    from crafting_system.cli._offers import Offer, offer_of, offers_for as listed
+    from crafting_system.planner._offers import Offer, offer_of, offers_for as listed
 
     target = load_target(R12, CONTRACT_DATA)
     base = listed(CONTRACT_DATA, Goal.from_target(target), target.base_id, target.start_item).offers

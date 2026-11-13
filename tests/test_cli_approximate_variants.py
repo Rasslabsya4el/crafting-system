@@ -25,11 +25,11 @@ from test_abstraction_variants import ADDITIONS, ANNUL, TYPED, block_of
 from crafting_system.abstraction import Abstraction, Coarsening
 from crafting_system.actions import AnnulmentOrb, Reads, RegalOrb
 from crafting_system.cli import Offer, PlanError, build_report, make_plan, policy_document, render_text
-from crafting_system.cli import _decide
-from crafting_system.cli import _approx
-from crafting_system.cli._approx import BlockModel, climb, shown_policy, solve_level
-from crafting_system.cli._decide import LADDER, SPREAD_LADDER, Candidate, Decision, Level, Rates, coarse_refusal, decide, ladder_for
-from crafting_system.cli._offers import PricedOffer
+from crafting_system.planner import _decide
+from crafting_system.planner import _approx
+from crafting_system.planner._approx import BlockModel, climb, shown_policy, solve_level
+from crafting_system.planner._decide import LADDER, SPREAD_LADDER, Candidate, Decision, Level, Rates, coarse_refusal, decide, ladder_for
+from crafting_system.planner._offers import PricedOffer
 from crafting_system.items import Rarity
 from crafting_system.prices import PriceFile
 from crafting_system.solver import Action, Outcome, VariantAction

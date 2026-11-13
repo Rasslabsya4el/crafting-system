@@ -32,9 +32,9 @@ from crafting_system.actions import (
     registered,
 )
 from crafting_system.cli import PricedOffer
-from crafting_system.cli._offers import RESTART, BuyStartItem, Offer, offer_of, offers_for
-from crafting_system.cli._plan import _Model
-from crafting_system.cli._prune import corrupting_offer_pruned, solver_actions
+from crafting_system.planner._offers import RESTART, BuyStartItem, Offer, offer_of, offers_for
+from crafting_system.planner._plan import _Model
+from crafting_system.planner._prune import corrupting_offer_pruned, solver_actions
 from crafting_system.data import GameData, Weight
 from crafting_system.items import ImplicitMod, Item, Rarity
 from crafting_system.solver import solve
@@ -295,7 +295,7 @@ def test_a_corrupting_offer_is_an_action_of_a_state_that_asks_only_where_every_o
 
 def test_the_pruned_toy_value_is_the_hand_oracle_and_the_pruning_changes_nothing(monkeypatch):
     """Start item that already meets the explicit requirement: one use is the goal with chance 1/2, else a restart: V = 2c + R."""
-    from crafting_system.cli import _plan
+    from crafting_system.planner import _plan
 
     start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(RESIST_2),))
     toy, restart = _priced(ToyCorruption(), COST, start_item), _restart(start_item)
@@ -312,7 +312,7 @@ def test_the_pruned_toy_value_is_the_hand_oracle_and_the_pruning_changes_nothing
 @pytest.mark.parametrize("with_restart", [True, False], ids=["restart", "no-restart"])
 def test_pruning_the_toy_to_the_states_that_pass_never_changes_the_value_on_a_fixture(monkeypatch, cost, with_restart):
     """A Chaos Orb rerolls until a resistance shows, the toy corrupts it: solved whole and pruned, every shared state has one value."""
-    from crafting_system.cli import _plan
+    from crafting_system.planner import _plan
 
     start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(LIFE_1),))
     chaos = _priced(ChaosOrb(), 1.0, start_item)
@@ -338,7 +338,7 @@ def test_pruning_the_toy_to_the_states_that_pass_never_changes_the_value_on_a_fi
 
 
 def test_a_corrupting_offer_is_terminal_for_the_bound_pruning():
-    from crafting_system.cli._bound_prune import TERMINAL, _kind_of
+    from crafting_system.planner._bound_prune import TERMINAL, _kind_of
 
     start_item = fixture_items()["rare_junk"]
     assert _kind_of(TOY_DATA, start_item, _priced(ToyCorruption(), COST, start_item))[0] == TERMINAL
@@ -407,7 +407,7 @@ def test_the_planner_offers_the_toy_to_a_target_that_allows_corruption_and_not_t
 
 
 def test_k13_a_corrupting_offer_left_out_of_a_state_is_written_so_that_the_answer_can_say_it():
-    from crafting_system.cli._limits import pruning_limits
+    from crafting_system.planner._limits import pruning_limits
 
     start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(LIFE_1),))  # no resistance
     toy, restart = _priced(ToyCorruption(), COST, start_item), _restart(start_item)

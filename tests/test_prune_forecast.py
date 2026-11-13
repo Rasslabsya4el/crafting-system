@@ -1,6 +1,6 @@
 """The forecast of a plan with a budget runs on the pruning's starting set (ticket #63).
 
-`cli._bound_prune.merge_twins` is the twin step of `solve_pruned`, taken out so that `make_plan(..., budget=...)` can
+`planner._bound_prune.merge_twins` is the twin step of `solve_pruned`, taken out so that `make_plan(..., budget=...)` can
 use it; `starting_offers` is the set `solve_pruned` solves first (restart, the bench crafts, the K best rerolls after the
 twins). `make_plan` forecasts (`decide`) on that set instead of on every offer, and an approximate answer is climbed on
 the twin-merged offers. This file checks, on the reduced boots world of `tests/test_prune_bound.py` (the Sorcerer Boots
@@ -37,10 +37,11 @@ from limits_support import notes, only
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
-from crafting_system.cli import RESTART, Offer, _bound_prune, make_plan
-from crafting_system.cli._bound_prune import merge_twins, solve_pruned, starting_offers
-from crafting_system.cli._decide import LADDER, Rates
-from crafting_system.cli._offers import BuyStartItem, PricedOffer, offer_of, price_offers
+from crafting_system.cli import RESTART, Offer, make_plan
+from crafting_system.planner import _bound_prune
+from crafting_system.planner._bound_prune import merge_twins, solve_pruned, starting_offers
+from crafting_system.planner._decide import LADDER, Rates
+from crafting_system.planner._offers import BuyStartItem, PricedOffer, offer_of, price_offers
 from crafting_system.items import Item, Rarity
 from crafting_system.targets import StartKind, Target
 

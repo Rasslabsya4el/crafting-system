@@ -27,11 +27,9 @@ from crafting_system.data import GameData
 from crafting_system.prices import DUST, GOLD
 from crafting_system.risk import Estimate, IntervalReport, Route, expected_total
 from crafting_system.solver import Action
+from crafting_system.planner import NOT_COMPUTED, Plan, axis_what, reading_pair
 
-from ._axes import axis_what, reading_pair
-from ._limits import NOT_COMPUTED
 from ._marking import ApproximateInput, approximate_inputs_of, number_text
-from ._plan import Plan
 
 FORMAT_NOTE = "The interval is the plan's cost at each value of the grid, not a bound: the true value can lie between two grid points."
 

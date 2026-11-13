@@ -13,7 +13,7 @@ from limits_support import labels_of
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import AspectBeast, Kind, registered
 from crafting_system.actions.beasts import ASPECT_LEVELS, ASPECT_WORDS
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import Rarity
 
 

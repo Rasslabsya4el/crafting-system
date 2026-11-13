@@ -34,7 +34,7 @@ kinds are no planner kinds; they stay in the catalog, under the contract suite, 
   they belong to unique items, which the model does not hold either.
 
 **The price** is read from the price file by the name in the claims `tempering_orb.cost` and `tailoring_orb.cost` (the item's name in the
-game data); an offer whose price the file lacks is dropped and reported with that name (`cli._offers.price_offers`, ADR-0007). The bench
+game data); an offer whose price the file lacks is dropped and reported with that name (`planner._offers.price_offers`, ADR-0007). The bench
 removal of an enchantment (3 Orbs of Scouring, `enchantment.bench_removes_for_three_scouring`) is not an action: clicking again
 replaces for free. The reforge of the sockets that a socket-stat enchant causes is not modelled (the planner models no sockets before B6;
 `enchantment.socket_stat_enchant_reforges_sockets`), and neither is the Memory Strands count, which the Tailoring Orb leaves alone

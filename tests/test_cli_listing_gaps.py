@@ -22,8 +22,8 @@ from crafting_system.abstraction import Goal
 from crafting_system.actions import BenchCraft, Kind, ListingGap, NotApplicableError, OutOfScopeError, catalog_kinds, junk_craft_offered, listing_gap, registered
 from crafting_system.actions import fossil as fossil_module
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
-from crafting_system.cli._limits import SHOWN_LABELS, WITHIN_GAP, limit_text
-from crafting_system.cli._offers import listing_gap_limits
+from crafting_system.planner._limits import SHOWN_LABELS, WITHIN_GAP, limit_text
+from crafting_system.planner._offers import listing_gap_limits
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.items import Item, Rarity
@@ -210,7 +210,7 @@ def test_a_plan_whose_listing_meets_no_gap_has_no_such_limit():
 def test_r08_boots_name_the_fossil_pair_the_model_has_no_rule_for(real):
     from pathlib import Path
 
-    from crafting_system.cli._offers import offers_for
+    from crafting_system.planner._offers import offers_for
 
     target = load_target(Path(__file__).resolve().parents[1] / "examples" / "targets" / "r08-energy-shield-boots.yaml", real)
     chosen = offers_for(real, Goal.from_target(target), target.base_id, target.start_item, target.actions)

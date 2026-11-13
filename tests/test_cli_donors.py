@@ -17,8 +17,8 @@ from ssp_input_oracles import brute_force_inputs
 
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import Need
-from crafting_system.cli._donors import DonorModel, solve_with_donors, takes_inputs
-from crafting_system.cli._offers import isolated_feeder
+from crafting_system.planner._donors import DonorModel, solve_with_donors, takes_inputs
+from crafting_system.planner._offers import isolated_feeder
 
 
 @pytest.fixture(scope="module", autouse=True)

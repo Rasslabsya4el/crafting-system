@@ -53,7 +53,7 @@ from harvest_augment_support import (
 )
 
 from crafting_system.actions import HarvestAddRemove, NotApplicableError, catalog, kinds
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.items import ExplicitMod, Influence, Rarity
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.rules import SourceKind, get_rule

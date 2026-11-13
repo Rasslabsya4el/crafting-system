@@ -300,7 +300,7 @@ def _lost_at(alpha: Fraction):
 
 
 def test_512_a_reading_where_the_plan_has_no_finite_mean_says_the_cause_in_its_row_and_in_the_json():
-    from crafting_system.cli._limits import NOT_COMPUTED
+    from crafting_system.planner._limits import NOT_COMPUTED
 
     result, start, is_goal, _ = _lost_at(Fraction(8, 5))
 
@@ -317,7 +317,7 @@ def test_512_a_reading_where_the_plan_has_no_finite_mean_says_the_cause_in_its_r
 
 def test_512_a_plan_with_no_finite_mean_at_its_own_reading_says_the_cause_for_its_cost_and_its_recombinations(monkeypatch):
     from crafting_system.cli import _interval
-    from crafting_system.cli._limits import NOT_COMPUTED
+    from crafting_system.planner._limits import NOT_COMPUTED
 
     result, start, is_goal, lost = _lost_at(Fraction(1))
     monkeypatch.setattr(_interval, "expected_total", lambda *args, **kwargs: lost)  # the same policy at the same reading: no finite count either

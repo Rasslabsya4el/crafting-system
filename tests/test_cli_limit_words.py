@@ -21,9 +21,9 @@ from targets_support import DATA
 
 from crafting_system.abstraction import Gap
 from crafting_system.cli import STRANDS_OFF, make_plan
-from crafting_system.cli import _decide, _plan
-from crafting_system.cli._decide import EXACT_TRANSITIONS, Decision, exact_offer
-from crafting_system.cli._limits import (
+from crafting_system.planner import _decide, _plan
+from crafting_system.planner._decide import EXACT_TRANSITIONS, Decision, exact_offer
+from crafting_system.planner._limits import (
     PERCENTILE_WORDS,
     QUANTILES,
     Limit,
@@ -81,7 +81,7 @@ def watched_strings(path: Path) -> list[tuple[int, str]]:
 
 SOURCES = sorted(
     path
-    for folder in ("cli", "risk", "abstraction")
+    for folder in ("planner", "cli", "risk", "abstraction")
     for path in (SRC / folder).glob("*.py")
     if any(word in path.read_text(encoding="utf-8") for word in ("Limit(", "note(", "EstimateRefused(", "def choose", "def measure_solve_rate"))
 )

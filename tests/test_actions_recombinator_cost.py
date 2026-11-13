@@ -24,7 +24,7 @@ from crafting_system.actions.recombinator import (
     junk_craft_for,
     junk_craft_offered,
 )
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.items import Influence, Rarity
 from crafting_system.prices import DUST, GOLD, PriceEntry, PriceFile, default_prices
 from crafting_system.rules import rule_by_id

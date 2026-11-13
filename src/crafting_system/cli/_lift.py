@@ -11,8 +11,8 @@ from collections.abc import Mapping
 from crafting_system.abstraction import CompressedState
 from crafting_system.items import Item
 from crafting_system.simulator import Policy, Step
+from crafting_system.planner import Plan
 
-from ._plan import Plan
 
 
 def lift(plan: Plan, steps: Mapping[CompressedState, Step]) -> Policy:

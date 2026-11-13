@@ -29,10 +29,8 @@ from crafting_system.prices.price_marks import chaos_text
 from crafting_system.rules import get_rule, rule_by_id
 from crafting_system.simulator import SampledEstimate
 from crafting_system.solver import Action
+from crafting_system.planner import PERCENTILE_WORDS, Approximation, Plan, figures
 
-from ._approx import Approximation
-from ._limits import PERCENTILE_WORDS, figures
-from ._plan import Plan
 from ._price_marks import PriceUse, price_uses
 from ._reach import policy_states
 from ._verify import CVAR_LEVEL, SIGMAS, Verification

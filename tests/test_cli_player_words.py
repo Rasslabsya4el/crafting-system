@@ -16,7 +16,7 @@ claim id, a file name, a ticket or ADR number, a workflow word, a base id, a sna
 
 * a module path or a program (`python -m crafting_system.cli trade`): the player is told the command by its name (the `trade` command);
 * a statistics or program word (`JARGON`): `p50`, `p90`, `CVaR`, `solver`, `percentile`, `quantile`, and a figure's label that is not the
-  words of `cli/_limits.py` `PERCENTILE_WORDS` ("the success chance", "the median cost", "the cost 9 runs in 10 stay under", "the average of
+  words of `planner/_limits.py` `PERCENTILE_WORDS` ("the success chance", "the median cost", "the cost 9 runs in 10 stay under", "the average of
   the worst tenth"), so that a figure is said as one table says it (ticket #633);
 * a command line option that the command does not have. A command line option is a thing the player types, so a sentence may name it
   (`--exact`, `--start-price`), but only an option that some `add_argument` of the `cli` package declares: the option is read from the code.
@@ -27,7 +27,7 @@ test scans. The causes written in `actions/` and `abstraction/` are read by `tes
 sites, #557); #632 owns the errors of `data`, `targets`, `prices` and `config`. The benchmark command is #631. The header
 `Target: <file>` is not read: it echoes the name of the player's own file.
 
-The axis table (`cli/_axes.py`) has its own test below: every rule axis the code defines has words, and so has each of its values.
+The axis table (`planner/_axes.py`) has its own test below: every rule axis the code defines has words, and so has each of its values.
 """
 
 import ast
@@ -46,17 +46,21 @@ from vendor_starts_support import BASE_PRICE, BOOTS_TARGET, FLASK_PRICE, TOY, WA
 import crafting_system.actions as actions_package
 from crafting_system.actions.contract import Axis
 from crafting_system.cli import build_report, make_plan, plan_with_starts, render_text
-from crafting_system.cli._axes import AXIS_WORDS, AxisWords, axis_name, axis_what, reading_pair, value_text
-from crafting_system.cli._plan import PlanError, resolve_start_price
+from crafting_system.planner._axes import AXIS_WORDS, AxisWords, axis_name, axis_what, reading_pair, value_text
+from crafting_system.planner._plan import PlanError, resolve_start_price
 from crafting_system.cli._verify import verify
 from crafting_system.items.vendor_recipes import RECIPES
 from crafting_system.targets import load_target
 
 REPO = Path(__file__).resolve().parent.parent
 CLI = REPO / "src" / "crafting_system" / "cli"
+PLANNER = REPO / "src" / "crafting_system" / "planner"  # the planner writes words a player reads too: limits, refusals, the words of a rule axis (#880)
 GOLDEN = Path(__file__).resolve().parent / "golden"
 
-NOT_READ = {"_route_html.py"}  # the page's CSS and script: the page lint reads the page
+NOT_READ = {
+    "_route_html.py",  # the page's CSS and script: the page lint reads the page
+    "_presenter.py",  # the planner's one sentence there is a `RuntimeError` for a programmer who named no presenter (issue #882); no command prints it
+}
 NOT_READ_PREFIX = "_benchmark"  # the benchmark command is a developer's tool; its words are filed as an issue (OR-29)
 PROGRAM_NAME = "COMMAND"  # the constant that holds the program name for `argparse`'s usage line
 
@@ -154,7 +158,7 @@ def sentences_in(source: str) -> list[tuple[int, str]]:
     return sorted((line, text) for line, text in found if len(text.split()) >= 2)
 
 
-READ = sorted(path for path in CLI.glob("*.py") if path.name not in NOT_READ and not path.name.startswith(NOT_READ_PREFIX))
+READ = sorted(path for folder in (CLI, PLANNER) for path in folder.glob("*.py") if path.name not in NOT_READ and not path.name.startswith(NOT_READ_PREFIX))
 
 
 # --- the rule itself, on counter-examples and examples ------------------------------------------------------------------------
@@ -338,7 +342,7 @@ def test_the_requirements_leak_is_still_there_so_its_exemption_is_still_needed(t
 
 
 def test_the_result_block_and_the_verification_say_each_figure_as_the_table_does(texts):
-    from crafting_system.cli._limits import PERCENTILE_WORDS
+    from crafting_system.planner._limits import PERCENTILE_WORDS
 
     text, verified = texts["R12 plan"], texts["R12 plan with --verify"]
     for name in ("success", "mean", "p50", "p90"):

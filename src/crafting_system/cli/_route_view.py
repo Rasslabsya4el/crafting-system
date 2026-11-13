@@ -66,12 +66,11 @@ from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 from crafting_system.targets import plain_base_names
+from crafting_system.planner import GIVEN_SOURCE, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown
 
 from ._interval import IntervalAnswer
-from ._limits import SHOWN_LABELS, STRANDS, grouped, limit_text, more_labels, not_shown
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
 from ._price_marks import price_uses, use_line
-from ._plan import GIVEN_SOURCE, Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text

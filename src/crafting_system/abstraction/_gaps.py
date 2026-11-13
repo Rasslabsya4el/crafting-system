@@ -3,7 +3,7 @@
 A refusal of an action is one of two things. The game refuses (`NotApplicableError`): the plan is exact under it and nothing is said.
 The model has no rule (`OutOfScopeError`): the action may be fine in the game, but the plan cannot use it there, and the answer has to say so.
 `ModelGaps` is where the walk and the solve write the second kind: for each action (by its label in the offers) the states where it was
-left out and the cause of the first refusal. The planner reads it at the end of the plan (`cli._plan.model_gap_limits`).
+left out and the cause of the first refusal. The planner reads it at the end of the plan (`planner._plan.model_gap_limits`).
 
 One `Abstraction` owns one `ModelGaps` (`Abstraction.gaps`); the walks of one plan share the abstraction, so they share the record. A state
 that is met again (the bound pruning solves the same states again) counts once.

@@ -24,10 +24,9 @@ import time
 
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
+from crafting_system.planner import Plan, progress
 
-from . import _packed
 from ._benchmark_use import per_use_of
-from ._plan import Plan
 from ._report import describe_state, money, name_states, number_states, percent
 from ._route import Divergence, RouteResult
 from ._route_chain import chain_of_plan
@@ -59,7 +58,7 @@ def divergences_of(plan: Plan, result: RouteResult, data: GameData) -> dict:
     if not found:
         return {"count": 0, "shown": [], "more": None}
     began = time.perf_counter()
-    say = _packed.PROGRESS or (lambda _text: None)  # a measuring script sets it to see each phase as it ends
+    say = progress() or (lambda _text: None)  # a measuring script sets it to see each phase as it ends
     planner = chain_of_plan(plan)
     route = _route_chain(plan, result)
     say(f"divergences: {len(found):,}; the chains of the planner ({planner.m:,} states) and of the route ({route.m:,}) made ({time.perf_counter() - began:.1f} s)")

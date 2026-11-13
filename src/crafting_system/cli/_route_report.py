@@ -9,10 +9,10 @@ tree that the state is in ("step 3 (Regal Orb)"), since the tree has a block for
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
 from crafting_system.targets import plain_base_names
+from crafting_system.planner import UNRESOLVED, unresolved
 
 from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
 from ._price_marks import price_uses
-from ._limits import UNRESOLVED, unresolved
 from ._report import ROW_WIDTH, Report, _estimate, _quantile_text, _row, _shifted, describe_state, interval, name_states, percent
 from ._route import Route, RouteResult
 

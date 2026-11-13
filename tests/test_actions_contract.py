@@ -29,7 +29,7 @@ from targets_support import DATA
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import ExaltedOrb, NotApplicableError, OutOfScopeError, Reads, RegalOrb, catalog, kinds
 from crafting_system.cli import PricedOffer, make_plan, parse_route
-from crafting_system.cli._offers import offer_of, offers_for
+from crafting_system.planner._offers import offer_of, offers_for
 from crafting_system.targets import load_target
 
 PAIRS = contract_pairs()

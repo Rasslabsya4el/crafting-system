@@ -28,7 +28,7 @@ from test_strand_routes_load import FILES, flat_price_file
 
 from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import make_plan
-from crafting_system.cli._packed import PackedPolicy
+from crafting_system.planner._packed import PackedPolicy
 from crafting_system.cli._reach import policy_states
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target, parse_target

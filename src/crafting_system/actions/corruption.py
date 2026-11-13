@@ -49,7 +49,7 @@ anyway (`corruption.vaal_incompatible_with_allflame`).
 **What it declares.** `Reads` names the implicits (the number of candidates for the replacement depends on how many the item holds) and the junk (a
 result keeps it); `Adds.corrupting(keeps_mods=True)` says that it corrupts, that it puts an implicit on the item and that every outcome that can
 still be the goal holds the explicit mods the item held, so a target that asks gets the Orb only from a state in which every other requirement passes
-(`cli._prune`, ADR-0036). A Vaal Orb neither cuts tiers nor spends Memory Strands (`memory_strands.cut_follows_spend_table`, `memory_strands.not_spent_by`).
+(`planner._prune`, ADR-0036). A Vaal Orb neither cuts tiers nor spends Memory Strands (`memory_strands.cut_follows_spend_table`, `memory_strands.not_spent_by`).
 Its `chance_all` counts the corrupted implicit it adds as the Bloodstained resonator's does; `implicit_chances` counts every implicit the finished item holds,
 the ones that stay included.
 """

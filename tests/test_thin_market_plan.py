@@ -15,7 +15,7 @@ from cli_support import run as run_command
 
 from crafting_system.actions import ChaosOrb
 from crafting_system.cli import Offer
-from crafting_system.cli._offers import price_offers
+from crafting_system.planner._offers import price_offers
 from crafting_system.prices import DeepReading, MarketRecord, PriceEntry, planned_price
 
 OLD_MARK = "old price, read on 2026-10-25, the market has few offers now"

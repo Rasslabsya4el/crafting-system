@@ -29,7 +29,9 @@ from pathlib import Path
 
 from packed_routes import inputs, peak_mb, watch_memory
 
-from crafting_system.cli import _packed, make_plan
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _packed
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, _View, build_section, route_input
 

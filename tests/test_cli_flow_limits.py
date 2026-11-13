@@ -22,7 +22,7 @@ from targets_support import DATA, EXAMPLES
 
 from crafting_system.cli import build_report, evaluate_route, make_plan, parse_route, policy_document, render_text
 from crafting_system.cli import _route_flow
-from crafting_system.cli._limits import GROUPS, SHOWN_LABELS, STEPS, limit_text
+from crafting_system.planner._limits import GROUPS, SHOWN_LABELS, STEPS, limit_text
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, given_route_input, route_input
 from crafting_system.targets import load_target
