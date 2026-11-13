@@ -8,12 +8,12 @@ The measurements ran on commit 73bad379, before the planner module of #880 lande
 
 ## Short answer
 
-1. **Kernel generation is the largest part of a plan, but it is not arithmetic.** On R04, 67% of a plan's time goes into making the *key* of a kernel (which kernel a state and an action have), 6% into building kernels, 0.5% into turning chances into integer weights. On the generated case essences/medium: 51%, 10% and 1%. Making a key means: turn the state into an item object, ask the action for its outcomes on it, group the pool of candidate mods by family, read the pool into a signature. Exact fractions are 11 to 13% of the profiler's time, and most of that is comparing and hashing them while sorting, not big-integer arithmetic.
-2. **The one loop in that path that can be compiled today is 100 to 140 times faster compiled, with the same result on every pool measured.** The pool-signature loop (group the candidates by family, sort, name the family types, name the signature) does about 4,000 pools a second today. On flat tables: plain Python 47,000 to 68,000 (14 to 17 times), Numba 381,000 to 436,000 (103 to 116 times), Cython 436,000 to 500,000 (116 to 141 times), the same on Linux and Windows. All three split the 49,184 pools of R04 and the 14,074 of essences/medium exactly as today's signatures do.
-3. **That loop is about a fifth of a plan, so compiling it makes a whole plan about 1.3 times faster, and the flat tables in plain Python give almost all of that (1.26 against 1.28).** The gain comes from the data model (integer ids in flat tables instead of objects), not from the compiler.
-4. **Compiling today's Python as it is gives nothing.** Cython compiled 143 of 164 modules (136 of the 225 a plan loads); the plans gave the same means and ran 3 to 5% *slower* on both systems. The kernel module itself crashes the Cython compiler, 19 modules use syntax it does not read, and one compiled module behaved differently from its source.
-5. **Fixed-width integers do not hold today's kernels; floats hold the draws.** 99.9% of kernels have integer weights within 53 bits, but 134 of R04's 220,710 need 128 to 1,595 bits, so 128-bit integers hold not one kernel more than 64-bit. The planner's float mode reproduces every chance of every exact draw to a relative error of at most 4.6e-16 (the solver's tolerance is 1e-10).
-6. **Recommendation: do not build a compiled kernel generator now.** Build ticket #827 (the key of a kernel from what the action reads, without calling the action per state) on flat tables with integer ids, behind one function that a compiled loop can later replace. Measure again. A compiled loop behind that seam is then two tickets if the profile still asks for it; a full compiled generator (state, key and kernel all compiled) is six to eight tickets and is not justified by these numbers. The 2 times the owner asks for can come from #827 (the key path is 51 to 67% of a plan); it cannot come from a compiler alone.
+1. **Kernel generation is the largest part of a plan, but it is not arithmetic.** On R04, 67% of a plan's time goes into making the *key* of a kernel (which kernel a state and an action have), 6% into building kernels, 0.5% into turning chances into integer weights. On the generated case essences/medium: 51%, 10% and 1%. Making a key means: turn the state into an item object, ask the action for its outcomes on it, group the pool of candidate mods by family, read the pool into a signature. Exact fractions are 11 to 13% of the profiler's time, and most of that is comparing and hashing them (the pool's test that a weight is above zero, sorting, dict keys), not big-integer arithmetic. No candidate below builds a kernel: what is compiled and timed is one loop of the key path, in pools a second.
+2. **The one loop in that path that can be compiled today is 100 to 140 times faster compiled, with the same result on every pool kept.** The pool-signature loop (group the candidates by family, sort, name the family types, name the signature) does about 4,000 pools a second today. On flat tables: plain Python 47,000 to 68,000 (14 to 17 times), Numba 381,000 to 436,000 (103 to 116 times), Cython 436,000 to 500,000 (116 to 141 times), the same on Linux and Windows. All three split the 49,184 pools of R04 and the 14,074 of essences/medium exactly as today's signatures do. Those pools come from two kinds of action only (an essence and the Exalted Orb): a guaranteed tag, fossil weights and lucky rolls did not occur (section 9).
+3. **That loop is about a fifth of a plan, so compiling it would make a whole plan about 1.2 times faster, and the flat tables in plain Python give almost all of that (1.22 against 1.24 on R04).** These whole-plan figures are computed from the loop's share, not run. The gain comes from the data model (integer ids in flat tables instead of objects), not from the compiler.
+4. **Compiling today's Python as it is gave nothing where it could be done, and could not be done where it matters most.** Cython compiled 143 of 164 modules (136 of the 225 a plan loads: items, actions, pools, states); the plans gave the same means and ran 3 to 5% *slower* on both systems. The kernel module itself (the key path's own code) crashes the Cython compiler and the search's module uses syntax it does not read, so those two ran as Python in this measurement; 18 more modules have that syntax, and one compiled module behaved differently from its source.
+5. **Fixed-width integers do not hold today's kernels; floats hold the draws.** 99.8 to 99.9% of kernels have integer weights within 53 bits, but 134 of R04's 220,710 need 128 to 1,595 bits, so 128-bit integers hold not one kernel more than 64-bit. The planner's float mode reproduces every chance of every exact draw to a relative error of at most 4.6e-16 (the solver's tolerance is 1e-10).
+6. **Recommendation: do not build a compiled kernel generator now.** Build ticket #827 (the key of a kernel from what the action reads, without calling the action per state) on flat tables with integer ids, behind one function that a compiled loop can later replace. Measure again. A compiled loop behind that seam is then two tickets if the profile still asks for it; a full compiled generator (state, key and kernel all compiled) is six to eight tickets and is not justified by these numbers. The 2 times the owner asks for can come only from removing the key path, which is #827's work (it is 67% of R04's plan and 51% of essences/medium's: at most 3.0 and 2.04 times if it cost nothing, so on essences/medium 2 times is the ceiling, not the expectation); it cannot come from a compiler alone.
 
 ## 1. What a kernel costs today
 
@@ -26,7 +26,7 @@ A *pair* below is one (state, action) whose kernel the search asked for (`Search
 | R04 | 618,816 | 220,617 | 305 s, 3,297; 363 s, 2,684; 358 s, 2,694 | 738 s, 1,302; 533 s, 1,838; 733 s, 1,319 |
 | essences/medium | 151,487 | 31,633 | 83 s, 2,321; 75 s, 2,505; 123 s, 1,555 | 119 s, 1,733; 150 s, 1,340; 113 s, 1,813 |
 
-The same plan differs by 20 to 40% between two runners of one system, so a whole-plan comparison below is always made on one runner. The ticket's figure (754,755 pairs in 364 s) is an earlier run of R04 at other prices; today's R04 at the committed prices realizes 618,816.
+The same plan differs by 20 to 65% between two runners of one system (essences/medium on Linux: 75 s and 123 s), so a whole-plan comparison below is always made on one runner. The ticket's figure (754,755 pairs in 364 s) is an earlier run of R04 at other prices; today's R04 at the committed prices realizes 618,816.
 
 **Where the time goes** (stage stopwatches, `profile_plan.py --mode timers`; seconds inside each function with what it calls; Linux runner; the Windows runner gives the same shares: `kernel_key` 67% and 52%):
 
@@ -42,26 +42,26 @@ The same plan differs by 20 to 40% between two runners of one system, so a whole
 | Building kernels (`kernel`) | 19 s, 6% | 8 s, 10% |
 | of it: the exact draw (`exact_distribution`) | 6 s, 2% | 5 s, 5% |
 | Integer weights (`integer_weights`) | 1.5 s, 0.5% | 0.8 s, 1% |
-| The solver (`solve_graph`) | 16 s, 5% | 8 s, 9% |
+| The solver (`solve_graph`) | 16 s, 5% | 7 s, 9% |
 | Reading an action's lower cost (`Search._q`) | 9 s, 3% | 12 s, 15% |
 
 `_item_of` is also called from outside a key (the bound's members), so its seconds are not all inside `kernel_key`.
 
-Two facts stand out. First, the cache of prepared pairs is cleared after every state (`CraftingProblem.release`), and its key holds every slot of the state, so 80% of the calls build the item and ask the action again (R04: 872,252 `_outcomes` calls for 1,096,612 lookups). Second, most of that work finds a kernel that already exists: on R04 the essence (`ApplyEssence`) made 301,746 keys and built 174 kernels; on essences/medium 103,099 keys and 58 kernels. Per kind of action (the instrumented run, so the seconds are higher than in the table above; `results/bench-linux/`):
+Two facts stand out. First, the cache of prepared pairs is cleared after every state (`CraftingProblem.release`), and for an action that reads the item's ordinary mods its key holds every slot of the state (an action that erases them keeps only the crafted slots), so 80% of the calls build the item and ask the action again (R04: 872,252 `_outcomes` calls for 1,096,612 lookups). Second, most of that work finds a kernel that already exists: on R04 the essence (`ApplyEssence`) made 301,746 keys and built 174 kernels; on essences/medium 103,099 keys and 58 kernels. Per kind of action (the instrumented run, so the seconds are higher than in the table above; `results/bench-linux/`):
 
 | Kind of action, R04 | Keys made | Seconds in `kernel_key` | Kernels built | Seconds in `kernel` |
 |---|---|---|---|---|
 | `ApplyEssence` | 301,746 | 153 | 174 | 6 |
 | `ExaltedOrb` | 121,421 | 62 | 101,716 | 10 |
-| `AnnulmentOrb` | 155,496 | 48 | 154,553 | 8 |
-| `FracturingOrb` | 184,349 | 28 | 35,128 | 2 |
+| `AnnulmentOrb` | 155,496 | 47 | 154,553 | 8 |
+| `FracturingOrb` | 184,349 | 27 | 35,128 | 2 |
 | `BenchCraft`, `RemoveCraftedMods` | 33,612 | 5 | 8,417 | 0.2 |
 
-**What kind of work it is** (`profile_plan.py --mode cprofile`; the profiler slows the plan 3.6 times on R04 and 2.3 times on essences/medium, and call-heavy code more than the rest, so these are shares of the profiler's own seconds, not of the plain plan):
+**What kind of work it is** (`profile_plan.py --mode cprofile`; the profiler slows the plan 3.6 times on R04 and 2.3 times on essences/medium, and call-heavy code more than the rest, so these are shares of the profiler's own seconds, not of the plain plan; Linux runner only; `profile_groups.py` on the two `.prof` files in `results/prof-linux/` prints it):
 
 | Kind of work | R04 | essences/medium |
 |---|---|---|
-| `Fraction`: comparing and hashing (sorting weights, keys of dicts) | 8.9% | 8.9% |
+| `Fraction`: comparing and hashing (the pool's `weight <= 0`, sorting weights, keys of dicts) | 8.9% | 8.9% |
 | `Fraction`: arithmetic and making new ones | 1.6% | 4.0% |
 | `math.gcd`, `math.lcm` | 0.2% | 0.5% |
 | Hashing and comparing other objects | 2.2% | 2.2% |
@@ -72,7 +72,7 @@ Two facts stand out. First, the cache of prepared pairs is cleared after every s
 | `dataclasses`, `enum` | 4.3% | 3.1% |
 | numpy and the solver | 3.2% | 5.7% |
 
-Big-integer `*`, `+` and `//` inside a function are not calls, so they sit inside that function's own time; the stage table bounds them: all of `integer_weights` is 0.5 to 1% of a plan. The largest single functions on R04 are `group_pool` (the candidates grouped by family, 514,260 calls), `Fraction.__eq__` (77.6 million calls), `isinstance` (229 million), `sorted`, and the item's `__post_init__` (3.4 million items built).
+Big-integer `*`, `+` and `//` inside a function are not calls, so they sit inside that function's own time; the stage table bounds them: all of `integer_weights` is 0.5 to 1% of a plan. The largest single functions on R04 are `group_pool` (the candidates grouped by family, 514,260 calls), `Fraction.__eq__` (77.6 million calls), `Fraction.__le__` (63.6 million: `group_pool` asks of every candidate whether its weight is above zero), `isinstance` (229 million), `sorted`, and the item's `__post_init__` (3.4 million items built).
 
 ## 2. The prototypes
 
@@ -97,7 +97,7 @@ Not built: Rust with PyO3. For this loop (64-bit integers, sorting, a hash table
 
 ## 3. The loop: pools a second per candidate
 
-Heavy runs 43462096163 (Linux) and 43463173614 (Windows), `bench_kernels.py`, best of 5 repeats per candidate; both runners have 4 cores.
+Heavy runs 43462096163 (Linux, Python 3.14.4) and 43463173614 (Windows, Python 3.14.10), jobs 1 and 2, `bench_kernels.py`; both runners have 4 cores. (Both runs are marked failed on GitHub: their jobs 3 and 4 were the first try of the whole-plan build of section 4, which runs 43465798966 and 43465836850 repeat.) Today's Python is timed once, inside the plan; each candidate is the best of 5 repeats on warm tables.
 
 | Case, system | Today's Python | Flat tables, plain Python | Numba | Cython |
 |---|---|---|---|---|
@@ -110,9 +110,9 @@ Same split as today's signatures: yes in all twelve cells (6,508 distinct signat
 
 ## 4. A whole plan
 
-**The loop's share of a plan.** In the instrumented run `group_pool` is 39% of `_outcomes` and `_pool_signature` 84% of `_signatures_of` (R04; 38% and 83% on essences/medium). Applied to the stage table of section 1: 67 s of R04's 303 s (22%) and 18 s of essences/medium's 85 s (21%). This share is derived from two runs with different instrumentation, not read from one.
+**The loop's share of a plan.** In the instrumented run the `group_pool` calls that feed a signature are 30% of `_outcomes` (the kept pools' own `group_pool` seconds, scaled to all 393,479 signatures: 37 s of 124 s) and `_pool_signature` is 84% of `_signatures_of` (R04; 36% and 83% on essences/medium). Applied to the stage table of section 1: 59 s of R04's 303 s (19.5%) and 18 s of essences/medium's 85 s (21%). This share is derived from two runs with different instrumentation, not read from one. R04 makes 514,260 `group_pool` calls for 393,479 signatures: the other 120,000 are a second, plain pool that `_check_type_blind` builds and compares with the action's for an item whose fractured mod is known only by its family type; they are outside the span (and are a cost #827 can drop).
 
-**Expected whole-plan speed-up from the loop alone** (the rest of the plan unchanged): with the loop 17 times faster (flat Python) 1.26; 104 times (Numba) 1.28; 123 times (Cython) 1.28, on R04; 1.24 to 1.26 on essences/medium. A plan of R04 goes from about 305 s to about 240 s on the Linux runner.
+**Computed whole-plan speed-up from the loop alone** (the rest of the plan unchanged; arithmetic on the share above, no plan was run with a candidate inside it): with the loop 17 times faster (flat Python) 1.22; 104 times (Numba) 1.24; 123 times (Cython) 1.24, on R04; 1.24 to 1.26 on essences/medium. A plan of R04 would go from about 305 s to about 250 s on the Linux runner.
 
 **Measured whole plan, the package compiled by Cython as it is** (heavy runs 43465798966 and 43465836850; each row is one runner, the source first, then the compiled copy):
 
@@ -129,9 +129,9 @@ The compiled copy is never faster; a 3 to 5% loss is inside what two runs on one
 - 19 modules of `solver`, `cli` and `data` use the generic syntax of Python 3.12 (`class Outcome[S]`, `def f[S]`), which Cython does not read;
 - `rules/registry.py` compiled but behaved differently (its YAML loader subclass returned no mapping), so the build put it back to its source. The build tries the copy on R13 and reverts any module an error comes from.
 
-So an object-heavy Python program does not get faster by being compiled as it is: the interpreter's loop is not the cost, the objects are.
+So the object-heavy modules that did compile (the items, the actions, the pools, the states: where `_item_of` and `_outcomes` spend their 44% of R04) do not get faster by being compiled as they are: the interpreter's loop is not their cost, the objects are. What this does not show is the kernel module and the search compiled, since neither could be.
 
-**The bound on any compiled generator.** If the whole key path and the kernel building took no time at all, R04 would run 3.7 times faster (303 s to 81 s) and essences/medium 2.6 times (85 s to 33 s). That is the ceiling, not a forecast: the 2 times the owner asks for is inside it only if nearly the whole key path goes, not one loop of it.
+**The bound on any compiled generator.** If the key path took no time at all, R04 would run 3.0 times faster (303 s to 100 s) and essences/medium 2.04 times (85 s to 42 s); with the kernel building free as well, 3.7 and 2.6 times. That is the ceiling, not a forecast: the 2 times the owner asks for is inside it only if nearly the whole key path goes, not one loop of it.
 
 ## 5. Exactness
 
@@ -153,15 +153,15 @@ So an object-heavy Python program does not get faster by being compiled as it is
 
 ## 6. What in today's data model stands in the way
 
-1. **The kernel of an action is whatever its Python code returns for an item object.** `Reads` and `Adds` (`actions/contract.py`) declare what an action looks at and what it puts on the item; they are read by the planner to choose kinds and to prune, and they are checked by the contract suite, but they cannot be *executed*: the only way to get a kernel, or even its key, is to build a validated `Item` from the state (`_item_of`: a representative mod for every slot, then the item's own checks) and call `action.outcomes` on it. There are 33 kinds of action the planner can use. A compiled generator needs, per kind, the rule as data over flat tables. That is a second implementation of every action, to be kept equal to the first.
+1. **The kernel of an action is whatever its Python code returns for an item object.** `Reads` and `Adds` (`actions/contract.py`) declare what an action looks at and what it puts on the item; they are read by the planner to choose kinds and to prune, and they are checked by the contract suite, but they cannot be *executed*: the only way to get a kernel, or even its key, is to build a validated `Item` from the state (`_item_of`: a representative mod for every slot, then the item's own checks) and call `action.outcomes` on it. The planner names 33 kinds of action it can use (the list in its own refusal message, as recorded in `tests/fixtures/family_bench/baseline-main.json`). A compiled generator needs, per kind, the rule as data over flat tables. That is a second implementation of every action, to be kept equal to the first.
 2. **States and keys are objects.** A `CompressedState` is a frozen dataclass of tuples of `Slot` dataclasses holding enums and strings; a key is a `frozenset` of nested tuples of them and of `Fraction`s; kernels are `dict[CompressedState, Fraction]`. Hashing and comparing them is cheap per object and adds up (hashes are cached on the objects already). A compiled loop needs states as rows of integers and an intern table, which is the flat state of the original research (`2026-10-30-4-solver-engineering.md`: flat arrays, kernels from integer weights) that ADR-0010 put off.
 3. **Weights are `Fraction`s used as identities.** Family types and signatures sort and compare tuples that hold `Fraction` weights (77.6 million `Fraction.__eq__` calls on R04). The weights of one pool table are a few distinct values (6 on R04's pools, 3 on essences/medium's): as ids in a table they cost nothing to compare.
 4. **Big integers** (section 5): any compiled kernel *builder* needs an exact fallback. The key path does not.
-5. **The cache is per state.** The prepared pair is keyed by every slot of the state and dropped after each state, so the work of section 1 is repeated for states that differ in something the action never reads. This is ticket #827's root (C1 of #812), and it is independent of the language.
+5. **The cache is per state.** The prepared pair is keyed by the slots of the state the action is given (all of them unless it erases the ordinary mods) and dropped after each state, so the work of section 1 is repeated for states that differ in something the action never reads. This is ticket #827's root (C1 of #812), and it is independent of the language.
 
 ## 7. Recommended design
 
-**Do not build a compiled kernel generator now.** The measured candidates give 1.3 times on a whole plan, the cheap one (compile as it is) gives nothing, and the part that would give more is a second implementation of every action.
+**Do not build a compiled kernel generator now.** The candidates measured on the loop give a computed 1.2 times on a whole plan, the cheap one (compile as it is) gave nothing where it compiled, and the part that would give more is a second implementation of every action.
 
 **Do #827 first, on flat tables, with the seam in place.** #827 is already cut for this root ("a `kernel_key` that never calls `action.outcomes`; the cache keyed by the projection of what the action reads"). This note adds how to build it so that the compiler stays an option:
 
@@ -170,7 +170,7 @@ So an object-heavy Python program does not get faster by being compiled as it is
 - **The seam:** one function, "table, blocked families, head in; signature id out", with its intern tables. Everything above it stays Python (actions, items, the rules registry, the search, the report); the kernel builder, `integer_weights` and the exact draw stay Python and exact (they are 7 to 11% of a plan).
 - **Accept it as #827 says** (the generated family of #824; equal kernels on every sampled pair), and measure R04 and essences/medium again with `research/881/profile_plan.py`.
 
-Expected whole-plan effect: measured, 1.26 from the pool loop alone in flat Python. If #827 removes most of the key path, the ceiling is 3.7 (R04) and 2.6 (essences/medium); an estimate from the flat-Python factor of 14 to 17 applied to the whole key path is about 2.5 to 3 on R04 and about 2 on essences/medium. That estimate is an extrapolation: only the pool loop was prototyped.
+Expected whole-plan effect: computed, 1.22 to 1.24 from the pool loop alone in flat Python. If #827 removes most of the key path, the ceiling is 3.0 (R04) and 2.04 (essences/medium); an estimate from the flat-Python factor of 14 to 17 applied to the whole key path is about 2.7 on R04 and 1.9 on essences/medium. That estimate is an extrapolation: only the pool loop was prototyped.
 
 **Then, only if the profile still shows the loop behind the seam at a fifth of a plan or more, compile that one function.** Between the two candidates the speed is the same within 20%; the difference is how they ship:
 
@@ -195,12 +195,16 @@ My pick for one integer loop is **Numba, with the plain-Python function kept as 
 - Rust with PyO3: not built; Cython stands for the ahead-of-time option.
 - A compiled kernel builder or exact draw, in fixed-width or exact rationals; a whole plan on float kernels.
 - Cython on `abstraction/_kernel.py` (compiler crash) and on the 19 modules with the newer syntax: the "as it is" figure covers 136 of 225 loaded modules.
-- Two cases only (R04 and essences/medium), three plain runs each per system; runners differ by 20 to 40%.
-- The loop's share of a plan (22% and 21%) is derived from two instrumented runs.
+- **Kernels a second for a candidate.** No candidate builds a kernel or its whole key: the candidates are measured in pools a second on one loop, and their whole-plan effect is computed from the loop's share, not run.
+- The equality check covers the pools of two kinds of action (`ApplyEssence`, `ExaltedOrb`), all without a guaranteed tag, a fossil factor or lucky rolls, and no family on both sides: the guaranteed flag of the sort key was never set, and the other kinds of the two plans (`AnnulmentOrb`, `FracturingOrb`, bench crafts) draw from no pool.
+- The baseline is not symmetric: today's Python is one pass inside the plan, the candidates the best of 5 on warm tables; making the flat tables (per action and item context) is not timed, and the number of contexts is not reported.
+- Two cases only (R04 and essences/medium), three plain runs each per system; runners differ by 20 to 65%. Linux ran Python 3.14.4, Windows 3.14.10. The profiler's table is from the Linux runner only.
+- The loop's share of a plan (19.5% and 21%) is derived from two instrumented runs; the keeping of a pool runs inside the `_signatures_of` stopwatch of the instrumented run, which makes the signature's part of it look smaller than it is.
 - The flat-Python and compiled loops were given the candidates left after the item's blocks; finding the blocked families from a flat state is argued (at most 6 mods), not measured.
 
 ## Files
 
-- `research/881/profile_plan.py`: one plan, plain, with stage stopwatches, or under cProfile. `research/881/bench_kernels.py`: the plan with its pools kept, then the candidates on them. `flat_python.py`, `flat_numba.py`, `flat_cython.pyx`: the loop. `build_cython.py`: the Cython builds. `run_job.sh`: the four jobs of a measurement run.
-- `research/881/results/`: the JSON of every run quoted here (`prof-*`: runs 43457009372 and 43457044188; `bench-*`: 43462096163 and 43463173614; `whole-*`: 43465798966 and 43465836850), with the runners' own folders cut from the paths.
-- To repeat: `python .github/scripts/heavy_dispatch.py run --no-wait [--os windows-latest] --ref <branch> --runners 4 --command 'bash research/881/run_job.sh $RUNNER_INDEX'`.
+- `research/881/profile_plan.py`: one plan, plain, with stage stopwatches, or under cProfile. `research/881/bench_kernels.py`: the plan with its pools kept, then the candidates on them. `flat_python.py`, `flat_numba.py`, `flat_cython.pyx`: the loop. `build_cython.py`: the Cython builds. `run_job.sh`: the four jobs of a measurement run. `profile_groups.py`: the profiler's seconds by kind of work. `profile_jobs.txt`, `profile_jobs_windows.txt`: the argument lines of the profile runs.
+- `research/881/results/`: the JSON of every run quoted here (`prof-*`: runs 43457009372 and 43457044188; `bench-*`: 43462096163 and 43463173614; `whole-*`: 43465798966 and 43465836850), with the runners' own folders cut from the paths, and in the four `compiled.json` the compiler's message for `abstraction/_kernel.py` written by hand (the runs kept only the end of its traceback; the crash was reproduced locally with the same Cython).
+- To repeat sections 3 to 5: `python .github/scripts/heavy_dispatch.py run --no-wait [--os windows-latest] --ref <branch> --runners 4 --command 'bash research/881/run_job.sh $RUNNER_INDEX'`. Section 1: the same with `--runners 6` (Linux) or `--runners 4` and `profile_jobs_windows.txt` (Windows) and `--command 'uv run --no-sync python -u research/881/profile_plan.py $(sed -n "${RUNNER_INDEX}p" research/881/profile_jobs.txt) --out $OUT_DIR'`.
+- Open points filed: on #827 (build it on flat tables behind one seam function; the second pool of `_check_type_blind`), on #868 (the counts of kernels past 64 bits on these two cases).
