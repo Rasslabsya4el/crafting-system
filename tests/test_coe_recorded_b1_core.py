@@ -330,6 +330,7 @@ EXALT_BY_HAND = {
     "exalt-j01-wants-wand-speed": Fraction(500, 17900),  # only a prefix: Wand attack speed 500 of 17,900
     "exalt-j01-wants-life": Fraction(350, 17750),  # only a prefix: % increased maximum Life 350 of 17,750
     "exalt-v01-minion-three-mods": Fraction(1000, 97400),  # either side: Life tier 1 1,000 of 97,400
+    "exalt-v01-minion-four-mods": Fraction(1000, 90400),  # either side, one filler prefix: its family's 7,000 leaves the 97,400
     "exalt-v01-minion-five-mods": Fraction(1000, 32000),  # the suffixes are full: Life tier 1 1,000 of the prefixes' 32,000
     "exalt-v01-life-three-mods": Fraction(250, 87675),  # either side: +1 to Level of all Minion Skill Gems 250 of 87,675
 }

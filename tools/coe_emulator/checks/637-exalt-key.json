@@ -6,8 +6,14 @@
   "base": "Metadata/Items/Jewels/JewelInt",
   "item_level": 84,
   "rarity": "rare",
-  "mods": ["PercentIncreasedLifeJewel", "WandAttackSpeedJewel", "FreezeChanceAndDurationJewel"],
-  "actions": ["Exalted Orb"],
+  "mods": [
+   "PercentIncreasedLifeJewel",
+   "WandAttackSpeedJewel",
+   "FreezeChanceAndDurationJewel"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
   "target": "examples/targets/j01-cobalt-life-attack-speed.yaml"
  },
  {
@@ -17,8 +23,14 @@
   "base": "Metadata/Items/Jewels/JewelInt",
   "item_level": 84,
   "rarity": "rare",
-  "mods": ["PercentIncreasedLifeJewel", "AttackSpeedJewel", "FreezeChanceAndDurationJewel"],
-  "actions": ["Exalted Orb"],
+  "mods": [
+   "PercentIncreasedLifeJewel",
+   "AttackSpeedJewel",
+   "FreezeChanceAndDurationJewel"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
   "target": "examples/targets/j01-cobalt-life-attack-speed.yaml"
  },
  {
@@ -28,8 +40,14 @@
   "base": "Metadata/Items/Jewels/JewelInt",
   "item_level": 84,
   "rarity": "rare",
-  "mods": ["WandAttackSpeedJewel", "AttackSpeedJewel", "FreezeChanceAndDurationJewel"],
-  "actions": ["Exalted Orb"],
+  "mods": [
+   "WandAttackSpeedJewel",
+   "AttackSpeedJewel",
+   "FreezeChanceAndDurationJewel"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
   "target": "examples/targets/j01-cobalt-life-attack-speed.yaml"
  },
  {
@@ -39,19 +57,51 @@
   "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
   "item_level": 84,
   "rarity": "rare",
-  "mods": ["GlobalIncreaseMinionSpellSkillGemLevel1", "Dexterity8", "ColdResist7"],
-  "actions": ["Exalted Orb"],
+  "mods": [
+   "GlobalIncreaseMinionSpellSkillGemLevel1",
+   "Dexterity8",
+   "ColdResist7"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
+  "target": "examples/targets/v01-minion-helmet.yaml"
+ },
+ {
+  "id": "exalt-v01-minion-four-mods",
+  "route": "V01",
+  "note": "#637: the plan's second Exalted Orb (Augmentation > Regal > Exalted > Exalted): a helmet holding the +1 Minion mod, one filler prefix and two filler suffixes, both sides open, and the helmet is the target when the orb adds the tier 1 Life. Fillers on both sides, so that one filler prefix is seen to cost the pool exactly its family",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": [
+   "GlobalIncreaseMinionSpellSkillGemLevel1",
+   "LocalIncreasedEvasionRatingPercent6",
+   "Dexterity8",
+   "ColdResist7"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
   "target": "examples/targets/v01-minion-helmet.yaml"
  },
  {
   "id": "exalt-v01-minion-five-mods",
   "route": "V01",
-  "note": "#637: the plan's second Exalted Orb on a full side: the helmet holds the +1 Minion mod, a filler prefix and three suffixes (a helmet holds 3 and 3), so the orb can add only a prefix, and the helmet is the target when it is the tier 1 Life. The cap on mods",
+  "note": "#637: a full side: the helmet holds the +1 Minion mod, a filler prefix and three suffixes (a helmet holds 3 and 3), so the orb can add only a prefix, and the helmet is the target when it is the tier 1 Life. The cap on mods. The V01 plan with the orb added takes it on such helmets too (790 of its 1,360 Exalted Orb states hold five mods, envelope solver, 2026-11-13), though its likeliest path ends after the second orb on four",
   "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
   "item_level": 84,
   "rarity": "rare",
-  "mods": ["GlobalIncreaseMinionSpellSkillGemLevel1", "LocalIncreasedEvasionRatingPercent6", "Dexterity8", "ColdResist7", "FireResist7"],
-  "actions": ["Exalted Orb"],
+  "mods": [
+   "GlobalIncreaseMinionSpellSkillGemLevel1",
+   "LocalIncreasedEvasionRatingPercent6",
+   "Dexterity8",
+   "ColdResist7",
+   "FireResist7"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
   "target": "examples/targets/v01-minion-helmet.yaml"
  },
  {
@@ -61,8 +111,14 @@
   "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
   "item_level": 84,
   "rarity": "rare",
-  "mods": ["IncreasedLife9", "Dexterity8", "ColdResist7"],
-  "actions": ["Exalted Orb"],
+  "mods": [
+   "IncreasedLife9",
+   "Dexterity8",
+   "ColdResist7"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
   "target": "examples/targets/v01-minion-helmet.yaml"
  }
 ]
