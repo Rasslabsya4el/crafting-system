@@ -23,6 +23,11 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
               status: absent          # absent, below or passing, or a list of them
         do: Harvest Reforge Lightning # an action as the solver prints it, or `restart`
 
+A plan that makes second items (a recombinator, ticket #225) reads the route on every item it makes: the target's own and each second item a
+recombination consumes, which starts as a Normal item of the base. `when: {making: target}` is a rule for the target's own item, `when:
+{making: [{family: ID}, ...]}` (or `stat:`) a rule for the second item that holds exactly those mods of the target, and a rule without
+`making` is for any item. A recombination is named by its label, which names its second item ("Recombinator with a donor of ...").
+
 `restart` buys the start item again: an action that costs the start price and ends in the start state. Only a bought start item has one; a given item is never bought again (OR-6).
 Conditions speak only of what the compressed state holds; one it cannot answer yet (mods per side, metamods)
 is refused, not guessed. `open_prefixes` and `open_suffixes` count the free slots of a side, which the state holds only
@@ -52,7 +57,7 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Rarity, Side, capacity
 from crafting_system.risk import RiskReport, lump
-from crafting_system.solver import Action, Outcome
+from crafting_system.solver import MAIN, Action, Outcome, Solution
 from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
@@ -67,11 +72,12 @@ from ._reach import policy_states
 RESTART = "restart"
 TOP_KEYS = ("name", "skip_refused", "rules")
 RULE_KEYS = ("when", "do")
-WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "imprints", "veil", "offer", "requirements")
+WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "imprints", "veil", "offer", "requirements", "making")
 VEIL_SIDES = {"prefix": "VeiledPrefix", "suffix": "VeiledSuffix"}  # the slot kind of the generic placeholder of each side (ADR-0026)
 VEIL_KINDS = frozenset(VEIL_SIDES.values())
 VEIL_VALUES = ("prefix", "suffix", "any", "none")
 OFFER_VALUES = ("none", "drawn")
+TARGET = "target"  # `making: target`: the rule is for the target's own item, not for a second item a recombination consumes
 REQUIREMENT_KEYS = ("stat", "family", "status")
 RARITIES = tuple(rarity.value for rarity in Rarity)
 STATUSES = tuple(status.name.lower() for status in Status)
@@ -104,6 +110,16 @@ class When:
     veil: str | None = None  # "prefix", "suffix", "any" or "none": the side of the veiled placeholder the item holds (ticket #146)
     offer: str | None = None  # "none" or "drawn": whether an unveil offer is drawn
     offer_shows: tuple[int, int | None] | None = None  # (index of the requirement leaf, position 1 to 3 or None for any): a mod shown meets the leaf
+    making: frozenset[int] | None = None  # the item the rule is for: None any, empty the target's own, else a second item holding exactly these leaves (#225)
+
+    def is_for(self, want: object) -> bool:
+        """Whether the rule is for the item made towards `want`: `MAIN` (the target's own) or a donor's compressed want (a plan with donors, #225)."""
+        if self.making is None:
+            return True
+        if want is MAIN:
+            return not self.making
+        passing = frozenset(index for index, status in enumerate(want.status) if status is Status.PASSING)
+        return bool(self.making) and passing == self.making
 
     def matches(self, state: CompressedState, data: GameData) -> bool:
         if self.rarities is not None and state.flags.rarity not in self.rarities:
@@ -200,6 +216,7 @@ class RouteResult:
     seconds: float
     chain: object | None = None  # the route on item states as arrays (`_route_chain.Chain`), set when it was read on a packed plan whose `policy` is a lumped view
     divergences: tuple[Divergence, ...] = ()
+    product_policy: dict | None = None  # for a plan that makes donors (#225): the route over the product of the target and its donors, `policy` its own part
 
 
 # --- reading -------------------------------------------------------------------------------------
@@ -354,7 +371,29 @@ class _Reader:
             fields["statuses"] = self.read_statuses(
                 when["requirements"], f"{path}.requirements", when.key_lines["requirements"]
             )
+        if "making" in when:
+            fields["making"] = self.read_making(when, f"{path}.making")
         return When(**fields)
+
+    def read_making(self, when: LineMap, path: str) -> frozenset[int]:
+        """`making: target`, or a list of `stat` / `family` entries: the target's mods the second item holds, and nothing else (#225)."""
+        value, line = when["making"], when.key_lines["making"]
+        if self.plan.donors is None:
+            self.fail(line, path, "the plan makes no second item (no offered action takes one), so a rule cannot be for one")
+        if value == TARGET:
+            return frozenset()
+        if not isinstance(value, LineList) or not value:
+            self.fail(line, path, f"must be `{TARGET}` or a list of `stat` or `family` entries naming the target's mods the second item holds")
+        found = set()
+        for index, entry in enumerate(value):
+            where, at = f"{path}[{index}]", value.item_lines[index]
+            if not isinstance(entry, LineMap):
+                self.fail(at, where, f"must be a mapping with `stat` or `family`, got {describe(entry)}")
+            self.check_keys(entry, where, ("stat", "family"))
+            if ("stat" in entry) == ("family" in entry):
+                self.fail(entry.line, where, "give exactly one of `stat` and `family`")
+            found.add(self.leaf_of(entry, where))
+        return frozenset(found)
 
     def read_open_slots(self, when: LineMap, path: str) -> tuple[tuple[Side, int, int], ...]:
         found = []
@@ -591,6 +630,8 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             "a given route is judged against the planner's choice at every state the route reaches, and the exact search used for this plan "
             "looks only at the states that can matter: plan it again with the search that walks every possible item (`--solver packed`)"
         )
+    if plan.donors is not None:  # the route makes second items too: it is read on the product of the target and its donors (#225)
+        return _evaluate_route_with_donors(plan, route, data)
     if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed
 
@@ -629,3 +670,72 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             divergences.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
     first = divergences[0] if divergences else None
     return RouteResult(policy, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(divergences))
+
+
+def _decide_product(plan: Plan, route: Route, data: GameData, product: tuple) -> Action | str:
+    """The action the route takes on the item of `product` (`("in", want, state)`), with its donors, or the reason it takes none (#225)."""
+    _tag, want, state = product
+    refusal = "no rule matches this state" if want is MAIN else "no rule matches this state of a second item"
+    offered = None
+    for rule in route.rules:
+        if not rule.when.is_for(want) or not rule.when.matches(state, data):
+            continue
+        if offered is None:
+            offered = {}
+            for action in plan.donors.acquisition.actions(product):
+                offered.setdefault(action.label, action)
+        found = offered.get(rule.do)
+        if found is not None:
+            return found
+        refusal = f"{rule.do} cannot be used here (rule at line {rule.line}): the game refuses it on this item"
+        if not route.skip_refused:
+            return refusal
+    return refusal
+
+
+def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> RouteResult:
+    """`evaluate_route` for a plan that makes donors (ticket #225): the route as a fixed policy of the product of the target and its donors.
+
+    The walk starts at the target's own item and follows every outcome and every second item a recombination consumes; a second item is
+    made by the rules that are for it (`making:`), each from a normal item of the base, as the planner makes it. A rule's action is the
+    product's own (`DonorPlan.acquisition`), so a recombination costs its combine plus the run of its donor, as in the plan. The risk is
+    measured on the whole product. `RouteResult.policy` is the target's own process (`main_view`), so the divergences are read where the
+    target's item is; the second items' rules are judged only through the mean. A gap of a second item names its state.
+    """
+    from ._plan import main_view  # the same reading as the plan's
+
+    began = time.perf_counter()
+    donors = plan.donors
+    choices: dict[tuple, Action | str] = {}
+    policy: dict[tuple, Action] = {}
+    gaps: list[Gap] = []
+    order = [donors.start]
+    seen = {donors.start}
+    for product in order:
+        if donors.acquisition.is_goal(product):
+            continue
+        choice = choices[product] = _decide_product(plan, route, data, product)
+        if isinstance(choice, str):
+            gaps.append(Gap(product[2], choice))
+            continue
+        policy[product] = choice
+        for successor in (*(t for t, w in choice.outcomes if w > 0), *choice.extra_inputs):
+            if successor not in seen:
+                seen.add(successor)
+                order.append(successor)
+    risk = evaluate_risk(policy, donors.start, donors.acquisition.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))
+    values = {product: 0.0 for product in policy}
+    own = main_view(Solution(values, policy, 0.0)).policy
+
+    divergences: list[Divergence] = []
+    for state in policy_states(plan.start, plan.policy, plan.is_goal):
+        if plan.is_goal(state) or state not in plan.policy:
+            continue
+        product = ("in", MAIN, state)
+        choice = choices[product] if product in choices else _decide_product(plan, route, data, product)
+        if isinstance(choice, str):
+            continue
+        if choice.label != plan.policy[state].label:
+            divergences.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
+    first = divergences[0] if divergences else None
+    return RouteResult(own, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(divergences), product_policy=policy)
