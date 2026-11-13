@@ -1002,12 +1002,23 @@ def test_a_stiff_chain_whose_visits_settle_on_its_item_states_settles_on_its_ker
         direct, lumped = _route_flow._direct(chain), _route_flow._solved(chain)
         if not direct.solved:
             continue
-        assert lumped.solved, start
+        assert lumped.solved, start  # what settles on the item states settles on the classes
         error = max(direct.error, lumped.error)
-        if not error < 1.0:  # (a cluster sending 2^62 + 5 to itself has a condition of 1e18 on the item states: no estimate; the classes merge it into one)
-            unknown += 1
-            continue
-        assert np.allclose(lumped.visits, direct.visits, rtol=max(1e-9, 4 * error), atol=0.0), (start, error)
+        # Both are solved without a subtraction, so they agree to the rounding of their sums even where the estimate, made from a plain residual,
+        # cannot show it (a cluster sending 2^62 + 5 to itself has a condition of 1e18 on the item states: no estimate; the classes merge it into one).
+        assert np.allclose(lumped.visits, direct.visits, rtol=max(1e-12, 4 * error) if error < 1.0 else 1e-9, atol=0.0), (start, error)
         compared += 1
+        unknown += not error < 1.0
         stiff += float(direct.visits.sum()) > 1e12
-    assert compared > 150 and stiff > 10 and unknown < compared / 10, (compared, stiff, unknown)
+    assert compared > 250 and stiff > 20 and unknown > 5, (compared, stiff, unknown)
+
+
+def test_a_plan_too_stiff_for_an_error_estimate_says_so_in_its_limit_and_does_not_fail():
+    # A and B send each other on with 2^62 + 5 against 1 into the goal: a run goes round 2e18 times, the rounding of a residual is as large as its terms
+    ring = {"A": act("a", ("B", 2**62 + 5), ("goal", 1)), "B": act("b", ("A", 2**62 + 5), ("goal", 1))}
+
+    (limit,) = _route_flow.flow_limits(_route_flow.chain_of_policy("A", ring, is_goal))
+
+    assert limit.what == "The numbers of the steps are good to fewer digits than printed"
+    assert "could not be estimated" in limit.why and "no digit is guaranteed" in limit.guarantee
+    assert _route_flow.digits_text(float("inf")) == "0" and _route_flow.digits_text(3e-3) == "2"

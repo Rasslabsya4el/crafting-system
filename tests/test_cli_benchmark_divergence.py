@@ -121,7 +121,9 @@ def test_the_block_says_in_notes_why_a_chance_is_a_question_mark_and_when_the_di
 
     stiff = divergences_of(plan, result, DATA)
 
-    assert "supports about 2 significant digits, fewer than printed" in stiff["notes"][0] and "residual of 1e-09" in stiff["notes"][0]
+    assert "estimated good to about 2 significant digits, fewer than printed" in stiff["notes"][0]
+    monkeypatch.setattr(divergence_module, "reach_of", lambda chain, wanted: [_route_flow.Reach(0.5, None, float("inf")) for _ in wanted])
+    assert "could not be estimated" in divergences_of(plan, result, DATA)["notes"][0]  # (a chain too stiff for an estimate: said, not a crash)
 def test_a_disagreement_between_the_cycles_and_the_visits_leaves_the_chances_not_measured(monkeypatch):
     policy, chain = hand_chain()
     index = {state: i for i, state in enumerate(chain.states)}

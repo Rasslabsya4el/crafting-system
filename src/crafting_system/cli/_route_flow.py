@@ -505,17 +505,17 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
             )
         )
     error = max(precision_of(done), entry_error)
-    if error > STIFF_ERROR:  # on a chain whose cycles are stiff the digits are fewer than printed (OR-13)
+    if error > STIFF_ERROR:  # on a chain whose cycles are stiff the digits are fewer than printed, or not known (OR-13)
         limits.append(
             Limit(
                 STEPS,
                 "The numbers of the steps are good to fewer digits than printed",
                 f"a run of this plan takes about {float(done.visits.sum()):,.0f} steps through cycles that amplify the rounding of the arithmetic, and the "
-                f"calculation of the steps is estimated good to about {digits_text(error)} significant digits",
+                f"calculation of the steps is estimated {estimate_text(error)}",
                 **claim(
                     "the methods offered",
                     "How often each step is used, what it costs, its chances and the share of runs that enter it are solutions of the plan's equations, each measured: "
-                    f"its error is estimated as its backward error times how much this plan's chain amplifies it, which supports about {digits_text(error)} digits, not the digits printed.",
+                    f"its error is estimated as its backward error times how much this plan's chain amplifies it, which {supports_text(error)}, not the digits printed.",
                 ),
             )
         )
@@ -1063,8 +1063,21 @@ def precision_of(done: "_Solved") -> float:
 
 
 def digits_text(error: float) -> str:
-    """How many significant digits an `error` supports, for a reader."""
-    return f"{max(0, int(-math.log10(error)) if error > 0 else 0)}"
+    """How many significant digits an `error` supports, for a reader (0 for an error of 1 or more, or one not known)."""
+    return f"{max(0, int(-math.log10(error)) if 0 < error < math.inf else 0)}"
+
+
+def estimate_text(error: float) -> str:
+    """`good to about N significant digits`, or, when the amplification could not be shown (an infinite estimate: a chain so stiff that the rounding of
+    the residual is as large as the terms), that the digits are not known."""
+    if math.isfinite(error):
+        return f"good to about {digits_text(error)} significant digits"
+    return "to an error that could not be estimated: the chain is too stiff for the rounding of the arithmetic to be bounded"
+
+
+def supports_text(error: float) -> str:
+    """`supports about N digits`, or that no number of digits is shown to be supported."""
+    return f"supports about {digits_text(error)} digits" if math.isfinite(error) else "could not be estimated, so no digit is guaranteed"
 
 
 def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:

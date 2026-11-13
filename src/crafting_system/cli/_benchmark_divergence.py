@@ -31,7 +31,7 @@ from ._plan import Plan
 from ._report import describe_state, money, name_states, number_states, percent
 from ._route import Divergence, RouteResult
 from ._route_chain import chain_of_plan
-from ._route_flow import ACCEPT_RESIDUAL, STIFF_ERROR, Chain, Reach, chain_of_policy, digits_text, reach_of
+from ._route_flow import STIFF_ERROR, Chain, Reach, chain_of_policy, estimate_text, reach_of
 
 DESCRIPTION_CUT = 80  # the characters of an item description in the `needs a human` row, which names three states on one line
 SHOWN = 10  # the lines of divergence shown for a route; the rest are counted, with their chances, in `more`
@@ -105,10 +105,7 @@ def _notes(*sides: tuple[str, list[Reach]]) -> list[str]:
             notes.append(f"{count} chance(s) of the {name} are `?` (not measured): {why}")
         worst = max((reach.error for reach in reaches), default=0.0)
         if worst > STIFF_ERROR:
-            notes.append(
-                f"the {name}'s chances were solved to a residual of {ACCEPT_RESIDUAL:g}, which on this chain (about {worst / ACCEPT_RESIDUAL:,.0f} steps a run) "
-                f"supports about {digits_text(worst)} significant digits, fewer than printed"
-            )
+            notes.append(f"the {name}'s chances are estimated {estimate_text(worst)}, fewer than printed (the cycles of this chain amplify the rounding)")
     return notes
 
 
