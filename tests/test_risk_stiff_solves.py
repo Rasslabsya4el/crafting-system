@@ -19,6 +19,7 @@ from crafting_system.risk._chain import build_chain
 from crafting_system.risk._report import UNDECIDED
 from crafting_system.solver import Action
 
+EPS = _linear.EPS
 DONE = {"goal", "done"}
 
 
@@ -119,14 +120,31 @@ def chain_of(start, policy):
     return build_chain(policy, start, is_done)
 
 
-@pytest.mark.parametrize(("power", "donor_power", "width"), [(6, 0, 1e-11), (10, 0, 1e-11), (13, 0, 1e-11), (4, None, 1e-9), (8, None, 1e-5), (10, None, 1e-3)])
-def test_the_mean_and_variance_of_a_stiff_policy_with_inputs_are_good_and_the_bound_is_small(power, donor_power, width):
+def skeel(chain) -> float:
+    """The Skeel condition of the system the risk solves, `max (|A^-1| |A| |x|) / |x|` with `A = I - P'` (the self-loops divided out), in floats."""
+    import numpy as np
+
+    system = _inputs._system(chain)
+    nodes = list(system.nodes)
+    at = {s: k for k, s in enumerate(nodes)}
+    a = np.eye(len(nodes))
+    for s in nodes:
+        for t, coef in system.scaled_rows[s]:
+            a[at[s], at[t]] -= coef
+    costs = _inputs.real_costs(chain)
+    x = np.linalg.solve(a, np.array([costs[s] / system.pivot[s] for s in nodes]))
+    return float(np.max(np.abs(np.linalg.inv(a)) @ np.abs(a) @ np.abs(x) / np.abs(x)))
+
+
+@pytest.mark.parametrize(("power", "donor_power"), [(6, 0), (10, 0), (13, 0), (4, None), (6, None), (8, None), (10, None), (12, None)])
+def test_the_mean_and_variance_of_a_stiff_policy_with_inputs_are_good_and_the_bound_is_its_condition_times_the_rounding(power, donor_power):
     """A stiff state stays with weight `10**power`; a donor is mild (`donor_power` 0) or as stiff (None), and then a stiff state consumes a stiff donor.
 
-    With mild donors the certified range is 1e-13 wide at 1e6 and at 1e13 alike. With a stiff donor too the cost is the product of two stiffnesses, 1e20 at
-    1e10, and the certificate (a residual against the costs of the actions) is worse by the ratio of the cost to the cost of one action: it grows with the
-    stiffness and is said (about 3 digits at 1e10), but it still holds the exact value, and it was 0.1 to 1 at 1e13 before the self-loops were divided out.
+    The cost of a stiff state that consumes a stiff donor is the product of two stiffnesses, 1e24 at 1e12. The certificate against the costs of the actions
+    is worse by the ratio of the cost to the cost of one action (3e-4 at 1e10, refused above 1e11: #670); the one against the scale of the terms, certified
+    by one more sweep, is the rounding times the Skeel condition of the system, about 1e-13 at every weight, and both hold the exact value.
     """
+    width = 1e-12
     for seed in range(20):
         rng = random.Random(seed)
         start, policy = stiff_policy(rng, rng.randint(3, 6), power, donors=rng.randint(1, 3), donor_power=donor_power)
@@ -138,14 +156,17 @@ def test_the_mean_and_variance_of_a_stiff_policy_with_inputs_are_good_and_the_bo
         assert m_low <= mean <= m_high and v_low <= variance <= v_high, (power, seed)
         assert m == pytest.approx(float(mean), rel=1e-12) and v == pytest.approx(float(variance), rel=1e-12), (power, seed)
         assert (m_high - m_low) <= width * float(mean), (power, seed)  # the bound is a residual that is small, not one that is merely under 1
+        assert (m_high - m_low) <= 64 * len(chain.states) * EPS * skeel(chain) * float(mean), (power, seed)  # a few units of the rounding times the condition
         assert (v_high - v_low) <= 10 * width * float(variance), (power, seed)
 
 
-@pytest.mark.parametrize("power", [6, 10, 13])
-def test_the_donor_counts_and_the_weighted_visits_of_a_stiff_policy_are_good(power):
+@pytest.mark.parametrize(("power", "donor_power"), [(6, 0), (10, 0), (13, 0), (4, None), (8, None), (12, None)])
+def test_the_donor_counts_and_the_weighted_visits_of_a_stiff_policy_are_good_and_their_range_is_narrow(power, donor_power):
+    """The range of a donor count was a 1-norm of the visits' residual times `max V / c_min`, `[0, huge]` on a stiff chain (#670); it is now each state's
+    backward error times a bound certified by one more sweep, and the width is the floor of the summing (`MIN_COUNT_ROUNDING`, 1e-12 of the count)."""
     for seed in range(12):
         rng = random.Random(100 + seed)
-        start, policy = stiff_policy(rng, rng.randint(3, 6), power, donors=rng.randint(1, 3))
+        start, policy = stiff_policy(rng, rng.randint(3, 6), power, donors=rng.randint(1, 3), donor_power=donor_power)
         chain = chain_of(start, policy)
         visits = exact_visits(policy, start)
         values, error = _inputs.solve_costs(chain, _inputs.real_costs(chain))
@@ -159,8 +180,10 @@ def test_the_donor_counts_and_the_weighted_visits_of_a_stiff_policy_are_good(pow
                 visits[s] * policy[s].extra_inputs.count(name) for s in policy
             )  # the runs started at `name`: the visits of every state that lists it
             assert low <= exact <= high and value == pytest.approx(float(exact), rel=1e-9), (power, seed, name)
+            assert high - low <= 3 * _inputs.MIN_COUNT_ROUNDING * value, (power, seed, name)
         total = sum(visits.values())
         assert weighted[1] <= total <= weighted[2] and weighted[0] == pytest.approx(float(total), rel=1e-9), (power, seed)
+        assert weighted[2] - weighted[1] <= 3 * _inputs.MIN_COUNT_ROUNDING * weighted[0], (power, seed)
 
 
 @pytest.mark.parametrize("power", [6, 10, 13])
@@ -242,7 +265,7 @@ def test_a_cycle_so_stiff_that_the_mean_is_known_to_less_than_one_in_a_hundred_i
 
 
 def test_the_refusal_at_one_in_a_hundred_is_an_undecided_not_a_policy_that_needs_more_than_it_makes():
-    start, policy = ring(10**12)
+    start, policy = ring(10**13)  # (at 1e12 the bound against the scale of the terms, #670, is 2e-3: shown, with a limit)
     chain = chain_of(start, policy)
 
     with pytest.raises(_inputs.Undecided, match="relative error"):

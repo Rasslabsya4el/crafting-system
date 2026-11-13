@@ -1,4 +1,4 @@
-"""The diagonal of the fundamental matrix of a chain, and the solve of `(I - Q) x = b`, from the cycles of the chain (the identities are exact; the numbers carry the rounding of dense inverses) (tickets #572, #490 and #621).
+"""The diagonal of the fundamental matrix of a chain, and the solve of `(I - Q) x = b`, from the cycles of the chain (the identities are exact; the components are inverted without a subtraction, #700) (tickets #572, #490, #621 and #841).
 
 A chain with transient states and the chances `Q[s, t]` among them (the rest of each row leaks to a goal or to a state the run cannot finish
 from) has the fundamental matrix `N = (I - Q)^-1`: `N[s, t]` is the expected number of visits to `t` of a run that starts in `s`. The chance
@@ -17,14 +17,17 @@ which, so the Woodbury identity gives, exactly,
 
     N = N_B + N_B U (I - K N_B U)^-1 K N_B
 
-and `N_B` is a block-triangular solve: the components of `B` in order, each a dense inverse. The work is `q` solves with `B` (and `q` with
+and `N_B` is a block-triangular solve: the components of `B` in order, each a dense inverse made without a subtraction (`_packed_linear.gth_inverse`:
+the diagonal of a component's `I - B` is each state's chance to leave the states still in, a sum of positive terms, so a ring with a small leak
+costs no digits). The work is `q` solves with `B` (and `q` with
 its transpose) and one `q x q` inverse, however many states ask. When the components of `P` already are small, `C` is empty and no
 Woodbury step is made. When a component stays big after the shared rows are cut, the most entered states of it are cut too (each its own
 row), until none is.
 
 The same pieces solve `(I - Q) x = b` for a right-hand side (`ChainSolver`, ticket #621): `x = y + A^-1 U M^-1 K y` with `y = A^-1 b` and
 `M = I - K A^-1 U`, which is `q + 2` solves with `B` and a `q x q` matrix and needs neither the diagonal nor the `wanted x q` blocks the diagonal
-needs. That is the exact fallback of the evaluation of a policy whose iteration did not converge (`_packed_solve.evaluate_policy`): the cost
+needs; `solve_transposed` is the same pieces for `(I - Q)^T` (the route page's visits). That is the exact solve of the one linear solve
+(`_packed_linear.solve`) when an approximate answer's error estimate is too large: the cost
 is the cycles of the chain, never a count of its states. A row that many states share can be given once (`shared`), so a policy of 800,000
 states whose rerolls are one kernel each is never expanded edge by edge.
 
@@ -38,6 +41,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ._packed import expand_ranges
+from ._packed_linear import gth_inverse
 
 INVERT_LIMIT = 4_000  # a component of at most this many states is inverted whole (a dense inverse of 4,000 states: 0.13 GB, a second or two); a bigger one is cut
 BLOCK_CELLS = 10_000_000  # the cells (edges or states x right-hand sides) held at once by a gather or a block of solves: 80 MB of float64 (a block of solves holds about six of them)
@@ -131,27 +135,42 @@ class Triangular:
 
     The equation of a state is `x[s] = b[s] + sum over t of B[s, t] x[t]`. The components are met sinks first; the edges that stay inside a
     component are handled by its dense inverse, the edges that leave it by a gather. States met at the same depth are done together.
+
+    A component is inverted without a subtraction (`_packed_linear.gth_inverse`, #700): the diagonal of its `I - B` is the chance each state leaves
+    the states of the component still in, a sum of positive terms: `exit[s]` (the share of the row of `s` that leaves the chain `B`: to a goal, a dead
+    state, or a row that is cut) plus its edges to other components. `exit` is given by the caller as such a sum; when it is not, it is
+    `1 - sum of the row` (`max(0, ...)`), which is as good as the rows are away from stiff. Components of one size are inverted together.
     """
 
-    def __init__(self, n: int, ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, label: np.ndarray, count: int):
+    def __init__(self, n: int, ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, label: np.ndarray, count: int, exit: np.ndarray | None = None):
         self.n = n
         self.sizes = np.bincount(label, minlength=count)
         row = np.repeat(np.arange(n), np.diff(ptr))
         self._members = np.argsort(label, kind="stable")
         self._starts = np.concatenate(([0], np.cumsum(self.sizes)))
         self.inverse: dict[int, np.ndarray] = {}
-        inside = np.flatnonzero(label[row] == label[col])
-        inside = inside[np.argsort(label[row[inside]], kind="stable")]
+        if exit is None:
+            exit = np.maximum(0.0, 1.0 - np.bincount(row, weights=weight, minlength=n))
+        leaves = label[row] != label[col]
+        out = np.asarray(exit, dtype=np.float64) + np.bincount(row[leaves], weights=weight[leaves], minlength=n)  # a sum of positive terms
+        inside = np.flatnonzero(~leaves)
         position = np.empty(n, dtype=np.int64)
         position[self._members] = np.arange(n) - self._starts[label[self._members]]
-        owner = label[row[inside]]
-        bounds = np.searchsorted(owner, np.arange(count + 1))
-        for c in np.flatnonzero(self.sizes > 1).tolist():
-            edges = inside[bounds[c] : bounds[c + 1]]
-            matrix = np.eye(int(self.sizes[c]))
-            np.subtract.at(matrix, (position[row[edges]], position[col[edges]]), weight[edges])
-            self.inverse[c] = np.linalg.inv(matrix)
-        leaves = label[row] != label[col]
+        cyclic = np.flatnonzero(self.sizes > 1)
+        for size in np.unique(self.sizes[cyclic]).tolist():
+            comps = cyclic[self.sizes[cyclic] == size]
+            room = max(1, BLOCK_CELLS // (size * size))
+            for lo in range(0, len(comps), room):
+                part = comps[lo : lo + room]
+                slot = np.full(count, -1, dtype=np.int64)
+                slot[part] = np.arange(len(part))
+                edges = inside[slot[label[row[inside]]] >= 0]
+                block = np.zeros((len(part), size, size))
+                np.add.at(block, (slot[label[row[edges]]], position[row[edges]], position[col[edges]]), weight[edges])
+                members = self._members[(self._starts[part][:, None] + np.arange(size)[None, :]).reshape(-1)].reshape(len(part), size)
+                inverses = gth_inverse(block, out[members])
+                for k, c in enumerate(part.tolist()):
+                    self.inverse[c] = inverses[k]
         self._forward = self._levels(row[leaves], col[leaves], weight[leaves], label, count)
         self._backward = self._levels(col[leaves], row[leaves], weight[leaves], label, count)
 
@@ -241,8 +260,8 @@ class ChainSolver:
     the chain; the rows of a state cut by `_cut_until_small` and of the shared groups are put back by the Woodbury step, none of them formed as `1 - p`.
 
     Building it costs the components' inverses, `q` solves with the chain without its cut rows and one `q x q` inverse; `CyclesTooTangled` says so when
-    that does not fit in `WOODBURY_CELLS`. `solve(b)` then costs three solves with the chain. The answer carries the rounding of the dense inverses: the
-    caller measures its backward error and refines (`solve` of the residual) while it falls.
+    that does not fit in `WOODBURY_CELLS`. `solve(b)` then costs three solves with the chain. The components are good to the rounding of their sums; what
+    is left is the `q x q` inverse of `M` (an LU): the caller measures the backward error and refines only an answer that lost digits (`_packed_linear.refine`).
     """
 
     def __init__(
@@ -294,7 +313,9 @@ class ChainSolver:
                 f"putting back {q:,} distinct cut rows of {n:,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows",
                 q, cells, WOODBURY_CELLS,
             )
-        self.base = Triangular(n, new_ptr, new_col, new_weight, label, count)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            exit = np.where(cut, 1.0, np.where(leave > 0.0, leak / np.where(leave > 0.0, leave, 1.0), 0.0))  # a cut row is the unit row: all of it leaves
+        self.base = Triangular(n, new_ptr, new_col, new_weight, label, count, exit)
         self.cut, self.leave = cut, leave
         self.q, self.groups, self.rows = q, groups, rows
         self.owner = np.full(n, -1, dtype=np.int64)
@@ -315,6 +336,22 @@ class ChainSolver:
         z = np.array([vals @ y[cols] for cols, vals in self.rows])
         w = self.middle @ z
         return y + self.base.solve(np.where(self.owner >= 0, w[np.maximum(self.owner, 0)], 0.0))
+
+    def solve_transposed(self, b: np.ndarray) -> np.ndarray:
+        """`x` with `(I - P)^T x = b`; `b` is `n`.
+
+        `(I - P) = D^-1 (A - U K)` with `A = I - P_B` and `D` the chance to leave on the cut rows (1 elsewhere), so `x = D u` with
+        `(A - U K)^T u = b`, and by the Woodbury identity `u = y + A^-T K^T M^-T U^T y`, `y = A^-T b`, `M = I - K A^-1 U` (the same `M` as `solve`).
+        """
+        u = self.base.solve_transposed(b)
+        if self.q:
+            z = np.array([float(np.sum(u[members])) for members in self.groups])
+            w = self.middle.T @ z
+            back = np.zeros(self.n)
+            for g, (cols, vals) in enumerate(self.rows):
+                np.add.at(back, cols, vals * w[g])
+            u = u + self.base.solve_transposed(back)
+        return np.where(self.cut, self.leave * u, u)
 
 
 def inverse_diagonal(
@@ -359,15 +396,15 @@ def inverse_diagonal(
     big = sizes[label] > limit
     say(f"cycles: {n:,} states, {count:,} components, the biggest {int(sizes.max()) if count else 0:,} ({time.perf_counter() - began:.1f} s)")
     scale = 1.0 / leave
+    if leak is None:
+        leak = np.maximum(0.0, 1.0 - np.bincount(row, weights=weight, minlength=n))
     if not big.any():
-        base = Triangular(n, p_ptr, p_col, p_weight, label, count)
+        base = Triangular(n, p_ptr, p_col, p_weight, label, count, leak * scale)
         say(f"cycles: every component inverted whole ({time.perf_counter() - began:.1f} s)")
         found = base.solve_transposed(_unit(n, start)) * scale if start_row is not None else None
         return base.diagonal() * scale, _deviation(found, start_row, np.arange(n))
     cut = _cut_rows(n, ptr, col, weight, p_ptr, p_col, big, limit)
     say(f"cycles: {int(cut.sum()):,} rows cut from {int(big.sum()):,} states in components above {limit:,} ({time.perf_counter() - began:.1f} s)")
-    if leak is None:
-        leak = np.maximum(0.0, 1.0 - np.bincount(row, weights=weight, minlength=n))
     return _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak)
 
 
@@ -482,7 +519,7 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
     new_ptr, new_col, new_weight = _without_rows(p_ptr, p_col, p_weight, cut)
     label, count = components(n, new_ptr, new_col)
     sizes = np.bincount(label, minlength=count)
-    base = Triangular(n, new_ptr, new_col, new_weight, label, count)
+    base = Triangular(n, new_ptr, new_col, new_weight, label, count, np.where(cut, 1.0, leak * scale))
     r = np.where(cut, 1.0, scale)  # the rows of A: each divided by leave, a cut row not at all
     diagonal = base.diagonal() * r  # A^-1[s, s]
     groups = _row_groups(ptr, col, weight, np.flatnonzero(cut))

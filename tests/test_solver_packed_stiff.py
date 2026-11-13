@@ -58,15 +58,23 @@ def solve_exactly(rows: list[list[Fraction]], rhs: list[Fraction]) -> list[Fract
     return [table[i][n] for i in range(n)]
 
 
-def exact_values(graph, work, leave, blocks: int) -> list[Fraction]:
-    """The values of the policy by `Fraction` elimination, from the coefficients the evaluation itself forms: `k_prob / leave` and `cost / leave` as floats."""
+def exact_values(graph, work, leave, blocks: int, ring_weight: int) -> list[Fraction]:
+    """The values of the policy by `Fraction` elimination: the rings from their integer weights (`ring_weight` against 1: no rounding), the rerolls from the
+    coefficients the evaluation itself forms (`k_prob / leave` and `cost / leave` as floats; they are far from stiff).
+
+    The rings are taken from their weights because their stored chances are not their system: `ring_weight / (ring_weight + 1)` is stored to 1e-16, and
+    `1` minus it, the chance to leave a ring state that a solve of `I - P` reads, is then 1e-3 off at 1e13; the leak itself is stored to 1e-16 (#700)."""
 
     def coefficients(action: int) -> list[Fraction]:
+        if action < 3 * blocks:  # a ring state: on round the ring, or out into the reroll
+            return [Fraction(ring_weight, ring_weight + 1), Fraction(1, ring_weight + 1)]
         k = int(graph.act_kernel[action])
         span = slice(int(graph.k_ptr[k]), int(graph.k_ptr[k + 1]))
         return [Fraction(float(x)) for x in graph.k_prob[span] / leave[action]]
 
     def cost(action: int) -> Fraction:
+        if action < 3 * blocks:
+            return Fraction(float(graph.act_cost[action]))  # (a ring state has no self-loop: its chance to leave is 1)
         return Fraction(float(graph.act_cost[action] / leave[action]))
 
     alpha, beta = [], []  # head value of block j = alpha + beta * U[j % 3], U the value of the reroll state its ring leaves into
@@ -108,26 +116,24 @@ def test_a_stiff_policy_above_the_old_dense_fallback_count_is_solved_not_refused
     work = ps.Work(graph)
     leave = work.nonself_sums(np.ones(work.n))
     info: dict = {}
-    assert int((policy >= 0).sum()) > 6_000 and ps.DENSE_FALLBACK <= 6_000  # above the count that used to decide
+    assert int((policy >= 0).sum()) > 6_000  # above the count that used to decide
 
     values = ps.evaluate_policy(work, leave, policy, np.zeros(work.n), ps.DENSE_LIMIT, 1e-13, info)
 
     assert info["policy_states"] == 6400 and info["linear_backward_error"] <= 1e-12
-    assert info["linear_error_floor"] > 1e-5  # the least that the backward error and the size of the answer allow the error to be (a lower bound; the exact values below are far better)
-    exact = exact_values(graph, work, leave, BLOCKS)
-    # (the backward error is 1e-15 and the answer is 6e11 times the right-hand side, so the digits that are certain are fewer than 16: 7 at 1e9, more at 1e13
-    # where the 3-state rings are inverted whole and exactly; the iterate of the old code was 4e-4 off at 1e9 and wrong at 1e13)
-    assert values[: 4 * BLOCKS] == pytest.approx([float(x) for x in exact], rel=1e-6)
+    exact = exact_values(graph, work, leave, BLOCKS, 10**power)
+    # the 3-state rings are inverted without a subtraction (#700) and the shared rerolls put back by the Woodbury step: the values are good to the
+    # rounding of the sums at 1e9 and 1e13 alike (an LU inverse of the rings left 7 digits at 1e9; the iterate of the old code was 4e-4 off at 1e9 and wrong at 1e13)
+    assert values[: 4 * BLOCKS] == pytest.approx([float(x) for x in exact], rel=1e-12)
     assert info["linear_cycles"] == 1 and info["linear_cut_rows"] == 3  # the three shared rerolls are cut and put back
-    assert info["linear_residual_iterate"] > ps.ACCEPT_BOUND  # the iterate was what the old code saw and refused (at 1e9 its backward error was 1e-15 and it was 4e-4 off as an answer)
+    assert info["linear_forward_iterate"] > ps._packed_linear.ACCEPT_ERROR  # the iterate is not good by what bounds its error: the exact solve was made
 
 
 def test_the_old_count_is_not_read_and_a_memory_that_does_not_hold_the_cycles_is_said_by_what_they_cost(monkeypatch):
     graph, policy = ring_policy(BLOCKS, 10**13)
     work = ps.Work(graph)
     leave = work.nonself_sums(np.ones(work.n))
-    monkeypatch.setattr(ps, "DENSE_FALLBACK", 10**9)  # a count that would have allowed the dense solve: nothing reads it
-    info: dict = {}
+    info: dict = {}  # (no count of states is read: the old `DENSE_FALLBACK`, 6,000, is gone)
     ps.evaluate_policy(work, leave, policy, np.zeros(work.n), ps.DENSE_LIMIT, 1e-13, info)
     assert info["linear_cycles"] == 1
 
@@ -138,7 +144,7 @@ def test_the_old_count_is_not_read_and_a_memory_that_does_not_hold_the_cycles_is
         ps.evaluate_policy(work, leave, policy, np.zeros(work.n), ps.DENSE_LIMIT, 1e-13, {})
 
     words = str(refused.value)
-    assert "6,400 states" in words and "true residual" in words and "distinct cut rows" in words and "past the 1,000" in words
+    assert "6,400 states" in words and "backward error" in words and "distinct cut rows" in words and "past the 1,000" in words
 
 
 def test_what_remains_when_the_cycles_do_not_fit_is_a_limit_that_names_the_memory_they_needed(monkeypatch):
@@ -175,45 +181,4 @@ def test_the_shared_rows_of_the_policy_are_given_once_and_never_expanded_state_b
     assert solver.cut.sum() == BLOCKS and not solver.cut[: 3 * BLOCKS].any()  # only the reroll states are cut
 
 
-def two_loops_and_a_dear_state(rounds: int, dear_cost: float):
-    """`(graph, policy)`: states a and b send each other on with the weight `rounds` against 1 for the goal (cost 1 each), `c` costs `dear_cost` and finishes.
-
-    The values of a and b are `rounds + 1` (a run goes round that many times); the right-hand side is as large as `dear_cost` at c, so the answer is only
-    `(rounds + 1) / dear_cost` times larger than the largest right-hand side, while the system is `rounds` ill-conditioned: a stiff state that feeds a stiff state.
-    """
-    builder = PackedBuilder()
-    weights = [rounds, 1]
-    builder.action(0, 1.0, builder.kernel([1, 3], weights))
-    builder.close_state(False)
-    builder.action(1, 1.0, builder.kernel([0, 3], weights))
-    builder.close_state(False)
-    builder.action(2, dear_cost, builder.kernel([3], [1.0]))
-    builder.close_state(False)
-    builder.close_state(True)
-    return builder.build(), np.array([0, 1, 2, -1])
-
-
-def test_an_iterate_with_a_tiny_backward_error_is_not_taken_for_an_answer_as_good_as_that_error(monkeypatch):
-    """The error an answer can have is its backward error times the condition of the system, which a ratio of the answer to the right-hand side only bounds from below.
-
-    Here the ratio is 1e5 and the backward error of the iterate 5e-16, so `backward * ratio` is 5e-11 and under the old test (1e-10) the iterate was taken; it is 1e-5 off.
-    """
-    rounds, dear = 10**10, 1e5
-    graph, policy = two_loops_and_a_dear_state(rounds, dear)
-    work = ps.Work(graph)
-    leave = work.nonself_sums(np.ones(work.n))
-    exact = np.array([rounds + 1.0, rounds + 1.0, dear])  # x = 1 + rounds / (rounds + 1) x
-    moved = np.array([1.0, 1.0, 0.0]) * (1e-10 * dear * rounds)  # along the direction the system hardly feels: a residual of 1e-10 of the largest right-hand side
-
-    def stalled(matvec, rhs, x0, tol):
-        x = np.asarray(exact, dtype=float) + moved
-        return x, float(np.linalg.norm(rhs - matvec(x)) / np.linalg.norm(rhs)), 1
-
-    monkeypatch.setattr(ps, "bicgstab_checked", stalled)
-    info: dict = {}
-
-    values = ps.evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, info)  # (0: no dense solve, the iterate path)
-
-    assert info["linear_residual_iterate"] > ps.DENSE_FALLBACK_RESIDUAL  # the iterate is judged on its residual, and that is above the line
-    assert info["linear_backward_error"] < 1e-12  # (the exact solve's, once it replaces the iterate)
-    assert values[:3] == pytest.approx(exact, rel=1e-6)  # not the iterate, 1e-5 off (the cycles of a ring that is gone round 1e10 times are good to 1e-7: its conditioning)
+# (The iterate with a tiny backward error that is 1e-5 off, #699, is in `tests/test_linear_solve.py`, with the ring of #700 and the 100,000 states of #671.)

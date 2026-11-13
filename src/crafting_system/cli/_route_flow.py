@@ -28,11 +28,12 @@ shows the mixture of them: for an outcome, the sum over the step's states of (ex
 chance) divided by the expected visits of the step. The weights are the expected visits from the start under the
 policy itself: row `start` of N = (I - Q)^-1, where Q holds the chances among the states that have an action and can
 reach a goal. They are the solution of the system (I - Q)^T v = e_start with each self-loop divided out so that no
-`1 - p` is formed: dense for at most `DENSE_LIMIT` such states, else BiCGSTAB on the edge arrays (memory O(edges),
-never O(states^2)). The dense solve and the iteration are two ways to the same numbers, a speed choice and no cut (a
-test lowers the limit and compares). What is shown is a solution whose TRUE residual `|b - A x| / |b|` was measured,
-never the residual BiCGSTAB claims of its own recurrence (tickets #584 and #600); a solve that does not reach it
-falls back to the dense solve for up to `DENSE_FALLBACK` states, else the flow is not `measured`. The chances are
+`1 - p` is formed, by the one linear solve of the planner (`solver/_packed_linear.py`, #841): dense for at most `DENSE_LIMIT`
+such states (inverted without a subtraction), else BiCGSTAB on the edge arrays (memory O(edges), never O(states^2)) to its first
+stagnation, and when that answer's error estimate is above what is taken, the exact solve by the cycles of the chain (the
+transposed one for the visits), whatever the number of states. The dense solve and the iteration are two ways to the same
+numbers, a speed choice and no cut (a test lowers the limit and compares). What is shown is measured: its backward error and
+the estimate of its error, never the residual BiCGSTAB claims of its own recurrence (tickets #584 and #600). The chances are
 `Fraction`s of integer weights turned to float64 once (correctly rounded). From the same visits come the uses of a
 step (the sum of the visits of its states, so `sum(uses x cost)` is the mean cost of the policy) and, for a step with
 an action, the chance a run ever enters it: the chance of reaching a state of the step when the step's states
@@ -50,14 +51,15 @@ checked against the visits, which another method found.
 
 Three things are stated, not hidden (OR-12, OR-13), and the chances and uses are as solved where they are shown:
 
-* `Flow.measured` is False when the visits cannot be solved (a chance per use so small that it is lost in the
-  float, or a solve whose true residual stayed above `ACCEPT_RESIDUAL`): the uses and visits are then not known, and
+* `Flow.measured` is False when the visits cannot be solved (a part of the chain that never leaves it, or no solve whose
+  backward error is within `ACCEPT_RESIDUAL` could be made): the uses and visits are then not known, and
   the chances of a step with several states are the plain mean of them. The page says so on each step it applies to.
 * `Flow.entered` is False when the chance of entering some step could not be solved to that residual (`Step.reached`
   is None for it). Uses, costs and chances do not depend on it, and it does not depend on the size of the policy.
-* The digits. What is checked is a residual (`ACCEPT_RESIDUAL`), and a stiff chain loses digits between a residual and an answer: a plan whose
-  runs take millions of steps is good to fewer digits than `percent` prints. `precision_of` estimates the error the residual guarantees (that
-  residual times the expected steps of a run) and `flow_limits` says how many digits it supports once it passes `STIFF_ERROR`.
+* The digits. A chain whose cycles are stiff (a ring of states a run goes round millions of times) amplifies the rounding of the arithmetic:
+  each solve estimates its own error (its backward error times the amplification it measures, `_packed_linear.forward_estimate`), and
+  `flow_limits` says how many digits the largest of them supports once it passes `STIFF_ERROR` (`precision_of`). A self-loop costs nothing:
+  it is divided out.
 
 Both are `Limit` records (`flow_limits`, kind `STEPS`) written into `Plan.limits` when a plan is finished and shown, like every limit, by the text
 report, the JSON and the goal card of the page; a given route's own chain gets its own on its section.
@@ -79,15 +81,16 @@ import numpy as np
 
 from crafting_system.solver import Action
 from crafting_system.solver._packed import BIG_TOTAL, expand_ranges
-from crafting_system.solver._packed_chain import CyclesTooTangled, inverse_diagonal
+from crafting_system.solver import _packed_linear
+from crafting_system.solver._packed_chain import ChainSolver, CyclesTooTangled, inverse_diagonal
+from crafting_system.solver._packed_linear import DENSE_LIMIT, Terms, backward_error, forward_estimate, gth_inverse
 from crafting_system.solver._packed_lump import lump_states
-from crafting_system.solver._packed_solve import DENSE_FALLBACK, DENSE_FALLBACK_RESIDUAL, DENSE_LIMIT, bicgstab_checked
 
 from ._limits import STEPS, Limit, claim
 from ._reach import policy_states
 
 VISITS_TOLERANCE = 1e-12  # the relative residual BiCGSTAB aims at
-ACCEPT_RESIDUAL = 1e-9  # the largest true relative residual of a solve that is shown; above it the flow is not `measured`
+ACCEPT_RESIDUAL = 1e-9  # the largest backward error of a solve that is shown when no better one could be made; above it the flow is not `measured`
 AGREE = 1e-6  # the most the visits (iteration) and the same row from the cycles of the chain (direct) may differ for the visit chances to be shown
 _GOAL = -1  # the target "a goal state" while steps are numbered from 0
 
@@ -379,7 +382,7 @@ def flow_of[S: Hashable](
 
     done = _solved(chain)  # made once for a chain: the plan's limits and the page both read them
     finishing, visits, solved = done.finishing, done.visits, done.solved
-    reached, unsettled = _entries(chain)
+    reached, unsettled, _ = _entries(chain)
     weights = np.where(finishing, visits, 0.0) if solved else np.zeros(m)
     raw = np.bincount(step, weights=weights, minlength=nsteps)
     mix = np.where(raw[step] > 0.0, weights, 1.0)  # nobody can finish here, or unmeasured: the plain mean
@@ -487,7 +490,7 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
                 ),
             ),
         )
-    reached, unsettled = _entries(chain)
+    reached, unsettled, entry_error = _entries(chain)
     limits: list[Limit] = []
     if unsettled:
         limits.append(
@@ -501,18 +504,18 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
                 ),
             )
         )
-    error = precision_of(done)
-    if error > STIFF_ERROR:  # the residual is what is checked; on a stiff chain the digits are fewer than the residual (OR-13)
+    error = max(precision_of(done), entry_error)
+    if error > STIFF_ERROR:  # on a chain whose cycles are stiff the digits are fewer than printed, or not known (OR-13)
         limits.append(
             Limit(
                 STEPS,
                 "The numbers of the steps are good to fewer digits than printed",
-                f"a run of this plan takes about {float(done.visits.sum()):,.0f} steps, and a solve checked to a residual of {ACCEPT_RESIDUAL:g} is then good to about "
-                f"{digits_text(error)} significant digits",
+                f"a run of this plan takes about {float(done.visits.sum()):,.0f} steps through cycles that amplify the rounding of the arithmetic, and the "
+                f"calculation of the steps is estimated {estimate_text(error)}",
                 **claim(
                     "the methods offered",
-                    f"How often each step is used, what it costs, its chances and the share of runs that enter it are solutions of the plan's equations to a residual of {ACCEPT_RESIDUAL:g}; "
-                    f"on a plan that takes this many steps that supports about {digits_text(error)} digits, not the digits printed.",
+                    "How often each step is used, what it costs, its chances and the share of runs that enter it are solutions of the plan's equations, each measured: "
+                    f"its error is estimated as its backward error times how much this plan's chain amplifies it, which {supports_text(error)}, not the digits printed.",
                 ),
             )
         )
@@ -575,20 +578,22 @@ def _numbering(chain: Chain) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 class _Solved:
     """What the visits solve of a chain gives, made once (`_solved`): the states that can finish and their expected visits.
 
-    `solved`: the visits were solved to `ACCEPT_RESIDUAL`. `inverse`: N over the states that can finish, when there are at most `DENSE_LIMIT` of them.
+    `solved`: the visits were solved (`_linear`). `inverse`: N over the states that can finish, when there are at most `DENSE_LIMIT` of them. `error`: the
+    estimate of the relative error of the visits (`_packed_linear.forward_estimate`; 0 when there is nothing to solve).
     """
 
     finishing: np.ndarray
     visits: np.ndarray
     solved: bool
     inverse: np.ndarray | None
+    error: float = 0.0
 
 
 def _direct(chain: Chain) -> _Solved:
     """The visits of `chain` solved on its own states: what `_solved` and `_entries` run on the lumped chains, whose states are blocks."""
     finishing = _can_finish(chain)
-    visits, solved, inverse = _visits(chain, _system(chain, finishing), finishing)
-    return _Solved(finishing, visits, solved, inverse)
+    visits, solved, inverse, error = _visits(chain, _system(chain, finishing), finishing)
+    return _Solved(finishing, visits, solved, inverse, error)
 
 
 def _quotient(chain: Chain, block: np.ndarray) -> tuple[Chain, np.ndarray]:
@@ -678,7 +683,7 @@ def _solved(chain: Chain) -> _Solved:
     `k` that can finish, the visits of a state that can finish are v[s] = [s = start] + sum over k of w[k] x (k's chance into s), one pass over
     the kernels, each once (#689). `inverse` is None: the entry chances are solved on the chain lumped with the steps' labels (`_entries`).
     """
-    key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)  # a test that changes a limit gets its own
+    key = (DENSE_LIMIT, ACCEPT_RESIDUAL, VISITS_TOLERANCE)  # a test that changes a limit gets its own
     cached = chain.__dict__.get("_solved")
     if cached is None or cached[0] != key:
         m = chain.m
@@ -701,17 +706,18 @@ def _solved(chain: Chain) -> _Solved:
             inflow = inflow[:m]
             inflow[0] += 1.0
             visits = np.where(finishing, inflow, 0.0)
-        cached = (key, _Solved(finishing, visits, done.solved, None))  # the classes' inverse is not the states': nothing reads it
+        cached = (key, _Solved(finishing, visits, done.solved, None, done.error))  # the classes' inverse is not the states': nothing reads it
         object.__setattr__(chain, "_solved", cached)
     return cached[1]
 
 
-def _entries(chain: Chain) -> tuple[list[float | None], int]:
-    """`(reached, unsettled)` of `chain`, kept on it: the chance of entering each step (None where it is not defined or not solved) and how many steps had a solve that did not settle.
+def _entries(chain: Chain) -> tuple[list[float | None], int, float]:
+    """`(reached, unsettled, error)` of `chain`, kept on it: the chance of entering each step (None where it is not defined or not solved), how many steps had a
+    solve that did not settle, and the largest estimate of the relative error of the solves made (`_packed_linear.forward_estimate`).
 
     Solved on the chain lumped with the steps' labels (`_page_blocks`): a step is a union of its blocks (#689).
     """
-    key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)
+    key = (DENSE_LIMIT, ACCEPT_RESIDUAL, VISITS_TOLERANCE)
     cached = chain.__dict__.get("_entries")
     if cached is None or cached[0] != key:
         done = _solved(chain)
@@ -719,6 +725,7 @@ def _entries(chain: Chain) -> tuple[list[float | None], int]:
         reached: list[float | None] = [None] * len(used)
         reached[0] = 1.0
         unsettled = 0
+        error = 0.0
         if done.solved and done.finishing[0]:
             blocks, row = _quotient(chain, _page_blocks(chain))
             lumped = _direct(blocks)
@@ -726,10 +733,11 @@ def _entries(chain: Chain) -> tuple[list[float | None], int]:
             block_step[row] = step
             system = _system(blocks, lumped.finishing) if lumped.solved else None
             if system is not None:
-                reached, unsettled = _entered(blocks, block_step, len(used), lumped.finishing, lumped.visits, system, lumped.inverse)
+                reached, unsettled, error = _entered(blocks, block_step, len(used), lumped.finishing, lumped.visits, system, lumped.inverse)
+                error = max(error, lumped.error)
             else:  # the blocks' visits did not settle though the states' did: no step but the first is said to be entered
                 unsettled = len(used) - 1
-        cached = (key, (reached, unsettled))
+        cached = (key, (reached, unsettled, error))
         object.__setattr__(chain, "_entries", cached)
     return cached[1]
 
@@ -847,7 +855,7 @@ def _pull(system: _System, v: np.ndarray) -> np.ndarray:
     return out / system.leave
 
 
-class _EdgeTerms:
+class _EdgeTerms(Terms):
     """The terms of a linear system `x[s] = b[s] + sum over the edges e with own[e] = s of weight[e] x[dep[e]]` (weights not negative), the edges as arrays."""
 
     def __init__(self, n: int, own: np.ndarray, dep: np.ndarray, weight: np.ndarray) -> None:
@@ -860,11 +868,26 @@ class _EdgeTerms:
         return np.bincount(self.own * self.n + self.dep, weights=self.weight, minlength=self.n * self.n).reshape(self.n, self.n)
 
 
-class _PushTerms:
-    """The terms of the visits, `v[c] = e[c] / leave[c] + sum over the edges r -> c of p / leave[c] v[r]`, read from the system in blocks."""
+class _PushTerms(Terms):
+    """The terms of the visits, `v[c] = e[c] / leave[c] + sum over the edges r -> c of p / leave[c] v[r]`, read from the system in blocks.
+
+    Its exact solve is the transposed solve by the cycles of the chain: with `u = leave v`, `(I - P)^T u = e` (`_chain_solver`).
+    """
 
     def __init__(self, system: _System) -> None:
         self.system = system
+        self.n = system.nt
+
+    def exact(self):
+        solver, leave = _chain_solver(self.system), self.system.leave
+
+        class Transposed:
+            q = solver.q
+
+            def solve(self, b: np.ndarray) -> np.ndarray:
+                return solver.solve_transposed(b * leave) / leave
+
+        return Transposed()
 
     def apply(self, x: np.ndarray) -> np.ndarray:
         return _push(self.system, x)
@@ -880,11 +903,30 @@ class _PushTerms:
         return matrix / system.leave[:, None]
 
 
-class _PullTerms:
-    """The terms of a chance of hitting, `h(s) = b(s) + sum over the free states t of p(s, t) / leave(s) h(t)` on the states `free` (a mask over the positions); the other states hold 0."""
+class _PullTerms(Terms):
+    """The terms of a chance of hitting, `h(s) = b(s) + sum over the free states t of p(s, t) / leave(s) h(t)` on the states `free` (a mask over the positions); the other states hold 0.
+
+    Its exact solve is the solve by the cycles of the chain of the free states, the edges into the others leaking out of it (`_chain_solver`).
+    """
 
     def __init__(self, system: _System, free: np.ndarray) -> None:
         self.system, self.free = system, free
+        self.n = system.nt
+
+    def exact(self):
+        free = self.free
+        solver = _chain_solver(self.system, free)
+        n = self.n
+
+        class Free:
+            q = solver.q
+
+            def solve(self, b: np.ndarray) -> np.ndarray:
+                out = np.zeros(n)
+                out[free] = solver.solve(b[free])
+                return out
+
+        return Free()
 
     def apply(self, x: np.ndarray) -> np.ndarray:
         return self.free * _pull(self.system, self.free * x)
@@ -900,20 +942,41 @@ class _PullTerms:
         return matrix / system.leave[:, None] * self.free[:, None] * self.free[None, :]
 
 
-def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tuple[np.ndarray, bool, np.ndarray | None]:
-    """`(visits, solved, inverse)`: the expected visits from the start of each state (zero where a run cannot finish).
+def _chain_solver(system: _System, free: np.ndarray | None = None) -> ChainSolver:
+    """The solve by the cycles of the chain (`solver/_packed_chain.ChainSolver`) of the states that can finish, or of the states `free` among them (a mask
+    over the positions): their rows with the self-loops (`_csr_with_self_loops`), each state's chance to leave, and its leak out of them (to a goal, a state
+    that cannot finish, or a state not free), a sum of positive terms."""
+    ptr, column, p = _csr_with_self_loops(system)
+    if free is None:
+        return ChainSolver(system.nt, ptr, column, p, system.leave, system.leak)
+    row = np.repeat(np.arange(system.nt), np.diff(ptr))
+    index = np.cumsum(free) - 1
+    count = int(free.sum())
+    kept = free[row]
+    keep = kept & free[column]
+    away = kept & ~free[column]
+    leak = system.leak[free] + np.bincount(index[row[away]], weights=p[away], minlength=count)
+    new_ptr = np.concatenate(([0], np.cumsum(np.bincount(index[row[keep]], minlength=count))))
+    return ChainSolver(count, new_ptr, index[column[keep]], p[keep], system.leave[free], leak)
 
-    Row `start` of N = (I - Q)^-1. With at most `DENSE_LIMIT` states that can finish, N is inverted whole (`inverse`, over the positions) and the row
-    is read off it; its row is accepted only when it solves (I - Q)^T v = e_start to `ACCEPT_RESIDUAL`, else the system is solved as it is for more
-    states: (I - Q)^T v = e_start with each self-loop divided out, v[c] = e[c] / leave[c] + sum over the edges r -> c of p / leave[c] v[r] (`_linear`,
-    read from the system a block of edges at a time). When the start cannot finish nothing else is a run's business: all zero and solved. `solved` is
-    False when no solve reaches the residual.
+
+def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tuple[np.ndarray, bool, np.ndarray | None, float]:
+    """`(visits, solved, inverse, error)`: the expected visits from the start of each state (zero where a run cannot finish), and the estimate of their relative error.
+
+    Row `start` of N = (I - Q)^-1. With at most `DENSE_LIMIT` states that can finish, N is inverted whole without a subtraction (`inverse`, over the
+    positions) and the row is read off it; its row is accepted only when it solves (I - Q)^T v = e_start to a backward error of `ACCEPT_RESIDUAL`, else the
+    system is solved by the one linear solve (`_linear`): (I - Q)^T v = e_start with each self-loop divided out, v[c] = e[c] / leave[c] + sum over the
+    edges r -> c of p / leave[c] v[r], read from the system a block of edges at a time, its exact solve the transposed one by the cycles of the chain.
+    When the start cannot finish nothing else is a run's business: all zero and solved. `solved` is False when no solve could be taken.
     """
     visits = np.zeros(chain.m)
     if system is None:
-        return visits, True, None
+        return visits, True, None, 0.0
     nt, start = system.nt, int(system.position[0])
     found = inverse = None
+    error = math.inf
+    b = np.zeros(nt)
+    b[start] = 1.0 / system.leave[start]
     if nt <= DENSE_LIMIT:
         inverse = _inverse(system)
         if inverse is not None:
@@ -921,16 +984,19 @@ def _visits(chain: Chain, system: _System | None, finishing: np.ndarray) -> tupl
             e[start] = 1.0
             found = inverse[start]
             row, column, p = _explicit(system)
-            if not (np.all(np.isfinite(found)) and _backward_error(_EdgeTerms(nt, column, row, p), e, found) <= ACCEPT_RESIDUAL):
+            if not (np.all(np.isfinite(found)) and backward_error(_EdgeTerms(nt, column, row, p).apply, e, found) <= ACCEPT_RESIDUAL):
                 found = inverse = None
+            else:
+                push, leave, use = _PushTerms(system), system.leave, inverse
+                error = forward_estimate(push.apply, b, found, backward_error(push.apply, b, found), lambda s: use.T @ (leave * s), _packed_linear.ACCEPT_ERROR)
     if found is None:
-        b = np.zeros(nt)
-        b[start] = 1.0 / system.leave[start]
-        found = _linear(nt, _PushTerms(system), b)
+        solved = _linear(nt, _PushTerms(system), b)
+        if solved is not None:
+            found, error = solved
     if found is None or not np.all(np.isfinite(found)) or np.any(found < -1e-9):
-        return visits, False, None
+        return visits, False, None, math.inf
     visits[finishing] = np.maximum(found, 0.0)
-    return visits, True, inverse
+    return visits, True, inverse, error
 
 
 def _inverse(system: _System) -> np.ndarray | None:
@@ -938,68 +1004,36 @@ def _inverse(system: _System) -> np.ndarray | None:
 
     Not formed as I - Q: a state that stays with chance 1 - 1e-13 has 1 - p = 1e-13 +- 1e-16 there, and an inverse of that is good to three digits (an entry
     chance off by 3e-4 in a test). Each row is divided by the chance to leave its state, which takes the self-loops out, and the inverse of
-    I - P (P = Q / leave without the diagonal) is scaled back by columns: N = (I - P)^-1 diag(1 / leave). The whole inverse is checked, not
+    I - P (P = Q / leave without the diagonal) is made by `gth_inverse`, whose diagonal is each state's leak plus the rest of its row (a ring of states
+    with a small leak costs no digits either), and scaled back by columns: N = (I - P)^-1 diag(1 / leave). The whole inverse is checked, not
     only the row of the start that the visits are read from: every entry of (I - P) (I - P)^-1 - I must be within `ACCEPT_RESIDUAL` of the size of the terms it is made of.
     """
     nt = system.nt
     row, column = system.row, system.column.astype(np.int64)
     with np.errstate(all="ignore"):
-        matrix = np.eye(nt) - np.bincount(row * nt + column, weights=system.p / system.leave[row], minlength=nt * nt).reshape(nt, nt)
-        try:
-            inverse = np.linalg.inv(matrix)
-        except np.linalg.LinAlgError:
-            return None
+        off = np.bincount(row * nt + column, weights=system.p / system.leave[row], minlength=nt * nt).reshape(nt, nt)
+        matrix = np.eye(nt) - off
+        inverse = gth_inverse(off, system.leak / system.leave)  # without a subtraction: the diagonal of I - P is each state's leak plus its row (#700)
         scale = np.abs(matrix) @ np.abs(inverse) + np.eye(nt)
         if not (np.all(np.isfinite(inverse)) and np.max(np.abs(matrix @ inverse - np.eye(nt)) / scale) <= ACCEPT_RESIDUAL):
             return None
         return inverse / system.leave[None, :]
 
 
-def _backward_error(terms, b: np.ndarray, x: np.ndarray) -> float:
-    """The TRUE residual of `x` in `x[s] = b[s] + terms.apply(x)[s]`, measured against the size of the terms it is made of.
+def _linear(n: int, terms: Terms, b: np.ndarray) -> tuple[np.ndarray, float] | None:
+    """`(x, error)` with `x[s] = b[s] + terms.apply(x)[s]`, that is `(I - P) x = b`, and the estimate of its relative error; None when no answer could be taken.
 
-    `max over s of |b[s] - (x[s] - terms[s])| / (|x[s]| + the same terms of |x| + |b[s]|)`: the componentwise backward error (the weights are chances, not
-    negative). Plain `|b - A x| / |b|` cannot get below the rounding of the terms when the answer is far larger than the right-hand side (a policy that restarts
-    a million times), and then refuses a solve that is as good as floats allow; this number is the size of the change of the system
-    that would make `x` exact, so it is small exactly for such a solve and about 1 for a wrong iterate.
+    The one linear solve (`solver/_packed_linear.solve`): dense up to `DENSE_LIMIT` states, else BiCGSTAB to its first stagnation, then, when the forward
+    estimate of that answer is above `_packed_linear.ACCEPT_ERROR`, the exact solve by the cycles of the chain where `terms` has one (`_PushTerms`,
+    `_PullTerms`). An answer is taken when it is good there, or, when nothing better could be made, when its backward error is within `ACCEPT_RESIDUAL`;
+    its error estimate goes with it, and the limits of the page say it when it is larger than the digits printed.
     """
-    with np.errstate(all="ignore"):
-        scale = np.abs(x) + terms.apply(np.abs(x)) + np.abs(b)
-        error = np.abs(b - (x - terms.apply(x))) / np.where(scale > 0, scale, 1.0)
-    return float(np.max(error)) if len(error) else 0.0
-
-
-def _linear(n: int, terms, b: np.ndarray) -> np.ndarray | None:
-    """The `x` with `x[s] = b[s] + terms.apply(x)[s]`, that is `(I - P) x = b`; None when no solve reaches `ACCEPT_RESIDUAL`.
-
-    `terms` is `_EdgeTerms` (edges as arrays), `_PushTerms` or `_PullTerms` (read from the system in blocks). Dense up to `DENSE_LIMIT` states, else BiCGSTAB; a
-    stiff system falls back to the dense solve for up to `DENSE_FALLBACK` states. Every answer is accepted on its TRUE residual (`_backward_error`, one more
-    product), never on a number a method claims of itself.
-    """
-    with np.errstate(all="ignore"):
-        if n > DENSE_LIMIT:
-
-            def matvec(x: np.ndarray) -> np.ndarray:
-                return x - terms.apply(x)
-
-            x, _, _ = bicgstab_checked(matvec, b, np.zeros(n), VISITS_TOLERANCE)
-            error = _backward_error(terms, b, x)
-            if error <= DENSE_FALLBACK_RESIDUAL:
-                return x
-            if n > DENSE_FALLBACK:  # too big for the dense solve: the iterate is shown only if its true residual is good enough
-                return x if error <= ACCEPT_RESIDUAL else None
-        matrix = np.eye(n) - terms.dense()
-        bnorm = max(float(np.linalg.norm(b)), 1e-300)
-        try:
-            x = np.linalg.solve(matrix, b)
-            for _ in range(2):  # iterative refinement: a stiff system loses digits in one solve
-                correction = b - matrix @ x
-                if not float(np.linalg.norm(correction)) > 4 * np.finfo(float).eps * bnorm:
-                    break
-                x = x + np.linalg.solve(matrix, correction)
-        except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats: nothing to say
-            return None
-        return x if _backward_error(terms, b, x) <= ACCEPT_RESIDUAL else None
+    found = _packed_linear.solve(terms, b, dense_limit=DENSE_LIMIT, iterate_tol=VISITS_TOLERANCE)
+    if found.x is None or not np.all(np.isfinite(found.x)):
+        return None
+    if found.good or found.backward <= ACCEPT_RESIDUAL:
+        return found.x, found.forward
+    return None
 
 
 @dataclass(frozen=True)
@@ -1022,17 +1056,28 @@ STIFF_ERROR = 1e-4  # a chance is printed to 4 significant digits (`percent`): a
 
 
 def precision_of(done: "_Solved") -> float:
-    """The relative error of a chance or a visit count that the residual `ACCEPT_RESIDUAL` guarantees, estimated as that residual times the expected number of steps of a run.
-
-    The condition number of I - Q is at least the expected steps of a run from the start (the sum of the visits), so a solve with a backward error of
-    `ACCEPT_RESIDUAL` is guaranteed to that times it, no better. R04 and R14 are about 1e-6; a chain with chances per use of 1e-10 is 1.
-    """
-    return float(done.visits.sum()) * ACCEPT_RESIDUAL
+    """The estimate of the relative error of the visits (`_Solved.error`): their backward error times how much the chain amplifies it, measured by the one
+    linear solve (`_packed_linear.forward_estimate`), not a residual times the expected steps of a run (#841, #853). A self-loop costs nothing, as it is
+    divided out; a ring of states with a small leak costs its rounds."""
+    return done.error
 
 
 def digits_text(error: float) -> str:
-    """How many significant digits an `error` supports, for a reader."""
-    return f"{max(0, int(-math.log10(error)) if error > 0 else 0)}"
+    """How many significant digits an `error` supports, for a reader (0 for an error of 1 or more, or one not known)."""
+    return f"{max(0, int(-math.log10(error)) if 0 < error < math.inf else 0)}"
+
+
+def estimate_text(error: float) -> str:
+    """`good to about N significant digits`, or, when the amplification could not be shown (an infinite estimate: a chain so stiff that the rounding of
+    the residual is as large as the terms), that the digits are not known."""
+    if math.isfinite(error):
+        return f"good to about {digits_text(error)} significant digits"
+    return "to an error that could not be estimated: the chain is too stiff for the rounding of the arithmetic to be bounded"
+
+
+def supports_text(error: float) -> str:
+    """`supports about N digits`, or that no number of digits is shown to be supported."""
+    return f"supports about {digits_text(error)} digits" if math.isfinite(error) else "could not be estimated, so no digit is guaranteed"
 
 
 def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
@@ -1102,21 +1147,24 @@ def _diagonal(chain: Chain, done: _Solved, say) -> tuple[np.ndarray | None, str 
     return None, why
 
 
-def _entry_chance(system: _System, absorbing: np.ndarray, extra: np.ndarray | None = None) -> float | None:
+def _entry_chance(system: _System, absorbing: np.ndarray, extra: np.ndarray | None = None, errors: list[float] | None = None) -> float | None:
     """The chance a run from the start ever reaches a state of `absorbing` (a mask over the positions; the start is not in it); None when the solve did not settle.
 
     h(s) is that chance from s, the states of `absorbing` made to stop the run: h(s) = sum over u in `absorbing` of p(s, u) / leave(s) + extra(s) + sum over the
     other states t of p(s, t) / leave(s) h(t), each self-loop divided out as in `_visits`, read from the system a block of edges at a time. `extra[s]` (over the
     positions, already divided by `leave`) is the chance of getting from `s` into the step by a way that leaves the states that can finish (`_entered`): it makes
-    a step that holds dead states a hitting problem too.
+    a step that holds dead states a hitting problem too. `errors`, when given, gets the estimate of the relative error of the solve.
     """
     free = ~absorbing
     b = free * _pull(system, absorbing.astype(float))
     if extra is not None:
         b = b + free * extra
-    h = _linear(system.nt, _PullTerms(system, free), b)
-    if h is None:
+    found = _linear(system.nt, _PullTerms(system, free), b)
+    if found is None:
         return None
+    h, error = found
+    if errors is not None:
+        errors.append(error)
     return min(1.0, max(0.0, float(h[system.position[0]])))
 
 
@@ -1152,7 +1200,7 @@ def _dead_region(chain: Chain, finishing: np.ndarray) -> _Dead:
     return _Dead(row, column, p, np.bincount(row[nonself], weights=p[nonself], minlength=m), out, into, q)
 
 
-def _dead_chances(m: int, dead: _Dead, target: np.ndarray) -> np.ndarray | None:
+def _dead_chances(m: int, dead: _Dead, target: np.ndarray, errors: list[float] | None = None) -> np.ndarray | None:
     """For every state, the chance a run that is there ever reaches a state of `target` (a mask over states that cannot finish): 1 on `target`, the hitting chance on the dead states that can get there, 0 elsewhere. None when the solve did not settle.
 
     A step that holds dead states is entered directly from a state that can finish, or by way of a dead state of another step that goes on to one of
@@ -1176,15 +1224,19 @@ def _dead_chances(m: int, dead: _Dead, target: np.ndarray) -> np.ndarray | None:
     to_free = edge & free[dead.column]
     weight = dead.p / np.where(dead.leave[dead.row] > 0, dead.leave[dead.row], 1.0)
     b = np.bincount(index[dead.row[to_target]], weights=weight[to_target], minlength=int(free.sum()))
-    h = _linear(int(free.sum()), _EdgeTerms(int(free.sum()), index[dead.row[to_free]], index[dead.column[to_free]], weight[to_free]), b)
-    if h is None:
+    found = _linear(int(free.sum()), _EdgeTerms(int(free.sum()), index[dead.row[to_free]], index[dead.column[to_free]], weight[to_free]), b)
+    if found is None:
         return None
+    h, error = found
+    if errors is not None:
+        errors.append(error)
     chances[free] = np.clip(h, 0.0, 1.0)
     return chances
 
 
-def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[list[float | None], int]:
-    """`(chance, unsettled)`: the chance a run ever enters each step (1 for the first), and how many steps had a solve that did not settle.
+def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[list[float | None], int, float]:
+    """`(chance, unsettled, error)`: the chance a run ever enters each step (1 for the first), how many steps had a solve that did not settle, and the
+    largest estimate of the relative error of the solves made.
 
     For a step A of states that can finish, the first state of A a run meets is a with chance H(a), and the visits of N split by it:
     N[start, b] = sum over a in A of H(a) N[a, b], so H = N[start, A] N[A, A]^-1 and the chance is its sum, when N is at hand (`inverse`, up to
@@ -1198,6 +1250,7 @@ def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[l
     result: list[float | None] = [None] * nsteps
     result[0] = 1.0
     unsettled = 0
+    errors: list[float] = [0.0]
     m = chain.m
     dead: _Dead | None = None
     for s in range(1, nsteps):
@@ -1218,7 +1271,7 @@ def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[l
             else:
                 absorbing = np.zeros(system.nt, dtype=bool)
                 absorbing[inside] = True
-                value = _entry_chance(system, absorbing)
+                value = _entry_chance(system, absorbing, None, errors)
             if value is None:
                 unsettled += 1
             else:
@@ -1227,7 +1280,7 @@ def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[l
             dead = dead or _dead_region(chain, finishing)
             target = np.zeros(m, dtype=bool)
             target[members[~live]] = True
-            chances = _dead_chances(m, dead, target)
+            chances = _dead_chances(m, dead, target, errors)
             if chances is None:
                 unsettled += 1
                 continue
@@ -1238,9 +1291,9 @@ def _entered(chain, step, nsteps, finishing, visits, system, inverse) -> tuple[l
                 absorbing = np.zeros(system.nt, dtype=bool)
                 absorbing[system.position[members[live]]] = True
                 extra = np.bincount(system.position[dead.out], weights=weight, minlength=system.nt) / system.leave
-                value = _entry_chance(system, absorbing, extra)
+                value = _entry_chance(system, absorbing, extra, errors)
             if value is None:
                 unsettled += 1
             else:
                 result[s] = min(1.0, max(0.0, value))
-    return result, unsettled
+    return result, unsettled, max(errors)

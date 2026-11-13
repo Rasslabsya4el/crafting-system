@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
+from crafting_system.solver import _packed_linear as lin
 from crafting_system.solver import _packed_solve as ps
 from crafting_system.solver._packed_chain import CyclesTooTangled
 from crafting_system.solver._packed_solve import Certificate, Work, certify, evaluate_policy, lift_policy, proper_states, solve_graph
@@ -195,6 +196,26 @@ def test_certify_uses_the_cost_of_the_greedy_action_when_the_first_action_is_not
     assert certificate.upper == pytest.approx(1.0 + 5 * EPS, abs=1e-17)
 
 
+@pytest.mark.parametrize("power", [10, 12, 14])
+def test_a_stiff_self_loop_is_certified_to_its_own_condition_not_to_one_over_its_chance_to_leave(power):
+    # one state of cost 1 that stays with weight 10**power against 1 for the goal: V = 10**power + 1, exactly. With the self-loop kept in the operator the
+    # rounding of its sum, 4 eps V, is measured against the cost 1: 9e-6 at 1e10, above the accepted 1e-6, and the plan was refused (#585). With the
+    # self-loop divided out, as the solve itself divides it, the margin is the cost of the state's whole stay, 10**power + 1 (#841).
+    graph = build((False, [(1.0, [(1, 1), (0, 10**power)])]), (True, []))
+
+    core = solve_graph(graph)
+
+    assert core.value[0] == pytest.approx(10**power + 1, rel=1e-14)
+    assert core.certificate.window == -1 and core.certificate.bound <= 16 * EPS  # the divided operator: a few roundings
+    assert core.certificate.own_bound > ps.ACCEPT_BOUND  # the operator with the self-loop kept: refused
+
+
+def test_a_plan_that_certifies_with_its_self_loops_kept_keeps_that_certificate_to_the_bit():
+    certificate = certify(GEO, np.array([4.0, 0.0]), np.array([True, True]))
+
+    assert certificate.window == 0 and certificate.bound == certificate.own_bound  # the divided operator is measured only when this one misses `wanted`
+
+
 def test_certify_with_nothing_to_check_is_the_exact_certificate():
     assert certify(GEO, np.array([0.0, 0.0]), np.array([False, True])) == Certificate(0.0, 1.0, 1.0, 0.0, True)
     assert certify(build((True, [])), np.zeros(1), np.ones(1, dtype=bool)) == Certificate(0.0, 1.0, 1.0, 0.0, True)
@@ -244,143 +265,6 @@ def test_proper_states_of_a_graph_where_everything_is_proper_keep_everything():
     assert policy.tolist() == [1, -1]
 
 
-# --- BiCGSTAB ------------------------------------------------------------------------------------------------------------
-
-A3 = np.array([[4.0, 1.0, 0.0], [-1.0, 3.0, 1.0], [2.0, 0.0, 5.0]])
-X3 = np.array([1.0, -2.0, 3.0])
-
-
-def residual_of(matrix, b, x):
-    return float(np.linalg.norm(b - matrix @ x) / np.linalg.norm(b))
-
-
-def test_bicgstab_solves_a_three_by_three_system_in_at_most_three_steps():
-    b = A3 @ X3
-    x, relative, steps = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 1e-13, 100)
-
-    assert x == pytest.approx(X3, abs=1e-12)
-    assert 1 <= steps <= 3  # BiCGSTAB ends in n steps in exact arithmetic
-    assert relative <= 1e-12
-
-
-def test_bicgstab_reports_the_residual_of_the_iterate_it_returns():
-    b = A3 @ X3
-    for limit in (1, 2):
-        x, relative, steps = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 1e-30, limit)
-
-        assert steps == limit  # not converged: it ran the steps it was given
-        assert relative == pytest.approx(residual_of(A3, b, x), rel=1e-6)
-        assert 0.0 < relative < 1.0
-
-
-def test_each_bicgstab_step_lowers_the_residual_of_a_well_conditioned_system():
-    b = A3 @ X3
-    residuals = [ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 1e-30, limit)[1] for limit in (1, 2, 3)]
-
-    assert residuals[0] > residuals[1] > residuals[2]
-    assert residuals[2] < 1e-12
-
-
-def test_bicgstab_scales_the_stopping_test_by_the_size_of_the_right_hand_side():
-    b = (A3 @ X3) * 1e6
-    x, relative, steps = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 1e-13, 100)
-
-    assert steps <= 3 and x == pytest.approx(X3 * 1e6, rel=1e-10)
-
-
-def reference_residuals(matrix, b, steps=4):
-    """The relative residuals BiCGSTAB (van der Vorst's recurrence) has after each half step and each whole step, in exact `Fraction`s.
-
-    Written from the textbook and not from the module: `[(iteration, relative residual), ...]` in the order the module can stop at them
-    (after the first half of step k it has the residual of `s`, after the whole step that of `r`); the list ends where `s` or `r` is zero.
-    """
-    exact = [[Fraction(float(entry)) for entry in row] for row in matrix]
-
-    def times(vector):
-        return [sum(a * x for a, x in zip(row, vector)) for row in exact]
-
-    def dot(u, v):
-        return sum(p * q for p, q in zip(u, v))
-
-    def size(vector):
-        return math.sqrt(float(dot(vector, vector)))
-
-    r = [Fraction(float(entry)) for entry in b]
-    bnorm = size(r)
-    rhat, v, p = list(r), [Fraction(0)] * len(r), [Fraction(0)] * len(r)
-    rho = alpha = omega = Fraction(1)
-    found = []
-    for step in range(1, steps + 1):
-        rho_new = dot(rhat, r)
-        beta = (rho_new / rho) * (alpha / omega)
-        p = [ri + beta * (pi - omega * vi) for ri, pi, vi in zip(r, p, v)]
-        v = times(p)
-        alpha = rho_new / dot(rhat, v)
-        s = [ri - alpha * vi for ri, vi in zip(r, v)]
-        found.append((step, size(s) / bnorm))
-        if not any(s):
-            break
-        t = times(s)
-        omega = dot(t, s) / dot(t, t)
-        r = [si - omega * ti for si, ti in zip(s, t)]
-        rho = rho_new
-        found.append((step, size(r) / bnorm))
-        if not any(r):
-            break
-    return found
-
-
-def test_the_reference_residuals_are_the_ones_worked_out_by_hand_for_the_three_by_three_system():
-    # A3 x = b with x = (1, -2, 3): b = (2, -4, 17), |b| = sqrt(309) = 17.58. The half step of the first iteration leaves |s| / |b| = 0.280, the
-    # whole step 0.0660, the second half step 0.0682, the second whole step 0.0340, and the third half step solves the system (3 unknowns)
-    b = A3 @ X3
-    assert b.tolist() == [2.0, -4.0, 17.0]
-    found = reference_residuals(A3, b)
-
-    assert [step for step, _ in found] == [1, 1, 2, 2, 3]
-    assert [round(value, 3) for _, value in found[:4]] == [0.280, 0.066, 0.068, 0.034] and found[4][1] == 0.0
-
-
-def test_bicgstab_stops_at_the_first_half_or_whole_step_whose_residual_is_below_the_tolerance_times_the_size_of_the_right_hand_side():
-    # the stopping steps and the residuals they leave are those of the reference above (not read off the module); a tolerance just above
-    # and just below each of them is tried, and 0.3, which only the first half step (x + alpha p) meets before the whole step is made
-    # scaling b by a million changes nothing
-    reference = reference_residuals(A3, A3 @ X3)
-    tolerances = [0.3] + [factor * value for _, value in reference if value > 1e-12 for factor in (0.99, 1.01)]  # (not 0: a float residual is never 0)
-    seen_steps = set()
-    for scale in (1.0, 1e6):
-        b = (A3 @ X3) * scale
-        for tol in tolerances:
-            expected_steps, expected_residual = next((step, value) for step, value in reference if value <= tol)
-            x, relative, taken = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), tol, 100)
-
-            assert taken == expected_steps, (scale, tol)
-            assert relative == pytest.approx(expected_residual, rel=1e-6, abs=1e-14), (scale, tol)
-            assert relative <= tol and relative == pytest.approx(residual_of(A3, b, x), rel=1e-6, abs=1e-14)
-            seen_steps.add(taken)
-    assert seen_steps == {1, 2, 3}  # the tolerances reach every number of steps: the test is not one-sided
-
-
-def test_bicgstab_started_at_the_answer_takes_no_step():
-    b = A3 @ X3
-
-    x, relative, steps = ps._bicgstab(lambda v: A3 @ v, b, X3.copy(), 1e-13, 100)
-
-    assert steps == 0 and relative <= 1e-15 and (x == X3).all()
-
-
-def test_bicgstab_of_a_one_by_one_system_ends_in_the_half_step():
-    x, relative, steps = ps._bicgstab(lambda v: 2.0 * v, np.array([2.0]), np.zeros(1), 1e-13, 100)
-
-    assert x.tolist() == [1.0] and relative == 0.0 and steps == 1
-
-
-def test_bicgstab_stops_at_the_step_limit():
-    b = A3 @ X3
-
-    assert ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 1e-30, 2)[2] == 2
-
-
 def random_policy_graph(seed):
     """A graph of 4 to 8 states, one action each (cost 0.5 to 3, two to four outcomes of weights 1 to 3), the last state the goal: the policy takes every action."""
     import random
@@ -395,34 +279,39 @@ def random_policy_graph(seed):
     return build(*states), np.append(np.arange(size), -1)
 
 
-# random policies on which the recurrence of BiCGSTAB claimed a residual of 1e-13 and the values it returned were wrong (found by trying 400 seeds, #584)
+# random policies on which the recurrence of BiCGSTAB claimed a residual of 1e-13 and the values it returned were wrong (found by trying 400 seeds, #584).
+# Every one of them is improper: its states never reach the goal, so I - P is singular and there are no values to return; the LU inverse of the old
+# exact solve returned huge finite numbers with a tiny backward error, the inverse without a subtraction finds the closed class (#841).
 DRIFTING_SEEDS = [86, 184, 308, 326, 337, 366, 395]
 
 
 @pytest.mark.parametrize("seed", DRIFTING_SEEDS)
-def test_the_recurrence_residual_of_bicgstab_is_tiny_and_the_true_residual_is_not_on_a_system_where_it_drifts(seed):
+def test_a_random_policy_that_never_reaches_the_goal_is_refused_as_improper_not_given_values(seed):
     graph, policy = random_policy_graph(seed)
     work = Work(graph)
     leave = work.nonself_sums(np.ones(work.n))
-    seen = []
+    with pytest.raises(ConvergenceError, match="improper"):
+        evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, {})  # dense_limit 0: every policy by BiCGSTAB (the run now stops at its first
+        # stagnation, before its recurrence drifts to the claim of 1e-13 it made in 4,000 iterations)
+    with pytest.raises(ConvergenceError, match="improper"):
+        evaluate_policy(work, leave, policy, np.zeros(work.n), 100, 1e-13, {})  # and dense
+    assert not ps.reaches_goal(work, policy)[policy >= 0].all()  # (the policy is improper indeed)
+
+
+@pytest.mark.parametrize("seed", range(1, 41))
+def test_a_proper_random_policy_by_bicgstab_is_taken_only_when_good_on_the_true_measures(seed):
+    graph, policy = random_policy_graph(seed)
+    work = Work(graph)
+    if not ps.reaches_goal(work, policy)[policy >= 0].all():
+        return
+    leave = work.nonself_sums(np.ones(work.n))
     info = {}
-    real_run = ps._bicgstab_run
+    values = evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, info)
+    dense = evaluate_policy(work, leave, policy, np.zeros(work.n), 100, 1e-13, {})
 
-    def spy(*arguments):
-        found = real_run(*arguments)
-        seen.append(found)
-        return found
-
-    ps._bicgstab_run, kept = spy, ps._bicgstab_run
-    try:
-        values = evaluate_policy(work, leave, policy, np.zeros(work.n), 0, 1e-13, info)  # dense_limit 0: every policy by BiCGSTAB
-    finally:
-        ps._bicgstab_run = kept
-    assert np.all(np.isfinite(values))
-    claimed = [claim for *_, claim in seen]
-    assert min(claimed) < 1e-10  # a run that the recurrence said had converged
-    assert info["linear_residual"] <= 1e-10 or info["linear_backward_error"] <= 1e-10  # what was taken is good on one of the true measures, whatever the recurrence said
-    assert ("linear_cycles" in info) == (info.get("linear_residual_iterate", 0.0) > 1e-10)  # an iterate that was not good was replaced by the exact solve
+    assert np.all(np.isfinite(values)) and values == pytest.approx(dense, rel=1e-9)
+    assert info["linear_forward"] <= lin.ACCEPT_ERROR and info["linear_backward_error"] <= 1e-10
+    assert ("linear_cycles" in info) == (info.get("linear_forward_iterate", 0.0) > lin.ACCEPT_ERROR)  # an iterate that was not good was replaced by the exact solve
 
 
 def tangled(*_arguments, **_keywords):
@@ -432,40 +321,12 @@ def tangled(*_arguments, **_keywords):
 def test_a_policy_whose_true_residual_stays_large_is_never_returned_when_the_exact_solve_cannot_be_made(monkeypatch):
     work, leave = prepared(LINE)
     monkeypatch.setattr(ps, "policy_solver", tangled)  # the cycles do not fit in the memory of the run
-    monkeypatch.setattr(ps, "_bicgstab", lambda matvec, b, x0, tol, limit: (x0 + 1e6, 0.5, 1))  # an iterate whose TRUE residual is 0.5
+    monkeypatch.setattr(lin, "bicgstab", lambda matvec, b, x0, tol, max_iter=None: (x0 + 1e6, 0.5, 1, False))  # an iterate far from the answer
 
-    with pytest.raises(ConvergenceError, match="true residual") as refused:
+    with pytest.raises(ConvergenceError, match="backward error") as refused:
         evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 0, 1e-13, {})
 
     assert "needs 123 cells" in str(refused.value)  # what it would have cost, from the method, not a count of states
-
-
-SKEW = np.array([[0.0, 1.0], [-1.0, 0.0]])  # v . A v = 0 for every v: the first step divides by zero, the method can make no progress
-
-
-def test_bicgstab_that_cannot_progress_stops_after_the_stagnation_limit_and_returns_the_start(monkeypatch):
-    monkeypatch.setattr(ps, "STAGNATION", 7)
-    b = np.array([1.0, 2.0])
-
-    x, relative, steps = ps._bicgstab(lambda v: SKEW @ v, b, np.zeros(2), 1e-13, 1000)
-
-    assert steps == 7 and relative == 1.0 and x.tolist() == [0.0, 0.0]
-
-
-def test_bicgstab_that_cannot_progress_is_cut_by_the_step_limit_when_that_is_sooner(monkeypatch):
-    monkeypatch.setattr(ps, "STAGNATION", 50)
-
-    assert ps._bicgstab(lambda v: SKEW @ v, np.array([1.0, 2.0]), np.zeros(2), 1e-13, 4)[2] == 4
-
-
-def test_bicgstab_halving_the_residual_resets_the_stagnation_count(monkeypatch):
-    # the residual falls by far more than half in each of the three steps, so a limit of 2 steps without halving is never reached
-    monkeypatch.setattr(ps, "STAGNATION", 2)
-    b = A3 @ X3
-
-    x, relative, steps = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 1e-13, 100)
-
-    assert x == pytest.approx(X3, abs=1e-12) and steps <= 3
 
 
 # --- evaluate_policy -----------------------------------------------------------------------------------------------------
@@ -495,55 +356,55 @@ def test_above_the_dense_limit_bicgstab_alone_solves_a_small_system_without_the_
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
     assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-10)
-    assert "linear_cycles" not in info  # the residual was below the fallback's 1e-10
-    assert 1 <= info["linear_iterations"] <= 10 and info["linear_residual"] < 1e-12  # a few steps; a broken recurrence runs to the stagnation limit of 400
+    assert "linear_cycles" not in info  # its forward estimate was small
+    assert 1 <= info["linear_iterations"] <= 10 and info["linear_residual"] < 1e-12  # a few steps
 
 
 def test_the_exact_solve_by_the_cycles_takes_over_when_bicgstab_cannot_reach_its_residual(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
-    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)  # one step: not enough, whatever the restarts
+    monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)  # one step: not enough
 
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
     assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
     assert info["linear_cycles"] == 1 and "linear_dense" not in info
-    assert info["linear_iterations"] == 1 + ps.BICGSTAB_RESTARTS  # the first run and each restart stopped at its one step
+    assert info["linear_iterations"] == 1  # no restart: the exact solve was made at once (#671)
 
 
 def test_after_the_exact_solve_replaces_an_iterate_the_residual_reported_is_that_of_the_values_taken(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
-    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)  # one step: far from the answer
+    monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)  # one step: far from the answer
 
     evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert info["linear_cycles"] == 1 and info["linear_residual_iterate"] > ps.DENSE_FALLBACK_RESIDUAL  # the iterate thrown away
+    assert info["linear_cycles"] == 1 and info["linear_residual_iterate"] > 1e-10 and info["linear_forward_iterate"] > lin.ACCEPT_ERROR  # the iterate thrown away
     assert info["linear_residual"] <= 1e-14 and info["linear_backward_error"] <= 1e-14  # the exact values taken: not the iterate's residual
 
 
 def test_a_policy_whose_exact_solve_does_not_fit_and_whose_true_residual_is_large_is_refused_not_returned(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
-    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
+    monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
     monkeypatch.setattr(ps, "policy_solver", tangled)
 
-    with pytest.raises(ConvergenceError, match="true residual"):
+    with pytest.raises(ConvergenceError, match="backward error"):
         evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert "linear_cycles" not in info and info["linear_residual"] > ps.ACCEPT_BOUND  # a garbage iterate is never handed to the policy improvement (#584)
+    assert "linear_cycles" not in info and info["linear_backward_error"] > ps.ACCEPT_BOUND  # a garbage iterate is never handed to the policy improvement (#584)
 
 
 def test_a_policy_whose_exact_solve_does_not_fit_keeps_an_iterate_whose_true_residual_is_small_and_says_why(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
-    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
+    monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
     monkeypatch.setattr(ps, "policy_solver", tangled)
-    monkeypatch.setattr(ps, "ACCEPT_BOUND", 10.0)  # the residual after one step is below this
+    monkeypatch.setattr(ps, "ACCEPT_BOUND", 10.0)  # the backward error after one step is below this
 
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
-    assert "linear_cycles" not in info and info["linear_residual"] > ps.DENSE_FALLBACK_RESIDUAL  # the residual the caller sees is the true one
+    assert "linear_cycles" not in info and info["linear_residual"] > 1e-10  # the residual the caller sees is the true one
     assert info["linear_limit"]["states"] == 5 and "needs 123 cells" in info["linear_limit"]["why"]  # what remained, from the cost of the method
     assert np.all(np.isfinite(values))
 
@@ -551,23 +412,21 @@ def test_a_policy_whose_exact_solve_does_not_fit_keeps_an_iterate_whose_true_res
 def test_no_count_of_states_decides_whether_a_stiff_evaluation_is_solved_or_refused(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
-    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
-    monkeypatch.setattr(ps, "DENSE_FALLBACK", 0)  # the old count (6,000), here zero: it is not read
+    monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)  # (the old count of states that allowed a dense solve, 6,000, is gone)
 
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
 
     assert info["linear_cycles"] == 1 and values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
 
 
-def test_the_exact_solve_is_used_when_the_residual_is_just_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
+def test_the_exact_solve_is_used_when_the_forward_estimate_is_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
     work, leave = prepared(LINE)
     policy = np.array([0, 1, 2, 3, 4, -1])
-    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
-    seen = {}
+    monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
     info = {}
     evaluate_policy(work, leave, policy, np.zeros(6), 4, 1e-13, info)
-    assert info["linear_cycles"] == 1  # one step leaves a residual far above 1e-10
-    monkeypatch.setattr(ps, "DENSE_FALLBACK_RESIDUAL", 10.0)  # a residual below this is good enough
+    assert info["linear_cycles"] == 1  # one step leaves an answer far from the values
+    monkeypatch.setattr(lin, "ACCEPT_ERROR", 10.0)  # an error estimate below this is good enough
     info = {}
     evaluate_policy(work, leave, policy, np.zeros(6), 4, 1e-13, info)
     assert "linear_cycles" not in info
@@ -580,7 +439,7 @@ def test_no_restart_is_made_when_the_first_run_reached_its_residual(monkeypatch)
     evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
     first = info["linear_iterations"]
     info2 = {}
-    monkeypatch.setattr(ps, "BICGSTAB_RESTARTS", 0)
+    monkeypatch.setattr(lin, "BICGSTAB_RESTARTS", 0)
     evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info2)
 
     assert info2["linear_iterations"] == first  # nothing was left to restart
@@ -628,19 +487,25 @@ def test_a_stiff_system_is_solved_to_the_exact_values():
         assert abs(Fraction(float(values[i])) - exact) <= Fraction(1, 10**13) * exact, i
 
 
-def test_the_dense_solve_is_refined_twice_and_each_correction_is_added_with_its_sign(monkeypatch):
-    monkeypatch.setattr(ps, "DENSE_FALLBACK_RESIDUAL", 1e-6)  # (a backward error of 1e-9 is good enough here: the exact solve by the cycles is not to take over)
+def test_the_dense_solve_is_refined_while_the_error_falls_and_each_correction_is_added_with_its_sign(monkeypatch):
     # A solver that returns (1 + d) times the true solution, d = 1e-3, whatever the BLAS: one solve leaves the error d, a correction
-    # solved by the same (1 + d) solver makes it d^2 = 1e-6 and a second one d^3 = 1e-9. The values (10, 8, 6, 4, 2 of LINE) must be
-    # within 1e-8 of the exact ones: no refinement (1e-3), one (1e-6) or a correction of the wrong sign (2e-3, 2e-6 ...) fail
+    # solved by the same (1 + d) solver makes it d^2 = 1e-6, a second one d^3 = 1e-9, and so on while the backward error falls (at most
+    # `REFINEMENTS` = 4 corrections: d^5 = 1e-15). No refinement (1e-3), one (1e-6) or a correction of the wrong sign (2e-3, 2e-6 ...) fail
     work, leave = prepared(LINE)
     real, delta = np.linalg.solve, 1e-3
-    monkeypatch.setattr(np.linalg, "solve", lambda a, b: (1.0 + delta) * real(a, b))
+    calls = []
 
-    values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 100, 1e-13, {})
+    def biased(a, b):
+        calls.append(1)
+        return (1.0 + delta) * real(a, b)
 
-    assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-8, abs=1e-12)
-    assert abs(values[0] - 10.0) > 1e-10  # (and the stub did act: the refinement is not exact either, d^3 is left)
+    monkeypatch.setattr(np.linalg, "solve", biased)
+    info = {}
+
+    values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 100, 1e-13, info)
+
+    assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13, abs=1e-12)
+    assert info["linear_dense"] == 1 and "linear_cycles" not in info and len(calls) >= 1 + lin.REFINEMENTS
 
 
 # --- solve_graph and solve_packed ---------------------------------------------------------------------------------------
@@ -848,61 +713,52 @@ LINE_POLICY = np.array([0, 1, 2, 3, 4, -1])
 LINE_VALUES = np.array([10.0, 8.0, 6.0, 4.0, 2.0])
 
 
-def stub_bicgstab(monkeypatch, residual):
-    """`_bicgstab` that returns the values of LINE (a fresh array each time), the residual given and one iteration; the calls are noted."""
+def stub_bicgstab(monkeypatch, scale):
+    """`lin.bicgstab` that returns the values of LINE times `scale` (a fresh array each time), stagnated after one iteration; the calls are noted."""
     calls = []
+    real = lin.bicgstab
 
-    def fake(matvec, rhs, start, tol, limit):
-        calls.append((start.copy(), tol, limit))
-        return LINE_VALUES.copy() * (1.0 + len(calls)), residual, 1  # (a different array each call, so that a restart is seen to start from the last)
+    def fake(matvec, rhs, start, tol, max_iter=None):
+        if tol != 1e-13:  # (the iteration that measures the amplification is left as it is)
+            return real(matvec, rhs, start, tol, max_iter)
+        calls.append(start.copy())
+        x = LINE_VALUES * scale
+        return x, float(np.linalg.norm(rhs - matvec(x)) / np.linalg.norm(rhs)), 1, True
 
-    monkeypatch.setattr(ps, "_bicgstab", fake)
+    monkeypatch.setattr(lin, "bicgstab", fake)
     return calls
 
 
-@pytest.mark.parametrize(
-    "residual,runs",
-    [
-        (9.5e-13, 1),  # below 10 tol: reached, no restart
-        (10 * 1e-13, 1),  # exactly 10 tol (the same expression as in the module): reached
-        (10.5e-13, 1 + ps.BICGSTAB_RESTARTS),  # a little above: not reached, every restart is made
-        (1e-10, 1 + ps.BICGSTAB_RESTARTS),
-        (0.5, 1 + ps.BICGSTAB_RESTARTS),
-    ],
-)
-def test_a_run_that_leaves_a_residual_up_to_ten_times_the_tolerance_is_not_started_again(monkeypatch, residual, runs):
+@pytest.mark.parametrize("scale,exact", [(1.0, False), (1.0 + 1e-9, False), (1.0 + 1e-5, True), (2.0, True)])
+def test_the_exact_solve_is_made_for_an_iterate_whose_error_estimate_is_above_its_threshold_and_not_otherwise(monkeypatch, scale, exact):
+    # the iterate is the values of LINE off by a known relative amount: up to 1e-6 (`ACCEPT_ERROR`) it is taken, above it the cycles are solved
     work, leave = prepared(LINE)
-    calls = stub_bicgstab(monkeypatch, residual)
-    info = {}
-
-    evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
-
-    assert len(calls) == runs
-    assert info["linear_iterations"] == runs  # one iteration for each run, summed
-    assert all(tol == 1e-13 and limit == ps.BICGSTAB_ITERATIONS for _, tol, limit in calls)
-    assert calls[0][0].tolist() == [0.0] * 5  # the first run starts from the values given
-    for before, (start, _, _) in zip(range(1, len(calls)), calls[1:]):  # each restart starts from the iterate of the run before it
-        assert start.tolist() == (LINE_VALUES * (1.0 + before)).tolist()
-
-
-@pytest.mark.parametrize(
-    "residual,dense",
-    [(0.5 * ps.DENSE_FALLBACK_RESIDUAL, False), (ps.DENSE_FALLBACK_RESIDUAL, False), (ps.DENSE_FALLBACK_RESIDUAL * (1 + 1e-9), True), (1e-3, True)],
-)
-def test_the_exact_solve_is_made_for_a_residual_above_its_threshold_and_not_at_it(monkeypatch, residual, dense):
-    work, leave = prepared(LINE)
-    stub_bicgstab(monkeypatch, residual)
+    calls = stub_bicgstab(monkeypatch, scale)
     info = {}
 
     values = evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
 
-    assert ("linear_cycles" in info) is dense
-    assert (info["linear_residual"] <= 1e-14) if dense else (info["linear_residual"] == residual)  # the residual of the values taken
-    if dense:
-        assert info["linear_residual_iterate"] == residual
-        assert values.tolist() == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)  # the dense solve replaced the stub's values
+    assert ("linear_cycles" in info) is exact and len(calls) == 1  # one run, no restart: a stagnation with the exact solve at hand goes to it
+    assert calls[0].tolist() == [0.0] * 5  # the run starts from the values given
+    if exact:
+        assert info["linear_forward_iterate"] >= abs(scale - 1.0)  # the estimate holds the iterate's real error
+        assert values.tolist() == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)  # the exact solve replaced the stub's values
     else:
-        assert values[:5].tolist() == (LINE_VALUES * (1.0 + 1 + ps.BICGSTAB_RESTARTS)).tolist()  # the stub's last iterate, kept
+        assert info["linear_forward"] >= abs(scale - 1.0) and values[:5].tolist() == (LINE_VALUES * scale).tolist()  # the stub's iterate, kept
+
+
+def test_a_stagnated_iterate_is_run_again_from_its_best_only_when_the_exact_solve_cannot_be_made(monkeypatch):
+    work, leave = prepared(LINE)
+    calls = stub_bicgstab(monkeypatch, 2.0)
+    monkeypatch.setattr(ps, "policy_solver", tangled)
+    monkeypatch.setattr(ps, "ACCEPT_BOUND", 10.0)
+    info = {}
+
+    evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
+
+    assert len(calls) == 1 + lin.BICGSTAB_RESTARTS and info["linear_iterations"] == 1 + lin.BICGSTAB_RESTARTS  # the first run, then each restart
+    assert all(start.tolist() == (LINE_VALUES * 2.0).tolist() for start in calls[1:])  # each restart starts from the iterate before it
+    assert "needs 123 cells" in info["linear_limit"]["why"]
 
 
 def stub_certify(monkeypatch, quotient_bound, whole_bound):
