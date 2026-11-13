@@ -39,20 +39,16 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from ._certify import ConvergenceError
+from ._certify import ACCEPT_BOUND, AHEAD_FIRST, AHEAD_LIMIT, AHEAD_WEIGHT, ConvergenceError, lowered, widen  # noqa: F401  (ACCEPT_BOUND, AHEAD_*: read here, by tests, and shared with the object solver, #842)
 from ._packed import PackedGraph, expand_ranges, kernel_any, kernel_min, kernel_sums
 from ._packed_chain import ChainSolver, CyclesTooTangled
 from ._packed_merge import exact_classes, identity_classes, quotient
 
 EPS = sys.float_info.epsilon
 INF = math.inf
-ACCEPT_BOUND = 1e-6  # a certified relative bound above this raises `ConvergenceError` (the rounding of long sums gives 5e-8 on R04, 7e-8 on S02)
 DENSE_LIMIT = 1500  # policies of at most this many states are evaluated by a dense solve, larger ones by BiCGSTAB
 CHUNK_EDGES = 4_000_000
 HEAVY_SELF = 0.5  # an action whose kernel puts more than this chance on its own state is summed edge by edge: taking the own term off a shared sum would lose digits
-AHEAD_FIRST = 2  # the first window of the cost ahead that `certify` also measures a state's error against (#769): a free step and the paid one after it; it doubles while the bound is above the one wanted (`certify`). It decides no answer, only how tight the bound is
-AHEAD_LIMIT = 64  # the longest window of the cost ahead: a stop-and-say-so rail (OR-12) on its cost, one sweep of the graph a step; the refusal names it
-AHEAD_WEIGHT = 0.5  # w of `certify`'s cost ahead: a paid state keeps at least 1 - w of its own cost as its margin, a free state gets w / L of the paid steps in its window
 SHARE_MIN = 64  # a kernel with fewer edges than this is summed edge by edge for the action too (nothing to save), as the own term of its shared sum would be a rounding
 
 
@@ -294,11 +290,6 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
     e, d = e0 + delta[targets], d0 + delta[targets]
     g, k = g_all[targets], graph.act_cost[greedy][targets]
 
-    def lowered(sum_: np.ndarray, h: np.ndarray) -> np.ndarray:
-        """`sum_ - h` less the rounding of the sum (`grow` of it) and of the subtraction: at most the exact difference."""
-        s, h, r = sum_[targets], h[targets], grow[targets]
-        return s - r * s - h - 2.0 * EPS * (s + h)
-
     policy = np.full(n, -1, dtype=np.int64)
     policy[targets] = greedy[targets]
 
@@ -314,33 +305,29 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
         own_upper = INF if np.any(e >= k) else float(np.max(k / (k - e)))
     own_lower = own_lower if own_lower == own_lower else 0.0  # (0 / 0 at a state of cost 0 and residual 0: no measure, V* >= 0 is all it says)
     own_upper = own_upper if own_upper == own_upper else INF
-    best = (own_lower, own_upper, g, 0)
-    last, last_stuck = max(1.0 - own_lower, own_upper - 1.0), int(np.sum(~np.isfinite(own_share)))
-    window, step, total, steps = AHEAD_FIRST, np.where(targets, g_all, 0.0), np.where(targets, g_all, 0.0), 1
-    longest = min(AHEAD_LIMIT, int(targets.sum()))  # a window as long as the states are many cannot meet a paid step it has not met
-    while not max(1.0 - best[0], best[1] - 1.0) <= wanted and window // 2 < longest:  # (the last window tried is the first at least `longest`)
-        # The cost ahead is measured only when each state's own cost does not carry the bound wanted, so a plan that certifies on it keeps its
-        # numbers. The window doubles while the bound is above `wanted` and the doubling does not make it clearly worse: a run of free steps with
-        # epsilon costs gives the same margin to every window until the window reaches the paid step after it, and then a far larger one.
+    step, total, steps = np.where(targets, g_all, 0.0), np.where(targets, g_all, 0.0), 1
+
+    def ahead(window: int) -> np.ndarray:
+        """`h` of the window: `w / L` times the cheapest costs of the next 1..L steps, the steps already taken kept."""
+        nonlocal step, total, steps
         while steps < window:
             step = np.where(targets, backup(step)[1], 0.0)
             total += step
             steps += 1
-        h = total * (AHEAD_WEIGHT / window)
+        return total * (AHEAD_WEIGHT / window)
+
+    def measure(h: np.ndarray) -> tuple[float, float, int, np.ndarray]:
         qh, th = backup(h)
-        gamma, kappa = lowered(th, h), lowered(qh[greedy], h)
+        r, ht = grow[targets], h[targets]
+        gamma, kappa = lowered(th[targets], ht, r), lowered(qh[greedy][targets], ht, r)
         lower, upper, share = _sides(d, e, gamma, kappa, escapes)
-        if lower > best[0] or upper < best[1]:
-            best = (max(lower, best[0]), min(upper, best[1]), np.maximum(gamma, 0.0), window)
-        now, stuck = max(1.0 - lower, upper - 1.0), int(np.sum(~np.isfinite(share)))
-        if window > AHEAD_FIRST and not (now <= 2.0 * last if math.isfinite(now) else stuck < last_stuck):
-            break  # worse than twice the last window's bound, or no bound and no fewer states without a margin (a free cycle: no window helps)
-        last, last_stuck = now, stuck
-        window *= 2
+        return lower, upper, int(np.sum(~np.isfinite(share))), gamma
+
+    best = widen(ahead, measure, (own_lower, own_upper, g, 0), wanted, min(AHEAD_LIMIT, int(targets.sum())))
     lower, upper, margin, used = best
     bound = max(1.0 - lower, upper - 1.0)
     own_bound = max(1.0 - own_lower, own_upper - 1.0)
-    residual = float(np.max(_shares(np.maximum(e0, d0), np.maximum(margin, g))))
+    residual = float(np.max(_shares(np.maximum(e0, d0), np.maximum(margin, g))))  # (max(gamma, g) = max(max(gamma, 0), g): g >= 0)
     setter = int(np.argmax(own_share))
     return Certificate(bound, lower, upper, residual, bool(np.all(np.maximum(e0, d0) <= delta[targets])), own_bound, float(g[setter]), used)
 
