@@ -5,8 +5,8 @@ prices the actions a run may use (`_offers`), leaves out the ones a state cannot
 (`_decide`) and searches (`_envelope`, `_envelope_plan` with its bound `_pattern_bound` and `_offer_floor`; the older walks `_packed`,
 `_bound_prune`, `_approx`), adds the socket finish (`_finish`), Hinekora's Lock (`_foresight`) and second items (`_donors`), measures the risk
 (`_plan`), and says what the answer leaves out (`_limits`). It loads no file, reads no date and prints nothing: `cli` parses the
-arguments, loads the inputs, calls the entry and presents the `Plan` (the report, the route page, the benchmark command). It times its own stages (the run's budget, `crafting_system.budget`) and takes the number of worker processes from `crafting_system.parallel`;
-nothing else of the machine reaches a plan.
+arguments, loads the inputs, calls the entry and presents the `Plan` (the report, the route page, the benchmark command). It times its own stages (the run's budget, `crafting_system.budget`) and takes the number of worker processes from `crafting_system.parallel`,
+and the envelope search reads the memory the process holds against the run's memory limit (`_envelope.resident_mb`): a stop there is said in the answer.
 
 The other names here are what a presenter of a plan reads: the records a `Plan` is made of (its offers, its start options, its limits and
 their words, the words of a rule axis), and the pieces `cli` still needs to evaluate a given route on a plan's graph (`offer_action`,
