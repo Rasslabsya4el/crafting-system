@@ -20,8 +20,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry plans them | 15 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
-| Settings and flags the planner accepts | 33 |
-| - read by some code | 32 |
+| Settings and flags the planner accepts | 34 |
+| - read by some code | 33 |
 | - never read | 1 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
@@ -154,6 +154,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 4 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
+| `--gap` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
 | `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |

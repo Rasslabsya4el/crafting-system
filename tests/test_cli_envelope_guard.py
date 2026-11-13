@@ -60,7 +60,9 @@ def test_a_state_whose_bound_is_above_all_its_actions_is_refused_where_it_is_exp
 
 
 def test_a_convergence_error_on_a_graph_whose_tips_are_not_consistent_is_a_bound_error(monkeypatch):
-    """The root is consistent, so nothing is refused when it is expanded; the tips it reaches are raised, and the solve of their graph fails: the tips are looked at."""
+    """The root is consistent, so nothing is refused when it is expanded; the tips it reaches are raised, and the solve of their graph fails: the tips are looked at.
+
+    The first plan is a given route that names no action (#826), so that the tips stay tips: the least-`la` chain would expand them and refuse the bound there."""
     graph, value, _ = problem(5)
 
     class RaisedTips(ExplicitProblem):
@@ -70,25 +72,29 @@ def test_a_convergence_error_on_a_graph_whose_tips_are_not_consistent_is_a_bound
     real = _envelope.solve_graph
     calls = []
 
-    def fail_on_the_second(graph, **kwargs):
+    def fail_on_the_third(graph, **kwargs):  # the first solve is the first plan's upper graph, the second the first round's lower graph
         calls.append(graph.n)
-        if len(calls) == 2:
+        if len(calls) == 3:
             raise ConvergenceError("the policy is improper: its linear system is singular", float("inf"))
         return real(graph, **kwargs)
 
-    monkeypatch.setattr(_envelope, "solve_graph", fail_on_the_second)
+    monkeypatch.setattr(_envelope, "solve_graph", fail_on_the_third)
     with pytest.raises(BoundError, match="not consistent") as refused:
-        Search(RaisedTips(graph, value, 1.0)).run()
-    assert isinstance(refused.value.__context__, ConvergenceError) and len(calls) == 2  # the failure it was raised from is kept
+        Search(RaisedTips(graph, value, 1.0), incumbent=lambda state: []).run()
+    assert isinstance(refused.value.__context__, ConvergenceError) and len(calls) == 3  # the failure it was raised from is kept
 
 
 def test_a_bound_that_falls_is_refused_at_the_round_it_falls():
     """A bound that is consistent state by state but above the exact cost (each state's bound and its offers' scaled together, as a wrong declared block
-    invariance would do) breaks only when the exact action replaces the fake one: the root's bound then falls."""
+    invariance would do) breaks only when the exact action replaces the fake one: the root's bound then falls.
+
+    Since #826 the first plan replaces the fake actions along its chain before the first round, so the fall shows at the first round, against the
+    start's own bound (which this fault raises too: with the start's bound left exact, the first plan is the optimal one and the search ends on the
+    right answer with nothing to refuse)."""
 
     class Scaled(ExplicitProblem):
         def _scale(self, state):
-            return 1.0 + 0.8 * ((state * 31) % 7) / 7.0
+            return 1.0 + 0.8 * ((state * 31 + 3) % 7) / 7.0
 
         def lower(self, state):
             return super().lower(state) * self._scale(state)
@@ -105,6 +111,32 @@ def test_a_bound_that_falls_is_refused_at_the_round_it_falls():
         except BoundError as error:
             assert "fell" in str(error) and "consistent bound never does" in str(error)
             assert search.stats.largest_fall > FALL_LIMIT
+            refused += 1
+    assert refused >= 3, refused
+
+
+def test_a_bound_that_falls_in_a_later_round_is_refused_at_that_round():
+    """The same fault with the start's bound left exact, and a first plan that names no action, so that the rounds replace the fake actions one layer at
+    a time as they did before #826: the root's bound falls rounds after the first, against the last round's value, and the search refuses there."""
+
+    class Scaled(ExplicitProblem):
+        def _scale(self, state):
+            return 1.0 + 0.8 * ((state * 31) % 7) / 7.0
+
+        def lower(self, state):
+            return super().lower(state) * self._scale(state)
+
+        def candidates(self, state):
+            return [(la * self._scale(state), offer) for la, offer in super().candidates(state)]
+
+    refused = 0
+    for seed in SEEDS:
+        graph, value, _ = problem(seed)
+        search = Search(Scaled(graph, value, 1.0), incumbent=lambda state: [])
+        try:
+            search.run()
+        except BoundError as error:
+            assert "fell" in str(error) and search.stats.largest_fall > FALL_LIMIT and search.stats.rounds >= 2
             refused += 1
     assert refused >= 3, refused
 
@@ -128,16 +160,16 @@ def test_an_improper_policy_of_a_sound_bound_stays_a_convergence_error(monkeypat
     calls = []
     real = _envelope.solve_graph
 
-    def fail_on_the_third(graph, **kwargs):
+    def fail_on_the_second(graph, **kwargs):  # the first solve is the first plan's upper graph (a failure there is not fatal, #826), the second the first round's lower graph
         calls.append(graph.n)
-        if len(calls) == 3:
+        if len(calls) == 2:
             raise ConvergenceError("the policy is improper: its linear system is singular", float("inf"))
         return real(graph, **kwargs)
 
-    monkeypatch.setattr(_envelope, "solve_graph", fail_on_the_third)
+    monkeypatch.setattr(_envelope, "solve_graph", fail_on_the_second)
     with pytest.raises(ConvergenceError, match="improper") as caught:
         Search(sound).run()
-    assert not isinstance(caught.value, BoundError) and len(calls) == 3
+    assert not isinstance(caught.value, BoundError) and len(calls) == 2
 
 
 def free_cycle(graph) -> bool:
