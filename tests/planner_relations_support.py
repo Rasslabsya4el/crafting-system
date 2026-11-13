@@ -9,9 +9,11 @@ on the planner as it is, and some on a planner broken on purpose.
 prices scaled per currency by a seeded factor. The committed family itself (`tests/fixtures/family_bench/cases-seed824.json`) takes from under a
 second to 9 minutes a plan on a runner, and a relation needs up to ten plans of one case, so the cases here are the generator's own draw at one or
 two wanted mods (`SIZES`) over the method sets that plan in about a second or less (`METHODS`): the orbs of a Magic item, the same with
-the Regal Orb, essences, the Chaos Orb. A case is named by its method set, size and seed (`case`). Nothing here records a number (OR-12).
+the Regal Orb, essences, the Chaos Orb. A case is named by its method set, size and seed (`case`). Nothing here records a number of a route, and no value here is chosen for one case.
 
-**The tolerance** of every comparison is the one value `GAP`.
+**The tolerance** of every comparison of two costs is the one value `GAP`, and a plan that says it stopped at a proved gap (OR-32) is
+compared at the figure it proved (`Cost.proved`), so no comparison is loosened for the plans that are exact. The simulator's own test is
+`cli._verify.SIGMAS` standard errors of its mean.
 """
 
 from __future__ import annotations
@@ -35,16 +37,17 @@ from crafting_system.planner import RESTART, Plan, PlanError, PlanSettings, eval
 from crafting_system.prices.price_file import PriceFile
 from crafting_system.targets import parse_target
 
-# The room every comparison gives, as a share of the larger side: "a <= b" is read `a <= b * (1 + GAP)`. Today every plan here is exact,
-# so it is the solver's certified tolerance with room to spare. A plan that stops at a proved gap (OR-32,
-# ticket #826: at most 1% above the cheapest when the whole plan does not fit in about a minute) is that much above the cheapest and no
-# more, so a relation between two such plans holds within that gap: if a case here ever stops that way, this is the value to raise.
+# The room every comparison gives, as a share of the larger side: "a <= b" is read `a <= b * (1 + GAP)`. It is the solver's certified
+# tolerance with room to spare. The proved gap of a plan that stopped before it was exact (OR-32, ticket #826) is not in it: such a
+# plan says what it proved, and `Cost.proved` reads that.
 GAP = 1e-6
+PROVED_GAP_LIMIT = 0.01  # OR-32: a plan is exact, or proved at most 1% above the cheapest
 
 PRICE_STEP = 3.0  # an ingredient's price is raised and lowered by this factor
 SCALES = (0.25, 3.0)  # every price is scaled by each of these factors
-CLICKS = 50_000  # the simulator plays a plan about this many clicks in all (a few seconds), in no fewer than `PLAYS[0]` and no more than `PLAYS[1]` plays
-PLAYS = (50, 1000)  # its own test of agreement is `cli._verify.SIGMAS` standard errors of the simulated mean
+CLICKS = 25_000  # the simulator plays a plan until about this many clicks are made (a few seconds), in no fewer than `PLAYS[0]` and no more than `PLAYS[1]` plays
+PLAYS = (50, 500)
+PILOT = 20  # plays that measure how many clicks one play takes
 GUIDES = 3  # generated guides per case
 UNIT = F.UNIT
 
@@ -164,12 +167,44 @@ def _key(value) -> str:
     return yaml.safe_dump(value, sort_keys=True)
 
 
+NO_PLAN = ("reaches the goal", "no action has a price")  # the planner's two ways to say that the offered actions cannot make the item
+
+
+@dataclass(frozen=True)
+class Cost:
+    """The mean cost of a plan, start item included (`stated`), and the cost no plan of the same run is below (`proved`).
+
+    An exact plan proves its own cost. A plan of the envelope search says the two sides it stopped between (`EnvelopeInfo.lower` and
+    `upper`, OR-32), and `proved` is the stated cost less that share. Both are infinite where there is no plan.
+    """
+
+    stated: float
+    proved: float
+
+    def times(self, factor: float) -> "Cost":
+        return Cost(self.stated * factor, self.proved * factor)
+
+    @property
+    def gap(self) -> float:
+        return 0.0 if self.stated == self.proved else self.stated / self.proved - 1.0
+
+
+NONE = Cost(math.inf, math.inf)
+
+
+def cost_of(plan: Plan) -> Cost:
+    info = plan.packed.info.get("envelope") if plan.packed is not None else None
+    share = info.lower / info.upper if info is not None and 0 <= info.lower < info.upper else 1.0
+    return Cost(total(plan), plan.start_price.chaos + float(plan.mean_remaining) * share)
+
+
 class Runs:
-    """Plans of the cases through the planner's entry, each made once: a relation's two runs, and a run two relations share."""
+    """Plans of the cases through the planner's entry: the same run asked twice (a case's own plan, by every relation) is made once."""
 
     def __init__(self, data: GameData) -> None:
         self.data = data
         self.made: dict[tuple, tuple] = {}
+        self.guides: dict[str, list[tuple[str, float]]] = {}
         self.count = 0
 
     def plan(self, case: Case, *, doc: Mapping | None = None, prices: PriceFile | None = None, start_factor: float = 1.0) -> Plan | None:
@@ -185,26 +220,32 @@ class Runs:
                 target = parse_target(yaml.safe_dump(dict(doc), sort_keys=False, allow_unicode=True, width=1000), self.data, source=f"<{case.id}>")
                 self.made[key] = (prices, plan_target(self.data, target, prices, settings))  # the prices are held so that their `id` stays theirs
             except PlanError as error:
+                if not any(words in str(error) for words in NO_PLAN):
+                    raise  # any other refusal is the planner failing, not a cost: it must not pass as "infinitely dear"
                 self.made[key] = (prices, error)
         made = self.made[key][1]
         return None if isinstance(made, PlanError) else made
 
-    def cost(self, case: Case, **changes) -> float:
-        """The mean cost of the plan, start item included; infinite where there is no plan (no offered action reaches the target)."""
+    def cost(self, case: Case, **changes) -> Cost:
+        """The cost of the plan; `NONE` (infinite) where there is no plan (no offered action reaches the target)."""
         plan = self.plan(case, **changes)
-        return math.inf if plan is None else total(plan)
+        return NONE if plan is None else cost_of(plan)
 
 
 def total(plan: Plan) -> float:
     return plan.start_price.chaos + float(plan.mean_remaining)
 
 
-def not_above(low: float, high: float) -> bool:
-    """`low <= high` within `GAP`; an infinite cost (no plan) is above every cost and not above itself."""
-    return low <= high * (1 + GAP) or (math.isinf(low) and math.isinf(high))
+def not_above(low: Cost, high: Cost) -> bool:
+    """Whether "the cheapest of `low`'s run costs no more than the cheapest of `high`'s" can stand, within `GAP`.
+
+    The cheapest of `low`'s run is at least `low.proved` and the cheapest of `high`'s at most `high.stated`. For two exact plans this is
+    `low <= high` of their costs. No plan is above every cost and not above no plan.
+    """
+    return low.proved <= high.stated * (1 + GAP) or (math.isinf(low.proved) and math.isinf(high.stated))
 
 
-def same(one: float, other: float) -> bool:
+def same(one: Cost, other: Cost) -> bool:
     return not_above(one, other) and not_above(other, one)
 
 
@@ -226,24 +267,24 @@ def choices(plan: Plan) -> dict:
 
 
 def price_violations(runs: Runs, case: Case) -> list[str]:
-    """Raising the price of one ingredient never lowers the plan's mean cost; lowering it never raises it. The start item is one."""
+    """Raising the price of one ingredient never lowers the plan's mean cost; lowering it never raises it. The start item is one.
+
+    A price that changes takes no action away, so a run that then finds no plan is a violation too.
+    """
     base = runs.plan(case)
-    cost = total(base)
-    found = []
-    for name in ingredients(base):
-        dearer = runs.cost(case, prices=one_price(case.prices, name, PRICE_STEP))
-        cheaper = runs.cost(case, prices=one_price(case.prices, name, 1 / PRICE_STEP))
-        if not not_above(cost, dearer):
-            found.append(f"{case.id}: {name} at {PRICE_STEP:g} times its price lowers the mean cost from {cost!r} to {dearer!r}")
-        if not not_above(cheaper, cost):
-            found.append(f"{case.id}: {name} at 1/{PRICE_STEP:g} of its price raises the mean cost from {cost!r} to {cheaper!r}")
+    cost = cost_of(base)
+    changes = [(name, lambda factor, name=name: {"prices": one_price(case.prices, name, factor)}) for name in ingredients(base)]
     if base.start_price.bought:
-        dearer = runs.cost(case, start_factor=PRICE_STEP)
-        cheaper = runs.cost(case, start_factor=1 / PRICE_STEP)
+        changes.append(("the start item", lambda factor: {"start_factor": factor}))
+    found = []
+    for name, change in changes:
+        dearer, cheaper = runs.cost(case, **change(PRICE_STEP)), runs.cost(case, **change(1 / PRICE_STEP))
+        if dearer is NONE or cheaper is NONE:
+            found.append(f"{case.id}: {name} at another price leaves no plan")
         if not not_above(cost, dearer):
-            found.append(f"{case.id}: the start item at {PRICE_STEP:g} times its price lowers the mean cost from {cost!r} to {dearer!r}")
+            found.append(f"{case.id}: {name} at {PRICE_STEP:g} times its price lowers the mean cost from {cost.stated!r} to {dearer.stated!r}")
         if not not_above(cheaper, cost):
-            found.append(f"{case.id}: the start item at 1/{PRICE_STEP:g} of its price raises the mean cost from {cost!r} to {cheaper!r}")
+            found.append(f"{case.id}: {name} at 1/{PRICE_STEP:g} of its price raises the mean cost from {cost.stated!r} to {cheaper.stated!r}")
     return found
 
 
@@ -257,11 +298,11 @@ def method_violations(runs: Runs, case: Case) -> list[str]:
             break  # a target that names no action is refused by the target's parser, not planned
         without = runs.cost(case, doc=with_actions(case.doc, [a for a in actions if a != name]))
         if not not_above(cost, without):
-            found.append(f"{case.id}: forbidding {name} lowers the mean cost from {cost!r} to {without!r}")
+            found.append(f"{case.id}: forbidding {name} lowers the mean cost from {cost.stated!r} to {without.stated!r}")
     if case.more is not None:
         more = runs.cost(case, doc=with_actions(case.doc, [*actions, case.more]))
         if not not_above(more, cost):
-            found.append(f"{case.id}: allowing {case.more} raises the mean cost from {cost!r} to {more!r}")
+            found.append(f"{case.id}: allowing {case.more} raises the mean cost from {cost.stated!r} to {more.stated!r}")
     return found
 
 
@@ -271,7 +312,7 @@ def target_violations(runs: Runs, case: Case) -> list[str]:
     for what, looser, tighter in tier_changes(case.doc):
         low, high = runs.cost(case, doc=looser), runs.cost(case, doc=tighter)
         if not not_above(low, high):
-            found.append(f"{case.id}: the looser target ({what}) costs {low!r}, the tighter one {high!r}")
+            found.append(f"{case.id}: the looser target ({what}) costs {low.stated!r}, the tighter one {high.stated!r}")
     return found
 
 
@@ -280,25 +321,28 @@ def scale_violations(runs: Runs, case: Case) -> list[str]:
 
     The Chaos Orb is the unit and cannot be scaled. Where an offer of the plan consumes it, the prices scaled by `f` lie between the
     case's prices and `f` times all of them, so the cost lies between the case's cost and `f` times it (the price relation and this
-    one together), and the plan may change.
+    one together), and the plan may change. The plan is compared only where both runs are exact: a plan that stopped at a proved gap
+    is one of several the planner may return.
     """
     base = runs.plan(case)
-    cost = total(base)
+    cost = cost_of(base)
     unit_used = any(name == UNIT for priced in base.offers for name, *_ in priced.parts)
     found = []
     for factor in SCALES:
         plan = runs.plan(case, prices=scaled(case.prices, lambda name: factor), start_factor=factor)
         if plan is None:
             found.append(f"{case.id}: every price times {factor:g} leaves no plan")
-        elif unit_used:
-            low, high = sorted((cost, factor * cost))
-            if not (not_above(low, total(plan)) and not_above(total(plan), high)):
-                found.append(f"{case.id}: every price but the Chaos Orb's times {factor:g} gives {total(plan)!r}, outside {low!r} to {high!r}")
-        else:
-            if not same(total(plan), factor * cost):
-                found.append(f"{case.id}: every price times {factor:g} gives {total(plan)!r}, not {factor:g} times {cost!r}")
-            if choices(plan) != choices(base):
-                found.append(f"{case.id}: every price times {factor:g} changes the plan")
+            continue
+        other = cost_of(plan)
+        if unit_used:
+            low, high = sorted((cost, cost.times(factor)), key=lambda entry: entry.stated)
+            if not (not_above(low, other) and not_above(other, high)):
+                found.append(f"{case.id}: every price but the Chaos Orb's times {factor:g} gives {other.stated!r}, outside {low.stated!r} to {high.stated!r}")
+            continue
+        if not same(other, cost.times(factor)):
+            found.append(f"{case.id}: every price times {factor:g} gives {other.stated!r}, not {factor:g} times {cost.stated!r}")
+        if max(cost.gap, other.gap) <= GAP and choices(plan) != choices(base):
+            found.append(f"{case.id}: every price times {factor:g} changes the plan")
     return found
 
 
@@ -309,6 +353,8 @@ def guides(runs: Runs, case: Case) -> list[tuple[str, float]]:
     a route file of rules with no condition and `skip_refused: true` does (`cli._route`). So it is a valid policy of the allowed methods;
     one that never reaches the target has an infinite mean. The first guide keeps the offers in the planner's order.
     """
+    if case.id in runs.guides:
+        return runs.guides[case.id]
     plan = runs.plan(case)
     labels = [priced.label for priced in plan.offers if priced.label != RESTART]
     found = {}
@@ -317,7 +363,8 @@ def guides(runs: Runs, case: Case) -> list[tuple[str, float]]:
         if number:
             random.Random(f"{case.id}:guide:{number}").shuffle(order)
         found.setdefault(" > ".join(order), plan.start_price.chaos + guide_mean(plan, order))
-    return list(found.items())
+    runs.guides[case.id] = list(found.items())
+    return runs.guides[case.id]
 
 
 def guide_mean(plan: Plan, order: list[str]) -> float:
@@ -353,20 +400,21 @@ def guide_mean(plan: Plan, order: list[str]) -> float:
 def guide_violations(runs: Runs, case: Case, given: list[tuple[str, float]]) -> list[str]:
     """A guide's route is a valid policy, so the plan's cost with the guide's methods allowed is never above the guide's cost."""
     cost = runs.cost(case)
-    return [f"{case.id}: the plan costs {cost!r}, the guide ({order}) {mean!r}" for order, mean in given if not not_above(cost, mean)]
+    return [f"{case.id}: the plan costs {cost.stated!r}, the guide ({order}) {mean!r}" for order, mean in given if not not_above(cost, Cost(mean, mean))]
 
 
 def simulation_violations(runs: Runs, case: Case) -> list[str]:
     """The plan played by the simulator reaches the target, and its simulated mean agrees with the stated mean within the simulator's error.
 
-    The plays end at the case's own target, read again from the case and not from the plan.
+    The plays end at the case's own target, read again from the case and not from the plan. A plan that stopped at a proved gap states
+    the exact mean of the plan it returns (OR-32), so this comparison takes no gap.
     """
     plan = runs.plan(case)
     target = parse_target(case.generated.target_yaml, runs.data, source=f"<{case.id}>")
-    cheapest = min((priced.cost for _state, priced in chosen_offers(plan)), default=0.0)
-    clicks = plan.mean_remaining / cheapest if cheapest else 1.0  # at most this many a play, on average
+    played = dataclasses.replace(plan, target=target)
+    clicks = verify(runs.data, played, runs=PILOT, seed=886).report.mean_steps  # the pilot only sizes the run: its costs are not read
     plays = int(max(PLAYS[0], min(PLAYS[1], CLICKS // max(clicks, 1.0))))
-    result = verify(runs.data, dataclasses.replace(plan, target=target), runs=plays, seed=887)
+    result = verify(runs.data, played, runs=plays, seed=887)
     return [] if result.agrees else [f"{case.id}: {result.reason}"]
 
 
@@ -384,3 +432,10 @@ def tiers_upside_down(data: GameData, target):
         return dataclasses.replace(leaf, tier_ok=frozenset(mod for mod in leaf.mod_ids if tiers.get(mod, 0) >= worst))
 
     return dataclasses.replace(target, requirements=tuple(turned(leaf) for leaf in target.requirements))
+
+
+def understated(plan: Plan, share: float) -> Plan:
+    """`plan` as a planner returns it that states `share` of the plan's mean cost."""
+    values = dict(plan.solution.values)
+    values[plan.start] = values[plan.start] * share
+    return dataclasses.replace(plan, solution=dataclasses.replace(plan.solution, values=values))

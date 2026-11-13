@@ -10,9 +10,9 @@ each other, on generated cases (`planner_relations_support`: the generator of th
 5. a guide's route is a valid policy, so the plan never costs more than the guide by the same rules;
 6. the plan played by the simulator reaches the target, and its simulated mean agrees with the stated mean.
 
-Every comparison gives the room `planner_relations_support.GAP` and no other. The second half breaks the planner on purpose (it drops an
-offer, misprices an ingredient, misreads the target) and asserts that the relation then reports a violation: a relation that cannot fail
-tests nothing. The breaks are monkeypatches of two names the planner calls, `_plan.price_offers` and `_entry.plan_with_starts`; no
+Every comparison of two costs gives the room `planner_relations_support.GAP`, and reads a plan that stopped at a proved gap (OR-32) at
+the figure it proved. The second half breaks the planner on purpose (it drops an offer, misprices an ingredient, misreads the target,
+understates its mean) and asserts that the relation then reports a violation: a relation that cannot fail tests nothing. The breaks are monkeypatches of two names the planner calls, `_plan.price_offers` and `_entry.plan_with_starts`; no
 code of the planner is changed for them.
 """
 
@@ -22,7 +22,7 @@ import pytest
 from abstraction_support import real_game_data
 
 import planner_relations_support as R
-from crafting_system.planner import _entry, _plan
+from crafting_system.planner import PlanError, _entry, _plan
 
 # The generated cases: (method set, size, seed). Each relation runs on every one of them.
 CASES = (
@@ -76,6 +76,7 @@ def test_every_case_is_the_generators_and_has_a_plan(runs, case_of, data, name):
     assert set(case.doc["actions"]) == set(R.METHODS[name[0]].method.actions)
     plan = runs.plan(case)
     assert plan is not None and 0 < R.total(plan) < float("inf")
+    assert 0 <= R.cost_of(plan).gap <= R.PROVED_GAP_LIMIT  # OR-32: exact, or proved at most 1% above the cheapest
 
 
 def test_the_cases_differ():
@@ -118,6 +119,16 @@ def test_the_simulated_plan_reaches_the_target_at_the_stated_mean(runs, case_of,
     assert R.simulation_violations(runs, case_of(name)) == []
 
 
+def test_the_relations_compare_something(runs, case_of):
+    """What the relations above ran on: ingredients whose price moved, methods to forbid and to allow, guides dearer than the plan."""
+    priced = {name: R.ingredients(runs.plan(case_of(name))) for name in CASES}
+    assert all(priced[name] for name in CASES if name[0] != "chaos-orb")  # the Chaos Orb is the unit: there the start item is the ingredient
+    assert all(runs.plan(case_of(name)).start_price.bought for name in CASES)
+    assert sum(len(case_of(name).doc["actions"]) > 1 for name in CASES) >= 4 and sum(case_of(name).more is not None for name in CASES) >= 4
+    dearer = [name for name in CASES if any(R.total(runs.plan(case_of(name))) * (1 + R.GAP) < mean < float("inf") for _order, mean in R.guides(runs, case_of(name)))]
+    assert len(dearer) >= 4, dearer  # a guide that finishes and is not the plan itself
+
+
 def test_the_scale_relation_is_the_whole_one_where_no_offer_takes_the_unit(runs, case_of):
     """The Chaos Orb cannot be scaled, so a plan that consumes it is held to a range; most cases must be held to the exact factor."""
     exact = [name for name in CASES if not any(part[0] == R.UNIT for priced in runs.plan(case_of(name)).offers for part in priced.parts)]
@@ -127,13 +138,13 @@ def test_the_scale_relation_is_the_whole_one_where_no_offer_takes_the_unit(runs,
 # -- a planner broken on purpose: each relation reports it ----------------------------------------------------------------------------
 
 
-def priced_by(monkeypatch, change):
-    """Break the planner's pricing: `change` rewrites the priced offers `_plan.price_offers` returns."""
+def priced_by(monkeypatch, change, reads_file=False):
+    """Break the planner's pricing: `change` rewrites the priced offers `_plan.price_offers` returns (`reads_file`: it is given the price file too)."""
     real = _plan.price_offers
 
-    def broken(offers, prices, price_source=None, *more):
-        priced, dropped = real(offers, prices, *(() if price_source is None else (price_source,)), *more)
-        return tuple(change(priced)), dropped
+    def broken(offers, prices, *more):
+        priced, dropped = real(offers, prices, *more)
+        return tuple(change(priced, prices) if reads_file else change(priced)), dropped
 
     monkeypatch.setattr(_plan, "price_offers", broken)
 
@@ -167,6 +178,28 @@ def test_a_planner_that_ignores_the_price_file_breaks_the_scale_relation(monkeyp
     assert len(found) == len(R.SCALES) and all("every price times" in line for line in found), found
 
 
+def test_a_planner_that_drops_an_offer_when_prices_are_high_changes_the_plan_under_scaling(monkeypatch, data, broken_case):
+    """Drop an offer: with the Divine Orb above twice its price the Orb of Augmentation is left out, so the plan at three times the prices is another."""
+    high = 2 * broken_case.prices.chaos_per_divine
+    priced_by(monkeypatch, lambda priced, prices: [e for e in priced if prices.chaos_per_divine < high or e.label != "Orb of Augmentation"], reads_file=True)
+
+    found = R.scale_violations(R.Runs(data), broken_case)
+
+    assert f"{broken_case.id}: every price times 3 changes the plan" in found, found
+    assert not any("times 0.25" in line for line in found), found
+
+
+def test_a_planner_that_prices_the_unit_against_the_divine_orb_leaves_the_range_of_the_scale_relation(monkeypatch, data, case_of):
+    """Misprice an ingredient: the Chaos Orb is read dearer the cheaper the Divine Orb is, so with every other price at a quarter the plan costs more."""
+    case = case_of(("chaos-orb", "one", 2))
+    rate = case.prices.chaos_per_divine
+    priced_by(monkeypatch, lambda priced, prices: [dataclasses.replace(e, cost=e.cost * rate / prices.chaos_per_divine) if e.label == "Chaos Orb" else e for e in priced], reads_file=True)
+
+    found = R.scale_violations(R.Runs(data), case)
+
+    assert len(found) == 1 and "every price but the Chaos Orb's times 0.25" in found[0] and "outside" in found[0], found
+
+
 def test_a_planner_that_drops_an_offer_when_three_are_allowed_breaks_the_method_relation(monkeypatch, data, broken_case):
     """Drop an offer: with three or more offers the Orb of Augmentation is left out, so forbidding another orb brings it back."""
     priced_by(monkeypatch, lambda priced: [entry for entry in priced if len(priced) < 3 or entry.label != "Orb of Augmentation"])
@@ -174,6 +207,17 @@ def test_a_planner_that_drops_an_offer_when_three_are_allowed_breaks_the_method_
     found = R.method_violations(R.Runs(data), broken_case)
 
     assert any("forbidding alteration-orb lowers the mean cost" in line for line in found), found
+
+
+def test_a_planner_that_keeps_one_offer_of_three_breaks_the_method_relation_when_a_method_is_allowed(monkeypatch, data, case_of):
+    """Drop offers: of three or more the planner keeps the first only, so allowing the Orb of Transmutation beside two essences costs an essence."""
+    case = case_of(("essences", "one", 1))
+    assert case.more == "transmutation-orb"
+    priced_by(monkeypatch, lambda priced: priced[:1] if len(priced) > 2 else priced)
+
+    found = R.method_violations(R.Runs(data), case)
+
+    assert any("allowing transmutation-orb raises the mean cost" in line for line in found), found
 
 
 def test_a_planner_that_drops_an_offer_costs_more_than_a_guide_that_uses_it(monkeypatch, runs, data, broken_case):
@@ -202,6 +246,38 @@ def test_a_planner_that_reads_the_tiers_upside_down_does_not_reach_the_target_in
     found = R.simulation_violations(R.Runs(data), broken_case)
 
     assert len(found) == 1, found
+
+
+def test_a_planner_that_states_a_third_of_its_mean_does_not_agree_with_the_simulator(monkeypatch, data, broken_case):
+    """Understate the mean: the plan is the right one and reaches the target, and the simulator pays three times what it states."""
+    real = _entry.plan_with_starts
+    monkeypatch.setattr(_entry, "plan_with_starts", lambda *given, **settings: R.understated(real(*given, **settings), 1 / 3))
+
+    found = R.simulation_violations(R.Runs(data), broken_case)
+
+    assert len(found) == 1 and "standard errors" in found[0], found
+
+
+def test_a_plan_that_stopped_at_a_proved_gap_is_compared_at_what_it_proved():
+    """OR-32: a plan up to its proved gap above the cheapest is not a violation, and one further above is."""
+    exact, stopped = R.Cost(100.0, 100.0), R.Cost(100.9, 100.0)  # the second run stopped 0.9% above what it proved
+    assert stopped.gap == pytest.approx(0.009) and exact.gap == 0
+    assert R.not_above(stopped, exact) and R.not_above(exact, stopped) and R.same(stopped, exact)
+    assert not R.not_above(R.Cost(101.0, 100.5), exact)  # proved above the other run's plan
+    assert not R.not_above(R.Cost(100.001, 100.001), exact) and R.not_above(R.Cost(100.00001, 100.00001), exact)  # `GAP`
+    assert R.not_above(exact, R.NONE) and not R.not_above(R.NONE, exact) and R.not_above(R.NONE, R.NONE)
+
+
+def test_a_refusal_that_is_not_no_plan_is_not_a_cost(monkeypatch, data, broken_case):
+    """A planner that fails is not "infinitely dear": only its two ways to say that nothing reaches the target count as no plan."""
+
+    def failing(*given, **settings):
+        raise PlanError("the search stopped at its net before any plan closed")
+
+    monkeypatch.setattr(_entry, "plan_with_starts", failing)
+
+    with pytest.raises(PlanError, match="stopped at its net"):
+        R.Runs(data).cost(broken_case)
 
 
 def test_the_breaks_are_undone(runs, data, broken_case):
