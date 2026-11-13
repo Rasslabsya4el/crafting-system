@@ -14,12 +14,12 @@ from abstraction_support import real_game_data
 from crafting_system.prices import load_price_file
 from crafting_system.prices.essence_recipe import RECIPE_SOURCE, TIERS, apply_upgrade_recipe, tier_of
 from crafting_system.prices.price_marks import price_marks
-from crafting_system.prices.provenance import ESTIMATE, HISTORY, PREVIOUS_LEAGUE
+from crafting_system.prices.provenance import ESTIMATE, HISTORY, OVERRIDE, PREVIOUS_LEAGUE
 from crafting_system.prices.spends import spends, unpriced
 
 PRICES = Path(__file__).resolve().parent / "fixtures" / "prices"
 DEFAULT_FILE = PRICES / "routes-allflame-2026-07-31.json"
-ESTIMATES = PRICES / "estimates-allflame-2026-07-31.json"
+HAND_PRICES = PRICES / "hand-prices-allflame-2026-07-31.json"
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +39,7 @@ def test_no_action_in_scope_spends_a_name_the_default_file_does_not_price(prices
     assert {kind: names for kind, names in missing.items() if names} == {}
 
 
-def test_every_beast_a_recipe_spends_is_a_reading_of_the_leagues_own_day_and_one_is_an_estimate(prices, walked):
+def test_every_beast_a_recipe_spends_is_a_reading_of_the_leagues_own_day_and_one_is_a_hand_price(prices, walked):
     beast_kinds = ("beast-side-swap", "wild-bristle-matron", "aspect-beast", "talisman-fracture", "imprint", "beast-influence-recipe")
     beasts = {name for kind in beast_kinds for name in walked[kind]} - {"Chaos Orb"}
 
@@ -52,13 +52,17 @@ def test_every_beast_a_recipe_spends_is_a_reading_of_the_leagues_own_day_and_one
     assert prices.prices["Wild Bristle Matron"].chaos == 235.0 and prices.prices["Farric Wolf Alpha"].chaos == 2.0
 
 
-def test_the_only_estimate_is_the_beast_no_market_lists_and_it_is_marked(prices):
-    """Every stand-in is listed in the PR for the owner to replace with his own number; this one has no market evidence at all."""
-    estimates = {name for name, entry in prices.prices.items() if entry.provenance is not None and entry.provenance.kind == ESTIMATE}
+def test_the_beast_no_market_lists_is_the_owners_hand_price_and_the_file_holds_no_estimate(prices):
+    """The Black Mórrígan has no poe.ninja line in any league. The owner's number of 2026-11-13: 1.5 Divine, 264.9 Chaos at the file's
+    176.6 Chaos per Divine. A hand price is the owner's own number, so it carries no mark; the row says whose it is."""
+    hand = {name for name, entry in prices.prices.items() if entry.provenance is not None and entry.provenance.kind == OVERRIDE}
+    row = prices.prices["The Black Mórrígan"]
 
-    assert estimates == {"The Black Mórrígan"} == set(load_price_file(ESTIMATES).prices)
-    assert prices.prices["The Black Mórrígan"].chaos == 100.0
-    assert [mark.reason for mark in price_marks(prices.prices["The Black Mórrígan"], prices, 1.0)] == ["an estimate: no market lists this item"]
+    assert hand == {"The Black Mórrígan"} == set(load_price_file(HAND_PRICES).prices)
+    assert not [name for name, entry in prices.prices.items() if entry.provenance is not None and entry.provenance.kind == ESTIMATE]
+    assert row.chaos == pytest.approx(1.5 * prices.chaos_per_divine) == pytest.approx(264.9)
+    assert row.source == "hand" and "owner, 2026-11-13, 1.5 Divine" in row.note
+    assert price_marks(row, prices, 1.0) == ()
 
 
 def test_the_currency_of_the_other_methods_is_read_on_the_day_and_two_catalysts_from_the_previous_league(prices, walked):

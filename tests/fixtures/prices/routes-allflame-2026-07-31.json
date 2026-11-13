@@ -3949,19 +3949,19 @@
       "source": "poe.ninja-history"
     },
     "The Black Mórrígan": {
-      "chaos": 100.0,
+      "chaos": 264.9,
       "detail": {
-        "category": "Beast",
         "date": "2026-07-31",
+        "divine": 1.5,
         "league": "Allflame"
       },
-      "note": "stand-in (OR-7): no market lists it, so an estimate stands in; the reading of 2026-07-31 from estimates-allflame-2026-07-31.json is kept (estimate (#885, OR-23): poe.ninja has no line for this beast in Allflame, Mirage or Standard, and the trade site keeps no history, so no reading of any day can price it; 100 Chaos is the placeholder of #813, with no market evidence behind it. The owner's own number replaces it (a hand price in price_overrides.toml, or this file))",
+      "note": "stand-in (OR-7): a hand price or a default is no market reading; the reading of 2026-07-31 from hand-prices-allflame-2026-07-31.json is kept (hand price (#885): owner, 2026-11-13, 1.5 Divine, which is 264.9 Chaos at the file's 176.6 Chaos per Divine; poe.ninja has no line for this beast in Allflame, Mirage or Standard, so no reading of any day can price it)",
       "provenance": {
         "date": "2026-07-31",
-        "kind": "estimate",
+        "kind": "override",
         "league": "Allflame"
       },
-      "source": "estimate"
+      "source": "hand"
     },
     "Thicket Bow, magic, item level 78-79, Hunter influence": {
       "chaos": 9.8,
