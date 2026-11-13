@@ -88,6 +88,7 @@ from crafting_system.actions import (
     OutOfScopeError,
     Reading,
     Reads,
+    Recounted,
     Rerolled,
     Spent,
     catalog,
@@ -308,6 +309,8 @@ def finished(outcomes, data=CONTRACT_DATA) -> list[tuple[Fraction, Item]]:
                 _roll_in(data, mod_id) for mod_id, count in sorted(outcome) for _ in range(count)
             )
             items.append((share * chance, part.retained.changed(data, mods=(*part.retained.mods, *added))))
+    if isinstance(outcomes, Recounted):  # an Orb of Remembrance: each item with every count its law gives (#278), as the kernel spreads it
+        return [(chance * each, found.changed(data, memory_strands=count)) for chance, found in items for count, each in outcomes.strands_after.items()]
     return items
 
 
@@ -409,8 +412,10 @@ def check_strand_declarations(action: Action, item: Item, outcomes, items, data,
     after = strands_after(outcomes, item.memory_strands)
     assert sum(after.values()) == 1, "the count after the craft is a distribution"
     assert after == use.after(item), "the count after the craft is the declared law's, from the count before"
+    assert use.recounts == isinstance(outcomes, Recounted), "the result is a Recounted exactly when the action sets the count anew"
     low = item.memory_strands - (use.spend.ceiling(len(item.mods)) if use.spend is not None else 0)
-    assert all(max(0, low) <= left <= item.memory_strands for left in after), "a craft never raises the count and never spends more than its ceiling"
+    if not use.recounts:  # an Orb of Remembrance sets the count anew, up or down, by its law (checked above); every other craft only spends
+        assert all(max(0, low) <= left <= item.memory_strands for left in after), "a craft never raises the count and never spends more than its ceiling"
     rng = random.Random(20261101)
     seen: dict[int, int] = defaultdict(int)
     for _ in range(SAMPLES):

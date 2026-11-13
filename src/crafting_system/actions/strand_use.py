@@ -72,6 +72,7 @@ __all__ = [
     "SPEND_EXALTED",
     "SPEND_LAW_UNIFORM",
     "SPEND_SPECIAL_ORBS",
+    "Recounted",
     "Spent",
     "SpendLaw",
     "StrandUse",
@@ -190,7 +191,14 @@ class StrandUse:
     cuts: bool = False
     spend: SpendLaw | None = None
     claims: frozenset[str] = frozenset()
+    recount: tuple[tuple[int, Fraction], ...] = ()
     count_sets_odds: bool = False
+
+    def __post_init__(self) -> None:
+        if self.recount and (self.cuts or self.spend is not None):
+            raise ValueError("an action that sets the count anew (an Orb of Remembrance) neither cuts nor spends")
+        if self.recount and sum(chance for _, chance in self.recount) != 1:
+            raise ValueError("the law of a new strand count sums to exactly 1")
 
     @classmethod
     def cutting(cls, spend: SpendLaw, *rules: Rule) -> "StrandUse":
@@ -207,6 +215,17 @@ class StrandUse:
         """An action that uses every strand of the item and whose odds read the count it had (`count_sets_odds`); it does not cut."""
         return cls(False, SpendLaw.everything(), frozenset(rule.id for rule in rules), count_sets_odds=True)
 
+    @classmethod
+    def recounting(cls, law: Mapping[int, Fraction], *rules: Rule) -> "StrandUse":
+        """An action that sets the count to a number drawn from `law` whatever it was (an Orb of Remembrance, ADR-0043): it neither cuts nor
+        spends, and its result is a `Recounted` whose `strands_after` is `law`. `rules` are the claims that say so."""
+        return cls(False, None, frozenset(rule.id for rule in rules), tuple(sorted(law.items())))
+
+    @property
+    def recounts(self) -> bool:
+        """Whether the action sets the count anew (`recount` is the law of the new count), whatever it was."""
+        return bool(self.recount)
+
     @property
     def reads_count(self) -> bool:
         """Whether the result depends on the count the item has: a cut reads it, a spend does (the count after is a function of it), and so do odds that grow with it."""
@@ -215,10 +234,12 @@ class StrandUse:
     @property
     def changes_count(self) -> bool:
         """Whether the count of the finished item can differ from the count before."""
-        return self.spend is not None
+        return self.spend is not None or self.recounts
 
     def after(self, item: Item) -> Mapping[int, Fraction]:
         """The distribution of the count after one use on `item`, from its count before (the mods it holds fix the ceiling of a law that depends on them)."""
+        if self.recount:
+            return dict(self.recount)
         if self.spend is None:
             return {item.memory_strands: Fraction(1)}
         return self.spend.after(item.memory_strands, len(item.mods))
@@ -277,11 +298,54 @@ class Spent:
         return getattr(self.given, name)
 
 
+@dataclass(frozen=True, eq=False)
+class Recounted:
+    """The result of an action that keeps the item and sets its strand count anew (an Orb of Remembrance, ADR-0043, ticket #278).
+
+    It answers `components`, `fractures`, `chance_all` and `distribution` as `given` does (the count is drawn apart from the mods), and
+    `strands_after` is `counts`, the law of the new count, which does not depend on the count before. Like `Spent`, the items of `components`
+    keep the count the item had; only `strands_after` and `sample` say what it becomes. The kernel spreads the states of the result over
+    `strands_after` as it does a spend's (`_spread_spend`).
+    """
+
+    given: "ActionOutcomes"
+    data: GameData
+    counts: Mapping[int, Fraction]
+
+    def __post_init__(self) -> None:
+        if sum(self.counts.values()) != 1 or any(chance <= 0 for chance in self.counts.values()):
+            raise ValueError("the law of a new strand count has positive chances that sum to exactly 1")
+
+    @property
+    def strands_after(self) -> Mapping[int, Fraction]:
+        return self.counts
+
+    @property
+    def components(self):
+        return self.given.components
+
+    @property
+    def fractures(self) -> bool:
+        return self.given.fractures
+
+    def chance_all(self, mod_ids):
+        return self.given.chance_all(mod_ids)
+
+    def distribution(self, label):
+        return self.given.distribution(label)
+
+    def sample(self, rng: random.Random) -> Item:
+        """One finished item from `given`, its count drawn from `counts`."""
+        finished = self.given.sample(rng)
+        count = rng.choices(tuple(self.counts), weights=tuple(float(chance) for chance in self.counts.values()))[0]
+        return finished.changed(self.data, memory_strands=count)
+
+
 def strands_after(outcomes: "ActionOutcomes", count: int) -> Mapping[int, Fraction]:
     """The exact distribution of the strand count after the action that gave `outcomes`, on an item that had `count`.
 
     `{count: 1}` for a result that spends nothing (every result at 0 strands, and an action that declares no spend).
     """
-    if isinstance(outcomes, Spent):
+    if isinstance(outcomes, Spent | Recounted):
         return outcomes.strands_after
     return {count: Fraction(1)}

@@ -41,6 +41,7 @@ from crafting_system.actions import (
     Restore,
     catalog,
     imprint_actions,
+    imprints_held_at_most,
     kinds,
 )
 from crafting_system.cli._offers import FREE_ACTION_SHARE, offer_of, price_offers
@@ -89,10 +90,12 @@ def space(*actions: Action, goal: Goal = GOAL) -> Abstraction:
 # --- the contract suite -----------------------------------------------------------------------------
 
 
-def test_the_two_kinds_are_registered_outside_the_planner_and_listed_for_a_magic_item():
+def test_the_two_kinds_are_opt_in_planner_kinds_and_listed_for_a_magic_item():
+    # #223: the planner offers them, but only to a target that names them, because the first imprint multiplies the states by about 200 (ADR-0060 point 5)
     registered = {entry.name: entry for entry in kinds()}
     for name in ("imprint", "restore"):
-        assert not registered[name].planner and "#223" in registered[name].why_not and registered[name].reads_item_state_while_not_planner == "any"
+        assert registered[name].planner and registered[name].opt_in and registered[name].reads_item_state_while_not_planner == "any"
+    assert not [a for a in catalog(CONTRACT_DATA, magic(LIFE_1), planner_only=True) if isinstance(a, (Imprint, Restore))]
     listed = catalog(CONTRACT_DATA, magic(LIFE_1))
     assert [a for a in listed if isinstance(a, (Imprint, Restore))] == [
         Imprint(CROAKER),
@@ -362,6 +365,20 @@ def test_the_default_cap_is_one_and_the_setting_is_read_by_the_config():
         Imprint(CROAKER, 1, 1)
     with pytest.raises(ValueError):
         Imprint("rare")
+
+
+def test_the_catalog_kinds_list_the_cap_the_planner_sets():
+    # #223: the planner passes `max_imprints` to the catalog for the length of a plan; outside it the kinds list the default cap
+    names = {"imprint", "restore"}
+    default = [a for a in catalog(CONTRACT_DATA, magic(LIFE_1), names=names)]
+    assert Restore(1) not in default and Imprint(CROAKER, 2) not in default
+    with imprints_held_at_most(2):
+        two = [a for a in catalog(CONTRACT_DATA, magic(LIFE_1), names=names)]
+        assert two == list(imprint_actions(CONTRACT_DATA, magic(LIFE_1), 2))
+    assert [a for a in catalog(CONTRACT_DATA, magic(LIFE_1), names=names)] == default
+    with pytest.raises(ValueError):
+        with imprints_held_at_most(0):
+            pass
 
 
 # --- the state --------------------------------------------------------------------------------------

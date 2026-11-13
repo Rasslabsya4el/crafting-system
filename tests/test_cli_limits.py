@@ -96,7 +96,7 @@ def test_k2_the_kinds_the_planner_cannot_use_yet_are_listed_in_every_answer(plan
 def test_g1_k3_k6_the_kinds_that_need_memory_strands_are_one_limit_named_in_player_words(plan):
     strands = only(plan.limits, "strands")
 
-    assert strands.labels == ("Foulborn Augmentation Orb", "Foulborn Regal Orb", "Foulborn Exalted Orb", "Orb of Unravelling")
+    assert strands.labels == ("Foulborn Augmentation Orb", "Foulborn Regal Orb", "Foulborn Exalted Orb", "Orb of Remembrance", "Orb of Unravelling")
     assert strands.guarantee == "The plan makes no use of Memory Strands."
     assert "Foulborn Exalted Orb" not in labels_of(plan.limits, "kinds-opt-in")  # counted once
 

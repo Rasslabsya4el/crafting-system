@@ -108,11 +108,36 @@ __all__ = [
     "Reading",
     "Reads",
     "Rerolled",
+    "SocketRule",
     "model_readings",
 ]
 
 if TYPE_CHECKING:
     from .outcomes import Outcomes
+
+
+SocketShape = Callable[[int, tuple[int, ...]], "tuple[tuple[int, tuple[int, ...], Fraction], ...] | None"]
+SocketRoll = Callable[[int], "Mapping[tuple, Fraction] | None"]
+
+
+@dataclass(frozen=True)
+class SocketRule:
+    """How a socket action changes the sockets of an item of one base, item level and plain quality (`Action.socket_rule`; ADR-0045, ticket #231).
+
+    The socket finish (`abstraction`) is solved from these rules alone, so the mechanics of each socket action stay with the action. An action that
+    changes the count or the links gives `shape`; one that changes the colours gives `roll`.
+
+    * `shape(count, links)`: on an item of `count` sockets in the link groups `links` (sizes in socket order), each result as `(new count, new link
+      groups, chance)`, the chances summing to 1. The colours of a result are the item's: carried over, cut from the end, or grown with white
+      sockets to the new count (ADR-0046), so they are not given. None where the game refuses the action on such an item.
+    * `roll(count)`: the chance of each list of colours (`SocketColour`s in socket order) of `count` sockets that one use rolls, before any exclusion;
+      the links stay. None where the game refuses it on that many sockets. With `excludes_current` the result is that roll conditioned on differing
+      from the item's colours (a Chromatic Orb never returns them, ADR-0047); without it the roll is the result (a bench colour craft).
+    """
+
+    shape: SocketShape | None = None
+    roll: SocketRoll | None = None
+    excludes_current: bool = False
 
 
 @dataclass(frozen=True)
@@ -638,13 +663,15 @@ class BurnKeeps:
     * `implicits`: a requirement reads the implicits (ticket #158). A Blessed Orb rerolls them, so it is no burn there.
     * `enchantment`: the target requires the enchantment of the item (ADR-0050). A re-anoint replaces it, so it is no burn there.
 
-    The sockets are not here: a Chromatic Orb is a burn at every state of a socketed class, a move where a target names sockets and a loop
-    otherwise, which the planner's kernel shows and the legality does not need.
+    * `sockets`: the target names sockets (ticket #231). The compressed state does not hold them: the finish starts from the sockets the goal item
+      has (ADR-0045), the start item's, so a burn that changes them (a Chromatic Orb) would change the finish unseen, and is no burn there
+      (`burns_at`). Where no target names sockets a Chromatic Orb is a burn at every state of a socketed class.
     """
 
     quality: bool = False
     implicits: bool = False
     enchantment: bool = False
+    sockets: bool = False
 
 
 class Action(ABC):
@@ -785,6 +812,15 @@ class Action(ABC):
         The answer has the same label, so a route names it alike.
         """
         return self
+
+    def socket_rule(
+        self, data: GameData, base_id: str, item_level: int, quality: int, reading: "Reading | None" = None
+    ) -> SocketRule | None:
+        """How the action changes the sockets of an item of `base_id` at `item_level` and `quality` percent, at `reading` (None: the plan's).
+
+        None by default: the action is no step of the socket finish, or it cannot be used on that base at that quality (`SocketRule`; ticket #231).
+        """
+        return None
 
     def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
         """The rules the action reads that the sources leave open, each as an `Axis` with its readings; none by default.

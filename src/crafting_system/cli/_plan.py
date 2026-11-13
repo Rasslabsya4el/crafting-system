@@ -18,6 +18,8 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
+from crafting_system.budget import STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
+from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
@@ -33,9 +35,10 @@ from ._approx import Approximation, climb
 from ._axes import axis_what
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
+from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
-from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
+from ._limits import Limit, approximate_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, listing_draw, offers_for, price_offers, split_usable
 from . import _packed
 from ._envelope import Net, NoPolicy
@@ -138,6 +141,7 @@ class Plan:
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
     readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
     foresight: Foresight | None = None  # what the plan found about Hinekora's Lock (ticket #296, ADR-0057); None for a plan that was not solved
+    finish: PlanFinish | None = None  # the socket finish added to every goal state (ticket #231, ADR-0045); None for a target that names no sockets
 
     def __post_init__(self) -> None:
         # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13)
@@ -177,8 +181,25 @@ class Plan:
 
     @property
     def mean_remaining(self) -> float:
-        """The solver's expected cost from the start, without the price of the start item."""
+        """The solver's expected cost of the mods from the start, without the price of the start item (the socket finish is `finish_value`)."""
         return self.solution.values[self.start]
+
+    @property
+    def finish_value(self) -> float:
+        """What the socket finish adds to every goal state (ADR-0045): its mean from the start item's sockets, 0 for a target with no sockets.
+
+        One value for every goal state (no mod action changes sockets; Orb of Binding, which gives a goal a second one, is ticket #232), so the plan
+        of the mods is the cheapest with the finish too and only its mean grows (`cli/_finish.py`)."""
+        return 0.0 if self.finish is None else self.finish.value
+
+    def value_of(self, state: CompressedState) -> float:
+        """The expected cost from `state` to the finished item: the solver's value of the mods plus the finish, which every goal state adds."""
+        return self.solution.values[state] + self.finish_value
+
+    @property
+    def total_mean(self) -> float:
+        """The expected cost of the whole craft from the start, the mods and the socket finish, without the price of the start item."""
+        return self.value_of(self.start)
 
 
 class _Model:
@@ -229,6 +250,7 @@ class _Model:
         self.abstraction.prime(requests)
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
+        checkpoint()  # the run's net (#825): every walk of the object solver, the bound pruning's and the Lock's among them, stops here between two states
         chosen = self.chosen.pop(state, None)
         return solver_actions(
             self.abstraction, self.offers, state, self.start,
@@ -336,7 +358,7 @@ def make_plan(
     *,
     start_price: float | None = None,
     offers: Iterable[Offer] | None = None,
-    budget: float | None = None,
+    budget: float | Budget | None = None,
     rates: Rates | None = None,
     strands: bool = False,
     solve_it: bool = True,
@@ -348,6 +370,120 @@ def make_plan(
     net: Net | None = None,
     judges_route: bool = False,
 ) -> Plan:
+    """Solve the target and measure the risk of the policy, under one budget of time and memory (`crafting_system.budget`, #825).
+
+    `budget` is the run's `Budget` (OR-33: the aim and the stop-and-say-so net of time and memory, `Budget.default()`), or a number of seconds
+    (only the aim, as before: the forecast of ADR-0023 reads it; no net), or None (no aim and no net: every stage runs to its end, as a test of the
+    exact answer or a measurement needs). `net` is the older way to give the net (its time, memory and states), and is folded into the budget.
+    Every stage runs on the one clock of the run (a plan inside a run that already has a clock, a start option or a reading, shares it), and a
+    stage that a limit stopped is listed in one limit of the answer (`_limits.budget_limit`, #378). A stop before any plan closed is a `PlanError`
+    that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. The rest is `_make_plan`'s text.
+    """
+    plan_budget: Budget | None = as_budget(budget, net)
+    owns = budget_active() is None and plan_budget is not None
+    with running(plan_budget.start() if plan_budget is not None else None) as clock:
+        try:
+            plan = _make_plan(
+                data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
+                strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
+                incumbent=incumbent, clock=clock, judges_route=judges_route,
+            )  # fmt: skip
+        except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
+            if clock is not None:
+                clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
+            raise PlanError(stopped_refusal(clock, stop.binding)) from None
+    return with_bindings(plan, clock) if owns else plan
+
+
+def as_budget(budget: float | Budget | None, net: Net | None = None) -> Budget | None:
+    """The run's `Budget` from `make_plan`'s arguments: a `Budget` as it is, a number as the aim alone (no net), and `net`'s figures as the net."""
+    if isinstance(budget, Budget):
+        found: Budget | None = budget
+    elif budget is not None:
+        found = Budget(aim_seconds=float(budget), seconds=None, memory_mb=None)
+    else:
+        found = None
+    if net is None:
+        return found
+    base = found if found is not None else Budget.unlimited()
+    return replace(
+        base,
+        seconds=net.seconds if net.seconds is not None else base.seconds,
+        memory_mb=net.memory_mb if net.memory_mb is not None else base.memory_mb,
+        states=net.states if net.states is not None else base.states,
+    )  # a figure the net leaves out is the budget's
+
+
+def with_bindings(plan: Plan, clock: Clock | None) -> Plan:
+    """`plan` with the one limit that lists what bound in the run (#378), when something did."""
+    found = budget_limit(clock.bindings) if clock is not None else None
+    return plan if found is None else replace(plan, limits=(*plan.limits, found))
+
+
+SEARCH_STAGE = "the search for the cheapest plan"
+APPROXIMATE_STAGE = "the search for a plan within the stated gap of the cheapest"
+PRUNED_STAGE = "the search for the cheapest plan, first on a smaller set of actions"
+WALK_STAGE = "the walk of every item the actions can reach"
+READINGS_STAGE = "the plan made once for each reading of a rule the sources leave open"
+LOCK_STAGE = "the check of Hinekora's Lock"
+LOCK_KEPT = "the plan is the best one without the Lock; whether the Lock saves anything was not checked"
+SEARCH_KEPT = "the best plan found so far is kept, with the figure below which no plan can cost"
+RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs in 10 stay under)"
+RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
+
+
+def search_net(clock: Clock | None) -> Net | None:
+    """The envelope search's net from the run's clock: the time left, and the memory and state nets as they are; None when the run has no net."""
+    if clock is None:
+        return None
+    given: Budget = clock.budget
+    if given.seconds is None and given.memory_mb is None and given.states is None:
+        return None
+    return Net(seconds=clock.left(), states=given.states, memory_mb=given.memory_mb)
+
+
+def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
+    """Record on the clock the limit that stopped the envelope search or its bound's build, when one did (OR-13: the plan says which bound)."""
+    if clock is None or (info.exact and info.bound_stopped is None):
+        return
+    what = SEARCH_KEPT if not info.exact else "the cheapest possible cost was worked out only in part; the plan is still the cheapest"
+    found = clock.over(SEARCH_STAGE, what)
+    if found is None:  # the net the search met is no longer met now (the memory fell when its graph was let go): say the one it names
+        given = clock.budget
+        if given.states is not None and info.touched >= given.states:
+            found = Binding(SEARCH_STAGE, STATES, given.states, info.touched, what)
+        elif given.memory_mb is not None and info.peak_mb is not None and info.peak_mb >= given.memory_mb:
+            found = Binding(SEARCH_STAGE, "memory", given.memory_mb, info.peak_mb, what)
+        else:
+            found = Binding(SEARCH_STAGE, "time", given.seconds if given.seconds is not None else 0.0, clock.elapsed(), what)
+    clock.bind(found)
+
+
+def stopped_refusal(clock: Clock | None, binding: Binding) -> str:
+    """The `PlanError` of a run its net stopped before any plan closed (OR-33): how long it ran and where it stopped."""
+    spent = f" after {clock.elapsed():,.0f} s" if clock is not None else ""
+    return f"stopped{spent}: {binding.words()}"
+
+
+def _make_plan(
+    data: GameData,
+    target: Target,
+    prices: PriceFile,
+    *,
+    start_price: float | None,
+    offers: Iterable[Offer] | None,
+    aim: float | None,
+    rates: Rates | None,
+    strands: bool,
+    solve_it: bool,
+    start_price_of: StartPrice | None,
+    price_source: str,
+    solver: str,
+    with_risk: bool,
+    incumbent: Callable[[CompressedState], Sequence[str]] | None,
+    clock: Clock | None,
+    judges_route: bool,
+) -> Plan:
     """Solve the target and measure the risk of the policy.
 
     `start_price` is the cost of the start item for this run (it wins over the price file);
@@ -355,11 +491,16 @@ def make_plan(
     `quality` (the planner ignores them until B2), when no offer has a price or no policy reaches the
     goal, and what the layers below raise for a bad input.
 
+    A target that names sockets (ADR-0045, ticket #231) is planned in two parts: the mods as for the same target without sockets, and the socket
+    finish solved on its own from the start item's sockets (`_finish.plan_finish`), whose value every goal state adds (`Plan.finish`,
+    `Plan.total_mean`). Its refusals (`sockets: any`, a corrupted goal, a mod action that changes sockets, a finish no offered action completes)
+    are `PlanError`s too.
+
     Remove Crafted Mods is kept only when a priced bench craft is, or the start item holds a crafted
     mod: otherwise no crafted mod can ever exist and tracking the junk slots for it would only grow
     the state space. A bought start item is offered again as `restart` from every state; a given one never is (OR-6).
 
-    `budget` (seconds) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
+    `aim` (seconds, the budget's aim) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
     answer is approximate within the tolerance if some coarse level reaches it, and `PlanError` says so
     when none exists and the exact run is not offered. `rates` injects the seconds per kernel outcome and per
     solved edge instead of measuring them. None (the default) always solves exactly. With `solve_it` False nothing is
@@ -388,9 +529,9 @@ def make_plan(
     cut ran, what it guarantees). It takes the offers after the twins are merged, as "packed" does, and ignores `budget` (it is always exact), so
     a test or a measurement that needs the approximate answer or the budget refusal names `solver="packed"` or `"object"`. `incumbent` (a state to
     the labels of the offers it takes) is the policy the search completes with a restart for its
-    first upper bound (`_envelope_plan.route_incumbent` reads a given route as one); `net` is a stop-and-say-so safety net (time, states or
-    memory; none by default): when it ends the search the plan is the best executable one, `Plan.limits` says it is not shown to be the best and
-    gives the lower and upper bounds of its cost.
+    first upper bound (`_envelope_plan.route_incumbent` reads a given route as one); `clock` is the run's clock (`make_plan`), whose net the search
+    is given (what is left of its time, its memory and state nets): when it ends the search the plan is the best executable one, `Plan.limits` says
+    it is not shown to be the best and gives the lower and upper bounds of its cost.
 
     With `with_risk` False the policy is solved but its risk (the p50, p90 and CVaR grid, which can take minutes where the solve takes
     seconds) is left out, `Plan.risk` is None, and `add_risk` fills it in later: the choice among start options compares the
@@ -408,11 +549,6 @@ def make_plan(
         raise PlanError(
             "the target asks for implicits or quality, which the planner cannot plan yet"
         )
-    if target.sockets is not None:
-        raise PlanError(
-            "the target asks for sockets, which the planner cannot plan yet"
-            ": the finish of sockets is not built, so an answer would silently ignore them"
-        )
     if target.enchantment is not None:
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"
@@ -420,9 +556,10 @@ def make_plan(
     price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price, price_source)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
+    mod_names, finish_names = split_names(data, target.start_item, target.actions) if target.sockets is not None else (target.actions, None)
     if offers is None:
         try:
-            chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
+            chosen = offers_for(data, goal, target.base_id, target.start_item, mod_names)
         except ValueError as error:
             raise PlanError(str(error)) from error
         offers, limits = chosen.offers, (*chosen.limits, *limits)
@@ -448,6 +585,16 @@ def make_plan(
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
+    finish = None
+    if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
+        try:
+            finish = plan_finish(
+                data, target, prices, price_source, names=finish_names, goal_takes_corrupted=goal.takes_corrupted,
+                mod_actions=[p.offer.action for p in priced if not isinstance(p.offer.action, BuyStartItem)],
+            )  # fmt: skip
+        except (FinishRefused, OutOfScopeError, ArithmeticError) as error:  # ArithmeticError: the finish did not converge
+            raise PlanError(str(error)) from error
+        limits = without_finish_kinds(limits)
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
     # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
     # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading
@@ -477,7 +624,7 @@ def make_plan(
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
-        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
+        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0, finish=finish)
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
     # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
@@ -486,7 +633,7 @@ def make_plan(
     # exact (OR-11, OR-12), and #742 carries removing this exception.
     many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
     envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not many_offers)
-    if budget is not None and not envelope and not axes:
+    if aim is not None and not envelope and not axes:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -494,7 +641,7 @@ def make_plan(
             # a pilot over thousands of fossil sets. An approximate answer is made of all the offers, twins merged.
             merged, merged_twins = (tuple(each) for each in merge_twins(data, target.start_item, priced))
             forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape))
-        decision = decide(abstraction, start, forecast, budget, rates)
+        decision = decide(abstraction, start, forecast, aim, rates)
         if decision.message:
             limits += (whole_search_limit(decision.message, decision.detail),)
         if decision.rate_why:
@@ -507,17 +654,20 @@ def make_plan(
             limits = with_limits(limits, (whole_search_limit(_packed_note(decision), decision.detail),), _limits.SOLVE)
         if decision.action == "approximate":
             try:
-                solved = climb(decision, start, merged)
-                burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+                with stage(APPROXIMATE_STAGE):
+                    solved = climb(decision, start, merged)
+                burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
                 foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
             except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
                 raise PlanError(str(error)) from error
             limits += skipped_level_limits(solved.skipped)
             if merged_twins:
                 limits += (twins_limit(merged_twins),)  # G17: the approximate answer is made of the offers left after the twins
+            if finish is not None:
+                limits += finish_limits(finish, solved.solution.values[solved.start], mods_at_most=True)  # the upper end of the approximate answer
             return finished(Plan(
                 target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, limits,
-                solved.solution, None, solved.seconds, 0.0, solved.approximation, foresight=foresight,
+                solved.solution, None, solved.seconds, 0.0, solved.approximation, foresight=foresight, finish=finish,
             ))  # fmt: skip
 
     began = time.perf_counter()
@@ -525,13 +675,16 @@ def make_plan(
     packed = None
     readings = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
+    # every stage below stops at the run's net (#825): `make_plan` says a stop before a plan closed, "no plan found yet", with where (OR-33)
     if axes:
-        readings, others = solve_each_reading(abstraction, model, start, priced, axes)
+        with stage(READINGS_STAGE):
+            readings, others = solve_each_reading(abstraction, model, start, priced, axes)
         solution = readings.solution
-        limits += reading_limits(abstraction, others, budget is not None)
+        limits += reading_limits(abstraction, others, aim is not None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     elif many and not envelope and solver != "packed":
-        pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
+        with stage(PRUNED_STAGE):  # #702: the walks of the bound pruning stop at the net between two states
+            pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
@@ -541,20 +694,31 @@ def make_plan(
             limits += (twins_limit(twins),)  # G17: the packed path leaves out the dearer twins, as the bound pruning does
         if envelope:
             try:
-                packed = envelope_result(
-                    abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net, item=target.start_item if many else None
-                )
+                with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
+                    packed = envelope_result(
+                        abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=search_net(clock),
+                        item=target.start_item if many else None,
+                    )  # fmt: skip
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 raise PlanError(envelope_refusal(solver, error)) from error
             limits += envelope_limits(packed.info["envelope"])
+            bind_search(clock, packed.info["envelope"])
         else:
-            packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
-        solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
+            with stage(WALK_STAGE):
+                packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
+        with stage(WALK_STAGE):
+            solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
         if packed is not None:
             limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
-    foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
+    try:
+        with stage(LOCK_STAGE, LOCK_KEPT):
+            foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
+    except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
+        if clock is not None:
+            clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
+        foresight, with_lock = Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
     if with_lock is not None and readings is not None:
         raise PlanError(
             "the cheapest plan takes Hinekora's Lock, and a plan made once for each reading of a rule the sources leave open "
@@ -567,19 +731,22 @@ def make_plan(
     risk, risk_seconds = None, 0.0
     if with_risk:
         began = time.perf_counter()
-        if packed is not None:
-            risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
-        else:
-            risk = evaluate_risk(solution.policy, start, lambda state: not isinstance(state, PeekNode) and abstraction.is_goal(state), solution.values[start], free_cost=free_action_cost(priced))
-            risk_found = risk_limits(risk)
+        with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745, `risk._evaluate`)
+            if packed is not None:
+                risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
+            else:
+                risk = evaluate_risk(solution.policy, start, lambda state: not isinstance(state, PeekNode) and abstraction.is_goal(state), solution.values[start], free_cost=free_action_cost(priced))
+                risk_found = risk_limits(risk)
         limits += risk_found
         risk_seconds = time.perf_counter() - began
     if packed is not None and packed.view is not None and len(solution.policy) > VIEW_FROM_STATES:
         limits += (lumped_limit(len(solution.policy), len(packed.view) + 1),)
+    if finish is not None:
+        limits += finish_limits(finish, solution.values[start])
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight, finish=finish,
     ))
 
 
@@ -676,7 +843,7 @@ def plan_foresight(
     lock = lock_price(prices, price_source)
     if not lock_wanted(target.actions):  # switched off: nothing is built
         return Foresight(LockStatus.SWITCHED_OFF, lock), None
-    burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+    burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
     cache: dict = {}
     plain = offered if offered is not None else (pruned.used if pruned is not None else priced)
     sites = PlanSites(abstraction, priced, plain, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
@@ -874,11 +1041,12 @@ def add_risk(plan: Plan) -> Plan:
         return plan
     began = time.perf_counter()
     free = free_action_cost(plan.offers)
-    if plan.packed is not None:
-        risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
-    else:
-        risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, plan.solution.values[plan.start], free_cost=free)
-        found = risk_limits(risk)
+    with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745)
+        if plan.packed is not None:
+            risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
+        else:
+            risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, plan.solution.values[plan.start], free_cost=free)
+            found = risk_limits(risk)
     return replace(plan, risk=risk, limits=with_limits(plan.limits, found, _limits.RISK), risk_seconds=time.perf_counter() - began)
 
 

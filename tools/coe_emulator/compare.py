@@ -389,10 +389,11 @@ def compare_action(data, coe: Coe, emulator: Emulator, item: Item, spec: dict, c
 
 def target_met(data, spec: dict, item: Item, action, results: Counter, n_ok: int) -> dict:
     """The joint "the target is met" count (ticket #617): the share of the emulator's finished items that are the target, or one sure bench craft short of it,
-    beside the planner's exact chance of one use of `action` (`_benchmark_use.per_use_of`, the same judge). Needs the check's item to be the target's start item."""
+    beside the planner's exact chance of one use of `action` (`_benchmark_use.per_use_of`, the same judge). Needs the check's item to be the target's start item; a case on a later item of the craft (#637) is counted by `record.py`
+    alone, and its planner's chance is pinned by its test."""
     from crafting_system.cli._benchmark_use import per_use_of
 
-    judge = TargetJudge(data, spec["target"])
+    judge = TargetJudge(data, spec["target"], spec.get("rarity"))
     start = judge.target.start_item
     if (item.base_id, item.item_level, item.rarity, item.mods) != (start.base_id, start.item_level, start.rarity, start.mods):
         return {"note": "the check's item is not the target's start item: no target count", "flags": []}

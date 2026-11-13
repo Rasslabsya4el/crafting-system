@@ -115,7 +115,7 @@ def test_the_magic_route_for_a_family_on_both_sides_costs_what_the_hand_formula_
 def test_the_command_returns_the_chaos_policy(data, prices, tmp_path):
     out = tmp_path / "policy.json"
 
-    code = main([str(TARGET), "--json", str(out)], data=data, prices=prices, env={})
+    code = main([str(TARGET), "--json", str(out), "--time-limit", "none", "--memory-limit", "none"], data=data, prices=prices, env={})  # the whole run (#825)
 
     assert code == 0
     totals = read_json(out)["totals"]
@@ -125,7 +125,7 @@ def test_the_command_returns_the_chaos_policy(data, prices, tmp_path):
 
 def test_the_answer_on_a_jewel_names_the_approximate_mod_count_and_one_on_a_belt_does_not(data, prices, tmp_path):
     out = tmp_path / "policy.json"
-    main([str(TARGET), "--json", str(out)], data=data, prices=prices, env={})
+    main([str(TARGET), "--json", str(out), "--time-limit", "none", "--memory-limit", "none"], data=data, prices=prices, env={})
 
     listed = [item["claim"] for item in read_json(out)["approximate_inputs"]]
 
