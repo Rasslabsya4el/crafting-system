@@ -360,11 +360,16 @@ class ExpandedModel(_View):
     `reactions` gives the acceptance set of every state that offers a Peek (a missing one is an error). The states
     of the base model are kept; the pseudo-states are `PeekNode`s. Use it to solve a given reaction with `solve`,
     or to read the same reaction under another reading of the kernels (`risk`, the simulator).
+
+    `lenient` is for that other reading (ticket #297): a state with no acceptance set keeps only its plain actions (the
+    plan did not take the Lock there), and a pair whose result is no outcome of its option under this reading is left
+    out (its chance is 0 here); a result of this reading that the set does not hold is not accepted.
     """
 
-    def __init__(self, base: Model, reactions: Mapping[Hashable, Reaction]) -> None:
+    def __init__(self, base: Model, reactions: Mapping[Hashable, Reaction], *, lenient: bool = False) -> None:
         super().__init__(base)
         self._reactions = reactions
+        self._lenient = lenient
         self._pending: dict[PeekNode, tuple[Action, ...]] = {}
 
     def actions(self, state: Hashable) -> tuple:
@@ -374,7 +379,7 @@ class ExpandedModel(_View):
                 found = self._expand(state.state)[1][state]
             return found
         plain, peek = _split(state, self._base.actions(state))
-        if peek is None:
+        if peek is None or (self._lenient and state not in self._reactions):
             return plain
         lock, nodes = self._expand(state, peek)
         self._pending.update(nodes)
@@ -387,6 +392,9 @@ class ExpandedModel(_View):
             reaction = self._reactions[state]
         except KeyError:
             raise ValueError(f"no acceptance set for state {state!r}, which offers a peek") from None
+        if self._lenient:
+            kernels = [dict(_merge(option).outcomes) for option in peek.options]
+            reaction = tuple((a, r) for a, r in reaction if 0 <= a < len(kernels) and r in kernels[a])
         return lock_expansion(state, peek, reaction)
 
 

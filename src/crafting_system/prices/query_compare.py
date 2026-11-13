@@ -30,8 +30,8 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
 
     `stored` is the body kept in the price entry (`{"query": {...}}`). The stat ids are compared by their group (`fractured`, `implicit`,
     `explicit`, `pseudo`) and minimum, not by id: the stat list of the site is not needed to read a price. Wider means the stored search
-    also matched the item of the spec (a lower level, no base type, no minimum); another means it asked for a different rarity, influence
-    or corruption.
+    also matched the item of the spec (a lower level, no base type, no minimum); another means it asked for a different rarity, influence,
+    corruption or Memory Strand minimum (a stranded purchase, ADR-0043).
     """
     query = stored.get("query") if isinstance(stored.get("query"), Mapping) else stored
     parts: list[str] = []
@@ -50,6 +50,10 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
     level = _filters(query, "misc_filters").get("ilvl") or {}
     if (level.get("min"), level.get("max")) != (spec.item_level_min, spec.item_level_max):
         parts.append(_level_words(level.get("min"), level.get("max")))
+    stored_strands = (_filters(query, "misc_filters").get("memory_level") or {}).get("min")
+    if stored_strands != spec.memory_strands_min:  # more strands cut more tiers, so a price for another minimum is of another item (ADR-0043)
+        parts.append(f"{stored_strands} or more Memory Strands" if stored_strands is not None else "any Memory Strands")
+        another = True
     stored_corrupted = (_filters(query, "misc_filters").get("corrupted") or {}).get("option")
     if stored_corrupted is None:
         parts.append("corrupted or not")

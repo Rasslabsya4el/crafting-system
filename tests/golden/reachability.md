@@ -11,8 +11,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 
 |  | Count |
 |---|---|
-| Action kinds in the catalog | 60 |
-| - with `planner=False` (no plan can use them) | 27 |
+| Action kinds in the catalog | 61 |
+| - with `planner=False` (no plan can use them) | 28 |
 | - with `planner=True` | 33 |
 | - `planner=True` and offered by at least one target (reachable) | 19 |
 | - `planner=True` and offered by no target | 14 |
@@ -20,12 +20,12 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry plans them | 14 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
-| Settings and flags the planner accepts | 29 |
-| - read by some code | 27 |
+| Settings and flags the planner accepts | 33 |
+| - read by some code | 31 |
 | - never read | 2 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 41 of 60 (27 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 42 of 61 (28 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -69,7 +69,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `awakeners-orb` | **no** |  | none | `planner=False`: the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built'); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 16 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
-| `recombinator` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
+| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (12 of 16 start items list such actions) | ACT2-11 |
 | `catalyst` | **no** | reads: any | none | `planner=False`: the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158) |  |
 | `eldritch-implicit-currency` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
 | `eldritch-chaos-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
@@ -87,6 +87,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `foulborn-exalted-orb` | yes | opt-in, needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
+| `orb-of-remembrance` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
 | `vaal` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (15 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-1 |
 | `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold; the finish is attached to the goal states by ticket #231 (B6 S5) |  |
@@ -128,7 +129,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
 
-- `Abstraction(..., allow_inputs=bool(donated)) in make_plan`: an action that consumes other items is planned only when it reads a rule axis, with the second items the planner offers (the recombinator: the target's isolated feeders); one without an axis is refused by the kernel.
+- `Abstraction(..., allow_inputs=False) in make_plan`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.
 - `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (asked for by `--strands` or in the planner settings), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
 - Targets that take a corrupted item (`allow_corrupted`, or a corrupted implicit): none; offers of a corrupting action over all entries: 0.
 - Fossil sets that use the Bloodstained Fossil (offered only when the target asks for a corrupted implicit): up to 2302 listed for one start item, 0 offered by any entry.
@@ -142,31 +143,35 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
 | `cache` | [paths] | `local/cache` | read | cli/_route_view.py: _trade_stats (compared; on the planning path); cli/_route_view.py: _trade_stats (used in an operation; on the planning path); and 4 more |
 | `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path) |
-| `memory_strands` | [planner] | `false` | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: plan_with_starts (read from `**kwargs`; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
-| `recipe_starts` | [planner] | `true` | read | cli/_starts.py: plan_with_starts (used in an operation; on the planning path) |
+| `memory_strands` | [planner] | `false` | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
+| `recipe_starts` | [planner] | `true` | read | cli/_starts.py: _with_starts (used in an operation; on the planning path) |
 | `recombinator_junk_craft` | [planner] | `false` | **never read** | no code reads it |
 | `max_imprints` | [planner] | `1` | **never read** | no code reads it |
-| `price_source` | [planner] | `both` | read | cli/_bought_starts.py: _option (formatted into text; not on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 10 more |
+| `price_source` | [planner] | `both` | read | cli/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
 | `price_gap_percent` | [planner] | `20.0` | read | cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); cli/_main.py: main (used as an index or container; on the planning path); and 9 more |
-| `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 5 more |
+| `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.left (compared; on the planning path); and 3 more |
+| `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.over (compared; on the planning path); and 6 more |
+| `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 4 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
 | `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
-| `--k` | command `trade` |  | read | prices/deepen.py: _deep_reading (an attribute or method of it is used; not on the planning path); prices/price_file.py: _entry_to_json (compared; on the planning path); and 9 more |
+| `--k` | command `trade` |  | read | prices/deepen.py: _deep_reading (an attribute or method of it is used; not on the planning path); prices/price_file.py: _entry_to_json (compared; on the planning path); and 12 more |
 | `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
+| `--memory-limit` | command `plan` |  | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.over (compared; on the planning path); and 6 more |
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
-| `--price-source` | command `plan` |  | read | cli/_bought_starts.py: _option (formatted into text; not on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 10 more |
+| `--price-source` | command `plan` |  | read | cli/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 2 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
-| `--solver` | command `plan` |  | read | cli/_packed.py: packed_result (compared; on the planning path); cli/_packed.py: packed_result (formatted into text; on the planning path); and 4 more |
+| `--solver` | command `plan` |  | read | cli/_packed.py: packed_result (compared; on the planning path); cli/_packed.py: packed_result (formatted into text; on the planning path); and 5 more |
 | `--start-price` | command `plan` |  | read | cli/_plan.py: _override (compared; on the planning path); cli/_plan.py: _override (formatted into text; on the planning path); and 2 more |
-| `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: plan_with_starts (read from `**kwargs`; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
+| `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
+| `--time-limit` | command `plan` |  | read | budget.py: Binding.words (formatted into text; on the planning path); budget.py: Clock.left (compared; on the planning path); and 4 more |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 
 Code that takes a never-read setting by its own name:
@@ -185,7 +190,7 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
 | the market rule | `classify` | `prices/trade_market.py` | prices/trade_exchange.py: read_offers, prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
-| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_bought_starts.py: _option, cli/_offers.py: price_offers, and 4 more | yes | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_bought_starts.py: _option, cli/_offers.py: price_offers, and 5 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
@@ -201,9 +206,9 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the item-level floor | `level_groups` | `targets/floor.py` | cli/_bought_starts.py: bought_base_starts, targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `refusal_at` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `target_at_level` | `targets/floor.py` | cli/_bought_starts.py: _Level.__init__, cli/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | cli/_plan.py: solve_each_reading | yes | ACT2-11 |
-| the donor loop of two-input actions | `is_feeder` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
+| the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
+| the donor loop of two-input actions | `takes_inputs` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 
 ## 6. Target keys
 
