@@ -65,7 +65,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `aspect-beast` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `beast-side-swap` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `wild-bristle-matron` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `divine-orb` | yes |  | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
+| `divine-orb` | yes |  | r10-fractured-boots-70-life |  |  |
 | `awakeners-orb` | **no** |  | none | `planner=False`: the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built'); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 17 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
@@ -108,9 +108,9 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
-| r10-fractured-boots | plans | no key | 80 | 0 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
+| r10-fractured-boots | plans | no key | 79 | 0 | 0 | 5 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods |
 | r10-fractured-boots-70-life | plans | no key | 80 | 0 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
-| r11 | plans | no key | 78 | 0 | 0 | 4 | chaos-orb, divine-orb, essence, harvest-reforge |
+| r11 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r12 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r13 | plans | 5 names | 6 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
 | r14 | plans | 9 names | 11 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
@@ -220,7 +220,7 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_finish.py, planner/_plan.py |  |
 | `influences` | cli/_route_card.py, planner/_bought_starts.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, planner/_bought_starts.py, planner/_finish.py, planner/_plan.py, planner/_starts.py |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_finish.py, planner/_plan.py, and 1 more |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
 | `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py |  |
