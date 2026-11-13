@@ -15,6 +15,11 @@
 `envelope_result` runs the search, solves the graph it ended with exactly (`_packed.solve_walked`: merge, policy iteration, certificate, the lumped chain
 the report and the risk read) and returns the `PackedResult` that `make_plan` takes from the packed walk, with the search's numbers in `info["envelope"]`.
 `envelope_limits` is the `Limit` the report shows: which cut ran and what it guarantees (OR-13).
+
+The search ends in one of three ways, and `EnvelopeInfo` says which (ticket #826, OR-32, OR-33): *exact* (the plan is proved the cheapest); *at a
+proved gap* (`within`: past the run's aim, the plan is proved to cost at most that share more than the cheapest); *stopped by a net* (`stopped`: the
+best plan found, with the gap that was proved). In all three the mean is the exact mean of the plan returned: the graph the search ended with is
+solved again here, and that solve, not the search's upper figure, is the mean shown.
 """
 
 import dataclasses
@@ -31,7 +36,7 @@ from crafting_system.abstraction._pattern import SINK, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 
 from . import _limits
-from ._envelope import BoundError, Net, NoPolicy, Refused, Search, resident_mb
+from ._envelope import BoundError, Net, NoPolicy, Refused, Search, Standing, resident_mb
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -247,6 +252,11 @@ class EnvelopeInfo:
     bound_expanded: int = 0  # keys the build expanded (the others were tips with a floor)
     bound_offers: int = 0  # offers the model was built on (the rest are carried by their floors, `_pattern_bound`)
     bound_rounds: int = 1
+    within: float | None = None  # the gap setting, when the search ended because the plan was proved within it of the cheapest (OR-32); then `stopped` is None
+    restarts: bool = True  # whether the plan of a search that is not exact buys the start item again wherever the search had not looked (False: a given start, whose plan closed)
+    first_plan: int = 0  # actions built along the first plan's chain, before the first round
+    upper_refused: int = 0  # rounds in which the plan in hand could not be solved to a certified cost, so the stop at the gap waited (#769)
+    upper_seconds: float = 0.0
 
 
 def envelope_result(
@@ -262,8 +272,16 @@ def envelope_result(
     progress: Callable[[str], None] | None = None,
     guard: bool = True,
     item=None,
+    gap: float = 0.0,
+    gap_after: float | None = None,
+    watch: Callable[[Standing], None] | None = None,
 ) -> PackedResult:
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
+
+    `gap` and `gap_after` are the stop at a proved gap (OR-32, `_envelope`): once `gap_after` seconds of this call have passed (the bound's build
+    counts), the search ends when its plan is proved to cost at most `gap` more than the cheapest; `gap` 0 or `gap_after` None is the exact search.
+    `watch` is told where the search stands after the first plan and after each round (`_envelope.Standing`: the best plan's cost so far and the
+    figure no plan can cost less than).
 
     Raises `OutOfScopeError` when the bound cannot be built for this abstraction (a goal with a roll limit, an action that rerolls values, an unveil
     offer, imprints: #507), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
@@ -276,13 +294,13 @@ def envelope_result(
     say = progress or _packed.PROGRESS or (lambda _text: None)
     try:
         with parallel.memory_net(net.memory_mb if net is not None else None):  # the pool's workers are watched by the memory net too (#626, OR-12)
-            return _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item)
+            return _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch)
     finally:  # said on a refusal too
         if (reason := getattr(abstraction, "prime_stopped", None)) is not None:
             say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
 
 
-def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item) -> PackedResult:
+def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch) -> PackedResult:
     """The body of `envelope_result`, under the run's memory net."""
     began = time.perf_counter()
     if bound is None:
@@ -295,10 +313,12 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
     )
     if net is not None and net.seconds is not None:
         net = dataclasses.replace(net, seconds=max(net.seconds - (built - began), 0.0))  # the search has what the build left of the time
+    if gap_after is not None:
+        gap_after = max(gap_after - (built - began), 0.0)  # the aim is of the whole plan: the build's time counts toward it
     problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting)
     where = {priced.label: position for position, priced in enumerate(offers)}
     positions = None if incumbent is None else (lambda state: [where[label] for label in incumbent(state) if label in where])
-    search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance, guard=guard)
+    search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance, guard=guard, gap=gap, gap_after=gap_after, watch=watch)
     try:
         result = search.run()
     except NoPolicy as refusal:
@@ -313,6 +333,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
         result.exact, result.stopped, result.lower, mean, stats.rounds, stats.touched, stats.expanded, stats.realized, stats.candidates,
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
+        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds,
     )  # fmt: skip
     return packed
 
@@ -349,13 +370,31 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
                 ),
             ),
         )
+    if info.within is not None:
+        waited = (
+            f"; in {info.upper_refused:,} of its rounds the plan in hand could not be worked out to a certified cost, and the search went on until one could"
+            if info.upper_refused
+            else ""
+        )
+        return (
+            Limit(
+                _limits.SOLVE,
+                "The search stopped once the plan was proved close to the cheapest",
+                f"the plan took longer than the time it aims at, so the search stopped, after {info.rounds:,} rounds and {info.expanded:,} states looked at, "
+                f"as soon as its plan was proved to cost at most {certificate_gap_text(info.within)} more than the cheapest possible (the gap this run allows)"
+                + (", buying the start item again wherever it had not looked" if info.restarts else "")
+                + waited,
+                f"The plan is {_limits.WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is exact for the "
+                "plan shown, not an estimate. " + certificate_text(info),
+            ),
+        )
     return (
         Limit(
             _limits.SOLVE,
             "The search was stopped",
-            f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} states looked at; the plan restarts from the start item "
-            "wherever the search had not looked",
-            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item. " + certificate_text(info),
+            f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} states looked at"
+            + ("; the plan restarts from the start item wherever the search had not looked" if info.restarts else ""),
+            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, exactly. " + certificate_text(info),
         ),
     )
 
@@ -387,7 +426,7 @@ def certificate_gap_text(gap: float) -> str:
 
 
 def certificate_text(info: EnvelopeInfo) -> str:
-    """What a stopped search still guarantees, next to the point answer (OR-11, OR-13): `[LB, U]`, the gap, the bound used and what it bounds.
+    """What a search that did not end exact still guarantees, next to the point answer (OR-13, OR-32): `[LB, U]`, the gap, the bound used and what it bounds.
 
     The plan and its exact mean `U` stay the answer; the interval only says how far the stop could be from the best possible cost. `LB` is a
     lower bound of the whole graph: the optimistic model of the crafted pattern (the walk-free bound), raised by the actions the search looked at,
@@ -421,4 +460,7 @@ def certificate_text(info: EnvelopeInfo) -> str:
     return head + gap_text + bound + cut
 
 
-__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "certificate_figures", "certificate_gap", "certificate_gap_text", "certificate_text", "envelope_limits", "envelope_result", "route_incumbent"]
+__all__ = [
+    "BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "Standing", "certificate_figures", "certificate_gap", "certificate_gap_text",
+    "certificate_text", "envelope_limits", "envelope_result", "route_incumbent",
+]  # fmt: skip

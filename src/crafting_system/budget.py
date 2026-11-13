@@ -37,6 +37,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the exact proof gives way to the stop at a proved 1% (#826)
+PROOF_GAP = 0.01  # OR-32: past the aim the search stops when its plan is proved to cost at most this share more than the cheapest; 0 keeps the exact proof (#826)
 NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every method family has its bound (#822, ticket 4)
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
@@ -55,14 +56,20 @@ class Budget:
 
     `aim_seconds` is what the plan aims at (the forecast of `_decide` reads it, and #826's stop at a proved 1%); `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements).
+    `gap` is the proof the run owes once it is past its aim (OR-32): the plan proved to cost at most this share more than the cheapest; before the
+    aim, and with no aim, the proof is exact, and 0 keeps it exact whatever the time. Every figure is a setting of the machine and the user the
+    run is for, never a constant sized for one machine.
     """
 
     aim_seconds: float | None = AIM_SECONDS
     seconds: float | None = NET_SECONDS
     memory_mb: float | None = None
     states: int | None = None
+    gap: float = PROOF_GAP
 
     def __post_init__(self) -> None:
+        if not (self.gap >= 0 and math.isfinite(self.gap)):
+            raise ValueError(f"the budget's gap is a share, zero or more (0.01 is 1%); got {self.gap!r}")
         for name in ("aim_seconds", "seconds", "memory_mb"):
             value = getattr(self, name)
             if value is not None and not (value >= 0 and math.isfinite(value)):

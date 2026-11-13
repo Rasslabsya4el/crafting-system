@@ -1,11 +1,13 @@
 """Plan routes on the packed solver and cross-check it against the object solver (ticket #374, ADR-0063); run by the `Run a command` workflow.
 
-    python .github/scripts/packed_routes.py plan  --route r04|r14|s02 [--out DIR]
+    python .github/scripts/packed_routes.py plan  --route r04|r14|r13|j01|v01|s02 [--aim-seconds S] [--gap SHARE] [--no-risk] [--out DIR]
     python .github/scripts/packed_routes.py check --route r05|r08|r10|r12|r13 [--out DIR]
 
 `plan` makes the plan of the route the way the planner does (`make_plan(solver="auto")`, exact; since #535 the envelope search wherever its bound can be built, so pass `--solver packed` for the walk) and writes `<route>.json`:
 the mean cost from the start, the certified error bound, the numbers of the packed solve (states, classes, kernels, rounds,
-seconds of each phase), the risk (odds, p50, p90) and the peak memory.
+seconds of each phase), the risk (odds, p50, p90) and the peak memory. With `--aim-seconds S` the plan has OR-32's budget (ticket #826): past `S` seconds
+the envelope search stops once its plan is proved within `--gap` (a share, the planner's 1% by default) of the cheapest; `search` in the JSON says how the
+search ended (exact, or within the gap), its lower and upper figures, its rounds and the first plan's cost. `--no-risk` leaves the percentiles out.
 
 `check` makes the production plan with the object solver (`solver="object"`), then solves the same offers on packed arrays and
 prints the relative difference of the mean cost, p50 and p90; for R08 the packed solve takes the offers the bound pruning
@@ -25,6 +27,7 @@ import threading
 import time
 from pathlib import Path
 
+from crafting_system.budget import PROOF_GAP, Budget
 from crafting_system.cli import make_plan
 
 from crafting_system.planner import _packed
@@ -35,6 +38,8 @@ from crafting_system.targets import load_target, parse_target
 ROOT = Path(__file__).resolve().parents[2]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"  # `ROUTE_PRICES` (a path from the project root) names another snapshot for one run
 TARGETS = {
+    "j01": "j01-cobalt-life-attack-speed",
+    "v01": "v01-minion-helmet",
     "r04": "r04-penetrating-quiver",
     "r05": "r05-strength-ring",
     "r08": "r08-energy-shield-boots",
@@ -115,6 +120,9 @@ def main() -> None:
     parser.add_argument("--route", required=True)
     parser.add_argument("--out")
     parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto, the planner's own; packed is the walk of the whole graph)")
+    parser.add_argument("--aim-seconds", type=float, help="plan: the time the plan aims at (OR-32); past it the search stops at --gap. Default: no aim, the exact proof")
+    parser.add_argument("--gap", type=float, default=PROOF_GAP, help="plan: the gap of the stop past the aim, as a share (default: the planner's)")
+    parser.add_argument("--no-risk", action="store_true", help="plan: leave the percentiles out")
     arguments = parser.parse_args()
     faulthandler.dump_traceback_later(300, repeat=True, file=sys.stderr)
     threading.Thread(target=watch_memory, daemon=True).start()
@@ -129,8 +137,16 @@ def main() -> None:
     out = Path(arguments.out) if arguments.out else None
     result: dict = {"route": arguments.route, "mode": arguments.mode}
     if arguments.mode == "plan":
-        plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver=arguments.solver)
+        budget = None if arguments.aim_seconds is None else Budget(aim_seconds=arguments.aim_seconds, seconds=None, memory_mb=None, gap=arguments.gap)
+        plan = make_plan(data, target, prices, start_price=start_price, budget=budget, solver=arguments.solver, with_risk=not arguments.no_risk)
+        search = plan.search
+        if search is not None:
+            keep = ("exact", "within", "stopped", "lower", "upper", "rounds", "touched", "expanded", "realized", "candidates", "first_upper", "first_plan",
+                    "bound_keys", "bound_seconds", "seconds", "peak_mb", "upper_refused", "upper_seconds")  # fmt: skip
+            result["search"] = {name: getattr(search, name) for name in keep}
+            result["search"]["gap"] = search.upper / search.lower - 1.0 if search.lower > 0 else None
         result.update(
+            aim_seconds=arguments.aim_seconds, gap_setting=arguments.gap,
             solver=arguments.solver, seconds=round(time.perf_counter() - began, 1), solve_seconds=round(plan.solve_seconds, 1),
             risk_seconds=round(plan.risk_seconds, 1), mean_remaining=plan.mean_remaining, error_bound=plan.solution.error_bound,
             states=len(plan.solution.values), policy_states=len(plan.policy), offers=len(plan.offers),

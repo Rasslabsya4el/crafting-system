@@ -96,7 +96,7 @@ def test_a_net_gives_an_executable_plan_bounds_around_the_cost_and_a_limit_that_
 
 def test_a_net_that_stops_the_search_before_any_plan_exists_raises_and_says_so(world):
     with pytest.raises(NoPolicy, match="before any policy that can be executed was found"):
-        fresh(world, net=Net(states=12))
+        fresh(world, net=Net(seconds=0.0))  # the time net ends the first plan's chain at the start (#826: a state net waits for the first round)
 
 
 def test_a_bound_planted_above_the_exact_cost_is_caught(world):

@@ -1,4 +1,4 @@
-"""The envelope search: the exact branch-and-bound of OR-12 on a lower bound that needs no walk (ticket #377, ADR-0063 point 4).
+"""The envelope search: the branch-and-bound of OR-12 on a lower bound that needs no walk, two-sided since #826 (ticket #377, ADR-0063 point 4).
 
 The full walk expands every state a route can reach (R14: 816,153) and every action of each. The envelope search expands only the states, and
 of those only the actions, that the bound cannot rule out, and stops when the root's best action is proved. It is generic: a `Problem` gives
@@ -22,7 +22,8 @@ never realized: the optimal action has `Q_L <= Q* = V*(s)`, so it is cheaper tha
 ("an action is not expanded when its cost with lower bounds exceeds the best action's cost with upper bounds"), made with the upper bound
 `U >= V*` replaced by the stronger `V*` it stands for; the upper bound of an executable policy (the completed route of the guide, or the
 restart at every tip) does not move the cut. It is what a stop returns (below). A state is expanded only when the greedy policy of the lower graph
-reaches it. Nothing is cut by a number: no tolerance, no lumping by chance.
+reaches it, or when the first plan does (below: the least-`la` offer of a state has `la <= V*` there, so the cut's statement holds for it too).
+Nothing is cut by a number: no tolerance, no lumping by chance. The stop at a proved gap (below) cuts nothing either: it ends the proof early.
 
 **Why the mean is exact.** Each round takes the greedy policy `pi` of the lower graph. If it reaches no fake action, every state it reaches is
 expanded and the action it takes there is realized: `pi` is a policy of the real graph. The lower graph restricted to its reach is then exactly the
@@ -65,11 +66,34 @@ bounds are fixed points computed to the solver's certified relative error (`L` i
 lower), so a cut never rests on a rounding: a bound moves only up (`L`) and every comparison that decides a cut is against a value that was
 lowered by what the solver cannot certify.
 
-**The upper bound, and the stop-and-say-so net.** `U` is the value of a policy that can be executed: the realized actions plus, at every state
-but the start, the restart (buy the start item again) when the start item is bought. A tip then restarts (its upper bound is the start price plus
-the start value, a fixed point of the same graph), and a given route, completed (`cli/_route.py`), is the same policy with its actions realized first
-(`incumbent`). A start that is given has no restart: a tip has no executable action, and `U` is infinite until the greedy policy closes, which says
-so. A time, memory or state net (`Net`) ends the search between rounds; the answer is then the best executable policy and `exact` is False.
+**The upper side (ticket #826).** `U` is the value of a policy that can be executed: the best policy of the *upper graph*, which holds the realized
+actions plus, at every state but the start, the restart (buy the start item again) when the start item is bought. A tip then restarts (its cost is
+the start price plus the start value, a fixed point of the same graph). A start that is given has no restart: a tip has no executable action, and
+`U` is infinite until some policy of the realized actions closes (reaches no tip). Every action of the upper graph is a real action with its exact
+kernel, so its best policy is a policy of the real game and `U`, solved with a certified residual and taken `(1 + error)` higher, is at least that
+policy's exact mean, which is at least `V*(root)`. The upper graph only gains actions, so `U` only falls.
+
+**The first plan.** Before the first round the search realizes one action along a chain from the start (`_seed`): at each state the offer with the
+least `la` (the action the bound thinks best; an offer the game refuses passes to the next), or the offers a given route names (`incumbent`, the
+"completed route" of `cli/_route.py`, #536). That chain with the restart at whatever it leaves is the first executable plan, and its `U` the first
+upper figure (`SearchStats.first_upper`): on R04 it is the optimum itself, on R14 0.0004% above it (research note 2026-11-13-planning-speed,
+section 3). From then on a caller can read the best plan so far and its proved gap at any time (`Search.standing`, `Search.plan_now`, `watch`).
+
+**The stop at a proved gap (OR-32).** With `gap = eps > 0`, once `gap_after` seconds have passed, the search ends at the first round where
+`U <= (1 + eps) L(root)`: the answer is the upper graph's best policy, `exact` is False and `within` is `eps`. The stop is sound because of two
+facts and nothing else. (1) *The lower side is admissible*: `L(root) <= V*(root)` ("The lower graph", above), and the figure compared is
+`L(root)` less its certified error. (2) *The upper side is an executable policy evaluated exactly*: the plan returned is the policy whose value
+`U` is (the same graph, solved in the same round), every action in it is real, and `U` is taken with its certified error added. Then
+`mean(plan) <= U <= (1 + eps) L(root) <= (1 + eps) V*(root)`: the plan costs at most `eps` more than the cheapest plan of the offers. A `U` that
+is an estimate, a heuristic's value or the value of a policy that reaches a state with no executable action would break (2); a bound that is not
+a lower bound would break (1), and the guard above refuses the ones it can see. A round whose upper solve cannot be certified (`ConvergenceError`:
+the free-action and stiff cases of #769) does not stop: the stop waits for a certified `U` (`SearchStats.upper_refused` counts the rounds it
+waited). Before `gap_after` only the exact stop ends the search ("exact when the whole plan fits in about a minute"); `gap = 0`, or `gap_after`
+None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
+
+**The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
+round and inside the first plan's chain; the answer is then the best executable policy and `exact` is False, with `stopped` saying which net. A given start whose plan has not closed has no answer
+(`NoPolicy`).
 """
 
 import math
@@ -94,7 +118,7 @@ FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
-POLL_SECONDS = 0.5  # how often a round that expands many states asks the net inside it
+POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
 
@@ -159,7 +183,11 @@ class SearchStats:
     kernels: int = 0
     lower_history: list[float] = field(default_factory=list)  # `L(root)` after each round
     largest_fall: float = 0.0  # the largest relative fall of `L(root)` from one round to the next: 0 for a consistent bound (it only rises)
-    first_upper: float | None = None  # the value of the incumbent's policy (or the restart policy), when one was asked for
+    first_upper: float | None = None  # the certified upper figure of the first plan (the least-`la` chain or the incumbent's, the restart at the rest); None when not finite or not certified
+    seeded: int = 0  # (state, offer) pairs realized along the first plan's chain, before the first round
+    upper_solves: int = 0  # solves of the upper graph
+    upper_refused: int = 0  # of those, the ones the solver could not certify (the stop at a gap waited)
+    upper_seconds: float = 0.0
     solve_seconds: float = 0.0
     build_seconds: float = 0.0
     expand_seconds: float = 0.0
@@ -174,8 +202,10 @@ class SearchResult[S]:
 
     `exact`: the greedy policy reaches only expanded states and its mean is the optimum, pinned by `lower == upper` to the solver's certified
     error. Otherwise `stopped` says which net ended the search and the graph holds the best executable policy (the restart at every tip).
-    `lower` is `L(root)` less its certified error (the `LB` of the certificate `[LB, U]`); `upper` is None until a policy was executed (the caller
-    solves the graph and reads the value).
+    `lower` is `L(root)` less its certified error (the `LB` of the certificate `[LB, U]`). `upper` is the certified upper figure of the plan in
+    `graph` (its value with the solver's error added; the caller solves the graph for the exact mean), None for an exact answer, where the mean
+    is pinned by the lower graph itself. `within` is the gap setting when the search ended at a proved gap (OR-32): then `stopped` is None,
+    `exact` is False and `upper <= (1 + within) * lower`.
     """
 
     states: list[S]
@@ -186,6 +216,29 @@ class SearchResult[S]:
     stopped: str | None
     restarts: bool
     stats: SearchStats
+    upper: float | None = None
+    within: float | None = None
+
+
+@dataclass(frozen=True)
+class Standing:
+    """Where the search stands: the best plan so far and its proved gap, for a caller to read at any time (`Search.standing`, `watch`).
+
+    `lower`: no plan costs less (certified). `upper`: a plan the search holds costs at most this (certified; `Search.plan_now` returns that plan
+    or a cheaper one), None while no executable plan has closed. Both are the remaining cost from the start state.
+    """
+
+    lower: float
+    upper: float | None
+    rounds: int
+    seconds: float
+
+    @property
+    def gap(self) -> float | None:
+        """`U / L - 1`: the most the plan can cost above the cheapest; None with no plan yet or a lower figure not above zero."""
+        if self.upper is None or not self.lower > 0.0 or not math.isfinite(self.upper):
+            return None
+        return max(self.upper / self.lower - 1.0, 0.0)
 
 
 def resident_mb() -> float | None:
@@ -277,9 +330,19 @@ class Search[S]:
         tolerance: float = 1e-10,
         guard: bool = True,
         warm: bool | None = None,
+        gap: float = 0.0,
+        gap_after: float | None = None,
+        watch: Callable[[Standing], None] | None = None,
     ) -> None:
+        if not (gap >= 0.0 and math.isfinite(gap)):
+            raise ValueError(f"the gap of the stop is a share, zero or more (0.01 is 1%); got {gap!r}")
         self.p = problem
         self.net = net or Net()
+        self.gap = gap  # OR-32: stop when the plan is proved to cost at most this share more than the cheapest; 0 is the exact search
+        self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
+        self.watch = watch
+        self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
+        self.standing: Standing | None = None
         self.incumbent = incumbent
         self.say = progress or (lambda _text: None)
         self.tolerance = tolerance
@@ -436,34 +499,45 @@ class Search[S]:
             self.stats.realized += 1
             best = min(best, self._q(cost, kid))
 
-    def _seed(self) -> None:
-        """Realize the incumbent's action along its chain from the start: the policy that gives a finite upper bound from the first round."""
-        assert self.incumbent is not None
+    def _seed(self, began: float) -> str | None:
+        """Realize one action along a chain from the start, the first plan (see the module text): the incumbent's where one is given, else the
+        offer with the least `la`; an offer the game refuses passes to the next. Returns the reason when the time or the memory net ended the
+        chain early (the states it had not come to stay tips, which restart)."""
         queue = [0]
         seen = {0}
+        polled = -math.inf  # the memory is read at the first state, and then every `POLL_SECONDS`
         for i in queue:
             if self.goal[i]:
                 continue
+            poll = time.perf_counter() - polled >= POLL_SECONDS
+            if poll:
+                polled = time.perf_counter()
+            stopped = self._net(began, memory=poll, states=False)  # the clock at every state; the state net waits for the first round, so the chain is whole
+            if stopped is not None:
+                return stopped
             if not self.expanded[i]:
                 self.expand(i)
             rows, cands = self.rows[i], self.cands[i]
-            for position in self.incumbent(self.states[i]):
+            wanted = self.incumbent(self.states[i]) if self.incumbent is not None else [position for _, position in reversed(cands)]  # the least `la` is last
+            for position in wanted:
                 held = [c for c in cands if c[1] == position]
                 if not held:
                     continue
+                cands.remove(held[0])  # a refused offer is not asked again: it has no action here
                 try:
                     kid = self._kernel(i, position)
                 except Refused:
                     continue
-                cands.remove(held[0])
                 rows.append((position, self.p.cost(position), kid, self._self_mass(i, kid)))
                 self.stats.realized += 1
+                self.stats.seeded += 1
                 for j in self.kernels.succ[self.kernels.span(kid)].tolist():
                     if j not in seen:
                         seen.add(j)
                         queue.append(j)
                 break
             self.p.release()
+        return None
 
     # ---- the graphs ---------------------------------------------------------------------------------------------
 
@@ -569,22 +643,59 @@ class Search[S]:
         return policy, value
 
     def upper_value(self) -> float:
-        """The value of the best executable policy of the graph now (restart at every tip): infinite when the start item is given and none closes."""
-        if self.p.restart is None:
-            return math.inf
-        graph = self._graph("upper")
-        core = solve_graph(graph, tolerance=self.tolerance, self_mass=self.self_mass)
-        return float(core.value[0])
+        """The value of the best executable policy of the graph now (the restart at every tip): infinite when the start item is given and no policy
+        of the realized actions closes. Raises `ConvergenceError` when the solver cannot certify it."""
+        return self._upper()[1]
+
+    def _upper(self) -> tuple[PackedGraph, float, float]:
+        """The upper graph now, the value of its best policy at the start and that value with the solver's certified error added (the upper
+        figure a stop may rest on). With no restart the graph is the realized actions alone (a tip is a dead end). Raises `ConvergenceError`."""
+        mark = time.perf_counter()
+        self.stats.upper_solves += 1
+        try:
+            graph = self._graph("upper")
+            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass)
+        except ConvergenceError:
+            self.stats.upper_refused += 1
+            raise
+        finally:
+            self.stats.upper_seconds += time.perf_counter() - mark
+        value = float(core.value[0])
+        certified = value * (1.0 + core.certificate.bound) if math.isfinite(value) else math.inf
+        if math.isfinite(certified) and (self.upper is None or certified < self.upper):
+            self.upper = certified
+        return graph, value, certified
+
+    def plan_now(self) -> SearchResult[S] | None:
+        """The best executable plan the search holds now, as a stop would return it, or None while none has closed or the solver cannot certify
+        it. For a caller that shows a plan before the proof ends (it costs one solve of the upper graph)."""
+        try:
+            graph, _, certified = self._upper()
+        except ConvergenceError:
+            return None
+        if not math.isfinite(certified):
+            return None
+        lower = self.standing.lower if self.standing is not None else float(self.lb[0])
+        self.stats.touched = len(self.states)
+        return SearchResult(self.states, self.index, graph, lower, False, None, self.p.restart is not None, self.stats, certified, None)
+
+    def _stand(self, lower: float, began: float) -> None:
+        """Record where the search stands and tell the watcher."""
+        self.standing = Standing(lower, self.upper, self.stats.rounds, time.perf_counter() - began)
+        if self.watch is not None:
+            self.watch(self.standing)
 
     # ---- the rounds ---------------------------------------------------------------------------------------------
 
-    def _net(self, began: float) -> str | None:
+    def _net(self, began: float, memory: bool = True, states: bool = True) -> str | None:
+        """The reason a net is reached now, or None; `memory` False leaves the memory unread (reading it costs too much to do at every state),
+        `states` False leaves the count of states unasked (the first plan's chain: the state net is asked between rounds)."""
         net = self.net
         if net.seconds is not None and time.perf_counter() - began >= net.seconds:
             return f"the time limit of {net.seconds:g} seconds was reached"
-        if net.states is not None and len(self.states) >= net.states:
+        if states and net.states is not None and len(self.states) >= net.states:
             return f"{len(self.states):,} states were known, the limit is {net.states:,}"
-        if net.memory_mb is not None:
+        if memory and net.memory_mb is not None:
             used = resident_mb()
             if used is not None and used >= net.memory_mb:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
@@ -594,14 +705,26 @@ class Search[S]:
         began = time.perf_counter()
         if self.p.restart is not None:
             self.restart_kernel = self._store([0], [1])
-        if self.incumbent is not None and not self.goal[0]:
-            self._seed()
-            upper = self.upper_value()
-            self.stats.first_upper = upper if math.isfinite(upper) else None
-            self.say(f"incumbent: {self.stats.realized:,} actions realized along its chain, value {upper!r}")
         stopped = None
+        if not self.goal[0]:
+            if math.isfinite(self.lb[0]):
+                self._last_root = float(self.lb[0])  # the lower graph before the first plan is the start alone, a tip, and its value the start's bound: the first round must not fall below it (the guard)
+            mark = time.perf_counter()
+            stopped = self._seed(began)
+            self.stats.expand_seconds += time.perf_counter() - mark
+            try:
+                upper = self._upper()[2]
+            except ConvergenceError:  # the first plan is beyond what the solver certifies (#769): the search goes on without an upper figure
+                upper = math.inf
+            self.stats.first_upper = upper if math.isfinite(upper) else None
+            self.say(
+                f"first plan ({'the given route' if self.incumbent is not None else 'the least lower cost at each state'}): {self.stats.seeded:,} actions "
+                f"realized along its chain over {len(self.states):,} states, costs at most {upper!r} ({time.perf_counter() - began:.0f} s)"
+                + (f"; its chain was cut short: {stopped}" if stopped is not None else "")
+            )
+            self._stand(float(self.lb[0]), began)  # the bound of the start is a lower figure before any round
         lower = 0.0
-        while True:
+        while stopped is None:
             mark = time.perf_counter()
             graph = self._graph("lower")
             self.stats.build_seconds += time.perf_counter() - mark
@@ -661,7 +784,21 @@ class Search[S]:
             )
             if not len(fake):
                 self.stats.touched = len(self.states)
+                self.upper = min(root * (1.0 + core.certificate.bound), self.upper if self.upper is not None else math.inf)  # the greedy policy is executable and its value is `root`
+                self._stand(lower, began)
                 return SearchResult(self.states, self.index, self._graph("exact"), lower, True, None, False, self.stats)
+            if self.gap > 0.0 and self.gap_after is not None and time.perf_counter() - began >= self.gap_after:
+                try:
+                    plan, _, upper = self._upper()
+                except ConvergenceError:  # the stop waits for an upper figure the solver can certify (#769)
+                    plan, upper = None, math.inf
+                    self.say("  the plan in hand could not be solved to a certified cost this round: the stop at the gap waits")
+                if plan is not None and upper <= (1.0 + self.gap) * lower:
+                    self.stats.touched = len(self.states)
+                    self._stand(lower, began)
+                    self.say(f"stop: the plan costs at most {upper!r}, no plan costs less than {lower!r}: proved within {self.gap:.3%}")
+                    return SearchResult(self.states, self.index, plan, lower, False, None, self.p.restart is not None, self.stats, upper, self.gap)
+            self._stand(lower, began)
             stopped = self._net(began)
             if stopped is not None:
                 break
@@ -681,24 +818,27 @@ class Search[S]:
             if stopped is not None:
                 break
         self.stats.touched = len(self.states)
-        if self.p.restart is None:
-            raise NoPolicy(
-                f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
-                f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}"
-            )
+        if not self.stats.rounds:
+            lower = float(self.lb[0])  # the net ended the first plan's chain before any round: the start's own bound is the lower figure
         try:
-            upper = self.upper_value()
+            plan, _, upper = self._upper()
         except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies: say so, with the bound
             raise NoPolicy(
                 f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
                 f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
             ) from error
         if not math.isfinite(upper):
+            if self.p.restart is None:
+                raise NoPolicy(
+                    f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
+                    f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}"
+                )
             raise NoPolicy(
                 f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} of {len(self.states):,} states "
                 f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
             )
-        return SearchResult(self.states, self.index, self._graph("upper"), lower, False, stopped, True, self.stats)
+        self._stand(lower, began)
+        return SearchResult(self.states, self.index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None)
 
 
 class NoPolicy(ValueError):
@@ -706,5 +846,6 @@ class NoPolicy(ValueError):
 
 
 __all__ = [
-    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "BoundError", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "resident_mb",
+    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "BoundError", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
+    "resident_mb",
 ]  # fmt: skip
