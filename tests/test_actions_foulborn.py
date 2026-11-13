@@ -61,7 +61,7 @@ def test_the_three_kinds_are_registered_and_flagged_as_needing_strands():
 
     assert all(registered[name].needs_strands for name in KIND_NAMES)
     others = {entry.name for entry in kinds() if entry.needs_strands and entry.name not in KIND_NAMES}
-    assert others == {"orb-of-remembrance"}  # the only other gated kind: the Orb of Remembrance (#278)
+    assert others == {"orb-of-remembrance", "unravelling-orb"}  # the other gated kinds: the Orbs of Remembrance (#278) and Unravelling (#281)
     assert [registered[name].opt_in for name in KIND_NAMES] == [False, False, True]  # like the plain orbs: the Exalted Orb only when named
 
 
@@ -87,7 +87,7 @@ def test_an_item_that_holds_strands_turns_them_on_by_itself():
 
 
 def test_the_plain_catalog_is_the_same_with_strands_on_apart_from_the_gated_kinds():
-    gated = {type(action).__name__ for action in FOULBORN} | {"RemembranceOrb"}  # the Orb of Remembrance is gated too (#278)
+    gated = {type(action).__name__ for action in FOULBORN} | {"RemembranceOrb", "OrbOfUnravelling"}  # the other strand-only kinds (#278, #281)
     for item in fixture_items().values():
         off = catalog(CONTRACT_DATA, item)
         on = catalog(CONTRACT_DATA, item, strands=True)

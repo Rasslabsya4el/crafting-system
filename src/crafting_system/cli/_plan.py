@@ -26,8 +26,8 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
-from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, is_free_cost, solve_readings
-from crafting_system.solver import Action, ConvergenceError, Outcome, PeekNode, Solution, solve
+from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, has_inputs, is_free_cost, solve_readings
+from crafting_system.solver import MAIN, Acquisition, Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
@@ -39,7 +39,7 @@ from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, spli
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, unusable_limits
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import Net, NoPolicy
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
@@ -120,6 +120,44 @@ def given_price() -> StartPrice:
 
 
 @dataclass(frozen=True)
+class DonorPlan:
+    """The plan of a target whose offers take donors (a recombinator, ticket #225, ADR-0022, ADR-0062): the product it was solved on.
+
+    A product state is `("in", want, state)`: the item wanted (`MAIN` for the target, else the compressed donor it must become) and the
+    compressed state it is in now (`solver.Acquisition`). `solution` is the plan reading's solve over the product, `start` the target's own
+    process at the start state, `acquisition` the product model of the plan reading (its actions carry their donors as product states).
+    `Plan.solution` is the target's own process read off it (`main_view`); the risk is measured on the whole product, donors included.
+    """
+
+    acquisition: Acquisition
+    start: tuple
+    solution: Solution[tuple]
+
+    @property
+    def processes(self) -> tuple[CompressedState, ...]:
+        """The donors the plan makes, each a compressed want, in the order the solve met them (the target's own process left out)."""
+        found: dict[CompressedState, None] = {}
+        for _tag, want, _state in self.solution.policy:
+            if want is not MAIN:
+                found.setdefault(want, None)
+        return tuple(found)
+
+
+def main_view(solution: Solution[tuple]) -> Solution[CompressedState]:
+    """The target's own process of a product solution, on compressed states (ticket #225).
+
+    Its values are those of the product, so a state's value counts the donors still to make; an action keeps its label and its own cost and
+    leaves its donors out (`extra_inputs` empty): what a donor costs is in the value, and how it is made is `DonorPlan`'s.
+    """
+    values = {state: value for (_tag, want, state), value in solution.values.items() if want is MAIN}
+    policy = {}
+    for (_tag, want, state), action in solution.policy.items():
+        if want is MAIN:
+            policy[state] = replace(action, outcomes=tuple(Outcome(t[2], w) for t, w in action.outcomes), extra_inputs=())
+    return Solution(values, policy, solution.error_bound)
+
+
+@dataclass(frozen=True)
 class Plan:
     """Everything the report prints: the solved policy, its risk and the inputs it was built from."""
 
@@ -142,6 +180,7 @@ class Plan:
     readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
     foresight: Foresight | None = None  # what the plan found about Hinekora's Lock (ticket #296, ADR-0057); None for a plan that was not solved
     finish: PlanFinish | None = None  # the socket finish added to every goal state (ticket #231, ADR-0045); None for a target that names no sockets
+    donors: "DonorPlan | None" = None  # set when an offer takes donors (ticket #225): the product of the main item and its donors' processes
 
     def __post_init__(self) -> None:
         # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13)
@@ -585,6 +624,7 @@ def _make_plan(
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
+    donated = tuple(p for p in priced if not isinstance(p.offer.action, BuyStartItem) and takes_inputs(p.offer.action))  # offers that take donors (#225)
     finish = None
     if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
         try:
@@ -599,6 +639,8 @@ def _make_plan(
     # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
     # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading
     axes = interval_axes(data, priced)
+    if not axes:  # donors are planned by the interval driver only (#225); an action with inputs and no axis stays a gap of its own (G6)
+        donated = ()
     if axes and solver not in ("auto", "object"):
         raise PlanError(
             f"an offered action reads a rule the sources leave open ({', '.join(axis_what(axis.name) for axis in axes)}), so the plan is "
@@ -614,7 +656,7 @@ def _make_plan(
             enabled,
             metamods=holds_metamod,
             enchantment=target.start_item.enchantment,
-            allow_inputs=False,
+            allow_inputs=bool(donated),
             reading=reading,
         )
 
@@ -625,6 +667,8 @@ def _make_plan(
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0, finish=finish)
+    if donated and solver not in ("auto", "object"):
+        raise PlanError(f"an offered action takes donors, so the plan is made by the search that holds every item it reaches; `--solver {solver}` does not do that")
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
     # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
@@ -674,12 +718,17 @@ def _make_plan(
     pruned = None
     packed = None
     readings = None
+    donor_plan = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
     # every stage below stops at the run's net (#825): `make_plan` says a stop before a plan closed, "no plan found yet", with where (OR-33)
     if axes:
         with stage(READINGS_STAGE):
-            readings, others = solve_each_reading(abstraction, model, start, priced, axes)
+            readings, others, product = solve_each_reading(abstraction, model, start, priced, axes, donors=donated)
         solution = readings.solution
+        if product is not None:  # the solve was over the product of the target and its donors: the plan's own process is read off it
+            donor_plan = DonorPlan(product, product.start(start), readings.solution)
+            solution = main_view(readings.solution)
+            limits += (_limits.feeder_donors_limit(), _limits.free_donor_base_limit(), _limits.second_items_shown_limit())
         limits += reading_limits(abstraction, others, aim is not None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     elif many and not envelope and solver != "packed":
@@ -712,13 +761,20 @@ def _make_plan(
             limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
-    try:
-        with stage(LOCK_STAGE, LOCK_KEPT):
-            foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
-    except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
-        if clock is not None:
-            clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
-        foresight, with_lock = Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
+    if donor_plan is not None:  # the Lock's second solve has no product of donors yet (#225): it is not offered, and the answer says so
+        wanted = lock_wanted(target.actions)
+        if wanted:
+            limits += (_limits.lock_with_donors_limit(),)
+        status = LockStatus.WITH_SECOND_ITEMS if wanted else LockStatus.SWITCHED_OFF
+        foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
+    else:
+        try:
+            with stage(LOCK_STAGE, LOCK_KEPT):
+                foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
+        except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
+            if clock is not None:
+                clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
+            foresight, with_lock = Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
     if with_lock is not None and readings is not None:
         raise PlanError(
             "the cheapest plan takes Hinekora's Lock, and a plan made once for each reading of a rule the sources leave open "
@@ -731,9 +787,14 @@ def _make_plan(
     risk, risk_seconds = None, 0.0
     if with_risk:
         began = time.perf_counter()
-        with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745, `risk._evaluate`)
+        with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745, `risk._evaluate`)
             if packed is not None:
                 risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
+            elif donor_plan is not None:  # the whole product: a recombination pays for its donor's run on every use (ADR-0022, `risk._inputs`)
+                risk = evaluate_risk(
+                    donor_plan.solution.policy, donor_plan.start, donor_plan.acquisition.is_goal, solution.values[start], free_cost=free_action_cost(priced)
+                )
+                risk_found = risk_limits(risk)
             else:
                 risk = evaluate_risk(solution.policy, start, lambda state: not isinstance(state, PeekNode) and abstraction.is_goal(state), solution.values[start], free_cost=free_action_cost(priced))
                 risk_found = risk_limits(risk)
@@ -746,7 +807,7 @@ def _make_plan(
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight, finish=finish,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight, finish=finish, donors=donor_plan,
     ))
 
 
@@ -766,7 +827,9 @@ def solve_each_reading(
     start: CompressedState,
     priced: Sequence[PricedOffer],
     axes: Sequence[Axis],
-) -> tuple[IntervalReport[CompressedState, Reading], tuple[Abstraction, ...]]:
+    *,
+    donors: Sequence[PricedOffer] = (),
+) -> tuple[IntervalReport, tuple[Abstraction, ...], Acquisition | None]:
     """Solve the plan once for each reading of `axes` and cross-evaluate the routes (`risk.solve_readings`, ADR-0012, ADR-0022; #589).
 
     A reading is one value of each axis (their product, the plan reading first); an axis that is `planned` stays at its plan value in every
@@ -774,21 +837,41 @@ def solve_each_reading(
     same target and enabled actions, so every kernel is taken at that reading. Each model is solved whole by the object solver: the envelope search
     and the packed walk take no reading. The solve is exact; no comparison route is asked, since the planner offers no action with inputs.
     Offers with an equal kernel are not merged (`merge_equal`): the routes are compared across readings by their offers' labels, and an offer
-    merged away at one reading could leave a route with no action there. Returns the driver's report and the abstractions of the other readings.
+    merged away at one reading could leave a route with no action there.
+
+    With `donors` (the offers among `priced` that take donors, ticket #225) each reading's model is the product of the target and its donors'
+    processes (`DonorModel` under `solver.Acquisition`, every donor the offers name offered at once: they are the target's few isolated feeders,
+    and a recombination is offered only on an item in hand that is one too, `feeders_only`: the guides' own feeders, and a product that stays small),
+    an acquisition ends at the first state with the donor's key (`Abstraction.reaches_donor`), the driver starts from the target's own process,
+    and the best route without the actions that take donors is solved beside the plan (ADR-0012's comparison route). The report is then over
+    product states. Returns the driver's report, the abstractions of the other readings and the plan reading's product (None without donors).
     """
     names = [axis.name for axis in axes]
     plan = Reading.of({axis.name: axis.plan for axis in axes})
     every = [Reading.of(dict(zip(names, values))) for values in itertools.product(*(axis.readings for axis in axes))]
 
-    models = {
-        reading: _Model(abstraction if reading == plan else model(reading), start, priced, merge_equal=False)
-        for reading in (plan, *(r for r in every if r != plan))
-    }
+    order = (plan, *(r for r in every if r != plan))
+    abstractions = {reading: abstraction if reading == plan else model(reading) for reading in order}
+    if donors:
+        from ._donors import DonorModel  # `_donors` builds on this module's `offer_action`
+
+        if len({type(p.offer.action) for p in donors}) != 1:
+            raise PlanError("the offers take donors of more than one kind of action, which the planner cannot plan together yet")
+        first = donors[0].offer.action
+        models = {
+            reading: Acquisition(DonorModel(each, start, priced, merge_equal=False, feeders_only=True), reaches=each.reaches_donor(first))
+            for reading, each in abstractions.items()
+        }
+        root, without = models[plan].start(start), has_inputs
+    else:
+        models = {reading: _Model(each, start, priced, merge_equal=False) for reading, each in abstractions.items()}
+        root, without = start, None
     try:
-        report = solve_readings(models, start, plan=plan)
+        report = solve_readings(models, root, plan=plan, without=without)
     except (OutOfScopeError, ConvergenceError) as error:
         raise PlanError(f"the plan could not be made at every reading of the rule axis {', '.join(names)}: {error}") from error
-    return report, tuple(each.abstraction for reading, each in models.items() if reading != plan)
+    others = tuple(each for reading, each in abstractions.items() if reading != plan)
+    return report, others, (models[plan] if donors else None)
 
 
 def reading_limits(abstraction: Abstraction, others: Iterable[Abstraction], budgeted: bool) -> tuple[Limit, ...]:
@@ -1041,9 +1124,13 @@ def add_risk(plan: Plan) -> Plan:
         return plan
     began = time.perf_counter()
     free = free_action_cost(plan.offers)
-    with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745)
+    with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745)
         if plan.packed is not None:
             risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
+        elif plan.donors is not None:  # the whole product: `solution` is the target's own process, whose actions leave their donors out (#225)
+            donors = plan.donors
+            risk = evaluate_risk(donors.solution.policy, donors.start, donors.acquisition.is_goal, plan.solution.values[plan.start], free_cost=free)
+            found = risk_limits(risk)
         else:
             risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, plan.solution.values[plan.start], free_cost=free)
             found = risk_limits(risk)

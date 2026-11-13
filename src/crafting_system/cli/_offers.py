@@ -11,12 +11,13 @@ import random
 from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
+from itertools import combinations
 
 from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import Item, ItemError, Rarity
+from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, spawn_weight
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
@@ -88,6 +89,82 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     inputs = action.inputs(data, item) if data is not None else ()
     axes = action.rule_axes(data) if data is not None else ()
     return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw if shares is None else shares, inputs=inputs, axes=axes, kind=kind)
+
+
+RECOMBINATOR_KIND = "recombinator"
+
+
+def takes_inputs(action: Action) -> bool:
+    """Whether the action's kind answers `inputs` itself: false for the base class's empty answer, so it is cheap to ask."""
+    return type(action).inputs is not Action.inputs
+
+
+def isolated_feeders(data: GameData, goal: Goal, start_item: Item) -> tuple[Item, ...]:
+    """The donors a recombinator is offered with (ADR-0062 decision 4, ticket #225): every item made only of the target's own mods.
+
+    One mod stands for each leaf of the goal: of the mods the leaf accepts (at a tier it accepts), the one the base rolls most often (the cheapest feeder to make;
+    ties by id), and a leaf whose mods the base never rolls has none. A donor is any non-empty set of those mods of distinct families that fits
+    the base (magic with at most one mod a side, rare otherwise), at the start item's base, item level and influences. These are the feeders
+    the guides build (R25's A, B and AB; R28's single-mod feeders and their pairs); a donor that holds any other mod is not offered, and the
+    answer says so (`_limits.FEEDER_DONORS`).
+    """
+    tags = data.base_items[start_item.base_id].tags
+    picked: dict[str, None] = {}
+    rolled_high: set[str] = set()  # mods whose leaf limits the roll: the feeder holds them at the top of their range, which every limit accepts
+    for leaf in goal.leaves:
+        accepted = leaf.tier_ok if leaf.tier_ok is not None else leaf.mod_ids  # a tier the leaf accepts (OR-1: the top tier when none is written)
+        rolled = [(spawn_weight(data.mods[mod_id], tags), mod_id) for mod_id in accepted if mod_id in data.mods]
+        rolled = [(weight, mod_id) for weight, mod_id in rolled if weight > 0]
+        if rolled:
+            chosen_mod = min(rolled, key=lambda pair: (-pair[0], pair[1]))[1]
+            picked.setdefault(chosen_mod, None)
+            if leaf.has_roll_limit:
+                rolled_high.add(chosen_mod)
+    found: list[Item] = []
+    seen: set[Item] = set()
+    chosen = sorted(picked)
+    for size in range(1, len(chosen) + 1):
+        for group in combinations(chosen, size):
+            families = [family for mod_id in group for family in data.mods[mod_id].families]
+            if len(families) != len(set(families)):
+                continue
+            per_side = Counter(data.mods[mod_id].generation_type for mod_id in group)
+            rarity = Rarity.MAGIC if max(per_side.values()) <= 1 else Rarity.RARE
+            mods = tuple(
+                ExplicitMod(mod_id, tuple((max if mod_id in rolled_high else min)(stat.min, stat.max) for stat in data.mods[mod_id].stats))
+                for mod_id in group
+            )
+            try:
+                item = Item.build(
+                    data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=rarity, mods=mods, influences=start_item.influences
+                )
+            except ItemError:  # more mods on a side than the base holds
+                continue
+            if item not in seen:
+                seen.add(item)
+                found.append(item)
+    return tuple(found)
+
+
+def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: dict[Action, str]) -> dict[Action, str]:
+    """`kind_of` with the recombinators the catalog listed for the start item replaced by one for each of the target's isolated feeders.
+
+    The catalog's own donors (a copy of the item in hand and a donor of other mods) are a contract fixture, not the planner's choice; the
+    planner's donors come from the target (ADR-0062 decision 4). The price follows whether the item in hand carries an influence.
+    """
+    kept = {action: kind for action, kind in kind_of.items() if kind != RECOMBINATOR_KIND}
+    feeders = isolated_feeders(data, goal, start_item)
+    if not feeders:
+        return kept
+    # the kind's first action for an item of the target's mods is the plain one (no junk craft), priced for the influences of the item in hand
+    # (the feeders carry the start item's); every feeder is that action with its own donor (`with_inputs`)
+    listed = catalog_kinds(data, feeders[0], planner_only=True, names=frozenset({RECOMBINATOR_KIND}))
+    template = next(iter(listed), None)
+    if template is None:
+        return kept
+    for donor in feeders:
+        kept[template.with_inputs((donor,))] = RECOMBINATOR_KIND
+    return kept
 
 
 def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
@@ -290,6 +367,13 @@ def offers_for(
     left_out_unwanted: list[str] = []
     listing_gaps: list[ListingGap] = []
     kind_of = _listed(data, start_item, kind_names, label_names, listing_gaps)
+    if kind_names is not None and RECOMBINATOR_KIND in kind_names:
+        kind_of = _with_feeder_donors(data, goal, start_item, kind_of)
+        # a donor is made from a normal item of the base (the recombinator's `inputs`): the actions that apply to one are offered too
+        bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=start_item.influences)
+        for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
+            if kind != RECOMBINATOR_KIND:
+                kind_of.setdefault(action, kind)
     if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
         kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
     listed = list(kind_of)

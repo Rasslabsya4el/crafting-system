@@ -427,7 +427,7 @@ def check_strand_declarations(action: Action, item: Item, outcomes, items, data,
     for left, chance in after.items():
         error = SIGMAS * math.sqrt(float(chance) * (1 - float(chance)) / SAMPLES) + 1e-9
         assert abs(seen[left] / SAMPLES - float(chance)) <= error, f"the sampler leaves {left} strands as often as the distribution says"
-    if not use.cuts:
+    if not use.cuts and not use.count_sets_odds:  # an Orb of Unravelling's odds read the count, and it refuses an item with none (#281)
         bare = item.changed(data, memory_strands=0)
         assert _by_mods(items) == _by_mods(finished(action.outcomes_under(data, bare, reading), data)), (
             "an action that does not declare `cuts` draws the mods it draws at 0 strands"

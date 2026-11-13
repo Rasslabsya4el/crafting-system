@@ -131,13 +131,22 @@ def test_a_plan_with_no_net_has_a_complete_build(world):
     assert "count itself was stopped" not in certificate_text(dataclasses.replace(info, exact=False, stopped="x"))
 
 
-def test_the_net_of_the_build_is_a_share_of_the_time_and_all_of_the_memory(monkeypatch):
+def test_the_build_takes_a_quarter_of_the_time_and_all_of_the_memory(monkeypatch):
+    """#825: the build stops once the time left is at most 3 times its own (a quarter of the net), set from the search/build ratio on R04 and R14."""
     assert build_stop(None, 0.0) is None and build_stop(Net(), 0.0) is None
-    clock = SimpleNamespace(now=10.0)  # a clock set by hand: ten seconds have passed since the build began (tests/test_no_timing.py)
+    clock = SimpleNamespace(now=0.0)  # a clock set by hand (tests/test_no_timing.py)
     clock.perf_counter = lambda: clock.now
     monkeypatch.setattr(_envelope_plan, "time", clock)
-    assert build_stop(Net(seconds=100.0), 0.0)() is None  # 10 s of 100: under half
-    assert "time limit" in build_stop(Net(seconds=15.0), 0.0)()  # 10 s of 15: over half
+    stop = build_stop(Net(seconds=600.0), 0.0)
+    for now in range(10, 150, 10):  # steps of 10 s: at 140 s, 460 s are left, more than 3 x 140 = 420
+        clock.now = float(now)
+        assert stop() is None
+    clock.now = 150.0  # 450 s left, 3 x 150 = 450: the search's room is reached
+    assert stop() == (
+        "stopped after 150 of the 600 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count"
+    )
+    clock.now = 0.0
+    assert build_stop(Net(seconds=0.0), 0.0)() == "the time limit of 0 seconds was reached"  # a net of 0 s: at the first ask
     monkeypatch.setattr(_envelope_plan, "resident_mb", lambda: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)
     assert "5,000 MB" in build_stop(Net(memory_mb=1000.0), 0.0)()
     assert build_stop(Net(memory_mb=10_000.0), 0.0)() is None
