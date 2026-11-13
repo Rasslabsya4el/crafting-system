@@ -139,7 +139,7 @@ def test_a_name_with_no_daily_row_keeps_the_templates_reading_as_a_marked_stand_
     )
     assert fossil.chaos == 519.7 and fossil.note == (
         "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13;"
-        " the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept"
+        " the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept: no other fossil name was priced on both days, so it is not scaled"
     )
     assert notes == [f"{name}: stand-in, the reading of 2026-11-10 from routes-allflame-2026-11-10.json" for name in ("Bloodstained Fossil", RING)]
 
@@ -179,6 +179,34 @@ def test_a_reading_within_seven_days_after_the_file_is_not_marked_and_one_long_b
     assert marks("2026-08-07") == []
     assert marks("2026-08-08") == [LATER]
     assert marks("2026-07-23") == [OLD]
+
+
+def test_a_bulk_stand_in_is_divided_by_the_median_rise_of_its_kind_and_a_start_item_is_not():
+    """#860. Essences A, B, C rose x4, x2, x10 from the day to the template's (12/3, 10/5, 30/3): their median is 4, so D, read only at
+    the end at 9 Chaos, stands in at 9 / 4 = 2.25. The currency names rose x3 (Divine 600/200) and x2 (Exalted 4/2): median 2.5, so the
+    Lock's 1,000 stands in at 400. A fossil has no fossil read on both days, so it is kept; the trade start item is kept whole."""
+    def ninja(chaos):
+        return PriceEntry(chaos, "poe.ninja", None, None, Provenance(EXCHANGE, "Allflame", "2026-11-10", 50.0))
+
+    end = PriceFile("Allflame", END, 600.0, {
+        "Divine Orb": ninja(600.0), "Exalted Orb": ninja(4.0), "Hinekora's Lock": ninja(1000.0),
+        "Essence of A": ninja(12.0), "Essence of B": ninja(10.0), "Essence of C": ninja(30.0), "Essence of D": ninja(9.0),
+        "Dense Fossil": ninja(7.0), RING: end_file().prices[RING],
+    })  # fmt: skip
+    rows = {"divine-orb": 200.0, "exalted-orb": 2.0, "essence-of-a": 3.0, "essence-of-b": 5.0, "essence-of-c": 3.0}
+
+    snapshot, notes = build_snapshot([("end.json", end)], lambda league, slug: [DayRow(AS_OF, rows[slug], 100.0)] if slug in rows else [], "Allflame", START, AS_OF, None)
+
+    assert snapshot.prices["Essence of D"].chaos == pytest.approx(2.25)
+    assert snapshot.prices["Essence of D"].note == (
+        "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31; the reading of 2026-11-10 from end.json (9 Chaos)"
+        " divided by 4, the median rise of the 3 essence names priced on both days"
+    )
+    assert snapshot.prices["Hinekora's Lock"].chaos == pytest.approx(400.0)
+    assert snapshot.prices["Dense Fossil"].chaos == 7.0
+    assert snapshot.prices[RING].chaos == 2.2
+    assert snapshot.prices["Essence of D"].provenance.date == "2026-11-10"  # still marked as a reading of a later day
+    assert "Essence of D: stand-in, the reading of 2026-11-10 from end.json, divided by 4" in notes
 
 
 def test_a_stash_line_and_a_hand_price_are_kept_and_never_read_from_the_rows():
