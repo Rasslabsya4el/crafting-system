@@ -90,6 +90,7 @@ def build_snapshot(
     league day `(as_of - start).days`; `previous` is the previous league and its first day, or None to skip that step.
     """
     names: dict[str, tuple[str, PriceEntry]] = {}
+    leagues = {label: template.league for label, template in templates}  # the league each template's readings are of
     for label, template in templates:
         for name, entry in template.prices.items():
             names.setdefault(name, (label, entry))
@@ -114,7 +115,7 @@ def build_snapshot(
     for name in left:
         label, entry = names[name]
         drift = _drift(name, label, names, prices) if wants_history(entry) else None
-        prices[name] = _stand_in(entry, label, league, as_of, back, name, drift)
+        prices[name] = _stand_in(entry, label, league, as_of, back, name, drift, leagues[label])
         notes.append(f"{name}: stand-in, the reading of {_day_of(entry, label)} from {label}" + ("" if drift is None or drift[1] == 0 else f", divided by {drift[0]:.4g}"))
     return PriceFile(league, datetime(as_of.year, as_of.month, as_of.day, tzinfo=UTC), divine.chaos, prices), notes
 
@@ -163,6 +164,14 @@ def _read(name: str, rows_of: RowsOf, league: str, start: date, as_of: date, pre
     return PriceEntry(row.chaos, PREVIOUS_SOURCE, note, detail, Provenance(PREVIOUS_LEAGUE, old, row.day.isoformat(), _units(row)))
 
 
+def _is_day(text: str) -> bool:
+    try:
+        date.fromisoformat(text)
+    except ValueError:
+        return False
+    return True
+
+
 def _day_of(entry: PriceEntry, label: str) -> str:
     if entry.provenance is not None:
         return entry.provenance.date
@@ -170,7 +179,10 @@ def _day_of(entry: PriceEntry, label: str) -> str:
     return day if isinstance(day, str) else f"the day of {label}"
 
 
-def _stand_in(entry: PriceEntry, label: str, league: str, as_of: date, previous: Previous | None, name: str = "", drift: tuple[float, int] | None = None) -> PriceEntry:
+def _stand_in(
+    entry: PriceEntry, label: str, league: str, as_of: date, previous: Previous | None, name: str = "", drift: tuple[float, int] | None = None,
+    template_league: str | None = None,
+) -> PriceEntry:
     """The template's entry, its note saying why and from where (OR-7); its own day is in its provenance. A bulk name's price is
     divided by the drift of its kind (`_drift`, #860), the best estimate the evidence gives (OR-23); any other is kept whole."""
     if isinstance((entry.detail or {}).get("query"), dict):
@@ -202,7 +214,9 @@ def _stand_in(entry: PriceEntry, label: str, league: str, as_of: date, previous:
     # an estimate, not the reading: the reading's own words, depth and counts no longer describe it, so they go and the
     # estimate is marked as a price with no recorded depth besides its later day (OR-23); `detail` keeps what it was made from
     ratio, count = drift
-    reading_league = entry.provenance.league if entry.provenance is not None else (entry.detail or {}).get("league", league)
-    detail = {"league": reading_league, "date": day, "reading_chaos": entry.chaos, "template": label, "divided_by": ratio, "sample": count, "group": group_of(name)}
+    reading_league = entry.provenance.league if entry.provenance is not None else (entry.detail or {}).get("league", template_league or league)
+    detail = {"league": reading_league, "reading_chaos": entry.chaos, "template": label, "divided_by": ratio, "sample": count, "group": group_of(name)}
+    if _is_day(day):  # a reading with no recorded day has none to give: never the words that stand in for it in the note
+        detail = {"league": reading_league, "date": day, **{k: v for k, v in detail.items() if k != "league"}}
     kept = None if entry.provenance is None else Provenance(entry.provenance.kind, entry.provenance.league, entry.provenance.date)
     return replace(entry, chaos=entry.chaos / ratio, note=note, detail=detail, provenance=kept)
