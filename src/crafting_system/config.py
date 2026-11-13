@@ -1,6 +1,6 @@
 """Where the data, cache and output directories are (ADR-0014), and the planner setting for Memory Strands (ADR-0040).
 
-Shared infrastructure, outside the eleven modules: it imports none of them.
+Shared infrastructure, outside the twelve modules: it imports none of them.
 
 For each directory the first of these wins: an environment variable, the config file,
 the built-in default. The config file is `crafting.toml` at the project root, or the file

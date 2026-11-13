@@ -435,7 +435,7 @@ def test_the_edges_read_in_tiny_chunks_give_the_same_steps(monkeypatch):
 
 def test_a_packed_chain_keeps_a_big_integer_kernel_with_its_exact_weights():
     """`packed_chain` renumbers the kernels the policy uses; a kernel past 62 bits keeps its exact weights under its new number."""
-    from crafting_system.cli._packed import Walked
+    from crafting_system.planner._packed import Walked
     from crafting_system.cli._route_chain import packed_chain
     from crafting_system.cli._route_flow import build_flow
     from crafting_system.solver import TabularModel, pack_model

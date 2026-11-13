@@ -18,8 +18,8 @@ from crafting_system.prices.price_marks import PriceMark, chaos_text, price_mark
 from crafting_system.prices.provenance import WIDER
 from crafting_system.risk import expected_totals
 from crafting_system.solver import Action
+from crafting_system.planner import Plan
 
-from ._plan import Plan
 from ._reach import policy_states
 
 @dataclass(frozen=True)

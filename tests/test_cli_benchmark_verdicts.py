@@ -18,7 +18,7 @@ from crafting_system.cli._benchmark import BENCHMARKS
 from crafting_system.cli._benchmark_divergence import per_use_lines, review_lines, review_of
 from crafting_system.cli._benchmark_use import per_use_of, use_numbers
 from crafting_system.cli._benchmark_verdicts import COMPLETED, GUIDE, REAL_FIND, Reviewing, Verdict, text_hash
-from crafting_system.cli._offers import Offer, PricedOffer
+from crafting_system.planner._offers import Offer, PricedOffer
 from crafting_system.config import load_config
 from crafting_system.solver import Action, Outcome
 

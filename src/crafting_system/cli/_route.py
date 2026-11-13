@@ -62,11 +62,8 @@ from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
+from crafting_system.planner import UNPRICED, PackedPolicy, Plan, PlanError, evaluate_risk, free_action_cost, offer_action
 
-from ._limits import UNPRICED
-from ._offers import free_action_cost
-from ._packed import PackedPolicy
-from ._plan import Plan, PlanError, evaluate_risk, offer_action
 from ._reach import policy_states
 
 RESTART = "restart"
@@ -702,7 +699,7 @@ def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> Rou
     measured on the whole product. `RouteResult.policy` is the target's own process (`main_view`), so the divergences are read where the
     target's item is; the second items' rules are judged only through the mean. A gap of a second item names its state.
     """
-    from ._plan import main_view  # the same reading as the plan's
+    from crafting_system.planner import main_view  # the same reading as the plan's
 
     began = time.perf_counter()
     donors = plan.donors

@@ -25,8 +25,8 @@ from crafting_system.abstraction import CompressedState
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Item
+from crafting_system.planner import Plan
 
-from ._plan import Plan
 from ._route import RESTART, Route
 from ._route_packed import _Reading, route_actions
 

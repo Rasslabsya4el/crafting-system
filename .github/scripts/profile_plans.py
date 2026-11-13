@@ -57,7 +57,7 @@ def timed(owner, name: str, stage: str | None = None) -> None:
 
 def install_timers() -> None:
     from crafting_system.abstraction import Abstraction, Coarsening
-    from crafting_system.cli import _approx, _bound_prune, _decide, _plan
+    from crafting_system.planner import _approx, _bound_prune, _decide, _plan
     from crafting_system.solver import _bounds, _solve, _tail
 
     for name in ("kernel", "kernel_key"):
@@ -88,7 +88,7 @@ def install_job_log() -> None:
     import sys
 
     from crafting_system.abstraction import _prime
-    from crafting_system.cli import _bound_prune
+    from crafting_system.planner import _bound_prune
 
     def logged(module, name: str, kind: str) -> None:
         original = getattr(module, name)
@@ -109,7 +109,7 @@ def install_job_log() -> None:
 
 def filled_prices(data, target, offers):
     """The fixture's prices plus a made-up price for each resource the offers (and the start item) need and it lacks."""
-    from crafting_system.cli._offers import price_offers
+    from crafting_system.planner._offers import price_offers
     from crafting_system.prices import load_price_file
     from crafting_system.targets import start_price_key
 
@@ -166,7 +166,7 @@ def main() -> None:
 
     from crafting_system.abstraction import Goal
     from crafting_system.cli import make_plan
-    from crafting_system.cli._offers import offers_for
+    from crafting_system.planner._offers import offers_for
     from crafting_system.data import load_game_data
 
     data = load_game_data()
@@ -181,7 +181,7 @@ def main() -> None:
     began = time.perf_counter()
     if profiler:
         profiler.enable()
-    from crafting_system.cli._decide import Rates
+    from crafting_system.planner._decide import Rates
 
     rates = Rates(*(float(x) for x in arguments.rates.split(","))) if arguments.rates else None
     plan = None

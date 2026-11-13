@@ -11,8 +11,8 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SimulationReport, Step, simulate
+from crafting_system.planner import Plan
 
-from ._plan import Plan
 from ._route import Route
 from ._verify import Memoized
 

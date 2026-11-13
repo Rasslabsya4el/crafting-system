@@ -129,7 +129,7 @@ def ours(data):
 def uses(data, targets):
     """The planner's numbers of one use of each recorded action that has a target-met count, on the start item (the plan is not solved)."""
     from crafting_system.cli._benchmark_use import per_use_of
-    from crafting_system.cli._plan import make_plan
+    from crafting_system.planner._plan import make_plan
     from crafting_system.prices import load_price_file
 
     found = {}
@@ -352,7 +352,7 @@ EXALT_BY_HAND = {
 def exalt_use(data, case: dict) -> dict:
     """The planner's numbers of one Exalted Orb on the case's item, on its target with the orb added to the key (as `actions_key.py plus=exalted-orb`)."""
     from crafting_system.cli._benchmark_use import per_use_of
-    from crafting_system.cli._plan import make_plan
+    from crafting_system.planner._plan import make_plan
     from crafting_system.prices import load_price_file
 
     target = load_target(Path(__file__).resolve().parents[1] / case["target"], data)

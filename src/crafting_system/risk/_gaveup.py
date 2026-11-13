@@ -3,7 +3,7 @@
 `evaluate` tries the faster methods of the percentile grid first (the free-action count, the coarse grid, the attempt-by-attempt run) and falls
 back to the ordinary grid when one cannot take the chain. Each of them has a size limit it states in its own module; when it reaches one it
 returns `None` and the next method runs, which used to leave no trace. `note` writes the cause, `collected` gathers the notes of one `evaluate`
-into `GridInfo.gave_up`, and `cli._limits.risk_limits` shows them: the answer says why its percentiles came from a slower method.
+into `GridInfo.gave_up`, and `planner._limits.risk_limits` shows them: the answer says why its percentiles came from a slower method.
 
 The notes are a module-level list that only `collected` opens, like `_regen.TRACE`; outside an `evaluate` a note is dropped.
 """

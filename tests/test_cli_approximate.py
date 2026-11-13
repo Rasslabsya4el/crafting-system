@@ -16,12 +16,12 @@ from limits_support import notes
 from coarse_support import CHAOS, COLD, CRAFTS, DATA, FIRE, HYBRID_CRAFT, MANA, REMOVE
 
 from crafting_system.abstraction import Coarsening
-from crafting_system.cli import Offer, PlanError, build_report, main, make_plan, policy_document, render_text
+from crafting_system.cli import Offer, PlanError, build_report, main, make_plan, plan_with_starts, policy_document, render_text
 from crafting_system.cli import _main
-from crafting_system.cli._approx import Approximation, climb
-from crafting_system.cli._decide import LADDER, Candidate, Decision, Level, Rates
+from crafting_system.planner._approx import Approximation, climb
+from crafting_system.planner._decide import LADDER, Candidate, Decision, Level, Rates
 from crafting_system.cli._marking import marking_document, marking_lines
-from crafting_system.cli._offers import PricedOffer
+from crafting_system.planner._offers import PricedOffer
 from crafting_system.prices import PriceFile
 from crafting_system.targets import parse_target
 
@@ -249,7 +249,7 @@ def test_a_tail_cut_over_a_coarse_level_with_no_policy_is_skipped_not_an_error(a
 
 
 def test_m3_a_skipped_tail_cut_is_kept_by_name_and_cause_and_becomes_a_limit_that_claims_only_the_level_shown(approximate):
-    from crafting_system.cli._plan import skipped_level_limits
+    from crafting_system.planner._plan import skipped_level_limits
 
     wide = candidate(approximate, [{COLD, MANA}, {FIRE, "LightningResistance"}])
     good = candidate(approximate, [{MANA, "LightningResistance"}])
@@ -373,8 +373,7 @@ def command(tmp_path, monkeypatch, budget):
     """The command on the fixture amulet; the plan is made with the fixture's offers and rates (the catalog would offer other crafts)."""
     path = tmp_path / "amulet.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    real = _main.plan_with_starts
-    monkeypatch.setattr(_main, "plan_with_starts", lambda *a, **k: real(*a, **{**k, "offers": OFFERS, "rates": RATES}))
+    monkeypatch.setattr(_main, "plan_target", lambda data, target, prices, settings: plan_with_starts(data, target, prices, **vars(settings), offers=OFFERS, rates=RATES))  # the entry takes no offers and no rates (#880)
     monkeypatch.setattr(_main, "write_route_page", lambda path, *a, **k: path)  # the route card needs mods that the fixture pool lacks
 
     def run(*arguments):

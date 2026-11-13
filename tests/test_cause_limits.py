@@ -19,9 +19,9 @@ from types import SimpleNamespace
 
 from crafting_system.abstraction import Abstraction, EstimateRefused, Gap, ModelGaps
 from crafting_system.actions import OutOfScopeError
-from crafting_system.cli import _bound_prune, _decide, _plan
-from crafting_system.cli._limits import SHOWN_CAUSES, limit_document, limit_text, model_gap_limits
-from crafting_system.cli._plan import skipped_level_limits, whole_search_limit
+from crafting_system.planner import _bound_prune, _decide, _plan
+from crafting_system.planner._limits import SHOWN_CAUSES, limit_document, limit_text, model_gap_limits
+from crafting_system.planner._plan import skipped_level_limits, whole_search_limit
 from crafting_system.solver import ConvergenceError
 
 SECRET = "ADR-0023 ticket #212 IncreasedLifeEssence6 size_estimate"  # what only a developer reads

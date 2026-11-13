@@ -20,7 +20,7 @@ import pytest
 from abstraction_support import real_game_data
 
 from crafting_system.actions import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap, NotApplicableError
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.items import ExplicitMod, ImplicitMod, Item, Rarity, tier_table
 from crafting_system.prices import PriceEntry, PriceFile
 

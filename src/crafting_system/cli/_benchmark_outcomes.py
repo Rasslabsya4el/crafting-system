@@ -22,8 +22,8 @@ from crafting_system.actions import Action
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, Rarity
 from crafting_system.targets import Target
+from crafting_system.planner import offers_for
 
-from ._offers import offers_for
 
 FRACTURED = "fractured"  # the event: the result holds this mod fractured
 REMOVED = "removed"  # the result no longer holds this mod

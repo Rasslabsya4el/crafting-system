@@ -36,8 +36,8 @@ from crafting_system.actions import (
 from crafting_system.actions.errors import ActionError
 from crafting_system.actions.cut import Cut, rollable_tiers
 from crafting_system.actions.pool import build_pool
-from crafting_system.cli._limits import kind_title
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.planner._limits import kind_title
+from crafting_system.planner._offers import offer_of, price_offers
 from crafting_system.data import Weight
 from crafting_system.items import Item, Rarity
 from crafting_system.prices.price_file import load_price_file, missing_prices
@@ -337,7 +337,7 @@ def _finished(outcomes):
 
 
 def test_an_offer_set_with_named_kinds_and_no_strands_does_not_mention_the_foulborn_kinds():
-    from crafting_system.cli._offers import offers_for
+    from crafting_system.planner._offers import offers_for
 
     item = fixture_items()["magic"]
     goal = Goal((Wanted(frozenset({"LightningResist3"})),))
@@ -349,7 +349,7 @@ def test_an_offer_set_with_named_kinds_and_no_strands_does_not_mention_the_foulb
 
 
 def test_naming_a_foulborn_kind_in_a_target_is_refused_until_the_planner_plans_with_strands():
-    from crafting_system.cli._offers import offers_for
+    from crafting_system.planner._offers import offers_for
 
     item = fixture_items()["magic"]
     goal = Goal((Wanted(frozenset({"LightningResist3"})),))
@@ -361,7 +361,7 @@ def test_naming_a_foulborn_kind_in_a_target_is_refused_until_the_planner_plans_w
 
 
 def test_a_stranded_start_item_has_the_kinds_in_its_catalog_so_they_are_named_or_left_out_like_any_other():
-    from crafting_system.cli._offers import offers_for
+    from crafting_system.planner._offers import offers_for
 
     item = fixture_items()["magic_stranded"]
     goal = Goal((Wanted(frozenset({"LightningResist3"})),))

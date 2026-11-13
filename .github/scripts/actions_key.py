@@ -239,8 +239,8 @@ def labels_used(plan) -> dict[str, int]:
 
 def plan_of_job(route: str, variant: str, solver: str, data, net=None):
     from crafting_system.cli._inputs import load_target_prices
-    from crafting_system.cli._plan import make_plan
-    from crafting_system.cli._starts import plan_with_starts
+    from crafting_system.planner._plan import make_plan
+    from crafting_system.planner._starts import plan_with_starts
     from crafting_system.config import load_config
     from crafting_system.prices import load_price_file
 
@@ -255,7 +255,7 @@ def plan_of_job(route: str, variant: str, solver: str, data, net=None):
 
 def measure(route: str, variant: str, solver: str, data, *, net=None, say: Callable[[str], None] = lambda _text: None) -> dict:
     """The record of one job that ran to its end (or to the envelope's own net, or to a refusal)."""
-    from crafting_system.cli._plan import PlanError
+    from crafting_system.planner._plan import PlanError
 
     began = time.perf_counter()
     record: dict = {
@@ -318,8 +318,8 @@ def write_record(path: Path, record: dict) -> None:
 
 
 def one_command(arguments: argparse.Namespace) -> int:
-    from crafting_system.cli import _packed
-    from crafting_system.cli._envelope import Net
+    from crafting_system.planner import _packed
+    from crafting_system.planner._envelope import Net
     from crafting_system.data import load_game_data
 
     out = Path(arguments.out)

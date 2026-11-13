@@ -1,6 +1,6 @@
 """A process pool that gives the same answers for any number of workers (ticket #250).
 
-Shared infrastructure, outside the eleven modules: it imports none of them (like `config.py`), only `budget`, which imports nothing.
+Shared infrastructure, outside the twelve modules: it imports none of them (like `config.py`), only `budget`, which imports nothing.
 
 `worker_count()` is the pool size: the cores of the machine, or `CRAFTING_WORKERS` (1 means serial: no process is
 started and the callers run their own serial code, unchanged). A caller that can split a job into independent

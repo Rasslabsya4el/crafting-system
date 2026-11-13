@@ -36,7 +36,7 @@ from crafting_system.actions import (
     unravel_chance,
 )
 from crafting_system.actions.strand_use import SpendLaw, Spent, strands_after
-from crafting_system.cli._limits import kind_title
+from crafting_system.planner._limits import kind_title
 from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 

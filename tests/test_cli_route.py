@@ -18,7 +18,7 @@ from cli_support import run as run_command
 from targets_support import DATA, EXAMPLES
 
 from crafting_system.actions import DRAW_LABEL, ChaosOrb
-from crafting_system.cli._limits import unpriced_limits
+from crafting_system.planner._limits import unpriced_limits
 from crafting_system.cli import RouteError, RouteResult, evaluate_route, load_route, make_plan, parse_route
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target, start_price_key
@@ -347,8 +347,8 @@ start: bought
 
 def test_the_risk_of_a_route_is_that_of_its_whole_policy_though_it_is_read_on_blocks_of_alike_states(plan):
     """#717: `evaluate_route` hands the risk the policy lumped (`risk.lump`); the numbers are those of the policy state by state."""
-    from crafting_system.cli._offers import free_action_cost
-    from crafting_system.cli._plan import evaluate_risk
+    from crafting_system.planner._offers import free_action_cost
+    from crafting_system.planner._plan import evaluate_risk
 
     for text in ("rules:\n  - do: Chaos Orb\n", f"rules:\n  - do: {REFORGE}\n"):
         result = evaluate_route(plan, read(text, plan), DATA)

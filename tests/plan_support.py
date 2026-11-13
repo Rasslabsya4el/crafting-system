@@ -11,7 +11,7 @@ What a fixture still does not have is the limits of the offers it did not choose
 
 from dataclasses import replace
 
-from crafting_system.cli._plan import Plan, finished, start_limits, strands_limit
+from crafting_system.planner._plan import Plan, finished, start_limits, strands_limit
 
 
 def planner_plan(**fields) -> Plan:

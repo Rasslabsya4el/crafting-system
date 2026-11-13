@@ -30,7 +30,7 @@ from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import Reading, VaalOrb, catalog, model_readings
 from crafting_system.actions.corruption import BRICK_AXIS
 from crafting_system.cli._marking import approximate_inputs_of
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.items import ImplicitMod, Item, Rarity, is_corrupted_implicit
 
 QUARTER = Fraction(1, 4)

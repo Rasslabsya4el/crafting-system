@@ -20,8 +20,9 @@ from pathlib import Path
 
 from crafting_system.abstraction import Goal
 from crafting_system.actions import kinds
-from crafting_system.cli import _packed, make_plan
-from crafting_system.cli._offers import offer_of, offers_for
+from crafting_system.cli import make_plan
+from crafting_system.planner import _packed
+from crafting_system.planner._offers import offer_of, offers_for
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -88,7 +89,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = (int(piece) for piece in arguments.part.split("/"))
     routes = arguments.routes.split(",")[index - 1 :: count]
-    from crafting_system.cli import _bound_prune
+    from crafting_system.planner import _bound_prune
 
     def progress(line: str) -> None:
         try:

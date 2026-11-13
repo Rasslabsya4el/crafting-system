@@ -351,6 +351,10 @@ An optional step before a recombination: a low-tier non-exclusive bench craft on
 The action to take in every state reachable from the start item, with the expected remaining cost of each state. It is what the planner returns.
 _Avoid_: plan, strategy
 
+**Planner**:
+The part of the system that finds the policy: a target, prices and settings in, a plan out (the policy with its costs, its risk figures, the start it chose and its limits). It reads no file and prints nothing. The settings are what one run may do, given by the caller and not read from the target: whether start items made by a vendor recipe are compared, the start price for this run, how a bought start item is priced, the time and memory limits of the run, whether Memory Strands are considered, which search is used (`PlanSettings`). In the code it is the module `crafting_system.planner` with one entry, `plan_target(data, target, prices, settings)` (ADR-0018, ticket #880); the command line, the text report, the JSON policy and the route page are its presenters and live in `crafting_system.cli`.
+_Avoid_: solver (the solver is the generic search under it), cli, engine
+
 **Limit**:
 One thing an answer leaves out and what it still guarantees: a kind of action not offered, actions with no price, an offer proved not needed, a given start item, a percentile the grid could not reach. `Plan.limits` holds them; the text report, the JSON policy and the goal card of the route page ("What this answer leaves out") show the same records. Every limit has a guarantee sentence in player words (OR-13).
 _Avoid_: note, left-out line, dropped action
@@ -464,14 +468,14 @@ The value of the optimistic model of the pattern key: a lower bound on the exact
 _Avoid_: pattern database (the research name), heuristic
 
 **Floor action**:
-The one extra action the pattern bound's model carries at a key so that it can be built on part of the offers (`cli/_pattern_bound.py`, ticket #626): an action to the goal that costs the least *floor* of the offers left out of the model there. The floor of an offer is `cost + (1 - pbar) rho` at a state outside E that has the start's flags and fractured mods, and its cost elsewhere (`cli/_offer_floor.py`: the number `pbar` and the Wald floor `rho` of the pruned walk, `cli/_bound_prune.py`). Every offer left out costs at least that at the key, so the model stays a lower bound whatever part of the offers it is built on; offers join the model when the floor action is the cheapest at some key and they could lower its value. A **tip** is a key the build did not reach (a net ended it): it has only a floor action, which is not "the key has no action".
+The one extra action the pattern bound's model carries at a key so that it can be built on part of the offers (`planner/_pattern_bound.py`, ticket #626): an action to the goal that costs the least *floor* of the offers left out of the model there. The floor of an offer is `cost + (1 - pbar) rho` at a state outside E that has the start's flags and fractured mods, and its cost elsewhere (`planner/_offer_floor.py`: the number `pbar` and the Wald floor `rho` of the pruned walk, `planner/_bound_prune.py`). Every offer left out costs at least that at the key, so the model stays a lower bound whatever part of the offers it is built on; offers join the model when the floor action is the cheapest at some key and they could lower its value. A **tip** is a key the build did not reach (a net ended it): it has only a floor action, which is not "the key has no action".
 _Avoid_: dummy action, fake action (that is the envelope search's word for its own cut of the lower graph)
 
 **Approximate kernel**:
 A kernel of the pattern bound made from float distributions (`Abstraction.approximate`, `actions.draw.floating`, ticket #626): each chance is shrunk by 2^-30, which is above the float error, and the mass that is then missing goes to a state that costs nothing, so the model built on such kernels is below the model built exactly by about 1e-9 of a value and never above it. Only the bound uses them; the search builds the exact kernels of the actions it realizes.
 
 **Envelope search**:
-The exact branch-and-bound of OR-12 (`make_plan(solver="envelope")`, `cli/_envelope.py`, ticket #377): it expands a state only when the greedy policy of the lower graph reaches it, and builds the kernel of an action at a state only when its lower bound (the pattern bound of that offer at the state's key) is below the best action built there. It stops when that policy reaches no state it has not expanded; the mean of the policy is then the lower graph's own value, so it is pinned (`LB = UB`) and equal to the full walk's. Nothing is cut by a tolerance or a chance; a time, state or memory net may end it, and then the plan says it is not shown to be the best.
+The exact branch-and-bound of OR-12 (`make_plan(solver="envelope")`, `planner/_envelope.py`, ticket #377): it expands a state only when the greedy policy of the lower graph reaches it, and builds the kernel of an action at a state only when its lower bound (the pattern bound of that offer at the state's key) is below the best action built there. It stops when that policy reaches no state it has not expanded; the mean of the policy is then the lower graph's own value, so it is pinned (`LB = UB`) and equal to the full walk's. Nothing is cut by a tolerance or a chance; a time, state or memory net may end it, and then the plan says it is not shown to be the best.
 _Avoid_: iLAO*, A* (the research names), pruning (a cut that guesses)
 
 **Lower graph**:

@@ -35,7 +35,7 @@ from crafting_system.cli import build_report, plan_with_starts, policy_document,
 from crafting_system.cli._route_view import build_section, route_input, write_route_page
 from crafting_system.cli._report import POLICY_HEADING
 from crafting_system.cli._start_step import ROLE_AUGMENTATION, ROLE_BASE, ROLE_FLASK, first_step
-from crafting_system.cli._start_types import SOURCE_PLAIN
+from crafting_system.planner._start_types import SOURCE_PLAIN
 from crafting_system.prices import load_buy_spec
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -20,9 +20,9 @@ from veiled_support import SPEED
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb
-from crafting_system.cli._offers import FREE_ACTION_SHARE, offer_of, offers_for, price_offers
-from crafting_system.cli._plan import _Model, evaluate_risk
-from crafting_system.cli._prune import solver_actions
+from crafting_system.planner._offers import FREE_ACTION_SHARE, offer_of, offers_for, price_offers
+from crafting_system.planner._plan import _Model, evaluate_risk
+from crafting_system.planner._prune import solver_actions
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.solver import solve
 
@@ -194,7 +194,7 @@ def test_the_mean_and_the_odds_of_the_veil_loop_are_exact_in_the_risk_report():
 
 def test_the_percentiles_and_the_cvar_of_the_veil_loop_resolve_and_the_bound_of_the_epsilon_is_stated():
     # a miss (3 in 13) costs a veil c and two free steps e more: C = (c + 2e) M + 2e with M geometric, so the 0.9 quantile (M = 1) is c + 4e
-    from crafting_system.cli._offers import free_action_cost
+    from crafting_system.planner._offers import free_action_cost
 
     ability, start, entries, solution = loop(5.0)
     free = free_action_cost(entries)
@@ -212,14 +212,14 @@ def test_the_percentiles_and_the_cvar_of_the_veil_loop_resolve_and_the_bound_of_
 
 
 def test_the_planner_names_no_free_cost_when_no_offer_is_free():
-    from crafting_system.cli._offers import free_action_cost
+    from crafting_system.planner._offers import free_action_cost
 
     assert free_action_cost(priced([VeiledChaosOrb()])) is None
     assert free_action_cost(priced(ACTIONS)) == pytest.approx(5.0 * FREE_ACTION_SHARE)
 
 
 def test_the_cut_follows_the_cheapest_action_that_costs_something_when_a_policy_holds_free_ones(monkeypatch):
-    from crafting_system.cli import _plan
+    from crafting_system.planner import _plan
     from crafting_system.solver import Action as SolverAction
     from crafting_system.solver import Outcome
 

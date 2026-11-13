@@ -34,8 +34,8 @@ from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import LOCUS_USE, LocusOfCorruption, NotApplicableError, OutOfScopeError, VaalOrb, catalog, kinds
 from crafting_system.actions.corruption import dead_end
 from crafting_system.actions.locus import LocusOutcomes
-from crafting_system.cli._limits import kind_title
-from crafting_system.cli._offers import free_action_cost, offers_for, price_offers
+from crafting_system.planner._limits import kind_title
+from crafting_system.planner._offers import free_action_cost, offers_for, price_offers
 from crafting_system.items import ImplicitMod, Item, Rarity, is_corrupted_implicit
 from crafting_system.prices import LOCUS_USE as PRICE_NAME
 from crafting_system.prices import PriceEntry, PriceFile, standing_defaults

@@ -1,7 +1,7 @@
 """Reading the limits of an answer in tests (ticket #459): the limits of one kind, their labels, their reasons."""
 
 from crafting_system.cli import Limit
-from crafting_system.cli._limits import limit_text
+from crafting_system.planner._limits import limit_text
 
 
 def of_kind(limits, kind: str) -> list[Limit]:

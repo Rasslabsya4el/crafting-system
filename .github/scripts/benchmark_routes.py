@@ -26,7 +26,8 @@ def names_price_file(target: Path) -> bool:
 
 
 def main(argv: list[str]) -> int:
-    from crafting_system.cli import _benchmark, _packed
+    from crafting_system.cli import _benchmark
+    from crafting_system.planner import _packed
     from crafting_system.config import find_project_root
     from crafting_system.prices import load_price_file
 

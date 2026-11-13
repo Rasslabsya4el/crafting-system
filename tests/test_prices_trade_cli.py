@@ -438,7 +438,7 @@ def test_a_cookie_that_cannot_be_sent_exits_1_names_the_variable_and_sends_nothi
 
 
 def test_the_message_of_a_thin_search_is_what_the_planner_then_prices_the_start_item_at(tmp_path, trade, prices_path, capsys):
-    from crafting_system.cli._plan import resolve_start_price
+    from crafting_system.planner._plan import resolve_start_price
     from crafting_system.targets import load_target
 
     data = fixture_game_data()

@@ -1,6 +1,6 @@
 """Pruning offers by twins and by a lower bound on the cost, with a certificate (ticket #118, piece E).
 
-`cli._bound_prune.solve_pruned` solves the plan on a small set of the offers and proves that the others
+`planner._bound_prune.solve_pruned` solves the plan on a small set of the offers and proves that the others
 cannot improve any value (its module text has the argument). This file checks:
 
 1. the pieces: which goal leaves are necessary, the set U, the kind of each offer, the best-first rho;
@@ -47,8 +47,9 @@ from crafting_system.actions import (
     fossil_actions,
 )
 from crafting_system.actions.fossil import CHAOTIC_RESONATOR_SOCKETS
-from crafting_system.cli import RESTART, Offer, _bound_prune, _plan, evaluate_route, make_plan, parse_route
-from crafting_system.cli._bound_prune import (
+from crafting_system.cli import RESTART, Offer, evaluate_route, make_plan, parse_route
+from crafting_system.planner import _bound_prune, _plan
+from crafting_system.planner._bound_prune import (
     CRAFT,
     REROLL,
     RESTART_KIND,
@@ -59,8 +60,8 @@ from crafting_system.cli._bound_prune import (
     goal_set,
     necessary_leaves,
 )
-from crafting_system.cli._offers import BuyStartItem, PricedOffer, offer_of, price_offers
-from crafting_system.cli._prune import solver_actions
+from crafting_system.planner._offers import BuyStartItem, PricedOffer, offer_of, price_offers
+from crafting_system.planner._prune import solver_actions
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.solver import Action as SolverAction

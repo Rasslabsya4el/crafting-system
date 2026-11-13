@@ -81,17 +81,17 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `imprint` | yes | opt-in, reads: any | r17 |  |  |
 | `restore` | yes | opt-in, reads: any | r17 |  |  |
 | `foulborn-augmentation-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `jewellers-orb` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `jewellers-orb` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods |  |
 | `foulborn-regal-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `orb-of-fusing` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
-| `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `orb-of-fusing` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods |  |
+| `bench-socket-count` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods |  |
 | `foulborn-exalted-orb` | yes | opt-in, needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `bench-socket-links` | **no** | only: weapon and armour | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods |  |
 | `orb-of-remembrance` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
-| `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `chromatic-orb` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods |  |
 | `vaal` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-1 |
-| `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods |  |
-| `quality-currency` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0049), bought before the orbs when that is cheaper: solved with the finish of a target that names sockets (`cli/_finish.py`), never searched over as a step of the mods |  |
+| `bench-socket-colours` | **no** | only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods |  |
+| `quality-currency` | **no** | burns, only: weapon and armour, reads: quality | none | `planner=False`: a step of the socket finish (ADR-0049), bought before the orbs when that is cheaper: solved with the finish of a target that names sockets (`planner/_finish.py`), never searched over as a step of the mods |  |
 | `re-anoint` | **no** | burns | none | `planner=False`: a burn only (ticket #295, ADR-0056): as a plain action it changes nothing the state keeps and gives a target nothing; the Peek of a Lock takes it as a fallback |  |
 | `locus` | yes | corrupting, only: an item whose class has a corrupted implicit pool | none | it corrupts the item and the target takes no corrupted item (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `unravelling-orb` | yes | needs strands | none | needs Memory Strands, which `make_plan` refuses to plan with (16 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
@@ -144,15 +144,15 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
 | `cache` | [paths] | `local/cache` | read | cli/_route_view.py: _trade_stats (compared; on the planning path); cli/_route_view.py: _trade_stats (used in an operation; on the planning path); and 4 more |
 | `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path) |
-| `memory_strands` | [planner] | `false` | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
-| `recipe_starts` | [planner] | `true` | read | cli/_starts.py: _with_starts (used in an operation; on the planning path) |
+| `memory_strands` | [planner] | `false` | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
+| `recipe_starts` | [planner] | `true` | read | planner/_starts.py: _with_starts (used in an operation; on the planning path) |
 | `recombinator_junk_craft` | [planner] | `false` | **never read** | no code reads it |
 | `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_main.py: main (passed to `imprints_held_at_most` (outside src); on the planning path) |
-| `price_source` | [planner] | `both` | read | cli/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
+| `price_source` | [planner] | `both` | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
 | `price_gap_percent` | [planner] | `20.0` | read | cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); cli/_main.py: main (used as an index or container; on the planning path); and 9 more |
 | `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 5 more |
 | `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
-| `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 4 more |
+| `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 4 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
 | `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
@@ -163,15 +163,15 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
-| `--price-source` | command `plan` |  | read | cli/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); cli/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
+| `--price-source` | command `plan` |  | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 2 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
-| `--solver` | command `plan` |  | read | cli/_packed.py: packed_result (compared; on the planning path); cli/_packed.py: packed_result (formatted into text; on the planning path); and 5 more |
-| `--start-price` | command `plan` |  | read | cli/_plan.py: _override (compared; on the planning path); cli/_plan.py: _override (formatted into text; on the planning path); and 2 more |
-| `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); cli/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
+| `--solver` | command `plan` |  | read | planner/_packed.py: packed_result (compared; on the planning path); planner/_packed.py: packed_result (formatted into text; on the planning path); and 5 more |
+| `--start-price` | command `plan` |  | read | planner/_plan.py: _override (compared; on the planning path); planner/_plan.py: _override (formatted into text; on the planning path); and 2 more |
+| `--strands` | command `plan` |  | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--time-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 6 more |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 
@@ -190,25 +190,25 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
 | the market rule | `classify` | `prices/trade_market.py` | prices/trade_exchange.py: read_offers, prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
-| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_bought_starts.py: _option, cli/_offers.py: price_offers, and 5 more | yes | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_trade.py: _priced_as, planner/_bought_starts.py: _option, and 5 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
-| the price-source rule | `ninja_row` | `prices/price_source.py` | cli/_bought_starts.py: _Level.__init__, cli/_bought_starts.py: _without_thin_row | **no** | INPUTS-2, PLANNING-6 |
-| the price-source rule | `source_price` | `prices/price_source.py` | cli/_bought_starts.py: _Level.__init__ | **no** | INPUTS-2, PLANNING-6 |
+| the price-source rule | `ninja_row` | `prices/price_source.py` | planner/_bought_starts.py: _Level.__init__, planner/_bought_starts.py: _without_thin_row | **no** | INPUTS-2, PLANNING-6 |
+| the price-source rule | `source_price` | `prices/price_source.py` | planner/_bought_starts.py: _Level.__init__ | **no** | INPUTS-2, PLANNING-6 |
 | the item-level floor | `ItemLevelFloor` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `ItemLevelOptions` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `LevelGroup` | `targets/floor.py` | nothing | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `NodeLevel` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `floor_of` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `item_level_options` | `targets/floor.py` | cli/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `level_groups` | `targets/floor.py` | cli/_bought_starts.py: bought_base_starts, targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `item_level_options` | `targets/floor.py` | planner/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `level_groups` | `targets/floor.py` | planner/_bought_starts.py: bought_base_starts, targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `refusal_at` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `target_at_level` | `targets/floor.py` | cli/_bought_starts.py: _Level.__init__, cli/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | cli/_plan.py: solve_each_reading | yes | ACT2-11 |
-| the donor loop of two-input actions | `is_feeder` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
-| the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
+| the item-level floor | `target_at_level` | `targets/floor.py` | planner/_bought_starts.py: _Level.__init__, planner/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the donor loop of two-input actions | `DonorModel` | `planner/_donors.py` | planner/_plan.py: solve_each_reading | yes | ACT2-11 |
+| the donor loop of two-input actions | `is_feeder` | `planner/_donors.py` | nothing | **no** | ACT2-11 |
+| the donor loop of two-input actions | `solve_with_donors` | `planner/_donors.py` | nothing | **no** | ACT2-11 |
 
 ## 6. Target keys
 
@@ -216,18 +216,18 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 
 | Target field | Read by | Audit |
 |---|---|---|
-| `base_id` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_finish.py, cli/_plan.py, cli/_route_card.py, and 1 more |  |
-| `item_level` | cli/_benchmark_outcomes.py, cli/_finish.py, cli/_plan.py, cli/_route_card.py |  |
-| `influences` | cli/_bought_starts.py, cli/_route_card.py |  |
-| `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_bought_starts.py, cli/_plan.py, cli/_route_card.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_bought_starts.py, cli/_finish.py, cli/_plan.py, cli/_starts.py |  |
-| `start` | cli/_benchmark.py, cli/_main.py, cli/_plan.py, cli/_starts.py, cli/_trade.py |  |
+| `base_id` | cli/_benchmark_outcomes.py, cli/_route_card.py, cli/_start_step.py, planner/_bought_starts.py, planner/_finish.py, and 1 more |  |
+| `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_finish.py, planner/_plan.py |  |
+| `influences` | cli/_route_card.py, planner/_bought_starts.py |  |
+| `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
+| `start_item` | cli/_benchmark_outcomes.py, planner/_bought_starts.py, planner/_finish.py, planner/_plan.py, planner/_starts.py |  |
+| `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
-| `implicits` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
-| `quality` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
-| `actions` | cli/_benchmark_outcomes.py, cli/_plan.py |  |
-| `enchantment` | cli/_plan.py |  |
+| `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py |  |
+| `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py |  |
+| `actions` | cli/_benchmark_outcomes.py, planner/_plan.py |  |
+| `enchantment` | planner/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
-| `sockets` | cli/_finish.py, cli/_plan.py |  |
+| `sockets` | planner/_finish.py, planner/_plan.py |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
 

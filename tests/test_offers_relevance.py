@@ -39,9 +39,10 @@ from crafting_system.actions import (
     kinds,
 )
 from crafting_system.actions.scope import BasePassed
-from crafting_system.cli import _limits, make_plan, offers_for
-from crafting_system.cli import _plan as plan_module
-from crafting_system.cli._offers import offer_of, split_usable
+from crafting_system.cli import make_plan, offers_for
+from crafting_system.planner import _limits
+from crafting_system.planner import _plan as plan_module
+from crafting_system.planner._offers import offer_of, split_usable
 from crafting_system.items import ExplicitMod, Item, Rarity, veiled_placeholder
 from crafting_system.prices import load_price_file
 from crafting_system.prices.price_file import PriceEntry

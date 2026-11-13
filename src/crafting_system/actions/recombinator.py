@@ -35,8 +35,8 @@ count table has no row).
 
 The catalog lists the kind for an item in hand with two donors (a copy of the item, and a donor of other mods the base can roll), the
 contract suite's fixture. It is a planner kind offered only when a target names it (`opt_in`, ticket #225): the planner replaces those donors
-with the target's isolated feeders (`cli/_offers.isolated_feeders`) and solves the product of the target and its donors at every reading
-of alpha (`cli/_plan.solve_each_reading`, ADR-0062 "As built (#225)"). Its compressed state is built (ticket #217): `reads` declares `input_classes`, so the state tells a junk mod by
+with the target's isolated feeders (`planner/_offers.isolated_feeders`) and solves the product of the target and its donors at every reading
+of alpha (`planner/_plan.solve_each_reading`, ADR-0062 "As built (#225)"). Its compressed state is built (ticket #217): `reads` declares `input_classes`, so the state tells a junk mod by
 its family type and its place in it, and the kernel is the action averaged over the names the item and the donor could hold in their classes
 (`abstraction/_inputs.py`, ADR-0062 decision 3, "As built (#217)"). `with_inputs` gives the kernel the same action with another donor.
 

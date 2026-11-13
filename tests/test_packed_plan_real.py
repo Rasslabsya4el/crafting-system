@@ -16,8 +16,10 @@ import pytest
 from abstraction_support import real_game_data
 from limits_support import notes, only
 
-from crafting_system.cli import _packed, _plan, make_plan
-from crafting_system.cli._packed import PackedPolicy
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _packed, _plan
+from crafting_system.planner._packed import PackedPolicy
 from crafting_system.cli._reach import policy_states
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -160,7 +162,7 @@ def test_a_long_chain_gets_its_moments_from_the_packed_solve_with_the_same_numbe
 def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_says_so(data, monkeypatch):
     import math
 
-    from crafting_system.cli import _plan
+    from crafting_system.planner import _plan
 
     target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
     prices = load_price_file(R13_PRICES)

@@ -382,7 +382,7 @@ def test_a_toy_undeclared_action_is_refused_at_1_strand_and_offered_at_0():
 
 
 def test_the_restart_is_not_refused_on_a_stranded_item_and_brings_back_the_start_item_with_its_own_count():
-    from crafting_system.cli._offers import BuyStartItem
+    from crafting_system.planner._offers import BuyStartItem
 
     start = small_item(roll_of(LIFE_1), rarity=Rarity.MAGIC, memory_strands=12)
     current = dataclasses.replace(start, memory_strands=90)

@@ -53,7 +53,7 @@ class CyclesTooTangled(ValueError):
     """The cut rows of a chain are too many to put back within `WOODBURY_CELLS`: the chances that need them are not measured, never guessed.
 
     `rows` is how many distinct rows are cut, `cells` what putting them back needs and `allowed` what a run may hold: the cost of the method that
-    a limit is written from (`cli/_packed.evaluation_limits`).
+    a limit is written from (`planner/_packed.evaluation_limits`).
     """
 
     def __init__(self, message: str, rows: int = 0, cells: int = 0, allowed: int = 0):

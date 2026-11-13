@@ -17,8 +17,8 @@ from test_abstraction_veiled_real import BOOTS, LEVEL, LOCK, R24
 
 from crafting_system.abstraction import Abstraction
 from crafting_system.actions import ActionError, BenchCraft, VeiledChaosOrb
-from crafting_system.cli._offers import FREE_ACTION_SHARE, free_action_cost, offer_of, price_offers
-from crafting_system.cli._plan import evaluate_risk, offer_action
+from crafting_system.planner._offers import FREE_ACTION_SHARE, free_action_cost, offer_of, price_offers
+from crafting_system.planner._plan import evaluate_risk, offer_action
 from crafting_system.items import tier_table
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.risk import evaluate

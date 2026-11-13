@@ -17,10 +17,11 @@ from targets_support import DATA
 
 from crafting_system.abstraction import Pattern, pattern_refusal
 from crafting_system.actions import OutOfScopeError
-from crafting_system.cli import _plan, _starts, evaluate_route, load_route, main
-from crafting_system.cli._envelope import NoPolicy
-from crafting_system.cli._packed import SOLVERS
-from crafting_system.cli._plan import PlanError, make_plan
+from crafting_system.cli import evaluate_route, load_route, main
+from crafting_system.planner import _plan, _starts
+from crafting_system.planner._envelope import NoPolicy
+from crafting_system.planner._packed import SOLVERS
+from crafting_system.planner._plan import PlanError, make_plan
 from crafting_system.targets import load_target
 
 
@@ -87,7 +88,7 @@ def test_auto_where_the_bound_is_refused_is_the_old_path_with_its_budget_decisio
 
 
 def test_envelope_by_name_still_refuses_where_the_bound_is_refused(monkeypatch):
-    from crafting_system.cli import _envelope_plan
+    from crafting_system.planner import _envelope_plan
 
     def refuse(*_args, **_kwargs):
         raise OutOfScopeError("a goal with a roll limit has no members")

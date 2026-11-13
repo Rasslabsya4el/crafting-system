@@ -17,9 +17,8 @@ from collections.abc import Callable
 from crafting_system.abstraction import CompressedState
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import Action
+from crafting_system.planner import Plan, PricedOffer, offer_action
 
-from ._offers import PricedOffer
-from ._plan import Plan, offer_action
 
 
 GOAL, SHORT, OTHER = "goal", "short", "other"

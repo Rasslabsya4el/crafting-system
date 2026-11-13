@@ -67,7 +67,7 @@ def test_a_chain_that_never_starts_over_is_left_to_the_other_grids():
 
 
 def test_c25_an_attempt_wise_run_refused_for_the_mass_it_cuts_is_written_and_a_resolved_one_is_not(monkeypatch):
-    from crafting_system.cli._limits import risk_limits, limit_text
+    from crafting_system.planner._limits import risk_limits, limit_text
     from crafting_system.risk import _regen
 
     assert not narrow(regenerative=True).grid.gave_up

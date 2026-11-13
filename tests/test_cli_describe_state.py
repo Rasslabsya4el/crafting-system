@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from abstraction_support import real_game_data
 
 from crafting_system.abstraction import CompressedState, Flags, FracturedMod, Slot, Status
-from crafting_system.cli._plan import leaf_labels
+from crafting_system.planner._plan import leaf_labels
 from crafting_system.cli._report import describe_state
 from crafting_system.items import Rarity, Side
 from crafting_system.targets import KOfN, load_target

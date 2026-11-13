@@ -6,7 +6,7 @@ Awakener's and the recombinator's models (I9, I10), the representative item of a
 The condition of keeping them is that none of them reaches the route page or the text answer as the start item. Three things show it:
 
 * **Who can set the start item.** A `Target` is built by the parser alone, and its start item is replaced in three places only:
-  `targets/floor.py` (the same item at a lower item level), `cli/_starts.py` (the vendor-recipe start I7) and `cli/_bought_starts.py` (the
+  `targets/floor.py` (the same item at a lower item level), `planner/_starts.py` (the vendor-recipe start I7) and `planner/_bought_starts.py` (the
   same base at another item level or with the influence a requirement needs, #351; listed as a start option, never a made-up item). No module of I8 to I12 builds a
   `Target` or replaces its start item (a scan of `src`, for I8, which only a real benchmark prints, and for the rest as a backstop).
 * **I7, in the output.** When a vendor recipe wins, the text's "Start item" line is the Normal base the recipe takes, the recipe is a step of
@@ -23,13 +23,13 @@ from vendor_starts_support import BOOTS_TARGET, TOY, prices, toy_target
 from crafting_system.cli import build_report, plan_with_starts, render_text
 from crafting_system.cli._route_card import ANY_OR_EMPTY, card_of_item
 from crafting_system.cli._route_view import build_section, route_input, write_route_page
-from crafting_system.cli._start_types import SOURCE_PLAIN
+from crafting_system.planner._start_types import SOURCE_PLAIN
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "crafting_system"
 PARSER = "targets/parse.py"
 FLOOR = "targets/floor.py"
-VENDOR_START = "cli/_starts.py"
-BOUGHT_START = "cli/_bought_starts.py"
+VENDOR_START = "planner/_starts.py"
+BOUGHT_START = "planner/_bought_starts.py"
 
 
 def calls_named(names: set[str]):

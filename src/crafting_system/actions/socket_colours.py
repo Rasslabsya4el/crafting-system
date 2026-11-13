@@ -92,7 +92,7 @@ CHROMATIC_FORCED_COLOUR = Axis("chromatic_forced_colour", (SIVERAN_WEIGHTS, FLAT
 OMEN_MINIMUM_SOCKETS = 3
 WHY_NOT_PLANNER = (
     "a step of the socket finish (ADR-0045), which the compressed state of the mods does not hold: the finish is solved on its own for a target "
-    "that names sockets and added to every goal state (`cli/_finish.py`), never searched over as a step of the mods"
+    "that names sockets and added to every goal state (`planner/_finish.py`), never searched over as a step of the mods"
 )
 
 Colours = tuple[SocketColour, ...]

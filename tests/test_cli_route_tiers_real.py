@@ -17,7 +17,7 @@ from abstraction_support import real_game_data
 from crafting_system.cli import make_plan
 from crafting_system.cli._benchmark import BENCHMARKS
 from crafting_system.cli._benchmark_outcomes import item_of, published_outcomes
-from crafting_system.cli._plan import offer_action
+from crafting_system.planner._plan import offer_action
 from crafting_system.cli._route_tiers import tier_lines
 from crafting_system.cli._route_view import build_section, route_input
 from crafting_system.prices import load_price_file

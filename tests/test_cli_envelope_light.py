@@ -2,7 +2,7 @@
 
 The world is the one of `test_packed_walk_light.py` (a Mana Leech amulet, the Chaos Orb, four bench crafts, Remove Crafted Mods, a restart: about a hundred
 states). Its crafted-pattern bound (#497) is weak (about 61% of the exact cost), so the search expands nearly all of it: this file checks the exactness
-of the crafting adapter (`cli/_envelope_plan.py`) where the cut does little. A strong bound on real routes is `tests/test_cli_envelope_real.py`, and the
+of the crafting adapter (`planner/_envelope_plan.py`) where the cut does little. A strong bound on real routes is `tests/test_cli_envelope_real.py`, and the
 generic search on random graphs, with a strong bound, a weak one and a planted fault, is `tests/test_cli_envelope.py`.
 
 * the mean and the value of every state of the plan equal the full walk's, and the plan takes an optimal action at each state it reaches;
@@ -20,11 +20,11 @@ import pytest
 from coarse_support import abstraction
 from test_packed_walk_light import START_ITEM, make_offers
 
-from crafting_system.cli import _packed
-from crafting_system.cli._envelope import Net, NoPolicy
-from crafting_system.cli._envelope_plan import BoundError, envelope_limits, envelope_result
-from crafting_system.cli._limits import SOLVE, limit_document, limit_text
-from crafting_system.cli._pattern_bound import pattern_lower_bound
+from crafting_system.planner import _packed
+from crafting_system.planner._envelope import Net, NoPolicy
+from crafting_system.planner._envelope_plan import BoundError, envelope_limits, envelope_result
+from crafting_system.planner._limits import SOLVE, limit_document, limit_text
+from crafting_system.planner._pattern_bound import pattern_lower_bound
 
 TOLERANCE = 1e-9
 

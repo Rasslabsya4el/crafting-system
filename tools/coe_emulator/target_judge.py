@@ -23,7 +23,7 @@ class TargetJudge:
 
     def __init__(self, data, target_file: str, rarity: str | None = None) -> None:
         from crafting_system.cli._benchmark_use import sure_steps
-        from crafting_system.cli._plan import make_plan
+        from crafting_system.planner._plan import make_plan
         from crafting_system.prices import load_price_file
         from crafting_system.targets import load_target
 

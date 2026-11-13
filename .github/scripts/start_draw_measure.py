@@ -15,7 +15,9 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from crafting_system.cli import _plan, make_plan
+from crafting_system.cli import make_plan
+
+from crafting_system.planner import _plan
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target

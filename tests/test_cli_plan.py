@@ -15,7 +15,7 @@ from targets_support import DATA
 
 from crafting_system.actions import ChaosOrb, HarvestReforge, RemoveCraftedMods
 from crafting_system.cli import Offer, PlanError, build_report, default_offers, make_plan, policy_document, render_text
-from crafting_system.cli._limits import unpriced_limits
+from crafting_system.planner._limits import unpriced_limits
 from crafting_system.items import CatalystType
 from crafting_system.prices import write_price_file
 from crafting_system.rules import get_rule

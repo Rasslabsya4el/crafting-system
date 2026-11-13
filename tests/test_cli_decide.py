@@ -17,8 +17,8 @@ from limits_support import notes, only
 from crafting_system.abstraction import Abstraction, Estimate, Goal
 from crafting_system.actions import Adds, ChaosOrb, RegalOrb, Reads
 from crafting_system.cli import Offer, PlanError, make_plan
-from crafting_system.cli import _decide, _packed
-from crafting_system.cli._decide import (
+from crafting_system.planner import _decide, _packed
+from crafting_system.planner._decide import (
     EXACT_TRANSITIONS,
     COARSE,
     LADDER,
@@ -29,7 +29,7 @@ from crafting_system.cli._decide import (
     decide,
     exact_offer,
 )
-from crafting_system.cli._offers import PricedOffer
+from crafting_system.planner._offers import PricedOffer
 from crafting_system.prices import PriceFile
 from crafting_system.targets import parse_target
 

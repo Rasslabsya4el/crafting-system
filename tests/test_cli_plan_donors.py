@@ -15,7 +15,7 @@ from donor_plan_support import A, B, PRICES, R, T, ALT, donor_target, world
 
 from crafting_system.actions import Recombinator
 from crafting_system.cli import make_plan
-from crafting_system.cli._offers import offers_for
+from crafting_system.planner._offers import offers_for
 from crafting_system.abstraction import Goal
 
 
@@ -139,7 +139,7 @@ def test_the_report_shows_the_interval_and_the_expected_recombinations_of_a_plan
 
 
 def test_the_risk_measured_after_the_start_choice_counts_the_second_items_too():
-    from crafting_system.cli._starts import plan_with_starts
+    from crafting_system.planner._starts import plan_with_starts
 
     data = world()
     plan = plan_with_starts(data, donor_target(data), PRICES)
@@ -171,7 +171,7 @@ def test_a_feeder_of_a_leaf_with_a_roll_limit_holds_a_roll_the_leaf_accepts():
 def test_a_target_that_allows_the_lock_hears_it_is_not_offered_with_second_items():
     import dataclasses
 
-    from crafting_system.cli._foresight import Status as LockStatus
+    from crafting_system.planner._foresight import Status as LockStatus
 
     data = world()
     plan = make_plan(data, dataclasses.replace(donor_target(data), actions=(*donor_target(data).actions, "hinekora-lock")), PRICES)
