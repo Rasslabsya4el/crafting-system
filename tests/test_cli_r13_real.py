@@ -3,7 +3,7 @@
 R13 is the alt-regal belt of the reference routes: a Magic Leather Belt of item level 86 (a trade price, #576: the guide opens
 with "Alt spam for T1 Life and a resist" and names no Transmutation Orb), Orbs of Alteration until it holds tier-1 life and a tier-1 resistance, a Regal
 Orb for the second tier-1 resistance (the guide buys the belt again when the Regal gives anything else), and the
-bench finish for the damage modifier. The prices are `tests/fixtures/prices/routes-allflame-2026-11-10.json`, the
+bench finish for the damage modifier. The prices are `tests/fixtures/prices/routes-allflame-2026-11-10.json` (kept while #878 is open), the
 same file as the other real routes, so the checks do not move with the market. These tests need the cached dump
 (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it; CI fetches it, ticket #165) and skip
 cleanly without it.
@@ -37,6 +37,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
+# R13's risk takes many minutes at the 2026-07-31 prices (#878): this file keeps the 2026-11-10 prices meanwhile
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
 TARGET = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml"

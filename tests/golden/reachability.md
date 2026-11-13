@@ -4,7 +4,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 
 - Game data: repoe-fork 3.29.3.3 (commit ee2084de).
 - Targets: the 17 files of `examples/targets/`, each through `make_plan(..., solve_it=False)` (the gates, `offers_for`, the pricing and the abstraction, nothing solved), and each start option `vendor_recipe_starts` lists for it.
-- Prices: `tests/fixtures/prices/routes-allflame-2026-10-31.json`, or the target's own `price_file`; they only decide which offers are dropped for lack of a price.
+- Prices: `tests/fixtures/prices/routes-allflame-2026-07-31.json`, or the target's own `price_file`; they only decide which offers are dropped for lack of a price.
 - A run of the entry that outlasts `--target-seconds` is reported as "not measured, too slow" (none did).
 
 ## Summary
@@ -103,15 +103,15 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
 | r03 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
-| r05 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
+| r05 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
-| r08 | plans | 2 names | 10672 | 2026 | 0 | 2 | bench-craft, fossil-set |
-| r09 | plans | 2 names | 10672 | 2026 | 0 | 2 | bench-craft, fossil-set |
-| r10-fractured-boots | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
-| r10-fractured-boots-70-life | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
-| r11 | plans | no key | 59 | 19 | 0 | 4 | chaos-orb, divine-orb, essence, harvest-reforge |
-| r12 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
+| r08 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
+| r09 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
+| r10-fractured-boots | plans | no key | 80 | 0 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
+| r10-fractured-boots-70-life | plans | no key | 80 | 0 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
+| r11 | plans | no key | 78 | 0 | 0 | 4 | chaos-orb, divine-orb, essence, harvest-reforge |
+| r12 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r13 | plans | 5 names | 6 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
 | r14 | plans | 9 names | 11 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
 | r17 | plans | 11 names | 14 | 0 | 0 | 9 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, harvest-add-remove, imprint, regal-orb, restore, transmutation-orb |

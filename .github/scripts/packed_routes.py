@@ -31,7 +31,7 @@ from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.targets import load_target, parse_target
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"  # `ROUTE_PRICES` (a path from the project root) names another snapshot for one run
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"  # `ROUTE_PRICES` (a path from the project root) names another snapshot for one run
 TARGETS = {
     "r04": "r04-penetrating-quiver",
     "r05": "r05-strength-ring",

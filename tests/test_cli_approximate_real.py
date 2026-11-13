@@ -3,7 +3,7 @@
 The ring is the one of ADR-0023 (Iron Ring, item level 86, a fractured All Attributes, goal Life and the forced Strength of
 the Deafening Essence of Rage) with Remove Crafted Mods and either the 32 crafts that touch the goal's families or all the
 ring crafts but the four that add a lock or an Attack/Caster metamod (137 of the 141; since ticket #69 such a craft makes the
-state model metamods, which the coarse level does not pool). Prices are the committed fixture `routes-allflame-2026-10-31.json`; the start ring costs what the R05 entry says there (2.6 Chaos, given as the run's own start price: this Iron Ring is not the R05 item, so no entry carries its key). The
+state model metamods, which the coarse level does not pool). Prices are the committed fixture `routes-allflame-2026-07-31.json`; the start ring costs what the R05 entry says there (read from the file, given as the run's own start price: this Iron Ring is not the R05 item, so no entry carries its key). The
 rates are injected (4e-5 s per kernel outcome, 7e-6 s per solved edge, the values of ADR-0023), so the decision does not
 depend on the machine; no time is asserted (ADR-0014).
 """
@@ -23,10 +23,10 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import parse_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 BASE = "Metadata/Items/Rings/Ring1"
 RATES = Rates(4e-5, 7e-6)
-START_PRICE = 2.6  # the committed price of R05's start ring
+START_PRICE = load_price_file(PRICES).prices["Amethyst Ring, item level 75, fractured +(13-16) to all Attributes"].chaos  # the committed price of R05's start ring
 TOUCHING = {
     "IncreasedLife", "FireResistance", "ColdResistance", "LightningResistance", "ChaosResistance",
     "AllAttributes", "Strength", "Dexterity", "Intelligence",

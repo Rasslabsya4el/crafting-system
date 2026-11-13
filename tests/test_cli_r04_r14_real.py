@@ -29,7 +29,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 ROUTES = {
     "R04": ("examples/targets/r04-penetrating-quiver.yaml", "examples/routes/r04-penetrating-quiver.yaml"),
     "R14": ("examples/targets/r14-hunter-bow.yaml", "examples/routes/r14-hunter-bow.yaml"),

@@ -1,23 +1,23 @@
 {
  "provenance": {
-  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy run 42432611502 on the branch of PR #665, commit 6e1ed96d, which is origin/main 9392e34 (with PRs #681 and #661) plus the PR's own commits, 2026-11-08; the R14 restart route is the one of PR #681) and `write`; docs/ci.md",
+  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy run 43381687684 on the branch of PR #855, commit fef5ae99, which holds origin/main 98e8837, 2026-11-13, at tests/fixtures/prices/routes-allflame-2026-07-31.json) and `write`; docs/ci.md. Before: heavy run 42432611502 (PR #665, 2026-11-08) and, for R14, 42892654469",
   "inputs": "sha256 of the target and route files (line ends as in the repository) and the cost of one use of each action of the route at the price file; pin is the game-data version. A quick test in every CI run fails when they differ; it does not see a change of the planner's code (issue #692)",
   "mean_without_start": "risk.mean.value of the completed route. `benchmark` prints mean + start price (_benchmark._totals), so mean_with_start = mean_without_start + start_price is recorded beside it and a test checks the sum",
-  "success": "success_value is what the planner prints (the low end of its bracket, issue #683); success_low and success_high are its bracket; naive_heavy is the share of naive plays that finished in heavy run 42410566176 (python -m naive_crafter play)",
+  "success": "success_value is what the planner prints (the low end of its bracket, issue #683); success_low and success_high are its bracket; naive_heavy is the share of naive plays that finished in heavy run 42410566176 (python -m naive_crafter play); the naive play's finish share does not depend on prices, so it is kept when the planner side is recorded again",
   "what": "the planner side of R04 and R14 for tests/test_naive_crafter_routes.py: the mean of the completed route (the route file with a restart) WITHOUT the price of the bought start item, and the bracket of the success of the guide's route as written; a solve of 177,242 and 816,153 states, too long for a test"
  },
  "routes": {
   "R04": {
-   "commit": "87af9c655ba5126fcd3eedda352cc2a4a4c462b1",
+   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
    "gaps": 13,
    "inputs": {
     "costs": {
-     "Bench craft Cannot roll Attack Modifiers": 516.2,
-     "Deafening Essence of Rage": 23.46,
-     "Essence of Insanity": 79.07,
-     "Exalted Orb": 3.61,
-     "Fracturing Orb": 686.5,
-     "Orb of Annulment": 37.63,
+     "Bench craft Cannot roll Attack Modifiers": 176.6,
+     "Deafening Essence of Rage": 3.22,
+     "Essence of Insanity": 20.26,
+     "Exalted Orb": 1.36,
+     "Fracturing Orb": 321.0,
+     "Orb of Annulment": 12.73,
      "restart": 3.2
     },
     "route": "0914f23b1b1db1320074a85d14f05310fd292a3d7370d9bc627165b5feda53b0",
@@ -32,33 +32,33 @@
     "seed": 23
    },
    "pin": "3.29.3.3",
-   "run": "42892654469",
+   "run": "43381687684",
    "stem": "r04-penetrating-quiver",
-   "success_high": 0.9674316294303453,
-   "success_low": 0.0003030404380161865,
-   "success_value": 0.0003030404380161865
+   "success_high": 0.5770098351914722,
+   "success_low": 0.005936001866592888,
+   "success_value": 0.005936001866592888
   },
   "R04 with restart": {
-   "commit": "87af9c655ba5126fcd3eedda352cc2a4a4c462b1",
+   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
    "gaps": 0,
    "inputs": {
     "costs": {
-     "Bench craft Cannot roll Attack Modifiers": 516.2,
-     "Deafening Essence of Rage": 23.46,
-     "Essence of Insanity": 79.07,
-     "Exalted Orb": 3.61,
-     "Fracturing Orb": 686.5,
-     "Orb of Annulment": 37.63,
-     "Remove Crafted Mods": 0.6128,
+     "Bench craft Cannot roll Attack Modifiers": 176.6,
+     "Deafening Essence of Rage": 3.22,
+     "Essence of Insanity": 20.26,
+     "Exalted Orb": 1.36,
+     "Fracturing Orb": 321.0,
+     "Orb of Annulment": 12.73,
+     "Remove Crafted Mods": 0.3463,
      "restart": 3.2
     },
     "route": "4f6c0229e2688042115ba3bfe428cb8156b166f30f14135e31dd500b5b5c2c84",
     "target": "724ef091ef9f78b5e9954ce55b5c8c98c55148da71bea081531ebf38ed342d07"
    },
-   "mean_with_start": 603707.7119957809,
-   "mean_without_start": 603704.511995781,
+   "mean_with_start": 91391.74184465811,
+   "mean_without_start": 91388.54184465812,
    "pin": "3.29.3.3",
-   "run": "42892654469",
+   "run": "43381687684",
    "start_price": 3.2,
    "stem": "r04-penetrating-quiver-restart",
    "success_high": 1.0,
@@ -66,19 +66,19 @@
    "success_value": 1.0
   },
   "R14": {
-   "commit": "5c19c1f66abdc0b112cdb052ff69162e2660096b",
+   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
    "gaps": 1,
    "inputs": {
     "costs": {
      "Bench craft +(18-20)% to Chaos Damage over Time Multiplier": 4.0,
-     "Bench craft +2 to Level of Socketed Support Gems": 14.44,
-     "Bench craft Can have up to 3 Crafted Modifiers": 1032.4,
-     "Bench craft Cannot roll Attack Modifiers": 516.2,
-     "Exalted Orb": 3.61,
-     "Orb of Alteration": 0.2433,
-     "Orb of Annulment": 37.63,
-     "Regal Orb": 0.1203,
-     "Remove Crafted Mods": 0.6128,
+     "Bench craft +2 to Level of Socketed Support Gems": 5.44,
+     "Bench craft Can have up to 3 Crafted Modifiers": 353.2,
+     "Bench craft Cannot roll Attack Modifiers": 176.6,
+     "Exalted Orb": 1.36,
+     "Orb of Alteration": 0.1782,
+     "Orb of Annulment": 12.73,
+     "Regal Orb": 0.1918,
+     "Remove Crafted Mods": 0.3463,
      "restart": 9.8
     },
     "route": "b334c25cac3511890735a44b29887625abfefea9ba49f37bdb9c156aa4b773c5",
@@ -93,35 +93,35 @@
     "seed": 13
    },
    "pin": "3.29.3.3",
-   "run": "42922058494",
+   "run": "43381687684",
    "stem": "r14-hunter-bow",
    "success_high": 1.0,
    "success_low": 0.0,
    "success_value": 0.0
   },
   "R14 with restart": {
-   "commit": "5c19c1f66abdc0b112cdb052ff69162e2660096b",
+   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
    "gaps": 0,
    "inputs": {
     "costs": {
      "Bench craft +(18-20)% to Chaos Damage over Time Multiplier": 4.0,
-     "Bench craft +2 to Level of Socketed Support Gems": 14.44,
-     "Bench craft Can have up to 3 Crafted Modifiers": 1032.4,
-     "Bench craft Cannot roll Attack Modifiers": 516.2,
-     "Exalted Orb": 3.61,
-     "Orb of Alteration": 0.2433,
-     "Orb of Annulment": 37.63,
-     "Regal Orb": 0.1203,
-     "Remove Crafted Mods": 0.6128,
+     "Bench craft +2 to Level of Socketed Support Gems": 5.44,
+     "Bench craft Can have up to 3 Crafted Modifiers": 353.2,
+     "Bench craft Cannot roll Attack Modifiers": 176.6,
+     "Exalted Orb": 1.36,
+     "Orb of Alteration": 0.1782,
+     "Orb of Annulment": 12.73,
+     "Regal Orb": 0.1918,
+     "Remove Crafted Mods": 0.3463,
      "restart": 9.8
     },
     "route": "1162f2b3e55ee6b67ae005bfc545aa52aaac9234c625d75564af2fa5d0f81e63",
     "target": "dcfbec8bc9da74e7bf9cc2c11f3911dce8b34f4a9be9ed8bea9977b224f7fcf3"
    },
-   "mean_with_start": 19009.984257523396,
-   "mean_without_start": 19000.184257523397,
+   "mean_with_start": 6888.481912997789,
+   "mean_without_start": 6878.6819129977885,
    "pin": "3.29.3.3",
-   "run": "42922058494",
+   "run": "43381687684",
    "start_price": 9.8,
    "stem": "r14-hunter-bow-restart",
    "success_high": 1.0,

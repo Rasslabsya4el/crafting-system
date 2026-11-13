@@ -99,7 +99,7 @@ TARGET_OF = {
 # None, every kind not opt-in), as `.github/scripts/actions_key.py` plans the `removed` variant
 KEY_HIDES = {"essence-r08-fear", "essence-r09-spite", "essence-r13-hatred"}
 # the label of the case's action, for the cases recorded with a `target`: the planner's own numbers of one use of it on the start item
-PRICES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 # the essence cases: the target's `mod:` line that the essence's forced mod must be (OR-2)
 FORCED_BY_GOAL = {
     "essence-r05-ring": "StrengthEssence7_",

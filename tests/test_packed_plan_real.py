@@ -23,7 +23,9 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
+# R13's risk on the object plan takes 9 to 21 minutes at the 2026-07-31 prices (#878): R13's plans here read the 2026-10-31 file meanwhile
+R13_PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 ROUTES = {
     "R13": "r13-life-resist-belt",
     "R12": "r12-lightning-amulet",
@@ -41,7 +43,7 @@ def data():
 def both(request, data):
     """(route id, object plan, packed plan) of one route."""
     target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[request.param]}.yaml", data)
-    prices = load_price_file(PRICES)
+    prices = load_price_file(R13_PRICES if request.param == "R13" else PRICES)
     return (
         request.param,
         make_plan(data, target, prices, solver="object"),
@@ -98,7 +100,7 @@ def test_every_policy_evaluated_by_bicgstab_gives_the_values_of_the_dense_solve_
     monkeypatch.setattr(_packed, "solve_packed", lowered)
     target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[route]}.yaml", data)
 
-    iterated = make_plan(data, target, load_price_file(PRICES), solver="packed")
+    iterated = make_plan(data, target, load_price_file(R13_PRICES if route == "R13" else PRICES), solver="packed")
 
     iterated_infos = [info for info in infos if info.get("linear_iterations", 0) > 0]
     assert iterated_infos or route == "R05"  # BiCGSTAB did run (R05's policy is one state that the start already solves, with no step of its own)
@@ -120,7 +122,7 @@ def test_a_graph_over_the_limit_is_solved_packed_and_a_small_one_by_the_object_s
     """The walk-and-solve `auto` of before #535 is `auto` now only where the envelope search's bound is refused (`pattern_refusal`): the test plants that refusal."""
     monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "planted for the test: the bound has no members")
     target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
-    prices = load_price_file(PRICES)
+    prices = load_price_file(R13_PRICES)
 
     small = make_plan(data, target, prices)  # "auto": 35,726 transitions is under the limit
     assert not isinstance(small.policy, PackedPolicy)
@@ -143,7 +145,7 @@ def test_a_long_chain_gets_its_moments_from_the_packed_solve_with_the_same_numbe
     from crafting_system.risk import _moments
 
     target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
-    prices = load_price_file(PRICES)
+    prices = load_price_file(R13_PRICES)
     reference = make_plan(data, target, prices, solver="object")
 
     monkeypatch.setattr(_moments, "PACKED_FROM_EDGES", 0)
@@ -161,7 +163,7 @@ def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_say
     from crafting_system.cli import _plan
 
     target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
-    prices = load_price_file(PRICES)
+    prices = load_price_file(R13_PRICES)
     reference = make_plan(data, target, prices, solver="packed")
 
     monkeypatch.setattr(_plan, "RISK_QUANTILE_TRANSITIONS", 0)

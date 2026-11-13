@@ -23,7 +23,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 TARGET_R13 = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 TOLERANCE = 1e-9
 
@@ -36,7 +36,9 @@ def r13():
         sys.path.append(str(ROOT / "research" / "312"))
     import exact_classes as E
 
-    _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
+    with pytest.MonkeyPatch.context() as patch:  # the research model reads its own price file; both sides are priced from the same one (#838)
+        patch.setattr(E, "PRICES", PRICES)
+        _, _, _, abstraction, start, priced, _ = E.build_model(TARGET_R13, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced)
     with pytest.MonkeyPatch.context() as patch:  # the research model starts from the item with no mods, so the exact mean is the plan's without the draw of a bought item's mods (ADR-0064)
         patch.setattr(_plan, "unopened_listing", lambda data, start: None)

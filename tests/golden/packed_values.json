@@ -1,17 +1,17 @@
 {
- "main": "671b32fff6b24da249e62c9c8a1d1302cf1119b0",
- "taken": "2026-11-10",
- "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-11-10.json (re-recorded in heavy run 42907313656 on the data half of #662: R04 189,226.57, R14 9,381.10; before, at the 2026-10-31 file, R04 69,257.54, R14 5,784.45), S02 at 1 chaos per currency and 10 chaos for the start item, unchanged since #374 (33,878.67; its solve needs more memory than a standard runner has, so heavy runs on standard runners leave it out with -k 'not S02')",
+ "main": "8146e048c444193a42b5761cdadf58f2f29961ad",
+ "taken": "2026-11-13",
+ "note": "exact mean cost in chaos through make_plan (packed solver); R04 and R14 at the committed prices tests/fixtures/prices/routes-allflame-2026-07-31.json (re-recorded in heavy run 43412724538 on the data half of #838, after the merge of main 8146e04; heavy run 43396064734 before that merge gave the same values to 3e-13: R04 31,900.08, R14 3,429.31; before, at the 2026-11-10 file (heavy run 42907313656, #662), R04 189,226.57, R14 9,381.10; at the 2026-10-31 file, R04 69,257.54, R14 5,784.45), S02 at 1 chaos per currency and 10 chaos for the start item, unchanged since #374 (33,878.67; its solve needs more memory than a standard runner has, so heavy runs on standard runners leave it out with -k 'not S02')",
  "routes": {
   "R04": {
-   "mean_remaining": 189226.56738171066,
+   "mean_remaining": 31900.076587055486,
    "states": 177242,
-   "error_bound": 9.36973177934064e-08
+   "error_bound": 3.7166175137492985e-08
   },
   "R14": {
-   "mean_remaining": 9381.09647401641,
+   "mean_remaining": 3429.311060195798,
    "states": 816153,
-   "error_bound": 4.646931232032969e-07
+   "error_bound": 4.1581417198344184e-08
   },
   "S02": {
    "mean_remaining": 33878.67277501651,
