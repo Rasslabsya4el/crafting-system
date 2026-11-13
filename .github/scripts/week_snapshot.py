@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from crafting_system.prices import load_price_file, write_price_file  # noqa: E402
 from crafting_system.prices.http_json import SourceError, http_get_json, paced  # noqa: E402
 from crafting_system.prices.ninja_history import exchange_history_readings  # noqa: E402
+from crafting_system.prices.price_names import canonical_price_name  # noqa: E402
 from crafting_system.prices.week_snapshot import build_snapshot  # noqa: E402
 
 MISSING = "404"  # what the cache keeps for an answer of "no such item"
@@ -102,7 +103,7 @@ def main() -> int:
         wanted += spent_names(load_game_data())
     if args.wanted_file:
         lines = Path(args.wanted_file).read_text(encoding="utf-8-sig").splitlines()
-        wanted += [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+        wanted += [canonical_price_name(line.strip()) for line in lines if line.strip() and not line.lstrip().startswith("#")]
     try:
         snapshot, notes = build_snapshot(templates, rows_of, args.league, args.start, args.as_of, previous, wanted)
     except (Stopped, ValueError) as error:

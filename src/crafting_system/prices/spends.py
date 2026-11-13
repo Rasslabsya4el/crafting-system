@@ -7,7 +7,9 @@ A method a user may pick must be priced before he picks it, so the question is a
 **In scope** is every registered kind that is not deferred (`DEFERRED_KINDS`, CLAUDE.md "Direction since 2026-11-13": corruption B4,
 Memory Strands B5, sockets and quality B6, enchants B7, Hinekora's Lock B8 and the recombinator wait; ADR-0013 lists the batches).
 A kind added later is in scope until someone defers it by name, so a new method cannot stay unpriced unseen. Whether the planner
-offers a kind yet (`planner`, `opt_in`) does not matter here: a method is priced before it is built end to end.
+offers a kind yet (`planner`, `opt_in`) does not matter here: a method is priced before it is built end to end. Scope is by kind,
+not by ingredient: the fossil sets are in scope whole, the Bloodstained Fossil among them (its corrupted outcomes are B4; the
+fossil is bought like the others).
 
 **The items** (`probe_items`): an action's `resources` reads the action alone, never the item, so the items only have to make every
 kind list its actions. For each item class of the equipment domains, the first released base (by id) and, where the class has bases
@@ -29,6 +31,7 @@ from crafting_system.items import Influence, Item, ItemError, Rarity
 
 from .default_prices import standing_defaults
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceFile
+from .price_source import DEFAULT_PRICE_SOURCE
 from .trade_market import planned_price
 
 __all__ = ["DEFERRED_KINDS", "kinds_in_scope", "probe_items", "spends", "spent_names", "unpriced"]
@@ -117,10 +120,11 @@ def spent_names(data: GameData, items: Sequence[Item] | None = None, kind_names:
     return sorted({name for spent in spends(data, items, kind_names).values() for name in spent})
 
 
-def unpriced(names: Iterable[str], price_file: PriceFile) -> list[str]:
-    """The names of `names` the planner could not price at `price_file`, sorted (the module docstring says how it reads one)."""
+def unpriced(names: Iterable[str], price_file: PriceFile, price_source: str = DEFAULT_PRICE_SOURCE) -> list[str]:
+    """The names of `names` the planner could not price at `price_file` under the profile's `price_source`, sorted (the module
+    docstring says how it reads one)."""
     defaults = standing_defaults()
     return sorted(
         name for name in set(names)
-        if name not in (CHAOS_ORB, DIVINE_ORB) and name not in defaults and planned_price(price_file, name) is None
+        if name not in (CHAOS_ORB, DIVINE_ORB) and name not in defaults and planned_price(price_file, name, price_source) is None
     )  # fmt: skip

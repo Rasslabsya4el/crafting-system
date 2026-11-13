@@ -394,6 +394,9 @@ def load_overrides(path: Path) -> dict[str, float]:
 def load_prices(price_file_path: Path, overrides_path: Path) -> PriceFile:
     """The price file with the overrides on top: an override always wins, source "override".
 
+    A file that prices its lower essence tiers from the vendor upgrade recipe (`essence_recipe.py`, #885) has that rule applied
+    again over the overrides, so a hand price of one tier reaches the tiers below it.
+
     A missing price file is a `PriceFileNotFound` even when overrides exist: a price view
     needs the league and the date, which only a fetch gives.
     """
@@ -406,7 +409,10 @@ def load_prices(price_file_path: Path, overrides_path: Path) -> PriceFile:
     for name, chaos in overrides.items():
         prices[name] = PriceEntry(chaos, OVERRIDE_SOURCE, None, None, Provenance(provenance_data.OVERRIDE, fetched.league, day))
     chaos_per_divine = overrides.get(DIVINE_ORB, fetched.chaos_per_divine)
-    return replace(fetched, prices=prices, chaos_per_divine=chaos_per_divine)
+    merged = replace(fetched, prices=prices, chaos_per_divine=chaos_per_divine)
+    from .essence_recipe import apply_upgrade_recipe, has_recipe_rows  # noqa: PLC0415  (that module reads this one)
+
+    return apply_upgrade_recipe(merged)[0] if has_recipe_rows(merged) else merged
 
 
 # --- staleness and missing prices ----------------------------------------------------------

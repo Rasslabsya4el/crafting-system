@@ -15,7 +15,7 @@ from pathlib import Path
 from ..config import load_config
 from .fallbacks import MIN_COUNT
 from .deepen import Deepened, ReadStopped, deepen_with_trade, exchange_entry, mark_unread
-from .essence_recipe import apply_upgrade_recipe
+from .essence_recipe import RECIPE_SOURCE, apply_upgrade_recipe
 from .fetch import fetch_price_file
 from .http_json import GetJson, SourceError, http_get_json, paced
 from .price_names import FORESIGHT_PRICE_NAMES, canonical_price_name
@@ -109,11 +109,14 @@ def main(
                 new_file, unread = deepened.price_file, deepened.unread
                 trade_warnings = [*trade_warnings, *deepened.warnings]
             # last, so that no later reading puts a lower tier's own inflated row back (#885)
-            new_file, from_recipe = apply_upgrade_recipe(new_file, wanted)
+            new_file, recipe_notes = apply_upgrade_recipe(new_file, wanted)
+            from_recipe = sum(entry.source == RECIPE_SOURCE for entry in new_file.prices.values())
             write_price_file(price_path, new_file)  # what poe.ninja and the trade site gave is kept whether or not the rest could be read
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
             if from_recipe:
-                print(f"{len(from_recipe)} lower essence tiers are priced from the vendor upgrade recipe (a third of the next tier up)")
+                print(f"{from_recipe} lower essence tiers are priced from the vendor upgrade recipe (a third of the next tier up)")
+            for note in (note for note in recipe_notes if ": kept, " in note):
+                print(f"Warning: {note}")
             if result.thin:
                 print(
                     f"{len(result.thin)} current lines were too thin to price "

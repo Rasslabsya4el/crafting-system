@@ -396,3 +396,28 @@ def test_a_templates_recipe_row_is_read_from_the_rows_again():
     recipe_row = PriceEntry(0.9, "upgrade-recipe", None, {"of": "Deafening Essence of Fear"}, Provenance("upgrade-recipe", "Allflame", "2026-11-10"))
 
     assert wants_history(recipe_row)
+
+
+def test_a_templates_recipe_row_does_not_count_in_the_rise_of_its_kind():
+    """A template built under the rule holds Shrieking Essence of Fear as a recipe row (2.7, a third of 8.1), which also traded on the
+    day at 3.0. Only Deafening counts as a market reading of both days (8.1 / 2.7 = x3): Essence of Horror stands in at 90 / 3 = 30."""
+    end = PriceFile(
+        "Allflame", END, 516.2,
+        {
+            "Divine Orb": PriceEntry(516.2, "poe.ninja"),
+            "Deafening Essence of Fear": PriceEntry(8.1, "poe.ninja", None, None, Provenance(EXCHANGE, "Allflame", "2026-11-10", 50.0)),
+            "Shrieking Essence of Fear": PriceEntry(2.7, "upgrade-recipe", None, {"of": "Deafening Essence of Fear"}, Provenance("upgrade-recipe", "Allflame", "2026-11-10")),
+            "Essence of Horror": PriceEntry(90.0, "trade-api", None, {"exchange": "essence-of-horror"}, Provenance(TRADE, "Allflame", "2026-11-10", 2.0)),
+        },
+    )  # fmt: skip
+    rows = {
+        ("Allflame", "divine-orb"): [DayRow(AS_OF, 176.6, 1766.0)],
+        ("Allflame", "deafening-essence-of-fear"): [DayRow(AS_OF, 2.7, 270.0)],
+        ("Allflame", "shrieking-essence-of-fear"): [DayRow(AS_OF, 3.0, 30.0)],
+    }
+
+    snapshot, _ = build_snapshot([("end.json", end)], lambda league, slug: rows.get((league, slug), []), "Allflame", START, AS_OF, None)
+
+    assert snapshot.prices["Essence of Horror"].chaos == pytest.approx(30.0)
+    assert snapshot.prices["Essence of Horror"].detail["sample"] == 1
+    assert snapshot.prices["Shrieking Essence of Fear"].chaos == pytest.approx(0.9)  # its own row of the day (3.0) does not win

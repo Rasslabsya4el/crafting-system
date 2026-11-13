@@ -126,6 +126,15 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
+  - id: essence.vendor_upgrade_recipe
+    statement: "Three essences of one tier and type are exchanged at a vendor for one essence of the next tier of the same type, so the lower tiers have no market of their own; the value is how many essences one upgrade takes. The price layer reads it to price every tier below a type's top priced tier as one third of the next tier up (prices/essence_recipe.py, ticket #885). The owner's word, as the ticket records it: no wiki page could be opened when the claim was written (poewiki.net refused the request)."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/885
+    quote: "players upgrade them at the vendor, three of one tier for one of the next tier of the same type"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-13
+    value: 3
+
   - id: essence.poedb_one_guaranteed_property
     statement: PoEDB's essence list says an essence of tier 5 to 7 (Screaming, Shrieking, Deafening) upgrades a normal item to rare or reforges a rare item, guaranteeing one property, and one of tier 1 to 4 (Whispering, Muttering, Weeping, Wailing) only upgrades a normal item to rare, with one guaranteed property and the other properties restricted to level 35, 45, 60 or 75 and below. The value maps the essence tier to that level (tier 1 to 4). This is the published form of essence.forced_mod_counts_in_total (one forced mod, the rest drawn) and essence.low_levels_cap_random_mods (the caps); tests/test_coe_published_numbers.py puts our data beside it. PoEDB's page names only the patch 3.29, so patch_verified is the export the page's numbers were matched against (the test compares them with the pinned repoe-fork 3.29.3.3 pool), not a patch the page states.
     source_kind: datamined

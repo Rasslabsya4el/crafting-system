@@ -1,37 +1,50 @@
 """The lower essence tiers priced from the vendor upgrade recipe (#885, the owner's decision of 2026-11-13).
 
-Three essences of one tier and type make one of the next tier of the same type at a vendor, so nobody trades the lower tiers: their
-market rows are few, inflated and odd (in the 3.29 file of league day 7 a Muttering Essence of Fear stood at 87 Chaos, and many
-Wailing and Weeping essences above their own Deafening tier). The rule, per essence type ("Essence of Fear"):
+Three essences of one tier and type make one of the next tier of the same type at a vendor (claim `essence.vendor_upgrade_recipe`),
+so nobody trades the lower tiers: their market rows are few, inflated and odd (in the 3.29 file of league day 7 a Muttering Essence of
+Fear stood at 87 Chaos, and many Wailing and Weeping essences above their own Deafening tier). The owner's decision: each essence type
+keeps one market price, and the lower tiers are priced from the recipe. The rule, per essence type ("Essence of Fear"):
 
-* the **highest tier the file prices** (the Deafening one, wherever the game has it) keeps its price: it is the type's one market price;
-* **every tier below it costs one third of the next tier up**: Shrieking = Deafening / 3, Screaming = Shrieking / 3, and so on down;
-* a lower tier's own row **wins only when it is cheaper and a plain fact**: a market reading of the file's own league and day, as
-  `price_marks` judges it (not a previous league's price, not a stand-in of another day, not a thin market). A player buys the
-  cheaper of the two, and a marked row is no evidence of a cheaper market. The next tier down is then a third of that row;
-* a hand price (an override) and a default are the user's and the model's own numbers: kept, and the tier below is a third of them.
+* the **highest tier the file has a market row for** (the Deafening one, wherever the file prices it) keeps its price: the type's
+  one market price, the **anchor** of its chain;
+* **every tier below it costs one third of the next tier up**: Shrieking = Deafening / 3, Screaming = Shrieking / 3, and so on down,
+  **whatever row of its own the tier has, a cheaper one too**. A lower tier's market is thin in both directions: a cheap odd row
+  (one seller, a fraction of a unit) is no more a price a plan can buy at than a dear one, and it would make a route look cheaper
+  than it is. The row it replaces is kept in the new row's `detail`;
+* a **hand price** (an override) and a default are the user's and the model's own numbers: kept, dearer or cheaper, and the tiers
+  below are a third of them (it is the anchor of the tiers below it).
 
 So no lower tier ever costs more than a third of its upper tier. A row the rule writes says so in the row (OR-7, OR-23): source
-`upgrade-recipe`, the tier it is a third of and that tier's price in `detail`, the row it replaced, and a provenance of kind
-`upgrade-recipe` with the league and day of the price it rests on, which `price_marks` marks as an approximate input.
+`upgrade-recipe`, the tier it is a third of and that tier's price, the anchor and how many tiers above it stands, the row it
+replaced, and a provenance of kind `upgrade-recipe` with the league and day of the anchor. `price_marks` marks it as an approximate
+input and judges the anchor in its place (its league, its day, its depth for a third of the uses per tier), since a recipe price is
+as good as the market price it rests on and no better.
 
 `wanted` names lower tiers the file has no row for (an essence a method spends): they get a row too, and so does every tier between
-a named one and the type's priced top, since the chain passes through it. A type the file prices at no tier stays unpriced, and the
-corrupted essences (Delirium, Horror, Hysteria, Insanity) and Essence of Desolation, which have no tier, are not touched.
+a named one and the anchor, since the chain passes through it. Two cases have a note and no change: a type whose anchor is not its
+Deafening tier (nothing prices that row from above, so it stays whatever it is), and a type that has recipe rows but no market row
+left to anchor them. A type the file prices at no tier stays unpriced, and the corrupted essences (Delirium, Horror, Hysteria,
+Insanity) and Essence of Desolation, which have no tier, are not touched.
+
+The hand prices live in a file of their own and are laid over the price file when it is read (`load_prices`), after any fetch: a
+file that holds recipe rows has the rule applied again there, so an override of one tier reaches the tiers below it.
 Pure: no I/O, no clock. Applying the rule twice gives the same file.
 """
 
 from collections.abc import Iterable
 from dataclasses import replace
 
+from crafting_system.rules import get_rule
+
 from .price_file import PriceEntry, PriceFile
-from .price_marks import MARKET_KINDS, price_marks, provenance_of
+from .price_marks import provenance_of
 from .provenance import DEFAULT, OVERRIDE, RECIPE, Provenance
 
-__all__ = ["PER_UPGRADE", "RECIPE_SOURCE", "TIERS", "apply_upgrade_recipe", "tier_of"]
+__all__ = ["PER_UPGRADE", "RECIPE_SOURCE", "TIERS", "apply_upgrade_recipe", "has_recipe_rows", "tier_of"]
 
+VENDOR_UPGRADE_RECIPE = get_rule("essence.vendor_upgrade_recipe")
 TIERS = ("Whispering", "Muttering", "Weeping", "Wailing", "Screaming", "Shrieking", "Deafening")  # lowest first, as the game names them
-PER_UPGRADE = 3  # essences of one tier and type the vendor takes for one of the next tier
+PER_UPGRADE: int = VENDOR_UPGRADE_RECIPE.value  # essences of one tier and type the vendor takes for one of the next tier
 RECIPE_SOURCE = "upgrade-recipe"
 _MIDDLE = " Essence of "
 
@@ -45,31 +58,41 @@ def tier_of(name: str) -> tuple[int, str] | None:
     return TIERS.index(word), f"Essence of {kind}"
 
 
+def has_recipe_rows(price_file: PriceFile) -> bool:
+    """Whether the file was built under the rule: some row of it is a recipe row."""
+    return any(entry.source == RECIPE_SOURCE for entry in price_file.prices.values())
+
+
 def _is_own_number(entry: PriceEntry, price_file: PriceFile) -> bool:
     p = provenance_of(entry, price_file)
     return p is not None and p.kind in (OVERRIDE, DEFAULT)
 
 
-def _is_plain_reading(entry: PriceEntry, price_file: PriceFile) -> bool:
-    """A recorded market reading of the file's own league and day with no mark against it; its depth is not judged (no plan is at hand)."""
-    p = provenance_of(entry, price_file)
-    return p is not None and p.recorded and p.kind in MARKET_KINDS and not price_marks(entry, price_file, 0.0)
+def _replaced(existing: PriceEntry | None) -> dict[str, object] | None:
+    """What the rule replaced at this name: the row there now, or, when that is the rule's own row, what it first replaced."""
+    if existing is None:
+        return None
+    if existing.source != RECIPE_SOURCE:
+        return {"chaos": existing.chaos, "source": existing.source}
+    was = (existing.detail or {}).get("replaced")
+    if isinstance(was, dict) and isinstance(was.get("chaos"), int | float) and not isinstance(was.get("chaos"), bool) and isinstance(was.get("source"), str):
+        return {"chaos": was["chaos"], "source": was["source"]}
+    return None
 
 
-def _derived(name: str, upper_name: str, upper: PriceEntry, existing: PriceEntry | None, price_file: PriceFile) -> PriceEntry:
-    rests_on = provenance_of(upper, price_file)
+def _derived(upper_name: str, upper: PriceEntry, anchor_name: str, anchor: PriceEntry, steps: int, existing: PriceEntry | None, price_file: PriceFile) -> PriceEntry:
+    rests_on = provenance_of(anchor, price_file)
     league = rests_on.league if rests_on is not None else price_file.league
     day = rests_on.date if rests_on is not None else price_file.fetched_at.date().isoformat()
     note = (
         f"vendor upgrade recipe (#885): one third of {upper_name} ({upper.chaos:.4g} Chaos); {PER_UPGRADE} essences of a tier make one of the"
         " next tier of the same type, so the lower tiers have no market of their own"
     )
-    detail: dict[str, object] = {"league": league, "date": day, "recipe": "essence-upgrade", "of": upper_name, "of_chaos": upper.chaos, "per": PER_UPGRADE}
-    replaced = None
-    if existing is not None and existing.source != RECIPE_SOURCE:
-        replaced = {"chaos": existing.chaos, "source": existing.source}
-    elif existing is not None and isinstance((existing.detail or {}).get("replaced"), dict):  # the rule applied again: what it first replaced is kept
-        replaced = dict(existing.detail["replaced"])
+    detail: dict[str, object] = {
+        "league": league, "date": day, "recipe": "essence-upgrade", "of": upper_name, "of_chaos": upper.chaos, "per": PER_UPGRADE,
+        "anchor": anchor_name, "steps": steps,
+    }  # fmt: skip
+    replaced = _replaced(existing)
     if replaced is not None:
         note += f"; it replaces the row of {replaced['chaos']:.4g} Chaos ({replaced['source']})"
         detail["replaced"] = replaced
@@ -77,7 +100,8 @@ def _derived(name: str, upper_name: str, upper: PriceEntry, existing: PriceEntry
 
 
 def apply_upgrade_recipe(price_file: PriceFile, wanted: Iterable[str] = ()) -> tuple[PriceFile, list[str]]:
-    """`price_file` with the rule of this module applied, and one note per row the rule wrote or changed, in the file's order of types.
+    """`price_file` with the rule of this module applied, and its notes: one per row the rule wrote or changed ("<name>: <price> Chaos,
+    one third of ..."), and one per type it could not price from its Deafening tier ("<name>: kept, ...").
 
     `wanted` are names that need a price whether or not the file has a row for them; a name of it that is no tiered essence is ignored.
     """
@@ -89,19 +113,26 @@ def apply_upgrade_recipe(price_file: PriceFile, wanted: Iterable[str] = ()) -> t
     prices = dict(price_file.prices)
     notes: list[str] = []
     for kind, tiers in types.items():
-        priced = [index for index, name in tiers.items() if name in price_file.prices]
-        if not priced:
-            continue  # no tier of the type has a price to start from
-        top = max(priced)
-        upper_name, upper = tiers[top], price_file.prices[tiers[top]]
+        market = [index for index, name in tiers.items() if name in price_file.prices and price_file.prices[name].source != RECIPE_SOURCE]
+        if not market:
+            stale = [name for name in tiers.values() if name in price_file.prices]
+            if stale:
+                notes.append(f"{stale[0]}: kept, a recipe row of {kind} with no market row of its type left to rest on")
+            continue  # no tier of the type has a market price to start from
+        top = max(market)
+        anchor_name, anchor, steps = tiers[top], price_file.prices[tiers[top]], 0
+        if top != len(TIERS) - 1:
+            notes.append(f"{anchor_name}: kept, the highest tier of {kind} the file has a market row for; no Deafening row prices it from above")
+        upper_name, upper = anchor_name, anchor
         for index in range(top - 1, min(tiers) - 1, -1):
             name = f"{TIERS[index]} {kind}"
             existing = price_file.prices.get(name)
-            limit = upper.chaos / PER_UPGRADE
-            if existing is not None and (_is_own_number(existing, price_file) or (existing.chaos < limit and _is_plain_reading(existing, price_file))):
+            if existing is not None and _is_own_number(existing, price_file):
+                anchor_name, anchor, steps = name, existing, 0
                 upper_name, upper = name, existing
                 continue
-            made = _derived(name, upper_name, upper, existing, price_file)
+            steps += 1
+            made = _derived(upper_name, upper, anchor_name, anchor, steps, existing, price_file)
             if existing != made:
                 was = "no row" if existing is None else f"{existing.chaos:.4g} Chaos ({existing.source})"
                 notes.append(f"{name}: {made.chaos:.4g} Chaos, one third of {upper_name}; before: {was}")

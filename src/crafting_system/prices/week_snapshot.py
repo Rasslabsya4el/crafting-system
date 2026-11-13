@@ -36,7 +36,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 
-from .essence_recipe import apply_upgrade_recipe
+from .essence_recipe import RECIPE_SOURCE, apply_upgrade_recipe
 from .fallbacks import HISTORY_DAYS
 from .ninja_history import DayRow, window_ending
 from .poe_ninja import HISTORY_SOURCE, history_slug
@@ -142,7 +142,7 @@ def build_snapshot(
     snapshot, recipe = apply_upgrade_recipe(PriceFile(league, datetime(as_of.year, as_of.month, as_of.day, tzinfo=UTC), divine.chaos, prices), wanted)
     notes = [note for name, note in stand_ins.items() if snapshot.prices[name] is prices[name]]  # a stand-in the recipe replaced is one no longer
     notes += [f"{name}: no price, no poe.ninja daily row in {league} {_window(as_of)}" + ("" if back is None else f" nor in {back[0]} {_window(back[2])}") + " and no template holds it" for name in unpriced if name not in snapshot.prices]
-    notes += [note.replace(": ", ": vendor recipe, ", 1) for note in recipe]
+    notes += [note.replace(": ", ": vendor recipe, ", 1) for note in recipe]  # a row the rule wrote, or a type it kept as it is
     return snapshot, notes
 
 
@@ -163,6 +163,7 @@ def _drift(name: str, label: str, names: dict[str, tuple[str, PriceEntry]], pric
         entry.chaos / found.chaos
         for other, (other_label, entry) in names.items()
         if other_label == label and group_of(other) == group and (found := prices.get(other)) is not None and found.source == HISTORY_SOURCE and entry.chaos > 0
+        and entry.source != RECIPE_SOURCE  # a template's recipe row is no market reading of its day: it says nothing of how far the market moved
     ]
     return (statistics.median(ratios), len(ratios)) if ratios else (1.0, 0)
 

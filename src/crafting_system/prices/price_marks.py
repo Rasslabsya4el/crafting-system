@@ -11,8 +11,10 @@ its depth in units is at least the units the plan expects to use. Every other pr
   day that keeps a later reading as its stand-in, #838);
 * "few offers: the mean of the cheapest units of the N offers there are" and "old price, read on <date>, the market has few
   offers now" (a thin trade book, OR-8 as amended by #718: its own mean, or the league's last deep price in its place);
-* "priced from the vendor recipe: one third of <the next tier up>" (a lower essence tier, `essence_recipe.py`, #885; beside it the
-  league or the day of the price it rests on, when that is not the file's own);
+* "priced from the vendor recipe: one third of <the next tier up>" (a lower essence tier, `essence_recipe.py`, #885), and beside it
+  every reason against the market price its chain rests on (the anchor: its league, its day, its depth), each said with the
+  anchor's name. One unit of a tier `k` tiers below the anchor is a `3**k`-th of an anchor unit, so the anchor's depth is
+  compared with the plan's uses divided by that;
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
 
 There is no fixed cut that drops a route (OR-12): a price on few units is kept, marked, and the plan is solved with it.
@@ -103,6 +105,8 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
     found: list[PriceMark] = []
     if p is None:
         return (PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS),)
+    if p.kind == RECIPE:
+        return _recipe_marks(entry, price_file, uses)
     if p.kind == PREVIOUS_LEAGUE:
         found.append(PriceMark(EARLIER, f"previous league's price ({p.league}, {p.date})"))
     elif p.kind == STANDARD:
@@ -117,9 +121,6 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(THIN, f"few offers: the mean of the cheapest units of the {p.book} {'offer' if p.book == 1 else 'offers'} there are"))
     elif p.recorded and p.market == OLD_PRICE:
         found.append(PriceMark(OLD_THIN, f"old price, read on {p.date}, the market has few offers now"))
-    if p.kind == RECIPE:
-        upper = (entry.detail or {}).get("of")
-        found.append(PriceMark(FROM_RECIPE, f"priced from the vendor recipe: one third of {upper if isinstance(upper, str) else 'the next tier up'}"))
     if p.recorded and p.item == WIDER:
         found.append(PriceMark(STAND_IN, _stand_in_words(p)))
     if p.recorded and p.kind in MARKET_KINDS and p.kind not in EARLIER_LEAGUE and p.market != OLD_PRICE:  # an old price's depth was not kept; its mark says what it is
@@ -132,6 +133,22 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(TRADE_UNREAD, f"the trade offers beside it were not read: {p.trade_unread}"))
     if not p.recorded:
         found.append(PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS))
+    return tuple(found)
+
+
+def _recipe_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) -> tuple[PriceMark, ...]:
+    """The marks of a row the upgrade recipe wrote (`essence_recipe.py`): what it is a third of, then every reason against the market
+    price its chain rests on, judged for the anchor units the plan's uses come to; a row whose anchor the file no longer holds says so."""
+    detail = entry.detail or {}
+    upper, anchor_name, steps, per = detail.get("of"), detail.get("anchor"), detail.get("steps"), detail.get("per")
+    found = [PriceMark(FROM_RECIPE, f"priced from the vendor recipe: one third of {upper if isinstance(upper, str) else 'the next tier up'}")]
+    anchor = price_file.prices.get(anchor_name) if isinstance(anchor_name, str) else None
+    if anchor is None or provenance_of(anchor, price_file) is None or provenance_of(anchor, price_file).kind == RECIPE:
+        found.append(PriceMark(NOT_RECORDED, "the market price the recipe price rests on is not in the file"))
+        return tuple(found)
+    whole = isinstance(steps, int) and not isinstance(steps, bool) and isinstance(per, int) and not isinstance(per, bool) and steps >= 0 and per >= 1
+    anchor_uses = None if uses is None else (uses / per**steps if whole else uses)
+    found.extend(PriceMark(mark.code, f"{anchor_name}: {mark.reason}") for mark in price_marks(anchor, price_file, anchor_uses))
     return tuple(found)
 
 

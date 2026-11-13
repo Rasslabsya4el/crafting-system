@@ -138,3 +138,5 @@ def test_unpriced_reads_a_name_as_the_planner_prices_an_offer():
 
     assert sorted(name for offer in dropped for name in offer.missing) == unpriced(names, prices) == ["Awakener's Orb", "Farric Wolf Alpha"]
     assert len(priced) == 6
+    _, dropped_ninja = price_offers([Offer(name, object(), {name: 1}) for name in names], prices, "ninja")  # no trade record is read under `ninja`
+    assert sorted(name for offer in dropped_ninja for name in offer.missing) == unpriced(names, prices, "ninja") == ["Awakener's Orb", "Farric Wolf Alpha", "Thin Beast"]
