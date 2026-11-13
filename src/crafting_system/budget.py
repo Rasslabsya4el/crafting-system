@@ -7,11 +7,11 @@ planner settings or on the command line (#537).
 
 **One clock.** `Budget.start()` gives the `Clock` of the run. Every stage reads the same clock: the search (a `Net` made from what is left,
 `Clock.left`), the walks of the whole graph and the bound pruning (`checkpoint`, between two states), the Lock's check, the risk's attempt runs (the
-time left, #745), the start options (one clock across them). No stage has a fixed share. The stages that make the answer (the walks, the bound
+time left, #745), the start options (one clock across them). No stage has a fixed share but the bound's build (below). The stages that make the answer (the walks, the bound
 pruning, the search) may take the whole net: until a plan closes there is nothing to show. The stages that refine an answer already in hand (the
 Lock's check, the percentiles, which OR-34 adds after the route) take what is left, and when nothing is left they say so and the answer is kept
-(the plan without the Lock; the percentiles of a coarser step, or of the slower method). The share of the bound's build inside the search is
-part 2 of #825 (after #802).
+(the plan without the Lock; the percentiles of a coarser step, or of the slower method). Inside the search, the bound's build takes at most
+a quarter of the time it is given (`cli._envelope_plan.build_stop`), a hand-set share set from the search/build ratio on R04 (3.7) and R14 (6.2).
 
 **What bound.** A stage that a limit stopped records it on the clock (`Clock.bind`), with the stage, the limit and its figures; the plan lists
 them all in one limit of its answer (`cli._limits.budget_limit`, #378). A stop never passes silently (OR-12): a stage either finishes, or stops at a
@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the exact proof gives way to the stop at a proved 1% (#826)
 NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every method family has its bound (#822, ticket 4)
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
+EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
 MEMORY_POLL_SECONDS = 0.5  # a checkpoint reads the memory at most this often (the clock it reads every time)
 
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
@@ -99,15 +100,23 @@ class Binding:
     reached: float
     what: str = ""
 
+    @property
+    def early(self) -> bool:
+        """Whether the stage stopped at least `EARLY_SECONDS` before its time limit, to leave room for what follows (not a reading of the clock a
+        moment short of the limit: a clock's steps are as coarse as 15 ms on Windows)."""
+        return self.limit == TIME and self.given - self.reached >= EARLY_SECONDS
+
     def words(self) -> str:
         """The binding in a player's words: "the search stopped at the time limit of 600 s (601 s spent): no plan found yet"."""
-        if self.limit == TIME:
+        if self.early:  # a stage that stopped early to leave room for what follows it (the bound's build)
+            figure = f"{self.given - self.reached:,.0f} s before the time limit of {self.given:,.0f} s, to leave room for what follows ({self.reached:,.0f} s spent)"
+        elif self.limit == TIME:
             figure = f"the time limit of {self.given:,.0f} s ({self.reached:,.0f} s spent)"
         elif self.limit == MEMORY:
             figure = f"the memory limit of {self.given:,.0f} MB ({self.reached:,.0f} MB held)"
         else:
             figure = f"the limit of {self.given:,.0f} {self.limit} ({self.reached:,.0f} reached)"
-        return f"{self.stage} stopped at {figure}" + (f": {self.what}" if self.what else "")
+        return f"{self.stage} stopped {'' if self.early else 'at '}{figure}" + (f": {self.what}" if self.what else "")
 
 
 class BudgetExceeded(BaseException):
@@ -151,8 +160,10 @@ class Clock:
             self._memory, self._memory_read = process_mb(), now
         return self._memory
 
-    def over(self, stage: str, what: str = "") -> Binding | None:
-        """The binding a stage meets now, if the time or the memory net is reached; nothing is recorded (`bind` does that)."""
+    def over(self, stage: str, what: str = "", held: float | None = None) -> Binding | None:
+        """The binding a stage meets now, if the time or the memory net is reached; nothing is recorded (`bind` does that).
+
+        `held` is the memory to compare with the net when the caller read it itself (a pool: this process and its workers); else this process's."""
         given: Budget = self.budget
         seconds = given.seconds
         if seconds is not None:
@@ -160,7 +171,8 @@ class Clock:
             if spent >= seconds:
                 return Binding(stage, TIME, seconds, spent, what)
         if given.memory_mb is not None:
-            held = self.memory()
+            if held is None:
+                held = self.memory()
             if held is not None and held >= given.memory_mb:
                 return Binding(stage, MEMORY, given.memory_mb, held, what)
         return None

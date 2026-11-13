@@ -63,6 +63,7 @@ DISPLAY = "display"
 STEPS = "step-numbers"
 STATE_LINE = "state-line"
 RISK = "risk"
+FINISH = "socket-finish"
 
 GROUPS: tuple[tuple[str, str], ...] = (
     (NOT_NAMED, "Methods the target does not name"),
@@ -81,6 +82,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (MODEL_GAP, "Actions the model has no rule for in some states"),
     (PROVED, "Actions proved not needed"),
     (START, "The start item"),
+    (FINISH, "The sockets"),
     (SOLVE, "How the answer was found"),
     (BUDGET, "Time and memory limits that stopped a stage"),
     (DISPLAY, "What is shown"),

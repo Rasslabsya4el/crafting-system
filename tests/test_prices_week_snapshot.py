@@ -15,7 +15,7 @@ import pytest
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write_price_file
 from crafting_system.prices.http_json import SourceError
 from crafting_system.prices.ninja_history import exchange_readings, exchange_rows
-from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, OLD, OLD_THIN, price_marks
+from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, NO_DEPTH, OLD, OLD_THIN, price_marks
 from crafting_system.prices.provenance import EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STASH, TRADE, Provenance
 from crafting_system.prices.week_snapshot import DayRow, build_snapshot, reading_on, wants_history
 
@@ -139,7 +139,7 @@ def test_a_name_with_no_daily_row_keeps_the_templates_reading_as_a_marked_stand_
     )
     assert fossil.chaos == 519.7 and fossil.note == (
         "stand-in (OR-7): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13;"
-        " the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept"
+        " the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept: no other fossil name was priced on both days, so it is not scaled"
     )
     assert notes == [f"{name}: stand-in, the reading of 2026-11-10 from routes-allflame-2026-11-10.json" for name in ("Bloodstained Fossil", RING)]
 
@@ -179,6 +179,53 @@ def test_a_reading_within_seven_days_after_the_file_is_not_marked_and_one_long_b
     assert marks("2026-08-07") == []
     assert marks("2026-08-08") == [LATER]
     assert marks("2026-07-23") == [OLD]
+
+
+def test_a_bulk_stand_in_is_divided_by_the_median_rise_of_its_kind_and_a_start_item_is_not():
+    """#860. Essences A, B, C rose x4, x2, x10 from the day to the template's (12/3, 10/5, 30/3): their median is 4, so D, read only at
+    the end at 9 Chaos, stands in at 9 / 4 = 2.25. The currency names rose x3 (Divine 600/200) and x2 (Exalted 4/2): median 2.5, so the
+    Lock's 1,000 stands in at 400. A fossil has no fossil read on both days, so it is kept; the trade start item is kept whole."""
+    def ninja(chaos):
+        return PriceEntry(chaos, "poe.ninja", None, None, Provenance(EXCHANGE, "Allflame", "2026-11-10", 50.0))
+
+    end = PriceFile("Allflame", END, 600.0, {
+        "Divine Orb": ninja(600.0), "Exalted Orb": ninja(4.0), "Hinekora's Lock": ninja(1000.0),
+        "Essence of A": ninja(12.0), "Essence of B": ninja(10.0), "Essence of C": ninja(30.0), "Essence of D": ninja(9.0),
+        "Dense Fossil": ninja(7.0), RING: end_file().prices[RING],
+    })  # fmt: skip
+    rows = {"divine-orb": 200.0, "exalted-orb": 2.0, "essence-of-a": 3.0, "essence-of-b": 5.0, "essence-of-c": 3.0}
+
+    snapshot, notes = build_snapshot([("end.json", end)], lambda league, slug: [DayRow(AS_OF, rows[slug], 100.0)] if slug in rows else [], "Allflame", START, AS_OF, None)
+
+    assert snapshot.prices["Essence of D"].chaos == pytest.approx(2.25)
+    assert snapshot.prices["Essence of D"].note == (
+        "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31; the reading of 2026-11-10 from end.json (9 Chaos)"
+        " divided by 4, the median rise of the 3 essence names priced on both days"
+    )
+    assert snapshot.prices["Hinekora's Lock"].chaos == pytest.approx(400.0)
+    assert snapshot.prices["Dense Fossil"].chaos == 7.0
+    assert snapshot.prices[RING].chaos == 2.2
+    d = snapshot.prices["Essence of D"]
+    assert d.provenance == Provenance(EXCHANGE, "Allflame", "2026-11-10")  # its day kept, the reading's depth gone
+    assert d.detail == {"reading_chaos": 9.0, "reading_date": "2026-11-10", "template": "end.json", "divided_by": 4.0, "sample": 3, "group": "essence"}
+    assert [mark.code for mark in price_marks(d, snapshot, uses=1.0)] == [LATER, NO_DEPTH]
+    assert "Essence of D: stand-in, the reading of 2026-11-10 from end.json, divided by 4" in notes
+
+
+def test_a_previous_leagues_reading_and_a_zero_price_stay_out_of_the_sample():
+    """Essence A is read only from Mirage (its rise would be 12/1 = 12) and essence Z is priced 0 at the end: neither counts, so the
+    sample is B alone (10/5 = 2) and D stands in at 9 / 2 = 4.5."""
+    end = PriceFile("Allflame", END, 600.0, {
+        "Divine Orb": PriceEntry(600.0, "poe.ninja"), "Essence of A": PriceEntry(12.0, "poe.ninja"), "Essence of B": PriceEntry(10.0, "poe.ninja"),
+        "Essence of Z": PriceEntry(0.0, "poe.ninja"), "Essence of D": PriceEntry(9.0, "poe.ninja"),
+    })  # fmt: skip
+    rows = {("Allflame", "divine-orb"): 200.0, ("Mirage", "essence-of-a"): 1.0, ("Allflame", "essence-of-b"): 5.0, ("Allflame", "essence-of-z"): 1.0}
+
+    snapshot, _ = build_snapshot([("end.json", end)], lambda league, slug: [DayRow(AS_OF if league == "Allflame" else date(2026, 3, 13), rows[league, slug], 10.0)] if (league, slug) in rows else [], "Allflame", START, AS_OF, MIRAGE)
+
+    assert snapshot.prices["Essence of A"].source == "poe.ninja-previous-league"
+    assert snapshot.prices["Essence of D"].chaos == pytest.approx(4.5)
+    assert snapshot.prices["Essence of D"].detail["sample"] == 1
 
 
 def test_a_stash_line_and_a_hand_price_are_kept_and_never_read_from_the_rows():

@@ -256,7 +256,7 @@ _NO_RISK = types.SimpleNamespace(p90=types.SimpleNamespace(value=math.nan))  # s
 
 def run_part(route_id: str, part: int, parts: int, out: Path, runs_scale: float = 1.0) -> int:
     """Play one part of one benchmark route and write `out/sim-ID-K.json`; 2 for a bad argument, 1 when a kind failed."""
-    from crafting_system.cli._benchmark import BENCHMARKS, _given_route
+    from crafting_system.cli._benchmark import BENCHMARKS, _given_route, reads_own_prices
     from crafting_system.cli._inputs import write_json
     from crafting_system.cli._route import evaluate_route, load_route
     from crafting_system.cli._route_sim import simulate_route
@@ -276,8 +276,8 @@ def run_part(route_id: str, part: int, parts: int, out: Path, runs_scale: float 
     config = load_config(os.environ)
     game = load_game_data(cache_dir=config.cache_dir)
     root = find_project_root()
-    # a CI checkout has no price file of its own; a route with its own start (V01) reads the price file its target names
-    prices = load_price_file(root / PRICES) if bench.start is None else None
+    # a CI checkout has no price file of its own; a route with its own start (V01) or its own price file (R17) reads the price file its target names
+    prices = None if reads_own_prices(bench, root) else load_price_file(root / PRICES)
     runs = runs_for(route_id, runs_scale)
     seed = SEED_BASE + part
     path = out / f"sim-{route_id}-{part}.json"

@@ -13,6 +13,9 @@ hashes of the Craft of Exile copy; no Craft of Exile code). They were recorded o
 * the essences the `actions:` key of R08, R09 and R13 hides (#627, `tools/coe_emulator/checks/627-key-essences.json`): Shrieking Essence of Fear
   and Screaming Essence of Spite on the start boots of R08 and R09, with the target-met count against the planner's chance of one use on the target
   with its key removed (what the plans of run 42369553590 repeat), and Deafening Essence of Hatred on R13's rare belt.
+* the Exalted Orb the `actions:` key of J01 and V01 hides (#637, `tools/coe_emulator/checks/637-exalt-key.json`): on the later items of the craft
+  where the plans with the orb added take it (3-mod jewels missing one goal mod; helmets with the +1 Minion mod or tier 1 Life and 3 to 5 mods), with
+  the target-met count against the planner's chance of one use on the target with the orb added, which is also pinned to a fraction worked by hand.
 
 The statistic is stated in `coe_recorded_support.py`: an exact two-sided binomial test per cell, a Bonferroni correction
 over every cell of this module, `ALPHA` = 0.01 for the module. There is no percentage threshold. A cell that fails is a
@@ -30,6 +33,7 @@ requirement's own `tier_ok` set (`accepted_by_tier`), not by a tier number writt
 Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it, so these run there.
 """
 
+import json
 import math
 import re
 from dataclasses import replace
@@ -83,6 +87,13 @@ TARGET_OF = {
     "essence-r08-fear": "r08-energy-shield-boots",  # #627: the essences the actions: key hides
     "essence-r09-spite": "r09-life-boots",
     "essence-r13-hatred": "r13-life-resist-belt",
+    "exalt-j01-wants-attack-speed": "j01-cobalt-life-attack-speed",  # #637: the Exalted Orb the keys hide, on later items of the craft
+    "exalt-j01-wants-wand-speed": "j01-cobalt-life-attack-speed",
+    "exalt-j01-wants-life": "j01-cobalt-life-attack-speed",
+    "exalt-v01-minion-three-mods": "v01-minion-helmet",
+    "exalt-v01-minion-four-mods": "v01-minion-helmet",
+    "exalt-v01-minion-five-mods": "v01-minion-helmet",
+    "exalt-v01-life-three-mods": "v01-minion-helmet",
 }
 # #627: the cases whose action the target's `actions:` key leaves out; their one use is the planner's on the target with the key removed (`actions`
 # None, every kind not opt-in), as `.github/scripts/actions_key.py` plans the `removed` variant
@@ -123,7 +134,9 @@ def uses(data, targets):
 
     found = {}
     for case, record in CASES.items():
-        if "target" in record:
+        if "target" in record and case in EXALT_BY_HAND:  # #637: a later item of the craft, the orb added to the key
+            found[case] = exalt_use(data, {**record["item"], "target": record["target"]["file"]})
+        elif "target" in record:
             target = targets[TARGET_OF[case]]
             if case in KEY_HIDES:
                 target = replace(target, actions=None)
@@ -134,6 +147,7 @@ def uses(data, targets):
             ), f"{case}: the recorded item is not the target's start item"
             opened = plan.abstraction.compress(item) if plan.start.flags.unopened else plan.start  # a bought listing is drawn first (#640): the recorded item is the one it opens to
             found[case] = per_use_of(plan, opened, record["action"])
+            assert found[case]["short"] is not None, f"{case}: R08 and R09 have a sure bench step; its second target cell must not drop out"
     return found
 
 
@@ -317,6 +331,69 @@ def test_the_essence_the_key_hides_ends_in_the_target_as_often_as_the_planner_sa
     assert use["error"] is None
     expected = {"essence-r08-fear": 0.0222956, "essence-r09-spite": 0.0236223}[case]
     assert use["chance"] + use["short"] == pytest.approx(expected, abs=1e-6)
+
+
+# #637: the Exalted Orb the `actions:` key of J01 and V01 hides, on the states the plans with the orb added take it in (run 42378616946). The
+# chance that one use ends in the target, worked by hand from the weights of the empty base's pool (`IncreasedLife9` and the jewel mods: the
+# family and side of each, the side cap of 2 on a jewel and 3 on a helmet): the wanted mod's weight over the weights the orb can still add,
+# without the families the item holds.
+EXALT_CHECKS = Path(__file__).resolve().parents[1] / "tools" / "coe_emulator" / "checks" / "637-exalt-key.json"
+EXALT_BY_HAND = {
+    "exalt-j01-wants-attack-speed": Fraction(500, 17520),  # only a suffix: Attack Speed 500 of 17,520 (the five ailment suffixes are one family, gone)
+    "exalt-j01-wants-wand-speed": Fraction(500, 17900),  # only a prefix: Wand attack speed 500 of 17,900
+    "exalt-j01-wants-life": Fraction(350, 17750),  # only a prefix: % increased maximum Life 350 of 17,750
+    "exalt-v01-minion-three-mods": Fraction(1000, 97400),  # either side: Life tier 1 1,000 of 97,400
+    "exalt-v01-minion-four-mods": Fraction(1000, 90400),  # either side, one filler prefix: its family's 7,000 leaves the 97,400
+    "exalt-v01-minion-five-mods": Fraction(1000, 32000),  # the suffixes are full: Life tier 1 1,000 of the prefixes' 32,000
+    "exalt-v01-life-three-mods": Fraction(250, 87675),  # either side: +1 to Level of all Minion Skill Gems 250 of 87,675
+}
+
+
+def exalt_use(data, case: dict) -> dict:
+    """The planner's numbers of one Exalted Orb on the case's item, on its target with the orb added to the key (as `actions_key.py plus=exalted-orb`)."""
+    from crafting_system.cli._benchmark_use import per_use_of
+    from crafting_system.cli._plan import make_plan
+    from crafting_system.prices import load_price_file
+
+    target = load_target(Path(__file__).resolve().parents[1] / case["target"], data)
+    target = replace(target, actions=(*target.actions, "exalted-orb"))
+    prices = load_price_file(target.price_file if target.price_file is not None else PRICES)
+    plan = make_plan(data, target, prices, solve_it=False)
+    return per_use_of(plan, plan.abstraction.compress(build_item(data, case)), "Exalted Orb")
+
+
+@pytest.mark.parametrize("case", sorted(EXALT_BY_HAND))
+def test_one_exalted_orb_ends_in_the_target_at_the_chance_worked_by_hand(data, case):
+    """#637: the planner's chance of one use of the Exalted Orb on the plan's states is the hand-worked one (the side cap and the families held)."""
+    (spec,) = [check for check in json.loads(EXALT_CHECKS.read_text(encoding="utf-8")) if check["id"] == case]
+    use = exalt_use(data, spec)
+    assert use["error"] is None, use["error"]
+    assert not use["short"]  # no sure bench step on J01 or V01: None
+    assert use["chance"] == pytest.approx(float(EXALT_BY_HAND[case]), abs=1e-12)
+
+
+def test_the_judge_reads_a_later_item_at_its_recorded_rarity_with_the_target_s_own_prices(data):
+    """#637: the emulator's target count of V01 (a Normal start item, its own price file) judges the finished rare helmet, not a Normal one."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools" / "coe_emulator"))
+    from target_judge import TargetJudge
+
+    judge = TargetJudge(data, "examples/targets/v01-minion-helmet.yaml", "rare")
+    assert judge.target.start_item.rarity.value == "normal"
+    held = ["GlobalIncreaseMinionSpellSkillGemLevel1", "Dexterity8", "ColdResist7"]
+    assert judge.reading([*held, "IncreasedLife9"]) == "goal"
+    assert judge.reading([*held, "IncreasedLife8"]) == "other"  # tier 2 Life: not the goal's tier 1 (OR-1)
+    assert judge.reading([*held, "FireResist7"]) == "other"
+
+
+def test_the_keys_still_hide_the_exalted_orb():
+    """#637: J01's and V01's keys do not name the Exalted Orb; when #405 takes the keys out, this test and the cases above stay as the check."""
+    import yaml
+
+    for name in ("j01-cobalt-life-attack-speed", "v01-minion-helmet"):
+        key = yaml.safe_load((TARGETS / f"{name}.yaml").read_text(encoding="utf-8")).get("actions")
+        assert key is None or "exalted-orb" not in key, name
 
 
 # --- the statistical test --------------------------------------------------------------------------

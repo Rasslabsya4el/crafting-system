@@ -51,7 +51,7 @@ def _peak_mb() -> float | None:
 
 def run_route_file(route_id: str, out: Path) -> int:
     """Solve one benchmark route and write `out/route-ID.json`; 2 when there is no such benchmark route."""
-    from crafting_system.cli._benchmark import BENCHMARKS, run_route
+    from crafting_system.cli._benchmark import BENCHMARKS, reads_own_prices, run_route
     from crafting_system.cli._inputs import write_json
     from crafting_system.config import find_project_root, load_config
     from crafting_system.data import load_game_data
@@ -66,8 +66,8 @@ def run_route_file(route_id: str, out: Path) -> int:
     game = load_game_data(cache_dir=config.cache_dir)
     root = find_project_root()
     began = time.monotonic()
-    # a CI checkout has no price file of its own; a route with its own start (V01) reads the price file its target names
-    prices = load_price_file(root / PRICES) if bench.start is None else None
+    # a CI checkout has no price file of its own; a route with its own start (V01) or its own price file (R17) reads the price file its target names
+    prices = None if reads_own_prices(bench, root) else load_price_file(root / PRICES)
     entry, _ = run_route(bench, game, root, config, prices, None, heavy=True)
     seconds = time.monotonic() - began
     path = out / f"route-{route_id}.json"

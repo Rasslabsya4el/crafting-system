@@ -125,7 +125,7 @@ def subjects(export):
 
 
 def test_the_benchmark_names_many_bases_and_two_influenced_ones(export, subjects):
-    assert len(_yaml_files(TARGETS_DIR)) == 16
+    assert len(_yaml_files(TARGETS_DIR)) == 17
     assert len({base_id for base_id, _ in subjects}) >= 14  # the computed buy specs name a base each (the old category-only ones accepted 16 rings and 88 amulets)
     assert sum(1 for _, influences in subjects if influences) == 2  # the Hunter belt and the Hunter bow
 
@@ -296,7 +296,7 @@ def test_the_old_oracle_rule_and_the_shared_rule_name_the_same_base_for_every_na
     bases = export["base_items"]
     references = [target["base"] for target in _yaml_files(TARGETS_DIR)] + [spec["base_type"] for spec in _yaml_files(BUY_DIR) if spec.get("base_type")]
 
-    assert len(references) == 16 + 14  # the computed specs: one per bought start item, the two R10 files sharing one
+    assert len(references) == 17 + 15  # the computed specs: one per bought start item, the two R10 files sharing one
     for reference in references:
         merged = shared.base_ids_of(bases, reference)
         assert merged and oracle_base_v411(bases, reference) in merged

@@ -57,3 +57,7 @@ The Chromatic Orb (`ChromaticOrb`, `omen=True` for the Omen of Trichromatism), t
 - **The repeat exclusion compares the ordered list of colours**, and a bench colour craft excludes nothing (it is a conditioned roll, not a Chromatic Orb). The Omen's result is also conditioned on differing from the current colours.
 - **The Omen is offered from three sockets** and refused below (`NotApplicableError`).
 - **Whetstone and Scrap** share the catalysts' gain law (`catalyst.gain_law`) and stop at 20%; a Whetstone works on the weapon classes, a Scrap on the armour classes (shields included); both are refused at 20% or more and are declared `Adds.only_quality`, so a planner offers them last like a catalyst.
+
+## Amendment: the forced colour's second reading reaches further ([#231](https://github.com/Rasslabsya4el/crafting-system/issues/231))
+
+"It matters only for a target that needs exactly one coloured socket" (above, and the same words in the amendment of #229) misses the exclusion: a forced result's colours decide what the next Chromatic Orb cannot return, so the second reading also moves a target of two coloured sockets (two red sockets on a dexterity-intelligence helmet from two white ones: 790.4 orbs at Siveran's weights, 817.6 at the flatter reading). The finish lists a second reading wherever it changes the number (ADR-0045, amendment of #231).

@@ -35,6 +35,7 @@ from ._approx import Approximation, climb
 from ._axes import axis_what
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
+from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
@@ -178,6 +179,7 @@ class Plan:
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
     readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
     foresight: Foresight | None = None  # what the plan found about Hinekora's Lock (ticket #296, ADR-0057); None for a plan that was not solved
+    finish: PlanFinish | None = None  # the socket finish added to every goal state (ticket #231, ADR-0045); None for a target that names no sockets
     donors: "DonorPlan | None" = None  # set when an offer takes donors (ticket #225): the product of the main item and its donors' processes
 
     def __post_init__(self) -> None:
@@ -218,8 +220,25 @@ class Plan:
 
     @property
     def mean_remaining(self) -> float:
-        """The solver's expected cost from the start, without the price of the start item."""
+        """The solver's expected cost of the mods from the start, without the price of the start item (the socket finish is `finish_value`)."""
         return self.solution.values[self.start]
+
+    @property
+    def finish_value(self) -> float:
+        """What the socket finish adds to every goal state (ADR-0045): its mean from the start item's sockets, 0 for a target with no sockets.
+
+        One value for every goal state (no mod action changes sockets; Orb of Binding, which gives a goal a second one, is ticket #232), so the plan
+        of the mods is the cheapest with the finish too and only its mean grows (`cli/_finish.py`)."""
+        return 0.0 if self.finish is None else self.finish.value
+
+    def value_of(self, state: CompressedState) -> float:
+        """The expected cost from `state` to the finished item: the solver's value of the mods plus the finish, which every goal state adds."""
+        return self.solution.values[state] + self.finish_value
+
+    @property
+    def total_mean(self) -> float:
+        """The expected cost of the whole craft from the start, the mods and the socket finish, without the price of the start item."""
+        return self.value_of(self.start)
 
 
 class _Model:
@@ -511,6 +530,11 @@ def _make_plan(
     `quality` (the planner ignores them until B2), when no offer has a price or no policy reaches the
     goal, and what the layers below raise for a bad input.
 
+    A target that names sockets (ADR-0045, ticket #231) is planned in two parts: the mods as for the same target without sockets, and the socket
+    finish solved on its own from the start item's sockets (`_finish.plan_finish`), whose value every goal state adds (`Plan.finish`,
+    `Plan.total_mean`). Its refusals (`sockets: any`, a corrupted goal, a mod action that changes sockets, a finish no offered action completes)
+    are `PlanError`s too.
+
     Remove Crafted Mods is kept only when a priced bench craft is, or the start item holds a crafted
     mod: otherwise no crafted mod can ever exist and tracking the junk slots for it would only grow
     the state space. A bought start item is offered again as `restart` from every state; a given one never is (OR-6).
@@ -564,11 +588,6 @@ def _make_plan(
         raise PlanError(
             "the target asks for implicits or quality, which the planner cannot plan yet"
         )
-    if target.sockets is not None:
-        raise PlanError(
-            "the target asks for sockets, which the planner cannot plan yet"
-            ": the finish of sockets is not built, so an answer would silently ignore them"
-        )
     if target.enchantment is not None:
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"
@@ -576,9 +595,10 @@ def _make_plan(
     price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price, price_source)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
+    mod_names, finish_names = split_names(data, target.start_item, target.actions) if target.sockets is not None else (target.actions, None)
     if offers is None:
         try:
-            chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
+            chosen = offers_for(data, goal, target.base_id, target.start_item, mod_names)
         except ValueError as error:
             raise PlanError(str(error)) from error
         offers, limits = chosen.offers, (*chosen.limits, *limits)
@@ -605,6 +625,16 @@ def _make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     donated = tuple(p for p in priced if not isinstance(p.offer.action, BuyStartItem) and takes_inputs(p.offer.action))  # offers that take donors (#225)
+    finish = None
+    if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
+        try:
+            finish = plan_finish(
+                data, target, prices, price_source, names=finish_names, goal_takes_corrupted=goal.takes_corrupted,
+                mod_actions=[p.offer.action for p in priced if not isinstance(p.offer.action, BuyStartItem)],
+            )  # fmt: skip
+        except (FinishRefused, OutOfScopeError, ArithmeticError) as error:  # ArithmeticError: the finish did not converge
+            raise PlanError(str(error)) from error
+        limits = without_finish_kinds(limits)
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
     # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
     # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading
@@ -636,7 +666,7 @@ def _make_plan(
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
-        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
+        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0, finish=finish)
     if donated and solver not in ("auto", "object"):
         raise PlanError(f"an offered action takes donors, so the plan is made by the search that holds every item it reaches; `--solver {solver}` does not do that")
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
@@ -670,16 +700,18 @@ def _make_plan(
             try:
                 with stage(APPROXIMATE_STAGE):
                     solved = climb(decision, start, merged)
-                burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+                burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
                 foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
             except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
                 raise PlanError(str(error)) from error
             limits += skipped_level_limits(solved.skipped)
             if merged_twins:
                 limits += (twins_limit(merged_twins),)  # G17: the approximate answer is made of the offers left after the twins
+            if finish is not None:
+                limits += finish_limits(finish, solved.solution.values[solved.start], mods_at_most=True)  # the upper end of the approximate answer
             return finished(Plan(
                 target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, limits,
-                solved.solution, None, solved.seconds, 0.0, solved.approximation, foresight=foresight,
+                solved.solution, None, solved.seconds, 0.0, solved.approximation, foresight=foresight, finish=finish,
             ))  # fmt: skip
 
     began = time.perf_counter()
@@ -755,7 +787,7 @@ def _make_plan(
     risk, risk_seconds = None, 0.0
     if with_risk:
         began = time.perf_counter()
-        with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745, `risk._evaluate`)
+        with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745, `risk._evaluate`)
             if packed is not None:
                 risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
             elif donor_plan is not None:  # the whole product: a recombination pays for its donor's run on every use (ADR-0022, `risk._inputs`)
@@ -770,10 +802,12 @@ def _make_plan(
         risk_seconds = time.perf_counter() - began
     if packed is not None and packed.view is not None and len(solution.policy) > VIEW_FROM_STATES:
         limits += (lumped_limit(len(solution.policy), len(packed.view) + 1),)
+    if finish is not None:
+        limits += finish_limits(finish, solution.values[start])
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight, donors=donor_plan,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight, finish=finish, donors=donor_plan,
     ))
 
 
@@ -892,7 +926,7 @@ def plan_foresight(
     lock = lock_price(prices, price_source)
     if not lock_wanted(target.actions):  # switched off: nothing is built
         return Foresight(LockStatus.SWITCHED_OFF, lock), None
-    burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
+    burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
     cache: dict = {}
     plain = offered if offered is not None else (pruned.used if pruned is not None else priced)
     sites = PlanSites(abstraction, priced, plain, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
@@ -1090,7 +1124,7 @@ def add_risk(plan: Plan) -> Plan:
         return plan
     began = time.perf_counter()
     free = free_action_cost(plan.offers)
-    with stage(RISK_STAGE, RISK_KEPT):  # the risk's attempt runs take what is left of the run's time (#745)
+    with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745)
         if plan.packed is not None:
             risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
         elif plan.donors is not None:  # the whole product: `solution` is the target's own process, whose actions leave their donors out (#225)

@@ -14,6 +14,7 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
                                       # or {without: [{family: Pierce}]}: some mod is fractured and none of the listed families is
           crafted_mods: false         # the item holds a crafted mod or metamod
           open_suffixes: 1            # at least this many free suffixes (open_prefixes likewise); needs a bench action offered
+          imprints: 1                 # exactly this many imprints held (ADR-0060; 0 for none); needs an imprint action offered (#223)
           veil: prefix                # the item holds a veiled placeholder on that side: prefix, suffix, any, or none (an unveil offered)
           offer: none                 # no unveil offer is drawn; `drawn`: one is; or {shows: {stat: "..."}, at: 2}: the 2nd mod shown
                                       # (the one `Pick 2` takes) meets that requirement of the target (without `at`: any mod shown does)
@@ -71,7 +72,7 @@ from ._reach import policy_states
 RESTART = "restart"
 TOP_KEYS = ("name", "skip_refused", "rules")
 RULE_KEYS = ("when", "do")
-WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "veil", "offer", "requirements", "making")
+WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "imprints", "veil", "offer", "requirements", "making")
 VEIL_SIDES = {"prefix": "VeiledPrefix", "suffix": "VeiledSuffix"}  # the slot kind of the generic placeholder of each side (ADR-0026)
 VEIL_KINDS = frozenset(VEIL_SIDES.values())
 VEIL_VALUES = ("prefix", "suffix", "any", "none")
@@ -105,6 +106,7 @@ class When:
     unopened: bool | None = None  # the bought listing whose mods are not drawn yet (ADR-0064): the one state the draw is taken in
     statuses: tuple[tuple[int, frozenset[Status]], ...] = ()  # (index of the requirement leaf, statuses allowed)
     open_slots: tuple[tuple[Side, int, int], ...] = ()  # (side, capacity of the side, free slots wanted at least)
+    imprints: int | None = None  # the number of imprints held, exactly (#223)
     veil: str | None = None  # "prefix", "suffix", "any" or "none": the side of the veiled placeholder the item holds (ticket #146)
     offer: str | None = None  # "none" or "drawn": whether an unveil offer is drawn
     offer_shows: tuple[int, int | None] | None = None  # (index of the requirement leaf, position 1 to 3 or None for any): a mod shown meets the leaf
@@ -129,6 +131,8 @@ class When:
         if self.unopened is not None and state.flags.unopened != self.unopened:
             return False
         if self.no_fractured and state.fractured:
+            return False
+        if self.imprints is not None and len(state.imprints) != self.imprints:
             return False
         if self.fractured_families:  # a mod fractured mid-route may be held as its family type ("~3"): it names no family here
             held = {family for entry in state.fractured if entry.mod_id in data.mods for family in data.mods[entry.mod_id].families}
@@ -357,6 +361,8 @@ class _Reader:
         open_slots = self.read_open_slots(when, path)
         if open_slots:
             fields["open_slots"] = open_slots
+        if "imprints" in when:
+            fields["imprints"] = self.read_imprints(when, f"{path}.imprints")
         if "fractured" in when:
             fields.update(self.read_fractured(when["fractured"], f"{path}.fractured", when.key_lines["fractured"]))
         if "veil" in when or "offer" in when:
@@ -407,6 +413,19 @@ class _Reader:
             room = capacity(self.data, self.plan.target.base_id, Rarity.RARE).of(side)
             found.append((side, room, value))
         return tuple(found)
+
+    def read_imprints(self, when: LineMap, path: str) -> int:
+        value, line = when["imprints"], when.key_lines["imprints"]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            self.fail(line, path, f"must be a whole number of imprints held, 0 or more, got {describe(value)}")
+        if not self.plan.abstraction.tracks_imprints:
+            self.fail(
+                line,
+                path,
+                "the states of this plan hold no imprint (no imprint action is offered: name `imprint` and `restore` in the target's "
+                "`actions:`), so the imprints cannot be counted; leave the condition out",
+            )
+        return value
 
     def read_veil(self, when: LineMap, path: str) -> dict[str, object]:
         """`veil` and `offer` (ticket #146): what the state holds of the veiled placeholder and of the unveil offer (ADR-0026)."""

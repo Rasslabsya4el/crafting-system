@@ -28,6 +28,7 @@ from datetime import UTC, date, datetime
 from fractions import Fraction
 from pathlib import Path
 
+from crafting_system.actions import imprints_held_at_most
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, planned_price, stale_warning
@@ -241,6 +242,15 @@ BENCHMARKS = (
         heavy="the exact graph has 816,153 states: the packed solver takes about 32 minutes and 9 GB, and no approximate level exists for a route with metamods (ticket #70)",
         completed="examples/routes/r14-hunter-bow-restart.yaml",
     ),
+    # The guide publishes no odds (#223); the beasts of its imprint and the start Talisman are priced from its own price file.
+    BenchmarkRoute(
+        "R17",
+        "+2 Lightning rare Talisman with the rare-Talisman imprint (Reddit guide)",
+        "examples/targets/r17-lightning-talisman.yaml",
+        "examples/routes/r17-lightning-talisman.yaml",
+        (),
+        heavy="the exact walk of the imprint loop passed 2.76 million states and 28 million transitions in an hour and did not end (heavy run 43308613718, #223): it waits for a bound or a value-carrying form of the held imprint (ADR-0060, #817)",
+    ),
     # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
     BenchmarkRoute(
         "V01",
@@ -257,6 +267,17 @@ BENCHMARKS = (
         ),
     ),
 )
+
+def reads_own_prices(bench: BenchmarkRoute, root: Path) -> bool:
+    """Whether a heavy script must let the route read the price file its target names instead of the committed snapshot of the routes.
+
+    True for a route that starts from a vendor recipe (V01) and for a target that names its own price file (a top-level `price_file:`;
+    R17, whose beasts and start Talisman are not in the snapshot, #223).
+    """
+    if bench.start is not None:
+        return True
+    return any(line.startswith("price_file:") for line in (root / bench.target).read_text(encoding="utf-8").splitlines())
+
 
 class _Skipped(Exception):
     """A heavy route that `benchmark` leaves unsolved; its entry already says why."""
@@ -292,10 +313,11 @@ def benchmark_main(
         out_dir = Path(args.out) if args.out else config.output_dir
         entries = []
         used_prices: PriceFile | None = None
-        for bench in BENCHMARKS:
-            entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy)
-            entries.append(entry)
-            used_prices = used_prices or loaded
+        with imprints_held_at_most(config.max_imprints):  # the setting `max_imprints` for every plan of the run (#223)
+            for bench in BENCHMARKS:
+                entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy)
+                entries.append(entry)
+                used_prices = used_prices or loaded
         document = {
             "format": FORMAT,
             "machine": machine_info(root),

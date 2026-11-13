@@ -164,20 +164,35 @@ class CraftingProblem:
         self.ab._prepared_by.clear()
 
 
-BUILD_SHARE = 0.5  # the share of a time net the bound's build may take: the search and the solve of the graph it ends with come after it
+SEARCH_PER_BUILD = 3.0  # the search after a build takes at least this many times the build's time: measured 3.7 (R04: build 99 s, search 364-510 s) and 6.2 (R14: 37 s, 231-238 s), research note 2026-11-13-planning-speed, section 1; rounded down
 
 
 def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None:
-    """The net of the bound's build (OR-12): the time net's share `BUILD_SHARE` and the memory net as it is (the state net counts the search's states).
+    """The net of the bound's build (OR-12): a quarter of the time net, and the memory net as it is (the state net counts the search's states).
 
-    `began` is the clock reading when `envelope_result` started. The build asks it between two offers; it returns the reason once one is reached.
+    `began` is the clock reading when `envelope_result` started. The build asks it between two pieces of its work (two offers, or before a solve of
+    its model); it returns the reason once one is reached. The plan comes from the search after the build, so the build keeps room for it: it stops
+    when the time left is at most `SEARCH_PER_BUILD` times the time it has taken, which is the same as a fixed share of a quarter of the time it was
+    given: a hand-set stop-and-say-so net under OR-12, set from the search/build ratio on R04 (3.7) and R14 (6.2) and checked on R08, not a measure
+    of this build. A build that ends earlier leaves the search all the rest. This replaced `BUILD_SHARE = 0.5` (#825): on
+    R08 at the prices of 2026-11-10 a build that left the search 103 s gave a plan of 33,755 Chaos where a search given 266 s gave 2,236, on the same
+    lower figure (heavy runs 43358114571, 43358085172).
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
 
     def stop() -> str | None:
-        if net.seconds is not None and time.perf_counter() - began >= net.seconds * BUILD_SHARE:
-            return f"the time limit of {net.seconds * BUILD_SHARE:g} seconds (half of the {net.seconds:g} of the net) was reached"
+        now = time.perf_counter()
+        if net.seconds is not None:
+            spent = now - began
+            left = net.seconds - spent
+            if left <= 0.0:
+                return f"the time limit of {net.seconds:g} seconds was reached"
+            if left <= SEARCH_PER_BUILD * spent:
+                return (
+                    f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan, "
+                    f"which takes several times as long as this count"
+                )
         if net.memory_mb is not None:
             used = resident_mb()
             if used is not None and used >= net.memory_mb:

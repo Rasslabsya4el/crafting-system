@@ -62,6 +62,14 @@ RULES = _cite(
         "2026-10-30",
     ),
     Cite(
+        "jewel_capacity",
+        "A rare jewel (item class Jewel or AbyssJewel) holds at most 2 prefixes and 2 suffixes, not 3 and 3.",
+        "wiki",
+        "https://www.poewiki.net/wiki/Modifier#Explicit_modifiers",
+        "with the exception of some items like jewels, which can only have (1 to 2) prefixes and (1 to 2) suffixes",
+        "2026-10-30",
+    ),
+    Cite(
         "normal_has_no_mods",
         "A normal item holds no explicit mods, so its prefix and suffix capacity is 0.",
         "wiki",
@@ -777,6 +785,7 @@ DRAW = (
     "values_uniform_integers",
     "royale_copies_do_not_spawn",
     "capacity",
+    "jewel_capacity",
     "normal_has_no_mods",
     "dry_pool_leaves_fewer_mods",
     "metamod_tag_is_implicit_tag",
@@ -864,6 +873,8 @@ USED_BY = {
 MAGIC_COUNTS = {1: 1, 2: 1}
 RARE_COUNTS = {4: 8, 5: 3, 6: 1}
 CAPACITY = {"normal": 0, "magic": 1, "rare": 3}  # per side
+JEWEL_CLASSES = frozenset({"Jewel", "AbyssJewel"})  # rule `jewel_capacity`: their rare capacity per side is JEWEL_RARE_CAPACITY
+JEWEL_RARE_CAPACITY = 2
 
 # The claim of the project's registry (`src/crafting_system/rules/claims/*.yaml`) that states the same fact, for the rules added by tickets #608 to #610 (OR-22: every fact cites a claim).
 # `test_naive_sources.py` reads the claim files as plain YAML and checks that each id here is one of theirs. Where the cite is a first-hand reading of Craft of Exile's code
@@ -890,6 +901,7 @@ CLAIM_OF = {
     "harvest_keeps_fractured": ("harvest_reforge.fractured_mods_kept",),
     "harvest_removes_crafted_mods": ("harvest_reforge.removes_crafted_mods",),
     "harvest_lifeforce_cost": ("harvest_reforge.lifeforce_cost",),
+    "jewel_capacity": ("affix_count.rare_jewel_max_per_side",),
     "exalted_rare_only": ("exalted_orb.accepts_rare_only",),
     "exalted_adds_one_mod": ("exalted_orb.adds_one_mod",),
     "exalted_cost": ("exalted_orb.cost",),
