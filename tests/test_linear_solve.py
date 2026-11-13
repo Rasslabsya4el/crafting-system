@@ -615,3 +615,45 @@ def test_the_transposed_solve_by_the_cycles_is_the_transpose_of_the_solve():
     assert solver.q == 1
     assert solver.solve(b) == pytest.approx(np.linalg.solve(np.eye(n) - p, b), rel=1e-12)
     assert solver.solve_transposed(b) == pytest.approx(np.linalg.solve((np.eye(n) - p).T, b), rel=1e-12)
+
+
+def rare_visits(n: int = 800, rare_share: float = 0.3, rare_weight: float = 1e-5, seed: int = 1) -> np.ndarray:
+    """The transposed chain of the visits from state 0 (`T^T`, dense): each state goes on to three random states with 0.9 in all, or, one state in
+    `1 / rare_share`, with `rare_weight` in all; so the visits span many orders (down to 1e-16 here), as the visits of a route's page do."""
+    rng = np.random.default_rng(seed)
+    t = np.zeros((n, n))
+    for s in range(n):
+        to, w = rng.integers(0, n, size=3), rng.random(3)
+        np.add.at(t[s], to, w / w.sum() * (rare_weight if rng.random() < rare_share else 0.9))
+    np.fill_diagonal(t, 0.0)
+    return t.T.copy()
+
+
+def test_an_amplification_whose_coarse_measure_fails_its_check_is_measured_again_aimed_as_the_answer_was():
+    # R14's page (heavy run 43412812769): the visits of 21,569 kernel classes converged (backward error 3e-12), but the measure of the amplification
+    # aimed at a normwise 1e-3 left the small entries of the scale unsolved, its check failed, and the page made the exact solve (+568 MB) for nothing
+    tt = rare_visits()
+    n = len(tt)
+
+    class Visits(lin.Terms):
+        def __init__(self) -> None:
+            self.n = n
+
+        def apply(self, v: np.ndarray) -> np.ndarray:
+            return tt @ v
+
+    b = np.zeros(n)
+    b[0] = 1.0
+    found = lin.solve(Visits(), b, iterate_tol=1e-12, dense_limit=10)  # no exact solve here: the iterate is taken on its own estimate, or not at all
+
+    assert found.how == "iterate" and found.good and found.forward <= lin.ACCEPT_ERROR
+    x = found.x
+    seen = x > 0.0
+    assert x[seen].min() < 1e-15 and x.max() > 0.5
+    matvec = lambda v: v - tt @ v  # noqa: E731
+    coarse = lambda s: lin.bicgstab(matvec, s, np.zeros(n), lin.AMPLIFICATION_TOL)[0]  # noqa: E731
+    fine = lambda s: lin.bicgstab(matvec, s, np.zeros(n), 1e-12)[0]  # noqa: E731
+    scale = np.abs(x) + tt @ np.abs(x) + b
+    dense = float(np.max(np.linalg.solve(np.eye(n) - tt, scale)[seen] / x[seen]))
+    assert lin.amplification(tt.__matmul__, b, x, coarse) == math.inf  # the coarse measure alone shows nothing
+    assert lin.amplification(tt.__matmul__, b, x, coarse, fine) == pytest.approx(dense, rel=1e-6)  # 36.565, as the dense solve has it

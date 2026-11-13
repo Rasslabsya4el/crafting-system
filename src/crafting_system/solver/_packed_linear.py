@@ -129,18 +129,37 @@ def normwise_residual(apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, 
     return value if math.isfinite(value) else math.inf
 
 
-def amplification(apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x: np.ndarray, solve_with: Callable[[np.ndarray], np.ndarray | None]) -> float:
+def amplification(
+    apply: Callable[[np.ndarray], np.ndarray],
+    b: np.ndarray,
+    x: np.ndarray,
+    solve_with: Callable[[np.ndarray], np.ndarray | None],
+    finer: Callable[[np.ndarray], np.ndarray | None] | None = None,
+) -> float:
     """`max over the states of ((I - T)^-1 s) / |x|`, `s = |x| + T |x| + |b|`: how many times the system amplifies a backward error into the error of `x`,
     state by state. Infinite when it cannot be shown, or a state of value 0 is fed.
 
     `y = solve_with(s)` is one more solve with the same method, and it is checked, not believed: with `d` the largest share of `s` that `(I - T) y`
     falls short of it (its residual plus the rounding of the product), `y >= 0` and `d <= 1/2` give `(I - T)^-1 s <= y / (1 - d)`, as `(I - T)^-1` is not
     negative (`(I - T) y >= (1 - d) s`). So an approximate `y` (an iterate) gives a bound too, and a solve that failed gives none.
+
+    `finer` (optional) is the same solve aimed closer: tried when `solve_with`'s `y` does not pass the check. An iterate aimed at a normwise residual
+    (`AMPLIFICATION_TOL`) leaves the small entries of `s` unsolved where `x` spans many orders (the visits of a route's page, from 1 down to 1e-10
+    at its rare states), and then shows nothing, though the answer is good (R14's page, heavy run 43412812769).
     """
     if not len(b):
         return 0.0
     with np.errstate(all="ignore"):
         scale = np.abs(x) + apply(np.abs(x)) + np.abs(b)
+    found = _amplification_of(apply, x, scale, solve_with)
+    if not math.isfinite(found) and finer is not None:
+        found = _amplification_of(apply, x, scale, finer)
+    return found
+
+
+def _amplification_of(apply: Callable[[np.ndarray], np.ndarray], x: np.ndarray, scale: np.ndarray, solve_with: Callable[[np.ndarray], np.ndarray | None]) -> float:
+    """`amplification` from one solve of `(I - T) y = scale`, checked; infinite when the check fails."""
+    with np.errstate(all="ignore"):
         try:
             reach = solve_with(scale)
         except (np.linalg.LinAlgError, MemoryError):
@@ -176,16 +195,22 @@ def rhs_bound(apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x: np.nd
 
 
 def forward_estimate(
-    apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x: np.ndarray, backward: float, solve_with: Callable[[np.ndarray], np.ndarray | None], tol: float = 0.0
+    apply: Callable[[np.ndarray], np.ndarray],
+    b: np.ndarray,
+    x: np.ndarray,
+    backward: float,
+    solve_with: Callable[[np.ndarray], np.ndarray | None],
+    tol: float = 0.0,
+    finer: Callable[[np.ndarray], np.ndarray | None] | None = None,
 ) -> float:
-    """The estimate of the relative error of `x` (module text): the smaller of `rhs_bound` and `backward` times the measured `amplification`. The
-    amplification costs one more solve and is measured only when `rhs_bound` is above `tol`."""
+    """The estimate of the relative error of `x` (module text): the smaller of `rhs_bound` and `backward` times the measured `amplification` (with
+    its `finer` solve). The amplification costs one more solve and is measured only when `rhs_bound` is above `tol`."""
     first = rhs_bound(apply, b, x)
     if first <= tol:
         return first
     if not math.isfinite(backward):
         return first
-    second = (backward + 8 * EPS) * amplification(apply, b, x, solve_with)
+    second = (backward + 8 * EPS) * amplification(apply, b, x, solve_with, finer)
     return min(first, second if math.isfinite(second) else math.inf)
 
 
@@ -419,9 +444,9 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
 # ---- the solve -------------------------------------------------------------------------------------------------------------------------------------
 
 
-def _answer(terms: Terms, b: np.ndarray, x: np.ndarray, how: str, solve_with, tol: float, **extra) -> Solved:
+def _answer(terms: Terms, b: np.ndarray, x: np.ndarray, how: str, solve_with, tol: float, finer=None, **extra) -> Solved:
     error = backward_error(terms.apply, b, x)
-    forward = forward_estimate(terms.apply, b, x, error, solve_with, tol)
+    forward = forward_estimate(terms.apply, b, x, error, solve_with, tol, finer)
     return Solved(x, how, error, forward, normwise_residual(terms.apply, b, x), **extra)
 
 
@@ -478,7 +503,11 @@ def solve(
         def again(s: np.ndarray) -> np.ndarray:
             return bicgstab(matvec, s, np.zeros(n), AMPLIFICATION_TOL)[0]
 
-        candidate = _answer(terms, b, x, "iterate", again, tol, iterations=iterations, stagnated=stagnated)
+        def finer(s: np.ndarray) -> np.ndarray:  # (when the coarse measure fails its check: aimed as the answer was)
+            return bicgstab(matvec, s, np.zeros(n), iterate_tol)[0]
+
+        # an answer that stagnated short of its aim is not measured finer: its backward error alone keeps it from being good
+        candidate = _answer(terms, b, x, "iterate", again, tol, None if stagnated else finer, iterations=iterations, stagnated=stagnated)
     if candidate is not None and candidate.forward <= tol:
         return candidate
 
@@ -519,7 +548,7 @@ def solve(
         def again(s: np.ndarray) -> np.ndarray:
             return bicgstab(matvec, s, np.zeros(n), AMPLIFICATION_TOL)[0]
 
-        further = _answer(terms, b, x, "iterate", again, tol, iterations=iterations, stagnated=stagnated)
+        further = _answer(terms, b, x, "iterate", again, tol, None if stagnated else finer, iterations=iterations, stagnated=stagnated)
         if further.forward < candidate.forward or (further.forward == candidate.forward and further.backward < candidate.backward):
             candidate = further
     if candidate is None:
