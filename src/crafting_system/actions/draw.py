@@ -35,9 +35,10 @@ from crafting_system.data import GameData, Mod
 from crafting_system.items import Item, Side
 from crafting_system.rules import get_rule
 
-from .errors import OutOfScopeError
+from .errors import UnmodelledBase
 from .metamods import allowed_by_tags
 from .pool import PoolFamily, PoolMod
+from .scope import BasePassed, probing
 
 __all__ = [
     "Outcome",
@@ -105,18 +106,23 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
     Ordinary crafted mods are not out of scope: a reforge removes them (`chaos_orb.removes_crafted_mods`,
     `harvest_reforge.removes_crafted_mods`, `essence.reforge_removes_crafted_mods`), and neither is a
     metamod (`metamods.py` says what it changes).
+
+    Every refusal here reads the base alone, so it is an `UnmodelledBase`: the action refuses every item of the base (#848). Inside
+    `scope.base_refusal` a base that passes stops the use here (`BasePassed`): the planner only asked whether the base is modelled.
     """
     item_class = jewel_class(data, item)
     if item_class is None:
+        if probing():
+            raise BasePassed
         return
     base = data.base_items[item.base_id]
     if base.release_state == "unique_only" or base.domain == NO_MOD_DOMAIN:  # the Assembled Eye Jewel has the domain "undefined" and no mod
-        raise OutOfScopeError(
+        raise UnmodelledBase(
             f"the item is a {base.name}, a base that exists as a unique item only (the wiki: it is found as a unique "
             "and then converted to a non-unique rarity), so crafting it is not modelled"
         )
     if base.domain in CLUSTER_JEWEL_DOMAINS.value:
-        raise OutOfScopeError(
+        raise UnmodelledBase(
             f"the item is a cluster jewel ({base.name}); its enchantments decide which mods it can roll "
             "and the item state holds no enchantment, so crafting it is not modelled"
         )
@@ -124,10 +130,12 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
         reason = jewel_reason or (
             "the 4, 5 or 6 mod ratio is modelled for regular items only, so rerolling a jewel is not modelled yet"
         )
-        raise OutOfScopeError(
+        raise UnmodelledBase(
             f"the item is a jewel; {reason}",
             detail=f"the item is a jewel ({item_class}); {reason}",
         )
+    if probing():
+        raise BasePassed
 
 
 def total_distribution(data: GameData | None = None, item: Item | None = None) -> Mapping[int, Fraction]:

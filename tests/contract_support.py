@@ -92,6 +92,7 @@ from crafting_system.actions import (
     Rerolled,
     Spent,
     catalog,
+    holds_placeholder,
     kinds,
     model_readings,
     strands_after,
@@ -560,8 +561,16 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
 
 
 def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given: Item, data, reading: Reading | None = None) -> None:
-    """The implicits, the quality and the offer: an action changes only what `adds` says, and reads only what `reads` says (ticket #142)."""
+    """The implicits, the quality and the offer: an action changes only what `adds` says, and reads only what `reads` says (ticket #142).
+
+    The veiled placeholder (#848): an action that `Reads.needs_veiled` was used on an item that holds one, and one that does not declare
+    `Adds.veils` puts none on an item that held none (an item with imprints is left out: a restore may bring back one an earlier craft made).
+    """
+    if reads.needs_veiled:
+        assert holds_placeholder(data, given), "an action that needs a veiled placeholder refuses an item without one"
     for _, result in items:
+        if not adds.veils and not given.imprints and not holds_placeholder(data, given):
+            assert not holds_placeholder(data, result), "an action that does not declare adds.veils puts no veiled placeholder on an item"
         if not adds.implicits:
             assert result.implicits == given.implicits, "an action that does not declare adds.implicits leaves the implicits as they were"
         if not adds.quality:

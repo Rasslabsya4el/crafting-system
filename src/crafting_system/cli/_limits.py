@@ -52,6 +52,7 @@ CRAFTS = "crafts"
 FIXED_MOD = "fixed-mod"
 ROLLS = "rolls"
 CRAFTED_MODS = "crafted-mods"
+NO_VEIL = "veiled-mods"
 UNPRICED = "unpriced"
 CONSUMES = "consumes-items"
 MODEL_GAP = "model-gap"
@@ -77,6 +78,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (FIXED_MOD, "Actions that add one fixed mod nobody wants"),
     (ROLLS, "Value rerolls without a roll limit"),
     (CRAFTED_MODS, "Removing crafted mods"),
+    (NO_VEIL, "Unveiling with no veiled mod"),
     (UNPRICED, "Actions with no price"),
     (CONSUMES, "Actions that consume other items"),
     (MODEL_GAP, "Actions the model has no rule for in some states"),
