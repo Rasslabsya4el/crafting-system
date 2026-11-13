@@ -219,30 +219,108 @@ def shared_policies(seed: int, wanted: int, finishing: bool):
         yield start, policy, marks_of(policy, rng)
 
 
+def can_finish(policy) -> set:
+    """The states with an action from which some run reaches the goal through states that have an action."""
+    found = {s for s, a in policy.items() if any(is_goal(o.state) for o in a.outcomes)}
+    while True:
+        more = {s for s, a in policy.items() if s not in found and any(o.state in found for o in a.outcomes)}
+        if not more:
+            return found
+        found |= more
+
+
+def exact_live_visits(start, policy) -> dict:
+    """The expected visits from `start` of the states that can finish (the others 0), by `Fraction` elimination over those states alone (an edge into a
+    state that cannot finish leaves the system); all 0 when the start cannot finish."""
+    live = can_finish(policy)
+    reached = [s for s in policy_states(start, policy, is_goal) if not is_goal(s)]
+    visits = {s: Fraction(0) for s in reached}
+    if start not in live:
+        return visits
+    states = [s for s in reached if s in live]
+    index = {s: k for k, s in enumerate(states)}
+    n = len(states)
+    rows = [[Fraction(0)] * n + [Fraction(1 if s == start else 0)] for s in states]
+    for s in states:
+        total = sum(o.weight for o in policy[s].outcomes)
+        rows[index[s]][index[s]] += 1
+        for o in policy[s].outcomes:
+            if o.state in index:
+                rows[index[o.state]][index[s]] -= Fraction(o.weight, total)
+    for c in range(n):
+        pivot = next(r for r in range(c, n) if rows[r][c] != 0)
+        rows[c], rows[pivot] = rows[pivot], rows[c]
+        rows[c] = [v / rows[c][c] for v in rows[c]]
+        for r in range(n):
+            if r != c and rows[r][c] != 0:
+                rows[r] = [a - rows[r][c] * b for a, b in zip(rows[r], rows[c])]
+    return visits | {s: rows[index[s]][n] for s in states}
+
+
 def test_on_random_chains_whose_states_share_kernels_every_page_quantity_equals_the_exact_unlumped_one():
-    """Done when of #689: visits (the weights), uses, cost, every edge's chance and loss, on the lumped chain, to 1e-12 of exact elimination."""
-    checked = lumped = 0
-    for start, policy, marks in shared_policies(689, 120, finishing=True):
+    """Done when of #689: visits (the weights), uses, cost, every edge's chance, kind, loss and landing states, on the lumped chains, to 1e-12 of
+    exact elimination. Dead ends, loops that never end and starts that cannot finish included: only the states that can finish are weighted,
+    and a step with none of them is the plain mean of its states."""
+    checked = lumped = mixed = never = 0
+    for start, policy, marks in shared_policies(689, 600, finishing=False):
         chain = _route_flow.chain_of_policy(start, policy, is_goal)
         flow = flow_of(chain, loss=marked_reader(marks))
-        visits = exact_visits(start, policy)
+        visits = exact_live_visits(start, policy)
         assert flow.measured and flow.entered
         lumped += len(set(_route_flow._page_blocks(chain).tolist())) < chain.m
         for step in flow.steps:
-            total = sum(visits[s] for s in step.states)
-            assert step.weights == pytest.approx(tuple(float(visits[s]) for s in step.states), rel=1e-12)
-            assert step.uses == pytest.approx(float(total), rel=1e-12)
-            assert step.cost == pytest.approx(float(sum(visits[s] * Fraction(policy[s].cost) for s in step.states) / total), rel=1e-12)
+            raw = sum(visits[s] for s in step.states)
+            weight = {s: visits[s] if raw > 0 else Fraction(1) for s in step.states}
+            total = sum(weight.values())
+            assert step.weights == pytest.approx(tuple(float(weight[s]) for s in step.states), rel=1e-12)
+            if step.action is None:
+                assert step.uses is None and step.edges == ()
+                checked += 1
+                continue
+            assert step.uses == (math.inf if raw == 0 else pytest.approx(float(raw), rel=1e-12))
+            never += raw == 0
+            mixed += raw > 0 and any(visits[s] == 0 for s in step.states)
+            assert step.cost == pytest.approx(float(sum(weight[s] * Fraction(policy[s].cost) for s in step.states) / total), rel=1e-12)
             wanted: dict = {}
+            landing: dict = {}
             for s in step.states:
                 weight_total = sum(o.weight for o in policy[s].outcomes)
                 for o in policy[s].outcomes:
                     to = None if is_goal(o.state) else flow.step_of[o.state]
-                    loses = ("x",) if to is not None and marks[s] == 1 and marks[o.state] == 0 else ()
-                    wanted[(to, loses)] = wanted.get((to, loses), Fraction(0)) + visits[s] * Fraction(o.weight, weight_total) / total
+                    loses = ("x",) if to is not None and marks[s] == 1 and marks.get(o.state, 0) == 0 else ()
+                    wanted[(to, loses)] = wanted.get((to, loses), Fraction(0)) + weight[s] * Fraction(o.weight, weight_total) / total
+                    landing.setdefault((to, loses), set()).add(o.state)
             assert by_target(step) == pytest.approx({k: float(v) for k, v in wanted.items()}, rel=1e-12, abs=1e-15)
+            for edge in step.edges:
+                assert set(edge.states) == landing[(edge.to, edge.lost)] and len(edge.states) == len(set(edge.states))
+                there = None if edge.to is None else flow.steps[edge.to - 1]
+                expected = "goal" if there is None else "failure" if edge.lost or there.action is None else "again" if there is step else "forward"
+                assert edge.kind == expected
             checked += 1
-    assert checked > 200 and lumped > 60, (checked, lumped)
+    assert checked > 1000 and lumped > 200 and mixed > 10 and never > 100, (checked, lumped, mixed, never)
+
+
+def test_a_kernel_whose_weights_pass_62_bits_is_exact_and_lumps_with_its_small_twin():
+    """`k_big`: A's weights are W and 2W with W = 2^62 + 5, B's 1 and 2: the same chances, one block, the numbers of the all-small chain."""
+    big = 2**62 + 5
+
+    def policy(w: int) -> dict:
+        return {
+            "S": Action("a", 1.0, (Outcome("A", 1), Outcome("B", 1))),
+            "A": Action("b", 2.0, (Outcome(GOAL, w), Outcome("S", 2 * w))),
+            "B": Action("b", 2.0, (Outcome(GOAL, 1), Outcome("S", 2))),
+        }
+
+    chain = _route_flow.chain_of_policy("S", policy(big), is_goal)
+    assert list(chain.kernels.k_big) == [int(chain.kernel[1])]
+    block = _route_flow._page_blocks(chain)
+    assert block[1] == block[2] != block[0]
+    got, small = flow_of(chain), flow_of(_route_flow.chain_of_policy("S", policy(1), is_goal))
+    for a, b in zip(got.steps, small.steps):
+        assert a.weights == pytest.approx(b.weights, rel=1e-15) and a.reached == b.reached
+        assert [e.chance for e in a.edges] == pytest.approx([e.chance for e in b.edges], rel=1e-15)
+    assert got.steps[1].uses == pytest.approx(3.0, rel=1e-14)  # v_S = 1 + 2/3 (v_A + v_B) and v_A + v_B = v_S: 3, so b is used 3 times
+
 
 
 def test_on_random_chains_whose_states_share_kernels_the_chance_of_entering_every_step_is_the_exact_hitting_chance():
@@ -287,17 +365,28 @@ def test_states_with_the_same_outcomes_share_one_kernel_in_the_chain_of_a_policy
 
 
 def wide_chain(states: int, edges: int, seed: int) -> Chain:
-    """`states` states with one action, sharing 3 kernels of `edges` random successors each (one of them the goal, with 5%)."""
+    """`states` states under 5 labels, sharing 3 kernels of `edges` random successors each (one of them the goal, with 5%)."""
     rng = np.random.default_rng(seed)
     rows = []
     for _ in range(3):
         succ = rng.choice(states, size=edges - 1, replace=False)
         rows.append([(states, int(edges * 0.05) + 1), *((int(s), int(w)) for s, w in zip(succ, rng.integers(1, 20, size=edges - 1)))])
     table = kernels(rows)
+    labels = tuple(("action", name) for name in "abcde")
     return Chain(
-        list(range(states)), [GOAL], np.zeros(states, dtype=np.int64), (("action", "a"),), np.ones(states),
+        list(range(states)), [GOAL], rng.integers(0, 5, size=states).astype(np.int64), labels, np.ones(states),
         rng.integers(0, 3, size=states).astype(np.int64), table, lambda i: Action("a", 1.0, ((GOAL, 1),)),
     )  # fmt: skip
+
+
+def four_marks(states: int) -> LossReader:
+    """4 loss classes: state i holds the wanted mods `i % 4`; a use loses what the landing does not hold of them."""
+    mark = np.concatenate((np.arange(states) % 4, [3]))
+
+    def lost(chain, src, dst):
+        return (0, 1), np.stack([(mark[src] & 1) > (mark[dst] & 1), (mark[src] & 2) > (mark[dst] & 2)], axis=1)
+
+    return LossReader(lost, lambda chain: mark[: chain.m])
 
 
 def peak_of(work) -> int:
@@ -310,18 +399,66 @@ def peak_of(work) -> int:
     return peak
 
 
-def test_what_the_page_holds_per_state_does_not_depend_on_the_edges_of_its_kernel():
-    """#689: R04's chain copied its kernel's edges to each of its 18,696 states (48.7 million edges). A state now names its kernel."""
+def test_what_the_page_holds_per_state_does_not_depend_on_the_edges_of_its_kernel(monkeypatch):
+    """#689: R04's chain copied its kernel's edges to each of its 18,696 states (48.7 million edges). A state now names its kernel, and the page
+    reads the kernels a chunk at a time: 5 steps x 4 loss classes x 3 kernels are 60 groups of edges, never all at once."""
+    from crafting_system.solver import _packed_lump as lump_module
+
     states = 4000
     small, large = wide_chain(states, 500, 1), wide_chain(states, 3000, 1)
     assert len(large.kernels.k_succ) == 3 * 3000  # the edges are held once per kernel, not once per state
+    monkeypatch.setattr(_route_flow, "CHUNK_EDGES", 20_000)
+    monkeypatch.setattr(lump_module, "CHUNK_EDGES", 20_000)
 
     def page(chain):
-        return lambda: (flow_of(chain), flow_limits(chain))
+        return lambda: (flow_of(chain, loss=four_marks(states)), flow_limits(chain))
 
     peak_small, peak_large = peak_of(page(small)), peak_of(page(large))
     copied = states * 3000 * 16  # what one copy of the edges per state would take (a successor and a chance per edge)
     assert peak_large < copied / 20, f"{peak_large:,} bytes"
     assert peak_large - peak_small < 2_000 * (3000 - 500) * 3, "the peak grows with the kernels' edges, not with the states times the edges"
-    flow = flow_of(large)
-    assert flow.measured and flow.entered and math.isfinite(flow.steps[0].uses)
+    flow = flow_of(large, loss=four_marks(states))
+    assert flow.measured and flow.entered and len(flow.steps) == 5 and all(math.isfinite(step.uses) for step in flow.steps)
+    assert any(edge.lost for step in flow.steps for edge in step.edges)
+
+
+def test_the_edges_read_in_tiny_chunks_give_the_same_steps(monkeypatch):
+    """`CHUNK_EDGES` bounds the temporary arrays and decides no number: a chunk smaller than one kernel gives the same flow."""
+    whole = flow_of(wide_chain(300, 120, 2), loss=four_marks(300))
+    monkeypatch.setattr(_route_flow, "CHUNK_EDGES", 7)
+    chunked = flow_of(wide_chain(300, 120, 2), loss=four_marks(300))
+    for a, b in zip(whole.steps, chunked.steps):
+        assert b.weights == pytest.approx(a.weights, rel=1e-12) and b.uses == pytest.approx(a.uses, rel=1e-12)
+        assert [(e.kind, e.to, e.lost, e.states) for e in b.edges] == [(e.kind, e.to, e.lost, e.states) for e in a.edges]
+        assert [e.chance for e in b.edges] == pytest.approx([e.chance for e in a.edges], rel=1e-12)
+
+
+def test_a_packed_chain_keeps_a_big_integer_kernel_with_its_exact_weights():
+    """`packed_chain` renumbers the kernels the policy uses; a kernel past 62 bits keeps its exact weights under its new number."""
+    from crafting_system.cli._packed import Walked
+    from crafting_system.cli._route_chain import packed_chain
+    from crafting_system.cli._route_flow import build_flow
+    from crafting_system.solver import TabularModel, pack_model
+
+    big = 2**62 + 5
+    table = {
+        "S": [Action("a", 1.0, (Outcome("A", 1), Outcome("B", 1)))],
+        "A": [Action("b", 2.0, (Outcome(GOAL, big), Outcome("S", 2 * big)))],
+        "B": [Action("b", 2.0, (Outcome(GOAL, 1), Outcome("S", 3)))],
+    }
+    packed = pack_model(TabularModel([GOAL], table), ["S"])
+    graph = packed.graph
+    has = np.diff(graph.act_ptr) > 0
+    action = np.where(has, graph.act_ptr[:-1], -1)
+    names = ["a", "b"]
+    label_ids = np.array([names.index(packed.actions[a].label) if a >= 0 else 0 for a in action.tolist()])
+    chain = packed_chain(Walked(graph, packed.states, packed.index, (), 0.0), action, label_ids, names, graph.act_cost[np.maximum(action, 0)])
+
+    a = packed.states.index("A")
+    (held,) = chain.kernels.k_big.items()
+    assert held[0] == int(chain.kernel[chain.states.index("A")]) and sorted(held[1]) == [big, 2 * big] and a >= 0
+    got = flow_of(chain)
+    expected = build_flow("S", {s: actions[0] for s, actions in table.items()}, is_goal)
+    for x, y in zip(got.steps, expected.steps):
+        assert x.weights == pytest.approx(y.weights, rel=1e-14) and x.uses == pytest.approx(y.uses, rel=1e-14) and x.reached == pytest.approx(y.reached, rel=1e-14)
+        assert [e.chance for e in x.edges] == pytest.approx([e.chance for e in y.edges], rel=1e-14)

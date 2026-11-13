@@ -385,29 +385,39 @@ def flow_of[S: Hashable](
     mix = np.where(raw[step] > 0.0, weights, 1.0)  # nobody can finish here, or unmeasured: the plain mean
     total = np.bincount(step, weights=mix, minlength=nsteps)
 
-    # the edges, read once per (kernel, step, loss class): one state stands for the states of each, whose mixture weights add up
-    src, dst, mass = _edges_by_class(chain, step, mix, reader)
-    into_goal = dst >= m
-    # the edges, grouped by (step, target step, whether a wanted mod is lost)
-    target = np.where(into_goal, _GOAL, step[np.minimum(dst, m - 1)])
-    if reader is None or len(dst) == 0:
-        items, lost_matrix = (), np.zeros((len(dst), 0), dtype=bool)
-    else:
-        items, lost_matrix = reader.lost(chain, src, dst)
-    lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
-    lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
-    lost_matrix = lost_matrix & lost_edge[:, None]
-    code = ((step[src] * (nsteps + 1) + (target + 1)) * 2 + lost_edge).astype(np.int64)
-    group_codes, group = np.unique(code, return_inverse=True)
+    # the edges, grouped by (step, target step, whether a wanted mod is lost): read once per (kernel, step, loss class), one state standing for
+    # the states of each, whose mixture weights add up; a chunk of kernels at a time, the groups' sums and landing states gathered across chunks
+    width = m + len(chain.goals)
+    code_parts: list[np.ndarray] = []
+    mass_parts: list[np.ndarray] = []
+    pair_parts: list[np.ndarray] = []
+    lost_parts: dict = {}
+    for src, dst, mass in _edges_by_class(chain, step, mix, reader):
+        into_goal = dst >= m
+        target = np.where(into_goal, _GOAL, step[np.minimum(dst, m - 1)])
+        items, lost_matrix = ((), np.zeros((len(dst), 0), dtype=bool)) if reader is None else reader.lost(chain, src, dst)
+        lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
+        lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
+        code = ((step[src] * (nsteps + 1) + (target + 1)) * 2 + lost_edge).astype(np.int64)
+        found, at = np.unique(code, return_inverse=True)
+        code_parts.append(found)
+        mass_parts.append(np.bincount(at.reshape(-1), weights=mass, minlength=len(found)))
+        pair_parts.append(np.unique(code * width + dst))  # the distinct landing states of each group
+        for u, item in enumerate(items):
+            hit = lost_matrix[:, u] & lost_edge
+            if hit.any():
+                lost_parts.setdefault(item, []).append(np.unique(code[hit]))
+    every = np.concatenate(code_parts) if code_parts else np.zeros(0, dtype=np.int64)
+    group_codes = np.unique(every)
     ngroups = len(group_codes)
-    group_lost = np.array([(c % 2) == 1 for c in group_codes.tolist()], dtype=bool)
+    group_lost = (group_codes % 2) == 1
     group_target = (group_codes // 2) % (nsteps + 1) - 1
     group_step = (group_codes // 2) // (nsteps + 1)
-    chance = np.bincount(group, weights=mass, minlength=ngroups) / total[group_step]
-    gone = [np.bincount(group, weights=lost_matrix[:, u], minlength=ngroups) > 0 for u in range(len(items))]
-    width = m + len(chain.goals)
-    pair = np.unique(group.astype(np.int64) * width + dst)  # the distinct landing states of each group, sorted
-    pair_group = pair // width
+    chance = np.bincount(np.searchsorted(group_codes, every), weights=np.concatenate(mass_parts) if mass_parts else None, minlength=ngroups) / total[group_step]
+    items = sorted(lost_parts)
+    gone = [np.isin(group_codes, np.concatenate(lost_parts[item])) for item in items]
+    pair = np.unique(np.concatenate(pair_parts)) if pair_parts else np.zeros(0, dtype=np.int64)
+    pair_group = np.searchsorted(group_codes, pair // width)
     bounds = np.searchsorted(pair_group, np.arange(ngroups + 1))
     everything = (lambda d: chain.states[d] if d < m else chain.goals[d - m])
     edges_of: list[list[Edge]] = [[] for _ in range(nsteps)]
@@ -633,8 +643,9 @@ def _page_blocks(chain: Chain) -> np.ndarray:
     return lump_states(chain.kernels, slot, label)[:m]  # a goal's block is numbered after every state's: its first member comes after them
 
 
-def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: LossReader | None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """`(src, dst, mass)`: the edges of the steps read once per (kernel, step, loss class) of the states that act.
+def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: LossReader | None):
+    """The edges of the steps read once per (kernel, step, loss class) of the states that act, as `(src, dst, mass)` a chunk of at most
+    `CHUNK_EDGES` edges at a time (a kernel with more is a chunk of its own).
 
     `src` is the first state of the class (it stands for all: they share the outcomes and what each loses), `dst` where an edge leads and
     `mass` the sum over the class's states of their mixture weight `mix` times the edge's chance.
@@ -647,7 +658,7 @@ def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: Los
     else:
         classes = np.unique(np.asarray(reader.classes(chain)), return_inverse=True)[1].reshape(-1).astype(np.int64)
     if not acting.size:
-        return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0)
+        return
     _, first, which = np.unique(np.stack([chain.kernel[acting], step[acting], classes[acting]], axis=1), axis=0, return_index=True, return_inverse=True)
     which = which.reshape(-1)
     weight = np.bincount(which, weights=mix[acting], minlength=len(first))
@@ -655,8 +666,9 @@ def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: Los
     table = chain.kernels
     moves = chain.kernel[rep]
     sizes = table.kernel_sizes()[moves]
-    edge = expand_ranges(table.k_ptr[moves], sizes)
-    return np.repeat(rep, sizes), table.k_succ[edge].astype(np.int64), np.repeat(weight, sizes) * table.k_prob[edge]
+    for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):
+        edge = expand_ranges(table.k_ptr[moves[a:b]], sizes[a:b])
+        yield np.repeat(rep[a:b], sizes[a:b]), table.k_succ[edge].astype(np.int64), np.repeat(weight[a:b], sizes[a:b]) * table.k_prob[edge]
 
 
 def _solved(chain: Chain) -> _Solved:
@@ -664,7 +676,7 @@ def _solved(chain: Chain) -> _Solved:
 
     Solved on the kernel classes (the states that move by one kernel, a lumpable partition): with `w[k]` the visits of the states of kernel
     `k` that can finish, the visits of a state that can finish are v[s] = [s = start] + sum over k of w[k] x (k's chance into s), one pass over
-    the kernels, each once (#689). `inverse` is that of the classes' chain, not of the states'.
+    the kernels, each once (#689). `inverse` is None: the entry chances are solved on the chain lumped with the steps' labels (`_entries`).
     """
     key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)  # a test that changes a limit gets its own
     cached = chain.__dict__.get("_solved")
@@ -689,7 +701,7 @@ def _solved(chain: Chain) -> _Solved:
             inflow = inflow[:m]
             inflow[0] += 1.0
             visits = np.where(finishing, inflow, 0.0)
-        cached = (key, _Solved(finishing, visits, done.solved, done.inverse))
+        cached = (key, _Solved(finishing, visits, done.solved, None))  # the classes' inverse is not the states': nothing reads it
         object.__setattr__(chain, "_solved", cached)
     return cached[1]
 

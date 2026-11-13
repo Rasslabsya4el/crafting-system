@@ -190,11 +190,12 @@ class _Rows:
         return worst
 
 
-def _settle(rows: _Rows, slot: np.ndarray, block: np.ndarray, block_of: np.ndarray, where, max_rounds: int) -> tuple[np.ndarray, int, int]:
+def _settle(rows: _Rows, slot: np.ndarray, block: np.ndarray, block_of: np.ndarray, where, max_rounds: int | None) -> tuple[np.ndarray, int, int]:
     """`(block, count, rounds)`: the partition `block` of the states `where` refined until no block splits.
 
     `slot[i]` is the position in `rows.kernels` of the kernel state `i` moves by (-1: none); `block_of` is the map from the kernels' successors to
-    their blocks, written here (successors outside `where` keep what it holds).
+    their blocks, written here (successors outside `where` keep what it holds). Every round that does not settle adds a block, so it settles
+    within the number of states; `max_rounds` None is no other bound.
     """
     count = int(block.max()) + 1
     rounds = 0
@@ -208,21 +209,22 @@ def _settle(rows: _Rows, slot: np.ndarray, block: np.ndarray, block_of: np.ndarr
         grown = int(new.max()) + 1
         if grown == count:
             break
-        if rounds >= max_rounds:
+        if max_rounds is not None and rounds >= max_rounds:
             raise ValueError(f"the lumping did not settle in {max_rounds} rounds")
         block, count = new, grown
     block_of[where] = block
     return block, count, rounds
 
 
-def lump_states(table, slot: np.ndarray, label: np.ndarray, *, max_rounds: int = 10_000) -> np.ndarray:
+def lump_states(table, slot: np.ndarray, label: np.ndarray) -> np.ndarray:
     """The block of every state in the coarsest lumping of a chain that keeps states of different `label` apart (ticket #689).
 
     State `i` moves by kernel `slot[i]` of `table` (anything with the kernel arrays of `PackedGraph`: `k_ptr`, `k_succ`, `k_wt`, `k_prob`,
     `k_big`, `kernel_sizes()`), whose successors are state numbers, or stops there when `slot[i] < 0` (a goal or a dead end: give them labels
     of their own). The states are `0..len(slot) - 1`; the kernels are read once per round whatever the number of states that share them.
-    The blocks are numbered by the first state of each. Checked like `lump_policy`: raises `ValueError` when a state's chance into a block
-    differs from its block's by more than `CHECK_TOLERANCE`, or when the refinement does not settle in `max_rounds`.
+    The blocks are numbered by the first state of each. The refinement runs until it settles, which it does within the number of states (no
+    cap on the rounds, OR-12). Checked like `lump_policy`: raises `ValueError` when a state's chance into a block differs from its block's by
+    more than `CHECK_TOLERANCE` (a bug, never a property of the chain).
     """
     n = len(slot)
     if n == 0:
@@ -242,7 +244,7 @@ def lump_states(table, slot: np.ndarray, label: np.ndarray, *, max_rounds: int =
     position[used] = np.arange(len(used))
     at = np.where(taking, position[np.maximum(slot, 0)], -1)
     block_of = np.full(n, -1, dtype=np.int64)
-    block, count, _ = _settle(rows, at, first.reshape(-1).astype(np.int64), block_of, slice(None), max_rounds)
+    block, count, _ = _settle(rows, at, first.reshape(-1).astype(np.int64), block_of, slice(None), None)
     rep = np.full(count, n, dtype=np.int64)
     np.minimum.at(rep, block, np.arange(n))
     succ: list[np.ndarray] = []
