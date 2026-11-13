@@ -112,6 +112,7 @@ A good answer is exact among realistic routes; "approximate with an interval" re
 - **Counter-example.** R04 and R14 at default flags are refused or answered "within a certified 1%" with no route page (audit PLANNING-15).
 - **Source.** Memory note `realism-rails.md`, 2026-11-01.
 - **Replaces.** The resolution of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2 (owner, 2026-10-31): exact when a query fits in about a minute, otherwise an approximate answer marked as such, with an error of at most 1%.
+- **Replaced by** OR-32 (owner, 2026-11-13, [#822](https://github.com/Rasslabsya4el/crafting-system/issues/822) question 1), which restores #81's rule: exact when the whole plan fits in about a minute, otherwise a plan proved at most 1% above the cheapest. What stays of OR-11: the answer is a point (the plan and its exact mean), and the proof figure is a certificate beside it, never an answer given as an interval.
 
 ### OR-12. No hard-coded cut-offs
 
@@ -121,6 +122,7 @@ The planner recognises an unrealistic branch by a general rule, not by a fixed n
 - **Counter-example.** R13's target (`r13-life-resist-belt.yaml:28-35`) names its allowed kinds because a belt rerolled with a Chaos Orb has "more than 43,000 states after four minutes"; the cut is by graph size.
 - **Source.** Memory note `realism-rails.md`, 2026-11-01, the owner's correction of the same day.
 - **Replaces.** The first reading of that note, "configurable realism rails (100k uses per step)".
+- **Narrowed by** OR-32 and OR-33 (owner, 2026-11-13, #822). The stop at a proved 1% (OR-32) is a stated tolerance on the proof of the cheapest plan, written beside the answer (OR-13); it never drops a branch for being unlikely or by a count, and every cut of the search stays exact. The 10-minute net of OR-33 is a stop-and-say-so net in the sense of this rule.
 
 ### OR-13. A cut says what it still guarantees
 
@@ -137,6 +139,23 @@ Pruning works on the route as a whole, not only inside one step.
 - **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which merge into 65,147 classes reached, or into 14,742 blocks; the guide route has 946 acting item states (1 gap), which merge into 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which merge into 11,767 classes reached, or into 551 blocks; the guide route has 18,629 acting item states (13 gaps), which merge into 22 blocks. Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
 - **Counter-example.** R14's page of 87,272 steps (151 MB), 65,433 of them the same Restart card, built on `86aa0b0` before the lumped view of #70. A page like that must not exist. Counted on `main` after #70 (heavy run 42243540582, `.github/scripts/page_size.py`, #465): 14,742 steps, 14,743 rows, 17.9 MB, one step per block of the lumped policy. Since #466 it is 12 steps, 13 rows, 0.067 MB (heavy run 42304575904, on `ce5e88b`).
 - **Source.** Owner decisions on #396, point 3, 2026-11-02; measurement results on #396, 2026-11-04 (route-level pruning comes before a "minimal state").
+
+### OR-32. Exact when the whole plan fits in about a minute; otherwise proved at most 1% above the cheapest, and said so
+
+When the whole plan fits in about a minute, the plan is proved the cheapest of the offered methods; otherwise the planner stops when its plan is proved to cost at most 1% more than the cheapest, and the answer says so. In both cases the mean shown is the exact mean of the plan shown, and the proof figure ("no way of crafting this item with the offered methods costs less than Y") is a certificate beside that point answer, not an answer given as an interval.
+
+- **Example.** R04 at the 2026-11-10 prices: the plan made from the walk-free bound alone costs 189,226.57 Chaos on average, exactly, and the bound proves that nothing costs less than 188,299.94, 0.49% less; the answer is that plan, its exact mean and the proof figure, in about 2 minutes (research note `docs/research/2026-11-13-planning-speed.md`, section 3; heavy run 43317321351).
+- **Counter-example.** Today's search on the same route: 364 to 510 s and 165,980 item states spent after the plan is already in hand, to prove the last 0.49% (same note and run). A plan shown "within 1%" whose mean is itself an estimate is a counter-example too: the mean is always exact.
+- **Source.** Owner in the main chat, 2026-11-13, answer (b) to question 1 of [#822](https://github.com/Rasslabsya4el/crafting-system/issues/822); his rule of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2, 2026-10-31.
+- **Replaces.** OR-11 ("exact, never an interval"); keeps its point answer. Narrows OR-12.
+
+### OR-33. One plan aims at about a minute; a 10-minute net stops it and says so until every method has its bound
+
+A plan aims to be ready in about a minute. Until every method family has its own bound (#822, ticket 4), a net of 10 minutes ends a longer plan with the best plan found, its exact mean and its proved gap, and says that it stopped (OR-12, OR-13).
+
+- **Example.** A plan with a method whose bound is not built yet, such as R07's unveil or R08's fossil sets, stops at 10 minutes with "stopped after 10 minutes: this plan costs X on average; nothing costs less than Y".
+- **Counter-example.** R07 killed out of memory after 7 minutes with no answer ([#770](https://github.com/Rasslabsya4el/crafting-system/issues/770)); R25 runs cancelled after about 50 minutes ([#225](https://github.com/Rasslabsya4el/crafting-system/issues/225)).
+- **Source.** Owner in the main chat, 2026-11-13, answer to question 2 of #822: (a) one minute as the goal, (b) ten minutes as the net until every method family has its bound.
 
 ## The answer and the page
 
@@ -196,6 +215,14 @@ When a step can add a mod of a family the target wants, the page shows the chanc
 - **Counter-example.** The R04 benchmark's check of the published odds (`tests/test_cli_r04_r14_real.py:104-111`) gives the first Exalted Orb only two numbers, 100% at any tier and 13% at the top tier, with nothing for the tiers in between.
 - **Format.** Runs of tiers with equal chances are joined ("T2 to T10 1.4% each"); the target's tier stays apart. Source: owner in the main chat, 2026-11-06 ([#491](https://github.com/Rasslabsya4el/crafting-system/issues/491)).
 - **Source.** Owner in the main chat, 2026-11-06: the system should say "T1 this chance, T2 this chance, and so on".
+
+### OR-34. p50 and p90 to ±10%, added after the route
+
+The p50 and p90 of a plan are given to within ±10% as a bracket; the route and its exact mean are shown at once, and the percentiles are added when they are done.
+
+- **Example.** R14 at the 2026-11-10 prices: p50 7,319 Chaos, between 6,655 and 7,984 (±9%), after about 6 minutes of percentiles (heavy run 42955861457); the route is on the page before them.
+- **Counter-example.** R14's finer step, ±4.8%, which brought the 16 GB runner to 14.9 GB ([#744](https://github.com/Rasslabsya4el/crafting-system/issues/744)); a page held back until the percentiles end.
+- **Source.** Owner in the main chat, 2026-11-13, answer (b) to question 3 of [#822](https://github.com/Rasslabsya4el/crafting-system/issues/822), with research into a method whose precision does not degrade on long crafts. That the bracket is printed is the owner's choice on [#709](https://github.com/Rasslabsya4el/crafting-system/issues/709), 2026-11-12.
 
 ## Evidence
 
