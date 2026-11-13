@@ -24,6 +24,8 @@ from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
+# R13's risk on the object plan takes 21 minutes at the 2026-07-31 prices (#878): the moments test reads the 2026-10-31 file meanwhile
+MOMENTS_PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 ROUTES = {
     "R13": "r13-life-resist-belt",
     "R12": "r12-lightning-amulet",
@@ -143,7 +145,7 @@ def test_a_long_chain_gets_its_moments_from_the_packed_solve_with_the_same_numbe
     from crafting_system.risk import _moments
 
     target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
-    prices = load_price_file(PRICES)
+    prices = load_price_file(MOMENTS_PRICES)
     reference = make_plan(data, target, prices, solver="object")
 
     monkeypatch.setattr(_moments, "PACKED_FROM_EDGES", 0)
