@@ -1,7 +1,7 @@
 """A kernel and its key are made from the projection of the state by what the action reads (ticket #827).
 
 On generated models: bows of the fixture with random mods, random metamods and random fractured mods, three pools of different sizes and
-weights, walked at random through every kind of action the fixture has (rerolls, adds, removals, a fracture, bench crafts of every metamod).
+weights, walked at random through every kind of action the fixture has (rerolls, adds, removals, bench crafts of every metamod).
 
 * the kernel made from the projection equals, exactly, the kernel made from the whole state (`Abstraction.project = False`: every slot of
   the state goes to the action whenever a lock could be there, as before the ticket), and a refusal is the same refusal;

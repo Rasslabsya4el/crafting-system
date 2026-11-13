@@ -18,6 +18,10 @@ def counts(run: dict) -> str:
 facts = {name: (run["mean_remaining"], counts(run)) for name, run in runs.items()}
 for name, run in runs.items():
     print(name, run["seconds"], "s, mean", repr(run["mean_remaining"]), flush=True)
+sides = {name: bool(run.get("source")) for name, run in runs.items()}  # a run of main planned with the copy of main's package
+if any(planned_by_main != name.startswith("main") for name, planned_by_main in sides.items()):
+    print("a run planned with the wrong package:", sides, flush=True)
+    sys.exit(1)
 if len(runs) < 4 or len(set(facts.values())) != 1:
     print("the runs differ:", {name: fact[0] for name, fact in facts.items()}, flush=True)
     sys.exit(1)
