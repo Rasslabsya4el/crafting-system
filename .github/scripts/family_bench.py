@@ -368,14 +368,17 @@ def run_plan_child(args) -> None:
         # a net that ended the search before any plan closed (a given start: no restart to fall back on) is OR-33's "stopped, no plan
         # found yet", not a refusal of the method: `_envelope_plan.envelope_result` words it "the search stopped (...)"
         stopped = "the search stopped" in text or "was stopped" in text
-        record.update(status="stopped" if stopped else "refused", reason=text, no_plan=stopped)
+        # a refusal of a method the planner does not build yet is "refused" (the generator marks those cases from the code); any other
+        # PlanError on a case expected to plan (no policy found, a certificate not reached) is the planner failing it: "failed"
+        status = "stopped" if stopped else "refused" if case.refused else "failed"
+        record.update(status=status, reason=text, no_plan=True)
         record["envelope_rounds"] = per_round
         watch.end()
         record["progress_tail"] = PROGRESS[-40:]
         write(path, record)
         return
     except Exception as error:  # noqa: BLE001 - a crash is a finding of the benchmark, recorded with its trace
-        record.update(status="error", reason=f"{type(error).__name__}: {error}"[:2000], trace=traceback.format_exc()[-4000:])
+        record.update(no_plan=True, status="error", reason=f"{type(error).__name__}: {error}"[:2000], trace=traceback.format_exc()[-4000:])
         watch.end()
         record["progress_tail"] = PROGRESS[-40:]
         write(path, record)
@@ -649,7 +652,7 @@ def checks(record: dict) -> dict:
         out["z_within"] = abs(sim["z"]) <= SIGMAS and not sim.get("unfinished") and not sim.get("stopped")
     mark = (record.get("case") or {}).get("refused")
     status = record.get("status")
-    if status in ("planned", "stopped", "refused"):
+    if status in ("planned", "stopped", "refused", "failed"):
         out["mark_agrees"] = (mark is not None) == (status == "refused")
     return out
 

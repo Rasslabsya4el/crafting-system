@@ -14,11 +14,14 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 from abstraction_support import real_game_data
 
 import family_bench_support as F
 from crafting_system.cli import make_plan
+from crafting_system.actions.pool import tiers_of
 from crafting_system.cli._plan import PlanError
+from crafting_system.items.model import Item, Rarity
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "tests" / "fixtures" / "family_bench" / "cases-seed824.json"
@@ -97,6 +100,12 @@ def test_sizes_grow_and_the_cases_parse_with_their_wanted_mods(data):
             target = F.target_of(case, data)
             assert target.base_id == case.base_id and target.item_level == case.item_level
             assert len(target.requirements) == case.wanted
+        for case in mine:  # every tier asked is one the item level rolls: a case is never out of reach by its tier
+            item = Item(case.base_id, case.item_level, Rarity.RARE, influences=frozenset(F.target_of(case, data).influences))
+            pool, tiers = F.single_family_mods(data, item), tiers_of(data, item)
+            for entry in yaml.safe_load(case.target_yaml)["requirements"]:
+                if "min_tier" in entry:
+                    assert entry["min_tier"] >= min(tiers[m] for m in pool[entry["family"]]), (case.id, entry)
     veiled = [c for c in found if c.method == "veiled"]
     for case in veiled:  # one wanted mod is a veiled one, which only an unveil gives
         assert any(r.mod_ids and all(data.mods[m].domain == "unveiled" for m in r.mod_ids) for r in F.target_of(case, data).requirements), case.id
@@ -148,7 +157,7 @@ def test_the_baseline_names_its_runs_and_covers_every_case():
     digests = {case.id: case.digest() for case in F.read_cases(CASES)}
     recorded = {r["case"]["id"]: r["case"]["digest"] for r in baseline["records"]}
     assert recorded == digests
-    assert all(r.get("status") in ("planned", "stopped", "refused", "error") for r in baseline["records"]), "a case was not run"
+    assert all(r.get("status") in ("planned", "stopped", "refused", "failed", "error") for r in baseline["records"]), "a case was not run"
 
 
 def bench_script():

@@ -506,8 +506,10 @@ def draw_case(data: GameData, seed: int, method: Method, size: Size, item_class:
     requirements = []
     tiers = tiers_of(data, item)
     for f, ids in chosen:
-        ladder = max(tiers.get(m, 1) for m in ids)
-        entry = {"family": f, "min_tier": min(rng.randint(*size.tiers), ladder), "not_crafted": True}
+        # `min_tier: k` asks natural tier k or better (OR-1's ladder over every level); the pool holds only the tiers this item level rolls,
+        # so k is kept between the best of them (a better tier is out of reach) and the worst
+        best, worst = min(tiers.get(m, 1) for m in ids), max(tiers.get(m, 1) for m in ids)
+        entry = {"family": f, "min_tier": max(best, min(rng.randint(*size.tiers), worst)), "not_crafted": True}
         requirements.append(entry)
     wanted_mods = tuple(top_mod(data, item, ids) for _, ids in chosen)
     if method.roll_limit:

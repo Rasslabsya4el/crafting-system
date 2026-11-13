@@ -82,7 +82,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 0.4243,
-  "target_yaml": "base: Metadata/Items/Armours/Shields/ShieldDex8\nitem_level: 77\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: Dexterity\n  min_tier: 1\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: AvoidElementalStatusAilments\n  min_tier: 1\n  not_crafted: true\n- family: AllResistances\n  min_tier: 2\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Shields/ShieldDex8\nitem_level: 77\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: Dexterity\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: AvoidElementalStatusAilments\n  min_tier: 1\n  not_crafted: true\n- family: AllResistances\n  min_tier: 2\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -599,7 +599,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.3081,
-  "target_yaml": "base: Metadata/Items/Armours/Gloves/GlovesStr9\nitem_level: 76\ninfluence: []\nactions:\n- essence\n- annulment-orb\n- exalted-orb\nrequirements:\n- family: DefencesPercent\n  min_tier: 1\n  not_crafted: true\n- family: LightningResistance\n  min_tier: 1\n  not_crafted: true\n- family: Dexterity\n  min_tier: 2\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\n- family: LifeRegenerationRate\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Gloves/GlovesStr9\nitem_level: 76\ninfluence: []\nactions:\n- essence\n- annulment-orb\n- exalted-orb\nrequirements:\n- family: DefencesPercent\n  min_tier: 2\n  not_crafted: true\n- family: LightningResistance\n  min_tier: 2\n  not_crafted: true\n- family: Dexterity\n  min_tier: 3\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\n- family: LifeRegenerationRate\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -1183,7 +1183,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.7307,
-  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw19\nitem_level: 75\ninfluence: []\nactions:\n- fossil-set\n- bench-craft\n- remove-crafted-mods\nrequirements:\n- family: LifeGainPerTarget\n  min_tier: 2\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: GlobalDamageOverTimeMultiplier\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw19\nitem_level: 75\ninfluence: []\nactions:\n- fossil-set\n- bench-craft\n- remove-crafted-mods\nrequirements:\n- family: LifeGainPerTarget\n  min_tier: 2\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: GlobalDamageOverTimeMultiplier\n  min_tier: 3\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -1348,7 +1348,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 6.5703,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow19\nitem_level: 77\ninfluence: []\nactions:\n- fracturing-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: GlobalDamageOverTimeMultiplier\n  min_tier: 1\n  not_crafted: true\n- family: LifeGainPerTarget\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSpecificSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow19\nitem_level: 77\ninfluence: []\nactions:\n- fracturing-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: GlobalDamageOverTimeMultiplier\n  min_tier: 2\n  not_crafted: true\n- family: LifeGainPerTarget\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSpecificSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -1426,7 +1426,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 6.6319,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2\nitem_level: 80\ninfluence: []\nactions:\n- divine-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: GlobalDamageOverTimeMultiplier\n  min_roll:\n  - 39\n  not_crafted: true\n- family: FireDamage\n  min_tier: 1\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\n- family: LocalPhysicalDamagePercent\n  min_tier: 1\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2\nitem_level: 80\ninfluence: []\nactions:\n- divine-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: GlobalDamageOverTimeMultiplier\n  min_roll:\n  - 39\n  not_crafted: true\n- family: FireDamage\n  min_tier: 2\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\n- family: LocalPhysicalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -1510,7 +1510,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 9.9172,
-  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetDexInt3\nitem_level: 78\ninfluence: []\nactions:\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- harvest-damage-swap\n- annulment-orb\n- exalted-orb\nrequirements:\n- family: ChaosResistance\n  min_tier: 1\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: Intelligence\n  min_tier: 1\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 2\n  not_crafted: true\n- family: ItemFoundRarityIncrease\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetDexInt3\nitem_level: 78\ninfluence: []\nactions:\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- harvest-damage-swap\n- annulment-orb\n- exalted-orb\nrequirements:\n- family: ChaosResistance\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: Intelligence\n  min_tier: 3\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 2\n  not_crafted: true\n- family: ItemFoundRarityIncrease\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -1649,7 +1649,7 @@
   "size": "medium",
   "start": "bought",
   "start_price": 4.1919,
-  "target_yaml": "base: Metadata/Items/Armours/BodyArmours/BodyInt14\nitem_level: 80\ninfluence: []\nactions:\n- eldritch-implicit-currency\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedLife\n  min_tier: 2\n  not_crafted: true\n- family: AttackerTakesDamageNoRange\n  min_tier: 2\n  not_crafted: true\n- family: StunRecovery\n  min_tier: 3\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 2\n  not_crafted: true\nimplicits:\n- family: MaximumResistances\n  mod: MaximumResistancesEldritchImplicit5\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/BodyArmours/BodyInt14\nitem_level: 80\ninfluence: []\nactions:\n- eldritch-implicit-currency\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedLife\n  min_tier: 3\n  not_crafted: true\n- family: AttackerTakesDamageNoRange\n  min_tier: 2\n  not_crafted: true\n- family: StunRecovery\n  min_tier: 3\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 2\n  not_crafted: true\nimplicits:\n- family: MaximumResistances\n  mod: MaximumResistancesEldritchImplicit5\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 4
  },
@@ -1675,7 +1675,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 10.518,
-  "target_yaml": "base: Metadata/Items/Armours/BodyArmours/BodyDexInt9\nitem_level: 83\ninfluence: []\nactions:\n- eldritch-implicit-currency\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: Dexterity\n  min_tier: 1\n  not_crafted: true\n- family: FireResistance\n  min_tier: 2\n  not_crafted: true\n- family: LightningResistance\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 1\n  not_crafted: true\n- family: AttackerTakesDamageNoRange\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercent\n  min_tier: 1\n  not_crafted: true\nimplicits:\n- family: LightningDamagePercentage\n  mod: LightningDamagePercentageEldritchImplicitUniquePresence3\n- family: CriticalStrikeMultiplier\n  mod: AttackCriticalStrikeMultiplierEldritchImplicitUniquePresence4\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/BodyArmours/BodyDexInt9\nitem_level: 83\ninfluence: []\nactions:\n- eldritch-implicit-currency\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: Dexterity\n  min_tier: 1\n  not_crafted: true\n- family: FireResistance\n  min_tier: 2\n  not_crafted: true\n- family: LightningResistance\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 1\n  not_crafted: true\n- family: AttackerTakesDamageNoRange\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercent\n  min_tier: 3\n  not_crafted: true\nimplicits:\n- family: LightningDamagePercentage\n  mod: LightningDamagePercentageEldritchImplicitUniquePresence3\n- family: CriticalStrikeMultiplier\n  mod: AttackCriticalStrikeMultiplierEldritchImplicitUniquePresence4\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -1834,7 +1834,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 11.397,
-  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw9\nitem_level: 79\ninfluence: []\nactions:\n- veiled-chaos-orb\n- unveil\n- pick\n- annulment-orb\n- exalted-orb\nrequirements:\n- family: LifeLeech\n  min_tier: 2\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\n- family: GlobalDamageOverTimeMultiplier\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 1\n  not_crafted: true\n- family: WeaponCasterDamagePrefix\n  mod: JunMasterVeiledSpellDamageAndManaRegenerationRate1h\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw9\nitem_level: 79\ninfluence: []\nactions:\n- veiled-chaos-orb\n- unveil\n- pick\n- annulment-orb\n- exalted-orb\nrequirements:\n- family: LifeLeech\n  min_tier: 2\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\n- family: GlobalDamageOverTimeMultiplier\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 2\n  not_crafted: true\n- family: WeaponCasterDamagePrefix\n  mod: JunMasterVeiledSpellDamageAndManaRegenerationRate1h\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -1990,7 +1990,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 13.0602,
-  "target_yaml": "base: Metadata/Items/Rings/Ring1\nitem_level: 80\ninfluence: []\nactions:\n- catalyst\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: Dexterity\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedLife\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedEnergyShield\n  min_tier: 1\n  not_crafted: true\n- family: ItemFoundRarityIncrease\n  min_tier: 1\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\nquality:\n  type: intrinsic\n  min_percent: 20\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Rings/Ring1\nitem_level: 80\ninfluence: []\nactions:\n- catalyst\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: Dexterity\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedLife\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedEnergyShield\n  min_tier: 1\n  not_crafted: true\n- family: ItemFoundRarityIncrease\n  min_tier: 1\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\nquality:\n  type: intrinsic\n  min_percent: 20\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -2149,7 +2149,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 12.6204,
-  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetStrDex5\nitem_level: 79\ninfluence:\n- crusader\nactions:\n- awakeners-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: ShockEffect\n  min_tier: 1\n  not_crafted: true\n- family: BaseLocalDefencesAndLife\n  min_tier: 2\n  not_crafted: true\n- family: Dexterity\n  min_tier: 1\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 1\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: MaximumManaIncreasePercent\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetStrDex5\nitem_level: 79\ninfluence:\n- crusader\nactions:\n- awakeners-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: ShockEffect\n  min_tier: 1\n  not_crafted: true\n- family: BaseLocalDefencesAndLife\n  min_tier: 2\n  not_crafted: true\n- family: Dexterity\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 1\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: MaximumManaIncreasePercent\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -2305,7 +2305,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 3.5574,
-  "target_yaml": "base: Metadata/Items/Belts/BeltE3\nitem_level: 78\ninfluence: []\nactions:\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- vaal\nrequirements:\n- family: StunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: LightningResistance\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedPhysicalDamageReductionRating\n  min_tier: 2\n  not_crafted: true\n- family: StunThresholdReduction\n  min_tier: 1\n  not_crafted: true\n- family: BeltFlaskRecoveryRate\n  min_tier: 2\n  not_crafted: true\nallow_corrupted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Belts/BeltE3\nitem_level: 78\ninfluence: []\nactions:\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- vaal\nrequirements:\n- family: StunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: LightningResistance\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedPhysicalDamageReductionRating\n  min_tier: 3\n  not_crafted: true\n- family: StunThresholdReduction\n  min_tier: 1\n  not_crafted: true\n- family: BeltFlaskRecoveryRate\n  min_tier: 2\n  not_crafted: true\nallow_corrupted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -2961,7 +2961,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 2.1709,
-  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw8\nitem_level: 77\ninfluence: []\nactions:\n- fossil-set\nrequirements:\n- family: Intelligence\n  min_tier: 1\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\nallow_corrupted: true\nimplicits:\n- family: FrenzyChargeOnKillChance\n  mod: V2ChanceToGainFrenzyChargeOnKillCorrupted\n  corrupted: true\n- family: LightningDamage\n  mod: V2LocalAddedLightningDamage1hCorrupted2\n  corrupted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw8\nitem_level: 77\ninfluence: []\nactions:\n- fossil-set\nrequirements:\n- family: Intelligence\n  min_tier: 2\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\nallow_corrupted: true\nimplicits:\n- family: FrenzyChargeOnKillChance\n  mod: V2ChanceToGainFrenzyChargeOnKillCorrupted\n  corrupted: true\n- family: LightningDamage\n  mod: V2LocalAddedLightningDamage1hCorrupted2\n  corrupted: true\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -3036,7 +3036,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 6.7053,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandMaces/TwoHandMace4\nitem_level: 75\ninfluence: []\nactions:\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LightRadiusAndAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: FireDamage\n  min_tier: 1\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: StunDurationIncreasePercent\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\n  memory_strands: 100\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandMaces/TwoHandMace4\nitem_level: 75\ninfluence: []\nactions:\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LightRadiusAndAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: FireDamage\n  min_tier: 2\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: StunDurationIncreasePercent\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\n  memory_strands: 100\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -3114,7 +3114,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 2.9402,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow9\nitem_level: 84\ninfluence: []\nactions:\n- remembrance-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: LocalChaosDamage\n  min_tier: 1\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: rare\n  memory_strands: 100\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow9\nitem_level: 84\ninfluence: []\nactions:\n- remembrance-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: LocalChaosDamage\n  min_tier: 1\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\n  memory_strands: 100\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -3192,7 +3192,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 2.0255,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff9\nitem_level: 81\ninfluence: []\nactions:\n- unravelling-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 1\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 2\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: SpellAddedElementalDamage\n  min_tier: 1\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\n  memory_strands: 100\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff9\nitem_level: 81\ninfluence: []\nactions:\n- unravelling-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 2\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: SpellAddedElementalDamage\n  min_tier: 1\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: rare\n  memory_strands: 100\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -3270,7 +3270,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 2.0738,
-  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetStrDex5\nitem_level: 79\ninfluence: []\nactions:\n- foulborn-exalted-orb\n- foulborn-augmentation-orb\n- foulborn-regal-orb\n- exalted-orb\nrequirements:\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\n- family: ItemFoundRarityIncrease\n  min_tier: 2\n  not_crafted: true\n- family: Strength\n  min_tier: 1\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercent\n  min_tier: 1\n  not_crafted: true\n- family: ChaosResistance\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: magic\n  memory_strands: 100\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetStrDex5\nitem_level: 79\ninfluence: []\nactions:\n- foulborn-exalted-orb\n- foulborn-augmentation-orb\n- foulborn-regal-orb\n- exalted-orb\nrequirements:\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\n- family: ItemFoundRarityIncrease\n  min_tier: 2\n  not_crafted: true\n- family: Strength\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercentAndStunRecovery\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercent\n  min_tier: 2\n  not_crafted: true\n- family: ChaosResistance\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: magic\n  memory_strands: 100\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -3438,7 +3438,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 12.8566,
-  "target_yaml": "base: Metadata/Items/Armours/BodyArmours/BodyDexInt12\nitem_level: 83\ninfluence: []\nactions:\n- tempering\n- tailoring\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedLife\n  min_tier: 1\n  not_crafted: true\n- family: LifeRegeneration\n  min_tier: 1\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercent\n  min_tier: 2\n  not_crafted: true\nenchantment:\n  any_of:\n  - ArmourEnchantmentHeistDefenceEffectResistanceEffect1\n  - ArmourEnchantmentHeistDefenceEffectSocketsAreLinked1\n  - ArmourEnchantmentHeistDefenceEffect1\n  - ArmourEnchantmentHeistResistanceEffect1__\n  - ArmourEnchantmentHeistManaEffectNoGreenSockets1\nstart_item:\n  rarity: rare\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/BodyArmours/BodyDexInt12\nitem_level: 83\ninfluence: []\nactions:\n- tempering\n- tailoring\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedLife\n  min_tier: 2\n  not_crafted: true\n- family: LifeRegeneration\n  min_tier: 2\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 2\n  not_crafted: true\n- family: DefencesPercent\n  min_tier: 3\n  not_crafted: true\nenchantment:\n  any_of:\n  - ArmourEnchantmentHeistDefenceEffectResistanceEffect1\n  - ArmourEnchantmentHeistDefenceEffectSocketsAreLinked1\n  - ArmourEnchantmentHeistDefenceEffect1\n  - ArmourEnchantmentHeistResistanceEffect1__\n  - ArmourEnchantmentHeistManaEffectNoGreenSockets1\nstart_item:\n  rarity: rare\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -3574,7 +3574,7 @@
   "size": "medium",
   "start": "bought",
   "start_price": 2.0829,
-  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword14\nitem_level: 77\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LightningDamage\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 3\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword14\nitem_level: 77\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: LightningDamage\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 3\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 3
  },
@@ -3603,7 +3603,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.0346,
-  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw22\nitem_level: 76\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 1\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: ManaLeech\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/OneHandWeapons/Claws/Claw22\nitem_level: 76\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 1\n  not_crafted: true\n- family: ManaLeech\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -3765,7 +3765,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.7716,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow17\nitem_level: 83\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: ProjectileSpeed\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 1\n  not_crafted: true\n- family: LocalPhysicalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: AdditionalArrows\n  min_tier: 1\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: FireDamage\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow17\nitem_level: 83\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: ProjectileSpeed\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 1\n  not_crafted: true\n- family: LocalPhysicalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: AdditionalArrows\n  min_tier: 2\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: FireDamage\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": true,
   "wanted": 6
  },
@@ -3815,7 +3815,7 @@
   "size": "medium",
   "start": "given",
   "start_price": null,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandAxes/TwoHandAxe16\nitem_level: 80\ninfluence: []\nactions:\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 3\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: rare\n  mods:\n  - mod: WeaponElementalDamageOnTwohandWeapon4\n    values:\n    - 71\nstart: given\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandAxes/TwoHandAxe16\nitem_level: 80\ninfluence: []\nactions:\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: LifeLeech\n  min_tier: 3\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: rare\n  mods:\n  - mod: WeaponElementalDamageOnTwohandWeapon4\n    values:\n    - 71\nstart: given\n",
   "vendor_starts": false,
   "wanted": 3
  },
@@ -3927,7 +3927,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 2.8187,
-  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetStrDex5\nitem_level: 82\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: FireResistance\n  min_tier: 1\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\n- family: IncreaseSpecificSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 2\n  not_crafted: true\n- family: BaseLocalDefencesAndLife\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Helmets/HelmetStrDex5\nitem_level: 82\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\nrequirements:\n- family: FireResistance\n  min_tier: 2\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 1\n  not_crafted: true\n- family: IncreaseSpecificSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: LocalAttributeRequirements\n  min_tier: 2\n  not_crafted: true\n- family: BaseLocalDefencesAndLife\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -4786,7 +4786,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 0.8171,
-  "target_yaml": "base: Metadata/Items/Belts/Belt4\nitem_level: 83\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\nrequirements:\n- family: ChaosResistance\n  min_tier: 2\n  not_crafted: true\n- family: ColdResistance\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedPhysicalDamageReductionRating\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedEnergyShield\n  min_tier: 2\n  not_crafted: true\n- family: LifeRegeneration\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Belts/Belt4\nitem_level: 83\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\nrequirements:\n- family: ChaosResistance\n  min_tier: 2\n  not_crafted: true\n- family: ColdResistance\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedPhysicalDamageReductionRating\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedMana\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedEnergyShield\n  min_tier: 2\n  not_crafted: true\n- family: LifeRegeneration\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -5203,7 +5203,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.5225,
-  "target_yaml": "base: Metadata/Items/Armours/Gloves/GlovesDexInt1\nitem_level: 78\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\nrequirements:\n- family: Dexterity\n  min_tier: 1\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: ColdResistance\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Armours/Gloves/GlovesDexInt1\nitem_level: 78\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\nrequirements:\n- family: Dexterity\n  min_tier: 3\n  not_crafted: true\n- family: BaseLocalDefences\n  min_tier: 2\n  not_crafted: true\n- family: PhysicalDamage\n  min_tier: 2\n  not_crafted: true\n- family: ColdDamage\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: ColdResistance\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
@@ -6160,7 +6160,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.6045,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandMaces/TwoHandMace19\nitem_level: 80\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- veiled-chaos-orb\n- unveil\n- pick\n- hinekora-lock\nrequirements:\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: LocalPhysicalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: WeaponCasterDamagePrefix\n  mod: JunMasterVeiledLightningDamageAndChanceToShock2h\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandMaces/TwoHandMace19\nitem_level: 80\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- veiled-chaos-orb\n- unveil\n- pick\n- hinekora-lock\nrequirements:\n- family: IncreasedWeaponElementalDamagePercent\n  min_tier: 3\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: LocalPhysicalDamagePercent\n  min_tier: 2\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: WeaponCasterDamagePrefix\n  mod: JunMasterVeiledLightningDamageAndChanceToShock2h\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -6697,7 +6697,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.37,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow3\nitem_level: 78\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- veiled-chaos-orb\n- unveil\n- pick\n- hinekora-lock\n- recombinator\n- awakeners-orb\nrequirements:\n- family: PhysicalDamage\n  min_tier: 1\n  not_crafted: true\n- family: AdditionalArrows\n  min_tier: 2\n  not_crafted: true\n- family: ProjectileSpeed\n  min_tier: 1\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 1\n  not_crafted: true\n- family: ChaosPenetrationWithAttacks\n  mod: JunMasterVeiledChaosPenetrationWithAttacks__\nstart_item:\n  rarity: normal\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow3\nitem_level: 78\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- veiled-chaos-orb\n- unveil\n- pick\n- hinekora-lock\n- recombinator\n- awakeners-orb\nrequirements:\n- family: PhysicalDamage\n  min_tier: 1\n  not_crafted: true\n- family: AdditionalArrows\n  min_tier: 2\n  not_crafted: true\n- family: ProjectileSpeed\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: ChaosPenetrationWithAttacks\n  mod: JunMasterVeiledChaosPenetrationWithAttacks__\nstart_item:\n  rarity: normal\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  },
@@ -7135,7 +7135,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 0.5294,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2\nitem_level: 82\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- veiled-chaos-orb\n- unveil\n- pick\n- hinekora-lock\n- recombinator\n- awakeners-orb\n- foulborn-exalted-orb\nrequirements:\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSpecificSocketedGemLevel\n  min_tier: 2\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 1\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: DamageOverTimeMultiplier\n  mod: JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand\nstart_item:\n  rarity: normal\n  memory_strands: 100\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2\nitem_level: 82\ninfluence: []\nactions:\n- transmutation-orb\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- chaos-orb\n- exalted-orb\n- annulment-orb\n- essence\n- fossil-set\n- bench-craft\n- remove-crafted-mods\n- harvest-reforge\n- harvest-add-remove\n- harvest-resistance-swap\n- veiled-chaos-orb\n- unveil\n- pick\n- hinekora-lock\n- recombinator\n- awakeners-orb\n- foulborn-exalted-orb\nrequirements:\n- family: ColdDamage\n  min_tier: 2\n  not_crafted: true\n- family: IncreaseSpecificSocketedGemLevel\n  min_tier: 2\n  not_crafted: true\n- family: LocalIncreasedPhysicalDamagePercentAndAccuracyRating\n  min_tier: 2\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 2\n  not_crafted: true\n- family: DamageOverTimeMultiplier\n  mod: JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand\nstart_item:\n  rarity: normal\n  memory_strands: 100\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 5
  }
