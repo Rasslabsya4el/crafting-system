@@ -89,8 +89,8 @@ is imported or tested for here.
   exact count), kept for every item: a count that no action changes stays the start item's and adds no state, and at 0 the hash, the
   order key and the text of a state are what they were before. The items the kernel rebuilds hold the count, so an action that cuts
   draws from the pool cut at the count before the craft (`Action.cut_of`); a spending action's result (`actions.Spent`) is spread over
-  the counts its spend leaves (`Spent.strands_after`, independent of the mods drawn), and any other result keeps the count of its
-  retained item. The label distribution is cached by pool signature, and the signature reads the cut pool: the counts of one cut class
+  the counts its spend leaves (`Spent.strands_after`, independent of the mods drawn), an Orb of Remembrance's (`actions.Recounted`) over
+  the table of its new count (ticket #278), and any other result keeps the count of its retained item. The label distribution is cached by pool signature, and the signature reads the cut pool: the counts of one cut class
   share one distribution. `Abstraction(..., weights=...)` is what the kept tiers weigh in every cutting draw (`actions.cut.WeightReading`;
   the plan reading of the claim `memory_strands.weights_of_kept_tiers` by default), passed to the pool through `kept_tier_weights`. The
   pattern bound, the pilot count and the coarse state carry the count as part of `CompressedState.held`; the cut classes as coarse blocks

@@ -73,8 +73,11 @@ def test_every_recorded_case_is_played_and_nothing_is_left_out():
         "chaos-r13-belt",
         "essence-c02-helmet",
         "essence-r05-ring",
+        "essence-r08-fear",  # #627: the essences the actions: key hides
+        "essence-r09-spite",
         "essence-r10-boots",
         "essence-r11-helmet",
+        "essence-r13-hatred",
         "fossil-r08-boots",
         "fossil-r09-boots",
         "regal-r13-belt",

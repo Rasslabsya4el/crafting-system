@@ -28,7 +28,7 @@ from crafting_system.actions import (
     floating,
     partners,
 )
-from crafting_system.actions import PLAN_READING, Spent, WeightReading, kept_tier_weights
+from crafting_system.actions import PLAN_READING, Recounted, Spent, WeightReading, kept_tier_weights
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -742,7 +742,7 @@ class Abstraction:
                 )
                 key = (*key, part.forced, pool)
             parts[key] += 1
-        if isinstance(outcomes, Spent):  # the counts the spend leaves (ticket #277)
+        if isinstance(outcomes, Spent | Recounted):  # the counts the spend leaves (ticket #277), or the new count of a Remembrance (#278)
             return (outcomes.fractures, frozenset(parts.items()), tuple(sorted(outcomes.strands_after.items())))
         return (outcomes.fractures, frozenset(parts.items()))
 
@@ -1480,7 +1480,7 @@ class Abstraction:
                 self._add_fractured(result, share, state, part, signature, split)
             else:
                 self._add_drawn(result, share, part, signature, split)
-        if isinstance(outcomes, Spent):
+        if isinstance(outcomes, Spent | Recounted):  # a Remembrance sets the count anew: the same spread over its law (#278)
             return self._spread_spend(result, outcomes.strands_after)
         return dict(result)
 

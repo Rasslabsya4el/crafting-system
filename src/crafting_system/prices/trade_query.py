@@ -28,8 +28,9 @@ equipment piece bought for its mods, and each one would also widen the query has
     misc_filters.ilvl (min and max)               set
     misc_filters.corrupted, .mirrored             set           both written explicitly
     misc_filters.fractured_item                   set           iff a spec mod is fractured
+    misc_filters.memory_level (min)               set           a stranded purchase (ADR-0043, #278)
     misc_filters.quality, .gem_level, .gem_imbued,
-      .stack_size, .memory_level, .foulborn_item,
+      .stack_size, .foulborn_item,
       .vestigial, .identified, .split               not covered   not relevant to rare equipment
     socket_filters (links, white sockets)         not covered   the buy actions do not ask for sockets
     armour_filters, weapon_filters, map_filters   not covered   defence / damage rolls come from mods
@@ -102,6 +103,12 @@ def _check_range(what: str, low: Any, high: Any) -> None:
         raise TradeSpecError(f"{what}: minimum {low} is above maximum {high}")
 
 
+def _check_strands(what: str, value: Any) -> None:
+    """A strand minimum is None or a whole number from 1 to 100 (a minimum of 0 is no filter: leave it out)."""
+    if value is not None and not (_is_int(value) and 1 <= value <= 100):
+        raise TradeSpecError(f"{what} must be a whole number from 1 to 100, got {value!r}")
+
+
 def _check_rarity(rarity: Any) -> None:
     if rarity not in RARITIES:
         raise TradeSpecError(f"rarity must be one of {', '.join(RARITIES)}, got {rarity!r}")
@@ -154,8 +161,10 @@ class TradeQuery:
     stats: tuple[StatFilter, ...] = field(default_factory=tuple)
     status: str = DEFAULT_STATUS
     indexed: str | None = None  # listing-age window, one of INDEXED_OPTIONS; None = any time
+    memory_level_min: int | None = None  # the least Memory Strand count of the item (ADR-0043); None = any
 
     def __post_init__(self) -> None:
+        _check_strands("memory_level_min", self.memory_level_min)
         if self.rarity is not None:
             _check_rarity(self.rarity)
         if self.indexed is not None and self.indexed not in INDEXED_OPTIONS:
@@ -185,6 +194,8 @@ class TradeQuery:
             level["max"] = self.ilvl_max
         if level:
             filters["ilvl"] = level
+        if self.memory_level_min is not None:
+            filters["memory_level"] = {"min": self.memory_level_min}
         for key, value in (
             ("corrupted", self.corrupted),
             ("mirrored", self.mirrored),
@@ -265,6 +276,7 @@ class BuySpec:
     influences: tuple[str, ...] = ()
     corrupted: bool = False
     mods: tuple[BuyMod, ...] = ()
+    memory_strands_min: int | None = None  # a stranded purchase: an item with at least this many Memory Strands (ADR-0043, #278)
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name.strip():
@@ -285,6 +297,7 @@ class BuySpec:
         _check_level("item_level_min", self.item_level_min)
         _check_level("item_level_max", self.item_level_max)
         _check_range("item level", self.item_level_min, self.item_level_max)
+        _check_strands("memory_strands_min", self.memory_strands_min)
         implicit = next((mod.stat for mod in self.mods if mod.implicit and not mod.own), None)
         if implicit is not None and not self.corrupted:
             raise TradeSpecError(
@@ -317,6 +330,7 @@ def build_query(
         stats=tuple(mod_filters) + influence_filters,
         status=status,
         indexed=indexed,
+        memory_level_min=spec.memory_strands_min,
     )
 
 
@@ -331,6 +345,7 @@ _SPEC_KEYS = frozenset(
         "influence",
         "corrupted",
         "mods",
+        "memory_strands_min",
     }
 )
 _MOD_KEYS = frozenset({"stat", "minimum", "fractured", "implicit", "own"})
@@ -403,6 +418,7 @@ def _parse_spec(record: Any, where: str) -> BuySpec:
         influences=tuple(influence),
         corrupted=_field(record, "corrupted", where, "true or false", _is_bool, default=False),
         mods=tuple(_parse_mod(item, where) for item in raw_mods),
+        memory_strands_min=_field(record, "memory_strands_min", where, "a whole number", _is_int),
     )
 
 

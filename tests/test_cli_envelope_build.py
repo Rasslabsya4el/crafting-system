@@ -12,14 +12,16 @@ which shares no code with the build.
 """
 
 import dataclasses
+import math
 from fractions import Fraction
 from types import SimpleNamespace
 
 import pytest
-from coarse_support import abstraction
+from coarse_support import DATA, abstraction, item
 from pattern_support import exact_values
 from test_packed_walk_light import START_ITEM, make_offers
 
+from crafting_system import parallel
 from crafting_system.abstraction import _pattern
 from crafting_system.abstraction._pattern import Pattern, PatternBuilder, build_pattern_model
 from crafting_system.cli import _packed, _pattern_bound
@@ -29,8 +31,10 @@ from crafting_system.cli import _envelope_plan
 from crafting_system.cli._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.cli._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
-from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, FloorsStopped, OfferFloors
-from crafting_system.cli._offers import BuyStartItem
+from crafting_system.cli._bound_prune import solve_pruned
+from crafting_system.cli._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
+from crafting_system.actions import unopened_listing
+from crafting_system.cli._offers import BuyStartItem, listing_draw
 from crafting_system.solver import ConvergenceError
 from crafting_system.cli._pattern_bound import pattern_lower_bound, pattern_offers
 
@@ -137,6 +141,24 @@ def test_the_net_of_the_build_is_a_share_of_the_time_and_all_of_the_memory(monke
     monkeypatch.setattr(_envelope_plan, "resident_mb", lambda: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)
     assert "5,000 MB" in build_stop(Net(memory_mb=1000.0), 0.0)()
     assert build_stop(Net(memory_mb=10_000.0), 0.0)() is None
+
+
+def test_the_memory_net_of_a_plan_watches_the_pool_workers_through_the_build_and_the_search(world, monkeypatch):
+    """#626 (OR-12): the build primes the distributions in worker processes; the run's memory net is set for the build and the search, so the wait
+    on the workers reads their memory too (`parallel.memory_net`), and it is lifted when the plan is made."""
+    ab, start, offers, full, _, _ = world
+    seen = []
+    real = _envelope_plan.pattern_lower_bound
+
+    def spy(*args, **kwargs):
+        seen.append(parallel.active_memory_net())
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", spy)
+    fresh = abstraction()
+    plan = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(memory_mb=50_000.0))
+    assert seen == [50_000.0] and parallel.active_memory_net() is None
+    assert plan.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)
 
 
 @pytest.fixture
@@ -360,6 +382,92 @@ def test_the_floor_of_an_offer_is_below_its_exact_q_at_every_state_of_the_world_
             assert floors.lower(position, klass) <= q * (1 + 1e-9), (priced.label, klass, state)
     assert seen == {OTHER, INSIDE, OUTSIDE} or seen == {INSIDE, OUTSIDE}, seen  # the world has states in E and outside it
     assert floors.klass(start.flags, start.fractured, start.status) == OUTSIDE
+
+
+def listing_world(restart_price: float = 3.0):
+    """The light world from a bought start the market sells unopened (ADR-0064): the restart buys the listing and a draw opens it into the Rare."""
+    opened = item()
+    listing = unopened_listing(DATA, opened)
+    offers = [dataclasses.replace(p, cost=restart_price) if isinstance(p.offer.action, BuyStartItem) else p for p in make_offers(listing)]
+    offers.append(listing_draw(DATA, listing, opened.rarity, offers))
+    ab = abstraction()
+    start = ab.compress(listing)
+    return ab, start, opened, offers, exact_values(ab, start, pattern_offers(offers))
+
+
+@pytest.mark.parametrize("restart_price", [3.0, 0.05])
+def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and_stay_below_the_exact_q(restart_price):
+    """#626/#731: a bought start is an unopened listing (ADR-0064) that no reroll touches; the floors are stated for the shape it opens into, as the
+    pruned walk's are, so `rho` is finite and the listing itself is a state of another shape (its floor is the cost), never `rho` = 1e300 above its exact value.
+    The restart buys the listing and its draw can land in E: with a cheap restart, buying again and drawing is the cheapest way into E, and `rho` counts it."""
+    ab, start, opened, offers, exact = listing_world(restart_price)
+    assert start.flags.unopened
+    floors = OfferFloors(ab, start, offers, opened)
+    fresh = abstraction()
+    plain = OfferFloors(fresh, fresh.compress(opened), make_offers(opened), opened)
+    assert floors.chosen == plain.chosen and 0 < floors.rho < 1e6
+    if restart_price == 3.0:  # buying again is dearer than the Chaos Orb: `rho` is the reroll's, as from the opened start
+        assert floors.rho == pytest.approx(plain.rho, rel=1e-12)
+    else:  # the restart and its draw are the cheapest way into E, below the Chaos Orb's cost / chance
+        assert floors.rho < plain.rho
+    assert floors.klass(start.flags, start.fractured, start.status) == UNOPENED
+    for position, priced in enumerate(offers):  # at the listing only the draw works, and the restart buys it again: every other offer is refused there
+        action = priced.offer.action
+        if getattr(action, "opens_listing", False):
+            assert floors.lower(position, UNOPENED) == priced.cost
+        elif isinstance(action, BuyStartItem):
+            assert floors.lower(position, UNOPENED) == floors.entries[position].cost  # the restart counted with its draw
+        else:
+            assert floors.lower(position, UNOPENED) == float("inf")
+            with pytest.raises(NotApplicableError):
+                ab.kernel(start, action)
+    shape = ab.compress(opened)
+    assert floors.klass(shape.flags, shape.fractured, shape.status) == OUTSIDE
+    for entry in floors.entries:
+        if entry.kind == "reroll":
+            floors._raise(entry, 2)
+    for state, value in exact.items():
+        if ab.is_goal(state):
+            continue
+        klass = floors.klass(state.flags, state.fractured, state.status)
+        if klass == OUTSIDE:
+            assert value >= floors.rho * (1 - 1e-9), (state, value, floors.rho)
+        for position, priced in enumerate(offers):
+            action = priced.offer.action
+            if isinstance(action, BuyStartItem):
+                successors = {start: Fraction(1)}
+            else:
+                try:
+                    successors = ab.kernel(state, action)
+                except (NotApplicableError, OutOfScopeError):
+                    continue
+            q = priced.cost + float(sum(chance * exact[successor] for successor, chance in successors.items()))
+            assert floors.lower(position, klass) <= q * (1 + 1e-9), (priced.label, klass, state)
+
+
+@pytest.mark.parametrize("restart_price", [3.0, 0.05])
+def test_the_envelope_search_from_an_unopened_start_with_the_floors_gives_the_full_walks_mean(restart_price, monkeypatch):
+    """#626/#731 end to end: from a bought listing, with the floors on (the restart and the Chaos Orb first, the rest by the floors), the search gives
+    the full walk's mean and its root's bound is finite; before, `rho` was 1e300 at the listing and the search refused it as an inconsistent bound."""
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
+    _, start, opened, offers, exact = listing_world(restart_price)
+    listing = unopened_listing(DATA, opened)
+    walk_ab = abstraction()
+    full = _packed.packed_result(walk_ab, walk_ab.compress(listing), offers, solver="packed")
+    fresh = abstraction()
+    result = envelope_result(fresh, fresh.compress(listing), offers, item=opened)
+    info = result.info["envelope"]
+    assert info.exact and info.bound_stopped is None and math.isfinite(info.lower)
+    assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE) == pytest.approx(exact[start], rel=TOLERANCE)
+
+
+@pytest.mark.parametrize("restart_price", [3.0, 0.05])
+def test_the_pruned_walk_from_an_unopened_start_gives_the_exact_mean(restart_price):
+    """The bound pruning shares `through_listing` with the floors: from a listing, with a dear or a cheap restart, its certificate holds (#626)."""
+    _, start, opened, offers, exact = listing_world(restart_price)
+    fresh = abstraction()
+    pruned = solve_pruned(fresh, fresh.compress(unopened_listing(DATA, opened)), offers, opened, min_offers=0, shape=fresh.compress(opened))
+    assert pruned.solution.values[start] == pytest.approx(exact[start], rel=TOLERANCE)
 
 
 def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):

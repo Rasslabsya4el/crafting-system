@@ -14,14 +14,20 @@ intervals are normal approximations, good for thousands of runs. A `Step` may li
 items made by nested runs before the action is applied, each an `Input` with its own sub-policy; see `_simulate`. A policy may also name a `Lock` (ticket #297, ADR-0054): every option is thrown on a copy of the
 item and the acceptance set picks the result, or the fallback is applied.
 
-Public names: `Action`, `DonorMismatchError`, `Input`, `Lock`, `Policy`, `SampledEstimate`, `Sampler`, `SimulationReport`, `Step`, `simulate`.
+The three corrupting actions have samplers of their own written from the claims (`SampledVaalOrb`, `SampledLocus`, `SampledBloodstained`,
+`_corruption.py`, ticket #264, ADR-0039), because the actions' own samplers draw from the very lists the kernel is built from.
+
+Public names: `Action`, `DonorMismatchError`, `Input`, `Lock`, `Policy`, `SampledBloodstained`, `SampledEstimate`, `SampledLocus`,
+`SampledVaalOrb`, `Sampler`, `SimulationReport`, `Step`, `corrupted_pool`, `simulate`.
 """
 
+from ._corruption import SampledBloodstained, SampledLocus, SampledVaalOrb, corrupted_pool
 from ._estimate import SampledEstimate
 from ._report import SimulationReport
 from ._simulate import simulate
 from ._step import Action, DonorMismatchError, Input, Lock, Policy, Sampler, Step
 
 __all__ = [
-    "Action", "DonorMismatchError", "Input", "Lock", "Policy", "SampledEstimate", "Sampler", "SimulationReport", "Step", "simulate",
+    "Action", "DonorMismatchError", "Input", "Lock", "Policy", "SampledBloodstained", "SampledEstimate", "SampledLocus",
+    "SampledVaalOrb", "Sampler", "SimulationReport", "Step", "corrupted_pool", "simulate",
 ]  # fmt: skip

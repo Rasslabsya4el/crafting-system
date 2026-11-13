@@ -4,6 +4,7 @@ import io
 import os
 import random
 import sys
+import multiprocessing
 import threading
 from types import MappingProxyType
 
@@ -154,3 +155,71 @@ def test_a_worker_that_never_comes_back_is_killed_at_the_timeout():
             pool.map(waits_forever, [1, 2], timeout=0.0)
         assert pool._executor is None  # abandoned: the next map starts fresh workers
         assert pool.map(add_offset, [1, 2]) == [(1, 7), (2, 14)]
+
+
+def sleeps(piece: int) -> int:
+    threading.Event().wait(30)  # a worker that is still at work when the memory net is read
+    return piece
+
+
+def test_a_pool_past_the_memory_net_is_killed_and_says_so(monkeypatch):
+    """#626 (OR-12): the workers hold memory the caller's net never saw; while a net is set, the wait on them reads the memory of the caller and its
+    workers and kills them once it passes the limit, instead of letting the runner run out of memory."""
+    monkeypatch.setattr(parallel, "held_mb", lambda: 12_000.0)
+    with parallel.memory_net(10_000):
+        with WorkerPool(make_base, (0,), workers=2) as pool:
+            with pytest.raises(parallel.MemoryNetReached, match="12,000 MB.*10,000 MB"):
+                pool.map(sleeps, [1, 2], chunk=1)
+            assert pool._executor is None  # abandoned: the workers are gone
+    assert parallel.active_memory_net() is None  # the net is the run's: it ends with the block
+
+
+def test_a_pool_under_the_memory_net_gives_the_list_of_a_loop(monkeypatch):
+    monkeypatch.setattr(parallel, "held_mb", lambda: 100.0)
+    with parallel.memory_net(10_000):
+        with WorkerPool(make_base, (7,), workers=2) as pool:
+            assert pool.map(add_offset, [1, 2, 3]) == [(1, 14), (2, 21), (3, 28)]
+            assert pool.map_chunks(total_of, [1, 2, 3], chunk=2) == [1 + 2 + 7, 3 + 7]
+
+
+def make_gate(ready, release) -> dict:
+    return {"ready": ready, "release": release}
+
+
+def holds(piece: int) -> int:
+    block = bytearray(200 * 2**20)  # 200 MB written (a zeroed bytearray is touched page by page), held until the test has read the memory
+    context()["ready"].put(piece)
+    context()["release"].wait(60)
+    return len(block)
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="the workers' memory is read from /proc")
+def test_the_memory_held_counts_the_workers():
+    """The memory the net reads is the caller's and its live workers' (proportional sizes, so the pages a fork shares are counted once)."""
+    alone = parallel.held_mb()
+    ready, release = multiprocessing.Queue(), multiprocessing.Event()
+    with WorkerPool(make_gate, (ready, release), workers=2) as pool:
+        executor = pool._start()
+        futures = [executor.submit(parallel._run_chunk, holds, [piece]) for piece in (1, 2)]
+        assert sorted(ready.get(timeout=60) for _ in futures) == [1, 2]  # both workers hold their block now
+        during = parallel.held_mb()
+        release.set()
+        assert [future.result() for future in futures] == [[200 * 2**20]] * 2
+    assert during >= alone + 300, (alone, during)
+
+
+def hangs_or_fails(piece: int) -> int:
+    if piece == 2:
+        raise KeyError(piece)
+    threading.Event().wait()  # nobody sets it: before the fix the caller waited on this one after the other had failed
+
+
+@pytest.mark.parametrize("net", [None, 10_000])
+def test_a_failed_chunk_ends_the_wait_at_once_and_kills_the_hung_one(monkeypatch, net):
+    """A chunk that raises while another hangs: the caller gets the error now, not after the hung one, and its workers are stopped (#535 kept)."""
+    monkeypatch.setattr(parallel, "held_mb", lambda: 100.0)
+    with parallel.memory_net(net):
+        with WorkerPool(make_base, (0,), workers=2) as pool:
+            with pytest.raises(KeyError):
+                pool.map(hangs_or_fails, [1, 2], chunk=1, timeout=3600.0)  # the hour is never reached: the failure ends the wait
+            assert pool._executor is None

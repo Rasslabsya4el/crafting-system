@@ -38,6 +38,7 @@ import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 
+from crafting_system.budget import Binding
 from crafting_system.risk._linear import SAID_ABOVE  # one definition: a certified relative error above it is said (4 significant digits; as `cli/_route_flow.STIFF_ERROR` is for the chances of a step)
 
 NOT_NAMED = "kinds-not-named"
@@ -57,6 +58,7 @@ MODEL_GAP = "model-gap"
 PROVED = "proved-unneeded"
 START = "start-item"
 SOLVE = "how-solved"
+BUDGET = "time-and-memory"
 DISPLAY = "display"
 STEPS = "step-numbers"
 STATE_LINE = "state-line"
@@ -82,6 +84,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (START, "The start item"),
     (FINISH, "The sockets"),
     (SOLVE, "How the answer was found"),
+    (BUDGET, "Time and memory limits that stopped a stage"),
     (DISPLAY, "What is shown"),
     (STEPS, "What the steps show"),
     (STATE_LINE, "What a state line shows"),
@@ -155,6 +158,22 @@ class Limit:
 
 
 WITHIN_GAP = "within the stated gap of the cheapest"
+
+
+def budget_limit(bindings: Sequence[Binding]) -> Limit | None:
+    """The one limit that lists every time or memory limit that stopped a stage of the run, in the order they stopped (#378, #825; OR-12, OR-13).
+
+    None when nothing bound. Each name is the stage, the limit with its figure and what was spent, and what the stage kept (`Binding.words`).
+    """
+    if not bindings:
+        return None
+    return Limit(
+        BUDGET,
+        "Stopped by a time or memory limit",
+        "the run has a limit of time and memory, and these stages reached it: {names}",
+        "Each stage that stopped kept what it says here; nothing was left out for being unlikely or by a count, and every other stage ran to its end.",
+        names=tuple(binding.words() for binding in bindings),
+    )
 
 
 def claim(among: str, rest: str = "") -> dict[str, str]:

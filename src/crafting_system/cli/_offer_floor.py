@@ -6,7 +6,7 @@ the pruned walk proves it without the kernel (`_bound_prune`: the number `pbar` 
 two numbers, and the proof that they are a floor of the cost of the offers it leaves out of the model.
 
 For an offer `a` and a state `s` outside `E` (every necessary leaf of the goal that is open at the start is PASSING) that has the flags and the
-fractured mods of the start, one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
+fractured mods of the start (of the item it opens into when the start is an unopened listing, ADR-0064), one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
 with the same shape (the claim and its proof are in `_bound_prune`: Wald's identity over the number of uses). So, with three classes of states,
 
     class OUTSIDE (outside E, the start's shape):   Q*(s, a) >= c(a) + (1 - pbar(a)) rho,  V*(s) >= rho,
@@ -14,6 +14,8 @@ with the same shape (the claim and its proof are in `_bound_prune`: Wald's ident
                                                     but through the flags and the fractured mods, so it lands in E with the same chance as from outside),
                                                     Q*(s, a) >= c(a) for any other offer (a craft from a state in E may stay in E),
     class OTHER   (any other shape):                Q*(s, a) >= c(a),
+    class UNOPENED (an unopened listing, ADR-0064): Q*(s, a) >= c(a) for the draw that opens it and the restart, and infinity for any other offer
+                                                    (the kernel refuses every other action on an unopened item: `Abstraction._prepare`),
 
 and `V*(s) >= 0` everywhere (costs are not negative).
 
@@ -44,13 +46,15 @@ from ._bound_prune import (
     _raised,
     best_first_rho,
     goal_set,
+    through_listing,
     ONE,
     ZERO,
 )
-from ._offers import PricedOffer
+from ._offers import BuyStartItem, PricedOffer
 
 
-OTHER, INSIDE, OUTSIDE = 0, 1, 2  # the classes of states a floor is stated for (see the module text)
+OTHER, INSIDE, OUTSIDE, UNOPENED = 0, 1, 2, 3  # the classes of states a floor is stated for (see the module text)
+CLASSES = (OTHER, INSIDE, OUTSIDE, UNOPENED)
 
 
 class FloorsStopped(Exception):
@@ -62,7 +66,7 @@ class FloorsStopped(Exception):
 
 
 class OfferFloors:
-    """The floors of a list of priced offers, from the start `start` of a plan and its start item `item`."""
+    """The floors of a list of priced offers, from the start `start` of a plan and its start item `item` (the item an unopened `start` opens into)."""
 
     def __init__(
         self, abstraction: Abstraction, start: CompressedState, priced: list[PricedOffer] | tuple[PricedOffer, ...], item, stop: Callable[[], str | None] | None = None
@@ -79,7 +83,11 @@ class OfferFloors:
                 self.ask()
             kinds.append(_kind_of(data, item, offer))
         crafts = frozenset().union(*(named for kind, named in kinds if kind == CRAFT)) if kinds else frozenset()
-        self.chosen = goal_set(goal, start, crafts)
+        # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
+        # as the pruned walk's are (`_bound_prune._run`, `shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
+        # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
+        shape = abstraction.compress(item) if start.flags.unopened else start
+        self.chosen = goal_set(goal, shape, crafts)
         u_mods = frozenset().union(*(goal.leaves[index].mod_ids for index in self.chosen)) if self.chosen else frozenset()
         self.entries: list[_Entry] = []
         for index, (offer, (kind, named)) in enumerate(zip(priced, kinds)):
@@ -91,8 +99,9 @@ class OfferFloors:
             elif kind == CRAFT:
                 pbar = ONE if named & u_mods else ZERO
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
-        self.bare = replace(start, slots=())
-        self.shape = (start.flags, start.fractured)
+        through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
+        self.bare = replace(shape, slots=())
+        self.shape = (shape.flags, shape.fractured)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
 
     def ask(self) -> None:
@@ -109,7 +118,9 @@ class OfferFloors:
     # ---- the classes of states ------------------------------------------------------------------------------------------
 
     def klass(self, flags, fractured, status: tuple) -> int:
-        """The class of a state with these flags, fractured mods and status: `OUTSIDE` (outside `E`, the start's shape), `INSIDE` (in `E`, the start's shape) or `OTHER`."""
+        """The class of a state with these flags, fractured mods and status: `UNOPENED` (a listing), `OUTSIDE` (outside `E`, the start's shape), `INSIDE` (in `E`, the start's shape) or `OTHER`."""
+        if getattr(flags, "unopened", False):
+            return UNOPENED
         if not self.chosen or (flags, fractured) != self.shape:
             return OTHER
         return INSIDE if all(status[index] is Status.PASSING for index in self.chosen) else OUTSIDE
@@ -119,6 +130,9 @@ class OfferFloors:
     def lower(self, position: int, klass: int) -> float:
         """A floor of `Q*(s, a)` for the offer at `position` and a state of the class `klass` (never above the exact cost)."""
         entry = self.entries[position]
+        if klass == UNOPENED:  # only the draw works on a listing; the restart buys it again
+            action = entry.priced.offer.action
+            return entry.cost if getattr(action, "opens_listing", False) or isinstance(action, BuyStartItem) else math.inf
         if entry.pbar == ONE or klass == OTHER or (klass == INSIDE and entry.kind != REROLL):
             return entry.cost
         return entry.cost + float(1 - entry.pbar) * self.rho
@@ -144,8 +158,9 @@ class OfferFloors:
         and stops at the first level whose floor is above the limits.
         """
         entry = self.entries[position]
-        if limits[OTHER] is not None and entry.cost * (1 - SLACK) <= limits[OTHER]:
-            return entry.cost
+        for klass in (OTHER, UNOPENED):
+            if limits.get(klass) is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]:
+                return low
         for level in (0, 1, 2):
             if level and entry.kind == REROLL and entry.level < level:
                 self._raise(entry, level)
@@ -161,4 +176,4 @@ class OfferFloors:
         return min(low for low, _ in found)
 
 
-__all__ = ["FloorsStopped", "OfferFloors"]
+__all__ = ["CLASSES", "FloorsStopped", "OfferFloors"]
