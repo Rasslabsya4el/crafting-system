@@ -76,7 +76,7 @@ def cli(tmp_path_factory, data, route_id):
     with contextlib.redirect_stdout(printed):
         code = main(
             [str(ROOT / "examples" / "targets" / f"{stem}.yaml"), "--json", str(out), "--verify", "--runs", str(RUNS), "--progress",
-             "--route", str(ROOT / "examples" / "routes" / f"{stem}-restart.yaml")],
+             "--route", str(ROOT / "examples" / "routes" / f"{stem}-restart.yaml"), "--time-limit", "none", "--memory-limit", "none"],  # the whole run, past OR-33's net (#825)
             data=data, prices=load_price_file(PRICES), env={}, today=datetime.date(2026, 11, 1),
         )  # fmt: skip
     return code, read_json(out), printed.getvalue()

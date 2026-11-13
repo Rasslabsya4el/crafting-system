@@ -18,19 +18,20 @@ two bracket the true one. A cost below D is free on the lower chain and is folde
 mass still in flight is below `ATTEMPT_TAIL`, and the answer is refused (None) when the attempts that are cut (the missing mass
 over the chance of success) could move a quantile by more than the rounding allowance.
 
-A net bounds the time (ticket #535): each attempt run gets `seconds` of its own from the moment it starts (so four runs one after
-another, without workers, are not cut for their sum), and a run that is still going then stops at the last bin it finished, like a
-run at its cap. A worker that does not come back by `ABANDON_MARGIN` past its runs' time (stuck outside that loop) is killed; its jobs
-are not run again here. Either way the step is refused (`TIMED_OUT`) and the caller says so.
+A net bounds the time (ticket #535, #745): one deadline for the whole ladder of steps (`ladder_net`: `_evaluate.REGEN_SECONDS`, or less when
+the run's budget has less left, #825), shared by every attempt run, side by side or one after another; a run that is still going then stops at
+the last bin it finished, like a run at its cap. A worker that does not come back by `ABANDON_MARGIN` past the deadline (stuck outside that
+loop) is killed; its jobs are not run again here. Either way the step is refused (`TIMED_OUT`) and the caller says so.
 """
 
 import gc
 import time
 from collections import deque
+from dataclasses import dataclass
 
 import numpy as np
 
-from .. import parallel
+from .. import budget, parallel
 from ._budget import BudgetRun, run_budget
 from ._chain import Chain
 from ._fold import FOLD_GAVE_UP, FOLD_LIMIT, fold_free
@@ -52,10 +53,48 @@ TIMED_OUT = "timed out"  # what `regenerative_runs` returns for a step its time 
 
 def time_net_words(seconds: float, coarser: bool) -> str:
     """What the player is told when the time net stops a step (OR-13): whether the figures shown still come from this method."""
-    limit = f"{seconds / 60:.0f} minutes"
+    limit = f"{seconds / 60:.0f} minutes" if seconds >= 120 else f"{seconds:.0f} seconds"
     if coarser:
         return f"a finer pass of the quicker method for the cost figures ran past its time limit of {limit} and was stopped; the figures shown come from the coarser pass before it, and their ranges still hold"
     return f"the quicker method for the cost figures ran past its time limit of {limit} and was stopped, so it worked out none of them; the slower method follows"
+
+
+@dataclass(frozen=True)
+class LadderNet:
+    """The time net of the whole ladder of steps (#745): its deadline on `time.monotonic`, its length, and whether the run's clock set it."""
+
+    deadline: float
+    seconds: float
+    by_run: bool
+
+
+def ladder_net(seconds: float) -> LadderNet:
+    """The net of a ladder that starts now: `seconds`, or less when the run's clock (`crafting_system.budget`) has less time left (#745, #825).
+
+    One net for every step and every attempt run of the ladder, run side by side or one after another: before #745 each run had `seconds` from its own
+    start, so a ladder of five steps of four runs one after another could take twenty nets (about 10 hours at 30 minutes)."""
+    clock = budget.active()
+    left = None if clock is None else clock.left()
+    if left is not None and left < seconds:
+        return LadderNet(time.monotonic() + left, left, True)
+    return LadderNet(time.monotonic() + seconds, seconds, False)
+
+
+def run_spent_words(coarser: bool) -> str:
+    """What the player is told when the run's own time limit stopped the ladder (OR-13, OR-33): the plan before it took the time."""
+    if coarser:
+        return "the run's time limit was reached during a finer pass of the quicker method for the cost figures; the figures shown come from the coarser pass before it, and their ranges still hold"
+    return "the run's time limit was reached before the quicker method for the cost figures could work any of them out; the slower method follows"
+
+
+def ladder_stopped(net: LadderNet, coarser: bool) -> str:
+    """Say that the net stopped the ladder (OR-13), and record it on the run's clock when the run's net was the one that bound (#378)."""
+    clock = budget.active()
+    if net.by_run and clock is not None:
+        kept = "the figures of the coarser step already worked out are kept" if coarser else "the slower method works them out instead"
+        clock.bind(budget.Binding(clock.stage, budget.TIME, clock.budget.seconds or 0.0, clock.elapsed(), kept))
+        return run_spent_words(coarser)
+    return time_net_words(net.seconds, coarser=coarser)
 
 
 class TimedOut(Exception):
@@ -111,13 +150,12 @@ def attempt_chain(chain: Chain, *, success: bool) -> Chain:
 
 
 def attempt_pmf(
-    chain: Chain, bins: list[int], *, success: bool, max_bins: int, seconds: float | None = None
+    chain: Chain, bins: list[int], *, success: bool, max_bins: int, deadline: float | None = None
 ) -> tuple[np.ndarray, float, bool] | None:
     """`(pmf over bins, mass that is neither in it nor lost, stopped by the time net)` of one attempt ending in a goal (`success`) or back at the start, or None.
 
-    None when a free component is too large to fold (`_fold`). `seconds` from this call on is the run's time net (`run_budget`'s deadline).
+    None when a free component is too large to fold (`_fold`). `deadline` (on `time.monotonic`, which a forked worker shares) is the ladder's net (`ladder_net`).
     """
-    deadline = None if seconds is None else time.monotonic() + seconds
     attempt = attempt_chain(chain, success=success)
     extended = [*bins, 0]
     if not attempt.can_finish[0]:
@@ -158,19 +196,19 @@ def renewal_cdf(g: np.ndarray, f: np.ndarray, target: float, max_bins: int, allo
 
 def regenerative_runs(
     chain: Chain, low_bins: list[int], high_bins: list[int], target: float, max_bins: int, allowance, attempt_bins: int,
-    *, seconds: float | None = None, step: float = 0.0,
+    *, deadline: float | None = None, step: float = 0.0,
 ) -> tuple[BudgetRun, BudgetRun] | str | None:
     """The lower and the upper chain's `BudgetRun` of the whole craft, from its attempts; None when they cannot be made, `TIMED_OUT` when the net stopped them.
 
-    `seconds` is the time net of each attempt run (`step` only names the grid in the trace).
+    `deadline` is the ladder's net, shared by every attempt run (`step` only names the grid in the trace).
 
     Each run's `cdf` is the cumulative distribution of the total in bins up to `target` (or `max_bins`). `unresolved` is the mass beyond.
     """
     distinct = [low_bins] if low_bins == high_bins else [low_bins, high_bins]
-    options = {"max_bins": attempt_bins, "seconds": seconds}
+    options = {"max_bins": attempt_bins, "deadline": deadline}
     jobs = [(attempt_pmf, (chain, bins), {"success": success, **options}) for bins in distinct for success in (True, False)]
     try:
-        found = run_jobs(jobs, seconds=seconds)  # the attempt runs share nothing: side by side when workers can be forked
+        found = run_jobs(jobs, deadline=deadline)  # the attempt runs share nothing: side by side when workers can be forked
     except TimedOut as stopped:
         trace(f"attempt by attempt on step {step:.4g}: {stopped}")
         return TIMED_OUT
@@ -178,7 +216,7 @@ def regenerative_runs(
         note(FOLD_GAVE_UP.format(FOLD_LIMIT))  # an attempt cut short by `fold_free`; said here as well, since a forked worker's note is not seen
         return None
     if any(each[2] for each in found):
-        trace(f"attempt by attempt on step {step:.4g}: a run was stopped by its time net of {seconds:.0f} s")
+        trace(f"attempt by attempt on step {step:.4g}: a run was stopped by the ladder's time net")
         return TIMED_OUT
     runs: list[BudgetRun] = []
     for k in range(len(distinct)):
@@ -204,13 +242,13 @@ def _call(name: str):
     return function(*args, **kwargs)
 
 
-def run_jobs(jobs: list[tuple], *, seconds: float | None = None) -> list:
+def run_jobs(jobs: list[tuple], *, deadline: float | None = None) -> list:
     """The results of `(function, args, kwargs)` jobs, in order: side by side in a pool when `CRAFTING_WORKERS` allows and workers can be forked.
 
     A job is a function of its arguments alone, so the list is the same either way (as `_evaluate._both`); a worker that fails sends the jobs
-    back to a serial run here. With `seconds`, each job's time net, the pool waits for as many nets as a worker has jobs to run one after
-    another, plus `ABANDON_MARGIN`; workers not back by then are killed and `TimedOut` is raised (the jobs are not run again: they would take
-    as long here). Run here, each job bounds itself from its own start.
+    back to a serial run here. With `deadline` (the ladder's net, on `time.monotonic`), the pool waits until it, plus `ABANDON_MARGIN`; workers
+    not back by then are killed and `TimedOut` is raised (the jobs are not run again: they would take as long here). Run here, each job stops
+    at the same deadline (one net for the ladder, #745).
     """
     if len(jobs) > 1 and parallel.worker_count() >= 2 and parallel.can_inherit():
         names = [str(i) for i in range(len(jobs))]
@@ -218,7 +256,7 @@ def run_jobs(jobs: list[tuple], *, seconds: float | None = None) -> list:
         gc.freeze()  # the forked workers must not touch the parent's objects (a collection writes to every one of them: a plan holds gigabytes)
         try:
             workers = min(len(jobs), parallel.worker_count())
-            timeout = None if seconds is None else -(-len(jobs) // workers) * seconds + ABANDON_MARGIN
+            timeout = None if deadline is None else max(deadline - time.monotonic(), 0.0) + ABANDON_MARGIN
             with parallel.WorkerPool(_held, (dict(zip(names, jobs)),), workers=workers) as pool:
                 return pool.map(_call, names, chunk=1, timeout=timeout)
         except TimeoutError as late:

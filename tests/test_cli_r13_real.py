@@ -151,7 +151,7 @@ def command(tmp_path_factory, data):
     printed = io.StringIO()
     with contextlib.redirect_stdout(printed):
         code = main(
-            [str(TARGET), "--json", str(out), "--verify", "--runs", str(RUNS), "--route", str(ROUTE)],
+            [str(TARGET), "--json", str(out), "--verify", "--runs", str(RUNS), "--route", str(ROUTE), "--time-limit", "none", "--memory-limit", "none"],  # the whole run, past OR-33's net of the command (#825)
             data=data,
             prices=load_price_file(PRICES),
             env={},

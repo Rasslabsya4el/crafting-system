@@ -6,7 +6,8 @@ are listed. The plans walk the veiled kinds with the junk told apart by family (
     python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 2 --timeout-minutes 60 \
         --command 'CRAFTING_ROUTES=$([ "$RUNNER_INDEX" = 1 ] && echo R24 || echo R07) CRAFTING_HEAVY=1 uv run --no-sync pytest -q -s -p no:cacheprovider tests/test_cli_r24_r07_heavy.py'
 
-Without `CRAFTING_HEAVY` they skip, and without the cached dump the data fixture skips. The CLI runs with its default budget.
+Without `CRAFTING_HEAVY` they skip, and without the cached dump the data fixture skips. The CLI runs with its default budget (the aim) and no
+time or memory limit (`--time-limit none --memory-limit none`): this test measures the whole walk, which OR-33's 10-minute net would stop (#825).
 """
 
 import contextlib
@@ -49,7 +50,7 @@ def cli(tmp_path_factory, data, route_id):
     with contextlib.redirect_stdout(printed):
         code = main(
             [str(ROOT / "examples" / "targets" / f"{stem}.yaml"), "--json", str(out), "--verify", "--runs", str(RUNS), "--progress",
-             "--route", str(ROOT / "examples" / "routes" / f"{stem}.yaml")],
+             "--route", str(ROOT / "examples" / "routes" / f"{stem}.yaml"), "--time-limit", "none", "--memory-limit", "none"],
             data=data, prices=load_price_file(PRICES), env={}, today=datetime.date(2026, 11, 12),
         )  # fmt: skip
     print(f"{route_id}: the CLI exit {code} (its times are in the --progress lines)", file=sys.stderr)

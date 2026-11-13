@@ -30,6 +30,7 @@ import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState, integer_weights
 from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.budget import checkpoint
 from crafting_system.solver import (
     Action,
     LumpedChain,
@@ -102,6 +103,7 @@ def walk(
 
     i = 0
     while i < len(states):
+        checkpoint()  # the run's net (#825): the walk stops between two states once its time or memory is spent
         state = states[i]
         if not goals[i]:
             for position, priced, key in keyed_offers(abstraction, offers, state, start, merge_equal=True, prune_corrupting=prune_corrupting):
