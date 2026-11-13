@@ -446,6 +446,8 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
 
 def _answer(terms: Terms, b: np.ndarray, x: np.ndarray, how: str, solve_with, tol: float, finer=None, **extra) -> Solved:
     error = backward_error(terms.apply, b, x)
+    if not error <= tol:  # the amplification is at least 1: an answer whose backward error is above `tol` cannot be good, so it is not measured finer
+        finer = None
     forward = forward_estimate(terms.apply, b, x, error, solve_with, tol, finer)
     return Solved(x, how, error, forward, normwise_residual(terms.apply, b, x), **extra)
 

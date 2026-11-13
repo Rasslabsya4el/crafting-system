@@ -657,3 +657,19 @@ def test_an_amplification_whose_coarse_measure_fails_its_check_is_measured_again
     dense = float(np.max(np.linalg.solve(np.eye(n) - tt, scale)[seen] / x[seen]))
     assert lin.amplification(tt.__matmul__, b, x, coarse) == math.inf  # the coarse measure alone shows nothing
     assert lin.amplification(tt.__matmul__, b, x, coarse, fine) == pytest.approx(dense, rel=1e-6)  # 36.565, as the dense solve has it
+
+
+def test_an_amplification_whose_finer_measure_fails_its_check_too_shows_nothing():
+    # the same chain, the finer solve as wrong as the coarse one (negative entries): nothing is believed, the estimate is infinite and the answer
+    # is not good, so `solve` goes on to the exact solve where there is one
+    tt = rare_visits()
+    n = len(tt)
+    b = np.zeros(n)
+    b[0] = 1.0
+    x = np.linalg.solve(np.eye(n) - tt, b)
+    matvec = lambda v: v - tt @ v  # noqa: E731
+    coarse = lambda s: lin.bicgstab(matvec, s, np.zeros(n), lin.AMPLIFICATION_TOL)[0]  # noqa: E731
+    wrong = lambda s: -s  # noqa: E731
+
+    assert lin.amplification(tt.__matmul__, b, x, coarse, wrong) == math.inf
+    assert lin.forward_estimate(tt.__matmul__, b, x, lin.backward_error(tt.__matmul__, b, x), coarse, lin.ACCEPT_ERROR, wrong) == math.inf
