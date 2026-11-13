@@ -58,7 +58,7 @@ PLAN_SECONDS = 600.0  # OR-33: the 10-minute net
 GRACE_SECONDS = 300.0  # past the net, before the watchdog ends the plan stage: what follows the search (the plan's solve, limits, lumping), or a path with no net of its own
 SIM_SECONDS = 120.0
 SIM_GRACE_SECONDS = 120.0  # one block may run past `SIM_SECONDS`
-SIM_FIRST_BLOCK = 100  # plays of the first `verify` call; each next block doubles, up to `SIM_BLOCK`
+SIM_FIRST_BLOCK = 10  # plays of the first `verify` call; each next block doubles, up to `SIM_BLOCK`
 SIM_BLOCK = 2000  # the simulator's own block
 SIM_MAX_RUNS = 20_000
 RISK_SECONDS = 300.0
@@ -119,7 +119,7 @@ def _kb(path: Path, key: str) -> int | None:
 
 def kill_tree() -> None:
     """End this process's group (the child is its own session: `child` starts it so), workers included, then this process."""
-    if hasattr(os, "killpg"):
+    if hasattr(os, "killpg") and os.getpgid(0) == os.getpid():  # only when this child leads its own group (`child` starts it so)
         try:
             os.killpg(os.getpgid(0), 9)
         except OSError:
@@ -149,7 +149,8 @@ class Watch:
     def end(self, **extra) -> None:
         with self.lock:
             entry = self.record["stages"][self.stage]
-            entry.update(seconds=round(time.perf_counter() - self.stage_began, 2), peak_mb=round(self.peak, 1) if self.peak else peak_mb_self(), done=True, **extra)
+            sampled = round(self.peak, 1) if self.peak else None  # a stage shorter than one sample has no peak of its own
+            entry.update(seconds=round(time.perf_counter() - self.stage_began, 2), peak_mb=sampled, process_peak_mb=peak_mb_self(), done=True, **extra)
             self.stage = None
             write(self.path, self.record)
 
@@ -217,7 +218,7 @@ def say(line: str) -> None:
 
 def write(path: Path, record: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
+    temporary = path.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")  # the watch and the main thread may write at once
     temporary.write_text(json.dumps(record, indent=1, sort_keys=True, default=str) + "\n", encoding="utf-8")
     temporary.replace(path)
 
@@ -383,14 +384,16 @@ def run_plan_child(args) -> None:
         info = describe_plan(plan, record)
     except Exception as error:  # noqa: BLE001 - the plan exists; a figure that cannot be read is recorded, the rest stands
         info = None
-        record.setdefault("status", "planned")
+        if record.get("status") == "running":
+            record["status"] = "planned"
         record["describe_error"] = f"{type(error).__name__}: {error}"[:1000]
     record["envelope_rounds"] = per_round
     watch.end()
     spent = record["stages"]["plan"]["seconds"]
     risk_inside = round(plan.risk_seconds, 2) if plan.risk is not None else 0.0  # a vendor-recipe plan comes with its risk measured
     record["breakdown"] = (  # the plan stage split: the bound's build, the search (with the solve of what it expanded), the rest (limits, lumping)
-        {"bound": round(info.bound_seconds, 2), "search": round(info.seconds - info.bound_seconds, 2), "after_search": round(spent - info.seconds - risk_inside, 2), "risk": risk_inside}
+        {"bound": round(info.bound_seconds, 2), "search": round(info.seconds - info.bound_seconds, 2), "after_search": round(spent - info.seconds - risk_inside, 2), "risk": risk_inside,
+         "note": "a vendor-recipe case: after_search also holds the plans of the other start options" if case.vendor_starts else ""}
         if info is not None
         else {"solve": round(plan.solve_seconds, 2), "rest": round(spent - plan.solve_seconds - risk_inside, 2), "risk": risk_inside}
     )
@@ -432,6 +435,9 @@ def simulate(data, plan, seconds: float, record: dict, path: Path) -> None:
     size, block = SIM_FIRST_BLOCK, 0
     try:
         while totals["n"] < SIM_MAX_RUNS and time.perf_counter() - began < seconds:
+            if totals["n"]:  # size the block from the plays a second measured so far, so that one call cannot overrun the stage's net
+                rate = totals["n"] / max(time.perf_counter() - began, 1e-6)
+                size = max(1, min(size, int(rate * (seconds - (time.perf_counter() - began)))))
             report = verify(data, plan, runs=size, seed=1 + block).report
             mean, se = report.cost.value, report.cost.standard_error
             totals["sum"] += size * mean
@@ -489,7 +495,7 @@ def run_walk_child(args) -> None:
         if case.vendor_starts:
             from crafting_system.cli._starts import plan_with_starts
 
-            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, solver="packed", with_risk=False)
+            plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, solver="packed")
         else:
             plan = make_plan(data, target, prices, start_price=case.start_price, solver="packed", with_risk=False)
         record.update(status="solved", optimum=float(plan.mean_remaining), states=len(plan.solution.values), reason=None)
@@ -543,7 +549,10 @@ def child(args, case_id: str, mode: str, wall: float) -> dict:
             process.wait()
             code = "killed"
         _end_group(process)  # workers a finished child left behind
-    record = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"mode": mode}
+    try:
+        record = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"mode": mode}
+    except ValueError as error:  # a record cut while written: what the log says is kept below
+        record = {"mode": mode, "record_error": repr(error)[:200]}
     record["exit"] = code
     record["wall_seconds"] = round(time.perf_counter() - began, 1)
     if record.get("status") in (None, "running"):
@@ -598,7 +607,7 @@ def run_part(args) -> None:
         say(f"{case.id}: plan (wall {wall:.0f} s) ...")
         planned = child(args, case.id, "plan", wall)
         planned.setdefault("case", head)
-        if wall < worst and planned.get("exit") == "killed":  # the part's deadline cut it, not a net of the measurement: run it again (`--only`)
+        if wall < worst and planned.get("exit") == "killed" and planned.get("plan") is None:  # the part's deadline cut it before a plan: run it again (`--only`)
             planned.update(status="not run", reason=f"the part's deadline cut the case after {wall:.0f} s")
         walk = None
         full = planned.get("path", "").startswith("full walk")
@@ -655,7 +664,10 @@ def summarize(args) -> None:
                     records[key] = record
     rows = []
     for key in sorted(records):
-        record = {k: v for k, v in records[key].items() if k not in ("progress_tail", "log_tail", "trace")}  # those stay in the run's artifact
+        strip = ("progress_tail", "log_tail", "trace")  # those stay in the run's artifact
+        record = {k: v for k, v in records[key].items() if k not in strip}
+        if isinstance(record.get("walk"), dict):
+            record["walk"] = {k: v for k, v in record["walk"].items() if k not in strip}
         record["checks"] = checks(record)
         rows.append(record)
     by_family: dict[str, dict] = {}
