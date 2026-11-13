@@ -5,12 +5,13 @@ caller loads the game data, the target and the prices and decides what to do wit
 Nothing here reads the clock except `time.perf_counter` around the solve and the risk run, which
 are reported (the budget DP of `risk.evaluate` is pure Python and can be slow on large policies).
 
-With a `budget` the plan first forecasts its size (`_decide.decide`): a query that fits runs exactly, a
-larger one is answered by the ladder of coarse levels (`_approx`) and the `Plan` then has an `approximation`,
-its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023). Without a `budget` the plan
-is always exact, as before. Where the envelope search makes the plan there is no forecast: under a budget the search stops by itself once its
-plan is proved within the budget's gap of the cheapest, whatever the time (OR-32, OR-39, #826); the `Plan` then has no `approximation` (its mean
-is the exact mean of the plan shown) and `Plan.search` says how the search ended.
+Under a `budget` the default search (`solver="auto"`) is the envelope search wherever its bound can be built and no given route is judged: it
+stops by itself once its plan is proved within the budget's gap of the cheapest, whatever the time (OR-32, OR-39, #826), and the run's net guards
+it (OR-33, OR-40); the `Plan` has no `approximation` (its mean is the exact mean of the plan shown) and `Plan.search` says how the search ended.
+Where that search cannot take the target, `auto` walks every item exactly, as with no budget, to the run's net (#926). Without a `budget` the plan
+is always exact. The forecast of ADR-0023 (`_decide.decide`) and its ladder of coarse levels (`_approx`), which answer with an `approximation`
+(a pessimistic `solution` on blocks and no `risk`), are retired: only a walk asked for by name (`solver="packed"`, `"object"`) under a budget
+still reaches them, until #928 deletes them.
 """
 
 import itertools
@@ -20,9 +21,9 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
-from crafting_system.budget import STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
+from crafting_system.budget import NO_PLAN, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
-from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal
+from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -55,6 +56,7 @@ MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest 
 PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
 PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
 MIN_OFFERS_TO_PRUNE = 40  # fewer priced offers than this are solved whole
+FORECAST_SOLVERS = ("packed", "object")  # a walk asked for by name: the only way left to the retired forecast and its ladder under a budget (#926)
 
 
 class PlanError(ValueError):
@@ -572,9 +574,10 @@ def _make_plan(
     mod: otherwise no crafted mod can ever exist and tracking the junk slots for it would only grow
     the state space. A bought start item is offered again as `restart` from every state; a given one never is (OR-6).
 
-    `aim` (seconds, the budget's aim) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
-    answer is approximate within the tolerance if some coarse level reaches it, and `PlanError` says so
-    when none exists and the exact run is not offered. `rates` injects the seconds per kernel outcome and per
+    `aim` (seconds, the budget's aim) says the run has a time it aims at: `auto` is then the envelope search with 40 offers or more too
+    (#926). For a walk asked for by name (`solver="packed"`, `"object"`) it still turns on the retired decision of ADR-0023 (until #928): when
+    the forecast of the exact run is longer, the answer is approximate within the tolerance if some coarse level reaches it, and `PlanError`
+    says so when none exists and the exact run is not offered; `rates` injects the seconds per kernel outcome and per
     solved edge instead of measuring them. None (the default) always solves exactly. With `solve_it` False nothing is
     solved: the plan holds the offers, the abstraction and the start, an empty policy and an infinite value, so that a
     given route can be read and played on concrete items (`_route_sim`) when the graph is too large to solve (R04, R14).
@@ -586,12 +589,14 @@ def _make_plan(
     `solver` picks the exact solve (ticket #374, #377, #535, ADR-0063): "auto" (the default) is the envelope search wherever its bound can be
     built (`abstraction.pattern_refusal` says before any solve: a goal with a roll limit, an action that rerolls values, an unveil offer or
     imprints refuse it, #507), whatever the size of the graph and whatever the `budget`, because that search is exact, ends in seconds on the small
-    graphs and expands far less than the walk on the big ones. Where the bound cannot be built, "auto" is the path it was before the envelope search:
-    the budget decision when there is a `budget`, `solve_pruned` for 40 offers or more, otherwise the graph is walked on packed arrays and
+    graphs and expands far less than the walk on the big ones. Where the bound cannot be built, "auto" is the path it was before the envelope search,
+    with or without a `budget` (#926: no forecast and no approximate answer; the run's net ends a walk that is too long, and the stop says what the
+    search has no bound for, `walk_cause`): `solve_pruned` for 40 offers or more, otherwise the graph is walked on packed arrays and
     solved there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02) and by the object solver below that.
     There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
-    `solver="packed"`. With 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the fossil sets) "auto" keeps the bound pruning for now: on those worlds
-    the envelope search is 1.2 to 40 times slower (#696, #742) and refuses R09 (#731); #742 carries removing the exception. With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
+    `solver="packed"`. With 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the fossil sets) and no aim "auto" keeps the bound pruning for now: on those
+    worlds the envelope search is 1.2 to 40 times slower (#696, #742), and a run with no aim has no stop of its own; #742 carries removing the
+    exception. With an aim (a budget) it is the envelope search there too (#926). With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
     older path too, decided before solving: judging a route needs the planner's action at every state the route reaches, and the envelope
     search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with 40 offers or more it solves the offers left after the twins are
     merged, without the bound pruning (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
@@ -706,12 +711,20 @@ def _make_plan(
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
     # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
-    # Nor, for now, with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the bound pruning that already existed, not a new cut-off): on
-    # fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound pruning (#696, #742) and refuses R09 (#731); both paths are
-    # exact (OR-11, OR-12), and #742 carries removing this exception.
+    # Nor, for a run with no aim, with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the bound pruning that already existed, not a
+    # new cut-off): on fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound pruning (#696, #742), both paths are exact
+    # (OR-11, OR-12), and a run with no aim has no stop of its own to end a slow search; #742 carries removing this exception. A run with an aim
+    # (a budget) takes the envelope search there too (#926): it stops by itself at the budget's proved gap and the net guards it (OR-33, OR-39,
+    # OR-40), where the bound pruning had only the forecast below to keep a walk in bounds.
     many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
-    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not many_offers)
-    if aim is not None and not envelope and not axes:
+    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not (many_offers and aim is None))
+    # why `auto` walks every item instead of searching, said when a net stops that walk before a plan closed (OR-13, #926)
+    unbounded = () if refusal is None else refusal_causes(abstraction, player=True) or (refusal,)  # the causes in a player's words, else the refusal's own text
+    walks_because = None if solver != "auto" or envelope or axes else walk_cause(unbounded, judges_route)
+    # The forecast of ADR-0023 and its ladder of approximate answers are retired (direction of 2026-11-13) and `auto` never reaches them (#926):
+    # under a budget it is the envelope search, or, where that search cannot take the target, the same walk as with no budget, to the run's net.
+    # They stand only behind a walk asked for by name, for the tests and measurements of the ladder itself, until #928 deletes them.
+    if aim is not None and solver in FORECAST_SOLVERS and not axes:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -766,7 +779,7 @@ def _make_plan(
         limits += reading_limits(abstraction, others, aim is not None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     elif many and not envelope and solver != "packed":
-        with stage(PRUNED_STAGE):  # #702: the walks of the bound pruning stop at the net between two states
+        with stage(PRUNED_STAGE, walk_stop(walks_because)):  # #702: the walks of the bound pruning stop at the net between two states
             pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
@@ -788,9 +801,9 @@ def _make_plan(
             limits += envelope_limits(packed.info["envelope"])
             bind_search(clock, packed.info["envelope"])
         else:
-            with stage(WALK_STAGE):
+            with stage(WALK_STAGE, walk_stop(walks_because)):
                 packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
-        with stage(WALK_STAGE):
+        with stage(WALK_STAGE, walk_stop(walks_because)):
             solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
         if packed is not None:
             limits += _packed.evaluation_limits(packed.info)  # (OR-13, #621) the policy evaluation that stopped short of the exact system says so
@@ -974,6 +987,23 @@ def plan_foresight(
     return foresee(
         abstraction, start, solution, sites, second_solve, lock=lock, c_min=cheapest_cost(priced, burn), is_goal=abstraction.is_goal,
     )  # fmt: skip
+
+
+def walk_cause(unbounded: Sequence[str], judges_route: bool) -> str:
+    """Why `solver="auto"` walks every item the actions can reach instead of running the envelope search (#926): the cause that `make_plan`
+    decided on before solving, in the order it decides: what the search has no lower bound for yet (`refusal_causes`), a route to judge, or, for
+    a run with no aim, the number of offers (#742)."""
+    said = "the faster search, which proves its plan against the cheapest possible cost, was not used: "
+    if unbounded:
+        return said + f"it has no such cost yet where {'; '.join(unbounded)}"
+    if judges_route:
+        return said + "a given route is judged against the plan, which needs the planner's choice at every item the route can reach"
+    return said + f"{MIN_OFFERS_TO_PRUNE} actions or more are offered and the run was given no time to aim at"
+
+
+def walk_stop(cause: str | None) -> str:
+    """What a net's stop of a walk leaves (OR-33: "no plan found yet"), with why `auto` walked instead of searching when it chose to (OR-13, #926)."""
+    return NO_PLAN if cause is None else f"{NO_PLAN}; {cause}"
 
 
 def envelope_refusal(solver: str, error: Exception) -> str:

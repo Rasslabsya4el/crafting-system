@@ -220,7 +220,7 @@ from ._finish import Finish, FinishModel, FinishStep, FinishValues, SocketWanted
 from ._gaps import PRUNED_CORRUPTING, PRUNED_QUALITY, Gap, ModelGaps, Prunings
 from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
-from ._pattern import Pattern, PatternKey, PatternModel, PatternOffer, PatternStats, build_pattern_model, pattern_refusal
+from ._pattern import Pattern, PatternKey, PatternModel, PatternOffer, PatternStats, build_pattern_model, pattern_refusal, refusal_causes
 from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot, status_of
 
 __all__ = [
@@ -268,5 +268,6 @@ __all__ = [
     "BlockHoldsMetamod",
     "build_pattern_model",
     "pattern_refusal",
+    "refusal_causes",
     "needs_walk",
 ]
