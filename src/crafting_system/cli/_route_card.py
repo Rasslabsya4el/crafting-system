@@ -22,7 +22,7 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 One format for every mod line: the game's text with its ranges, then the tier as the note, `+(100-114) to
 maximum Life · T1`. The tier is the mod's place among the mods that can spawn on the base
 (`items.tier_table`, 1 is the best); a crafted mod has none and says `crafted` when a leaf can only be met by it. A mod that comes from an essence says the
-essence's tier, `Shrieking essence`, `Deafening essence` (#895), because the essence's level, not a tier of the ladder, is what the player
+essence's tier, `Shrieking essence`, `Deafening essence` (OR-47, #895), because the essence's level, not a tier of the ladder, is what the player
 chooses. Where a mod comes from is a fact of the route, not of the target file: the caller passes `forced`, the mods the essences of the
 route force on this item with the note of each (`essence_notes`), and a leaf that one mod meets says that note when the mod is among
 them (the Shrieking Essence of Spite forces on boots the mod that is also tier 2 of Intelligence; with another route, or no route, the
@@ -32,7 +32,7 @@ meet (the candidates are those that spawn on the base at the item level and that
 of all of them with `#` for the ranges, joined by ` or `, and the note `T2 or better` (`min_tier`) or
 `any tier`, or the tiers the candidates have (`T1 to T3`) when the leaf asked a tier it did not write.
 
-Fractured mods (#895). A fracture is a fact of the start item, not a word of the target file (a requirement cannot say it), and it
+Fractured mods (OR-47, #895). A fracture is a fact of the start item, not a word of the target file (a requirement cannot say it), and it
 never leaves the item. So a leaf of the target card that a fractured mod of the start item meets is drawn as that mod, with its tier
 and the mark `fractured`, and so is that mod on every card after a step. A state stores a fractured mod by a canonical id that
 stands for every tier of the same contribution: the start item's own mod of that class is the one drawn; a mod fractured on the way

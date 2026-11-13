@@ -29,7 +29,7 @@
 #     the 40, and the 48 is read as the essence's usual roll, not as a minimum (the guide also says
 #     "Whatever additional stats you get is pure bonus"), so no `min_roll` is written for it.
 #   * "Life": tier 1 or tier 2, +(115-129) or +(100-114) on boots of item level 84. This is the owner's reading of 2026-11-13
-#     (ticket #895): he read the page as a player and fixed the target, because nobody crafts or buys boots with a low Life
+#     (ticket #895, OR-45): he read the page as a player and fixed the target, because nobody crafts or buys boots with a low Life
 #     tier. The guide says "We want at least 70, but more is always better"; before #895 the file read that as a roll of 70 or
 #     more at any tier (tiers 1 to 4). `r10-fractured-boots-70-life.yaml` keeps that reading of the guide's number.
 #   * The guide's priority list also names Lightning Resistance ("roughly 40%, but slightly lower values can do"), which the

@@ -16,7 +16,7 @@ A bought start item is **the item the market sells**, a draw of the orb that mak
 | Magic | what an Orb of Alteration leaves on that base: 1 or 2 mods, 1/2 each, from the base's pool at its game weights, the mods of the item's influences included |
 | Rare | what an Orb of Alchemy leaves on that base: 4, 5 or 6 mods (8:3:1) |
 
-The start price is the price of the listing, as before; a restart pays it again. The planner's first decision is made on each outcome of the draw, so an Augmentation is chosen only where the item holds 1 mod, and an Alteration (or whatever is cheapest) where it holds 2. The mods no requirement asks for are junk, counted and not told apart (OR-10), so the draw adds few states.
+The start price is the price of the listing, as before; a restart pays it again (**narrowed: see "Amendment: starting over may wipe the same item" at the end**). The planner's first decision is made on each outcome of the draw, so an Augmentation is chosen only where the item holds 1 mod, and an Alteration (or whatever is cheapest) where it holds 2. The mods no requirement asks for are junk, counted and not told apart (OR-10), so the draw adds few states.
 
 The rule is in `targets` (`start_item` and `rarity` in the docs of `targets/__init__.py`) and is read in one place, `actions.listing.unopened_listing`. A bought start item with a mod listed (a fractured mod: R03, R05, R10, R11, R12) names mods, so it is not drawn (the mods it does not list are a separate open point, ticket [#656](https://github.com/Rasslabsya4el/crafting-system/issues/656)); a given start item is a concrete item the player holds (OR-6), so it is not drawn either (J01).
 
@@ -39,3 +39,12 @@ Two ways looked possible:
 * R13, R14: from the Magic base with 1 or 2 mods; R08, R09: from a Rare with 4 to 6. Their means, first actions and state counts are in the PR of #640 and in the issue.
 * The vendor-recipe starts name their mod (ADR-0059), the fractured starts too, and R04, R06 and V01 start from a Normal item: none of them is drawn.
 * `Target.start_item` stays what the target says (the Magic belt with no mods); the plan's start is the unopened listing.
+
+## Amendment: starting over may wipe the same item ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), owner rules OR-42 and OR-43 in [`docs/owner-rules.md`](../owner-rules.md), 2026-11-13)
+
+The sentences above that "a restart pays it again" and that "the restart returns to" the unopened listing say what is built. By the owner's rules of the retro of 2026-11-13:
+
+- **OR-42.** Starting over costs the cheaper of buying the start item again or wiping the same item (an Orb of Scouring, plus an Orb of Transmutation or an Orb of Alchemy when needed); the wipe is a shown step. A fractured mod survives it; a corrupted item cannot be wiped.
+- **OR-43.** Where the guide names no rarity, the start is the cheapest rarity the market sells, and the steps that make it the needed rarity are shown and paid. A bought fractured item is a Rare with random other mods, marked approximate.
+
+Neither is built: the cases on record are [#687](https://github.com/Rasslabsya4el/crafting-system/issues/687), [#656](https://github.com/Rasslabsya4el/crafting-system/issues/656) and [#515](https://github.com/Rasslabsya4el/crafting-system/issues/515), and [#914](https://github.com/Rasslabsya4el/crafting-system/issues/914) lists the rules that still need a ticket. The listing draw of this ADR stands.

@@ -379,7 +379,7 @@ def check_cut_guarantee(page: Page) -> list[Fault]:
 _TIER_NOTE = re.compile(r"T\d+")
 # The one shape of a note after a mod line: what the mod is (a tier, the tiers a line of several mods accepts: "T2 or better",
 # "T1 to T3", "any tier"; crafted; the tier of the essence that forces it, "Shrieking essence", or the name of an essence with no
-# tier word, "Essence of Horror" (#895: an essence's mod is said by the essence, not by a tier of the ladder); essence only; a grade
+# tier word, "Essence of Horror" (OR-47, #895: an essence's mod is said by the essence, not by a tier of the ladder); essence only; a grade
 # of an implicit; a tier too low for the target), then how the target holds it ("at least 1 of 4", "in some" of the states the card shows).
 _ESSENCE_TIERS = "Whispering|Muttering|Weeping|Wailing|Screaming|Shrieking|Deafening"  # the game's seven essence tiers, lowest first
 _ESSENCE_NOTE = rf"(?:(?:{_ESSENCE_TIERS}) essence|Essence of [A-Z][a-z]+)"

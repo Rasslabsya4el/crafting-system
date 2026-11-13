@@ -21,7 +21,7 @@
 #     start item below is the tier-1 one, +(31-35)%, the tier the buy spec prices (OR-3); the guide
 #     accepts a cheaper tier of the fractured mod too, and the file makes up no second start item for it.
 #   * "Evasion/Life prefixes you are happy with", "Total Evasion On Helmet - Ideally around 1900" and "+# to Maximum Life -
-#     Ideally > 95": Evasion tier 1 to tier 3 and Life tier 1. This is the owner's reading of 2026-11-13 (ticket #895): he read
+#     Ideally > 95": Evasion tier 1 to tier 3 and Life tier 1. This is the owner's reading of 2026-11-13 (ticket #895, OR-45): he read
 #     the page as a player and fixed the target, because a helmet with a low Evasion or Life tier is not one a player is happy
 #     with. Before #895 the file read the guide as "any tier" of Evasion and a Life roll above 95 (tiers 1 to 3); before #404
 #     it asked tier 1 of both. The Evasion leaf is the percentage prefix "#% increased Evasion Rating", (68-79)% or more; the

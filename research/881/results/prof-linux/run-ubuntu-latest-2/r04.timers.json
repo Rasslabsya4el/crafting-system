@@ -1,0 +1,290 @@
+{
+ "name": "r04.timers",
+ "mode": "timers",
+ "platform": "linux",
+ "python": "3.14.4",
+ "not_timed": [],
+ "seconds": 303.16,
+ "mean_remaining": 31900.076587073483,
+ "search": {
+  "stats": {
+   "rounds": 51,
+   "touched": 138797,
+   "expanded": 138782,
+   "realized": 618816,
+   "candidates": 671002,
+   "kernels": 220617,
+   "largest_fall": 0.0,
+   "first_upper": null,
+   "solve_seconds": 16.41712495300007,
+   "build_seconds": 7.118917885999906,
+   "expand_seconds": 187.57887035899998,
+   "verified": 117,
+   "peak_mb": 1178.3701171875,
+   "solve_info": {
+    "seconds_work": 0.05321551499991983,
+    "seconds_proper": 0.9852708619997941,
+    "linear_dense": 1,
+    "linear_backward_error": 8.772837241427154e-13,
+    "linear_forward": 2.0568490648178672e-08,
+    "linear_residual": 1.0530497646628167e-13,
+    "seconds_evaluate": 9.808355245000115,
+    "seconds_improve": 1.7424516619993824,
+    "rounds": 279,
+    "seconds_certify": 0.8239046249999546,
+    "refinements": 74,
+    "quotient_own_bound": 1.6652344602130498e-06,
+    "quotient_own_cost": 31892.89493134098,
+    "warm_kept": 49,
+    "policy_states": 4651658,
+    "policy_edges": 0,
+    "shared_edges": 5897239,
+    "matvecs": 8125,
+    "linear_iterations": 3794,
+    "warm_repaired": 1,
+    "warm_replaced": 105556
+   }
+  },
+  "states_known": 138797,
+  "shared_kernel_hits": 398200
+ },
+ "timers": [
+  {
+   "function": "Abstraction._outcomes",
+   "calls": 872252,
+   "total_s": 88.12,
+   "own_s": 88.12
+  },
+  {
+   "function": "Abstraction._item_of",
+   "calls": 1118175,
+   "total_s": 45.86,
+   "own_s": 45.86
+  },
+  {
+   "function": "Abstraction._signatures_of",
+   "calls": 892487,
+   "total_s": 38.84,
+   "own_s": 38.84
+  },
+  {
+   "function": "Abstraction._prepare",
+   "calls": 1096612,
+   "total_s": 145.59,
+   "own_s": 18.8
+  },
+  {
+   "function": "solve_graph",
+   "calls": 53,
+   "total_s": 16.43,
+   "own_s": 16.43
+  },
+  {
+   "function": "Abstraction._splits_of",
+   "calls": 892487,
+   "total_s": 11.1,
+   "own_s": 11.1
+  },
+  {
+   "function": "Search._q",
+   "calls": 1378691,
+   "total_s": 9.39,
+   "own_s": 9.39
+  },
+  {
+   "function": "Abstraction.kernel_key",
+   "calls": 796624,
+   "total_s": 203.38,
+   "own_s": 8.81
+  },
+  {
+   "function": "Pattern.members",
+   "calls": 65263,
+   "total_s": 14.61,
+   "own_s": 7.42
+  },
+  {
+   "function": "Search._graph",
+   "calls": 52,
+   "total_s": 7.32,
+   "own_s": 7.32
+  },
+  {
+   "function": "PatternBuilder._offers_of_key",
+   "calls": 13052,
+   "total_s": 85.17,
+   "own_s": 5.89
+  },
+  {
+   "function": "exact_distribution",
+   "calls": 9018,
+   "total_s": 5.72,
+   "own_s": 5.72
+  },
+  {
+   "function": "Abstraction._add_fixed",
+   "calls": 865687,
+   "total_s": 4.35,
+   "own_s": 4.35
+  },
+  {
+   "function": "Search.realize",
+   "calls": 429057,
+   "total_s": 181.77,
+   "own_s": 3.76
+  },
+  {
+   "function": "Abstraction._add_drawn",
+   "calls": 101890,
+   "total_s": 9.94,
+   "own_s": 3.6
+  },
+  {
+   "function": "Search.run",
+   "calls": 1,
+   "total_s": 212.43,
+   "own_s": 3.37
+  },
+  {
+   "function": "Search._kernel",
+   "calls": 618816,
+   "total_s": 166.27,
+   "own_s": 3.35
+  },
+  {
+   "function": "CraftingProblem.candidates",
+   "calls": 138782,
+   "total_s": 3.13,
+   "own_s": 2.58
+  },
+  {
+   "function": "Search._self_mass",
+   "calls": 618816,
+   "total_s": 2.35,
+   "own_s": 2.35
+  },
+  {
+   "function": "Pattern.key",
+   "calls": 735476,
+   "total_s": 2.23,
+   "own_s": 2.23
+  },
+  {
+   "function": "Abstraction._mixture_kernel",
+   "calls": 299988,
+   "total_s": 16.39,
+   "own_s": 1.96
+  },
+  {
+   "function": "Search.intern",
+   "calls": 1201293,
+   "total_s": 2.49,
+   "own_s": 1.66
+  },
+  {
+   "function": "Abstraction.kernel",
+   "calls": 299988,
+   "total_s": 18.79,
+   "own_s": 1.6
+  },
+  {
+   "function": "integer_weights",
+   "calls": 220710,
+   "total_s": 1.51,
+   "own_s": 1.51
+  },
+  {
+   "function": "pattern_lower_bound",
+   "calls": 1,
+   "total_s": 88.33,
+   "own_s": 1.21
+  },
+  {
+   "function": "solve_walked",
+   "calls": 1,
+   "total_s": 1.1,
+   "own_s": 1.08
+  },
+  {
+   "function": "CraftingProblem.kernel",
+   "calls": 220733,
+   "total_s": 13.27,
+   "own_s": 1.04
+  },
+  {
+   "function": "CraftingProblem.kernel_key",
+   "calls": 618816,
+   "total_s": 146.91,
+   "own_s": 0.73
+  },
+  {
+   "function": "Search.expand",
+   "calls": 138782,
+   "total_s": 3.61,
+   "own_s": 0.48
+  },
+  {
+   "function": "Abstraction._expanded_distribution",
+   "calls": 101890,
+   "total_s": 6.34,
+   "own_s": 0.43
+  },
+  {
+   "function": "CraftingProblem.lower",
+   "calls": 138784,
+   "total_s": 0.72,
+   "own_s": 0.31
+  },
+  {
+   "function": "Search._fresh_equal",
+   "calls": 117,
+   "total_s": 1.72,
+   "own_s": 0.25
+  },
+  {
+   "function": "Abstraction._distribution",
+   "calls": 9018,
+   "total_s": 5.92,
+   "own_s": 0.2
+  },
+  {
+   "function": "Abstraction.is_goal",
+   "calls": 152611,
+   "total_s": 0.13,
+   "own_s": 0.13
+  },
+  {
+   "function": "Abstraction.compress",
+   "calls": 1,
+   "total_s": 0.0,
+   "own_s": 0.0
+  }
+ ],
+ "kernel_shapes": {
+  "kernels_built": 220710,
+  "outcomes": 1481780,
+  "mean_outcomes": 6.7,
+  "max_outcomes": 7133,
+  "outcome_sizes": {
+   ">=1000": 92,
+   "2-9": 193112,
+   "10-99": 27255,
+   "1": 209,
+   "100-999": 42
+  },
+  "largest_weight_bits": {
+   ">1023": 27,
+   "<=53": 220576,
+   "<=1023": 76,
+   "<=255": 31
+  },
+  "sum_of_weights_bits": {
+   ">1023": 27,
+   "<=53": 220576,
+   "<=1023": 76,
+   "<=255": 31
+  },
+  "max_weight_bits": 1595,
+  "max_sum_bits": 1602
+ }
+}

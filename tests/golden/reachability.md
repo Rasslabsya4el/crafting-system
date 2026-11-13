@@ -157,7 +157,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
 | `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
-| `--k` | command `trade` |  | read | prices/deepen.py: _deep_reading (an attribute or method of it is used; not on the planning path); prices/price_file.py: _entry_to_json (compared; on the planning path); and 12 more |
+| `--k` | command `trade` |  | read | prices/deepen.py: _deep_reading (an attribute or method of it is used; not on the planning path); prices/essence_recipe.py: _replaced (an attribute or method of it is used; on the planning path); and 16 more |
 | `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
 | `--memory-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
@@ -190,7 +190,7 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
 | the market rule | `classify` | `prices/trade_market.py` | prices/trade_exchange.py: read_offers, prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
-| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_trade.py: _priced_as, planner/_bought_starts.py: _option, and 5 more | yes | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_trade.py: _priced_as, planner/_bought_starts.py: _option, and 6 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |

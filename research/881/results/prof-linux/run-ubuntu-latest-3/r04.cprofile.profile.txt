@@ -1,0 +1,136 @@
+         3070162904 function calls (3060927185 primitive calls) in 1029.823 seconds
+
+   Ordered by: internal time
+   List reduced from 1426 to 60 due to restriction <60>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   514260   46.496    0.000  153.725    0.000 actions/pool.py:285(group_pool)
+ 77639040   36.546    0.000   81.737    0.000 fractions.py:1000(__eq__)
+228818958   35.876    0.000   75.447    0.000 {built-in method builtins.isinstance}
+26421833/18081149   34.132    0.000  176.102    0.000 {built-in method builtins.sorted}
+  3366219   26.574    0.000   65.086    0.000 items/model.py:196(__post_init__)
+ 65651803   23.300    0.000   59.093    0.000 fractions.py:1021(_richcmp)
+146216371   22.740    0.000   39.571    0.000 <frozen abc>:117(__instancecheck__)
+131274553   19.553    0.000   26.070    0.000 {method 'get' of 'dict' objects}
+ 49773472   17.757    0.000   39.913    0.000 abstraction/_kernel.py:1066(_label)
+ 97685553   17.331    0.000   27.209    0.000 items/model.py:671(_mod)
+146216371   16.830    0.000   16.831    0.000 {built-in method _abc._abc_instancecheck}
+  1118175   16.747    0.000  188.961    0.000 abstraction/_kernel.py:1157(_item_of)
+167166639   15.422    0.000   15.422    0.000 {method 'append' of 'list' objects}
+  2249504   14.631    0.000  116.410    0.000 items/model.py:334(validate)
+ 49560765   13.984    0.000   19.485    0.000 data/model.py:163(conflicts)
+ 57123873   13.485    0.000   52.593    0.000 abstraction/_kernel.py:1831(<genexpr>)
+ 12388867   13.450    0.000   18.645    0.000 items/model.py:378(_check_values)
+  5369073   13.305    0.000   48.269    0.000 abstraction/_kinds.py:275(representative)
+  1378691   12.934    0.000   13.803    0.000 cli/_envelope.py:395(_value)
+ 63605078   12.877    0.000   68.777    0.000 fractions.py:1051(__le__)
+       52   12.561    0.242   18.697    0.360 cli/_envelope.py:470(_graph)
+ 51980097   12.510    0.000   18.082    0.000 abstraction/_kernel.py:458(_context)
+114943182   12.424    0.000   12.424    0.000 {method 'get' of 'mappingproxy' objects}
+ 59009624   12.215    0.000   16.848    0.000 enum.py:187(__get__)
+  3316400   11.747    0.000   61.282    0.000 dataclasses.py:1773(_replace)
+  2249504   11.531    0.000   30.588    0.000 items/model.py:571(_check_families)
+  1260087   11.083    0.000   34.569    0.000 abstraction/_kernel.py:1512(_split)
+ 64288065   10.325    0.000   24.888    0.000 {method 'setdefault' of 'dict' objects}
+ 36564838   10.187    0.000   28.549    0.000 items/model.py:617(<genexpr>)
+ 17402915   10.178    0.000   24.640    0.000 items/model.py:588(<genexpr>)
+   796624    8.939    0.000  849.782    0.001 abstraction/_kernel.py:694(kernel_key)
+  3366219    8.112    0.000   12.458    0.000 items/model.py:247(_checked_implicits)
+    51591    7.550    0.000   49.958    0.001 actions/pool.py:259(_compute_pool_candidates)
+ 51373084    7.509    0.000    7.509    0.000 fractions.py:996(__hash__)
+    10711    7.035    0.001    9.363    0.001 solver/_packed_solve.py:538(terms)
+   434502    6.827    0.000   15.776    0.000 abstraction/_kinds.py:420(_mod_of)
+   915903    6.651    0.000   13.676    0.000 abstraction/_kernel.py:86(__hash__)
+  2249504    6.472    0.000   42.200    0.000 items/model.py:560(_check_capacity)
+  3615069    6.105    0.000   10.745    0.000 items/model.py:133(capacity)
+  2443361    5.798    0.000   15.406    0.000 abstraction/_state.py:293(best_of)
+ 82058848    5.535    0.000    5.535    0.000 fractions.py:441(numerator)
+ 49560765    5.501    0.000    5.501    0.000 {method 'isdisjoint' of 'set' objects}
+60273183/60273176    5.468    0.000    5.468    0.000 {built-in method builtins.len}
+  9520070    5.438    0.000    8.931    0.000 abstraction/_kinds.py:70(base_kind)
+ 80329401    5.223    0.000    5.223    0.000 fractions.py:445(denominator)
+  6964796    5.138    0.000   33.688    0.000 items/model.py:615(blocks)
+  5572810    4.921    0.000   29.561    0.000 items/model.py:586(mods_on)
+  1096612    4.823    0.000  600.738    0.001 abstraction/_kernel.py:1303(_prepare)
+ 18192889    4.787    0.000    7.841    0.000 enum.py:677(__call__)
+  3366219    4.782    0.000    6.421    0.000 items/model.py:278(_checked_veil_offer)
+ 63605078    4.653    0.000    4.653    0.000 {built-in method _operator.le}
+ 59009624    4.633    0.000    4.633    0.000 enum.py:1324(value)
+    13797    4.568    0.000    4.568    0.000 {method 'reduceat' of 'numpy.ufunc' objects}
+ 14660166    4.557    0.000    9.563    0.000 abstraction/_state.py:300(<genexpr>)
+  6977763    4.540    0.000    8.150    0.000 abstraction/_kernel.py:113(_low_values)
+   429057    4.497    0.000  717.245    0.002 cli/_envelope.py:407(realize)
+ 17813515    4.454    0.000    5.578    0.000 items/model.py:213(<genexpr>)
+  8340485    4.452    0.000  120.728    0.000 abstraction/_kernel.py:1815(_family_type)
+ 11249155    4.409    0.000    8.512    0.000 actions/pool.py:298(<genexpr>)
+ 39017803    4.362    0.000    4.362    0.000 {built-in method builtins.getattr}
+
+
+         3070162904 function calls (3060927185 primitive calls) in 1029.823 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1426 to 60 due to restriction <60>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000 1086.425 1086.425 cli/_plan.py:393(make_plan)
+        1    0.000    0.000 1086.425 1086.425 cli/_plan.py:507(_make_plan)
+        1    0.292    0.292 1085.435 1085.435 cli/_envelope_plan.py:252(envelope_result)
+        1    0.136    0.136 1085.143 1085.143 cli/_envelope_plan.py:285(_envelope_run)
+   796624    8.939    0.000  849.782    0.001 abstraction/_kernel.py:694(kernel_key)
+        1    0.000    0.000  775.706  775.706 ./research/881/profile_plan.py:254(kept_run)
+        1    1.289    1.289  775.706  775.706 cli/_envelope.py:593(run)
+   429057    4.497    0.000  717.245    0.002 cli/_envelope.py:407(realize)
+   618816    1.607    0.000  684.079    0.001 cli/_envelope.py:341(_kernel)
+   618816    0.641    0.000  644.064    0.001 cli/_envelope_plan.py:133(kernel_key)
+  1096612    1.052    0.000  601.881    0.001 abstraction/_kernel.py:1290(_prepared)
+  1096612    4.823    0.000  600.738    0.001 abstraction/_kernel.py:1303(_prepare)
+   872252    1.998    0.000  370.790    0.000 abstraction/_kernel.py:307(_outcomes)
+   872710    0.800    0.000  363.435    0.000 actions/contract.py:843(outcomes_under)
+   872710    1.071    0.000  362.518    0.000 actions/contract.py:907(guarded)
+        1    0.002    0.002  307.332  307.332 cli/_pattern_bound.py:109(pattern_lower_bound)
+        1    0.000    0.000  306.116  306.116 abstraction/_pattern.py:677(extend)
+        1    0.000    0.000  306.038  306.038 abstraction/_pattern.py:717(_pass)
+        1    0.105    0.105  306.038  306.038 abstraction/_pattern.py:722(_pass_keys)
+    13052    2.088    0.000  298.439    0.023 abstraction/_pattern.py:786(_offers_of_key)
+   514260    0.997    0.000  208.644    0.000 actions/pool.py:333(build_pool)
+   892487    0.973    0.000  189.972    0.000 abstraction/_kernel.py:1842(_signatures_of)
+  1118175   16.747    0.000  188.961    0.000 abstraction/_kernel.py:1157(_item_of)
+  1852585    1.537    0.000  188.950    0.000 abstraction/_kernel.py:1845(<genexpr>)
+   393479    2.239    0.000  187.263    0.000 abstraction/_kernel.py:1855(_pool_signature)
+26421833/18081149   34.132    0.000  176.102    0.000 {built-in method builtins.sorted}
+   514260   46.496    0.000  153.725    0.000 actions/pool.py:285(group_pool)
+   304543    2.313    0.000  151.361    0.000 actions/essence.py:75(outcomes)
+   291763    0.622    0.000  134.966    0.000 actions/outcomes.py:110(reroll)
+  8733964    3.778    0.000  124.507    0.000 abstraction/_kernel.py:1867(<genexpr>)
+  1158373    2.821    0.000  123.275    0.000 items/model.py:629(changed)
+  8340485    4.452    0.000  120.728    0.000 abstraction/_kernel.py:1815(_family_type)
+  2249504   14.631    0.000  116.410    0.000 items/model.py:334(validate)
+  1049475    2.612    0.000   97.621    0.000 items/model.py:303(build)
+   127135    0.286    0.000   89.883    0.001 actions/exalted.py:67(outcomes)
+   155507    1.151    0.000   87.331    0.001 actions/annul.py:73(outcomes)
+   127132    0.228    0.000   86.500    0.001 actions/add.py:71(add_one_mod)
+   127132    0.193    0.000   82.706    0.001 actions/outcomes.py:171(fill)
+ 77639040   36.546    0.000   81.737    0.000 fractions.py:1000(__eq__)
+   828025    0.415    0.000   77.116    0.000 actions/annul.py:101(<genexpr>)
+   672571    1.908    0.000   76.701    0.000 items/model.py:652(remove_mod)
+228818958   35.876    0.000   75.447    0.000 {built-in method builtins.isinstance}
+ 63605078   12.877    0.000   68.777    0.000 fractions.py:1051(__le__)
+  3316400    2.730    0.000   65.601    0.000 dataclasses.py:1754(replace)
+  3366219   26.574    0.000   65.086    0.000 items/model.py:196(__post_init__)
+  3316400   11.747    0.000   61.282    0.000 dataclasses.py:1773(_replace)
+ 65651803   23.300    0.000   59.093    0.000 fractions.py:1021(_richcmp)
+    65263    1.281    0.000   54.923    0.001 abstraction/_pattern.py:395(members)
+   592498    2.251    0.000   54.070    0.000 abstraction/_kernel.py:1428(_check_type_blind)
+   514261    2.147    0.000   53.981    0.000 actions/pool.py:206(pool_candidates)
+ 57123873   13.485    0.000   52.593    0.000 abstraction/_kernel.py:1831(<genexpr>)
+    51591    7.550    0.000   49.958    0.001 actions/pool.py:259(_compute_pool_candidates)
+  5369073   13.305    0.000   48.269    0.000 abstraction/_kinds.py:275(representative)
+   299988    0.877    0.000   46.049    0.000 abstraction/_kernel.py:632(kernel)
+   347413    0.434    0.000   43.699    0.000 abstraction/_pattern.py:463(_assemble)
+  2249504    6.472    0.000   42.200    0.000 items/model.py:560(_check_capacity)
+   299988    1.790    0.000   40.483    0.000 abstraction/_kernel.py:1461(_mixture_kernel)
+ 49773472   17.757    0.000   39.913    0.000 abstraction/_kernel.py:1066(_label)
+146216371   22.740    0.000   39.571    0.000 <frozen abc>:117(__instancecheck__)
+   892487    1.718    0.000   38.888    0.000 abstraction/_kernel.py:1500(_splits_of)
+
+

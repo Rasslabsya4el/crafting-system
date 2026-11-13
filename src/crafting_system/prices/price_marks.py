@@ -11,6 +11,12 @@ its depth in units is at least the units the plan expects to use. Every other pr
   day that keeps a later reading as its stand-in, #838);
 * "few offers: the mean of the cheapest units of the N offers there are" and "old price, read on <date>, the market has few
   offers now" (a thin trade book, OR-8 as amended by #718: its own mean, or the league's last deep price in its place);
+* "priced from the vendor recipe: one third of <the next tier up>" (a lower essence tier, `essence_recipe.py`, #885), and beside it
+  every reason against the market price its chain rests on (the anchor: its league, its day, its depth), each said with the
+  anchor's name. One unit of a tier `k` tiers below the anchor is a `3**k`-th of an anchor unit, so the anchor's depth is
+  compared with the plan's uses divided by that;
+* "an estimate: no market lists this item" (a number set by hand where neither poe.ninja nor the trade history has the item, #885;
+  unlike a hand override it is not the user's own number, so it is never a plain fact);
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
 
 There is no fixed cut that drops a route (OR-12): a price on few units is kept, marked, and the plan is solved with it.
@@ -27,12 +33,14 @@ from datetime import date
 from .price_file import MAX_AGE_DAYS, PriceEntry, PriceFile
 from .provenance import (
     DEFAULT,
+    ESTIMATE,
     EXCHANGE,
     HISTORY,
     OBSERVATIONS,
     OLD_PRICE,
     OVERRIDE,
     PREVIOUS_LEAGUE,
+    RECIPE,
     STANDARD,
     STASH,
     THIN_MARKET,
@@ -58,6 +66,8 @@ NOT_RECORDED_WORDS = "where this price comes from is not recorded"
 TRADE_UNREAD = "trade-unread"
 THIN = "thin-market"
 OLD_THIN = "old-price"
+FROM_RECIPE = "upgrade-recipe"
+ESTIMATED = "estimate"
 
 
 @dataclass(frozen=True)
@@ -99,6 +109,10 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
     found: list[PriceMark] = []
     if p is None:
         return (PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS),)
+    if p.kind == RECIPE:
+        return _recipe_marks(entry, price_file, uses)
+    if p.kind == ESTIMATE:
+        return (PriceMark(ESTIMATED, "an estimate: no market lists this item"),)
     if p.kind == PREVIOUS_LEAGUE:
         found.append(PriceMark(EARLIER, f"previous league's price ({p.league}, {p.date})"))
     elif p.kind == STANDARD:
@@ -125,6 +139,51 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(TRADE_UNREAD, f"the trade offers beside it were not read: {p.trade_unread}"))
     if not p.recorded:
         found.append(PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS))
+    return tuple(found)
+
+
+MAX_RECIPE_STEPS = 16  # more tiers than any chain has; a row that says more is not believed
+
+
+def recipe_anchor(entry: PriceEntry, price_file: PriceFile) -> tuple[str, PriceEntry, float] | None:
+    """What a row the upgrade recipe wrote rests on (`essence_recipe.py`): (the anchor's name, its row in the file, how many units of
+    this tier one anchor unit is worth: 3 per tier between them); None for any other row, or when the file no longer holds the anchor
+    (it is missing, or is itself a recipe row). A row whose record of the tiers is unreadable counts one for one."""
+    detail = entry.detail or {}
+    name, steps, per = detail.get("anchor"), detail.get("steps"), detail.get("per")
+    if entry.source != RECIPE or not isinstance(name, str):
+        return None
+    anchor = price_file.prices.get(name)
+    if anchor is None or anchor.source == RECIPE:
+        return None
+    whole = all(isinstance(value, int) and not isinstance(value, bool) for value in (steps, per)) and 0 <= steps <= MAX_RECIPE_STEPS and 1 <= per <= MAX_RECIPE_STEPS
+    return name, anchor, float(per**steps) if whole else 1.0
+
+
+def judged_depth(entry: PriceEntry, price_file: PriceFile) -> float | None:
+    """The depth a plan's uses of `entry` are compared with, in units of the entry's own name: its recorded depth, and for a row the
+    upgrade recipe wrote the depth of its anchor times the units of this tier one anchor unit is worth. None when none is recorded."""
+    rests_on = recipe_anchor(entry, price_file)
+    if rests_on is not None:
+        _, anchor, per_anchor = rests_on
+        p = provenance_of(anchor, price_file)
+        return None if p is None or not p.recorded or p.depth is None else p.depth * per_anchor
+    p = provenance_of(entry, price_file)
+    return None if p is None or not p.recorded else p.depth
+
+
+def _recipe_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) -> tuple[PriceMark, ...]:
+    """The marks of a row the upgrade recipe wrote (`essence_recipe.py`): what it is a third of, then every reason against the market
+    price its chain rests on, judged for the anchor units the plan's uses come to (`uses` None is one unit of this tier, as for any
+    price); a row whose anchor the file no longer holds says so."""
+    upper = (entry.detail or {}).get("of")
+    found = [PriceMark(FROM_RECIPE, f"priced from the vendor recipe: one third of {upper if isinstance(upper, str) else 'the next tier up'}")]
+    rests_on = recipe_anchor(entry, price_file)
+    if rests_on is None:
+        found.append(PriceMark(NOT_RECORDED, "the market price the recipe price rests on is not in the file"))
+        return tuple(found)
+    name, anchor, per_anchor = rests_on
+    found.extend(PriceMark(mark.code, f"{name}: {mark.reason}") for mark in price_marks(anchor, price_file, (1.0 if uses is None else uses) / per_anchor))
     return tuple(found)
 
 

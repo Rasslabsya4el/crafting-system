@@ -18,7 +18,7 @@ from crafting_system.cli._price_marks import price_lines, price_uses
 from crafting_system.cli._report import build_report, policy_document, render_text
 from crafting_system.cli._route_view import build_section, route_input
 from crafting_system.prices import PriceEntry
-from crafting_system.prices.provenance import EXCHANGE, TRADE, WIDER, Provenance
+from crafting_system.prices.provenance import EXCHANGE, RECIPE, TRADE, WIDER, Provenance
 from crafting_system.targets import load_target
 
 DAY = "2026-10-30"
@@ -159,3 +159,31 @@ def test_the_check_of_price_sources_fails_on_the_same_page_when_the_mark_is_take
     html = render_page(Page("Test page", (build_section(route_input(thin_plan), DATA),))).replace("; approximate: price on 10 units", "")
 
     assert page_lint.check_price_source_shown(page_lint.read_page(html))
+
+
+# --- a price the vendor upgrade recipe wrote (#885) -------------------------------------------------------------------------------
+
+ANCHOR = "Anchor Lifeforce"  # stands for the tier above: three of the plan's lifeforce make one of it
+
+
+def recipe_plan(anchor_depth: float):
+    """The lifeforce as a recipe row one tier under an anchor priced at three times it: one anchor unit is three of the plan's units."""
+    prices = price_file()
+    detail = {"league": "Test", "date": DAY, "recipe": "essence-upgrade", "of": ANCHOR, "of_chaos": 0.03, "per": 3, "anchor": ANCHOR, "steps": 1}
+    prices.prices[LIFEFORCE] = PriceEntry(0.01, "upgrade-recipe", None, detail, Provenance(RECIPE, "Test", DAY))
+    prices.prices[ANCHOR] = PriceEntry(0.03, "poe.ninja", None, None, Provenance(EXCHANGE, "Test", DAY, anchor_depth))
+    return make_plan(DATA, load_target(R12, DATA), prices)
+
+
+def test_a_recipe_price_is_judged_for_what_the_plan_buys_of_it_against_the_depth_of_the_price_it_rests_on(thin_plan):
+    """The plan buys the same units of lifeforce whatever the row's source (`thin_plan`: a few hundred). An anchor on a third of that or
+    more is deep enough: the only mark is the recipe's. An anchor on 10 units is 30 of the plan's: marked, with the anchor's name."""
+    bought = uses_of(thin_plan).uses
+    deep_enough = uses_of(recipe_plan(bought / 3 + 1.0))
+    shallow = uses_of(recipe_plan(10.0))
+
+    assert deep_enough.uses == pytest.approx(bought)  # solved, not taken as the most the plan could buy
+    assert [m.reason for m in deep_enough.marks] == [f"priced from the vendor recipe: one third of {ANCHOR}"]
+    assert [m.reason for m in shallow.marks] == [f"priced from the vendor recipe: one third of {ANCHOR}", f"{ANCHOR}: price on 10 units"]
+    assert shallow.source == f"vendor upgrade recipe, Test, {DAY}"
+    assert uses_of(recipe_plan(1e12)).uses is None  # deeper than anything the plan could buy: nothing to solve

@@ -19,7 +19,7 @@
 #     (mod AllAttributes4); the next tier down is (9-12). The guide's 12 is read as that 13.
 #   * "Tier 1 Strength": exactly the Strength the Deafening Essence of Rage adds, "+(51-58) to
 #     Strength" (mod StrengthEssence7_).
-#   * "Maximum Life": tier 1 Life, +(100-114), the prefix. This is the owner's reading of 2026-11-13 (ticket #895): he read
+#   * "Maximum Life": tier 1 Life, +(100-114), the prefix. This is the owner's reading of 2026-11-13 (ticket #895, OR-45): he read
 #     the page as a player and fixed the target, because a ring that is finished with "some useful mod of any kind" is not an
 #     item a player crafts. The guide's target says "Maximum Life or another useful prefix" and its step 2 "until you hit some
 #     extra useful modifiers like Maximum Life, Resistances"; before #895 the file read that as "at least 1 of Life and the
