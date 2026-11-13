@@ -397,7 +397,8 @@ METHODS: tuple[Method, ...] = (
     Method("catalysts", "B2", "rare", ("catalyst", *REROLL), classes=lambda d, c: c in JEWELLERY,
            keys=lambda draw: {"quality": {"type": "intrinsic", "min_percent": (10, 15, 20)[draw.size.scale]}}),
     # B3
-    Method("imprints", "B3", "magic", ("imprint", "restore", "alteration-orb", "augmentation-orb", "regal-orb")),
+    # the imprint route: alteration on a magic item, imprint, regal, restore if the regal misses, then exalts (a regal alone gives 3 mods at most)
+    Method("imprints", "B3", "magic", ("imprint", "restore", "alteration-orb", "augmentation-orb", "regal-orb", "exalted-orb")),
     Method("awakener", "B3", "rare", ("awakeners-orb", *REROLL), influenced=True),
     Method("recombinators", "B3", "rare", ("recombinator", *REROLL)),
     # B4

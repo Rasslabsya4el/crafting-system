@@ -2000,7 +2000,8 @@
    "restore",
    "alteration-orb",
    "augmentation-orb",
-   "regal-orb"
+   "regal-orb",
+   "exalted-orb"
   ],
   "base_id": "Metadata/Items/Weapons/TwoHandWeapons/TwoHandSwords/TwoHandSword1",
   "batch": "B3",
@@ -2017,7 +2018,7 @@
   "size": "small",
   "start": "bought",
   "start_price": 2.6175,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandSwords/TwoHandSword1\nitem_level: 78\ninfluence: []\nactions:\n- imprint\n- restore\n- alteration-orb\n- augmentation-orb\n- regal-orb\nrequirements:\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: magic\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandSwords/TwoHandSword1\nitem_level: 78\ninfluence: []\nactions:\n- imprint\n- restore\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- exalted-orb\nrequirements:\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: magic\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 1
  },
@@ -2027,7 +2028,8 @@
    "restore",
    "alteration-orb",
    "augmentation-orb",
-   "regal-orb"
+   "regal-orb",
+   "exalted-orb"
   ],
   "base_id": "Metadata/Items/Weapons/TwoHandWeapons/TwoHandAxes/TwoHandAxe6",
   "batch": "B3",
@@ -2044,7 +2046,7 @@
   "size": "medium",
   "start": "bought",
   "start_price": 0.6849,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandAxes/TwoHandAxe6\nitem_level: 84\ninfluence: []\nactions:\n- imprint\n- restore\n- alteration-orb\n- augmentation-orb\n- regal-orb\nrequirements:\n- family: StunThresholdReduction\n  min_tier: 3\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: magic\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/TwoHandAxes/TwoHandAxe6\nitem_level: 84\ninfluence: []\nactions:\n- imprint\n- restore\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- exalted-orb\nrequirements:\n- family: StunThresholdReduction\n  min_tier: 3\n  not_crafted: true\n- family: IncreasedAccuracy\n  min_tier: 2\n  not_crafted: true\n- family: LightRadiusAndAccuracy\n  min_tier: 2\n  not_crafted: true\nstart_item:\n  rarity: magic\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 3
  },
@@ -2054,7 +2056,8 @@
    "restore",
    "alteration-orb",
    "augmentation-orb",
-   "regal-orb"
+   "regal-orb",
+   "exalted-orb"
   ],
   "base_id": "Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2",
   "batch": "B3",
@@ -2071,7 +2074,7 @@
   "size": "large",
   "start": "bought",
   "start_price": 1.2872,
-  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2\nitem_level: 86\ninfluence: []\nactions:\n- imprint\n- restore\n- alteration-orb\n- augmentation-orb\n- regal-orb\nrequirements:\n- family: SpellBlockPercentage\n  min_tier: 1\n  not_crafted: true\n- family: LocalChaosDamage\n  min_tier: 1\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 1\n  not_crafted: true\n- family: WeaponCasterDamagePrefix\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedCastSpeed\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: magic\nstart: bought\n",
+  "target_yaml": "base: Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff2\nitem_level: 86\ninfluence: []\nactions:\n- imprint\n- restore\n- alteration-orb\n- augmentation-orb\n- regal-orb\n- exalted-orb\nrequirements:\n- family: SpellBlockPercentage\n  min_tier: 1\n  not_crafted: true\n- family: LocalChaosDamage\n  min_tier: 1\n  not_crafted: true\n- family: IncreaseSocketedGemLevel\n  min_tier: 1\n  not_crafted: true\n- family: ManaGainedFromEnemyDeath\n  min_tier: 1\n  not_crafted: true\n- family: WeaponCasterDamagePrefix\n  min_tier: 2\n  not_crafted: true\n- family: IncreasedCastSpeed\n  min_tier: 1\n  not_crafted: true\nstart_item:\n  rarity: magic\nstart: bought\n",
   "vendor_starts": false,
   "wanted": 6
  },
