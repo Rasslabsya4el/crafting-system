@@ -4,6 +4,9 @@ Neither Dust nor Gold is on poe.ninja or the trade site, so the price file carri
 the source "default"; the owner overrides either in the hand-written price_overrides.toml. Every price is in
 Chaos Orbs per ONE unit.
 
+The two defaults also stand when a price file lacks them (`standing_defaults`, ticket #225): a file fetched before #216 wrote them
+prices a recombination at the defaults instead of leaving it out for a missing price.
+
 A use of the Locus of Corruption has no market at all: the temple is not bought per use. Its price is a **standing default**,
 0 Chaos Orbs, that holds whenever neither the price file nor the overrides name it (`standing_defaults`), so a price file fetched
 before the entry existed prices it too and the Locus stays on by default. The owner sets another price in price_overrides.toml
@@ -33,8 +36,10 @@ def default_prices() -> dict[str, PriceEntry]:
 
 
 def standing_defaults() -> dict[str, PriceEntry]:
-    """The prices that hold when neither the price file nor the overrides name them, keyed by price name: a use of the Locus, 0 Chaos Orbs."""
+    """The prices that hold when neither the price file nor the overrides name them, keyed by price name: a use of the Locus, 0 Chaos Orbs,
+    and the Dust and the Gold of a recombination at their defaults (ticket #225: a price file fetched before #216 wrote them still prices it)."""
     return {
+        **default_prices(),
         LOCUS_USE: PriceEntry(
             0.0,
             DEFAULT_SOURCE,
