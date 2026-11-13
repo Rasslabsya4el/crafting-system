@@ -23,7 +23,7 @@ from random import Random
 
 from independent import ladder as shared
 
-from .rules import CAPACITY, MAGIC_COUNTS, RARE_COUNTS
+from .rules import CAPACITY, JEWEL_CLASSES, JEWEL_RARE_CAPACITY, MAGIC_COUNTS, RARE_COUNTS
 
 REJECTIONS = 20  # picks of the whole pool tried before the allowed mods are listed
 # the groups of the metamods in the export, and what each does (rules `metamod_tag_is_implicit_tag`, `multimod_raises_crafted_limit`, `metamod_essence_refused`)
@@ -77,6 +77,7 @@ class Laws:
     metamod_filter: bool = True  # False: `Cannot roll Attack Modifiers` filters nothing (rules `metamod_filters_adds`, `metamod_annulment_respects_tags`)
     metamod_refuses_rerolls: bool = True  # False: an essence or a resonator is taken by an item with a metamod (rule `metamod_essence_refused`)
     multimod: bool = True  # False: `Can have up to 3 Crafted Modifiers` lifts nothing (rule `multimod_raises_crafted_limit`)
+    jewel_capacity: bool = True  # False: a rare jewel holds 3 prefixes and 3 suffixes like other items (rule `jewel_capacity`, #637)
 
     def total(self, rarity: str, rng: Random) -> int:
         weights = self.magic if rarity == "magic" else self.rare
@@ -247,8 +248,14 @@ class Crafter:
             found |= self.book.groups(held.mod_id)
         return found
 
+    def capacity(self, rarity: str) -> int:
+        """The mods of one side an item of this base holds at `rarity` (rules `capacity`, `jewel_capacity`)."""
+        if rarity == "rare" and self.laws.jewel_capacity and self.item_class in JEWEL_CLASSES:
+            return JEWEL_RARE_CAPACITY
+        return CAPACITY[rarity]
+
     def free_slots(self, item: Item, side: str) -> int:
-        return CAPACITY[item.rarity] - self.side_counts(item.mods)[side]
+        return self.capacity(item.rarity) - self.side_counts(item.mods)[side]
 
     def barred_tags(self, mods) -> frozenset[str]:
         """The tags no add may carry because of the metamods among `mods` (rules `metamod_filters_adds`, `metamod_reroll_needs_retained_carrier`)."""
@@ -265,7 +272,7 @@ class Crafter:
 
     def _fill(self, mods: list[Held], total: int, rarity: str, pool: Pool, rng: Random) -> None:
         """Add random mods until the item holds `total` (the kept ones included) or no mod is allowed any more."""
-        room = CAPACITY[rarity]
+        room = self.capacity(rarity)
         counts = self.side_counts(mods)
         blocked = self.groups_of(mods) if self.laws.family_exclusion else set()
         barred = self.barred_tags(mods)
@@ -301,7 +308,7 @@ class Crafter:
         if item.rarity != "magic":
             raise Refused("an Orb of Augmentation takes a magic item only")
         counts = self.side_counts(item.mods)
-        if all(counts[side] >= CAPACITY["magic"] for side in counts):
+        if all(counts[side] >= self.capacity("magic") for side in counts):
             raise Refused("the magic item has no open prefix or suffix")
         mods = list(item.mods)
         self._fill(mods, len(mods) + 1, "magic", self.pool(), rng)
@@ -388,7 +395,7 @@ class Crafter:
             if not tagged.ids:
                 raise Refused(f"the pool of the item holds no mod with the tag {tag}")
             counts = self.side_counts(mods)
-            closed = tuple(side for side in ("prefix", "suffix") if counts[side] >= CAPACITY["rare"])
+            closed = tuple(side for side in ("prefix", "suffix") if counts[side] >= self.capacity("rare"))
             blocked = self.groups_of(mods) if self.laws.family_exclusion else set()
             mod_id = tagged.draw(rng, blocked, closed)
             if mod_id is None:
