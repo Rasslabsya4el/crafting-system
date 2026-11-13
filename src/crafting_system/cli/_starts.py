@@ -151,7 +151,7 @@ def plan_with_starts(
     budget = as_budget(kwargs.pop("budget", None), net)
     kwargs = {**kwargs, "price_source": price_source, "budget": budget}  # every plan reads the trade prices under the profile setting
     with running(budget.start() if budget is not None else None) as clock:
-        plan = _with_starts(data, target, prices, recipe_starts, start_price, sources, offers, price_source, price_gap_percent, today, **kwargs)
+        plan = _with_starts(data, target, prices, recipe_starts, start_price, sources, offers, price_gap_percent, today, **kwargs)
     return with_bindings(plan, clock)
 
 
@@ -163,12 +163,12 @@ def _with_starts(
     start_price: float | None,
     sources: tuple[StartSource, ...],
     offers: tuple[Offer, ...] | None,
-    price_source: str,
     price_gap_percent: float,
     today: date | None,
     **kwargs: Any,
 ) -> Plan:
-    """`plan_with_starts` inside the run's clock; `kwargs` go to `make_plan` unchanged."""
+    """`plan_with_starts` inside the run's clock; `kwargs` go to `make_plan` unchanged (`price_source` among them)."""
+    price_source = kwargs["price_source"]
     if not recipe_starts:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
     listing = combine([source(StartContext(data, target, prices, price_source, price_gap_percent, today)) for source in sources])
