@@ -5,10 +5,13 @@ stop at a proved 1%, OR-32), and a stop-and-say-so net of time and memory (`seco
 has its bound). The figures are named settings (`AIM_SECONDS`, `NET_SECONDS`, `MEMORY_SHARE`), never route constants; the user sets them in the
 planner settings or on the command line (#537).
 
-**One clock.** `Budget.start()` gives the `Clock` of the run. Every stage reads the same clock: the bound's build and the search (a `Net` made from
-what is left, `Clock.net_seconds`), the walks of the whole graph and the bound pruning (`checkpoint`, between two states), the risk's attempt runs (the
-time left, #745), the start options (one clock across them). A stage takes what is left when it starts, less what the stages after it estimate they
-need (`Clock.left(reserve=...)`): no stage has a fixed share.
+**One clock.** `Budget.start()` gives the `Clock` of the run. Every stage reads the same clock: the search (a `Net` made from what is left,
+`Clock.left`), the walks of the whole graph and the bound pruning (`checkpoint`, between two states), the Lock's check, the risk's attempt runs (the
+time left, #745), the start options (one clock across them). No stage has a fixed share. The stages that make the answer (the walks, the bound
+pruning, the search) may take the whole net: until a plan closes there is nothing to show. The stages that refine an answer already in hand (the
+Lock's check, the percentiles, which OR-34 adds after the route) take what is left, and when nothing is left they say so and the answer is kept
+(the plan without the Lock; the percentiles of a coarser step, or of the slower method). The share of the bound's build inside the search is
+part 2 of #825 (after #802).
 
 **What bound.** A stage that a limit stopped records it on the clock (`Clock.bind`), with the stage, the limit and its figures; the plan lists
 them all in one limit of its answer (`cli._limits.budget_limit`, #378). A stop never passes silently (OR-12): a stage either finishes, or stops at a
@@ -134,11 +137,11 @@ class Clock:
     def elapsed(self) -> float:
         return time.perf_counter() - self.began
 
-    def left(self, reserve: float = 0.0) -> float | None:
-        """The seconds left to the net, less `reserve` (what the stages after this one estimate they need), never below 0; None with no time net."""
+    def left(self) -> float | None:
+        """The seconds left to the net, never below 0; None with no time net."""
         if self.budget.seconds is None:
             return None
-        return max(self.budget.seconds - self.elapsed() - reserve, 0.0)
+        return max(self.budget.seconds - self.elapsed(), 0.0)
 
     def memory(self, fresh: bool = False) -> float | None:
         """The memory this process holds, in MB, read at most every `MEMORY_POLL_SECONDS` unless `fresh`."""

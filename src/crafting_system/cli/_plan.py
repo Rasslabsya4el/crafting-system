@@ -370,6 +370,8 @@ def make_plan(
                 incumbent=incumbent, clock=clock, judges_route=judges_route,
             )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
+            if clock is not None:
+                clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
             raise PlanError(stopped_refusal(clock, stop.binding)) from None
     return with_bindings(plan, clock) if owns else plan
 
@@ -681,7 +683,9 @@ def _make_plan(
     try:
         with stage(LOCK_STAGE, LOCK_KEPT):
             foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
-    except BudgetExceeded:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
+    except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
+        if clock is not None:
+            clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
         foresight, with_lock = Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
     if with_lock is not None and readings is not None:
         raise PlanError(

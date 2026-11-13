@@ -87,12 +87,11 @@ def test_a_process_that_does_not_exist_has_no_reading():
 # ---- the clock, by hand ------------------------------------------------------------------------------------------------------------
 
 
-def test_the_time_left_is_the_net_less_what_was_spent_less_what_later_stages_reserve(fake):
+def test_the_time_left_is_the_net_less_what_was_spent(fake):
     clock = Budget(seconds=600.0, memory_mb=None).start()
     fake.now = 1250.0
     assert clock.elapsed() == 250.0
     assert clock.left() == 350.0
-    assert clock.left(reserve=100.0) == 250.0
     fake.now = 1700.0
     assert clock.left() == 0.0  # never below zero
     assert Budget.unlimited().start().left() is None
@@ -229,6 +228,20 @@ def test_the_old_net_argument_is_the_same_budget(coarse):  # noqa: F811
     by_net = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96), with_risk=False)
     (bound,) = [limit for limit in by_net.limits if limit.kind == BUDGET]
     assert "the limit of 96 states" in bound.names[0]
+
+
+def test_a_stop_met_in_a_worker_is_listed_on_the_runs_own_clock(coarse, monkeypatch):  # noqa: F811
+    """A forked worker checks its own copy of the clock: the stop it sends back must still be listed on the run's clock (OR-12, #378)."""
+    target, prices, _ = coarse
+
+    def stopped_in_a_worker(*args, **kwargs):  # the binding is made on another clock, as in a worker, and only the stop comes back
+        raise BudgetExceeded(Binding(_plan.LOCK_STAGE, TIME, 600.0, 601.0, _plan.LOCK_KEPT))
+
+    monkeypatch.setattr(_plan, "plan_foresight", stopped_in_a_worker)
+    plan = make_plan(COARSE, target, prices, start_price=5.0, solver="packed", budget=Budget(seconds=3_600.0, memory_mb=None), with_risk=False)
+    (bound,) = [limit for limit in plan.limits if limit.kind == BUDGET]
+    assert bound.names == (Binding(_plan.LOCK_STAGE, TIME, 600.0, 601.0, _plan.LOCK_KEPT).words(),)
+    assert plan.foresight.status is LockStatus.STOPPED
 
 
 def test_a_stop_in_the_check_of_the_lock_keeps_the_plan_without_it_and_both_stops_are_listed_once(coarse, monkeypatch):  # noqa: F811
