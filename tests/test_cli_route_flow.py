@@ -16,6 +16,7 @@ from crafting_system.cli import _route_flow
 from crafting_system.cli._reach import policy_states, reach_probabilities
 from crafting_system.cli._route_flow import Edge, Flow, Step, build_flow
 from crafting_system.risk import evaluate
+from crafting_system.solver import _packed_lump as lump_module
 from crafting_system.solver import Action, Outcome
 
 
@@ -923,23 +924,29 @@ def dense_edges_chain(states: int, outcomes: int, seed: int):
     rng = np.random.default_rng(seed)
     dst = rng.integers(0, states, size=(states, outcomes)).astype(np.int64)
     dst[:, 0] = states  # the goal
-    prob = rng.random((states, outcomes)) + 0.1
-    prob[:, 0] = prob[:, 1:].sum(axis=1) * 0.05
-    prob /= prob.sum(axis=1, keepdims=True)
+    weight = rng.integers(10, 110, size=(states, outcomes)).astype(np.int64)
+    weight[:, 0] = weight[:, 1:].sum(axis=1) // 20
+    prob = weight / weight.sum(axis=1, keepdims=True)
+    table = _route_flow.Kernels(np.arange(0, states * outcomes + 1, outcomes, dtype=np.int64), dst.ravel(), weight.ravel(), prob.ravel())
     return _route_flow.Chain(
         list(range(states)), ["goal"], np.zeros(states, dtype=np.int64), (("action", "a"),), np.ones(states),
-        np.arange(0, states * outcomes + 1, outcomes, dtype=np.int64), dst.ravel(), prob.ravel(), lambda i: None,  # type: ignore[arg-type,return-value]
-    )
+        np.arange(states, dtype=np.int64), table, lambda i: None,  # type: ignore[arg-type,return-value]
+    )  # every state its own kernel
 
 
 def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array_the_size_of_the_edges_but_the_system(monkeypatch):
-    """#595: R04's flow peaked at 4.7 GB on 48.7 million edges, about 70 bytes an edge in arrays copied and indexed whole. Now the system is 12 bytes an edge and the rest is read a block at a time."""
+    """#595: R04's flow peaked at 4.7 GB on 48.7 million edges, about 70 bytes an edge in arrays copied and indexed whole.
+
+    #689: the edges are those of the kernels, each once (here no kernel is shared, the worst case): the chain of the kernel classes is 12 bytes an
+    edge, its system 12 more, and the rest is read a chunk of kernels at a time.
+    """
     import tracemalloc
 
     states, outcomes = 3000, 150
     chain = dense_edges_chain(states, outcomes, 1)
     edges = states * outcomes
     monkeypatch.setattr(_route_flow, "CHUNK_EDGES", edges // 8)
+    monkeypatch.setattr(lump_module, "CHUNK_EDGES", edges // 8)  # the lumping of the page reads the kernels a chunk at a time too
     tracemalloc.start()
     before = tracemalloc.get_traced_memory()[0]
     tracemalloc.reset_peak()
@@ -948,7 +955,7 @@ def test_the_visits_and_the_entry_chances_of_a_chain_of_many_edges_hold_no_array
     peak = tracemalloc.get_traced_memory()[1] - before
     tracemalloc.stop()
     assert done.solved and unsettled == 0 and reached == [1.0]
-    assert peak < 20 * edges, f"{peak / edges:.1f} bytes an edge"
+    assert peak < 40 * edges, f"{peak / edges:.1f} bytes an edge"
     monkeypatch.undo()
     monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 5000)  # the same visits by one inverse
     dense = _route_flow._solved(dense_edges_chain(states, outcomes, 1))

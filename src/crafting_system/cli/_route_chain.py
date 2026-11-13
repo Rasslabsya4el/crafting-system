@@ -4,8 +4,9 @@ A packed plan above `VIEW_FROM_STATES` item states is shown by its lumped chain:
 pays and for the blocks it leads to, so exact for the chances, uses and costs of a step, but not for a statement about an item (a
 wanted mod lost, the tiers a draw can add): two members of a block can hold different items. The page therefore reads the item
 states themselves. They are the states the policy reaches in the walked graph (R14: 87,251 of them, with about a million
-transitions between them), held as arrays: for each state its action's label and price, and its kernel's edges
-(`graph.k_succ`, `graph.k_prob`) renumbered to the chain's own numbering. No `Action` is built except the first of each step.
+transitions between them), held as arrays: for each state its action's label and price, and the kernel it moves by. The
+kernels the policy uses are held once each (`graph.k_succ` renumbered to the chain's own numbering, `k_wt`, `k_prob`), not
+copied to every state that shares one (R04: 15,003 states, 4,038 kernels; ticket #689). No `Action` is built except the first of each step.
 
 The states are numbered breadth first from the start, a level at a time and by graph number within a level, which is what makes
 the numbering of the steps deterministic. `reasons` says why a reachable non-goal state has no action (a gap of a given route).
@@ -20,7 +21,7 @@ from crafting_system.solver import Action, Outcome
 from crafting_system.solver._packed import expand_ranges
 
 from ._packed import PackedPolicy, Walked
-from ._route_flow import Chain, chain_of_policy, empty_chain
+from ._route_flow import Chain, Kernels, chain_of_policy, empty_chain
 
 
 def packed_chain(
@@ -68,12 +69,13 @@ def packed_chain(
 
     acting = action[plain] >= 0
     chosen = action[plain[acting]]
-    kernels = graph.act_kernel[chosen]
-    sizes = ksize[kernels]
-    edge = expand_ranges(graph.k_ptr[kernels], sizes)
-    counts = np.zeros(m, dtype=np.int64)
-    counts[acting] = sizes
-    ptr = np.concatenate(([0], np.cumsum(counts)))
+    used, slot = np.unique(graph.act_kernel[chosen], return_inverse=True)  # each kernel once, whatever the states that share it (#689)
+    sizes = ksize[used]
+    edge = expand_ranges(graph.k_ptr[used], sizes)
+    kernel = np.full(m, -1, dtype=np.int64)
+    kernel[acting] = slot.reshape(-1)
+    big = {k: graph.k_big[int(g)] for k, g in enumerate(used.tolist()) if int(g) in graph.k_big}
+    table = Kernels(np.concatenate(([0], np.cumsum(sizes))).astype(np.int64), position[graph.k_succ[edge]], graph.k_wt[edge], graph.k_prob[edge], big)
 
     dead = sorted({reasons.get(int(g)) or "" for g in plain[~acting].tolist()})
     dead_id = {reason: len(names) + k for k, reason in enumerate(dead)}
@@ -96,9 +98,8 @@ def packed_chain(
         key,
         keys,
         cost[plain],
-        ptr,
-        position[graph.k_succ[edge]],
-        graph.k_prob[edge],
+        kernel,
+        table,
         action_of,
     )
 

@@ -3,7 +3,8 @@
     python .github/scripts/flow_memory.py --route r04|r14 [--solver packed|envelope|auto] [--out DIR]
 
 Plans the route (`make_plan`, no risk) and, when the plan is finished, measures what `display_limits` does with it: building the item chain
-(`chain_of_plan`), the visits (`_route_flow._solved`) and the chances of entering the steps (`_entries`). A sampler thread reads the resident
+(`chain_of_plan`), the visits (`_route_flow._solved`, on the kernel classes), the page's lumping (`_page_blocks`) and the chances of entering
+the steps (`_entries`, on the lumped chain; ticket #689). A sampler thread reads the resident
 memory every 50 ms and keeps, for each stage, the highest it saw above what the stage began with, and the stack of the main thread at that moment.
 Writes `<route>.<solver>.flow-memory.json`: the peak of the plan before the flow (the search or the walk), the memory resident when the flow began,
 the peak of each stage, the size of the chain, and the stack at each stage's peak.
@@ -93,10 +94,16 @@ def main() -> None:
         return stage("chain_of_plan", lambda: real_chain(plan))
 
     def flow_limits(chain):
-        result["chain"] = {"states": chain.m, "edges": int(chain.ptr[-1])}
-        say(f"chain: {chain.m:,} states, {int(chain.ptr[-1]):,} edges")
-        stage("solved (can_finish, system, visits)", lambda: _route_flow._solved(chain))
-        stage("entries", lambda: _route_flow._entries(chain))
+        sizes = chain.kernels.kernel_sizes()
+        acting = chain.kernel >= 0
+        copied = int(sizes[chain.kernel[acting]].sum())  # the edges a copy per state would hold (#689: not made)
+        result["chain"] = {"states": chain.m, "kernels": len(sizes), "kernel_edges": int(sizes.sum()), "edges_if_copied_per_state": copied}
+        say(f"chain: {chain.m:,} states, {len(sizes):,} kernels of {int(sizes.sum()):,} edges ({copied:,} edges if copied per state)")
+        stage("solved (kernel classes, visits of every state)", lambda: _route_flow._solved(chain))
+        blocks = stage("page lumping (the steps' labels)", lambda: _route_flow._page_blocks(chain))
+        result["chain"]["page_blocks"] = int(blocks.max()) + 1 if len(blocks) else 0
+        say(f"page lumping: {result['chain']['page_blocks']:,} blocks")
+        stage("entries (lumping again, then the solves on the blocks)", lambda: _route_flow._entries(chain))
         return stage("flow_limits (rest)", lambda: real_limits(chain))
 
     _plan.chain_of_plan, _plan.flow_limits = chain_of_plan, flow_limits

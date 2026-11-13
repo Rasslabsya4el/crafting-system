@@ -76,7 +76,7 @@ from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
 from ._route_chain import chain_of_packed_policy
-from ._route_flow import Chain, Edge, Flow, Step, chain_of_policy, flow_limits, flow_of
+from ._route_flow import Chain, Edge, Flow, LossReader, Step, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
@@ -263,6 +263,16 @@ def _lost_leaves(chain: Chain, src: np.ndarray, dst: np.ndarray) -> tuple[range,
     return range(status.shape[1]), (status[src] == met) & (status[dst] != met)
 
 
+def _leaves_met(chain: Chain) -> np.ndarray:
+    """A number per state for the leaves of the target it meets: what a use loses depends on the state it starts from only through these (#689)."""
+    width = len(chain.states[0].status)
+    met = np.array([state.status for state in chain.states], dtype=np.int8).reshape(chain.m, width) == int(Status.PASSING)
+    return np.unique(met, axis=0, return_inverse=True)[1].reshape(-1)
+
+
+LOST_LEAVES = LossReader(_lost_leaves, _leaves_met)
+
+
 def steps_of_chain(chain: Chain) -> Flow:
     """The steps of a chain, as the page and the text report both draw them (`_route_flow.flow_of`): made once for a chain, then read from it.
 
@@ -270,7 +280,7 @@ def steps_of_chain(chain: Chain) -> Flow:
     """
     cached = getattr(chain, "_steps", None)
     if cached is None:
-        cached = flow_of(chain, is_restart=lambda action: action.label == RESTART, loss=_lost_leaves)
+        cached = flow_of(chain, is_restart=lambda action: action.label == RESTART, loss=LOST_LEAVES)
         object.__setattr__(chain, "_steps", cached)
     return cached
 
