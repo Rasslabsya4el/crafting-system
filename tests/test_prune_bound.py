@@ -14,8 +14,8 @@ cannot improve any value (its module text has the argument). This file checks:
 3. a deliberately wrong bound is caught by that comparison (the certificate trusts `reach_bound`: it
    proves the offers left out against the bounds, it does not check the bounds);
 4. the routes R10, R11 and R05 on the real dump give the mean and the policy that the unmodified code gave
-   (`tests/golden/plans_118.json`, made by planning the three targets with `make_plan` on main at 147fdad;
-   when a target file or a price changes on main, plan again on main and replace the file);
+   (`tests/golden/plans_118.json`, the three targets planned by `make_plan` with the pruning turned off, at the
+   route prices; when a target file or a price changes, `UPDATE_GOLDEN=1` rewrites it on a runner);
 5. the plan still prices and evaluates an offer the pruning left out.
 
 The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`) and skip cleanly without it, as in CI. No
@@ -25,6 +25,7 @@ test asserts a run time (ADR-0014).
 import datetime
 import hashlib
 import json
+import os
 import random
 from fractions import Fraction
 from pathlib import Path
@@ -635,9 +636,25 @@ def route_plan(request, real):
     return request.param, make_plan(real, target, load_price_file(ROUTE_PRICES), solver="object")  # the subject is the bound pruning, the object solver's path (#535)
 
 
-def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gave(route_plan, golden):
-    """Mean to 1e-9 and the same action at every state. The golden file was written from the unmodified main branch."""
+def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gave(route_plan, golden, real, monkeypatch):
+    """Mean to 1e-9 and the same action at every state. The golden file was written from the unmodified main branch.
+
+    `UPDATE_GOLDEN=1` rewrites this route's entry from the plan with the pruning turned off (`_plan.PRUNE_BOUND`), the
+    reference the pruned plan is held to, at the current prices (#838), then compares as usual."""
     stem, plan = route_plan
+    if os.environ.get("UPDATE_GOLDEN"):
+        monkeypatch.setattr(_plan, "PRUNE_BOUND", False)
+        target = load_target(ROOT / "examples" / "targets" / f"{stem}.yaml", real)
+        whole = make_plan(real, target, load_price_file(ROUTE_PRICES), solver="object")
+        found = json.loads(GOLDEN.read_text(encoding="utf-8"))
+        found[stem] = {
+            "mean_remaining": whole.mean_remaining,
+            "policy": {repr(state): action.label for state, action in whole.policy.items()},
+            "start": repr(whole.start),
+            "states": len(whole.solution.values),
+        }
+        GOLDEN.write_text(json.dumps(found, indent=0, sort_keys=True), encoding="utf-8", newline="\n")
+        golden[stem] = found[stem]
     expected = golden[stem]
 
     golden_diff.check_objects(expected["start"], repr(plan.start), f"{stem}: the start state differs from tests/golden/plans_118.json")
