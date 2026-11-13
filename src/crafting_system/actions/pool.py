@@ -113,7 +113,7 @@ _TABLE_FAMILIES: dict[int, PoolFamily] = {}  # id -> each family of the tables h
 
 def is_table_family(family: PoolFamily) -> bool:
     """Whether `family` is the object a pool table holds, the same for every item of the table: what is known of it can be kept by the object."""
-    return _TABLE_FAMILIES.get(id(family)) is family
+    return family is not None and _TABLE_FAMILIES.get(id(family)) is family
 
 
 _POOL_LIMIT = 256
