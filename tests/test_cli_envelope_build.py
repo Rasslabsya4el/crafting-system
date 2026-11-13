@@ -131,8 +131,8 @@ def test_a_plan_with_no_net_has_a_complete_build(world):
     assert "count itself was stopped" not in certificate_text(dataclasses.replace(info, exact=False, stopped="x"))
 
 
-def test_the_build_takes_the_time_by_its_own_measure_and_all_of_the_memory(monkeypatch):
-    """#825: the build keeps room for the search, which takes at least 3 times the build (measured on R04 and R14)."""
+def test_the_build_takes_a_quarter_of_the_time_and_all_of_the_memory(monkeypatch):
+    """#825: the build stops once the time left is at most 3 times its own (a quarter of the net), set from the search/build ratio on R04 and R14."""
     assert build_stop(None, 0.0) is None and build_stop(Net(), 0.0) is None
     clock = SimpleNamespace(now=0.0)  # a clock set by hand (tests/test_no_timing.py)
     clock.perf_counter = lambda: clock.now
@@ -143,7 +143,7 @@ def test_the_build_takes_the_time_by_its_own_measure_and_all_of_the_memory(monke
         assert stop() is None
     clock.now = 150.0  # 450 s left, 3 x 150 = 450: the search's room is reached
     assert stop() == (
-        "only 450 of the 600 seconds of the time limit were left after 150 seconds of it, and the search for the plan takes several times as long as this count"
+        "stopped after 150 of the 600 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count"
     )
     clock.now = 0.0
     assert build_stop(Net(seconds=0.0), 0.0)() == "the time limit of 0 seconds was reached"  # a net of 0 s: at the first ask

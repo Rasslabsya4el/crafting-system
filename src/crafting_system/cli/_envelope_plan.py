@@ -168,12 +168,13 @@ SEARCH_PER_BUILD = 3.0  # the search after a build takes at least this many time
 
 
 def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None:
-    """The net of the bound's build (OR-12): the time it takes by the search's measured need, and the memory net as it is (the state net counts the search's states).
+    """The net of the bound's build (OR-12): a quarter of the time net, and the memory net as it is (the state net counts the search's states).
 
     `began` is the clock reading when `envelope_result` started. The build asks it between two pieces of its work (two offers, or before a solve of
     its model); it returns the reason once one is reached. The plan comes from the search after the build, so the build keeps room for it: it stops
-    when the time left is at most `SEARCH_PER_BUILD` times the time it has taken (the search took 3.7 to 6.2 times the build on R04 and R14), which
-    is a quarter of the time it was given; a build that ends earlier leaves the search all the rest. This replaced `BUILD_SHARE = 0.5` (#825): on
+    when the time left is at most `SEARCH_PER_BUILD` times the time it has taken, which is the same as a fixed share of a quarter of the time it was
+    given: a hand-set stop-and-say-so net under OR-12, set from the search/build ratio on R04 (3.7) and R14 (6.2) and checked on R08, not a measure
+    of this build. A build that ends earlier leaves the search all the rest. This replaced `BUILD_SHARE = 0.5` (#825): on
     R08 at the prices of 2026-11-10 a build that left the search 103 s gave a plan of 33,755 Chaos where a search given 266 s gave 2,236, on the same
     lower figure (heavy runs 43358114571, 43358085172).
     """
@@ -189,8 +190,8 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
                 return f"the time limit of {net.seconds:g} seconds was reached"
             if left <= SEARCH_PER_BUILD * spent:
                 return (
-                    f"only {left:.0f} of the {net.seconds:g} seconds of the time limit were left after {spent:.0f} seconds of it, and the search "
-                    f"for the plan takes several times as long as this count"
+                    f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan, "
+                    f"which takes several times as long as this count"
                 )
         if net.memory_mb is not None:
             used = resident_mb()
