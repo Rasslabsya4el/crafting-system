@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 
 from crafting_system.solver import PackedBuilder, solve_packed
+from crafting_system.solver._packed import kernel_sums
 from crafting_system.solver._packed_solve import AHEAD_FIRST, AHEAD_WEIGHT, certify
 
 EPS = sys.float_info.epsilon
@@ -269,3 +270,72 @@ def test_the_certificate_holds_the_true_values_of_random_plans_with_free_steps(s
             assert np.all(truth[inner] <= certificate.upper * value[inner] * (1 + 1e-13)), (seed, scale)
         if scale == 0.0:
             assert certificate.bound < 1e-10 < certificate.own_bound  # the free states are certified only by the cost ahead
+
+
+# --- what the cost ahead must not do ---------------------------------------------------------------------------------------
+
+
+def test_values_of_zero_on_a_free_cycle_are_not_certified():
+    # states 0 and 1 send each other on for nothing; 1 can also pay 5 to finish. The true value is 5 at both, but 0 is a fixed point of the free
+    # cycle: e = kappa = 0 there proves nothing about the greedy (free, improper) policy, so nothing can be said above
+    graph = build((False, [(0.0, [(1, 1)])]), (False, [(0.0, [(0, 1)]), (5.0, [(2, 1)])]), (True, []))
+    certificate = certify(graph, np.zeros(3), np.ones(3, dtype=bool), wanted=0.0)
+
+    assert certificate.upper == math.inf and certificate.bound == math.inf
+
+
+@pytest.mark.parametrize("seed", range(8))
+def test_a_plan_that_certifies_on_its_own_costs_keeps_the_numbers_of_374_to_the_bit(seed):
+    # paid states only: the bound on each state's own cost is within the accepted one, so the cost ahead is not measured, and the numbers are
+    # those of the expressions of #374: lower = min g / (g + d), upper = max k / (k - e), the allowance (m + 2) eps of the sum
+    rng = np.random.default_rng(seed)
+    states = []
+    for s in range(6):
+        actions = []
+        for _ in range(2):
+            succ = sorted(set(rng.choice(6, size=3).tolist())) + [6]
+            actions.append((float(rng.uniform(0.5, 2.0)), [(int(t), int(rng.integers(1, 50))) for t in succ]))
+        states.append((False, actions))
+    states.append((True, []))
+    graph = build(*states)
+    value = reference_values(graph, graph.n) * (1.0 + 1e-12 * rng.uniform(-1.0, 1.0, graph.n))
+    found = certify(graph, value, np.ones(graph.n, dtype=bool))
+
+    q = graph.act_cost + kernel_sums(graph, value)[graph.act_kernel]  # the sums as the solver adds them (a primitive this PR does not change)
+    lowers, uppers = [], []
+    for s in range(6):
+        acts = range(graph.act_ptr[s], graph.act_ptr[s + 1])
+        tv = min(q[a] for a in acts)
+        greedy = min(a for a in acts if q[a] == tv)
+        terms = max(graph.k_ptr[graph.act_kernel[a] + 1] - graph.k_ptr[graph.act_kernel[a]] + 1 for a in acts)
+        rho = (terms + 2.0) * EPS
+        delta = rho / (1.0 - rho) * tv
+        g, k = min(graph.act_cost[a] for a in acts), graph.act_cost[greedy]
+        lowers.append(g / (g + max(value[s] - tv, 0.0) + delta))
+        uppers.append(k / (k - (max(tv - value[s], 0.0) + delta)))
+    assert found.window == 0
+    assert found.lower == min(lowers) and found.upper == max(uppers)  # exact equality: the same floats in the same order
+
+
+def test_a_free_cycle_stops_the_window_after_two_tries(monkeypatch):
+    # FREE with state 0's free action sent back to itself as well: no window gives state 0 a margin (its cheapest costs ahead are 0 by the loop),
+    # so the second window, no better, ends the doubling instead of running to the rail of AHEAD_LIMIT steps
+    from crafting_system.solver import _packed_solve as ps
+
+    graph = build((False, [(0.0, [(0, 1)]), (0.0, [(1, 1)])]), (False, [(1.0, [(2, 1), (1, 1023)])]), (True, []))
+    sweeps = []
+    real = ps.kernel_sums
+    monkeypatch.setattr(ps, "kernel_sums", lambda g, f: sweeps.append(1) or real(g, f))
+    certificate = certify(graph, np.array([1024.0, 1024.0, 0.0]), np.ones(3, dtype=bool), wanted=0.0)
+
+    assert len(sweeps) <= 1 + 3 + 2  # the Bellman sum, the steps of the windows 2 and 4, and their margins
+    assert certificate.lower == 0.0  # the free loop costs nothing forever: nothing below
+
+
+def test_a_free_action_into_the_goal_is_certified_though_its_margin_and_error_are_both_zero():
+    # state 0 pays 3 to reach state 1, which ends for nothing: V = (3, 0). At state 1, e = kappa = 0 for every h (its value and its step are 0),
+    # but the greedy action reaches the goal, so the policy is proper there and the upper side holds; the free cycle above is what it refuses
+    graph = build((False, [(3.0, [(1, 1)])]), (False, [(0.0, [(2, 1)])]), (True, []))
+    certificate = certify(graph, np.array([3.0, 0.0, 0.0]), np.ones(3, dtype=bool), wanted=0.0)
+
+    assert certificate.bound < 1e-14 and certificate.own_bound == math.inf  # the rounding of state 0's sum; its own cost 0 at state 1 says nothing

@@ -226,18 +226,24 @@ def _settled(certificate: Certificate, tolerance: float) -> bool:
     return certificate.residual <= tolerance or certificate.at_floor
 
 
-def _shares(error: np.ndarray, margin: np.ndarray) -> np.ndarray:
-    """`error / margin` per state, for an error that is at least 0: 0 where the error is 0 and the margin is not negative (nothing to carry), infinite
-    where a positive error meets a margin that is not positive or a negative margin meets anything (no `t >= 0` makes `error <= t * margin` there)."""
+def _shares(error: np.ndarray, margin: np.ndarray, carried: np.ndarray | bool = True) -> np.ndarray:
+    """`error / margin` per state, for an error that is at least 0: infinite where the margin is not positive, except where both are 0 and `carried`
+    says that is nothing to carry (`error <= t * margin` holds there for every `t`)."""
     with np.errstate(divide="ignore", invalid="ignore"):
         share = error / np.where(margin > 0.0, margin, 1.0)
-    return np.where(margin > 0.0, share, np.where((error == 0.0) & (margin == 0.0), 0.0, INF))
+    return np.where(margin > 0.0, share, np.where((error == 0.0) & (margin == 0.0) & carried, 0.0, INF))
 
 
-def _sides(d: np.ndarray, e: np.ndarray, gamma: np.ndarray, kappa: np.ndarray) -> tuple[float, float, np.ndarray]:
+def _sides(d: np.ndarray, e: np.ndarray, gamma: np.ndarray, kappa: np.ndarray, escapes: Callable[[np.ndarray], np.ndarray]) -> tuple[float, float, np.ndarray]:
     """`(lower, upper, share)` of the module docstring for the margins `gamma` (every action) and `kappa` (the greedy one): `lower = 1 / (1 + max d / gamma)`,
-    `upper = 1 / (1 - max e / kappa)` (infinite unless every `e < kappa`, which is also what proves the greedy policy proper); `share` is each state's larger share."""
-    low, high = _shares(d, gamma), _shares(e, kappa)
+    `upper = 1 / (1 - max e / kappa)`; `share` is each state's larger share.
+
+    The upper side also proves the greedy policy proper: `V - h` falls by `kappa - e` a step, so a run spends a finite time where that is positive.
+    A state with `e = kappa = 0` (a free action into the goal, value 0) falls by nothing; it is carried only if the policy leads it, with positive
+    chance, to the goal or to a state where `kappa > e` (`escapes`, given the states of zero margin); otherwise it may lie in a closed class that
+    never finishes (a free cycle with the values 0), and nothing can be said above."""
+    zero = (e == 0.0) & (kappa == 0.0)
+    low, high = _shares(d, gamma), _shares(e, kappa, escapes(zero) if zero.any() else False)
     t_low, t_high = float(np.max(low)), float(np.max(high))
     lower = 1.0 / (1.0 + t_low) if math.isfinite(t_low) else 0.0
     upper = 1.0 / (1.0 - t_high) if t_high < 1.0 else INF
@@ -293,9 +299,23 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
         s, h, r = sum_[targets], h[targets], grow[targets]
         return s - r * s - h - 2.0 * EPS * (s + h)
 
-    own_lower, own_upper, own_share = _sides(d, e, g, k)
+    policy = np.full(n, -1, dtype=np.int64)
+    policy[targets] = greedy[targets]
+
+    def escapes(zero: np.ndarray) -> np.ndarray:
+        """Whether each target state of zero margin reaches the goal or a state of positive margin under the greedy policy with positive chance."""
+        seeds = goal.copy()
+        seeds[np.flatnonzero(targets)[~zero]] = True
+        return reaches_goal(work, policy, seeds)[targets]
+
+    _, _, own_share = _sides(d, e, g, k, escapes)
+    with np.errstate(divide="ignore", invalid="ignore"):  # h = 0, in the expressions of #374, so that a plan that certified keeps its numbers to the bit
+        own_lower = float(np.min(g / (g + d)))
+        own_upper = INF if np.any(e >= k) else float(np.max(k / (k - e)))
+    own_lower = own_lower if own_lower == own_lower else 0.0  # (0 / 0 at a state of cost 0 and residual 0: no measure, V* >= 0 is all it says)
+    own_upper = own_upper if own_upper == own_upper else INF
     best = (own_lower, own_upper, g, 0)
-    last = max(1.0 - own_lower, own_upper - 1.0)
+    last, last_stuck = max(1.0 - own_lower, own_upper - 1.0), int(np.sum(~np.isfinite(own_share)))
     window, step, total, steps = AHEAD_FIRST, np.where(targets, g_all, 0.0), np.where(targets, g_all, 0.0), 1
     longest = min(AHEAD_LIMIT, int(targets.sum()))  # a window as long as the states are many cannot meet a paid step it has not met
     while not max(1.0 - best[0], best[1] - 1.0) <= wanted and window // 2 < longest:  # (the last window tried is the first at least `longest`)
@@ -309,13 +329,13 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
         h = total * (AHEAD_WEIGHT / window)
         qh, th = backup(h)
         gamma, kappa = lowered(th, h), lowered(qh[greedy], h)
-        lower, upper, _ = _sides(d, e, gamma, kappa)
+        lower, upper, share = _sides(d, e, gamma, kappa, escapes)
         if lower > best[0] or upper < best[1]:
             best = (max(lower, best[0]), min(upper, best[1]), np.maximum(gamma, 0.0), window)
-        now = max(1.0 - lower, upper - 1.0)
-        if window > AHEAD_FIRST and not now <= 2.0 * last:
-            break
-        last = now
+        now, stuck = max(1.0 - lower, upper - 1.0), int(np.sum(~np.isfinite(share)))
+        if window > AHEAD_FIRST and not (now <= 2.0 * last if math.isfinite(now) else stuck < last_stuck):
+            break  # worse than twice the last window's bound, or no bound and no fewer states without a margin (a free cycle: no window helps)
+        last, last_stuck = now, stuck
         window *= 2
     lower, upper, margin, used = best
     bound = max(1.0 - lower, upper - 1.0)
@@ -354,14 +374,14 @@ def proper_states(work: Work, alive: np.ndarray, effective: np.ndarray) -> tuple
     return inside, ok, distance, policy
 
 
-def reaches_goal(work: Work, policy: np.ndarray) -> np.ndarray:
-    """The states that reach a goal with positive chance under `policy` (-1: no action): a goal reaches itself, a state with no action only if it is one.
+def reaches_goal(work: Work, policy: np.ndarray, seeds: np.ndarray | None = None) -> np.ndarray:
+    """The states that reach a goal (or one of `seeds`, when given) with positive chance under `policy` (-1: no action): a goal reaches itself, a state with no action only if it is one.
 
     Reverse search from the goals over the kernels the policy uses (each once, however many states share it), so a pass costs the edges of the distinct
     kernels and not those of every state.
     """
     g, n = work.g, work.n
-    reached = g.goal.copy()
+    reached = (g.goal if seeds is None else seeds).copy()
     states = np.flatnonzero(policy >= 0)
     if not len(states):
         return reached
