@@ -369,11 +369,13 @@ def offers_for(
     kind_of = _listed(data, start_item, kind_names, label_names, listing_gaps)
     if kind_names is not None and RECOMBINATOR_KIND in kind_names:
         kind_of = _with_feeder_donors(data, goal, start_item, kind_of)
-        # a donor is made from a normal item of the base (the recombinator's `inputs`): the actions that apply to one are offered too
-        bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=start_item.influences)
-        for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
-            if kind != RECOMBINATOR_KIND:
-                kind_of.setdefault(action, kind)
+        # a donor is made from a normal item of the base (the recombinator's `inputs`): the actions that apply to one are offered too, but
+        # only when a recombinator is offered to take the donor; on a base no recombinator takes (a jewel) they would make nothing (#848)
+        if RECOMBINATOR_KIND in kind_of.values():
+            bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=start_item.influences)
+            for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
+                if kind != RECOMBINATOR_KIND:
+                    kind_of.setdefault(action, kind)
     if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
         kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
     listed = list(kind_of)
