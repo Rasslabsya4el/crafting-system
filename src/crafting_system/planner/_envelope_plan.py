@@ -368,6 +368,9 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
                 **claim(
                     "the methods offered",
                     "The cut is exact: nothing was left out for being unlikely or by a tolerance, and the mean cost is that of the best plan.",
+                    # the answer is approximate although this search is exact when another start option's plan is only proved within a gap (#826)
+                    "This search left nothing out for being unlikely or by a tolerance, and the mean cost is that of the best plan from this start item; "
+                    "another start item that was compared has a plan proved only to within its gap.",
                 ),
             ),
         )

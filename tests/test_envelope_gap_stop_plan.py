@@ -19,7 +19,6 @@ measured on runners (`.github/scripts/family_bench.py`).
 import dataclasses
 import json
 import re
-import time
 
 import numpy as np
 import pytest
@@ -44,6 +43,16 @@ from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target
 
 GAPS = [0.01, 0.05, 0.2, 0.7, 1.0]
+
+
+class HandClock:
+    """A clock that only moves when the test says so."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def perf_counter(self) -> float:
+        return self.now
 
 
 def at_once(gap: float) -> Budget:
@@ -131,13 +140,16 @@ def test_the_aim_counts_the_bounds_build(light, monkeypatch):
     start, offers, _, bound = light
     from crafting_system.planner import _envelope_plan
 
+    clock = HandClock()
+    monkeypatch.setattr(_envelope_plan, "time", clock)  # the clock of `envelope_result`, set by hand: no test reads the time (`tests/test_no_timing.py`)
+
     def slow_build(*_args, **_kwargs):
-        time.sleep(0.05)
+        clock.now += 50.0
         return bound
 
     monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", slow_build)
     ab = abstraction()
-    stopped = envelope_result(ab, ab.compress(START_ITEM), offers, gap=1.0, gap_after=0.04)
+    stopped = envelope_result(ab, ab.compress(START_ITEM), offers, gap=1.0, gap_after=40.0)
     assert stopped.info["envelope"].within == 1.0
     ab = abstraction()
     exact = envelope_result(ab, ab.compress(START_ITEM), offers, gap=1.0, gap_after=1e9)
@@ -263,15 +275,19 @@ def test_the_gap_is_a_named_setting_of_the_budget_with_a_default_of_one_percent(
             Budget(gap=wrong)
 
 
-def test_the_stop_applies_once_the_runs_aim_has_passed_and_never_without_an_aim():
+def test_the_stop_applies_once_the_runs_aim_has_passed_and_never_without_an_aim(monkeypatch):
+    from crafting_system import budget
+
+    clock = HandClock()
+    monkeypatch.setattr(budget, "time", clock)
     assert search_gap(None) == (0.0, None)
     assert search_gap(Budget.unlimited().start()) == (0.0, None)  # no aim: the exact search
     assert search_gap(Budget(aim_seconds=None, seconds=600.0, gap=0.05).start()) == (0.0, None)  # a net alone is no aim
-    gap, after = search_gap(Budget(aim_seconds=60.0, gap=0.02).start())
-    assert gap == 0.02 and 59.0 < after <= 60.0
-    late = Budget(aim_seconds=0.01).start()
-    time.sleep(0.02)
-    assert search_gap(late) == (PROOF_GAP, 0.0)  # the aim has passed (a second start option, or a search after a long build)
+    running = Budget(aim_seconds=60.0, gap=0.02).start()
+    clock.now += 45.0
+    assert search_gap(running) == (0.02, 15.0)  # what is left of the aim
+    clock.now += 45.0
+    assert search_gap(running) == (0.02, 0.0)  # the aim has passed (a second start option, or a search after a long build)
 
 
 def test_the_command_line_has_the_gap_as_a_percent(tmp_path):
@@ -279,9 +295,11 @@ def test_the_command_line_has_the_gap_as_a_percent(tmp_path):
     assert _main.run_budget(config, 60.0).gap == PROOF_GAP
     assert _main.run_budget(config, 60.0, gap=0.05).gap == 0.05
     assert _main._percent("2.5") == 2.5 and _main._percent("0") == 0.0
-    for wrong in ("-1", "nan", "inf", "one"):
+    for wrong in ("-1", "nan", "inf"):
         with pytest.raises(Exception, match="percent"):
             _main._percent(wrong)
+    with pytest.raises(ValueError):  # not a number: the argument parser words it
+        _main._percent("one")
 
 
 # ---- a net's stop on a plan the solver cannot certify, and the start options ------------------------------------------------------------
@@ -323,6 +341,10 @@ def test_a_start_option_whose_plan_is_only_proved_within_a_gap_says_so_and_the_a
     assert noted and all("(proved at most 0.70% above the cheapest plan from it)" in _row(row) for row in noted)
     assert not [limit for limit in loose.limits if "is the cheapest" in limit.guarantee]
     assert loose.mean_remaining == exact.mean_remaining
+    (cut,) = [limit for limit in loose.limits if limit.what == "The search expanded only what could matter"]  # the chosen start's own search was exact
+    assert cut.guarantee.startswith(f"The plan is {WITHIN_GAP} among the methods offered. This search left nothing out")
+    assert "best plan from this start item; another start item that was compared has a plan proved only to within its gap." in cut.guarantee
+    assert "The cut is exact" not in cut.guarantee  # the exact search's own sentence would contradict "within the stated gap"
 
 
 def test_what_a_start_options_row_says_of_a_plan_not_proved_the_cheapest():

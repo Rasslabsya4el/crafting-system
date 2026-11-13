@@ -151,7 +151,7 @@ def main() -> None:
         search = plan.search
         if search is not None:
             keep = ("exact", "within", "stopped", "lower", "upper", "rounds", "touched", "expanded", "realized", "candidates", "first_upper", "first_plan",
-                    "bound_keys", "bound_seconds", "seconds", "peak_mb", "upper_refused", "upper_seconds")  # fmt: skip
+                    "bound_keys", "bound_seconds", "seconds", "peak_mb", "upper_refused", "upper_seconds", "held")  # fmt: skip
             result["search"] = {name: getattr(search, name) for name in keep}
             result["search"]["gap"] = search.upper / search.lower - 1.0 if search.lower > 0 else None
         result.update(

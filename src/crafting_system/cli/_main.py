@@ -92,10 +92,7 @@ def _limit(text: str) -> float | None:
 
 def _percent(text: str) -> float:
     """A `--gap` value: a percent, zero or more."""
-    try:
-        value = float(text)
-    except ValueError:
-        value = math.nan
+    value = float(text)
     if not (value >= 0 and math.isfinite(value)):
         raise argparse.ArgumentTypeError(f"the gap is a percent, zero or more (0 keeps the exact proof); got {text!r}")
     return value

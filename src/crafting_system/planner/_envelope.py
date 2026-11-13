@@ -346,7 +346,7 @@ class Search[S]:
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
         self.watch = watch
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
-        self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on
+        self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
         self.standing: Standing | None = None
         self.incumbent = incumbent
         self.say = progress or (lambda _text: None)
@@ -668,7 +668,9 @@ class Search[S]:
         value = float(core.value[0])
         certified = value * (1.0 + core.certificate.bound) if math.isfinite(value) else math.inf
         if math.isfinite(certified):
-            self.held = graph, certified
+            net = self.net
+            if net.seconds is not None or net.states is not None or net.memory_mb is not None:
+                self.held = graph, certified  # only a net's stop falls back on it: a search no net can stop does not keep the older arrays alive
             if self.upper is None or certified < self.upper:
                 self.upper = certified
         return graph, value, certified
