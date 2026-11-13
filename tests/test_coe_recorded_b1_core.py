@@ -13,6 +13,9 @@ hashes of the Craft of Exile copy; no Craft of Exile code). They were recorded o
 * the essences the `actions:` key of R08, R09 and R13 hides (#627, `tools/coe_emulator/checks/627-key-essences.json`): Shrieking Essence of Fear
   and Screaming Essence of Spite on the start boots of R08 and R09, with the target-met count against the planner's chance of one use on the target
   with its key removed (what the plans of run 42369553590 repeat), and Deafening Essence of Hatred on R13's rare belt.
+* the Exalted Orb the `actions:` key of J01 and V01 hides (#637, `tools/coe_emulator/checks/637-exalt-key.json`): on the later items of the craft
+  where the plans with the orb added take it (3-mod jewels missing one goal mod; helmets with the +1 Minion mod or tier 1 Life and 3 to 5 mods), with
+  the target-met count against the planner's chance of one use on the target with the orb added, which is also pinned to a fraction worked by hand.
 
 The statistic is stated in `coe_recorded_support.py`: an exact two-sided binomial test per cell, a Bonferroni correction
 over every cell of this module, `ALPHA` = 0.01 for the module. There is no percentage threshold. A cell that fails is a
@@ -84,6 +87,13 @@ TARGET_OF = {
     "essence-r08-fear": "r08-energy-shield-boots",  # #627: the essences the actions: key hides
     "essence-r09-spite": "r09-life-boots",
     "essence-r13-hatred": "r13-life-resist-belt",
+    "exalt-j01-wants-attack-speed": "j01-cobalt-life-attack-speed",  # #637: the Exalted Orb the keys hide, on later items of the craft
+    "exalt-j01-wants-wand-speed": "j01-cobalt-life-attack-speed",
+    "exalt-j01-wants-life": "j01-cobalt-life-attack-speed",
+    "exalt-v01-minion-three-mods": "v01-minion-helmet",
+    "exalt-v01-minion-four-mods": "v01-minion-helmet",
+    "exalt-v01-minion-five-mods": "v01-minion-helmet",
+    "exalt-v01-life-three-mods": "v01-minion-helmet",
 }
 # #627: the cases whose action the target's `actions:` key leaves out; their one use is the planner's on the target with the key removed (`actions`
 # None, every kind not opt-in), as `.github/scripts/actions_key.py` plans the `removed` variant
@@ -124,7 +134,9 @@ def uses(data, targets):
 
     found = {}
     for case, record in CASES.items():
-        if "target" in record:
+        if "target" in record and case in EXALT_BY_HAND:  # #637: a later item of the craft, the orb added to the key
+            found[case] = exalt_use(data, {**record["item"], "target": record["target"]["file"]})
+        elif "target" in record:
             target = targets[TARGET_OF[case]]
             if case in KEY_HIDES:
                 target = replace(target, actions=None)
