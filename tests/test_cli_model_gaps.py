@@ -102,6 +102,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_envelope_plan.py", "CraftingProblem.kernel_key", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`, the offer is left out of the state"),
     ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
+    ("cli/_plan.py", "_make_plan", ("FinishRefused", "OutOfScopeError", "ArithmeticError"), GAP, "the socket finish cannot be planned (#231): its start sockets are not stated, the goal is corrupted, a mod action changes sockets, no offered action completes it, the base has no colour weights, or it did not settle; the text becomes the `PlanError`"),
     ("cli/_plan.py", "_make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
     ("cli/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
     ("cli/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
@@ -123,6 +124,9 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
 NOT_A_REFUSAL = "not a refusal"
 OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_pattern.py", "Pattern._ok", ("ValueError", "ItemError"), NOT_A_REFUSAL, "`_item_of` of a state that no item has (two slots of a family, more slots than families): the member is not an item; no action is called"),
+    ("actions/socket_colours.py", "BenchSocketColours.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
+    ("actions/socket_orbs.py", "BenchSocketCount.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
+    ("actions/socket_orbs.py", "BenchSocketLinks.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
     ("abstraction/_prime.py", "prime", ("ValueError",), EITHER, "a request `kernel` would refuse is left to `kernel`, which raises it in its own order"),
     ("abstraction/_coarse.py", "Coarsening._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),
     ("abstraction/_estimate.py", "_Pilot._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),

@@ -99,7 +99,7 @@ def test_a_target_sockets_key_with_no_value_is_refused():
 
 
 def test_the_committed_targets_are_all_there():
-    assert len(EXAMPLE_FILES) == 16
+    assert len(EXAMPLE_FILES) == 17
 
 
 @pytest.fixture(scope="module")

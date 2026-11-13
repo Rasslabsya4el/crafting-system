@@ -51,6 +51,7 @@ from crafting_system.cli._benchmark import (
     _missing_message,
     _missing_start_price,
     _without_root,
+    reads_own_prices,
 )
 from crafting_system.cli._inputs import load_target_prices, write_json
 from crafting_system.cli._plan import Plan, make_plan
@@ -521,8 +522,8 @@ def run_command(arguments: argparse.Namespace) -> int:
     root = find_project_root()
     if arguments.prices:
         prices = load_price_file(Path(arguments.prices))
-    elif bench.start is not None:
-        prices = None  # a route that starts from a vendor recipe (V01) reads the price file its target names (`benchmark_routes.py` does the same)
+    elif reads_own_prices(bench, root):
+        prices = None  # a route that starts from a vendor recipe (V01) or names its own price file (R17) reads the price file its target names (`benchmark_routes.py` does the same)
     else:
         prices = load_price_file(root / PRICES)
     document = bloat_route(

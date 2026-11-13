@@ -33,11 +33,17 @@ Exactness of the declarations. A Restore also restores the implicits, the qualit
 snapshot differs from the item in such a part only if some other action of the model changed it, and that action declares it, which makes
 the state keep it. The model of a route in which nothing changes the quality keeps no quality, and none is needed. Memory Strands: neither action declares
 `strand_use` yet, so both are refused on an item with one strand or more until ticket B5-11h (ADR-0041, `strand_use.py`) declares what an imprint keeps
-and what a restore brings back (`memory_strands.yaml`: an imprint restore changes the count). The kind is not a
-planner kind until the end-to-end ticket (#223) wires R15 and R17 and measures the state growth; the kernel and the state are here.
+and what a restore brings back (`memory_strands.yaml`: an imprint restore changes the count).
+
+The planner (ticket #223). Both kinds are planner kinds and `opt_in`: a target offers them by naming them in `actions:`, because the first
+imprint multiplies the states of a route by about 200 (ADR-0060, "State growth") and a target that is not about an imprint must not pay for
+that. The cap is the setting `max_imprints` of `crafting.toml` (`[planner]`, default 1): the planner sets it for the length of a plan with
+`imprints_held_at_most`, and the catalog kinds list the imprints and restores of that cap; outside such a block they list the default.
 """
 
-from collections.abc import Mapping
+import contextvars
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
@@ -51,7 +57,7 @@ from .draw import jewel_class
 from .errors import NotApplicableError
 from .finite import Finite
 
-__all__ = ["DEFAULT_MAX_IMPRINTS", "Imprint", "Restore", "imprint_actions"]
+__all__ = ["DEFAULT_MAX_IMPRINTS", "Imprint", "Restore", "imprint_actions", "imprints_held_at_most"]
 
 BEAST_RECIPES = get_rule("imprint.beast_recipes")
 RESTORES_STATE = get_rule("imprint.restores_state")
@@ -222,11 +228,26 @@ def imprint_actions(data: GameData, item: Item, max_imprints: int = DEFAULT_MAX_
     return (*made, *(Restore(index) for index in range(max_imprints)))
 
 
-@kind("imprint", order=97, planner=False, why_not="the end-to-end ticket #223 wires R15 and R17 and measures the state growth of imprints", reads_item_state_while_not_planner="any")
+_CAP: contextvars.ContextVar[int] = contextvars.ContextVar("max_imprints", default=DEFAULT_MAX_IMPRINTS)
+
+
+@contextmanager
+def imprints_held_at_most(cap: int) -> Iterator[None]:
+    """Make the catalog kinds list the imprints and restores of an item that holds at most `cap` imprints, inside the block (the setting `max_imprints`)."""
+    if isinstance(cap, bool) or not isinstance(cap, int) or cap < 1:
+        raise ValueError(f"an item holds at least one imprint, not {cap!r}")
+    token = _CAP.set(cap)
+    try:
+        yield
+    finally:
+        _CAP.reset(token)
+
+
+@kind("imprint", order=97, opt_in=True, reads_item_state_while_not_planner="any")
 def _imprint(data: GameData, item: Item):
-    yield from (action for action in imprint_actions(data, item) if isinstance(action, Imprint))
+    yield from (action for action in imprint_actions(data, item, _CAP.get()) if isinstance(action, Imprint))
 
 
-@kind("restore", order=98, planner=False, why_not="the end-to-end ticket #223 wires R15 and R17 and measures the state growth of imprints", reads_item_state_while_not_planner="any")
+@kind("restore", order=98, opt_in=True, reads_item_state_while_not_planner="any")
 def _restore(data: GameData, item: Item):
-    yield from (action for action in imprint_actions(data, item) if isinstance(action, Restore))
+    yield from (action for action in imprint_actions(data, item, _CAP.get()) if isinstance(action, Restore))

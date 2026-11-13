@@ -80,7 +80,7 @@ def run_case(spec: dict, seed: int, repeats: int, copy: Path) -> dict:
         results[json.dumps(mods)] += count
     readings: Counter = Counter()  # the finished items by what they are next to the target (ticket #617)
     if spec.get("target"):
-        judge = TargetJudge(data, spec["target"])
+        judge = TargetJudge(data, spec["target"], spec.get("rarity"))
         for key, count in results.items():
             found = json.loads(key)
             if any(mod_id.startswith("coe:") for mod_id in found):

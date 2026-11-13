@@ -165,3 +165,35 @@ def test_many_random_states_with_shuffled_successor_order_lump_alike():
     _, _, _, lumped = whole_and_lumped(TabularModel([goal], table))
 
     assert lumped.count == 3
+
+
+def kernel_table(rows):
+    """A `PackedGraph` holding only kernels (no states, no actions): the table `lump_states` reads."""
+    import numpy as np
+
+    from crafting_system.solver._packed import PackedGraph, probabilities
+
+    k_ptr = np.concatenate(([0], np.cumsum([len(row) for row in rows]))).astype(np.int64)
+    k_succ = np.array([s for row in rows for s, _ in row], dtype=np.int32)
+    k_wt = np.array([w for row in rows for _, w in row], dtype=np.int64)
+    empty = np.zeros(0, dtype=np.int64)
+    return PackedGraph(np.zeros(0, dtype=bool), np.zeros(1, dtype=np.int64), empty.astype(np.int32), np.zeros(0), empty.astype(np.int32), k_ptr, k_succ, k_wt, probabilities(k_ptr, k_wt, {}))
+
+
+@pytest.mark.parametrize(("label_of_4", "blocks"), [(3, [[0], [1, 2], [3, 4], [5]]), (4, [[0], [1], [2], [3], [4], [5]])])
+def test_lump_states_keeps_labels_apart_and_merges_rows_with_the_same_chances_into_every_block(label_of_4, blocks):
+    """#689: 0 -> 1, 2 (1:1); 1 -> 3, goal (1:1); 2 -> 4, goal (2:2); 3 and 4 share a kernel -> goal. State 5 is the goal.
+
+    With 3 and 4 under one label they are one block, so 1 and 2 have the same chances into every block (1/2, 1/2, under different weights) and merge.
+    With 4 under its own label, 3 and 4 are apart, and that splits 1 from 2 in a second round.
+    """
+    import numpy as np
+
+    table = kernel_table([[(1, 1), (2, 1)], [(3, 1), (5, 1)], [(4, 2), (5, 2)], [(5, 1)]])
+    slot = np.array([0, 1, 2, 3, 3, -1])
+    label = np.array([1, 2, 2, 3, label_of_4, 9])
+
+    block = lump_module.lump_states(table, slot, label)
+
+    found = sorted(sorted(np.flatnonzero(block == b).tolist()) for b in np.unique(block).tolist())
+    assert found == blocks

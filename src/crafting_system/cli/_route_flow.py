@@ -7,9 +7,21 @@ route) are steps too, one per reason. Steps are numbered in the order their firs
 
 The states are item states, never the blocks of a lumped chain: a lumped view shows a block by one member, and
 what a page says about an item (a mod lost, the tiers a draw can add) is a fact about one item. `Chain` is the
-policy on item states as arrays (a state per row, its edges in CSR form); `chain_of_policy` makes one from any
-policy mapping and `_route_chain` makes one from the walked graph of a packed plan, without building an `Action`
-per state. `flow_of(chain)` is the one place the steps are made.
+policy on item states as arrays: a state per row, and for each state the kernel it moves by, each kernel held once
+(`Kernels`), so a state costs the same whatever the edges of its kernel (R04: 15,003 states, 4,038 kernels; copied per
+state they were 48.7 million edges, ticket #689). `chain_of_policy` makes one from any policy mapping and `_route_chain`
+makes one from the walked graph of a packed plan, without building an `Action` per state. `flow_of(chain)` is the one
+place the steps are made.
+
+The page on lumped chains (ticket #689, class C7 of #812). Nothing of the page reads a copy of the edges per state. The
+solves run on two exact quotients of the chain, both lumpable (the states of a block move alike into every block, so a
+block's visits are the sum of its states' and the chance of hitting a union of blocks is the same on the quotient):
+the kernel classes (the states that share a kernel), whose visits give every state's own visits in one pass over the
+kernels (`_solved`: v[s] = [s = start] + sum over the kernels k of (the visits of the states that move by k) x k's
+chance into s); and the chain lumped with the labels of the steps (`_page_blocks`, `solver/_packed_lump.lump_states`),
+on which the chance of entering each step is solved (`_entries`; R04's plan lumps to some hundreds of blocks, so one
+inverse gives every step). The edges of the steps are read once per (kernel, step, loss class): the states of one share
+their outcomes and, through `LossReader.classes`, what an outcome loses.
 
 The chances of a step (OR-20). The states of one step need not have the same chance for an outcome, so the step
 shows the mixture of them: for an outcome, the sum over the step's states of (expected visits of the state x its
@@ -60,14 +72,15 @@ the caller (`loss`), which keeps this module free of the compressed state. Pure,
 import math
 import time
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from dataclasses import dataclass
-from fractions import Fraction
+from dataclasses import dataclass, field
 from typing import Literal
 
 import numpy as np
 
 from crafting_system.solver import Action
+from crafting_system.solver._packed import BIG_TOTAL, expand_ranges
 from crafting_system.solver._packed_chain import CyclesTooTangled, inverse_diagonal
+from crafting_system.solver._packed_lump import lump_states
 from crafting_system.solver._packed_solve import DENSE_FALLBACK, DENSE_FALLBACK_RESIDUAL, DENSE_LIMIT, bicgstab_checked
 
 from ._limits import STEPS, Limit, claim
@@ -150,15 +163,35 @@ class Flow[S]:
 
 
 @dataclass(frozen=True, eq=False)
+class Kernels:
+    """The kernels of a chain, each held once: kernel `k` is the edges `k_ptr[k]:k_ptr[k + 1]` of `k_succ` (a state of the chain, or
+    `m + j` for its goal `j`), `k_prob` (the chance, correctly rounded) and `k_wt` (the exact integer weight; a kernel whose weights add up
+    to `BIG_TOTAL` or more keeps them in `k_big[k]` and has zeros in `k_wt`). The arrays `solver/_packed_lump.lump_states` reads. `k_wt` is
+    None on a chain of blocks (`_quotient`), which is never lumped again.
+    """
+
+    k_ptr: np.ndarray
+    k_succ: np.ndarray
+    k_wt: np.ndarray | None
+    k_prob: np.ndarray
+    k_big: dict[int, tuple[int, ...]] = field(default_factory=dict)
+
+    def kernel_sizes(self) -> np.ndarray:
+        return np.diff(self.k_ptr)
+
+
+@dataclass(frozen=True, eq=False)
 class Chain[S]:
     """The policy on item states as arrays.
 
     `states`: the reachable non-goal states, the start first (row `i` of every array); `goals`: the goal states they
     lead to. `key[i]` is the index into `keys` of the step the state belongs to: `("action", label)` or
-    `("none", reason)` for a state with no action. `cost[i]` is the price of its action. The edges of state `i`
-    are `ptr[i]:ptr[i + 1]` of `dst` and `prob`: `dst < len(states)` is a state, `dst >= len(states)` is
-    the goal `goals[dst - len(states)]`; `prob` sums to 1 on a state with an action and the edges are in outcome order.
+    `("none", reason)` for a state with no action. `cost[i]` is the price of its action. State `i` moves by the
+    kernel `kernel[i]` of `kernels` (-1: it has no action); the kernel's edges are in outcome order and sum to 1.
     `action_of(i)` is the solver action of state `i` (called for the first state of a step only).
+
+    `ptr`, `dst`, `prob` are the edges of every state in CSR form, made when asked and then kept: a copy of its kernel's
+    edges per state, which the page never asks for (only the chance a run visits one state, `reach_of`, and measuring scripts).
     """
 
     states: Sequence[S]
@@ -166,26 +199,73 @@ class Chain[S]:
     key: np.ndarray
     keys: tuple[Hashable, ...]
     cost: np.ndarray
-    ptr: np.ndarray
-    dst: np.ndarray
-    prob: np.ndarray
+    kernel: np.ndarray
+    kernels: Kernels
     action_of: Callable[[int], Action[S]]
 
     @property
     def m(self) -> int:
         return len(self.states)
 
+    @property
+    def ptr(self) -> np.ndarray:
+        return self._rows()[0]
+
+    @property
+    def dst(self) -> np.ndarray:
+        return self._rows()[1]
+
+    @property
+    def prob(self) -> np.ndarray:
+        return self._rows()[2]
+
+    def _rows(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        cached = self.__dict__.get("_edges")
+        if cached is None:
+            table = self.kernels
+            has = self.kernel >= 0
+            which = np.where(has, self.kernel, 0)
+            sizes = np.where(has, table.kernel_sizes()[which], 0) if len(table.k_ptr) > 1 else np.zeros(self.m, dtype=np.int64)
+            ptr = np.concatenate(([0], np.cumsum(sizes))).astype(np.int64)
+            if np.array_equal(self.kernel[has], np.arange(len(table.k_ptr) - 1)):  # every kernel once, in the states' order (a chain of blocks): no copy
+                cached = (ptr, table.k_succ, table.k_prob)
+            else:
+                edge = expand_ranges(table.k_ptr[which], sizes) if len(table.k_ptr) > 1 else np.zeros(0, dtype=np.int64)
+                cached = (ptr, table.k_succ[edge].astype(np.int64), table.k_prob[edge])
+            object.__setattr__(self, "_edges", cached)
+        return cached
+
+
+@dataclass(frozen=True)
+class LossReader:
+    """What the uses of a step lose of the wanted mods.
+
+    `lost(chain, src, dst)` gives `(items, matrix)`: for the edges `src[e] -> dst[e]` (states, or `m + j` for goal `j`) which of `items` they
+    lose. `classes(chain)` gives a number per state such that what an edge loses depends on its source only through that number (the wanted
+    mods it holds); the edges are then read once per (kernel, step, class) with one state standing for the class. None: every state its own class.
+    """
+
+    lost: Callable[[Chain, np.ndarray, np.ndarray], tuple[Sequence, np.ndarray]]
+    classes: Callable[[Chain], np.ndarray] | None = None
+
+
+def empty_kernels() -> Kernels:
+    return Kernels(np.zeros(1, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0))
+
 
 def empty_chain() -> Chain:
     """The chain of a start that already is a goal: no step."""
     zero = np.zeros(0, dtype=np.int64)
-    return Chain([], [], zero, (), np.zeros(0), np.zeros(1, dtype=np.int64), zero, np.zeros(0), lambda i: None)  # type: ignore[arg-type,return-value]
+    return Chain([], [], zero, (), np.zeros(0), zero, empty_kernels(), lambda i: None)  # type: ignore[arg-type,return-value]
 
 
 def chain_of_policy[S: Hashable](
     start: S, policy: Mapping[S, Action[S]], is_goal: Callable[[S], bool], reasons: Mapping[S, str] | None = None
 ) -> Chain[S]:
-    """The chain of `policy` from `start`; `reasons` says why a reachable non-goal state has no entry in `policy`."""
+    """The chain of `policy` from `start`; `reasons` says why a reachable non-goal state has no entry in `policy`.
+
+    States whose action has the very same outcomes (successors and integer weights, in order) share one kernel.
+    """
     if is_goal(start):
         return empty_chain()
     reasons = reasons or {}
@@ -197,41 +277,45 @@ def chain_of_policy[S: Hashable](
     keys: dict[Hashable, int] = {}
     key = np.zeros(m, dtype=np.int64)
     cost = np.zeros(m)
-    ptr = [0]
-    dst: list[int] = []
-    prob: list[float] = []
+    kernel = np.full(m, -1, dtype=np.int64)
+    found: dict[tuple, int] = {}
+    k_ptr, k_succ, k_wt, k_prob = [0], [], [], []
+    k_big: dict[int, tuple[int, ...]] = {}
     for i, state in enumerate(states):
-        if state in policy:
-            action = policy[state]
-            key[i] = keys.setdefault(("action", action.label), len(keys))
-            cost[i] = action.cost
-            total = sum(weight for _, weight in action.outcomes)
-            merged: dict[S, Fraction] = {}
-            for successor, weight in action.outcomes:
-                if weight > 0:
-                    merged[successor] = merged.get(successor, Fraction(0)) + Fraction(weight, total)
-            for successor, chance in merged.items():
-                if is_goal(successor):
-                    dst.append(m + goal_index.setdefault(successor, len(goal_index)))
-                    if len(goals) < len(goal_index):
-                        goals.append(successor)
-                else:
-                    dst.append(index[successor])
-                prob.append(float(chance))
-        else:
+        if state not in policy:
             key[i] = keys.setdefault(("none", reasons.get(state)), len(keys))
-        ptr.append(len(dst))
-    return Chain(
-        states,
-        goals,
-        key,
-        tuple(keys),
-        cost,
-        np.array(ptr, dtype=np.int64),
-        np.array(dst, dtype=np.int64),
-        np.array(prob),
-        lambda i: policy[states[i]],
-    )
+            continue
+        action = policy[state]
+        key[i] = keys.setdefault(("action", action.label), len(keys))
+        cost[i] = action.cost
+        merged: dict[S, int] = {}
+        for successor, weight in action.outcomes:
+            if weight > 0:
+                merged[successor] = merged.get(successor, 0) + int(weight)
+        row = []
+        for successor, weight in merged.items():
+            if is_goal(successor):
+                row.append((m + goal_index.setdefault(successor, len(goal_index)), weight))
+                if len(goals) < len(goal_index):
+                    goals.append(successor)
+            else:
+                row.append((index[successor], weight))
+        signature = tuple(row)
+        k = found.get(signature)
+        if k is None:
+            k = found[signature] = len(found)
+            total = sum(weight for _, weight in row)
+            k_succ += [d for d, _ in row]
+            k_prob += [weight / total for _, weight in row]  # int / int is correctly rounded
+            if total >= BIG_TOTAL:
+                k_big[k] = tuple(weight for _, weight in row)
+                k_wt += [0] * len(row)
+            else:
+                k_wt += [weight for _, weight in row]
+            k_ptr.append(len(k_succ))
+        kernel[i] = k
+    table = Kernels(np.array(k_ptr, dtype=np.int64), np.array(k_succ, dtype=np.int64), np.array(k_wt, dtype=np.int64), np.array(k_prob, dtype=float), k_big)
+    return Chain(states, goals, key, tuple(keys), cost, kernel, table, lambda i: policy[states[i]])
 
 
 def failure_by(failed: Callable[[S, S], tuple] | None) -> Callable | None:  # type: ignore[type-var]
@@ -274,17 +358,13 @@ def build_flow[S: Hashable](
 def flow_of[S: Hashable](
     chain: Chain[S],
     is_restart: Callable[[Action[S]], bool] | None = None,
-    loss: Callable[[Chain, np.ndarray, np.ndarray], tuple[Sequence, np.ndarray]] | None = None,
+    loss: LossReader | Callable[[Chain, np.ndarray, np.ndarray], tuple[Sequence, np.ndarray]] | None = None,
 ) -> Flow[S]:
-    """The steps of `chain`. `loss(chain, src, dst)` gives `(items, matrix)`: for the edges `src[e] -> dst[e]` which of `items` they lose."""
+    """The steps of `chain`. `loss` says what the uses lose (`LossReader`; a plain `lost(chain, src, dst)` is a reader whose every state is its own class)."""
     m = chain.m
     if m == 0:
         return Flow((), {})
-    edges_per_state = np.diff(chain.ptr)
-    src = np.repeat(np.arange(m), edges_per_state)
-    dst = chain.dst
-    into_goal = dst >= m
-    into_state = ~into_goal
+    reader = loss if loss is None or isinstance(loss, LossReader) else LossReader(loss)
 
     step, used, first_of_key = _numbering(chain)  # step number from 0 of every state
     nsteps = len(used)
@@ -305,26 +385,39 @@ def flow_of[S: Hashable](
     mix = np.where(raw[step] > 0.0, weights, 1.0)  # nobody can finish here, or unmeasured: the plain mean
     total = np.bincount(step, weights=mix, minlength=nsteps)
 
-    # the edges, grouped by (step, target step, whether a wanted mod is lost)
-    target = np.where(into_goal, _GOAL, step[np.minimum(dst, m - 1)])
-    if loss is None or len(dst) == 0:
-        items, lost_matrix = (), np.zeros((len(dst), 0), dtype=bool)
-    else:
-        items, lost_matrix = loss(chain, src, dst)
-    lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
-    lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
-    lost_matrix = lost_matrix & lost_edge[:, None]
-    code = ((step[src] * (nsteps + 1) + (target + 1)) * 2 + lost_edge).astype(np.int64)
-    group_codes, group = np.unique(code, return_inverse=True)
+    # the edges, grouped by (step, target step, whether a wanted mod is lost): read once per (kernel, step, loss class), one state standing for
+    # the states of each, whose mixture weights add up; a chunk of kernels at a time, the groups' sums and landing states gathered across chunks
+    width = m + len(chain.goals)
+    code_parts: list[np.ndarray] = []
+    mass_parts: list[np.ndarray] = []
+    pair_parts: list[np.ndarray] = []
+    lost_parts: dict = {}
+    for src, dst, mass in _edges_by_class(chain, step, mix, reader):
+        into_goal = dst >= m
+        target = np.where(into_goal, _GOAL, step[np.minimum(dst, m - 1)])
+        items, lost_matrix = ((), np.zeros((len(dst), 0), dtype=bool)) if reader is None else reader.lost(chain, src, dst)
+        lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
+        lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
+        code = ((step[src] * (nsteps + 1) + (target + 1)) * 2 + lost_edge).astype(np.int64)
+        found, at = np.unique(code, return_inverse=True)
+        code_parts.append(found)
+        mass_parts.append(np.bincount(at.reshape(-1), weights=mass, minlength=len(found)))
+        pair_parts.append(np.unique(code * width + dst))  # the distinct landing states of each group
+        for u, item in enumerate(items):
+            hit = lost_matrix[:, u] & lost_edge
+            if hit.any():
+                lost_parts.setdefault(item, []).append(np.unique(code[hit]))
+    every = np.concatenate(code_parts) if code_parts else np.zeros(0, dtype=np.int64)
+    group_codes = np.unique(every)
     ngroups = len(group_codes)
-    group_lost = np.array([(c % 2) == 1 for c in group_codes.tolist()], dtype=bool)
+    group_lost = (group_codes % 2) == 1
     group_target = (group_codes // 2) % (nsteps + 1) - 1
     group_step = (group_codes // 2) // (nsteps + 1)
-    chance = np.bincount(group, weights=mix[src] * chain.prob, minlength=ngroups) / total[group_step]
-    gone = [np.bincount(group, weights=lost_matrix[:, u], minlength=ngroups) > 0 for u in range(len(items))]
-    width = m + len(chain.goals)
-    pair = np.unique(group.astype(np.int64) * width + dst)  # the distinct landing states of each group, sorted
-    pair_group = pair // width
+    chance = np.bincount(np.searchsorted(group_codes, every), weights=np.concatenate(mass_parts) if mass_parts else None, minlength=ngroups) / total[group_step]
+    items = sorted(lost_parts)
+    gone = [np.isin(group_codes, np.concatenate(lost_parts[item])) for item in items]
+    pair = np.unique(np.concatenate(pair_parts)) if pair_parts else np.zeros(0, dtype=np.int64)
+    pair_group = np.searchsorted(group_codes, pair // width)
     bounds = np.searchsorted(pair_group, np.arange(ngroups + 1))
     everything = (lambda d: chain.states[d] if d < m else chain.goals[d - m])
     edges_of: list[list[Edge]] = [[] for _ in range(nsteps)]
@@ -426,7 +519,7 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
     return tuple(limits)
 
 
-CHUNK_EDGES = 4_000_000  # the edges of the chain read at a time: the solves work in place on the chain's arrays, so the only array the size of the edges that is made is the system itself (ticket #595)
+CHUNK_EDGES = 4_000_000  # the edges read at a time (kernels, or the rows of a chain): it bounds temporary arrays and decides no number (tickets #595, #689)
 
 
 def _blocks(ptr: np.ndarray) -> list[tuple[int, int]]:
@@ -491,20 +584,133 @@ class _Solved:
     inverse: np.ndarray | None
 
 
+def _direct(chain: Chain) -> _Solved:
+    """The visits of `chain` solved on its own states: what `_solved` and `_entries` run on the lumped chains, whose states are blocks."""
+    finishing = _can_finish(chain)
+    visits, solved, inverse = _visits(chain, _system(chain, finishing), finishing)
+    return _Solved(finishing, visits, solved, inverse)
+
+
+def _quotient(chain: Chain, block: np.ndarray) -> tuple[Chain, np.ndarray]:
+    """`(chain of the blocks, the row of each state's block in it)` for a lumpable partition `block` of the states (a number per state, from 0).
+
+    Lumpable: the states of a block move alike into every block, so a block moves by the kernel of its first state read as blocks, every
+    goal being the one goal. The blocks are in the order of their first states, so the start's is row 0. Its kernels are one per block and
+    have no integer weights: it is solved, never lumped again.
+    """
+    m = chain.m
+    count = int(block.max()) + 1
+    rep = np.full(count, m, dtype=np.int64)
+    np.minimum.at(rep, block, np.arange(m))
+    order = np.argsort(rep, kind="stable")
+    row = np.empty(count, dtype=np.int64)
+    row[order] = np.arange(count)
+    rep = rep[order]
+    to = np.concatenate((row[block], np.full(len(chain.goals), count, dtype=np.int64)))  # a state's block, or the one goal
+    table = chain.kernels
+    moves = chain.kernel[rep]
+    acting = np.flatnonzero(moves >= 0)
+    sizes = table.kernel_sizes()[moves[acting]]
+    lengths = np.zeros(len(acting), dtype=np.int64)
+    succ_parts, prob_parts = [], []
+    for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):  # a chunk of kernels at a time: no temporary array the size of all edges
+        edge = expand_ranges(table.k_ptr[moves[acting[a:b]]], sizes[a:b])
+        code = np.repeat(np.arange(b - a, dtype=np.int64), sizes[a:b]) * (count + 1) + to[table.k_succ[edge]]
+        order = np.argsort(code, kind="stable")
+        code = code[order]
+        starts = np.flatnonzero(np.concatenate(([True], code[1:] != code[:-1])))
+        prob_parts.append(np.add.reduceat(table.k_prob[edge][order], starts))
+        succ_parts.append((code[starts] % (count + 1)).astype(np.int32))
+        lengths[a:b] = np.bincount(code[starts] // (count + 1), minlength=b - a)
+    k_ptr = np.concatenate(([0], np.cumsum(lengths))).astype(np.int64)
+    k_succ = np.concatenate(succ_parts) if succ_parts else np.zeros(0, dtype=np.int32)
+    k_prob = np.concatenate(prob_parts) if prob_parts else np.zeros(0)
+    kernel = np.full(count, -1, dtype=np.int64)
+    kernel[acting] = np.arange(len(acting))
+    goals = [None] if len(chain.goals) else []
+    quotient = Chain(rep.tolist(), goals, chain.key[rep], chain.keys, chain.cost[rep], kernel, Kernels(k_ptr, k_succ, None, k_prob), lambda i: chain.action_of(int(rep[i])))
+    return quotient, row[block]
+
+
+def _page_blocks(chain: Chain) -> np.ndarray:
+    """The block of every state in the coarsest lumping of `chain` that keeps the steps apart (`solver/_packed_lump.lump_states`; the goals one label of their own).
+
+    Strong lumpability keeps the chance of hitting a union of blocks, so the chance of entering a step is solved on the blocks (#689).
+    """
+    m, goals = chain.m, len(chain.goals)
+    slot = np.concatenate((chain.kernel, np.full(goals, -1, dtype=np.int64)))
+    label = np.concatenate((chain.key, np.full(goals, len(chain.keys), dtype=np.int64)))
+    return lump_states(chain.kernels, slot, label)[:m]  # a goal's block is numbered after every state's: its first member comes after them
+
+
+def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: LossReader | None):
+    """The edges of the steps read once per (kernel, step, loss class) of the states that act, as `(src, dst, mass)` a chunk of at most
+    `CHUNK_EDGES` edges at a time (a kernel with more is a chunk of its own).
+
+    `src` is the first state of the class (it stands for all: they share the outcomes and what each loses), `dst` where an edge leads and
+    `mass` the sum over the class's states of their mixture weight `mix` times the edge's chance.
+    """
+    acting = np.flatnonzero(chain.kernel >= 0)
+    if reader is None:
+        classes = np.zeros(chain.m, dtype=np.int64)
+    elif reader.classes is None:
+        classes = np.arange(chain.m, dtype=np.int64)
+    else:
+        classes = np.unique(np.asarray(reader.classes(chain)), return_inverse=True)[1].reshape(-1).astype(np.int64)
+    if not acting.size:
+        return
+    _, first, which = np.unique(np.stack([chain.kernel[acting], step[acting], classes[acting]], axis=1), axis=0, return_index=True, return_inverse=True)
+    which = which.reshape(-1)
+    weight = np.bincount(which, weights=mix[acting], minlength=len(first))
+    rep = acting[first]
+    table = chain.kernels
+    moves = chain.kernel[rep]
+    sizes = table.kernel_sizes()[moves]
+    for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):
+        edge = expand_ranges(table.k_ptr[moves[a:b]], sizes[a:b])
+        yield np.repeat(rep[a:b], sizes[a:b]), table.k_succ[edge].astype(np.int64), np.repeat(weight[a:b], sizes[a:b]) * table.k_prob[edge]
+
+
 def _solved(chain: Chain) -> _Solved:
-    """The visits of `chain`, kept on it: the plan's limits, the page and the benchmark all read them, and a solve of a big policy takes a minute."""
+    """The visits of every state of `chain`, kept on it: the plan's limits, the page and the benchmark all read them.
+
+    Solved on the kernel classes (the states that move by one kernel, a lumpable partition): with `w[k]` the visits of the states of kernel
+    `k` that can finish, the visits of a state that can finish are v[s] = [s = start] + sum over k of w[k] x (k's chance into s), one pass over
+    the kernels, each once (#689). `inverse` is None: the entry chances are solved on the chain lumped with the steps' labels (`_entries`).
+    """
     key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)  # a test that changes a limit gets its own
     cached = chain.__dict__.get("_solved")
     if cached is None or cached[0] != key:
-        finishing = _can_finish(chain)
-        visits, solved, inverse = _visits(chain, _system(chain, finishing), finishing)
-        cached = (key, _Solved(finishing, visits, solved, inverse))
+        m = chain.m
+        acting = chain.kernel >= 0
+        classes, row = _quotient(chain, np.unique(np.where(acting, chain.kernel, -1), return_inverse=True)[1].reshape(-1))
+        done = _direct(classes)
+        finishing = acting & done.finishing[row]
+        visits = np.zeros(m)
+        if done.solved and finishing[0]:
+            table = chain.kernels
+            w = np.zeros(len(table.k_ptr) - 1)
+            live = np.flatnonzero(done.finishing & (classes.kernel >= 0))
+            np.add.at(w, chain.kernel[np.asarray(classes.states, dtype=np.int64)[live]], done.visits[live])
+            used = np.flatnonzero(w > 0)
+            sizes = table.kernel_sizes()[used]
+            inflow = np.zeros(m + len(chain.goals))
+            for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):  # a chunk of kernels at a time
+                edge = expand_ranges(table.k_ptr[used[a:b]], sizes[a:b])
+                inflow += np.bincount(table.k_succ[edge], weights=np.repeat(w[used[a:b]], sizes[a:b]) * table.k_prob[edge], minlength=len(inflow))
+            inflow = inflow[:m]
+            inflow[0] += 1.0
+            visits = np.where(finishing, inflow, 0.0)
+        cached = (key, _Solved(finishing, visits, done.solved, None))  # the classes' inverse is not the states': nothing reads it
         object.__setattr__(chain, "_solved", cached)
     return cached[1]
 
 
 def _entries(chain: Chain) -> tuple[list[float | None], int]:
-    """`(reached, unsettled)` of `chain`, kept on it: the chance of entering each step (None where it is not defined or not solved) and how many steps had a solve that did not settle."""
+    """`(reached, unsettled)` of `chain`, kept on it: the chance of entering each step (None where it is not defined or not solved) and how many steps had a solve that did not settle.
+
+    Solved on the chain lumped with the steps' labels (`_page_blocks`): a step is a union of its blocks (#689).
+    """
     key = (DENSE_LIMIT, DENSE_FALLBACK, ACCEPT_RESIDUAL, VISITS_TOLERANCE)
     cached = chain.__dict__.get("_entries")
     if cached is None or cached[0] != key:
@@ -513,9 +719,16 @@ def _entries(chain: Chain) -> tuple[list[float | None], int]:
         reached: list[float | None] = [None] * len(used)
         reached[0] = 1.0
         unsettled = 0
-        system = _system(chain, done.finishing) if done.solved else None
-        if system is not None:
-            reached, unsettled = _entered(chain, step, len(used), done.finishing, done.visits, system, done.inverse)
+        if done.solved and done.finishing[0]:
+            blocks, row = _quotient(chain, _page_blocks(chain))
+            lumped = _direct(blocks)
+            block_step = np.empty(blocks.m, dtype=np.int64)
+            block_step[row] = step
+            system = _system(blocks, lumped.finishing) if lumped.solved else None
+            if system is not None:
+                reached, unsettled = _entered(blocks, block_step, len(used), lumped.finishing, lumped.visits, system, lumped.inverse)
+            else:  # the blocks' visits did not settle though the states' did: no step but the first is said to be entered
+                unsettled = len(used) - 1
         cached = (key, (reached, unsettled))
         object.__setattr__(chain, "_entries", cached)
     return cached[1]
