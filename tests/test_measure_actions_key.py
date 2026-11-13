@@ -218,12 +218,21 @@ def test_a_small_real_route_is_measured_in_each_variant(variant):
     json.dumps(key.clean(found), allow_nan=False)
 
 
-def test_the_envelope_refusal_of_a_target_is_a_record_not_a_crash():
+def test_the_envelope_refusal_of_a_target_is_a_record_not_a_crash(monkeypatch):
+    # The bound refuses as for a goal it cannot build (as `test_cli_envelope_plan.py`): J01 with every kind named no longer refuses by
+    # itself since the relevance test of #848 leaves out the Unveil it refused for, and its search then runs for minutes and gigabytes.
+    from crafting_system.actions import OutOfScopeError
+    from crafting_system.cli import _envelope_plan
+
+    def refuse(*_args, **_kwargs):
+        raise OutOfScopeError("a goal with a roll limit has no members")
+
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", refuse)
     data = real_game_data()
 
-    found = key.measure("J01", "all", "envelope", data)
+    found = key.measure("J01", "kept", "envelope", data)
 
-    assert not found["finished"] and "envelope search cannot answer" in found["error"]
+    assert not found["finished"] and "envelope search cannot answer" in found["error"] and "roll limit" in found["error"]
 
 
 def test_v01_is_planned_from_its_recipe_start_in_the_bloat_step_and_here():

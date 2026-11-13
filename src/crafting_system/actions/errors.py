@@ -28,6 +28,7 @@ __all__ = [
     "ConsumesInputsError",
     "NotApplicableError",
     "OutOfScopeError",
+    "UnmodelledBase",
 ]
 
 
@@ -67,6 +68,15 @@ class OutOfScopeError(ActionError):
         super().__init__(player)
         self.player = player
         self.detail = detail or player
+
+
+class UnmodelledBase(OutOfScopeError):
+    """The model has no rule for the action on ANY item of this base (a jewel for the Harvest crafts, a cluster jewel, a unique-only base; #848).
+
+    Raised only by `draw.refuse_unmodelled`, whose verdict reads the base alone: an action that raises it for one item of a base refuses
+    every item of that base (the contract suite checks it on the real jewels, `tests/test_offers_relevance.py`). The planner reads it
+    before the walk (`scope.base_refusal`) and leaves the action out, said as a model gap of the listing (#511).
+    """
 
 
 class ConsumesInputsError(OutOfScopeError):
