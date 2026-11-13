@@ -415,6 +415,7 @@ def test_a_stage_stopped_early_to_leave_room_says_so():
     assert Binding("the search", TIME, 600.0, 590.0, "kept").words() == (
         "the search stopped 10 s before the time limit of 600 s, to leave room for what follows (590 s spent): kept"
     )
+    assert Binding("the walk", TIME, 600.0, 599.99).words() == "the walk stopped at the time limit of 600 s (600 s spent)"  # a clock step short of it
 
 
 @pytest.mark.skipif(not __import__("crafting_system.parallel", fromlist=["can_inherit"]).can_inherit(), reason="a pool of forked workers")
@@ -435,6 +436,10 @@ def test_the_risk_stage_keeps_its_plan_when_the_run_is_past_its_net(coarse, fake
         fake.now += 10_000.0  # the plan took past the whole net before the percentiles began
         return real(*args, **kwargs)
 
+    from crafting_system import parallel
+
+    with budget.running(Budget(seconds=600.0, memory_mb=None).start()), budget.stage(_plan.RISK_STAGE, _plan.RISK_KEPT, stops=False):
+        assert parallel._watched_clock() is None  # no pool of the risk stage is stopped by the run's net: its ladder stops itself
     real = _plan.plan_foresight
     _plan.plan_foresight = spent
     try:

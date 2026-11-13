@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the exact proof gives way to the stop at a proved 1% (#826)
 NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every method family has its bound (#822, ticket 4)
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
+EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
 MEMORY_POLL_SECONDS = 0.5  # a checkpoint reads the memory at most this often (the clock it reads every time)
 
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
@@ -100,9 +101,15 @@ class Binding:
     reached: float
     what: str = ""
 
+    @property
+    def early(self) -> bool:
+        """Whether the stage stopped at least `EARLY_SECONDS` before its time limit, to leave room for what follows (not a reading of the clock a
+        moment short of the limit: a clock's steps are as coarse as 15 ms on Windows)."""
+        return self.limit == TIME and self.given - self.reached >= EARLY_SECONDS
+
     def words(self) -> str:
         """The binding in a player's words: "the search stopped at the time limit of 600 s (601 s spent): no plan found yet"."""
-        if self.limit == TIME and self.reached < self.given:  # a stage that stopped early to leave room for what follows it (the bound's build)
+        if self.early:  # a stage that stopped early to leave room for what follows it (the bound's build)
             figure = f"{self.given - self.reached:,.0f} s before the time limit of {self.given:,.0f} s, to leave room for what follows ({self.reached:,.0f} s spent)"
         elif self.limit == TIME:
             figure = f"the time limit of {self.given:,.0f} s ({self.reached:,.0f} s spent)"
@@ -110,8 +117,7 @@ class Binding:
             figure = f"the memory limit of {self.given:,.0f} MB ({self.reached:,.0f} MB held)"
         else:
             figure = f"the limit of {self.given:,.0f} {self.limit} ({self.reached:,.0f} reached)"
-        early = self.limit == TIME and self.reached < self.given
-        return f"{self.stage} stopped {'' if early else 'at '}{figure}" + (f": {self.what}" if self.what else "")
+        return f"{self.stage} stopped {'' if self.early else 'at '}{figure}" + (f": {self.what}" if self.what else "")
 
 
 class BudgetExceeded(BaseException):
