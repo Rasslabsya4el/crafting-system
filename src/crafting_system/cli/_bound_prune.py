@@ -14,7 +14,11 @@ leaves that are not PASSING at the start, less the ones a bench craft can finish
 Let E be "every leaf of U is PASSING". The goal implies E, and the start is outside E. For an offer x,
 pbar(x) is a number such that one use of x, from ANY state outside E that has the flags and the fractured
 mods of the start, lands in E with chance at most pbar(x):
-  * `restart` lands on the start, outside E: pbar = 0.
+  * `restart` lands on the start, outside E: pbar = 0. When the start is an unopened listing (ADR-0064) the restart lands
+    there instead, a state of another shape where only the draw that opens it works, and the draw can land in E. A restart
+    is then counted with the draw that must follow it (`through_listing`): one use of cost c(restart) + c(draw), with
+    pbar = the chance that the draw from the listing does not land outside E in the shape (the claim below holds because
+    from a state of the shape the listing is entered only by a restart, so each draw used follows a restart of its own).
   * an erasing reroll (it does not read the junk, erases the crafted mods, does not fracture, keeps the
     flags and the fractured mods of the item): its result does not depend on the state but through the
     flags and the fractured mods, so the exact chance at one state is the chance at every such state.
@@ -139,10 +143,11 @@ class _Entry:
     kind: str
     level: int = 0
     pbar: Fraction = ONE
+    extra: float = 0.0  # a cost that every use of the offer is followed by: the draw after a restart into an unopened listing (`through_listing`)
 
     @property
     def cost(self) -> float:
-        return self.priced.cost
+        return self.priced.cost + self.extra
 
     @property
     def ratio(self) -> float:
@@ -321,6 +326,7 @@ def _run(
         elif kind == CRAFT:
             pbar = ONE if named & u_mods else ZERO
         entries.append(_Entry(index, offer, kind, 0, pbar))
+    through_listing(abstraction, start, shape, chosen, entries)
     bare = replace(shape, slots=())
     mark("classify")
 
@@ -423,6 +429,43 @@ def _run(
         last = spent == rounds - 1
         inside.update(entry.index for _, entry in (failing if last else failing[:PER_ROUND]))
     return fallback(f"the proof that the smaller set is enough did not finish in {rounds} rounds", spent)
+
+
+def through_listing(abstraction: Abstraction, start: CompressedState, shape: CompressedState, chosen: Sequence[int], entries: Sequence[_Entry]) -> None:
+    """Count each restart with the draw that follows it when the start is an unopened listing (ADR-0064; see the module text, pbar).
+
+    The restart buys the listing, where only a draw works, so a policy that restarts pays a draw too and lands in E with that draw's chance: the
+    least cost of the draws offered and the largest of their chances bound every one of them. A draw outcome of another shape counts as landing (the
+    argument is cut there, as at a terminal offer). No draw offered, or a listing that is a goal, leaves the restart as it was.
+    """
+    if not getattr(start.flags, "unopened", False) or abstraction.is_goal(start):  # the light tests' states carry plain flags
+        return
+    draws = [entry for entry in entries if getattr(entry.priced.offer.action, "opens_listing", False)]
+    if not draws:
+        return
+    held = (shape.flags, shape.fractured)
+
+    def outside(state: CompressedState) -> bool:  # outside E, with the shape: where the claim's rho holds again
+        return (
+            not abstraction.is_goal(state)
+            and (state.flags, state.fractured) == held
+            and not all(state.status[index] is Status.PASSING for index in chosen)
+        )
+
+    landing = ZERO
+    for draw in draws:
+        try:
+            outcomes = abstraction.kernel(start, draw.priced.offer.action)
+        except NotApplicableError:
+            continue  # refused at the listing: never used after a restart
+        except OutOfScopeError:  # no rule for it proves no chance: counted as landing, the argument cut there as at a terminal offer
+            landing = ONE
+            continue
+        landing = max(landing, ONE - sum((chance for state, chance in outcomes.items() if outside(state)), ZERO))
+    cheapest = min(draw.priced.cost for draw in draws)
+    for entry in entries:
+        if isinstance(entry.priced.offer.action, BuyStartItem):
+            entry.pbar, entry.extra = landing, cheapest
 
 
 def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:

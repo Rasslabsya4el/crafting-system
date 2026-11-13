@@ -166,7 +166,8 @@ def burns_at(data: GameData, item: Item, keeps: BurnKeeps = BurnKeeps()) -> tupl
     """The burns that are legal on `item` at a state that keeps `keeps`, in catalog order; none for a jewel.
 
     Only the kinds that declare `burns` are asked, so no opt-in kind (the fossil sets) is searched. Each burn is a `Burn`: it is not an action
-    of the catalog, so it is never offered as a plain action (ADR-0056).
+    of the catalog, so it is never offered as a plain action (ADR-0056). With `keeps.sockets` (the target names sockets) an action that changes
+    the sockets (`Adds.sockets`) is no burn: the socket finish starts from the start item's sockets (ticket #231).
     """
     base = data.base_items.get(item.base_id)
     if base is None or base.item_class in JEWEL_CLASSES:
@@ -176,6 +177,8 @@ def burns_at(data: GameData, item: Item, keeps: BurnKeeps = BurnKeeps()) -> tupl
         if not entry.burns:
             continue
         for action in entry.members(data, item):
+            if keeps.sockets and action.adds(data, item).sockets:
+                continue
             if action.burn(data) and action.burn_refusal(data, item, keeps) is None:
                 found.setdefault(Burn(action))
     return tuple(found)

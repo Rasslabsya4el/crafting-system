@@ -21,12 +21,12 @@ solver and with the one of #312.
 import dataclasses
 import itertools
 import math
-import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from crafting_system.budget import running
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
@@ -34,7 +34,7 @@ from crafting_system.targets import StartBuyError, StartKind, Target, start_pric
 
 from ._offers import Offer
 from ._envelope import Net
-from ._plan import Plan, PlanError, StartPrice, add_risk, make_plan, resolve_start_price
+from ._plan import Plan, PlanError, StartPrice, add_risk, as_budget, make_plan, resolve_start_price, with_bindings
 from ._start_options import StartContext, StartList, StartSource, combine, vendor_recipe_starts
 from ._start_types import (
     SOURCE_PLAIN,
@@ -82,21 +82,6 @@ def _by_price(candidate: StartCandidate) -> tuple[float, str]:
     if candidate.price is None:
         raise PlanError(f"the start option {candidate.label!r} has no price, so it cannot be compared")
     return (candidate.price, candidate.key)
-
-
-def _deadline(net: Net | None) -> float | None:
-    """The clock reading at which the time net of this run is reached, or None when it has none (the net is one for the whole run, not for each start option)."""
-    seconds = getattr(net, "seconds", None)
-    return None if seconds is None else time.perf_counter() + seconds
-
-
-def _net_left(net: Net | None, deadline: float | None) -> dict[str, Any]:
-    """The keyword for `make_plan` that carries the net cut to the time left before `deadline` (a start option planned after the net was spent stops at once and fails, saying so)."""
-    if net is None:
-        return {}
-    if deadline is None:
-        return {"net": net}
-    return {"net": dataclasses.replace(net, seconds=max(deadline - time.perf_counter(), 0.0))}
 
 
 def readings_of(axes: tuple[tuple[str, tuple[str, ...]], ...]) -> list[Reading]:
@@ -155,23 +140,43 @@ def plan_with_starts(
     """Plan `target` from every start option and return the plan of the cheapest total, with the comparison in `Plan.starts`.
 
     `recipe_starts` is the user setting: false makes this exactly `make_plan`. `start_price` is the plain start item's price for
-    this run (it does not apply to a recipe start, whose price is its goods). `kwargs` go to `make_plan` unchanged (`budget`,
-    `rates`, `strands`); `net` goes too, but its time is one for the whole run: each start option gets what the ones before it left. `sources` are the start sources after the plain one. `price_source` (`ninja`, `trade`, `both`), `price_gap_percent`
+    this run (it does not apply to a recipe start, whose price is its goods). `kwargs` go to `make_plan` unchanged (`rates`, `strands`);
+    `budget` and `net` make the run's one budget (`_plan.as_budget`, #825), and its clock is one for the whole run: each start option gets
+    what the ones before it left, the risk of the kept one what they all left, and the limits that bound are listed once, on the answer. `sources` are the start sources after the plain one. `price_source` (`ninja`, `trade`, `both`), `price_gap_percent`
     and `today` are the profile setting of ticket #357; they go to every source in its `StartContext` and change nothing for the plain
     start item or for a recipe start, which are priced from the price file as before. Raises `PlanError` as `make_plan` does when no
     start option reaches the goal (the message is the plain start item's).
     """
     offers = tuple(offers) if offers is not None else None  # several plans read them
-    kwargs = {**kwargs, "price_source": price_source}  # every plan reads the trade prices under the profile setting
+    budget = as_budget(kwargs.pop("budget", None), net)
+    kwargs = {**kwargs, "price_source": price_source, "budget": budget}  # every plan reads the trade prices under the profile setting
+    with running(budget.start() if budget is not None else None) as clock:
+        plan = _with_starts(data, target, prices, recipe_starts, start_price, sources, offers, price_gap_percent, today, **kwargs)
+    return with_bindings(plan, clock)
+
+
+def _with_starts(
+    data: GameData,
+    target: Target,
+    prices: PriceFile,
+    recipe_starts: bool,
+    start_price: float | None,
+    sources: tuple[StartSource, ...],
+    offers: tuple[Offer, ...] | None,
+    price_gap_percent: float,
+    today: date | None,
+    **kwargs: Any,
+) -> Plan:
+    """`plan_with_starts` inside the run's clock; `kwargs` go to `make_plan` unchanged (`price_source` among them)."""
+    price_source = kwargs["price_source"]
     if not recipe_starts:
-        return make_plan(data, target, prices, start_price=start_price, offers=offers, **_net_left(net, None), **kwargs)
+        return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
     listing = combine([source(StartContext(data, target, prices, price_source, price_gap_percent, today)) for source in sources])
     if not listing.candidates and not listing.refused:
-        return make_plan(data, target, prices, start_price=start_price, offers=offers, **_net_left(net, None), **kwargs)
+        return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
 
     plain = plain_candidate(data, target, prices, start_price, price_source)
     order = [plain, *sorted(listing.candidates, key=_by_price)]
-    deadline = _deadline(net)
     outcomes: dict[str, _Outcome] = {}
     skipped: dict[str, str] = {}
     by_reading: list[ReadingChoice] = []
@@ -185,7 +190,7 @@ def plan_with_starts(
                 if candidate.key != PLAIN_KEY and candidate.price is not None and candidate.price >= best_total:
                     skipped.setdefault(candidate.key, f"its start price {candidate.price:,.2f} Chaos is not below the best total found, {best_total:,.2f}")
                     continue
-                outcomes[candidate.key] = _plan_candidate(data, target, prices, candidate, start_price, offers=offers, **kwargs, **_net_left(net, deadline))
+                outcomes[candidate.key] = _plan_candidate(data, target, prices, candidate, start_price, offers=offers, **kwargs)
             total = outcomes[candidate.key].total
             if total < best_total:
                 best_key, best_total = candidate.key, total

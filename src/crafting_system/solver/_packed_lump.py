@@ -20,6 +20,9 @@ kernel. The result is then checked against the float chances of the graph: every
 within `CHECK_TOLERANCE`, so a collision or a bug cannot pass unnoticed. The kernels are read in chunks of at most `CHUNK_EDGES` edges,
 so a route that visits ten times the classes of the optimal policy needs the memory of one chunk, not of all.
 
+`lump_states` is the same refinement for any chain whose states share kernels, started from labels the caller gives (ticket #689): the route
+page lumps the plan's item chain with the labels of its steps, and the chance of entering a step, a union of blocks, is solved on the blocks.
+
 The generic part of `solver/`: nothing here knows the game. Uses numpy, so it is a `_packed*.py` file (ADR-0010 amended).
 """
 
@@ -187,6 +190,86 @@ class _Rows:
         return worst
 
 
+def _settle(rows: _Rows, slot: np.ndarray, block: np.ndarray, block_of: np.ndarray, where, max_rounds: int | None) -> tuple[np.ndarray, int, int]:
+    """`(block, count, rounds)`: the partition `block` of the states `where` refined until no block splits.
+
+    `slot[i]` is the position in `rows.kernels` of the kernel state `i` moves by (-1: none); `block_of` is the map from the kernels' successors to
+    their blocks, written here (successors outside `where` keep what it holds). Every round that does not settle adds a block, so it settles
+    within the number of states; `max_rounds` None is no other bound.
+    """
+    count = int(block.max()) + 1
+    rounds = 0
+    while True:
+        rounds += 1
+        block_of[where] = block
+        ids = rows.signatures(block_of, count)
+        sig = np.where(slot >= 0, ids[np.maximum(slot, 0)], -1)
+        _, new = np.unique(np.stack([block, sig], axis=1), axis=0, return_inverse=True)
+        new = new.reshape(-1).astype(np.int64)
+        grown = int(new.max()) + 1
+        if grown == count:
+            break
+        if max_rounds is not None and rounds >= max_rounds:
+            raise ValueError(f"the lumping did not settle in {max_rounds} rounds")
+        block, count = new, grown
+    block_of[where] = block
+    return block, count, rounds
+
+
+def lump_states(table, slot: np.ndarray, label: np.ndarray) -> np.ndarray:
+    """The block of every state in the coarsest lumping of a chain that keeps states of different `label` apart (ticket #689).
+
+    State `i` moves by kernel `slot[i]` of `table` (anything with the kernel arrays of `PackedGraph`: `k_ptr`, `k_succ`, `k_wt`, `k_prob`,
+    `k_big`, `kernel_sizes()`), whose successors are state numbers, or stops there when `slot[i] < 0` (a goal or a dead end: give them labels
+    of their own). The states are `0..len(slot) - 1`; the kernels are read once per round whatever the number of states that share them.
+    The blocks are numbered by the first state of each. The refinement runs until it settles, which it does within the number of states (no
+    cap on the rounds, OR-12). Checked like `lump_policy`: raises `ValueError` when a state's chance into a block differs from its block's by
+    more than `CHECK_TOLERANCE` (a bug, never a property of the chain).
+    """
+    n = len(slot)
+    if n == 0:
+        return np.zeros(0, dtype=np.int64)
+    taking = slot >= 0
+    _, first = np.unique(np.asarray(label), return_inverse=True)
+    if not taking.any():  # nothing moves: the labels are the blocks
+        first = first.reshape(-1).astype(np.int64)
+        rep = np.full(int(first.max()) + 1, n, dtype=np.int64)
+        np.minimum.at(rep, first, np.arange(n))
+        renumber = np.empty(len(rep), dtype=np.int64)
+        renumber[np.argsort(rep, kind="stable")] = np.arange(len(rep))
+        return renumber[first]
+    used = np.unique(slot[taking])
+    rows = _Rows(table, used)
+    position = np.full(int(used.max()) + 1, -1, dtype=np.int64)
+    position[used] = np.arange(len(used))
+    at = np.where(taking, position[np.maximum(slot, 0)], -1)
+    block_of = np.full(n, -1, dtype=np.int64)
+    block, count, _ = _settle(rows, at, first.reshape(-1).astype(np.int64), block_of, slice(None), None)
+    rep = np.full(count, n, dtype=np.int64)
+    np.minimum.at(rep, block, np.arange(n))
+    succ: list[np.ndarray] = []
+    chance: list[np.ndarray] = []
+    for b in range(count):
+        k = int(slot[rep[b]])
+        if k < 0:
+            succ.append(np.zeros(0, dtype=np.int64))
+            chance.append(np.zeros(0))
+            continue
+        lo, hi = int(table.k_ptr[k]), int(table.k_ptr[k + 1])
+        target = block[table.k_succ[lo:hi]]
+        order = np.argsort(target, kind="stable")
+        ts = target[order]
+        starts = np.flatnonzero(np.concatenate(([True], ts[1:] != ts[:-1])))
+        succ.append(ts[starts])
+        chance.append(np.add.reduceat(table.k_prob[lo:hi][order], starts))
+    deviation = rows.deviation(block_of, count, at, block, succ, chance)
+    if deviation > CHECK_TOLERANCE:
+        raise ValueError(f"the lumped chain disagrees with a state it stands for by {deviation:.3g} in chance: the lumping cannot be trusted")
+    renumber = np.empty(count, dtype=np.int64)
+    renumber[np.argsort(rep, kind="stable")] = np.arange(count)
+    return renumber[block]
+
+
 def lump_policy(graph: PackedGraph, action: np.ndarray, start: int, *, max_rounds: int = 10_000) -> LumpedChain:
     """The coarsest lumping of the chain of policy `action` (an action index of `graph` per state, -1 for none) from `start`.
 
@@ -211,25 +294,9 @@ def lump_policy(graph: PackedGraph, action: np.ndarray, start: int, *, max_round
     cost = np.where(taking, graph.act_cost[np.maximum(acts, 0)], 0.0)
     kind = np.where(graph.goal[reached], 1, np.where(taking, 0, 2))  # 1 goal, 2 dead end
     _, first = np.unique(np.stack([kind.astype(np.float64), cost], axis=1), axis=0, return_inverse=True)
-    block = first.reshape(-1).astype(np.int64)
-    count = int(block.max()) + 1
     slot = np.where(taking, kernel_slot[graph.act_kernel[np.maximum(acts, 0)]], -1)
     on_class = np.full(graph.n, -1, dtype=np.int64)  # class -> block, for the classes reached
-    rounds = 0
-    while True:
-        rounds += 1
-        on_class[reached] = block
-        ids = rows.signatures(on_class, count)
-        sig = np.where(slot >= 0, ids[np.maximum(slot, 0)], -1)
-        _, new = np.unique(np.stack([block, sig], axis=1), axis=0, return_inverse=True)
-        new = new.reshape(-1).astype(np.int64)
-        grown = int(new.max()) + 1
-        if grown == count:
-            break
-        if rounds >= max_rounds:
-            raise ValueError(f"the lumping did not settle in {max_rounds} rounds")
-        block, count = new, grown
-    on_class[reached] = block
+    block, count, rounds = _settle(rows, slot, first.reshape(-1).astype(np.int64), on_class, reached, max_rounds)
     rep_index = np.full(count, len(reached), dtype=np.int64)
     np.minimum.at(rep_index, block, np.arange(len(reached)))
     rep = reached[rep_index]
@@ -267,4 +334,4 @@ def lump_policy(graph: PackedGraph, action: np.ndarray, start: int, *, max_round
     return LumpedChain(block_of_class, int(on_class[start]), goal, out_cost, rep_action, rep, tuple(succ), tuple(weight), rounds, deviation)
 
 
-__all__ = ["LumpedChain", "lump_policy"]
+__all__ = ["LumpedChain", "lump_policy", "lump_states"]

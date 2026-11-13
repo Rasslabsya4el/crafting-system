@@ -73,8 +73,18 @@ def test_every_recorded_case_is_played_and_nothing_is_left_out():
         "chaos-r13-belt",
         "essence-c02-helmet",
         "essence-r05-ring",
+        "essence-r08-fear",  # #627: the essences the actions: key hides
+        "essence-r09-spite",
         "essence-r10-boots",
         "essence-r11-helmet",
+        "essence-r13-hatred",
+        "exalt-j01-wants-attack-speed",  # #637: the Exalted Orb the actions: key hides
+        "exalt-j01-wants-life",
+        "exalt-j01-wants-wand-speed",
+        "exalt-v01-life-three-mods",
+        "exalt-v01-minion-five-mods",
+        "exalt-v01-minion-four-mods",
+        "exalt-v01-minion-three-mods",
         "fossil-r08-boots",
         "fossil-r09-boots",
         "regal-r13-belt",
@@ -125,6 +135,15 @@ def test_a_wrong_ratio_of_the_rare_counts_is_rejected(raw):
     shapes = [cell for cell in f.cells_of(name, CASES[name], wrong) if cell.kind == "shape"]
 
     assert f.failures(shapes, tested=len(shapes))
+
+
+def test_a_jewel_with_the_capacity_of_other_items_is_rejected(raw):
+    """#637: with the law `jewel_capacity` off, an Exalted Orb adds a third prefix to a rare jewel that holds two, which the emulator never does."""
+    name = "exalt-j01-wants-attack-speed"
+    wrong = count(raw, name, Laws(jewel_capacity=False), applications=20_000)
+
+    cells = f.cells_of(name, CASES[name], wrong)
+    assert f.failures(cells, tested=len(cells))
 
 
 def test_the_statistic_on_a_known_case():

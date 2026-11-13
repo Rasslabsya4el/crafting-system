@@ -1,0 +1,91 @@
+# Given route for benchmark route R17: a +2 Lightning rare Talisman made with the rare-Talisman imprint (3.29).
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# In every state the FIRST rule whose conditions match is the one that is followed. A goal state is never
+# acted on. A state no rule matches is reported as a gap: the guide does not say what to do there, and this
+# file does not invent it. The conditions and actions are explained in examples/routes/r12-lightning-amulet.yaml;
+# `imprints: n` matches a Talisman that holds exactly n imprints (#223).
+#
+# The route (Reddit, r/pathofexile, comments/1vtv3u0, 2026; docs/research/2026-10-30-5-reference-routes.md, id R17), from the
+# bought Croaker Talisman (steps 1 to 3 make its implicit, see the target):
+#   4. Orb of Alteration until "+1 to Level of all Skill Gems" (the one Orb of Transmutation that makes the Normal Talisman Magic
+#      comes first: the game forces it before an Alteration).
+#   5. Regal Orb.
+#   6. "Imprint and annul to a 1-mod item with only +1 all skills left", "on fail: restore imprint and retry": the imprint is made
+#      with the Fenumal Plagued Arachnid on the rare Talisman, an Orb of Annulment follows, and when it took the +1 the imprint is
+#      restored. A restore uses the imprint up (ADR-0034), so the next try makes a new one first.
+#   7. Craft "Can have up to 3 Crafted Modifiers", "Prefixes Cannot Be Changed" and "Cannot roll Attack Modifiers" (in that order:
+#      the multimod lets the other two be crafted beside it).
+#   8. "Harvest augment a new Lightning modifier and remove a random modifier", repeated "until +1 all Lightning skills". With the
+#      prefixes locked the craft removes one of the three metamods (the only mods it may take: Harvest add/remove claims), and the
+#      guide names no re-craft, so the craft is simply repeated, as written. A Talisman whose free prefixes are gone is a gap: the
+#      craft has no room to add and the guide names no way on. Should a later craft take the +1 (its prefix lock taken first),
+#      step 6's restore applies, as the guide's own rule for a lost +1. A Talisman back at 2 free prefixes after its prefix lock and
+#      its Lightning prefix were taken meets step 7's rules again; where the bench refuses the craft there, it is a gap.
+#
+# Counting mods: "only the +1" is 2 free prefixes and 3 free suffixes (the +1 is a prefix); the three metamods are suffixes.
+name: R17, Reddit guide
+
+rules:
+  # Step 4: the Normal Talisman is made Magic, then Alterations until the +1.
+  - when:
+      rarity: normal
+    do: Orb of Transmutation
+  - when:
+      rarity: magic
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+    do: Regal Orb
+  - when:
+      rarity: magic
+    do: Orb of Alteration
+
+  # Step 6: the Annulment took the +1: restore the imprint.
+  - when:
+      rarity: rare
+      imprints: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: [absent, below]
+    do: Restore imprint 1
+
+  # Step 7: only the +1 is left: the multimod first.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 2
+      open_suffixes: 3
+    do: Bench craft Can have up to 3 Crafted Modifiers
+
+  # Step 6: more than the +1, no imprint held: imprint, then annul.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      imprints: 0
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+    do: Orb of Annulment
+
+  # Step 7: the multimod stands (2 free prefixes: no Harvest craft yet): the prefix lock, then Cannot roll Attack Modifiers.
+  - when:
+      rarity: rare
+      crafted_mods: true
+      open_prefixes: 2
+      open_suffixes: 2
+    do: Bench craft Prefixes Cannot Be Changed
+  - when:
+      rarity: rare
+      crafted_mods: true
+      open_prefixes: 2
+      open_suffixes: 1
+    do: Bench craft Cannot roll Attack Modifiers
+
+  # Step 8: the Harvest craft, repeated until the +1 Lightning is on the Talisman.
+  - when:
+      rarity: rare
+      crafted_mods: true
+    do: Harvest Add Remove Lightning

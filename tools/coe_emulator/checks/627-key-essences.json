@@ -1,0 +1,34 @@
+[
+ {
+  "id": "essence-r08-fear",
+  "route": "R08",
+  "note": "#627: the essence the R08 plan repeats once the actions: key is removed (run 42369553590). Shrieking Essence of Fear on R08's start boots, Sorcerer Boots of item level 86, rare, no mod: a Chaos-like reroll with the forced suffix MinionLifeEssence6, (25-27)% increased maximum Life of minions, which no goal line asks. With the joint 'the target is met' count",
+  "base": "Metadata/Items/Armours/Boots/BootsInt9",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": ["Shrieking Essence of Fear"],
+  "target": "examples/targets/r08-energy-shield-boots.yaml"
+ },
+ {
+  "id": "essence-r09-spite",
+  "route": "R09",
+  "note": "#627: the essence the R09 plan repeats once the actions: key is removed (run 42369553590). Screaming Essence of Spite on R09's start boots, Two-Toned Boots (Evasion and Energy Shield) of item level 86, rare, no mod: a Chaos-like reroll with the forced suffix Intelligence6, +(33-37) to Intelligence, which no goal line asks. With the joint 'the target is met' count",
+  "base": "Metadata/Items/Armours/Boots/BootsAtlas1",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": ["Screaming Essence of Spite"],
+  "target": "examples/targets/r09-life-boots.yaml"
+ },
+ {
+  "id": "essence-r13-hatred",
+  "route": "R13",
+  "note": "#627: the essence the R13 plan adds once the actions: key is removed (run 42369553590). Deafening Essence of Hatred on R13's belt, a Leather Belt of item level 86, rare: a Chaos-like reroll with the forced suffix ColdResist8, +(46-48)% to Cold Resistance, the tier 1 the goal's resistance line asks",
+  "base": "Metadata/Items/Belts/Belt3",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [],
+  "actions": ["Deafening Essence of Hatred"]
+ }
+]

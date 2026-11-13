@@ -18,6 +18,7 @@ the history endpoints are not documented, so "this source failed" is an ordinary
 import statistics
 import urllib.parse
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -32,8 +33,17 @@ def window_ending(last: date, days: int = HISTORY_DAYS) -> tuple[date, date]:
     return last - timedelta(days=days - 1), last
 
 
-def exchange_rows(data: Any, first: date, last: date) -> list[tuple[date, float]]:
-    """Chaos rates of the traded days of an exchange `details` answer inside the window."""
+@dataclass(frozen=True)
+class DayRow:
+    """One traded day of an exchange item: its rate in Chaos and the Chaos traded (`volumePrimaryValue`)."""
+
+    day: date
+    chaos: float
+    volume: float
+
+
+def exchange_readings(data: Any, first: date, last: date) -> list[DayRow]:
+    """The traded days of an exchange `details` answer inside the window, with their volume (#838)."""
     pairs = data.get("pairs") if isinstance(data, dict) else None
     if not isinstance(pairs, list):
         return []
@@ -53,8 +63,13 @@ def exchange_rows(data: Any, first: date, last: date) -> list[tuple[date, float]
             continue
         day = stamp.astimezone(UTC).date() if stamp.tzinfo else stamp.date()
         if first <= day <= last:
-            rows.append((day, float(row["rate"])))
+            rows.append(DayRow(day, float(row["rate"]), float(row["volumePrimaryValue"])))
     return rows
+
+
+def exchange_rows(data: Any, first: date, last: date) -> list[tuple[date, float]]:
+    """Chaos rates of the traded days of an exchange `details` answer inside the window."""
+    return [(row.day, row.chaos) for row in exchange_readings(data, first, last)]
 
 
 def stash_rows(data: Any, anchor: date, first: date, last: date) -> list[tuple[date, float]]:
@@ -85,10 +100,15 @@ def exchange_history(
     get_json: GetJson, league: str, details_id: str, first: date, last: date
 ) -> list[tuple[date, float]]:
     """Rows of the item in `league`; every overview type is tried in turn until one answers with rows."""
+    return [(row.day, row.chaos) for row in exchange_history_readings(get_json, league, details_id, first, last)]
+
+
+def exchange_history_readings(get_json: GetJson, league: str, details_id: str, first: date, last: date) -> list[DayRow]:
+    """`exchange_history` with each day's volume: every overview type is tried until one answers with rows."""
     for kind in OVERVIEW_TYPES:
         url = _url("exchange/current/details", league=league, type=kind, id=details_id)
         try:
-            rows = exchange_rows(get_json(url), first, last)
+            rows = exchange_readings(get_json(url), first, last)
         except SourceError:
             continue
         if rows:

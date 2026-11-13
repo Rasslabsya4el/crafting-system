@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds this target does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 23,
+      "count": 25,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -192,7 +192,9 @@
         "Aspect beast",
         "Beast side swap",
         "Wild Bristle Matron",
-        "Divine Orb"
+        "Divine Orb",
+        "Imprint",
+        "Restore"
       ],
       "names": []
     },
@@ -201,7 +203,7 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 28,
+      "count": 26,
       "labels": [
         "Harvest reforges that favour a mod",
         "Harvest quality enchants",
@@ -221,8 +223,6 @@
         "Orb of Conflict",
         "Tempering",
         "Tailoring",
-        "Imprint",
-        "Restore",
         "Jeweller's Orb",
         "Orb of Fusing",
         "Bench socket count",
@@ -251,11 +251,12 @@
       "what": "Memory Strands are not considered",
       "why": "the start item has none, and the planner cannot plan with them yet",
       "guarantee": "The plan makes no use of Memory Strands.",
-      "count": 3,
+      "count": 4,
       "labels": [
         "Foulborn Augmentation Orb",
         "Foulborn Regal Orb",
-        "Foulborn Exalted Orb"
+        "Foulborn Exalted Orb",
+        "Orb of Remembrance"
       ],
       "names": []
     },

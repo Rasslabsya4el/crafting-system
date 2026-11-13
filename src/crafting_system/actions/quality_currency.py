@@ -140,7 +140,7 @@ class ApplyQualityCurrency(Action):
     "quality-currency",
     order=106,
     planner=False,
-    why_not="a step of the socket finish (ADR-0049), bought before the orbs; the finish is attached to the goal states by ticket #231 (B6 S5)",
+    why_not="a step of the socket finish (ADR-0049), bought before the orbs when that is cheaper: solved with the finish of a target that names sockets (`cli/_finish.py`), never searched over as a step of the mods",
     applies_only_to="weapon and armour",
     reads_item_state_while_not_planner="quality",  # it reads and adds the quality
     burns=True,  # a quality burn (ticket #295)

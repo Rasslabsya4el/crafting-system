@@ -908,7 +908,7 @@ def test_the_exact_solve_is_made_for_a_residual_above_its_threshold_and_not_at_i
 def stub_certify(monkeypatch, quotient_bound, whole_bound):
     """`certify` that is settled and gives `quotient_bound` when called by `solve_graph` (with a `work`), `whole_bound` for the whole graph."""
 
-    def fake(graph, value, solved, work=None):
+    def fake(graph, value, solved, work=None, wanted=None):
         return Certificate(quotient_bound if work is not None else whole_bound, 1.0, 1.0, 0.0, True)
 
     monkeypatch.setattr(ps, "certify", fake)

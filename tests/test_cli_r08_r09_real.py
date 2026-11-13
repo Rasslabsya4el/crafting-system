@@ -125,7 +125,7 @@ def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, route,
     out = tmp_path / "policy.json"
 
     code = main(
-        [str(target), "--json", str(out), "--verify", "--runs", str(RUNS), "--route", str(given), "--exact"],
+        [str(target), "--json", str(out), "--verify", "--runs", str(RUNS), "--route", str(given), "--exact", "--time-limit", "none", "--memory-limit", "none"],  # the whole run, past OR-33's net of the command (#825)
         data=data,
         prices=load_price_file(PRICES),
         env={},

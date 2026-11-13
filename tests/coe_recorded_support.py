@@ -273,6 +273,9 @@ def target_cells(case: str, record: dict, use: dict) -> list[Cell]:
     found = record["target"]
     n = record["applied"]
     assert found["goal"] + found["short"] + found["other"] == n, f"{case}: the readings do not add up to the applied items"
+    if use["short"] is None:  # the route has no sure bench step (J01, V01, #637): nothing is one craft short, the first cell is the only one
+        assert found["short"] == 0, f"{case}: the judge read items one bench craft short on a route with no bench step"
+        return [Cell(case, "target", "ends in the target", n, found["goal"], use["chance"])]
     return [
         Cell(case, "target", "ends in the target", n, found["goal"], use["chance"]),
         Cell(case, "target", "ends in the target or one bench craft short of it", n, found["goal"] + found["short"], use["chance"] + use["short"]),
