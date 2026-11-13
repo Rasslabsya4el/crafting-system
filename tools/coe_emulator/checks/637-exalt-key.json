@@ -1,0 +1,68 @@
+[
+ {
+  "id": "exalt-j01-wants-attack-speed",
+  "route": "J01",
+  "note": "#637: the Exalted Orb the J01 plan takes once the orb is added to the actions: key (run 42378616946). A rare Cobalt Jewel holding the goal's two prefixes (% increased maximum Life, Wand attack speed) and one filler suffix: both prefix slots are full (a jewel holds 2 and 2), so the orb adds a suffix, and the jewel is the target when it is (3-5)% increased Attack Speed. With the joint 'the target is met' count",
+  "base": "Metadata/Items/Jewels/JewelInt",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": ["PercentIncreasedLifeJewel", "WandAttackSpeedJewel", "FreezeChanceAndDurationJewel"],
+  "actions": ["Exalted Orb"],
+  "target": "examples/targets/j01-cobalt-life-attack-speed.yaml"
+ },
+ {
+  "id": "exalt-j01-wants-wand-speed",
+  "route": "J01",
+  "note": "#637: as above, the jewel holding the Life prefix, the Attack Speed suffix and one filler suffix: only a prefix can be added, and the jewel is the target when it is the Wand attack speed",
+  "base": "Metadata/Items/Jewels/JewelInt",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": ["PercentIncreasedLifeJewel", "AttackSpeedJewel", "FreezeChanceAndDurationJewel"],
+  "actions": ["Exalted Orb"],
+  "target": "examples/targets/j01-cobalt-life-attack-speed.yaml"
+ },
+ {
+  "id": "exalt-j01-wants-life",
+  "route": "J01",
+  "note": "#637: as above, the jewel holding the Wand attack speed prefix, the Attack Speed suffix and one filler suffix: only a prefix can be added, and the jewel is the target when it is the % increased maximum Life",
+  "base": "Metadata/Items/Jewels/JewelInt",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": ["WandAttackSpeedJewel", "AttackSpeedJewel", "FreezeChanceAndDurationJewel"],
+  "actions": ["Exalted Orb"],
+  "target": "examples/targets/j01-cobalt-life-attack-speed.yaml"
+ },
+ {
+  "id": "exalt-v01-minion-three-mods",
+  "route": "V01",
+  "note": "#637: the Exalted Orb the V01 plan takes once the orb is added to the key (Augmentation > Regal > Exalted > Exalted, run 42378616946). A rare Lion Pelt of item level 84 holding the recipe's +1 to Level of all Minion Skill Gems and two filler suffixes: the orb adds one mod of either side, and the helmet is the target when it is the tier 1 Life. With the joint 'the target is met' count",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": ["GlobalIncreaseMinionSpellSkillGemLevel1", "Dexterity8", "ColdResist7"],
+  "actions": ["Exalted Orb"],
+  "target": "examples/targets/v01-minion-helmet.yaml"
+ },
+ {
+  "id": "exalt-v01-minion-five-mods",
+  "route": "V01",
+  "note": "#637: the plan's second Exalted Orb on a full side: the helmet holds the +1 Minion mod, a filler prefix and three suffixes (a helmet holds 3 and 3), so the orb can add only a prefix, and the helmet is the target when it is the tier 1 Life. The cap on mods",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": ["GlobalIncreaseMinionSpellSkillGemLevel1", "LocalIncreasedEvasionRatingPercent6", "Dexterity8", "ColdResist7", "FireResist7"],
+  "actions": ["Exalted Orb"],
+  "target": "examples/targets/v01-minion-helmet.yaml"
+ },
+ {
+  "id": "exalt-v01-life-three-mods",
+  "route": "V01",
+  "note": "#637: the plan's Exalted Orb on a helmet that holds the tier 1 Life and two filler suffixes, hoping for the +1 to Level of all Minion Skill Gems (weight 250 of the pool)",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 84,
+  "rarity": "rare",
+  "mods": ["IncreasedLife9", "Dexterity8", "ColdResist7"],
+  "actions": ["Exalted Orb"],
+  "target": "examples/targets/v01-minion-helmet.yaml"
+ }
+]

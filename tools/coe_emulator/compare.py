@@ -392,7 +392,7 @@ def target_met(data, spec: dict, item: Item, action, results: Counter, n_ok: int
     beside the planner's exact chance of one use of `action` (`_benchmark_use.per_use_of`, the same judge). Needs the check's item to be the target's start item."""
     from crafting_system.cli._benchmark_use import per_use_of
 
-    judge = TargetJudge(data, spec["target"])
+    judge = TargetJudge(data, spec["target"], spec.get("rarity"))
     start = judge.target.start_item
     if (item.base_id, item.item_level, item.rarity, item.mods) != (start.base_id, start.item_level, start.rarity, start.mods):
         return {"note": "the check's item is not the target's start item: no target count", "flags": []}
