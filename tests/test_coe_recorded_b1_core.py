@@ -147,6 +147,7 @@ def uses(data, targets):
             ), f"{case}: the recorded item is not the target's start item"
             opened = plan.abstraction.compress(item) if plan.start.flags.unopened else plan.start  # a bought listing is drawn first (#640): the recorded item is the one it opens to
             found[case] = per_use_of(plan, opened, record["action"])
+            assert found[case]["short"] is not None, f"{case}: R08 and R09 have a sure bench step; its second target cell must not drop out"
     return found
 
 
