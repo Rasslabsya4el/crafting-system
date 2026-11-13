@@ -2,7 +2,7 @@
 
     uv run --no-sync python .github/scripts/budget_measure.py r08-energy-shield-boots tests/fixtures/prices/routes-allflame-2026-11-10.json default $OUT_DIR/r08.json
 
-`mode` is `none` (no budget: every stage to its end, as `make_plan` always ran before #825) or `default` (`budget.Budget.default()`: OR-33's
+`solver` (optional, default `auto`) is `make_plan`'s. `mode` is `none` (no budget: every stage to its end, as `make_plan` always ran before #825) or `default` (`budget.Budget.default()`: OR-33's
 10-minute net and 80% of the machine's memory, what the command uses). The memory of this process and of its live children is sampled every
 `SAMPLE_SECONDS` from /proc (Linux runners). The result is one JSON object: the seconds, the peak memory, the mean or the refusal, and the
 limits that bound. It runs on any branch: `none` needs nothing of #825.
@@ -33,7 +33,7 @@ def held_mb() -> float:
     return rss("self") + sum(rss(child.pid) for child in multiprocessing.active_children())
 
 
-def main(stem: str, prices_path: str, mode: str, out: str) -> None:
+def main(stem: str, prices_path: str, mode: str, out: str, solver: str = "auto") -> None:
     from crafting_system.cli import make_plan
     from crafting_system.cli._plan import PlanError
     from crafting_system.config import load_config
@@ -45,7 +45,7 @@ def main(stem: str, prices_path: str, mode: str, out: str) -> None:
     data = load_game_data(cache_dir=load_config().cache_dir)
     target = load_target(root / "examples" / "targets" / f"{stem}.yaml", data)
     prices = load_price_file(root / prices_path)
-    kwargs = {}
+    kwargs: dict = {"solver": solver}
     if mode == "default":
         from crafting_system.budget import Budget
 
@@ -59,13 +59,17 @@ def main(stem: str, prices_path: str, mode: str, out: str) -> None:
 
     threading.Thread(target=sample, daemon=True).start()
     began = time.perf_counter()
-    result: dict = {"route": stem, "prices": prices_path, "mode": mode, "budget": repr(kwargs.get("budget"))}
+    result: dict = {"route": stem, "prices": prices_path, "mode": mode, "solver": solver, "budget": repr(kwargs.get("budget"))}
     try:
         plan = make_plan(data, target, prices, **kwargs)
         result["mean"] = plan.mean_remaining
         result["states"] = len(plan.solution.values)
         result["p50"] = None if plan.risk is None else [plan.risk.p50.low, plan.risk.p50.high]
         result["bound"] = [list(limit.names) for limit in plan.limits if limit.kind == "time-and-memory"]
+        info = plan.packed.info.get("envelope") if plan.packed is not None else None
+        if info is not None:
+            result["envelope"] = {"exact": info.exact, "stopped": info.stopped, "lower": info.lower, "upper": info.upper, "bound_stopped": info.bound_stopped,
+                                  "bound_seconds": info.bound_seconds, "seconds": info.seconds, "expanded": info.expanded}
     except PlanError as error:
         result["refused"] = str(error)
     result["seconds"] = time.perf_counter() - began
@@ -76,4 +80,4 @@ def main(stem: str, prices_path: str, mode: str, out: str) -> None:
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:5])
+    main(*sys.argv[1:6])

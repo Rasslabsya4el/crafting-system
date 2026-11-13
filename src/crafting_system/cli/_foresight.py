@@ -81,6 +81,7 @@ class Status(StrEnum):
     NO_OPTION = "no previewable action"  # no state the plan visits has a previewable option
     REFUSED = "refused"  # the start item takes no Lock (corrupted)
     SWITCHED_OFF = "switched off by the target"  # the target's `actions:` does not name it
+    WITH_SECOND_ITEMS = "not offered in a plan that makes second items"  # the target allows it, but a plan with donors has no Lock solve yet (#225, #796)
     NO_PRICE = "no price"  # the price file has none: the Lock is dropped, N is still found
     COARSE = "coarse"  # an approximate answer whose pruning removed the Lock everywhere: no N (the exact values it needs do not exist)
     STOPPED = "not checked: the time or memory limit was reached"  # the run's net stopped the check (#825, OR-33): the plan is the one without the Lock

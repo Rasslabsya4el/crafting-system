@@ -1250,7 +1250,13 @@ def build_report(data, seconds: float = TARGET_SECONDS, src_root: Path = SRC, lo
     out.extend(table(["Condition", "Message", "Benchmark targets it refuses"], gate_rows))
     out.append("")
     for text in closed_inputs(index):
-        out.append(f"- `{text}`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.")
+        if "False" in text:
+            out.append(f"- `{text}`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.")
+        else:
+            out.append(
+                f"- `{text}`: an action that consumes other items is planned only when it reads a rule axis, with the second items the planner offers "
+                "(the recombinator: the target's isolated feeders); one without an axis is refused by the kernel."
+            )
     if first is not None:
         out.append(f"- `memory_strands` on (`--strands`, or the setting): `make_plan` says \"{strands_refusal or 'nothing'}\"")
     corrupting = sum(
