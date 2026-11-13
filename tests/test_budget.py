@@ -244,6 +244,20 @@ def test_under_a_budget_many_offers_take_the_envelope_search_not_the_forecast(co
         assert not [limit for limit in plan.limits if limit.kind == BUDGET]
 
 
+def test_a_plan_inside_a_run_takes_the_search_by_the_runs_gap_as_the_search_itself_reads_it(coarse, monkeypatch, no_forecast):  # noqa: F811
+    """A plan inside a run that already has a clock (a start option, a reading) shares it: the gap that decides is the run's, the one
+    `search_gap` gives the search, whatever budget the inner call names."""
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
+    target, prices, _ = coarse
+    with budget.running(Budget(seconds=3_600.0, memory_mb=None).start()):  # the run has a gap: the search, though the inner call asks for none
+        for inner in (None, Budget(memory_mb=None, gap=0.0)):
+            plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=inner)
+            assert plan.search is not None and plan.pruned is None
+    with budget.running(Budget(seconds=3_600.0, memory_mb=None, gap=0.0).start()):  # the run owes the whole proof: the pruning
+        plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(memory_mb=None))
+        assert plan.pruned is not None and plan.search is None
+
+
 @pytest.mark.parametrize("budget", [None, Budget(seconds=3_600.0, memory_mb=None, gap=0.0), Budget(aim_seconds=60.0, seconds=None, memory_mb=None, gap=0.0)])
 def test_a_run_that_asks_for_the_whole_proof_keeps_the_bound_pruning_for_many_offers(coarse, monkeypatch, no_forecast, budget):  # noqa: F811
     """#742's exception stands where the search has no stop of its own: no budget, or a gap of 0 (the command's `--exact` and `--gap 0`), with

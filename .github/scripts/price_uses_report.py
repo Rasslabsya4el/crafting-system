@@ -35,7 +35,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("routes")
     parser.add_argument("out")
     parser.add_argument("--prices", default=PRICES)
-    parser.add_argument("--budget", type=float, default=None, help="seconds the plan aims at (a budget with the default gap and no net; since #926 `auto` makes no forecast under it. Before: the decision of `make_plan`: exact when the forecast fits, else approximate; the envelope search that `auto` is since #535 wherever its bound can be built makes no approximate answer: under a budget it stops once its plan is proved within 1% of the cheapest, whatever the time, #826, OR-39), as the real-route tests plan R08 and R09")
+    parser.add_argument("--budget", type=float, default=None, help="seconds the plan aims at: a budget with the default gap and no net. Since #926 `auto` makes no forecast under it: the envelope search, wherever its bound can be built, stops once its plan is proved within 1% of the cheapest, whatever the time (#826, OR-39), also with 40 offers or more (R08, R09; the real-route tests of those two judge a route, so they walk instead)")
     args = parser.parse_args(argv)
     if args.routes == "split":
         index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
@@ -55,7 +55,7 @@ def main(argv: list[str]) -> int:
             return 2
         began = time.perf_counter()
         target = load_target(root / bench.target, data)
-        extra = {} if args.budget is None else {"budget": args.budget, "rates": Rates(4e-5, 7e-6)}  # the rates are injected, so the decision does not depend on the machine
+        extra = {} if args.budget is None else {"budget": args.budget, "rates": Rates(4e-5, 7e-6)}  # the rates are read by nothing under `auto` since #926 (no forecast); they go with the forecast (#928)
         plan = make_plan(data, target, prices, **extra) if bench.start is None else plan_with_starts(data, target, prices, **extra)
         print(f"{name}: planned in {time.perf_counter() - began:,.0f} s; {len(plan.view_policy):,} states in the policy, {len(plan.offers):,} offers", flush=True)
         uses = price_uses(plan, plan.view_policy, all_uses=True)
