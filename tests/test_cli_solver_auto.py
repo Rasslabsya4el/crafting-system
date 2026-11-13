@@ -2,7 +2,7 @@
 
 * `pattern_refusal(abstraction)` is the one check: None where the crafted-pattern bound can be built, a text where it cannot, and `Pattern` raises that text;
 * `make_plan(solver="auto")` asks it before any solve: the envelope search where it is None, whatever the `budget` (never the ladder's approximate
-  answer; R12 is proved the cheapest in its first round, so it is exact at any budget; a plan past its budget stops at a proved gap, #826,
+  answer; R12 is proved the cheapest in its first round, so it is exact at any budget; under a budget a search stops at a proved gap whatever the time, #826, OR-39,
   `tests/test_envelope_gap_stop_plan.py`);
   where it refuses, the path it was (the budget decision, the walk, the object solver for a small graph);
 * an envelope search that cannot answer under `auto` is a `PlanError` that says why and names `--solver packed`: no silent walk;

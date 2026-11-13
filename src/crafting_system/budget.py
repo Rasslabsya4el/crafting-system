@@ -36,7 +36,7 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the exact proof gives way to the stop at a proved 1% (#826)
+AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute (the forecast of the walk paths reads it; the search's stop at a proved 1% does not, OR-39)
 PROOF_GAP = 0.01  # OR-32, OR-39: the search stops by itself when its plan is proved to cost at most this share more than the cheapest, whatever the time; 0 keeps the exact proof (#826)
 NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every method family has its bound (#822, ticket 4)
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
@@ -54,7 +54,7 @@ STATES = "states"
 class Budget:
     """The time and memory one run may take (see the module text). None for a figure means no limit of that kind.
 
-    `aim_seconds` is what the plan aims at (the forecast of `_decide` reads it, and #826's stop at a proved 1%); `seconds` and `memory_mb` are the
+    `aim_seconds` is what the plan aims at (the forecast of `_decide` reads it; #826's stop at a proved 1% does not, OR-39); `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure.
     `gap` is the proof the run owes (OR-32 as narrowed by OR-39): the envelope search stops by itself once its plan is proved to cost at most this

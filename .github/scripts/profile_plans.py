@@ -2,7 +2,7 @@
 
     python .github/scripts/profile_plans.py --case r05 [--budget SECONDS] [--workers N] [--cprofile] --out $OUT_DIR
 
-Cases: the example targets by their short name (r04, r05, r08, r09, r10, r11, r12, r13). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default; the envelope search, which `--solver auto` is since #535 wherever its bound can be built, makes no approximate answer: past the budget it stops once its plan is proved within 1% of the cheapest, #826); `--solver object` or `packed` profile the walk-and-solve paths whose stages the timers below wrap;
+Cases: the example targets by their short name (r04, r05, r08, r09, r10, r11, r12, r13). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default; the envelope search, which `--solver auto` is since #535 wherever its bound can be built, makes no approximate answer: under a budget it stops once its plan is proved within 1% of the cheapest, whatever the time, #826, OR-39); `--solver object` or `packed` profile the walk-and-solve paths whose stages the timers below wrap;
 without it the plan is exact; `--rates` injects the seconds per kernel outcome and per solved edge, as the real-route tests
 do, so that the exact-or-approximate decision does not depend on the machine. Prices are the fixture's, plus a MADE-UP
 price for every resource it lacks (none for the routes the fixture covers).

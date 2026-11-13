@@ -15,8 +15,9 @@ one child process per measurement, so that the memory of one case is its own and
 
 1. **plan** (`one --mode plan`): the stages `setup` (the target, the scaled prices), `plan` (`make_plan(solver="auto", with_risk=False,
    budget=Budget(aim_seconds=AIM, seconds=PLAN_SECONDS, gap=GAP))`, or `plan_with_starts` for a vendor-recipe case: the planner's own path,
-   whatever it picks today; `--aim-seconds none`, the default, is no aim, so every proof is exact, as the baseline of #824 was recorded;
-   `--aim-seconds 60 --gap 0.01` is OR-32's setting, the stop at a proved 1% past a minute, ticket #826),
+   whatever it picks today; `--aim-seconds none`, the default, is no budget but the net, so every proof is exact, as the baseline of #824 was
+   recorded; any `--aim-seconds` value is a budget, under which the search stops at `--gap` whatever the time (OR-39, ticket #826; the aim
+   itself is read only by the forecast of the walk paths): `--aim-seconds 60 --gap 0.01` is the planner's default),
    `simulate` (the plan's policy played on concrete items, `cli._verify.verify`, in blocks until `SIM_SECONDS`), `risk` (`add_risk`).
    Each stage's seconds and peak memory (the resident memory of the process and its workers, sampled every `SAMPLE_SECONDS`) are written as
    the stage ends. Of the envelope search it records its own figures (`EnvelopeInfo`: rounds, states known and expanded, actions built and
@@ -774,8 +775,8 @@ def main() -> None:
         p.add_argument("--walk-seconds", type=float, default=WALK_SECONDS)
         p.add_argument("--memory-mb", type=float, default=MEMORY_MB)
         p.add_argument("--upper-per-round", action="store_true")
-        p.add_argument("--aim-seconds", type=aim_seconds, default=None, help="the plan's aim in seconds (OR-32: past it the search stops at --gap), or none for no aim: every proof exact (default)")
-        p.add_argument("--gap", type=float, default=PROOF_GAP, help="the gap of the stop past the aim, as a share (default: the planner's, 0.01)")
+        p.add_argument("--aim-seconds", type=aim_seconds, default=None, help="the plan's aim in seconds: a budget, under which the search stops at --gap whatever the time (OR-39), or none for no budget but the net: every proof exact (default)")
+        p.add_argument("--gap", type=float, default=PROOF_GAP, help="the gap of the stop under a budget, as a share (default: the planner's, 0.01)")
 
     listing = sub.add_parser("list")
     listing.add_argument("--seed", type=int, default=F.DEFAULT_SEED)

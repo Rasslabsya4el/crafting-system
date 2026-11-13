@@ -4,7 +4,7 @@
 * the limit that says which cut ran and what it guarantees is in `Plan.limits`, in the text report, in the JSON policy and on the route page, the way the
   other limits are (`tests/test_cli_limits.py`); a plan solved by another solver carries none;
 * a net given to `make_plan` ends the search, and the plan says it is not shown to be the best, with its bounds;
-* a plan that fits in its time budget is exact (the stop at a proved gap past the budget is `tests/test_envelope_gap_stop_plan.py`, #826) and an
+* a time budget never brings the ladder's approximate answer (under a budget the search stops at a proved gap, `tests/test_envelope_gap_stop_plan.py`, #826) and an
   abstraction the bound cannot be built for is a `PlanError`, not a silent walk.
 
 The walk-free bound needs no game dump, so this runs on the committed fixture pool. Real routes (R05, R13) are `tests/test_cli_envelope_real.py`.

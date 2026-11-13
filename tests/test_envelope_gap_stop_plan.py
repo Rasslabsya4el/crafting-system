@@ -360,3 +360,21 @@ def test_what_a_start_options_row_says_of_a_plan_not_proved_the_cheapest():
     assert _proved(plan(None)) == "" and _proved(plan(exact)) == ""
     assert _proved(plan(within)) == "the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"
     assert _proved(plan(no_figure)).endswith("which is not proved the cheapest")
+
+
+def test_the_pages_start_line_says_what_a_start_options_plan_proved():
+    """The route page's "Start" field lists the start options compared; a row whose plan the search did not prove the cheapest appends what it proved."""
+    from types import SimpleNamespace
+
+    from crafting_system.cli._route_view import _View
+
+    def row(outcome, total, note):
+        candidate = SimpleNamespace(label="a Magic helmet from the recipe", given=False, price=12.0)
+        return SimpleNamespace(outcome=outcome, total=total, mean_remaining=None if total is None else total - 12.0, candidate=candidate, note=note)
+
+    rows = [row("chosen", 61.0, ""), row("planned", 84.0, "the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"), row("failed", None, "x")]
+    view = SimpleNamespace(first=object(), plan=SimpleNamespace(starts=SimpleNamespace(considered=rows)))
+    field = _View.start_field(view)
+    texts = [line.text for line in field.lines]
+    assert len(texts) == 2 and texts[0].startswith("chosen: ") and "proved" not in texts[0] and texts[0].endswith(")")
+    assert texts[1].startswith("planned: ") and texts[1].endswith("; the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it)")

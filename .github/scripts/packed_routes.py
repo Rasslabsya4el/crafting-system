@@ -5,7 +5,7 @@
 
 `plan` makes the plan of the route the way the planner does (`make_plan(solver="auto")`, exact; since #535 the envelope search wherever its bound can be built, so pass `--solver packed` for the walk) and writes `<route>.json`:
 the mean cost from the start, the certified error bound, the numbers of the packed solve (states, classes, kernels, rounds,
-seconds of each phase), the risk (odds, p50, p90) and the peak memory. With `--aim-seconds S` the plan has OR-32's budget (ticket #826): past `S` seconds
+seconds of each phase), the risk (odds, p50, p90) and the peak memory. With `--aim-seconds S` the plan has a budget (ticket #826, OR-39): whatever the time,
 the envelope search stops once its plan is proved within `--gap` (a share, the planner's 1% by default) of the cheapest; `search` in the JSON says how the
 search ended (exact, or within the gap), its lower and upper figures, its rounds and the first plan's cost. `--no-risk` leaves the percentiles out.
 V01 is planned as the benchmark plans it: with the start items a vendor recipe makes, at the price file its target names.
@@ -126,8 +126,8 @@ def main() -> None:
     parser.add_argument("--route", required=True)
     parser.add_argument("--out")
     parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto, the planner's own; packed is the walk of the whole graph)")
-    parser.add_argument("--aim-seconds", type=float, help="plan: the time the plan aims at (OR-32); past it the search stops at --gap. Default: no aim, the exact proof")
-    parser.add_argument("--gap", type=float, default=PROOF_GAP, help="plan: the gap of the stop past the aim, as a share (default: the planner's)")
+    parser.add_argument("--aim-seconds", type=float, help="plan: the time the plan aims at: a budget, under which the search stops at --gap whatever the time (OR-39). Default: no budget, the exact proof")
+    parser.add_argument("--gap", type=float, default=PROOF_GAP, help="plan: the gap of the stop under a budget, as a share (default: the planner's)")
     parser.add_argument("--no-risk", action="store_true", help="plan: leave the percentiles out")
     arguments = parser.parse_args()
     faulthandler.dump_traceback_later(300, repeat=True, file=sys.stderr)
