@@ -43,11 +43,13 @@ def price_file(lifeforce: float | None = 0.01, start: float | None = 4.0, divine
 def run(tmp_path: Path, *arguments: str, target: Path = R12, data=DATA, prices: PriceFile | None = None):
     """Run the command on the fixture game data; returns the exit code and the path of the JSON it wrote.
 
-    `prices=None` makes the command read the price file the target names, as it does for a user.
+    `prices=None` makes the command read the price file the target names, as it does for a user. The run has no time or memory limit unless the
+    test gives one (`--time-limit`, `--memory-limit`): these tests check the answers, and OR-33's net of the command is `tests/test_budget.py`'s (#825).
     """
     out = tmp_path / "policy.json"
+    unlimited = [part for flag in ("--time-limit", "--memory-limit") if flag not in arguments for part in (flag, "none")]
     code = main(
-        [str(target), "--json", str(out), *arguments],
+        [str(target), "--json", str(out), *arguments, *unlimited],
         data=data,
         prices=prices,
         env={},

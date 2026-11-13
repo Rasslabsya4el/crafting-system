@@ -24,6 +24,7 @@ serial run, a refused offer) must not swallow the stop and run on.
 """
 
 import contextlib
+import contextvars
 import ctypes
 import math
 import os
@@ -113,6 +114,9 @@ class BudgetExceeded(BaseException):
         super().__init__(binding.words())
         self.binding = binding
 
+    def __reduce__(self):  # a pool worker that meets the net hands the stop back to its parent, which unpickles it
+        return (BudgetExceeded, (self.binding,))
+
 
 @dataclass
 class Clock:
@@ -169,32 +173,32 @@ class Clock:
             raise BudgetExceeded(self.bind(found))
 
 
-_active: Clock | None = None
+_active: contextvars.ContextVar[Clock | None] = contextvars.ContextVar("crafting_system_budget_clock", default=None)  # per thread and task: two plans at once (the website service) each have their own
 
 
 def active() -> Clock | None:
     """The clock of the run in progress, or None outside one (a library call with no budget)."""
-    return _active
+    return _active.get()
 
 
 @contextlib.contextmanager
 def running(clock: Clock | None) -> Iterator[Clock | None]:
     """Make `clock` the run's clock for the block; a block inside a run that already has one keeps the run's (one clock per run)."""
-    global _active
-    if _active is not None or clock is None:
-        yield _active
+    outer = _active.get()
+    if outer is not None or clock is None:
+        yield outer
         return
-    _active = clock
+    token = _active.set(clock)
     try:
         yield clock
     finally:
-        _active = None
+        _active.reset(token)
 
 
 def checkpoint() -> None:
     """Stop the running stage (`BudgetExceeded`) when the run's net is reached; nothing outside a run. Cheap enough for every state of a walk:
     it reads the clock every time and the memory at most every `MEMORY_POLL_SECONDS`."""
-    clock = _active
+    clock = _active.get()
     if clock is not None and clock.stops:
         clock.check(clock.stage, clock.what)
 
@@ -205,7 +209,7 @@ def stage(name: str, what: str = NO_PLAN, *, stops: bool = True) -> Iterator[Clo
 
     With `stops` False the checkpoints inside the block do nothing: the stage is given the net (`Clock.left`) and stops itself between two of its
     rounds, keeping the best it found (the envelope search), where a checkpoint deep inside a round would throw that away."""
-    clock = _active
+    clock = _active.get()
     if clock is None:
         yield None
         return
@@ -339,7 +343,7 @@ class _MemoryStatus(ctypes.Structure):
 
 
 def physical_mb() -> float | None:
-    """The machine's physical memory in MB, or None where it cannot be read."""
+    """The machine's physical memory in MB, or None where it cannot be read; on Linux no more than the limit of the process's container (cgroup)."""
     if sys.platform == "win32":
         try:
             status = _MemoryStatus()
@@ -350,6 +354,25 @@ def physical_mb() -> float | None:
             pass
         return None
     try:
-        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / (1024 * 1024)
+        total = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / (1024 * 1024)
     except (AttributeError, OSError, ValueError):
         return None
+    limit = _cgroup_mb()
+    return total if limit is None else min(total, limit)
+
+
+CGROUP_FILES = ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes")  # cgroup v2, then v1
+
+
+def _cgroup_mb() -> float | None:
+    """The memory limit of the container this process runs in, in MB, or None when it has none (`max`) or there is no such file."""
+    for path in CGROUP_FILES:
+        try:
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read().strip()
+        except OSError:
+            continue
+        if text.isdigit():
+            return int(text) / (1024 * 1024)
+        return None
+    return None

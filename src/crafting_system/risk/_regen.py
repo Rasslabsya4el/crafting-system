@@ -53,6 +53,10 @@ TIMED_OUT = "timed out"  # what `regenerative_runs` returns for a step its time 
 
 def time_net_words(seconds: float, coarser: bool) -> str:
     """What the player is told when the time net stops a step (OR-13): whether the figures shown still come from this method."""
+    if seconds < 1:  # the run's time was spent before the cost figures began (the plan took it all, OR-33)
+        if coarser:
+            return "the run's time limit was reached during a finer pass of the quicker method for the cost figures; the figures shown come from the coarser pass before it, and their ranges still hold"
+        return "the run's time limit was reached before the quicker method for the cost figures could work any of them out; the slower method follows"
     limit = f"{seconds / 60:.0f} minutes" if seconds >= 120 else f"{seconds:.0f} seconds"
     if coarser:
         return f"a finer pass of the quicker method for the cost figures ran past its time limit of {limit} and was stopped; the figures shown come from the coarser pass before it, and their ranges still hold"

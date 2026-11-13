@@ -289,3 +289,59 @@ def test_the_command_line_wins_over_the_settings_and_the_share_is_of_the_machine
     for wrong in ("0", "-1", "inf", "soon"):
         with pytest.raises(Exception, match="above zero"):
             _main._limit(wrong)
+
+
+# ---- the stop across processes and threads ------------------------------------------------------------------------------------------
+
+
+def test_a_stop_met_in_a_pool_worker_reaches_the_parent_whole():
+    import pickle
+
+    stop = BudgetExceeded(Binding("the walk", TIME, 600.0, 601.0, "no plan found yet"))
+    back = pickle.loads(pickle.dumps(stop))
+    assert isinstance(back, BudgetExceeded) and back.binding == stop.binding and str(back) == str(stop)
+
+
+def test_the_runs_clock_is_let_go_after_a_stop(fake):
+    clock = Budget(seconds=0.0, memory_mb=None).start()
+    with pytest.raises(BudgetExceeded), budget.running(clock):
+        budget.checkpoint()
+    assert budget.active() is None
+
+
+def test_two_runs_in_two_threads_each_have_their_own_clock(fake):
+    import threading
+
+    seen = {}
+    ready = threading.Barrier(2)
+
+    def run(name: str, seconds: float) -> None:
+        with budget.running(Budget(seconds=seconds, memory_mb=None).start()):
+            ready.wait()
+            seen[name] = budget.active().budget.seconds
+            ready.wait()
+
+    threads = [threading.Thread(target=run, args=(name, seconds)) for name, seconds in (("first", 10.0), ("second", 20.0))]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert seen == {"first": 10.0, "second": 20.0} and budget.active() is None
+
+
+def test_a_ladder_that_starts_with_no_time_left_says_the_run_spent_it():
+    from crafting_system.risk._regen import time_net_words
+
+    assert time_net_words(0.0, coarser=False) == (
+        "the run's time limit was reached before the quicker method for the cost figures could work any of them out; the slower method follows"
+    )
+    assert "30 seconds" in time_net_words(30.0, coarser=True) and "30 minutes" in time_net_words(1800.0, coarser=True)
+
+
+def test_the_command_stops_at_its_time_limit_and_says_so(tmp_path, capsys):
+    from cli_support import price_file, run
+
+    code, _ = run(tmp_path, "--time-limit", "0.000001", "--solver", "packed", prices=price_file())
+    error = capsys.readouterr().err
+    assert code != 0
+    assert re.search(rf"Error: stopped after \d+ s: {WALK_STAGE} stopped at the time limit of 0 s \(\d+ s spent\): no plan found yet", error), error

@@ -143,7 +143,7 @@ def main(
         "object: the same walk of the whole graph in plain objects; fine for a small target, it runs out of memory on a big one. "
         "The answer is the same exact mean whichever is chosen",
     )  # fmt: skip
-    parser.add_argument("--exact", action="store_true", help="where the answer would be approximate, solve exactly however long it takes (the search that auto and envelope use is always exact)")
+    parser.add_argument("--exact", action="store_true", help="where the answer would be approximate, solve exactly (the search that auto and envelope use is always exact); the time and memory limits still stop it and say so, unless --time-limit none and --memory-limit none")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time a walk of the whole graph (packed, object, or auto where the exact search cannot be built) may take before the answer is approximate (default {BUDGET_SECONDS:g}); the exact search ignores it")
     parser.add_argument(
         "--time-limit", type=_limit, default=_FROM_SETTINGS, metavar="SECONDS",

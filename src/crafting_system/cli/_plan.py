@@ -385,7 +385,12 @@ def as_budget(budget: float | Budget | None, net: Net | None = None) -> Budget |
     if net is None:
         return found
     base = found if found is not None else Budget.unlimited()
-    return replace(base, seconds=net.seconds, memory_mb=net.memory_mb, states=net.states)
+    return replace(
+        base,
+        seconds=net.seconds if net.seconds is not None else base.seconds,
+        memory_mb=net.memory_mb if net.memory_mb is not None else base.memory_mb,
+        states=net.states if net.states is not None else base.states,
+    )  # a figure the net leaves out is the budget's
 
 
 def with_bindings(plan: Plan, clock: Clock | None) -> Plan:
@@ -395,6 +400,7 @@ def with_bindings(plan: Plan, clock: Clock | None) -> Plan:
 
 
 SEARCH_STAGE = "the search for the cheapest plan"
+APPROXIMATE_STAGE = "the search for a plan within the stated gap of the cheapest"
 PRUNED_STAGE = "the search for the cheapest plan, first on a smaller set of actions"
 WALK_STAGE = "the walk of every item the actions can reach"
 READINGS_STAGE = "the plan made once for each reading of a rule the sources leave open"
@@ -616,7 +622,8 @@ def _make_plan(
             limits = with_limits(limits, (whole_search_limit(_packed_note(decision), decision.detail),), _limits.SOLVE)
         if decision.action == "approximate":
             try:
-                solved = climb(decision, start, merged)
+                with stage(APPROXIMATE_STAGE):
+                    solved = climb(decision, start, merged)
                 burn = plan_burn(data, target.start_item, abstraction, prices, price_source)
                 foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
             except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
