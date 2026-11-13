@@ -637,7 +637,7 @@ def route_plan(request, real):
 
 
 def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gave(route_plan, golden, real, monkeypatch):
-    """Mean to 1e-9 and the same action at every state. The golden file was written from the unmodified main branch.
+    """Mean to 1e-9 and the same action at every state, against the plan without the pruning (the golden file).
 
     `UPDATE_GOLDEN=1` rewrites this route's entry from the plan with the pruning turned off (`_plan.PRUNE_BOUND`), the
     reference the pruned plan is held to, at the current prices (#838), then compares as usual."""

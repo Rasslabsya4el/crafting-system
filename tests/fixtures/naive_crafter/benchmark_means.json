@@ -1,9 +1,9 @@
 {
  "provenance": {
-  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy run 42432611502 on the branch of PR #665, commit 6e1ed96d, which is origin/main 9392e34 (with PRs #681 and #661) plus the PR's own commits, 2026-11-08; the R14 restart route is the one of PR #681) and `write`; docs/ci.md",
+  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy run 43381687684 on the branch of PR #855, commit fef5ae99, which holds origin/main 98e8837, 2026-11-13, at tests/fixtures/prices/routes-allflame-2026-07-31.json) and `write`; docs/ci.md. Before: heavy run 42432611502 (PR #665, 2026-11-08) and, for R14, 42892654469",
   "inputs": "sha256 of the target and route files (line ends as in the repository) and the cost of one use of each action of the route at the price file; pin is the game-data version. A quick test in every CI run fails when they differ; it does not see a change of the planner's code (issue #692)",
   "mean_without_start": "risk.mean.value of the completed route. `benchmark` prints mean + start price (_benchmark._totals), so mean_with_start = mean_without_start + start_price is recorded beside it and a test checks the sum",
-  "success": "success_value is what the planner prints (the low end of its bracket, issue #683); success_low and success_high are its bracket; naive_heavy is the share of naive plays that finished in heavy run 42410566176 (python -m naive_crafter play)",
+  "success": "success_value is what the planner prints (the low end of its bracket, issue #683); success_low and success_high are its bracket; naive_heavy is the share of naive plays that finished in heavy run 42410566176 (python -m naive_crafter play); the naive play's finish share does not depend on prices, so it is kept when the planner side is recorded again",
   "what": "the planner side of R04 and R14 for tests/test_naive_crafter_routes.py: the mean of the completed route (the route file with a restart) WITHOUT the price of the bought start item, and the bracket of the success of the guide's route as written; a solve of 177,242 and 816,153 states, too long for a test"
  },
  "routes": {
