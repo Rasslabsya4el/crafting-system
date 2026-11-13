@@ -73,16 +73,14 @@ so. A time, memory or state net (`Net`) ends the search between rounds; the answ
 """
 
 import math
-import os
-import sys
 import time
 from collections.abc import Callable, Hashable, Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Protocol
 
 import numpy as np
 
+from crafting_system import parallel
 from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
 from crafting_system.solver._packed import BIG_TOTAL
 from crafting_system.solver._packed_solve import solve_graph
@@ -191,21 +189,11 @@ class SearchResult[S]:
 
 
 def resident_mb() -> float | None:
-    """The resident memory of this process in MB, or None where it cannot be read."""
-    try:
-        with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
-            for line in handle:
-                if line.startswith("VmRSS"):
-                    return int(line.split()[1]) / 1024
-    except OSError:
-        pass
-    try:
-        import resource
+    """The memory this process and its live pool workers hold, in MB, or None where it cannot be read (`parallel.held_mb`, #626).
 
-        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        return peak / (1024 * 1024) if sys.platform == "darwin" else peak / 1024
-    except ImportError:
-        return None
+    The workers that prime the distributions are processes of their own: a net that read this process alone let them take a runner's memory.
+    """
+    return parallel.held_mb()
 
 
 class Kernels:

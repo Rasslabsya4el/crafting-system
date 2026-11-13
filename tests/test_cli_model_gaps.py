@@ -88,6 +88,8 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_benchmark_use.py", "one_step_short", ("NotApplicableError", "OutOfScopeError"), EITHER, "a bench craft that cannot be used on this state is not a sure step to the target; nothing is left out of a plan and nothing is written"),
     ("cli/_bound_prune.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
     ("cli/_bound_prune.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
+    ("cli/_bound_prune.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
+    ("cli/_bound_prune.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
     ("cli/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
     ("cli/_donors.py", "DonorModel._candidate", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("cli/_donors.py", "DonorModel._candidate", ("OutOfScopeError",), RECORDS, "a model gap: written"),

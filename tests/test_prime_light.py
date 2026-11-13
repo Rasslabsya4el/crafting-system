@@ -250,3 +250,25 @@ def test_one_fracturing_pool_alone_is_left_to_the_kernel_and_joins_a_plain_pool_
 
     assert _prime.prime(ab, [(empty, PLAIN_FRACTURE), (empty, CHAOS)], workers=4) == 2  # a fracturing pool and a plain one
     assert len(ab._fractures) == 1 and len(ab._cache) == 1 and ab._kernels == 2
+
+
+class StoppedPool(PoolSpy):
+    """A pool whose workers the run's memory net killed (#626): `map` raises as `parallel.WorkerPool._wait` does."""
+
+    def map(self, function, pieces, *, chunk=None):
+        PoolSpy.mapped.append((len(list(pieces)), chunk))
+        raise parallel.MemoryNetReached("this process and its workers held 12,000 MB, the limit is 10,000 MB; the workers were stopped")
+
+
+def test_a_pool_the_memory_net_stopped_stores_nothing_and_no_pool_is_started_again(monkeypatch):
+    PoolSpy.made, PoolSpy.mapped = [], []
+    monkeypatch.setattr(parallel, "WorkerPool", StoppedPool)
+    monkeypatch.setattr(parallel, "can_inherit", lambda: True)
+    ab = abstraction()
+    requests = [(state, CHAOS) for state in states_of(ab)]
+
+    assert _prime.prime(ab, requests, workers=4) == 0
+    assert not ab._cache and ab._kernels == 0  # nothing stored: the kernels compute them alone, the same values
+    assert "12,000 MB" in ab.prime_stopped
+    assert _prime.prime(ab, requests, workers=4) == 0
+    assert PoolSpy.made == [4]  # the second call forked no pool: the net said the memory is not there
