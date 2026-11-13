@@ -202,6 +202,7 @@ def _stand_in(entry: PriceEntry, label: str, league: str, as_of: date, previous:
     # an estimate, not the reading: the reading's own words, depth and counts no longer describe it, so they go and the
     # estimate is marked as a price with no recorded depth besides its later day (OR-23); `detail` keeps what it was made from
     ratio, count = drift
-    detail = {"reading_chaos": entry.chaos, "reading_date": day, "template": label, "divided_by": ratio, "sample": count, "group": group_of(name)}
+    reading_league = entry.provenance.league if entry.provenance is not None else (entry.detail or {}).get("league", league)
+    detail = {"league": reading_league, "date": day, "reading_chaos": entry.chaos, "template": label, "divided_by": ratio, "sample": count, "group": group_of(name)}
     kept = None if entry.provenance is None else Provenance(entry.provenance.kind, entry.provenance.league, entry.provenance.date)
     return replace(entry, chaos=entry.chaos / ratio, note=note, detail=detail, provenance=kept)
