@@ -1,6 +1,7 @@
 """Profile one plan (ticket #881): where kernel generation and the pattern bound spend their time. No `src/` change.
 
     python research/881/profile_plan.py (--route r04|r13|j01 | --case essences/medium) [--mode plain|timers|cprofile] [--out DIR] [--top 60]
+    CRAFTING_SOURCE=DIR python research/881/profile_plan.py ...   # plan with the copy of the package in DIR (`build_cython.py source`)
 
 It plans with the planner's own entry (`make_plan(..., solver="envelope", with_risk=False)` for a route; `solver="auto"`, the family
 benchmark's call, for a generated case) and measures it in one of three ways:
@@ -32,6 +33,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".github" / "scripts"))
 sys.path.insert(0, str(ROOT / "tests"))
+if os.environ.get("CRAFTING_SOURCE"):  # a copy of the package to plan with instead (`build_cython.py source`)
+    sys.path.insert(0, os.environ["CRAFTING_SOURCE"])
 
 # (module, class or None, name): the stages of a plan. A function is looked up where it is defined and replaced wherever a module of the
 # package holds it by name.
@@ -238,13 +241,14 @@ def main() -> None:
     parser.add_argument("--mode", choices=("plain", "timers", "cprofile"), default="timers")
     parser.add_argument("--out")
     parser.add_argument("--top", type=int, default=60)
+    parser.add_argument("--tag", default="", help="added to the name of the files written")
     args = parser.parse_args()
     from crafting_system.cli import _envelope, make_plan
 
     data, target, prices, start_price, solver = inputs(args)
-    name = f"{(args.case or args.route).replace('/', '__')}.{args.mode}"
+    name = f"{(args.case or args.route).replace('/', '__')}.{args.mode}{args.tag}"
     found: dict = {}
-    out = {"name": name, "mode": args.mode, "platform": sys.platform, "python": sys.version.split()[0]}
+    out = {"name": name, "mode": args.mode, "platform": sys.platform, "python": sys.version.split()[0], "source": os.environ.get("CRAFTING_SOURCE")}
     timers, shapes, profile = Timers(), KernelShapes(), cProfile.Profile()
     if args.mode == "timers":
         out["not_timed"] = timers.install()
@@ -266,6 +270,9 @@ def main() -> None:
     plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver=solver, with_risk=False)
     profile.disable()
     out.update(seconds=round(time.perf_counter() - began, 2), mean_remaining=plan.mean_remaining, search=found)
+    loaded = [m for n, m in sys.modules.items() if n.startswith("crafting_system") and getattr(m, "__file__", None)]
+    out["modules_loaded"] = len(loaded)
+    out["modules_compiled"] = sum(not m.__file__.endswith(".py") for m in loaded)
     report = ""
     if args.mode == "timers":
         out["timers"] = timers.rows()
