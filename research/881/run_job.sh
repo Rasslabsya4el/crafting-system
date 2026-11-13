@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # One measurement job of ticket #881 on a GitHub runner (Linux or Windows), started only through the dispatcher:
 #   python .github/scripts/heavy_dispatch.py run --no-wait [--os windows-latest] --ref <branch> --runners 4 --command 'bash research/881/run_job.sh $RUNNER_INDEX'
 # 1, 2: the hot loop on the pools of R04 / essences/medium: today's Python against flat Python, Numba and Cython (bench_kernels.py).
