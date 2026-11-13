@@ -16,6 +16,7 @@ so no price becomes a stand-in because a request failed.
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 from datetime import date
@@ -40,10 +41,18 @@ class Stopped(Exception):
 def cached(get, folder: Path):
     folder.mkdir(parents=True, exist_ok=True)
 
+    def keep(path: Path, data) -> None:
+        temp = path.with_suffix(".tmp")
+        temp.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(temp, path)  # whole or not at all: a run killed mid-write leaves no half answer
+
     def get_json(url: str):
         path = folder / f"{hashlib.sha256(url.encode()).hexdigest()}.json"
-        if path.exists():
+        try:
             data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            data = None  # not cached, or unreadable: asked again
+        else:
             if data == MISSING:
                 raise SourceError(f"HTTP 404 from {url} (cached)")
             return data
@@ -52,9 +61,9 @@ def cached(get, folder: Path):
         except SourceError as error:
             if not str(error).startswith("HTTP 404"):
                 raise Stopped(str(error)) from error
-            path.write_text(json.dumps(MISSING), encoding="utf-8")
+            keep(path, MISSING)
             raise
-        path.write_text(json.dumps(data), encoding="utf-8")
+        keep(path, data)
         return data
 
     return get_json
@@ -83,7 +92,7 @@ def main() -> int:
     previous = None if args.previous is None else (args.previous, args.previous_start)
     try:
         snapshot, notes = build_snapshot(templates, rows_of, args.league, args.start, args.as_of, previous)
-    except Stopped as error:
+    except (Stopped, ValueError) as error:
         raise SystemExit(f"stopped, nothing written: {error}") from None
     for note in notes:
         print("  ", note)

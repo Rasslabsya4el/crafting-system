@@ -23,11 +23,14 @@ from datetime import UTC, date, datetime, timedelta
 from .fallbacks import HISTORY_DAYS
 from .ninja_history import DayRow, window_ending
 from .poe_ninja import HISTORY_SOURCE, history_slug
+from .ninja_items import STASH_TYPES
 from .previous_league import PREVIOUS_SOURCE
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
-from .provenance import HISTORY, PREVIOUS_LEAGUE, STASH, Provenance
+from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, PREVIOUS_LEAGUE, STANDARD, STASH, TRADE, WATCH, Provenance
 
 __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
+
+BULK_KINDS = (EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE)  # a stash line (STASH) is told by its kind or its category
 
 RowsOf = Callable[[str, str], Sequence[DayRow]]  # (league, poe.ninja details id) -> that item's traded days
 Previous = tuple[str, date, date]  # the previous league, its first day, and its day of the same league age
@@ -41,10 +44,13 @@ def reading_on(rows: Sequence[DayRow], as_of: date, days: int = HISTORY_DAYS) ->
 
 
 def wants_history(entry: PriceEntry) -> bool:
-    """Whether a template entry is a bulk name the exchange rows can price: not a stored trade search, not a stash line."""
-    if isinstance((entry.detail or {}).get("query"), dict):
+    """Whether a template entry is a bulk name the exchange rows can price: a market reading of a name (`BULK_KINDS`), not a
+    stored trade search and not a stash line; a hand price or a default stays the user's and the model's own number."""
+    detail = entry.detail or {}
+    if isinstance(detail.get("query"), dict) or detail.get("category") in STASH_TYPES:
         return False
-    return entry.provenance is None or entry.provenance.kind != STASH
+    kind = entry.provenance.kind if entry.provenance is not None else KIND_OF_SOURCE.get(entry.source)
+    return kind in BULK_KINDS
 
 
 def _units(row: DayRow) -> float:
@@ -78,6 +84,8 @@ def build_snapshot(
         for name, entry in template.prices.items():
             names.setdefault(name, (label, entry))
     age = (as_of - start).days
+    if age < 0:
+        raise ValueError(f"the day of the snapshot, {as_of.isoformat()}, is before {league}'s first day, {start.isoformat()}")
     divine = reading_on(rows_of(league, history_slug(DIVINE_ORB)), as_of)
     if divine is None:
         raise ValueError(f"{league} has no Divine Orb row {_window(as_of)}: the snapshot has no Chaos per Divine")
@@ -130,8 +138,10 @@ def _stand_in(entry: PriceEntry, label: str, league: str, as_of: date, previous:
     """The template's entry kept whole, its note saying why and from where (OR-7); its own day is in its provenance."""
     if isinstance((entry.detail or {}).get("query"), dict):
         why = "a trade search has no daily history"
-    elif not wants_history(entry):
+    elif (entry.detail or {}).get("category") in STASH_TYPES or (entry.provenance is not None and entry.provenance.kind == STASH):
         why = "poe.ninja keeps no daily rows of a stash line of a finished league"
+    elif not wants_history(entry):
+        why = "a hand price or a default is no market reading"
     else:
         why = f"no poe.ninja daily row in {league} {_window(as_of)}"
         if previous is not None:

@@ -107,7 +107,7 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         found.append(PriceMark(OTHER_LEAGUE, f"price of league {p.league} ({p.date})"))
     elif p.recorded and p.market != OLD_PRICE and _days_before(p.date, price_file) > MAX_AGE_DAYS:  # an old price says its day in its own mark
         found.append(PriceMark(OLD, f"price of {p.date}, {_days_before(p.date, price_file)} days before the file"))
-    elif p.recorded and -_days_before(p.date, price_file) > MAX_AGE_DAYS:  # a snapshot of an earlier day keeping a later reading (#838)
+    elif p.recorded and p.market != OLD_PRICE and -_days_before(p.date, price_file) > MAX_AGE_DAYS:  # a snapshot of an earlier day keeping a later reading (#838)
         found.append(PriceMark(LATER, f"price of {p.date}, {-_days_before(p.date, price_file)} days after the file"))
     if p.recorded and p.market == THIN_MARKET:
         found.append(PriceMark(THIN, f"few offers: the mean of the cheapest units of the {p.book} {'offer' if p.book == 1 else 'offers'} there are"))

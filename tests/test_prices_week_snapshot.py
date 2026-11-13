@@ -5,17 +5,21 @@ number below is made up and worked by hand: a rate of 2.5 Chaos on 1,000 Chaos o
 started on 2026-07-24, so 2026-07-31 is league day 7; from 2026-07-31 to 2026-11-10 is 31 + 30 + 31 + 10 = 102 days.
 """
 
+import importlib.util
 import json
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 import pytest
 
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write_price_file
+from crafting_system.prices.http_json import SourceError
 from crafting_system.prices.ninja_history import exchange_readings, exchange_rows
-from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, OLD, price_marks
+from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, OLD, OLD_THIN, price_marks
 from crafting_system.prices.provenance import EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STASH, TRADE, Provenance
 from crafting_system.prices.week_snapshot import DayRow, build_snapshot, reading_on, wants_history
 
+SCRIPT = Path(__file__).resolve().parents[1] / ".github" / "scripts" / "week_snapshot.py"
 START, AS_OF = date(2026, 7, 24), date(2026, 7, 31)
 END = datetime(2026, 11, 10, 19, 0, tzinfo=UTC)
 
@@ -177,9 +181,75 @@ def test_a_reading_within_seven_days_after_the_file_is_not_marked_and_one_long_b
     assert marks("2026-07-23") == [OLD]
 
 
-def test_a_snapshot_with_no_divine_row_on_the_day_is_refused():
+def test_a_stash_line_and_a_hand_price_are_kept_and_never_read_from_the_rows():
+    end = end_file()
+    belt = PriceEntry(7.5, "poe.ninja", None, {"category": "BaseType"}, Provenance(STASH, "Allflame", "2026-11-10", 26.0, "observations"))
+    unrecorded_belt = PriceEntry(6.0, "poe.ninja", None, {"category": "BaseType"})
+    hand = PriceEntry(50.0, "hand")
+    end.prices.update({"Leather Belt (ilvl 86)": belt, "Leather Belt (ilvl 85)": unrecorded_belt, "Exalted Orb": hand})
+    snapshot, _ = build_snapshot([("t.json", end)], rows_of, "Allflame", START, AS_OF, None)
+
+    assert snapshot.prices["Leather Belt (ilvl 86)"].note == "stand-in (OR-7): poe.ninja keeps no daily rows of a stash line of a finished league; the reading of 2026-11-10 from t.json is kept"
+    assert snapshot.prices["Leather Belt (ilvl 85)"].chaos == 6.0
+    assert snapshot.prices["Exalted Orb"].chaos == 50.0  # the rows hold 2.5 for it: a hand price is the user's own
+    assert price_marks(snapshot.prices["Exalted Orb"], snapshot, uses=1.0) == ()
+    assert not wants_history(hand) and not wants_history(unrecorded_belt)
+
+
+def test_an_old_price_kept_from_a_later_day_says_its_day_once():
+    file = PriceFile("Allflame", datetime(2026, 7, 31, tzinfo=UTC), 176.6)
+    old = Provenance(TRADE, "Allflame", "2026-11-01", None, "units", None, market="old", book=2)
+
+    assert [mark.code for mark in price_marks(PriceEntry(9.0, "trade-api", None, None, old), file, uses=1.0)] == [OLD_THIN]
+
+
+def test_a_snapshot_with_no_divine_row_on_the_day_or_of_a_day_before_the_league_is_refused():
     with pytest.raises(ValueError, match="Divine Orb"):
         build_snapshot([("t.json", end_file())], lambda league, slug: [], "Allflame", START, AS_OF, None)
+    with pytest.raises(ValueError, match="before Allflame's first day"):
+        build_snapshot([("t.json", end_file())], rows_of, "Allflame", AS_OF, START, None)
+
+
+# --- the script's cache -------------------------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def script():
+    spec = importlib.util.spec_from_file_location("week_snapshot_script", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_cache_keeps_an_answer_and_a_404_and_stops_on_any_other_failure(script, tmp_path):
+    asked = []
+
+    def get(url):
+        asked.append(url)
+        if url == "missing":
+            raise SourceError("HTTP 404 from missing")
+        if url == "limited":
+            raise SourceError("HTTP 429 from limited")
+        return {"pairs": []}
+
+    get_json = script.cached(get, tmp_path)
+    assert get_json("found") == {"pairs": []} and get_json("found") == {"pairs": []}
+    for _ in range(2):
+        with pytest.raises(SourceError, match="404"):
+            get_json("missing")
+    with pytest.raises(script.Stopped, match="429"):
+        get_json("limited")
+    assert asked == ["found", "missing", "limited"]  # each cached answer asked once; a failure other than 404 is not kept
+    assert sorted(path.suffix for path in tmp_path.iterdir()) == [".json", ".json"]
+
+
+def test_an_unreadable_cached_answer_is_asked_again(script, tmp_path):
+    get_json = script.cached(lambda url: {"ok": 1}, tmp_path)
+    get_json("u")
+    (cached_file,) = tmp_path.iterdir()
+    cached_file.write_text('{"cut', encoding="utf-8")
+
+    assert get_json("u") == {"ok": 1}
 
 
 def test_the_snapshot_writes_and_reads_back_in_the_format_of_the_others(tmp_path):
