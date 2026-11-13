@@ -16,7 +16,7 @@ NAMES_ITS_MODS = {  # a bought rare with its fractured mod listed (the mods it d
     "r03-avoid-shock-boots", "r05-strength-ring", "r10-fractured-boots", "r10-fractured-boots-70-life", "r11-reservation-helmet", "r12-lightning-amulet",
     "r24-avoid-shock-boots",
 }
-NORMAL = {"r04-penetrating-quiver", "r06-strength-heavy-belt", "v01-minion-helmet"}  # a normal base holds no mods; V01's vendor recipes name theirs (ADR-0059)
+NORMAL = {"r04-penetrating-quiver", "r06-strength-heavy-belt", "r17-lightning-talisman", "v01-minion-helmet"}  # a normal base holds no mods; V01's vendor recipes name theirs (ADR-0059)
 GIVEN = {"j01-cobalt-life-attack-speed"}  # the item the player holds, as written (OR-6)
 
 

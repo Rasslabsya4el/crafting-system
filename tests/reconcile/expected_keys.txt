@@ -14,5 +14,6 @@ r11-reservation-helmet	Lion Pelt, item level 84, fractured +(31-35)% to Chaos Re
 r12-lightning-amulet	Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance
 r13-life-resist-belt	Leather Belt, magic, item level 86-100
 r14-hunter-bow	Thicket Bow, magic, item level 78-79, Hunter influence
+r17-lightning-talisman	Croaker Talisman, normal, item level 85
 r24-avoid-shock-boots	Murder Boots, item level 86-100, fractured +(69-73) to maximum Mana
 v01-minion-helmet	Lion Pelt, normal, item level 84

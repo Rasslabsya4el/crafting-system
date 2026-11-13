@@ -32,10 +32,11 @@ import math
 import sys
 import time
 from collections.abc import Mapping, Sequence
+from contextlib import ExitStack
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.actions import NotApplicableError, OutOfScopeError, imprints_held_at_most
 from crafting_system.budget import Budget, default_memory_mb
 from crafting_system.config import MEMORY_SHARE_SETTING, NO_LIMIT, PRICE_SOURCES, Config, load_config
 from crafting_system.data import DataError, GameData, load_game_data
@@ -159,9 +160,11 @@ def main(
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")
     args = parser.parse_args(arguments)
     previous_progress = _packed.PROGRESS
+    setting = ExitStack()
 
     try:
         config = load_config(env)
+        setting.enter_context(imprints_held_at_most(config.max_imprints))  # the setting `max_imprints` for the length of the plan (#223)
         game = data if data is not None else load_game_data(cache_dir=config.cache_dir)
         target_path = Path(args.target)
         target = load_target(target_path, game)
@@ -226,6 +229,7 @@ def main(
         return 1
     finally:
         _packed.PROGRESS = previous_progress
+        setting.close()
     if check is not None and not check.agrees:
         return 2
     return 0

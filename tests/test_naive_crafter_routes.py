@@ -97,6 +97,7 @@ GAPPED = {
 NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {
     "R24": ("r24-avoid-shock-boots", ("Veiled Chaos Orb", "Unveil", "lock a side", "Harvest Add Remove Fire")),  # #775
     "R07": ("r07-minion-wand", ("Veiled Chaos Orb", "Unveil", "lock a side", "Corroded Fossil", "no bench option")),  # #775
+    "R17": ("r17-lightning-talisman", ("Imprint with the Fenumal Plagued Arachnid", "Restore imprint 1", "lock a side", "Harvest Add Remove Lightning")),  # #823, #775
 }
 RECORDED = ROOT / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
 HEAVY = bool(os.environ.get("NAIVE_HEAVY"))
