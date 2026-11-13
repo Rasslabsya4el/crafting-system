@@ -16,8 +16,10 @@ What is measured, never believed (tickets #584, #642, #699):
   with `s = |x| + T |x| + |b|` (an estimate: that solve has its own rounding). Neither is a certificate; the callers that certify (`certify`,
   `risk/_inputs`) prove their own bounds from the same pieces.
 
-How a system is solved (`solve`). Dense, refined, for at most `DENSE_LIMIT` states; else BiCGSTAB until it converges or first stagnates (`STALL`: the
-best residual has not halved for `STALL` times the run's own pace, the iterations per halving so far). An answer is taken when its forward estimate is
+How a system is solved (`solve`). Dense, refined, for at most `DENSE_LIMIT` states; else BiCGSTAB until it converges or first stagnates (`stalled`: the
+best residual has not halved for `STALL` times the run's own pace, nor for as long as its progress took). A run whose recurrence claims its aim while its
+true residual is above ten times it is started again from its iterate with a fresh recurrence (the drift of #584, not a stagnation; R04 and R14 reach
+1e-16 so), at most `BICGSTAB_RESTARTS` times. An answer is taken when its forward estimate is
 within `tol`. Otherwise the exact solve by the cycles of the chain (`_packed_chain.ChainSolver`: the components inverted without a subtraction, by
 `gth_inverse`, and the rows many states share cut and put back) is made, whatever the number of states, refined while its backward error falls, and
 taken when that error is within `accept`. Only when the exact solve cannot be made (its cost does not fit the memory of a run, or the caller has none)
@@ -46,7 +48,7 @@ REFINEMENTS = 4  # steps of refinement of a direct solve (each a residual and on
 SETTLED = 8 * EPS  # a backward error this small is the rounding of the product itself: a further step cannot lower it
 STALL = 6  # a BiCGSTAB run has stagnated when its best residual has not halved for this many times its own pace (iterations per halving so far), nor for as long as its progress took
 BICGSTAB_ITERATIONS = 4_000  # a rail on one run (stop and say so), not what decides an answer
-BICGSTAB_RESTARTS = 3  # further runs from the best iterate, only when the exact solve cannot be made
+BICGSTAB_RESTARTS = 3  # further runs from the iterate: when its recurrence drifted from the true residual, or after a stagnation when the exact solve cannot be made
 AMPLIFICATION_TOL = 1e-3  # the relative residual the iteration aims at when it measures the amplification: a factor known to 0.1% is plenty
 
 
@@ -450,6 +452,11 @@ def solve(
     else:
         start = np.zeros(n) if x0 is None else np.where(np.isfinite(x0), x0, 0.0)
         x, residual, iterations, stagnated = bicgstab(matvec, b, start, iterate_tol)
+        for _ in range(BICGSTAB_RESTARTS):  # a run whose recurrence claimed its aim while the TRUE residual did not reach it (#584): a fresh recurrence from there
+            if stagnated or residual <= 10 * iterate_tol or iterations >= BICGSTAB_ITERATIONS:
+                break
+            x, residual, more, stagnated = bicgstab(matvec, b, x, iterate_tol)
+            iterations += more
         best_iterate = x
 
         def again(s: np.ndarray) -> np.ndarray:

@@ -407,6 +407,30 @@ def test_a_stagnated_iterate_with_no_exact_solve_goes_on_from_its_best_iterate(m
     assert "no exact solve" in found.why and found.iterations >= 3  # the stagnated run's two steps and the run that went on
 
 
+def test_a_run_whose_recurrence_drifted_from_its_true_residual_is_started_again_not_sent_to_the_exact_solve(monkeypatch):
+    # the first run stops by its recurrence (no stagnation) with a TRUE residual of 1e-6, far above ten times the aim of 1e-13: the drift of #584.
+    # Main restarted such a run, and R04 and R14 reach 1e-16 so; sending it to the exact solve instead cost R14 20 s an evaluation (heavy run 43371506754)
+    real = lin.bicgstab
+    starts = []
+
+    def drifted(matvec, b, x0, tol, max_iter=None):
+        if tol != 1e-13:
+            return real(matvec, b, x0, tol, max_iter)
+        starts.append(x0.copy())
+        if len(starts) == 1:
+            x = np.array([5.0, 4.0, 3.0, 2.0, 1.0]) * (1.0 + 1e-6)
+            return x, 1e-6, 7, False
+        return real(matvec, b, x0, tol, max_iter)
+
+    monkeypatch.setattr(lin, "bicgstab", drifted)
+
+    found = lin.solve(DenseTerms(line(5)), np.ones(5), dense_limit=4)
+
+    assert found.how == "iterate" and found.good and found.iterate is None  # no exact solve was made
+    assert len(starts) == 2 and starts[1].tolist() == pytest.approx([5.0 * (1 + 1e-6), 4.0 * (1 + 1e-6), 3.0 * (1 + 1e-6), 2.0 * (1 + 1e-6), 1.0 + 1e-6])
+    assert found.x.tolist() == pytest.approx([5.0, 4.0, 3.0, 2.0, 1.0], rel=1e-12) and found.iterations >= 7
+
+
 # --- stiff chains of the planner: #700, #699, #671 -----------------------------------------------------------------------------------------------------
 
 
