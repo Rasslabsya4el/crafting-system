@@ -65,7 +65,7 @@ def test_both_committed_price_files_hold_the_magic_key_and_no_normal_one(stem, f
 
 def test_the_plan_offers_no_transmutation_orb_and_the_given_route_has_no_rule_for_one(data, stem):
     target = load_target(ROOT / "examples" / "targets" / f"{stem}.yaml", data)
-    plan = make_plan(data, target, load_price_file(PRICES / "routes-allflame-2026-10-31.json"), solve_it=False)
+    plan = make_plan(data, target, load_price_file(PRICES / "routes-allflame-2026-07-31.json"), solve_it=False)
 
     assert plan.start_price.name == CASES[stem][1]
     assert "Orb of Transmutation" not in {priced.label for priced in plan.offers}

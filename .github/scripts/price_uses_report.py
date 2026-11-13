@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # the snapshot the benchmark reads; `--prices` names another
+PRICES = "tests/fixtures/prices/routes-allflame-2026-07-31.json"  # the snapshot the benchmark reads; `--prices` names another
 GROUPS = ("R12,R10,R11", "R05,R13", "R08,R09", "R04", "R14")  # what one runner takes; R04 and R14 hold hundreds of thousands of states each
 
 

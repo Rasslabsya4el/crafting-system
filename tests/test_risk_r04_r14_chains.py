@@ -2,7 +2,7 @@
 
 `tests/fixtures/chains/r04-lumped.npz` and `r14-lumped.npz` are the optimal policy's chain of each route after the exact lumping
 (`solver._packed_lump`), as `.github/scripts/chain_dump.py` writes it: per block the cost of its action, the goal flag, the successors with
-float chances and the exact mean of the plan at the committed prices (`tests/fixtures/prices/routes-allflame-2026-10-31.json`, main of
+float chances and the exact mean of the plan at the committed prices (`tests/fixtures/prices/routes-allflame-2026-07-31.json`, main of
 2026-11-02, packed goldens). R04's 552 blocks and 2,746 transitions are run in seconds and their p90 is pinned here; R14's 14,743 blocks
 and 79,536 transitions take minutes (one attempt at a time, `risk._regen`), so they run in a heavy run (`CRAFTING_HEAVY=1`).
 

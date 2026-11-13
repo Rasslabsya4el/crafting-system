@@ -42,7 +42,7 @@ from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 GOLDEN = json.loads((ROOT / "tests" / "golden" / "packed_values.json").read_text(encoding="utf-8"))["routes"]
 START_KEYS = {  # the price key of each route's bought start item in the price file
     "R04": "Penetrating Arrow Quiver [QuiverNew5], normal, item level 81",

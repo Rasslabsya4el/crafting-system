@@ -167,6 +167,6 @@ def test_a_wrong_veil_or_offer_condition_is_refused_with_its_line(r24, data, whe
 
 def test_a_plan_without_an_unveil_refuses_the_conditions(data):
     target = load_target(ROOT / "examples/targets/r10-fractured-boots.yaml", data)
-    plan = make_plan(data, target, load_price_file(ROOT / "tests/fixtures/prices/routes-allflame-2026-11-10.json"), solve_it=False)
+    plan = make_plan(data, target, load_price_file(ROOT / "tests/fixtures/prices/routes-allflame-2026-07-31.json"), solve_it=False)
     with pytest.raises(RouteError, match="hold no veil and no offer"):
         parse_route("rules:\n  - when: {veil: none}\n    do: restart\n", plan, data)

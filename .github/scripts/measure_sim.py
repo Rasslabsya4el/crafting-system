@@ -30,7 +30,7 @@ import types
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # from the project root; the prices the bloat and routes steps use
+PRICES = "tests/fixtures/prices/routes-allflame-2026-07-31.json"  # from the project root; the prices the bloat and routes steps use
 HERE = Path(__file__).resolve().parent
 ROUTE_ORDER = ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
 KIND_ORDER = ["solver", "guide", "guide_completed"]

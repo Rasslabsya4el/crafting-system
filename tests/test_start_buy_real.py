@@ -194,7 +194,13 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
     elif stem in VEILED:
         assert committed == ["veiled-r24-r07-2026-11-12.json"]
     else:
-        assert committed == ["routes-allflame-2026-10-31.json", "routes-allflame-2026-11-10.json", "veiled-r24-r07-2026-11-12.json", "vendor-v01-2026-11-01.json"]
+        assert committed == [
+            "routes-allflame-2026-07-31.json",  # the default of the tests and benchmarks (#838); its start items are stand-ins of the 2026-11-10 readings
+            "routes-allflame-2026-10-31.json",
+            "routes-allflame-2026-11-10.json",
+            "veiled-r24-r07-2026-11-12.json",
+            "vendor-v01-2026-11-01.json",
+        ]
 
 
 def row(stem: str):

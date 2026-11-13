@@ -64,7 +64,7 @@ COLUMNS = (*PARTS, JUNK)
 ORDER = ("R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01")
 VALUE_TOLERANCE = 1e-9  # values in a group differ when their relative difference is above this
 FORMAT = "crafting-system-state-bloat/1"
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
+PRICES = "tests/fixtures/prices/routes-allflame-2026-07-31.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
 
 RUSSIAN = {
     "flags": "флагов предмета",

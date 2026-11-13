@@ -1,6 +1,6 @@
 """Measure one plan's time and memory with and without the run's budget (ticket #825), for a heavy run.
 
-    uv run --no-sync python .github/scripts/budget_measure.py r08-energy-shield-boots tests/fixtures/prices/routes-allflame-2026-11-10.json default $OUT_DIR/r08.json
+    uv run --no-sync python .github/scripts/budget_measure.py r08-energy-shield-boots tests/fixtures/prices/routes-allflame-2026-07-31.json default $OUT_DIR/r08.json
 
 `mode` is `none` (no budget: every stage to its end, as `make_plan` always ran before #825) or `default` (`budget.Budget.default()`: OR-33's
 10-minute net and 80% of the machine's memory, what the command uses). The memory of this process and of its live children is sampled every

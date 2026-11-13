@@ -13,7 +13,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # the committed snapshot: it prices every offer the plan lists
+PRICES = "tests/fixtures/prices/routes-allflame-2026-07-31.json"  # the committed snapshot: it prices every offer the plan lists
 
 
 class TargetJudge:

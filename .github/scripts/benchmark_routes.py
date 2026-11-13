@@ -4,19 +4,19 @@
 
 writes `OUT_DIR/benchmark.json` for those routes and prints the summary, as `python -m crafting_system.cli benchmark --heavy` does for all
 of them. A CI checkout has no price file of its own, so the routes with the plain start item are priced from the committed snapshot of
-the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-11-10.json`, as `measure_routes.py` does; the optional third argument names another
+the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-07-31.json`, as `measure_routes.py` does; the optional third argument names another
 price file from the project root, to put two snapshots side by side, #616) and a route that starts from a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`.
 
 At that default snapshot R08 and R09 are not expected to finish: the pruned search (`solve_pruned`) does not end inside a runner's 25 minutes at the prices of
-the newer snapshots (measured at 2026-11-07, the Prismatic Fossil at 5.87 Chaos, not 0.2; it is 20.15 in the default of 2026-11-10, not measured there), where it took 53 seconds at the old ones (#702). Run them with the older snapshot
+the newer snapshots (measured at 2026-11-07, the Prismatic Fossil at 5.87 Chaos, not 0.2; 20.15 on 2026-11-10 and 6.77 in the default of 2026-07-31, Mirage's league day 7, not measured there), where it took 53 seconds at the old ones (#702). Run them with the older snapshot
 (the third argument, `tests/fixtures/prices/routes-allflame-2026-10-31.json`) until #702 is fixed; their verdicts are then measured at the old prices (#703).
 """
 
 import sys
 from pathlib import Path
 
-PRICES = "tests/fixtures/prices/routes-allflame-2026-11-10.json"
+PRICES = "tests/fixtures/prices/routes-allflame-2026-07-31.json"
 
 
 def main(argv: list[str]) -> int:

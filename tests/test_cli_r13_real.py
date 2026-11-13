@@ -37,7 +37,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 TARGET = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml"
 RUNS = 8  # a simulated craft is about 50,000 orb uses and takes 10 s or more here, so --verify gets eight runs

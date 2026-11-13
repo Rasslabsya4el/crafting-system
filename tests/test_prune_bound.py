@@ -67,7 +67,7 @@ from crafting_system.targets import Requirement, StartKind, Target, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "plans_118.json"
-ROUTE_PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+ROUTE_PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 LIFE_CRAFT = "HelenaMasterIncreasedLife1"
 RESTART_PRICE = 3.0
 

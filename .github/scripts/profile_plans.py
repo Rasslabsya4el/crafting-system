@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 EXAMPLES = {
     "r04": "r04-penetrating-quiver", "r05": "r05-strength-ring", "r08": "r08-energy-shield-boots", "r09": "r09-life-boots", "r10": "r10-fractured-boots",
     "r11": "r11-reservation-helmet", "r12": "r12-lightning-amulet", "r13": "r13-life-resist-belt",

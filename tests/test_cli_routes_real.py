@@ -1,6 +1,6 @@
 """R10, R11 and R05 end to end on the real 3.29.3.3 dump, at the committed prices (ticket #60).
 
-The prices are `tests/fixtures/prices/routes-allflame-2026-11-10.json`: poe.ninja (and, for the tiers it
+The prices are `tests/fixtures/prices/routes-allflame-2026-07-31.json`: poe.ninja (and, for the tiers it
 does not list, poe.watch and an earlier league, each stamped in the file) of 2026-10-31 and the trade-API
 price of each start item, so the checks do not move with the market. These tests need the cached dump
 (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it; CI fetches it, ticket #165) and skip
@@ -31,7 +31,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, buy_spec_of, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-11-10.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 TRADE_STATS = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "stats_full.json.gz"  # the trade site's stat list, 2026-10-31
 RUNS = {"R10": 3_000, "R11": 300, "R05": 3_000}  # R11 takes about a thousand uses per finish, so fewer runs
 UNPRICED_ESSENCES = {
