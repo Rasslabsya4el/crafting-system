@@ -17,26 +17,31 @@ Seams, for the tickets that fill them in:
   one ADR-0062 names. A route's donors are another.
 
 Equal-kernel merging (`chosen_offers`) applies to the actions that take no input only: two donors with one kernel cost
-different amounts to get, so neither may be dropped for the other. The planner (`make_plan`) does not use this yet; it
-still refuses an action with inputs (`Abstraction(allow_inputs=False)`), until the report and the risk run read policies with inputs.
+different amounts to get, so neither may be dropped for the other. The planner (`make_plan`) does not use the loop yet; it
+takes the donors the target names (its isolated feeders, ticket #225) and solves their product per reading of the rule axes with
+`risk.solve_readings` (`_plan.solve_each_reading`): with a handful of donors the whole product is small, and the loop here is for many.
 """
 
 import dataclasses
 from collections.abc import Callable, Iterable
 
-from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.actions import Action as GameAction
+from crafting_system.abstraction import Abstraction, CompressedState, Status
 from crafting_system.actions import Need as ItemNeed, NotApplicableError, OutOfScopeError
 from crafting_system.solver import Action, LazySolution, Need, solve_lazily
 
-from ._offers import BuyStartItem, PricedOffer
+from ._offers import BuyStartItem, PricedOffer, takes_inputs
 from ._plan import offer_action
 from ._prune import chosen_offers, solver_actions
 
 
-def takes_inputs(action: GameAction) -> bool:
-    """Whether the action's kind answers `inputs` itself: false for the base class's empty answer, so it is cheap to ask."""
-    return type(action).inputs is not GameAction.inputs
+def is_feeder(state: CompressedState) -> bool:
+    """Whether the item holds nothing but target mods, each at a tier the target accepts (ticket #225): one mod for each requirement it meets.
+
+    Every mod of a state that is not fractured is one of its slots, a target mod among them, so the item is made of target mods exactly when it
+    has no fractured mod and as many slots as requirements it meets (a lower tier of a wanted family, or any other mod, is a slot that meets none).
+    """
+    met = sum(1 for status in state.status if status is Status.PASSING)
+    return not state.fractured and len(state.slots) == met
 
 
 class DonorModel:
@@ -47,8 +52,18 @@ class DonorModel:
     item. `needs(state, action)` gives the `Need`s of a candidate on concrete items, as the action asked for them.
     """
 
-    def __init__(self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+    def __init__(
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        offers: Iterable[PricedOffer],
+        *,
+        merge_equal: bool = True,
+        feeders_only: bool = False,
+    ) -> None:
         self.abstraction = abstraction
+        self.feeders_only = feeders_only  # the planner's restriction (#225): only an item of target mods is recombined
+        self.merge_equal = merge_equal  # the interval driver matches actions across readings by label, so it asks for no merging
         self.start = start
         self.offers = tuple(offers)
         self._free = tuple(p for p in self.offers if isinstance(p.offer.action, BuyStartItem) or not takes_inputs(p.offer.action))
@@ -63,7 +78,7 @@ class DonorModel:
     def actions(self, state: CompressedState) -> tuple[Action[CompressedState], ...]:
         built = self._built.get(state)
         if built is None:
-            found = solver_actions(self.abstraction, self._free, state, self.start, cache=self._cache)
+            found = solver_actions(self.abstraction, self._free, state, self.start, merge_equal=self.merge_equal, cache=self._cache)
             for priced in self._with:
                 candidate = self._candidate(state, priced)
                 if candidate is not None:
@@ -76,7 +91,12 @@ class DonorModel:
         return self._needs.get((state, action.label, action.extra_inputs), ())
 
     def _candidate(self, state: CompressedState, priced: PricedOffer) -> Action[CompressedState] | None:
-        """The action of one offer that takes inputs, with its `Need`s over compressed states; None where the game refuses it."""
+        """The action of one offer that takes inputs, with its `Need`s over compressed states; None where the game refuses it.
+
+        With `feeders_only` an item in hand that holds anything but target mods at a tier the target accepts is not offered one (`is_feeder`).
+        """
+        if self.feeders_only and not is_feeder(state):
+            return None
         try:
             wanted = self.abstraction.inputs(state, priced.offer.action)
             built = offer_action(self.abstraction, priced, state, self.start)

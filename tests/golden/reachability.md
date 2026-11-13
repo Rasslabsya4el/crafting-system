@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 60 |
-| - with `planner=False` (no plan can use them) | 28 |
-| - with `planner=True` | 32 |
+| - with `planner=False` (no plan can use them) | 27 |
+| - with `planner=True` | 33 |
 | - `planner=True` and offered by at least one target (reachable) | 19 |
-| - `planner=True` and offered by no target | 13 |
+| - `planner=True` and offered by no target | 14 |
 | Benchmark targets | 16 |
 | - the planner entry plans them | 14 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 2 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 41 of 60 (28 closed by `planner=False`, 13 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 41 of 60 (27 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -69,7 +69,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `awakeners-orb` | **no** |  | none | `planner=False`: the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built'); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (2 of 16 start items list such actions) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155); the kind lists no action for any benchmark start item |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
-| `recombinator` | **no** | reads: any | none | `planner=False`: the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs (ADR-0062 'As built'; the compressed state is built, #217, and so is the lazy offer loop, #212; a plan that reads its axis is solved at every reading, #589); it takes donor items, and `make_plan` builds the abstraction with `allow_inputs=False` (12 of 16 start items list such actions) | ACT2-11 |
+| `recombinator` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 17 entries); not named in the target's `actions:` (10 of 17 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
 | `catalyst` | **no** | reads: any | none | `planner=False`: the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158) |  |
 | `eldritch-implicit-currency` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
 | `eldritch-chaos-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
@@ -128,7 +128,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
 
-- `Abstraction(..., allow_inputs=False) in make_plan`: an action that consumes other items is refused by the kernel, so the Awakener's Orb and the recombinator cannot be planned.
+- `Abstraction(..., allow_inputs=bool(donated)) in make_plan`: an action that consumes other items is planned only when it reads a rule axis, with the second items the planner offers (the recombinator: the target's isolated feeders); one without an axis is refused by the kernel.
 - `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (asked for by `--strands` or in the planner settings), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
 - Targets that take a corrupted item (`allow_corrupted`, or a corrupted implicit): none; offers of a corrupting action over all entries: 0.
 - Fossil sets that use the Bloodstained Fossil (offered only when the target asks for a corrupted implicit): up to 2302 listed for one start item, 0 offered by any entry.
@@ -201,9 +201,9 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the item-level floor | `level_groups` | `targets/floor.py` | cli/_bought_starts.py: bought_base_starts, targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `refusal_at` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `target_at_level` | `targets/floor.py` | cli/_bought_starts.py: _Level.__init__, cli/_bought_starts.py: bought_base_starts | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
+| the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | cli/_plan.py: solve_each_reading | yes | ACT2-11 |
+| the donor loop of two-input actions | `is_feeder` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 | the donor loop of two-input actions | `solve_with_donors` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
-| the donor loop of two-input actions | `takes_inputs` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
 
 ## 6. Target keys
 

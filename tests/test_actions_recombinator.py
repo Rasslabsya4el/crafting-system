@@ -248,7 +248,8 @@ def test_pairs_and_triples_of_mods_equal_the_enumeration_on_six_and_six():
 
 def test_the_kind_is_found_by_the_catalog_and_applies_on_fixture_items():
     assert "recombinator" in {entry.name for entry in kinds()}
-    assert "recombinator" not in {entry.name for entry in kinds(planner_only=True)}
+    recombinator = next(entry for entry in kinds(planner_only=True) if entry.name == "recombinator")  # a planner kind since #225
+    assert recombinator.opt_in  # offered only when a target names it
     applied = []
     for kind, action, name in contract_pairs():
         if kind != "recombinator":
