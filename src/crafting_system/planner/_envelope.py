@@ -510,6 +510,7 @@ class Search[S]:
         chain early (the states it had not come to stay tips, which restart)."""
         queue = [0]
         seen = {0}
+        walked: set[int] = set()  # the kernels whose successors are all in the queue: states that share a kernel (`kernel_key`) share its successors
         polled = -math.inf  # the memory is read at the first state, and then every `POLL_SECONDS`
         for i in queue:
             if self.goal[i]:
@@ -536,10 +537,12 @@ class Search[S]:
                 rows.append((position, self.p.cost(position), kid, self._self_mass(i, kid)))
                 self.stats.realized += 1
                 self.stats.seeded += 1
-                for j in self.kernels.succ[self.kernels.span(kid)].tolist():
-                    if j not in seen:
-                        seen.add(j)
-                        queue.append(j)
+                if kid not in walked:  # read once: a kernel of tens of thousands of outcomes shared by as many states was most of the chain's time
+                    walked.add(kid)
+                    for j in self.kernels.succ[self.kernels.span(kid)].tolist():
+                        if j not in seen:
+                            seen.add(j)
+                            queue.append(j)
                 break
             self.p.release()
         return None
