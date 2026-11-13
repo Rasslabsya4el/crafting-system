@@ -9,11 +9,11 @@
 3. START POLICY. The sweeps also give each state of Y the cost of its luckiest path to the goal; the action that starts
    the cheapest such path lowers that distance with positive chance in every step, so the policy is proper.
 4. POLICY ITERATION. Each action has its self-loop compiled out (`cost / leave`, outcomes renormalised, as the object
-   solver does: no `1 - p` in floats). A policy is evaluated by one linear solve: dense up to `dense_limit` states of the
-   policy, else BiCGSTAB, whose result is taken on its TRUE residual and its componentwise backward error (`_bicgstab`, `backward_error`; never on
-   the method's own claim: ticket #584). A stiff system, which the iteration cannot follow, is solved exactly by the cycles of the policy's chain
-   (`_packed_chain.ChainSolver`, ticket #621), whatever the number of its states: its cost is the cells of the rows that many states share, and a
-   run whose memory does not hold them says so (`info["linear_limit"]`, or `ConvergenceError`) instead of a count of states deciding; then every state takes the action of least Q, an action replacing the current one only when it
+   solver does: no `1 - p` in floats). A policy is evaluated by the one linear solve of the planner (`_packed_linear.solve`, #841): dense up to
+   `dense_limit` states of the policy, else BiCGSTAB to its first stagnation, an answer taken by what bounds its error (its forward estimate), never
+   by a residual alone or by the method's own claim (tickets #584, #699). A stiff system, which neither follows, is solved exactly by the cycles of
+   the policy's chain (`_packed_chain.ChainSolver`, ticket #621), whatever the number of its states: its cost is the cells of the rows that many
+   states share, and a run whose memory does not hold them says so (`info["linear_limit"]`, or `ConvergenceError`) instead of a count of states deciding; then every state takes the action of least Q, an action replacing the current one only when it
    is better by more than the rounding of the sum (so the iteration cannot cycle on noise).
 5. CERTIFICATE. `certify` computes, on the graph as given and for the candidate values, the residuals of the Bellman
    operator and from them the relative error bound of `solver/_certify.py`, here per state: with g(s) the cheapest
@@ -22,7 +22,9 @@
    a_lo V <= V* <= a_hi V with a_lo = min g/(g + d) and a_hi = max k/(k - e) (infinite when some e >= k).
    g and k are the margins of h = 0; `certify` also measures d and e against the margins of the cost ahead (ticket #769),
    so that a state whose actions are all free (an unveil, a pick) is measured against the paid step after them and not
-   against its own epsilon, which its rounding alone exceeds; each side takes the better of the two.
+   against its own epsilon, which its rounding alone exceeds; each side takes the better of the two. When neither reaches the
+   bound asked, it is measured again on the operator with the self-loops divided out, as the solve divides them (`_divided`,
+   #585, #841): a state that stays with chance 1 - 1e-12 is then certified to its own condition, not to `1 / leave`.
    The operator is the one WITHOUT the self-loop compiled out, so the certificate is also an independent check of the
    merge and of the solve: it is run on the unmerged graph with the class values copied back to the members.
 
@@ -41,12 +43,13 @@ import numpy as np
 
 from ._certify import ACCEPT_BOUND, AHEAD_FIRST, AHEAD_LIMIT, AHEAD_WEIGHT, ConvergenceError, lowered, widen  # noqa: F401  (ACCEPT_BOUND, AHEAD_*: read here, by tests, and shared with the object solver, #842)
 from ._packed import PackedGraph, expand_ranges, kernel_any, kernel_min, kernel_sums
-from ._packed_chain import ChainSolver, CyclesTooTangled
+from . import _packed_linear
+from ._packed_chain import ChainSolver
+from ._packed_linear import DENSE_LIMIT, backward_error  # noqa: F401  (DENSE_LIMIT: the default of `solve_graph`, read by callers; backward_error: by tests)
 from ._packed_merge import exact_classes, identity_classes, quotient
 
 EPS = sys.float_info.epsilon
 INF = math.inf
-DENSE_LIMIT = 1500  # policies of at most this many states are evaluated by a dense solve, larger ones by BiCGSTAB
 CHUNK_EDGES = 4_000_000
 HEAVY_SELF = 0.5  # an action whose kernel puts more than this chance on its own state is summed edge by edge: taking the own term off a shared sum would lose digits
 SHARE_MIN = 64  # a kernel with fewer edges than this is summed edge by edge for the action too (nothing to save), as the own term of its shared sum would be a rounding
@@ -63,7 +66,7 @@ class Certificate:
     at_floor: bool  # every residual is within the rounding allowance of its state
     own_bound: float | None = None  # the bound measured against each state's own cheapest cost alone (h = 0, the certificate before #769)
     own_cost: float | None = None  # the cheapest action cost of the state that sets `own_bound` (a free action's epsilon on R24)
-    window: int = 0  # the steps of the cost ahead that the bound given is measured against (0: each state's own cost, `certify`)
+    window: int = 0  # the steps of the cost ahead that the bound given is measured against (0: each state's own cost; -1: the operator with the self-loops divided out, `_divided`)
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -211,6 +214,8 @@ def _own_text(certificate: Certificate) -> str:
     """What the certificate against each state's own cheapest cost alone gives, when that is not the bound given (#769)."""
     if certificate.own_bound is None or certificate.window == 0:
         return ""
+    if certificate.window < 0:
+        return f" (measured with each action's chance to stay divided out; with it kept: {certificate.own_bound:.3g})"
     return (
         f" (measured against the cost of the next {certificate.window} steps; against each state's own cheapest cost alone: {certificate.own_bound:.3g}, "
         f"set at a state whose cheapest action costs {certificate.own_cost:.3g}; the cost ahead is measured over at most {AHEAD_LIMIT} steps)"
@@ -329,7 +334,54 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
     own_bound = max(1.0 - own_lower, own_upper - 1.0)
     residual = float(np.max(_shares(np.maximum(e0, d0), np.maximum(margin, g))))  # (max(gamma, g) = max(max(gamma, 0), g): g >= 0)
     setter = int(np.argmax(own_share))
-    return Certificate(bound, lower, upper, residual, bool(np.all(np.maximum(e0, d0) <= delta[targets])), own_bound, float(g[setter]), used)
+    at_floor = bool(np.all(np.maximum(e0, d0) <= delta[targets]))
+    if not bound <= wanted:
+        divided = _divided(graph, work, v, targets, ok)
+        if divided is not None and divided[0] < bound:
+            bound, lower, upper, residual, at_floor = divided
+            used = -1
+    return Certificate(bound, lower, upper, residual, at_floor, own_bound, float(g[setter]), used)
+
+
+def _divided(graph: PackedGraph, work: Work, v: np.ndarray, targets: np.ndarray, ok: np.ndarray) -> tuple[float, float, float, float, bool] | None:
+    """`(bound, lower, upper, residual, at_floor)` of the certificate of `certify` on the operator with every action's self-loop divided out (#585, #841).
+
+    Each action `a` of a state `s` is replaced by the action that repeats it until it leaves `s`: cost `c_a / leave_a`, chances `p_a[s, t] / leave_a`
+    for `t != s` (`leave_a`, the chance to leave, a sum of positive terms). Every stationary policy has the same values in both (a run of the one is a
+    run of the other with the stays at `s` counted), so the optimum is the same and the bounds of `certify` (`h = 0`) hold of it. The rounding of the
+    sum and of `leave_a` is `(2 m + 4) eps` of a backup (`m` its terms), and the margins `c / leave` are taken lowered by it. A state that stays with
+    chance `1 - 1e-12` then has a margin of its whole value, not `1e-12` of it: it is certified to its own condition, not to `1 / leave` (the solve
+    itself divides the self-loops out the same way). None when no action of a target state leaves it.
+    """
+    leave = work.shared_sums(np.ones(work.n))
+    alive = ok & (leave > 0.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cost = np.where(alive, graph.act_cost / np.where(alive, leave, 1.0), INF)
+        q = np.where(alive, (graph.act_cost + work.shared_sums(v)) / np.where(alive, leave, 1.0), INF)
+    tv = work.state_min(q)
+    if not np.all(np.isfinite(tv[targets])):
+        return None
+    greedy = np.maximum(work.state_argmin(q, tv), 0)
+    terms = work.state_reduce(np.maximum, np.where(alive, work.asize + 1, 0).astype(np.float64), 0.0)
+    rho = (2.0 * terms + 4.0) * EPS
+    grow = rho / (1.0 - rho)
+    delta = (grow * tv)[targets]
+    e0, d0 = np.maximum(tv - v, 0.0)[targets], np.maximum(v - tv, 0.0)[targets]
+    e, d = e0 + delta, d0 + delta
+    g = (work.state_min(cost) * (1.0 - grow))[targets]
+    k = (cost[greedy] * (1.0 - grow))[targets]
+    policy = np.full(work.n, -1, dtype=np.int64)
+    policy[targets] = greedy[targets]
+
+    def escapes(zero: np.ndarray) -> np.ndarray:
+        seeds = graph.goal.copy()
+        seeds[np.flatnonzero(targets)[~zero]] = True
+        return reaches_goal(work, policy, seeds)[targets]
+
+    lower, upper, _ = _sides(d, e, g, k, escapes)
+    bound = max(1.0 - lower, upper - 1.0)
+    residual = float(np.max(_shares(np.maximum(e0, d0), g)))
+    return bound, lower, upper, residual, bool(np.all(np.maximum(e0, d0) <= delta))
 
 
 # ---- proper states and the start policy -----------------------------------------------------------------------------
@@ -455,130 +507,6 @@ def warm_policy(
 # ---- evaluating a policy ---------------------------------------------------------------------------------------------
 
 
-STAGNATION = 400  # BiCGSTAB iterations without the best residual halving after which the run stops and returns its best iterate
-BICGSTAB_ITERATIONS = 4_000  # per run (the research solve of #312 used 4,000 and converged on R04 and R14)
-BICGSTAB_RESTARTS = 3  # further runs from the best iterate when one did not reach the tolerance
-DENSE_FALLBACK = 6_000  # no longer read here (ticket #621: the exact solve by the cycles of the chain has no count of states); `cli/_route_flow._linear` still imports it
-DENSE_FALLBACK_RESIDUAL = 1e-10
-
-
-def _bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.ndarray, tol: float, max_iter: int):
-    """BiCGSTAB for `matvec(x) = b`: returns `(x, relative residual, iterations)`.
-
-    The residual returned is the TRUE one, `|b - A x| / |b|` of the iterate returned, made by one more product. The residual of the
-    method's own recurrence is not that: on a stiff system it drifts from the true one, can be 1e-21 while the iterate is wrong by
-    a factor of 1e16 (tickets #584 and #600), and so it only decides when the method stops. The iterate returned is the better, by
-    the true residual, of the best the recurrence saw and the start `x0` (whose residual is true: it is `b - A x0`). Every caller
-    reads this number and nothing else; it is the one place a solve is checked.
-    """
-    with np.errstate(all="ignore"):
-        x, iterations, first, _ = _bicgstab_run(matvec, b, x0, tol, max_iter)
-        bnorm = max(float(np.linalg.norm(b)), 1e-300)
-        true = float(np.linalg.norm(b - matvec(x)))
-        if not true <= first:  # the recurrence ended on an iterate worse than the start (or not a number)
-            x, true = x0.copy(), first
-        return x, true / bnorm, iterations
-
-
-def _bicgstab_run(matvec, b, x0, tol, max_iter):
-    """`(best iterate by the recurrence, iterations, true norm of b - A x0, the relative residual the recurrence claims for that iterate)`."""
-    x = x0.copy()
-    r = b - matvec(x)
-    bnorm = max(float(np.linalg.norm(b)), 1e-300)
-    rnorm = float(np.linalg.norm(r))
-    first = rnorm
-    best_x, best = x.copy(), rnorm
-    r_hat = r.copy()
-    rho = alpha = omega = 1.0
-    v = np.zeros_like(b)
-    p = np.zeros_like(b)
-    it = since = 0
-    marked = rnorm
-    while it < max_iter and rnorm > tol * bnorm:
-        it += 1
-        since += 1
-        if best < 0.5 * marked:
-            marked, since = best, 0
-        elif since >= STAGNATION:
-            break
-        rho_new = float(r_hat @ r)
-        if rho_new == 0.0 or omega == 0.0:  # breakdown: restart the recurrence from the current iterate
-            r_hat, rho, alpha, omega = r.copy(), 1.0, 1.0, 1.0
-            v[:] = 0.0
-            p[:] = 0.0
-            rho_new = float(r_hat @ r)
-            if rho_new == 0.0:
-                break
-        beta = (rho_new / rho) * (alpha / omega)
-        p = r + beta * (p - omega * v)
-        v = matvec(p)
-        denominator = float(r_hat @ v)
-        if denominator == 0.0:
-            omega = 0.0
-            continue
-        alpha = rho_new / denominator
-        s = r - alpha * v
-        if float(np.linalg.norm(s)) <= tol * bnorm:
-            x = x + alpha * p
-            r = s
-            rnorm = float(np.linalg.norm(r))
-            if rnorm < best:
-                best_x, best = x.copy(), rnorm
-            break
-        t = matvec(s)
-        tt = float(t @ t)
-        if tt == 0.0:
-            x = x + alpha * p
-            r = s
-            rnorm = float(np.linalg.norm(r))
-            if rnorm < best:
-                best_x, best = x.copy(), rnorm
-            break
-        omega = float(t @ s) / tt
-        x = x + alpha * p + omega * s
-        r = s - omega * t
-        rho = rho_new
-        rnorm = float(np.linalg.norm(r))
-        if rnorm < best:
-            best_x, best = x.copy(), rnorm
-    return best_x, it, first, best / bnorm
-
-
-def bicgstab_checked(matvec, b: np.ndarray, x0: np.ndarray, tol: float):
-    """BiCGSTAB with restarts: `(x, true relative residual, iterations)` (the module text of `_bicgstab` says which residual).
-
-    A run that stalls, or stops on a recurrence residual that is not the true one, starts again from its best iterate with a fresh
-    recurrence (`b - A x` made anew), at most `BICGSTAB_RESTARTS` times, until the true residual is within 10 `tol`.
-    """
-    x, residual, iterations = _bicgstab(matvec, b, x0, tol, BICGSTAB_ITERATIONS)
-    for _ in range(BICGSTAB_RESTARTS):
-        if residual <= 10 * tol:
-            break
-        x, residual, more = _bicgstab(matvec, b, x, tol, BICGSTAB_ITERATIONS)
-        iterations += more
-    return x, residual, iterations
-
-
-SETTLED = 8 * EPS  # a backward error this small is the rounding of the product itself: a further refinement step cannot lower it
-REFINEMENTS = 4  # steps of refinement of the solve by the cycles of the chain (each is a residual and one more solve)
-
-
-def backward_error(terms: Callable[[np.ndarray], np.ndarray], rhs: np.ndarray, x: np.ndarray) -> float:
-    """The componentwise backward error of `x` in `x = rhs + T x`, `T` the sum of the chances to other states (not the own one) over `leave`.
-
-    `max over s of |rhs[s] - (x[s] - T(x)[s])| / (|x[s]| + T(|x|)[s] + |rhs[s]|)`: the size of the relative change of the system that would make `x`
-    exact, small exactly for an answer as good as floats allow and about 1 for a wrong one. `T` has no negative entry, so `T(|x|)` is the sum of the
-    absolute terms. A plain `|rhs - A x| / |rhs|` cannot get below the rounding of the terms when the answer is far larger than the right-hand side (a
-    policy that rerolls a hundred million times), and refuses an answer that is as good as floats allow. Infinite if it is not a number.
-    """
-    if not len(rhs):
-        return 0.0
-    with np.errstate(all="ignore"):
-        scale = np.abs(x) + terms(np.abs(x)) + np.abs(rhs)
-        error = np.abs(rhs - (x - terms(x))) / np.where(scale > 0.0, scale, 1.0)
-    return float(np.max(error)) if np.all(np.isfinite(error)) else INF
-
-
 def policy_terms(work: Work, leave: np.ndarray, chosen: np.ndarray, states: np.ndarray, position: np.ndarray) -> tuple[Callable[[np.ndarray], np.ndarray], dict]:
     """`(T, counts)`: `T(v)[s]` is the sum over the successors `t != s` of the policy's state `s` of `p[s, t] / leave[s] * v[t]` (a successor outside the policy is 0).
 
@@ -651,28 +579,56 @@ def policy_solver(work: Work, leave: np.ndarray, chosen: np.ndarray, position: n
     return ChainSolver(m, ptr, target[inside], prob[inside], leave[chosen], leak, shared_of, shared, progress=progress)
 
 
+class _PolicyTerms(_packed_linear.Terms):
+    """The policy's system `x[s] = cost[s] / leave[s] + sum over t != s of (p[s, t] / leave[s]) x[t]` for the one linear solve (`_packed_linear`).
+
+    Up to `dense_limit` states it is held as a dense matrix; above, as `policy_terms` (each kernel summed once, memory O(edges)). Its exact solve is the
+    one by the cycles of the policy's chain (`policy_solver`).
+    """
+
+    def __init__(self, work: Work, leave: np.ndarray, chosen: np.ndarray, states: np.ndarray, position: np.ndarray, dense: bool, info: dict) -> None:
+        self.work, self.leave, self.chosen, self.position = work, leave, chosen, position
+        self.n = m = len(states)
+        if dense:
+            g = work.g
+            kernels = g.act_kernel[chosen]
+            sizes = work.ksize[kernels]
+            idx = expand_ranges(g.k_ptr[kernels], sizes)
+            dst = g.k_succ[idx]
+            weight = g.k_prob[idx] / np.repeat(leave[chosen], sizes)
+            weight[dst == np.repeat(states, sizes)] = 0.0
+            row = np.repeat(np.arange(m), sizes)
+            column = position[dst]
+            inside = column < m
+            self._off = np.bincount(row[inside] * m + column[inside], weights=weight[inside], minlength=m * m).reshape(m, m)
+            self.apply = self._off.__matmul__
+        else:
+            self._off = None
+            self.apply, counts = policy_terms(work, leave, chosen, states, position)
+            info["policy_states"], info["policy_edges"], info["shared_edges"] = m, counts["policy_edges"], counts["shared_edges"]
+
+    def dense(self) -> np.ndarray:
+        return self._off
+
+    def exact(self):
+        return policy_solver(self.work, self.leave, self.chosen, self.position)
+
+
 def evaluate_policy(
     work: Work, leave: np.ndarray, policy: np.ndarray, start: np.ndarray, dense_limit: int, tol: float, info: dict
 ) -> np.ndarray:
     """The values of the proper `policy` (action index per state, -1 for the states outside): a full-length vector.
 
-    The system is `x[s] - sum over t != s of (p[s, t] / leave[s]) x[t] = cost[s] / leave[s]`. A dense solve takes it as it is up to `dense_limit` states,
-    else BiCGSTAB on `policy_terms` (memory O(edges), never O(states^2)). What is taken is judged on its TRUE residual, never on a number a method
-    claims of itself: `|b - A x| / |b|` of the iterate (one more product), and the componentwise backward error of `backward_error`
-    (`info["linear_backward_error"]`), which is what a stiff system can reach (the first cannot get below the rounding of the terms when the answer is
-    far larger than the right-hand side).
-
-    An iterate is good when its true residual is within `DENSE_FALLBACK_RESIDUAL`, a dense solve when its backward error is. The backward error of an
-    iterate is NOT what makes it good: it is a measure of the system's relative change, and the error of the values is that times the condition of `I - P`,
-    which the ratio of the answer to the right-hand side (`info["linear_error_floor"]`, a lower bound named as one) only bounds from below. Otherwise (a stiff
-    system: BiCGSTAB cannot follow a cycle that a run goes round millions of times, and an iterate that it does follow is good to a backward error of 1e-15
-    and to 1e-4 as an answer) the exact solve is made by the cycles of the policy's chain, whatever the number of states (`policy_solver`: components
-    inverted whole, the rows many states share cut and put back by the Woodbury identity, then refined while the backward error falls). It costs the cells
-    of the cut rows, not a count of states; when they do not fit in `_packed_chain.WOODBURY_CELLS` the iterate stays, accepted only if its true residual is
-    within `ACCEPT_BOUND` (the certificate that follows bounds the error of the values), else `ConvergenceError` says what the exact solve would have cost.
-    `info["linear_limit"]` holds what remained, derived from that cost.
+    The system is `x[s] - sum over t != s of (p[s, t] / leave[s]) x[t] = cost[s] / leave[s]`, solved by the one linear solve (`_packed_linear.solve`,
+    ticket #841): dense up to `dense_limit` states, else BiCGSTAB (aiming at the relative residual `tol`, from `start`) until it converges or first
+    stagnates. What is taken is judged by what bounds its error, never by a residual alone (#699): the forward estimate (the residual against the
+    right-hand side, or the componentwise backward error times the amplification measured by one more solve). Above `ACCEPT_ERROR` the exact solve by
+    the cycles of the policy's chain is made, whatever the number of states (`policy_solver`: components inverted without a subtraction, the rows many
+    states share cut and put back by the Woodbury identity, then refined while the backward error falls). It costs the cells of the cut rows, not a
+    count of states; when they do not fit in `_packed_chain.WOODBURY_CELLS` the approximate answer stays, accepted only if its backward error is
+    within `ACCEPT_BOUND` (the certificate that follows bounds the error of the values), else `ConvergenceError` says what the exact solve would have
+    cost. `info["linear_limit"]` holds what remained.
     """
-    g = work.g
     states = np.flatnonzero(policy >= 0)
     m = len(states)
     values = np.zeros(work.n)
@@ -681,114 +637,38 @@ def evaluate_policy(
     chosen = policy[states]
     position = np.full(work.n, m, dtype=np.int64)
     position[states] = np.arange(m)
-    rhs = g.act_cost[chosen] / leave[chosen]
-    residual: float | None = None
-
-    if m <= dense_limit:
-        kernels = g.act_kernel[chosen]
-        sizes = work.ksize[kernels]
-        idx = expand_ranges(g.k_ptr[kernels], sizes)
-        dst = g.k_succ[idx]
-        weight = g.k_prob[idx] / np.repeat(leave[chosen], sizes)
-        weight[dst == np.repeat(states, sizes)] = 0.0
-        row = np.repeat(np.arange(m), sizes)
-        column = position[dst]
-        inside = column < m
-        off = np.bincount(row[inside] * m + column[inside], weights=weight[inside], minlength=m * m).reshape(m, m)
-        matrix = np.eye(m) - off
-        try:
-            solved = np.linalg.solve(matrix, rhs)
-            for _ in range(2):  # iterative refinement: a stiff system loses digits in one solve
-                correction = rhs - matrix @ solved
-                if not np.max(np.abs(correction)) > 4 * EPS * np.max(np.abs(rhs)):
-                    break
-                solved = solved + np.linalg.solve(matrix, correction)
-        except np.linalg.LinAlgError as error:
-            raise ConvergenceError("the policy is improper: its linear system is singular", INF) from error
+    rhs = work.g.act_cost[chosen] / leave[chosen]
+    terms = _PolicyTerms(work, leave, chosen, states, position, m <= dense_limit, info)
+    began = _tick()
+    found = _packed_linear.solve(terms, rhs, x0=start[states], dense_limit=dense_limit, iterate_tol=tol, info=info)
+    if found.how == "dense":
         info["linear_dense"] = info.get("linear_dense", 0) + 1
-
-        def terms(v: np.ndarray) -> np.ndarray:
-            return off @ v
-
-    else:
-        terms, counts = policy_terms(work, leave, chosen, states, position)
-        info["policy_states"], info["policy_edges"], info["shared_edges"] = m, counts["policy_edges"], counts["shared_edges"]
-
-        def matvec(x: np.ndarray) -> np.ndarray:
-            info["matvecs"] = info.get("matvecs", 0) + 1
-            return x - terms(x)
-
-        solved, residual, iterations = bicgstab_checked(matvec, rhs, start[states], tol)
-        info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
-        info["linear_residual"] = residual  # the true one, |rhs - A x| / |rhs| (of the exact values instead, once they replace the iterate)
-
-    scale = max(float(np.max(np.abs(rhs))), 1e-300)
-
-    def floor_of(x: np.ndarray, backward: float) -> float:
-        """A LOWER bound on the error an answer can have, not the error: its backward error times how many times larger than the right-hand side it is.
-
-        The error of an answer is its backward error times the condition of `I - P`, and the ratio of this answer to this right-hand side is only the least that
-        condition can be (a stiff state that feeds a stiff state squares it: a ratio of 1e5 at a backward error of 1e-15 is 1e-10 here and can be 1e-5 off).
-        It is kept as `info["linear_error_floor"]` for the reader of a limit; no decision of this function rests on it.
-        """
-        return backward * max(1.0, float(np.max(np.abs(x))) / scale)
-
-    error = backward_error(terms, rhs, solved)
-    info["linear_backward_error"], info["linear_error_floor"] = error, floor_of(solved, error)
-    # what is judged: the true residual of an iterate (a measured quantity, and the old test), the backward error of a direct solve (stable by the division of the self-loops)
-    judged = error if residual is None else residual
-    if not judged <= DENSE_FALLBACK_RESIDUAL:
-        # the iterate (or the dense solve) is not good: the exact solve by the cycles of the chain, whatever the number of states
-        if residual is not None:
-            info["linear_residual_iterate"] = residual
-        reason, cost = None, {}
-        try:
-            began = _tick()
-            solver = policy_solver(work, leave, chosen, position)
-            exact = solver.solve(rhs)
-            exact_error = backward_error(terms, rhs, exact)
-            for _ in range(REFINEMENTS):
-                if exact_error <= SETTLED:
-                    break
-                better = exact + solver.solve(rhs - (exact - terms(exact)))
-                better_error = backward_error(terms, rhs, better)
-                if not better_error < exact_error:
-                    break
-                exact, exact_error = better, better_error
-            info["linear_cycles"] = info.get("linear_cycles", 0) + 1
-            info["linear_cut_rows"] = solver.q
-            info["seconds_cycles"] = info.get("seconds_cycles", 0.0) + _tick() - began
-        except (CyclesTooTangled, MemoryError, np.linalg.LinAlgError) as stopped:
-            exact, exact_error, reason = None, INF, (str(stopped) or "the memory of the run, or a block of the chain that is singular in floats, stopped it")
-            cost = {"rows": stopped.rows, "cells": stopped.cells, "allowed": stopped.allowed} if isinstance(stopped, CyclesTooTangled) else {}
-        accepted = False
-        if exact is not None:
-            with np.errstate(all="ignore"):  # the residual that goes with the values taken, not with the iterate thrown away
-                taken = float(np.linalg.norm(rhs - (exact - terms(exact))) / max(float(np.linalg.norm(rhs)), 1e-300))
-            accepted = exact_error <= DENSE_FALLBACK_RESIDUAL
-            if accepted or (taken < residual if residual is not None else exact_error < error):  # a direct solve that is backward stable is taken over an iterate
-                solved, error = exact, exact_error
-                info["linear_replaced"] = info.get("linear_replaced", 0) + 1
-                info["linear_backward_error"], info["linear_error_floor"], info["linear_residual"] = error, floor_of(solved, error), taken
-                residual = taken if residual is not None else None
-                judged = error if residual is None else residual
-            if not accepted:
-                reason = f"the exact solve by the cycles of the chain reached only a backward error of {exact_error:.3g}"
-        if not accepted and not judged <= DENSE_FALLBACK_RESIDUAL:
-            if not judged <= ACCEPT_BOUND:  # a stop-and-say-so rail: a residual this large is not a value the certificate could accept
-                raise ConvergenceError(
-                    f"the evaluation of a policy of {m:,} states did not reach a true residual of {ACCEPT_BOUND:g} (it is {judged:.3g}) "
-                    f"and the exact solve by its cycles could not be made: {reason}",
-                    INF,
-                )
-            if judged >= info.get("linear_limit", {}).get("residual", 0.0):  # (the worst of the evaluations of a solve is the one that is said)
-                # accepted as it is; the certificate that follows bounds the error of the values. `amplification`: how many times the answer is the right-hand side,
-                # the least the condition of the system can be (so the error is the residual times at least that, in the worst case: not a bound, a reason to say it)
-                amplification = max(1.0, float(np.max(np.abs(solved))) / scale)
-                info["linear_limit"] = {"states": m, "residual": judged, "amplification": amplification, "why": reason, **cost}
-    if not np.all(np.isfinite(solved)):
-        raise ConvergenceError("the evaluation of a policy did not give finite values", INF)
-    values[states] = solved
+    if found.how != "dense" or found.iterations:
+        info["linear_iterations"] = info.get("linear_iterations", 0) + found.iterations
+    if found.iterate is not None:
+        info["linear_residual_iterate"] = found.iterate[1]
+        info["linear_forward_iterate"] = found.iterate[2]
+    if found.how == "exact":
+        info["linear_cycles"] = info.get("linear_cycles", 0) + 1
+        info["linear_cut_rows"] = found.cut_rows
+        info["seconds_cycles"] = info.get("seconds_cycles", 0.0) + _tick() - began
+        if found.iterate is not None:
+            info["linear_replaced"] = info.get("linear_replaced", 0) + 1
+    if found.x is None or not np.all(np.isfinite(found.x)):
+        raise ConvergenceError(f"the policy is improper: its linear system is singular ({found.why})" if found.x is None else "the evaluation of a policy did not give finite values", INF)
+    info["linear_backward_error"], info["linear_forward"], info["linear_residual"] = found.backward, found.forward, found.residual
+    if not found.good:
+        if not found.backward <= ACCEPT_BOUND:  # a stop-and-say-so rail: an answer this far off is not one the certificate could accept
+            raise ConvergenceError(
+                f"the evaluation of a policy of {m:,} states did not reach a backward error of {ACCEPT_BOUND:g} (it is {found.backward:.3g}) "
+                f"and the exact solve by its cycles could not be made: {found.why}",
+                INF,
+            )
+        if found.residual >= info.get("linear_limit", {}).get("residual", 0.0):  # (the worst of the evaluations of a solve is the one that is said)
+            # taken as it is; the certificate that follows bounds the error of the values. `amplification`: the forward estimate over the backward error
+            amplification = max(1.0, found.forward / found.backward) if found.backward > 0.0 and math.isfinite(found.forward) else max(1.0, float(np.max(np.abs(found.x))) / max(float(np.max(np.abs(rhs))), 1e-300))
+            info["linear_limit"] = {"states": m, "residual": found.residual, "amplification": amplification, "why": found.why, **found.cost}
+    values[states] = found.x
     return values
 
 

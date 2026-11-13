@@ -36,8 +36,8 @@ def unsolvable(monkeypatch):
     solved = _route_flow._visits
 
     def stuck(*arguments):
-        visits, _, _ = solved(*arguments)
-        return visits * 0.0, False, None
+        visits, _, _, _ = solved(*arguments)
+        return visits * 0.0, False, None, float("inf")
 
     monkeypatch.setattr(_route_flow, "_visits", stuck)
 
@@ -71,7 +71,7 @@ def test_a_solve_of_the_share_of_runs_that_enter_a_step_that_does_not_settle_is_
     policy = {"S": act("s", ("S", 1), ("B", 1), ("goal", 1)), "B": act("b", ("S", 1), ("goal", 2))}  # two steps, both can finish
     chain = _route_flow.chain_of_policy("S", policy, lambda state: state == "goal")
     monkeypatch.setattr(_route_flow, "DENSE_LIMIT", 0)  # no inverse of N: one solve for each step
-    monkeypatch.setattr(_route_flow, "_entry_chance", lambda system, absorbing: None)
+    monkeypatch.setattr(_route_flow, "_entry_chance", lambda system, absorbing, *more: None)
 
     (limit,) = _route_flow.flow_limits(chain)
 

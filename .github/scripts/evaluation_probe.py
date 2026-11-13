@@ -87,8 +87,10 @@ def main() -> None:
             print(f"evaluation {len(calls)}: {calls[-1]['states']:,} states, {seconds:.1f} s, peak {peak} MB (resident {resident} MB before)", flush=True)
 
     _packed_solve.evaluate_policy = probe
-    if arguments.force_exact:
-        _packed_solve.bicgstab_checked = lambda matvec, b, x0, tol: (x0, 1.0, 0)
+    if arguments.force_exact:  # the iteration returns its start at once: the one linear solve goes to the exact solve by the cycles of the chain
+        from crafting_system.solver import _packed_linear
+
+        _packed_linear.bicgstab = lambda matvec, b, x0, tol, max_iter=None: (x0, 1.0, 0, True)
     began = time.perf_counter()
     data, target, prices, start_price = packed_routes.inputs(arguments.route)
     result = {"route": arguments.route, "force_exact": arguments.force_exact}
