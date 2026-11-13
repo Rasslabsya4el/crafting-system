@@ -132,27 +132,19 @@ def test_a_plan_with_no_net_has_a_complete_build(world):
 
 
 def test_the_build_takes_the_time_by_its_own_measure_and_all_of_the_memory(monkeypatch):
-    """#825: no fixed share. The build stops when the time left no longer holds two of its longest steps (its next one and a round of the search)."""
+    """#825: the build keeps room for the search, which takes at least 3 times the build (measured on R04 and R14)."""
     assert build_stop(None, 0.0) is None and build_stop(Net(), 0.0) is None
     clock = SimpleNamespace(now=0.0)  # a clock set by hand (tests/test_no_timing.py)
     clock.perf_counter = lambda: clock.now
     monkeypatch.setattr(_envelope_plan, "time", clock)
-    stop = build_stop(Net(seconds=100.0), 0.0)
-    for now in (40.0, 41.0, 42.0, 52.0, 53.0):  # 40 s of setup before the first ask (no step), then steps of 1, 1, 10 and 1 s: 20 s of room needed
-        clock.now = now
+    stop = build_stop(Net(seconds=600.0), 0.0)
+    for now in range(10, 150, 10):  # steps of 10 s: at 140 s, 460 s are left, more than 3 x 140 = 420
+        clock.now = float(now)
         assert stop() is None
-    clock.now = 79.0  # a step of 26 s: 21 s left, under 2 x 26
-    said = stop()
-    assert said == (
-        "only 21 of the 100 seconds of the time limit were left, not enough for its next step and a first round of the search after it "
-        "(its longest step so far took 26 seconds)"
+    clock.now = 150.0  # 450 s left, 3 x 150 = 450: the search's room is reached
+    assert stop() == (
+        "only 450 of the 600 seconds of the time limit were left after 150 seconds of it, and the search for the plan takes several times as long as this count"
     )
-    stop = build_stop(Net(seconds=100.0), 0.0)
-    for now in (10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0):  # steps of 10 s from the first ask: room for two is 20 s
-        clock.now = now
-        assert stop() is None  # at 70 s, 30 s are left
-    clock.now = 80.0
-    assert "only 20 of the 100 seconds" in stop()  # 20 s left: no room for its next step and a round of the search
     clock.now = 0.0
     assert build_stop(Net(seconds=0.0), 0.0)() == "the time limit of 0 seconds was reached"  # a net of 0 s: at the first ask
     monkeypatch.setattr(_envelope_plan, "resident_mb", lambda: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)

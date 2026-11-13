@@ -164,35 +164,33 @@ class CraftingProblem:
         self.ab._prepared_by.clear()
 
 
-BUILD_PIECES = 2  # the pieces of work the build leaves room for when it stops: its own next one, and one round of the search after it (#825)
+SEARCH_PER_BUILD = 3.0  # the search after a build takes at least this many times the build's time: measured 3.7 (R04: build 99 s, search 364-510 s) and 6.2 (R14: 37 s, 231-238 s), research note 2026-11-13-planning-speed, section 1; rounded down
 
 
 def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None:
-    """The net of the bound's build (OR-12): the time it takes by its own measure, and the memory net as it is (the state net counts the search's states).
+    """The net of the bound's build (OR-12): the time it takes by the search's measured need, and the memory net as it is (the state net counts the search's states).
 
     `began` is the clock reading when `envelope_result` started. The build asks it between two pieces of its work (two offers, or before a solve of
-    its model); it returns the reason once one is reached. No fixed share of the net (#825, which replaced `BUILD_SHARE = 0.5`): the build measures
-    the largest piece of its work so far (the time between two asks) and stops when the time left would no longer hold `BUILD_PIECES` of them: one
-    for its own next piece, which it would not finish, and one for a round of the search, which solves a graph of the size of the build's model.
-    A build that ends early leaves the search all the rest; one that would run past the net stops while the search can still answer with it.
+    its model); it returns the reason once one is reached. The plan comes from the search after the build, so the build keeps room for it: it stops
+    when the time left is at most `SEARCH_PER_BUILD` times the time it has taken (the search took 3.7 to 6.2 times the build on R04 and R14), which
+    is a quarter of the time it was given; a build that ends earlier leaves the search all the rest. This replaced `BUILD_SHARE = 0.5` (#825): on
+    R08 at the prices of 2026-11-10 a build that left the search 103 s gave a plan of 33,755 Chaos where a search given 266 s gave 2,236, on the same
+    lower figure (heavy runs 43358114571, 43358085172).
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
-    last: list[float | None] = [None, 0.0]  # the clock at the last ask (None before the first: the setup before it is no step), the longest step so far
 
     def stop() -> str | None:
         now = time.perf_counter()
-        if last[0] is not None:
-            last[1] = max(last[1], now - last[0])
-        last[0] = now
         if net.seconds is not None:
-            left = net.seconds - (now - began)
+            spent = now - began
+            left = net.seconds - spent
             if left <= 0.0:
                 return f"the time limit of {net.seconds:g} seconds was reached"
-            if left <= BUILD_PIECES * last[1]:
+            if left <= SEARCH_PER_BUILD * spent:
                 return (
-                    f"only {left:.0f} of the {net.seconds:g} seconds of the time limit were left, not enough for its next step and a first round of "
-                    f"the search after it (its longest step so far took {last[1]:.0f} seconds)"
+                    f"only {left:.0f} of the {net.seconds:g} seconds of the time limit were left after {spent:.0f} seconds of it, and the search "
+                    f"for the plan takes several times as long as this count"
                 )
         if net.memory_mb is not None:
             used = resident_mb()

@@ -10,9 +10,9 @@ planner settings or on the command line (#537).
 time left, #745), the start options (one clock across them). No stage has a fixed share. The stages that make the answer (the walks, the bound
 pruning, the search) may take the whole net: until a plan closes there is nothing to show. The stages that refine an answer already in hand (the
 Lock's check, the percentiles, which OR-34 adds after the route) take what is left, and when nothing is left they say so and the answer is kept
-(the plan without the Lock; the percentiles of a coarser step, or of the slower method). Inside the search, the bound's build takes what it
-needs by its own measure (`cli._envelope_plan.build_stop`): it stops when the time left would no longer hold two of its largest pieces of work so
-far, one for its own next step and one for a round of the search after it.
+(the plan without the Lock; the percentiles of a coarser step, or of the slower method). Inside the search, the bound's build keeps room for
+the search after it (`cli._envelope_plan.build_stop`): it stops when the time left is at most 3 times what it has taken, since the search took 3.7
+to 6.2 times the build on R04 and R14.
 
 **What bound.** A stage that a limit stopped records it on the clock (`Clock.bind`), with the stage, the limit and its figures; the plan lists
 them all in one limit of its answer (`cli._limits.budget_limit`, #378). A stop never passes silently (OR-12): a stage either finishes, or stops at a
