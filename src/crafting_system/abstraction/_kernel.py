@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
+from typing import NamedTuple
 from functools import reduce
 from operator import attrgetter
 
@@ -29,6 +30,7 @@ from crafting_system.actions import (
     partners,
 )
 from crafting_system.actions import PLAN_READING, Recounted, Spent, WeightReading, kept_tier_weights
+from crafting_system.actions.metamods import LOCKED_SIDE
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -51,7 +53,7 @@ from crafting_system.items import (
     spawn_weight,
     with_base_implicits,
 )
-from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
+from crafting_system.items.model import CRAFTED_DOMAIN, UNVEILED_DOMAIN, VEILED_DOMAIN
 from crafting_system.items.words import base_words, mod_words, mod_words_of
 
 from ._gaps import ModelGaps, Prunings
@@ -115,19 +117,45 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
 
 
 Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
+TYPES_KEPT = 65_536  # the families whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
+SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
+# of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
+# families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
+# 120 small objects a part: some kilobytes to some tens of kilobytes a pair, so at most a few hundred megabytes at the cap
+
+
+class _View(NamedTuple):
+    """What the kernel of one action reads of a state: the projection of the state by what the action reads (`Abstraction._view`).
+
+    It has the fields of a `CompressedState` that the item given to the action is built from, and no other: no `status` (the kernel reads the
+    mods, not what they give the goal), and of the slots only the crafted ones when the action erases the ordinary mods. Everything the kernel of
+    a mixture is computed from after `_prepare` is this object and the action, so a field left out of it cannot be read: there is none to read.
+    """
+
+    flags: Flags
+    fractured: tuple[FracturedMod, ...]
+    slots: tuple[Slot, ...]
+    implicits: tuple[ImplicitSide, ...]
+    quality: "Quality | PlainQuality | None"
+    offer: tuple[OfferedMod, ...]
+    imprints: tuple[CompressedState, ...]
+    strands: int
+    replaced: tuple[str, ...]
 
 
 @dataclass
 class _Prepared:
     """What one action says about one state: its outcomes, where each mod of the item given to it came from, its pool signatures."""
 
-    outcomes: ActionOutcomes
+    outcomes: ActionOutcomes | None  # None: the pair is refused, and `refusal` is what `_prepare` raises for it
     origins: Origins
     signatures: tuple[Hashable, ...] | None = None
     splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
     item: Item | None = None  # the item the state stands for, as the action was given it
     imprints: tuple[CompressedState, ...] = ()  # the imprints of the state it was prepared for (ADR-0060)
     donors: tuple[Item, ...] = ()  # the inputs the outcomes were made with, when the kernel averages over them (`_inputs.py`): a result copies their implicits
+    key: Hashable | None = None  # the key of the mixture's kernel (`Abstraction._mixture_key`), made once for the pair
+    refusal: ValueError | None = None  # the refusal of the pair (`NotApplicableError` or `OutOfScopeError`): of the action, or of the key when `outcomes` is there
 
 
 @dataclass(frozen=True)
@@ -263,11 +291,18 @@ class Abstraction:
             )
         self._canonical_group: dict[tuple, list[Mod]] | None = None
         self._canonical: dict[tuple[frozenset[Influence], str, tuple[Status, ...], bool], str] = {}
-        self._prepared_by: dict[Hashable, _Prepared] = {}
+        self._prepared_by: dict[Hashable, _Prepared] = {}  # (action, view) -> the pair, for a view that holds the whole state: dropped after each state
+        self._shared_by: dict[Hashable, _Prepared] = {}  # the same for a view smaller than its state (many states have it): kept, the latest used last
+        self._free_lock: bool | None = None  # whether the game data has a lock outside the crafted domain (`_holds_lock`)
+        self._lock_mods: dict[str, bool] = {}  # mod id -> whether it is a lock (Prefixes or Suffixes Cannot Be Changed)
+        self.project = True  # False: every action is prepared on the whole state (the reference the projection is tested against)
+        self.outcome_calls = 0  # how many times an action was asked for its outcomes (`_outcomes`)
         self._has_partners: bool | None = None  # whether the pool of an empty rare item has a family with mods on both sides
         self._cache: dict[Hashable, dict[Hashable, Fraction]] = {}
         self._input_kernels: dict[Hashable, dict[CompressedState, Fraction]] = {}  # the kernels averaged over the names of an input (`_inputs.py`)
         self._expanded: dict[Hashable, Expanded] = {}
+        self._types_of: dict[tuple, tuple[object, int]] = {}  # (id of a pool family, tag, influences, blocked tags, lucky) -> (the family, the number of its type)
+        self._type_numbers: dict[FamilyType, int] = {}  # a family type -> its number in the pool signatures of this abstraction
         self._signatures: dict[Hashable, Hashable] = {}  # one object per equal pool signature, so a lookup by it is an identity hit
         self._drawn_slots: dict[tuple, Slot] = {}
         self._drawn_best: dict[tuple, tuple[Status, ...]] = {}
@@ -306,6 +341,7 @@ class Abstraction:
 
     def _outcomes(self, action: Action, item: Item):
         """`action.outcomes_under` on `item` at this abstraction's reading, its cutting draws at `weights` (every kernel asks the action through here)."""
+        self.outcome_calls += 1
         with kept_tier_weights(self._weights):
             return action.outcomes_under(self.data, item, self._reading)
 
@@ -710,6 +746,26 @@ class Abstraction:
         fractured mod is spread over its families; `_add_fractured`) and the forced mod, so for such a
         part the key adds `part.forced` and the families of the pool with their mod ids and weights. A
         `Rerolled` part also reads which of the kept slots are rerolled (`changed`), so the key adds them.
+
+        The same holds at two states: equal keys at `s` and `t` (and any two actions), equal kernels (the search shares a kernel by its
+        key across states; tickets #827, #886). The argument, in three steps:
+
+        1. The state is read through its view only. `_prepare` makes the pair from `(action, _view(state))` and from nothing else (`_build`
+           is given the view, a tuple with no other field of the state), and `_mixture_kernel` is given the pair, not the state. The view
+           leaves out the status, which no step reads, and the ordinary slots and the offer where the action erases them (`_erases`: it
+           does not read the junk, `Reads.junk`, and the item has no lock to keep a side). An imprint move and a kernel averaged over
+           inputs do read the whole state, and their key is the kernel itself.
+        2. Everything `_mixture_kernel` reads of a pair is in the key. Per part it calls one of `_add_fixed` (the split), `_add_drawn` (the
+           split and the distribution of the signature), `_add_rerolled` (the split, the rerolled slots, `("rerolled", lucky)`) and
+           `_add_fractured` (the split, the entries of the signature and the forced mod, the families of the pool with their mods and
+           weights, and the forced mod); the shares, `fractures` and the counts a spend leaves are in the key as they are. Of the split,
+           every field is in the key but `new_ids`, which no step of the kernel reads (it names the new mods).
+        3. A distribution is a function of its pool signature (`_pool_signature`: the head of the draw and the family types of the pool;
+           `test_abstraction_cache_exactness.py` and the oracles test it). The signature names each family type by a number of this
+           abstraction (`_pool_types`), one number for each distinct type, so signatures are equal exactly when the types are.
+
+        So the key is built from the same pair the kernel is built from and holds every part of it the kernel reads; a key says
+        nothing about another `Abstraction`, whose numbers are its own.
         """
         if len(state.status) != len(self.goal.leaves):
             raise ValueError(
@@ -723,6 +779,17 @@ class Abstraction:
             return ("imprint", tuple(self._imprint_kernel(state, action, move)))
         if self._averages_inputs(action):  # the kernel is the average over the names of the inputs: its own key is the kernel
             return ("input classes", frozenset(input_kernel(self, state, action, prepared).items()))
+        if prepared.key is None and prepared.refusal is None:
+            try:
+                prepared.key = self._mixture_key(prepared)
+            except (NotApplicableError, OutOfScopeError) as refusal:
+                prepared.refusal = refusal
+        if prepared.refusal is not None:
+            raise prepared.refusal.with_traceback(None)
+        return prepared.key
+
+    def _mixture_key(self, prepared: _Prepared) -> Hashable:
+        """The key of the kernel of a mixture (`kernel_key`), from the prepared pair alone: the state is not read here."""
         outcomes = prepared.outcomes
         self._check_parts(outcomes)
         parts: Counter = Counter()
@@ -1275,17 +1342,15 @@ class Abstraction:
         return tuple(sorted(entry.mod_id for entry in derived if entry.mod_id not in held))
 
     def release_prepared(self, *, keep_erased: bool = False) -> None:
-        """Drop what `_prepare` cached (a pool for each state, so a long walk must not keep it).
+        """Drop the pairs `_prepare` holds for one state (a pool for each state, so a long walk must not keep them).
 
-        With `keep_erased` the entries of items that hold no ordinary mod stay: an action that erases the junk is prepared on the item of its flags, fractured
-        and crafted mods alone, and every key of the pattern model that shares them finds the same entry (ticket #626: a build that clears the cache at each
-        key prepares a fossil set again at each of them). There is one such entry for an action and a set of flags, fractured and crafted mods.
+        With `keep_erased` the pairs whose view is smaller than their state stay (`_shared_by`): an action that erases the ordinary mods is
+        prepared on the flags, the fractured and the crafted mods alone, and every state that shares them finds the same pair (tickets #626,
+        #827). They are kept up to `SHARED_PAIRS`, the least recently used leaving first. Without it everything is dropped.
         """
+        self._prepared_by.clear()
         if not keep_erased:
-            self._prepared_by.clear()
-            return
-        for key in [key for key in self._prepared_by if any(not slot.crafted for slot in key[3])]:
-            del self._prepared_by[key]
+            self._shared_by.clear()
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
         """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
@@ -1300,12 +1365,58 @@ class Abstraction:
             )
         return prepared
 
+    def _holds_lock(self, state: CompressedState) -> bool:
+        """Whether the item of `state` may hold a lock (Prefixes or Suffixes Cannot Be Changed), which keeps the mods of its side through a reroll.
+
+        A lock is found by its family (`Item.metamods`). The crafted slots and the fractured mods held by id are looked up; an ordinary slot and a
+        fractured family type stand for mods that are not of the crafted domain (the item refuses a crafted mod not flagged so), so when the game
+        data has a lock outside the crafted domain the answer is True for every state.
+        """
+        if self._free_lock is None:
+            sides = {metamod.value for metamod in LOCKED_SIDE}
+            self._free_lock = any(mod.domain != CRAFTED_DOMAIN and sides.intersection(mod.families) for mod in self.data.mods.values())
+        if self._free_lock:
+            return True
+        return any(self._is_lock(slot.kind) for slot in state.slots if slot.crafted) or any(
+            self._is_lock(entry.mod_id) for entry in state.fractured if not entry.mod_id.startswith(TYPE_PREFIX)
+        )
+
+    def _is_lock(self, mod_id: str) -> bool:
+        found = self._lock_mods.get(mod_id)
+        if found is None:
+            found = self._lock_mods[mod_id] = bool({metamod.value for metamod in LOCKED_SIDE}.intersection(self.data.mods[mod_id].families))
+        return found
+
+    def _erases(self, state: CompressedState, action: Action) -> bool:
+        """Whether `action` erases every ordinary mod of the item of `state`, so that its kernel reads none of them.
+
+        An action that does not read the junk erases it (`Reads.junk`, checked by the contract suite); the one exception is an item with a lock,
+        whose side stays (`metamods.kept_by_lock`). So: the action does not read the junk and the item holds no lock. Without `metamods` no state
+        holds one (`compress` refuses the item).
+        """
+        if not self.project:
+            return not self._kinds.reads_junk(action) and not self._metamods  # the reference: with `metamods` the whole state, as before #827
+        if self._kinds.reads_junk(action):
+            return False
+        return not self._metamods or not self._holds_lock(state)
+
+    def _view(self, state: CompressedState, erasing: bool) -> _View:
+        """The projection of `state` an action's kernel reads: all but the status, and without the ordinary slots and the offer when it erases them."""
+        if erasing:
+            return _View(state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted), state.implicits, state.quality, (), state.imprints, state.strands, state.replaced)
+        return _View(state.flags, state.fractured, state.slots, state.implicits, state.quality, state.offer, state.imprints, state.strands, state.replaced)
+
     def _prepare(self, state: CompressedState, action: Action) -> _Prepared:
         """The outcomes of `action` on the item `state` stands for (cached), and where that item's mods came from.
 
-        An action that reads no junk erases it, so the item holds only the crafted slots; with `metamods`
-        no action is taken to erase, because a lock keeps the mods of its side: the item holds every slot,
-        and what the action keeps is read back from `origins`, the rest is dropped.
+        An action that reads no junk erases it, so the item holds only the crafted slots (`_erases`); on an item with a lock it does not, because
+        the lock keeps the mods of its side: the item then holds every slot, and what the action keeps is read back from `origins`, the rest is
+        dropped.
+
+        The pair is made once for each (action, view) and the action is asked for its outcomes once (ticket #827): `_view` is the projection of
+        the state by what the action reads, and the item, the outcomes, the checks and a refusal are all computed from the view and the action
+        (`_build`), never from the state. A view that holds the whole state is dropped after the state (`release_prepared`); a smaller one, which
+        many states share, is kept from state to state.
         """
         if state.offer and not action.reads(self.data).offer:
             raise NotApplicableError(
@@ -1317,37 +1428,52 @@ class Abstraction:
                 if state.flags.unopened
                 else "the item is already open: the draw of a bought item's mods works only on the listing"
             )
-        erasing = not self._kinds.reads_junk(action) and not self._metamods
-        slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
-        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer, state.imprints, state.strands, state.replaced)
-        prepared = self._prepared_by.get(key)
+        erasing = self._erases(state, action)
+        view = self._view(state, erasing)
+        key = (action, view)
+        shared = erasing  # the view leaves the ordinary mods out: every state with these flags, fractured and crafted mods has it
+        store = self._shared_by if shared else self._prepared_by
+        prepared = store.get(key)
         if prepared is None:
             try:
-                item, origins = self._item_of(state, erasing)
-            except ItemError:
-                bare = Item.build(
-                    self.data,
-                    base_id=self.base_id,
-                    item_level=self.item_level,
-                    rarity=state.flags.rarity,
-                    influences=state.flags.influences,
-                    corrupted=state.flags.corrupted,
-                    enchantment=self.enchantment,
-                    memory_strands=state.strands,
-                )
-                self._outcomes(action, bare)
-                raise
-            try:
-                outcomes = self._outcomes(action, item)  # a refusal of the action comes first
-            except NotApplicableError:
-                self._refusal_depends_on_the_family(state, erasing, action, origins)
-                raise
-            self._check_type_blind(state, outcomes)
-            self._check_fracture_without_partners(state, outcomes)
-            self._check_same_item_space(outcomes)
-            prepared = _Prepared(outcomes, origins, item=item, imprints=state.imprints)
-            self._prepared_by[key] = prepared
+                prepared = self._build(view, erasing, action)
+            except (NotApplicableError, OutOfScopeError) as refusal:
+                prepared = _Prepared(None, {}, refusal=refusal)
+            store[key] = prepared
+            if shared and len(store) > SHARED_PAIRS:
+                del store[next(iter(store))]
+        elif shared:
+            store[key] = store.pop(key)  # the latest used is last
+        if prepared.outcomes is None:
+            raise prepared.refusal.with_traceback(None)
         return prepared
+
+    def _build(self, view: _View, erasing: bool, action: Action) -> _Prepared:
+        """The prepared pair of `action` and the item `view` stands for. Raises what the action raises for it, and the gaps of the checks."""
+        try:
+            item, origins = self._item_of(view, erasing)
+        except ItemError:
+            bare = Item.build(
+                self.data,
+                base_id=self.base_id,
+                item_level=self.item_level,
+                rarity=view.flags.rarity,
+                influences=view.flags.influences,
+                corrupted=view.flags.corrupted,
+                enchantment=self.enchantment,
+                memory_strands=view.strands,
+            )
+            self._outcomes(action, bare)
+            raise
+        try:
+            outcomes = self._outcomes(action, item)  # a refusal of the action comes first
+        except NotApplicableError:
+            self._refusal_depends_on_the_family(view, erasing, action, origins)
+            raise
+        self._check_type_blind(view, outcomes)
+        self._check_fracture_without_partners(view, outcomes)
+        self._check_same_item_space(outcomes)
+        return _Prepared(outcomes, origins, item=item, imprints=view.imprints)
 
     def _refusal_depends_on_the_family(
         self, state: CompressedState, erasing: bool, action: Action, origins: Origins
@@ -1839,6 +1965,28 @@ class Abstraction:
             ),
         )
 
+    def _pool_types(self, pool: Iterable, tag: str | None, influences: frozenset[Influence], blocked: frozenset[str], lucky: bool) -> tuple[int, ...]:
+        """The family types of the families of `pool` as sorted numbers: the one loop of a pool's signature over its families (tickets #881, #827).
+
+        A family type gets a number the first time it is met (`_type_numbers`: equal types, one number, so two pools have the same numbers
+        exactly when they have the same types), and a family is read into its type once (`_types_of`, by the family object: the families of a
+        pool are those of its table, the same objects for every item, `actions.pool._Table`). So a pool costs one lookup for each family, and no
+        weight is compared. Nothing but `_family_type` reads a mod here: a compiled loop over the numbers can take this function's place.
+        """
+        seen = self._types_of
+        numbers = []
+        for family in pool:
+            key = (id(family), tag, influences, blocked, lucky)
+            found = seen.get(key)
+            if found is None or found[0] is not family:
+                if len(seen) >= TYPES_KEPT:
+                    seen.clear()
+                kind = self._family_type(family, tag, influences, blocked, lucky)
+                found = seen[key] = (family, self._type_numbers.setdefault(kind, len(self._type_numbers)))  # the family is held, so its `id` stays its own
+            numbers.append(found[1])
+        numbers.sort()
+        return tuple(numbers)
+
     def _signatures_of(self, prepared: _Prepared) -> tuple[Hashable, ...]:
         """The signature of every part of the outcomes (one, unless the action is a mixture)."""
         if prepared.signatures is None:
@@ -1863,15 +2011,10 @@ class Abstraction:
                 free[Side.PREFIX],
                 free[Side.SUFFIX],
                 tuple(sorted(part.totals.items())),
-                tuple(
-                    sorted(
-                        self._family_type(family, part.tag, influences, part.guaranteed_blocked, part.rolls_lucky)
-                        for family in part.pool
-                    )
-                ),
+                self._pool_types(part.pool, part.tag, influences, part.guaranteed_blocked, part.rolls_lucky),
                 tuple(  # the families with mods on both sides: which one-sided types are two sides of one family
                     sorted(
-                        tuple(sorted(self._family_type(side, part.tag, influences, part.guaranteed_blocked) for side in sides))
+                        self._pool_types(sides, part.tag, influences, part.guaranteed_blocked, False)
                         for sides in partners(part.pool).values()
                     )
                 ),
