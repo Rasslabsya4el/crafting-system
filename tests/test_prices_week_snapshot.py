@@ -530,3 +530,25 @@ def test_an_estimate_of_an_item_no_market_lists_is_kept_and_always_marked(tmp_pa
     path = tmp_path / "prices.json"
     write_price_file(path, snapshot)
     assert load_price_file(path).prices["The Black Mórrígan"] == kept
+
+
+def test_a_templates_beast_does_not_count_in_the_rise_of_the_currency():
+    """The Divine Orb did not move (x1) and the Exalted Orb rose x2 from the day to the template's (5.0 / 2.5): their median is 1.5, so
+    the Awakener's Orb, with no row, stands in at 600 / 1.5 = 400. The Matron rose x8 (362 / 45); counted, the median would be 2 and
+    the stand-in 300: a beast's own market says nothing of how far the currency moved."""
+    end = PriceFile(
+        "Allflame", END, 516.2,
+        {
+            "Divine Orb": PriceEntry(516.2, "poe.ninja"),
+            "Exalted Orb": PriceEntry(5.0, "poe.ninja", None, None, Provenance(EXCHANGE, "Allflame", "2026-11-10", 50.0)),
+            "Wild Bristle Matron": PriceEntry(362.0, "poe.ninja-history", None, {"category": "Beast"}, Provenance(HISTORY, "Allflame", "2026-11-10", 194.0, "observations")),
+            "Awakener's Orb": PriceEntry(600.0, "trade-api", None, {"exchange": "awakeners-orb"}, Provenance(TRADE, "Allflame", "2026-11-10", 2.0)),
+        },
+    )  # fmt: skip
+    rows = {("Allflame", "divine-orb"): [DayRow(AS_OF, 516.2, 1766.0)], ("Allflame", "exalted-orb"): [DayRow(AS_OF, 2.5, 1000.0)]}
+
+    snapshot, _ = build_snapshot([("end.json", end)], lambda league, slug: rows.get((league, slug), []), "Allflame", START, AS_OF, None, beast_rows_of=beast_rows_of)
+
+    assert snapshot.prices["Wild Bristle Matron"].chaos == 45.0
+    awakener = snapshot.prices["Awakener's Orb"]
+    assert awakener.chaos == pytest.approx(400.0) and awakener.detail["divided_by"] == pytest.approx(1.5) and awakener.detail["sample"] == 2
