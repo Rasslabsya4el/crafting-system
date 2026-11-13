@@ -6,6 +6,6 @@ Owner requirement: the repo installs and runs on any Windows or Linux machine, a
 - No absolute path in code or committed config. Data, cache and output directories come from a config file or environment variables, with git-ignored defaults inside the project.
 - No timing assertions in tests. A separate benchmark command records results with machine info and tracks the goal of about 1 minute per benchmark query without failing anything.
 - GitHub Actions runs the tests on Ubuntu for every pull request push and on Ubuntu and Windows in the integration run before landing (ticket #321, `docs/ci.md`); `.gitattributes` fixes line endings.
-- Docker only once an HTTP service exists, which v1 does not have (ADR-0015).
+- Docker only once an HTTP service exists, which v1 does not have (ADR-0015). (**Note of 2026-11-13, [#900](https://github.com/Rasslabsya4el/crafting-system/issues/900): the product is now a public website, owner rule OR-35 in [`docs/owner-rules.md`](../owner-rules.md) and the amendment of ADR-0015; how it is hosted is not decided here.**)
 
 Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/crafting-system/issues/2) Q9 (owner requirement), [Design grill round 2: data, batches, repo](https://github.com/Rasslabsya4el/crafting-system/issues/3) Q14.
