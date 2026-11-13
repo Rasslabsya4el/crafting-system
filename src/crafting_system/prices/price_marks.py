@@ -15,6 +15,8 @@ its depth in units is at least the units the plan expects to use. Every other pr
   every reason against the market price its chain rests on (the anchor: its league, its day, its depth), each said with the
   anchor's name. One unit of a tier `k` tiers below the anchor is a `3**k`-th of an anchor unit, so the anchor's depth is
   compared with the plan's uses divided by that;
+* "an estimate: no market lists this item" (a number set by hand where neither poe.ninja nor the trade history has the item, #885;
+  unlike a hand override it is not the user's own number, so it is never a plain fact);
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
 
 There is no fixed cut that drops a route (OR-12): a price on few units is kept, marked, and the plan is solved with it.
@@ -31,6 +33,7 @@ from datetime import date
 from .price_file import MAX_AGE_DAYS, PriceEntry, PriceFile
 from .provenance import (
     DEFAULT,
+    ESTIMATE,
     EXCHANGE,
     HISTORY,
     OBSERVATIONS,
@@ -64,6 +67,7 @@ TRADE_UNREAD = "trade-unread"
 THIN = "thin-market"
 OLD_THIN = "old-price"
 FROM_RECIPE = "upgrade-recipe"
+ESTIMATED = "estimate"
 
 
 @dataclass(frozen=True)
@@ -107,6 +111,8 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         return (PriceMark(NOT_RECORDED, NOT_RECORDED_WORDS),)
     if p.kind == RECIPE:
         return _recipe_marks(entry, price_file, uses)
+    if p.kind == ESTIMATE:
+        return (PriceMark(ESTIMATED, "an estimate: no market lists this item"),)
     if p.kind == PREVIOUS_LEAGUE:
         found.append(PriceMark(EARLIER, f"previous league's price ({p.league}, {p.date})"))
     elif p.kind == STANDARD:

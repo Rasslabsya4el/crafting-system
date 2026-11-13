@@ -10,7 +10,8 @@ overview). For each name of the templates, in order:
    as its depth, source `poe.ninja-history`. The file is dated on that day, so such a price is of the file's own day.
    A **beast** has no exchange row: it is its stash line's value on the day (`beast_rows_of`, #885; poe.ninja keeps the daily rows
    of a finished league's beasts while its Beast overview lists them), with the listings poe.ninja saw that day as its depth, in
-   observations. A day with fewer than 5 listings is no reading (`MIN_COUNT`, as in every stash reading).
+   observations. A day with fewer than 5 listings is no reading (`MIN_COUNT`, as in every stash reading). A base's stash line
+   is not read this way yet: it stays a stand-in (step 3).
 2. A bulk name the league has no row for (an item that left the overview before the league ended has no history any more) is read
    from the previous league at the same league age, the fetcher's own fallback (`previous_league`), marked as that league's price.
 3. Anything else keeps the first template's reading as a stand-in (OR-7): a trade search and a stash line have no daily history
@@ -46,7 +47,7 @@ from .poe_ninja import HISTORY_SOURCE, history_slug
 from .ninja_items import BEAST, STASH_TYPES
 from .previous_league import PREVIOUS_SOURCE
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
-from .provenance import EXCHANGE, HISTORY, KIND_OF_SOURCE, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
+from .provenance import ESTIMATE, EXCHANGE, HISTORY, KIND_OF_SOURCE, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
 
 __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
 
@@ -270,8 +271,12 @@ def _stand_in(
     divided by the drift of its kind (`_drift`, #860), the best estimate the evidence gives (OR-23); any other is kept whole."""
     if isinstance((entry.detail or {}).get("query"), dict):
         why = "a trade search has no daily history"
+    elif entry.provenance is not None and entry.provenance.kind == ESTIMATE:
+        why = "no market lists it, so an estimate stands in"
+    elif _is_beast(entry):
+        why = f"no daily row of the beast was read in {league} {_window(as_of)}" + ("" if previous is None else f" nor in {previous[0]} {_window(previous[2])}")
     elif (entry.detail or {}).get("category") in STASH_TYPES or (entry.provenance is not None and entry.provenance.kind == STASH):
-        why = "poe.ninja keeps no daily rows of a stash line of a finished league"
+        why = "the daily rows of a base's stash line are not read"
     elif not wants_history(entry):
         why = "a hand price or a default is no market reading"
     else:

@@ -261,7 +261,7 @@ def test_a_stash_line_and_a_hand_price_are_kept_and_never_read_from_the_rows():
     end.prices.update({"Leather Belt (ilvl 86)": belt, "Leather Belt (ilvl 85)": unrecorded_belt, "Exalted Orb": hand})
     snapshot, _ = build_snapshot([("t.json", end)], rows_of, "Allflame", START, AS_OF, None)
 
-    assert snapshot.prices["Leather Belt (ilvl 86)"].note == "stand-in (OR-7): poe.ninja keeps no daily rows of a stash line of a finished league; the reading of 2026-11-10 from t.json is kept"
+    assert snapshot.prices["Leather Belt (ilvl 86)"].note == "stand-in (OR-7): the daily rows of a base's stash line are not read; the reading of 2026-11-10 from t.json is kept"
     assert snapshot.prices["Leather Belt (ilvl 85)"].chaos == 6.0
     assert snapshot.prices["Exalted Orb"].chaos == 50.0  # the rows hold 2.5 for it: a hand price is the user's own
     assert price_marks(snapshot.prices["Exalted Orb"], snapshot, uses=1.0) == ()
@@ -507,3 +507,26 @@ def test_the_scripts_beast_reader_asks_the_overview_once_and_the_history_of_a_li
     assert rows("Mirage", "Wild Bristle Matron") == [] and rows("Mirage", "Farric Wolf Alpha") == []  # its overview answers 404: asked once
     assert rows("Standard", "Wild Bristle Matron") == []  # a league with no last day given is not asked at all
     assert sum("item/overview" in url for url in asked) == 2 and sum("item/history" in url for url in asked) == 2
+
+
+def test_an_estimate_of_an_item_no_market_lists_is_kept_and_always_marked(tmp_path):
+    """The Black Mórrígan has no poe.ninja line in any league: a hand-made template gives it an estimate, which no reading replaces
+    while none exists, and which is never a plain fact, however few of it a plan buys."""
+    estimate = PriceEntry(100.0, "estimate", "no poe.ninja line in any league; the placeholder of #813", {"category": "Beast"}, Provenance("estimate", "Allflame", "2026-07-31"))
+    hand = PriceFile("Allflame", datetime(2026, 7, 31, tzinfo=UTC), 176.6, {"The Black Mórrígan": estimate, "Wild Bristle Matron": estimate})
+
+    snapshot, notes = build_snapshot([("routes-allflame-2026-11-10.json", end_file()), ("estimates.json", hand)], rows_of, "Allflame", START, AS_OF, MIRAGE, beast_rows_of=beast_rows_of)
+
+    kept = snapshot.prices["The Black Mórrígan"]
+    assert (kept.chaos, kept.source, kept.provenance) == (100.0, "estimate", estimate.provenance)
+    assert kept.note == (
+        "stand-in (OR-7): no market lists it, so an estimate stands in; the reading of 2026-07-31 from estimates.json is kept"
+        " (no poe.ninja line in any league; the placeholder of #813)"
+    )
+    assert "The Black Mórrígan: stand-in, the reading of 2026-07-31 from estimates.json" in notes
+    assert [(mark.code, mark.reason) for mark in price_marks(kept, snapshot, 0.001)] == [("estimate", "an estimate: no market lists this item")]
+    assert kept.provenance.words == "estimate, no market lists it, Allflame, 2026-07-31"
+    assert snapshot.prices["Wild Bristle Matron"].chaos == 45.0  # a beast the league has a row for is read, estimate or not
+    path = tmp_path / "prices.json"
+    write_price_file(path, snapshot)
+    assert load_price_file(path).prices["The Black Mórrígan"] == kept
