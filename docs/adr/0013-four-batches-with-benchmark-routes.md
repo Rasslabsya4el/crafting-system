@@ -1,6 +1,6 @@
 # v1 comes in four batches, each with benchmark routes and its own grill
 
-Every crafting method in scope is part of v1 (owner amendment to round 1 Q7), but it is built in batches, ordered so each needs only what the batch before it built: single-item actions before two-input ones, which need the branching solver. "v1 done" means every batch passes its benchmark routes.
+Every crafting method in scope is part of v1 (owner amendment to round 1 Q7), but it is built in batches, ordered so each needs only what the batch before it built: single-item actions before two-input ones, which need the branching solver. "v1 done" means every batch passes its benchmark routes (**replaced as the scope of what is built first: see "Amendment: the beta is B1, B2 and B3 without the recombinator" at the end**).
 
 - **B1, core actions**: Transmutation, Alteration, Augmentation, Regal, Alchemy, Chaos, Exalted, Annulment, Scouring, Divine; Essences; Fossils and resonators; the 3.29 Harvest reforges; bench crafts including the five metamods (`Prefixes Cannot Be Changed`, `Suffixes Cannot Be Changed`, `Cannot roll Attack Modifiers`, `Cannot roll Caster Modifiers`, `Can have up to 3 Crafted Modifiers`); Fracturing Orb; buy item. Benchmarks R04, R05, R08–R14.
 - **B2, single-item additions**: Eldritch currency and Conflict (ADR-0002), influence Exalts, Dominance, Veiled Chaos / Veiled Exalted and unveil, single-item beasts (aspects, prefix/suffix swap), Blessed, catalysts. Benchmarks R02, R03, R06, R07, R20, R22, R23, R24, R30.
@@ -74,3 +74,13 @@ The grill fixed what B8 contains; the designs are ADR-0054 to ADR-0057.
 - **In B8**: Hinekora's Lock as a `Peek` action (ADR-0054) with the previewable set of ADR-0055, which includes the Vaal Orb that B4 handed over (ADR-0036), and the burn and relock of ADR-0056. The previews of different currencies are independent (owner, from play).
 - **Out of v1 for the Lock**: the Awakener's Orb as a preview option; a foreseeing start item; the beast, drop and card ways to a Lock; the Sacred Orb (no action).
 - **Benchmarks**: R29 gets its Lock step back (ADR-0057). B3's R29 without the Lock stays as the baseline, and a synthetic target with a low Lock price shows the Lock appearing when it pays, and a corrupted-implicit target of B4 shows the Lock in front of the Vaal Orb. The pass rule is unchanged.
+
+## Amendment: the beta is B1, B2 and B3 without the recombinator ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), owner rules OR-37 and OR-45 in [`docs/owner-rules.md`](../owner-rules.md), 2026-11-13)
+
+The sentences above that every method in scope is part of v1 and that "v1 done" means every batch passes its benchmark routes, with the owner's decision of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81) that put B5 to B8 in v1, are replaced as the scope of what is built first. By the owner's rule OR-37 (the retro of 2026-11-13):
+
+- **The beta** is B1, B2 and B3 without the recombinator, catalysts included. Of B3 the Awakener's Orb (ADR-0032) and the imprints from beasts (ADR-0034) stay.
+- **Deferred**: corruption (B4), Memory Strands (B5), sockets (B6), enchantments (B7), Hinekora's Lock (B8) and the recombinator of B3. The site shows them as "coming soon" and they are built later; recombinators wait for players' 3.30 data. Their designs (the amendments above and their ADRs) stand for when they are built, and their benchmark routes wait with them.
+- **No method of the beta is cut to gain speed.** If medium crafts grow past ten minutes as methods are added, the foundation is reviewed instead.
+
+The pass rule above stands and is read by OR-45: a guide's route is a ceiling, so the planner may honestly find a cheaper one, and a much cheaper one is reviewed; the guide's cost is its steps priced by our rules at the test prices (OR-44). Not every route of R01 to R30 is a reference any more: a reference target is an item a player would craft (no "any tier" on Life or defences), and guides from 2020, guides whose key step no longer exists and targets the project invented itself are not references. Which routes stay, which are fixed and which are added is [#901](https://github.com/Rasslabsya4el/crafting-system/issues/901) and [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895).

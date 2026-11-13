@@ -1,0 +1,51 @@
+{
+ "name": "essences__medium.plain.compiled",
+ "mode": "plain",
+ "platform": "win32",
+ "python": "3.14.10",
+ "source": "compiled-source",
+ "seconds": 116.39,
+ "mean_remaining": 20105.412833731243,
+ "search": {
+  "stats": {
+   "rounds": 48,
+   "touched": 20117,
+   "expanded": 20092,
+   "realized": 151487,
+   "candidates": 152258,
+   "kernels": 31633,
+   "largest_fall": 0.0,
+   "first_upper": null,
+   "solve_seconds": 5.696016499999814,
+   "build_seconds": 2.88593050000145,
+   "expand_seconds": 88.10628759999963,
+   "verified": 49,
+   "peak_mb": 476.75,
+   "solve_info": {
+    "seconds_work": 0.0727555000000848,
+    "seconds_proper": 0.41729509999913716,
+    "linear_dense": 1,
+    "linear_backward_error": 1.8956888891148467e-13,
+    "linear_forward": 2.412077750223358e-09,
+    "linear_residual": 1.4485452109785813e-13,
+    "seconds_evaluate": 3.2381593000015982,
+    "seconds_improve": 0.7465139000007639,
+    "rounds": 231,
+    "seconds_certify": 0.2822649999998248,
+    "refinements": 42,
+    "quotient_own_bound": 7.459238932083778e-07,
+    "quotient_own_cost": 19394.168847635665,
+    "warm_kept": 47,
+    "policy_states": 839752,
+    "policy_edges": 0,
+    "shared_edges": 1116280,
+    "matvecs": 7444,
+    "linear_iterations": 3527
+   }
+  },
+  "states_known": 20117,
+  "shared_kernel_hits": 119855
+ },
+ "modules_loaded": 225,
+ "modules_compiled": 136
+}
