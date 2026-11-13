@@ -54,8 +54,8 @@ STATES = "states"
 class Budget:
     """The time and memory one run may take (see the module text). None for a figure means no limit of that kind.
 
-    `aim_seconds` is what the plan aims at (#826's stop at a proved 1% does not read it, OR-39; a run that has one takes the envelope search
-    whatever the number of offers, #926; the retired forecast of `_decide` reads it for a walk asked for by name); `seconds` and `memory_mb` are the
+    `aim_seconds` is what the plan aims at (#826's stop at a proved 1% does not read it, OR-39, and since #926 nothing on the way of the default
+    search does; the retired forecast of `_decide` reads it for a walk asked for by name); `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure.
     `gap` is the proof the run owes (OR-32 as narrowed by OR-39): the envelope search stops by itself once its plan is proved to cost at most this
