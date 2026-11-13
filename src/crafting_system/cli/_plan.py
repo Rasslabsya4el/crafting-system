@@ -360,7 +360,7 @@ def make_plan(
     stage that a limit stopped is listed in one limit of the answer (`_limits.budget_limit`, #378). A stop before any plan closed is a `PlanError`
     that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. The rest is `_make_plan`'s text.
     """
-    plan_budget = as_budget(budget, net)
+    plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
     with running(plan_budget.start() if plan_budget is not None else None) as clock:
         try:
@@ -409,7 +409,7 @@ READINGS_STAGE = "the plan made once for each reading of a rule the sources leav
 LOCK_STAGE = "the check of Hinekora's Lock"
 LOCK_KEPT = "the plan is the best one without the Lock; whether the Lock saves anything was not checked"
 SEARCH_KEPT = "the best plan found so far is kept, with the figure below which no plan can cost"
-RISK_STAGE = "the work on the cost figures (the median and the 90th percentile)"
+RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs in 10 stay under)"
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
@@ -417,7 +417,7 @@ def search_net(clock: Clock | None) -> Net | None:
     """The envelope search's net from the run's clock: the time left, and the memory and state nets as they are; None when the run has no net."""
     if clock is None:
         return None
-    given = clock.budget
+    given: Budget = clock.budget
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
     return Net(seconds=clock.left(), states=given.states, memory_mb=given.memory_mb)

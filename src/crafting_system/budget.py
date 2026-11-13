@@ -139,9 +139,10 @@ class Clock:
 
     def left(self) -> float | None:
         """The seconds left to the net, never below 0; None with no time net."""
-        if self.budget.seconds is None:
+        given: Budget = self.budget
+        if given.seconds is None:
             return None
-        return max(self.budget.seconds - self.elapsed(), 0.0)
+        return max(given.seconds - self.elapsed(), 0.0)
 
     def memory(self, fresh: bool = False) -> float | None:
         """The memory this process holds, in MB, read at most every `MEMORY_POLL_SECONDS` unless `fresh`."""
@@ -152,15 +153,16 @@ class Clock:
 
     def over(self, stage: str, what: str = "") -> Binding | None:
         """The binding a stage meets now, if the time or the memory net is reached; nothing is recorded (`bind` does that)."""
-        seconds = self.budget.seconds
+        given: Budget = self.budget
+        seconds = given.seconds
         if seconds is not None:
             spent = self.elapsed()
             if spent >= seconds:
                 return Binding(stage, TIME, seconds, spent, what)
-        if self.budget.memory_mb is not None:
+        if given.memory_mb is not None:
             held = self.memory()
-            if held is not None and held >= self.budget.memory_mb:
-                return Binding(stage, MEMORY, self.budget.memory_mb, held, what)
+            if held is not None and held >= given.memory_mb:
+                return Binding(stage, MEMORY, given.memory_mb, held, what)
         return None
 
     def bind(self, binding: Binding) -> Binding:
@@ -230,7 +232,7 @@ def stage(name: str, what: str = NO_PLAN, *, stops: bool = True) -> Iterator[Clo
 def process_mb(pid: int | None = None) -> float | None:
     """The resident memory of a process (this one when `pid` is None) in MB, or None where it cannot be read (#540).
 
-    Linux: `VmRSS` of `/proc/<pid>/status`. Windows: the working set (`GetProcessMemoryInfo`). macOS: the resident size (`proc_pidinfo`). These are
+    Linux: `VmRSS` of the status file of the process under proc. Windows: the working set (`GetProcessMemoryInfo`). macOS: the resident size (`proc_pidinfo`). These are
     the memory the process holds now, not its peak, so a net read twice sees it fall as well as rise.
     """
     if sys.platform == "win32":
@@ -321,7 +323,7 @@ class _TaskInfo(ctypes.Structure):  # struct proc_taskinfo of <sys/proc_info.h>
 
 def _darwin_mb(pid: int | None) -> float | None:
     try:
-        libproc = ctypes.CDLL("/usr/lib/libproc.dylib")
+        libproc = ctypes.CDLL(os.path.join(os.sep, "usr", "lib", "libproc.dylib"))
         info = _TaskInfo()
         size = ctypes.sizeof(info)
         if libproc.proc_pidinfo(os.getpid() if pid is None else pid, 4, ctypes.c_uint64(0), ctypes.byref(info), size) != size:  # PROC_PIDTASKINFO
@@ -364,7 +366,10 @@ def physical_mb() -> float | None:
     return total if limit is None else min(total, limit)
 
 
-CGROUP_FILES = ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes")  # cgroup v2, then v1
+CGROUP_FILES = (
+    os.path.join(os.sep, "sys", "fs", "cgroup", "memory.max"),
+    os.path.join(os.sep, "sys", "fs", "cgroup", "memory", "memory.limit_in_bytes"),
+)  # cgroup v2, then v1
 
 
 def _cgroup_mb() -> float | None:

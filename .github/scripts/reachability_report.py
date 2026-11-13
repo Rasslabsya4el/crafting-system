@@ -970,8 +970,9 @@ def _message_text(node: ast.AST) -> str:
 
 
 def entry_gates(index: SourceIndex) -> list[tuple[str, str]]:
-    """(condition, message) of each `if ...: raise PlanError(...)` of `make_plan` before it builds the abstraction, as the code writes them."""
-    func = index.funcs[("func", f"{PACKAGE}.cli._plan", "make_plan")]
+    """(condition, message) of each `if ...: raise PlanError(...)` of `make_plan` before it builds the abstraction, as the code writes them
+    (in `_make_plan`, the body `make_plan` runs on the run's clock, #825)."""
+    func = index.funcs[("func", f"{PACKAGE}.cli._plan", "_make_plan")]
     gates = []
     for statement in func.node.body:  # type: ignore[attr-defined]
         if any(isinstance(n, ast.Call) and ast.unparse(n.func) == "Abstraction" for n in ast.walk(statement)):
@@ -984,8 +985,8 @@ def entry_gates(index: SourceIndex) -> list[tuple[str, str]]:
 
 
 def closed_inputs(index: SourceIndex) -> list[str]:
-    """Where `make_plan` builds the abstraction with `allow_inputs=False`, as the code writes it."""
-    func = index.funcs[("func", f"{PACKAGE}.cli._plan", "make_plan")]
+    """Where `make_plan` builds the abstraction with `allow_inputs=False`, as the code writes it (in `_make_plan`, #825)."""
+    func = index.funcs[("func", f"{PACKAGE}.cli._plan", "_make_plan")]
     found = []
     for node in ast.walk(func.node):
         if isinstance(node, ast.Call) and ast.unparse(node.func) == "Abstraction":

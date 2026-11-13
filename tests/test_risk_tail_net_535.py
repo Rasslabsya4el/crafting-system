@@ -147,7 +147,7 @@ def test_the_ladders_net_is_its_own_or_what_the_runs_budget_has_left_when_less(m
         assert net == _regen.LadderNet(1600.0, 30.0, True)
         fake.now = 1601.0
         said = _regen.ladder_stopped(net, coarser=True)
-    assert said == _regen.time_net_words(30.0, coarser=True) and "30 seconds" in said
+    assert said == _regen.run_spent_words(coarser=True) and "the run's time limit" in said  # the run's net bound, not the ladder's
     (bound,) = clock.bindings  # the run's net bound: the one list of the run says so (#378)
     assert (bound.stage, bound.limit, bound.given, bound.reached) == ("the cost figures", budget.TIME, 600.0, 601.0)
     assert bound.what == "the figures of the coarser step already worked out are kept"

@@ -342,13 +342,17 @@ def test_two_runs_in_two_threads_each_have_their_own_clock(fake):
     assert seen == {"first": 10.0, "second": 20.0} and budget.active() is None
 
 
-def test_a_ladder_that_starts_with_no_time_left_says_the_run_spent_it():
-    from crafting_system.risk._regen import time_net_words
+def test_a_ladder_the_runs_net_stopped_says_the_run_spent_it(fake):
+    from crafting_system.risk import _regen
 
-    assert time_net_words(0.0, coarser=False) == (
+    clock = Budget(seconds=600.0, memory_mb=None).start()
+    fake.now = 1600.0  # the plan took the whole net: the ladder starts with no time left
+    with budget.running(clock):
+        said = _regen.ladder_stopped(_regen.ladder_net(1800.0), coarser=False)
+    assert said == (
         "the run's time limit was reached before the quicker method for the cost figures could work any of them out; the slower method follows"
     )
-    assert "30 seconds" in time_net_words(30.0, coarser=True) and "30 minutes" in time_net_words(1800.0, coarser=True)
+    assert "30 seconds" in _regen.time_net_words(30.0, coarser=True) and "30 minutes" in _regen.time_net_words(1800.0, coarser=True)
 
 
 def test_the_command_stops_at_its_time_limit_and_says_so(tmp_path, capsys):

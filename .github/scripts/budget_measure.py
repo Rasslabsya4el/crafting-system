@@ -9,6 +9,7 @@ limits that bound. It runs on any branch: `none` needs nothing of #825.
 """
 
 import json
+import os
 import multiprocessing
 import sys
 import threading
@@ -21,7 +22,7 @@ SAMPLE_SECONDS = 2.0
 def held_mb() -> float:
     def rss(pid) -> float:
         try:
-            with open(f"/proc/{pid}/status", encoding="utf-8") as handle:
+            with open(os.path.join(os.sep, "proc", str(pid), "status"), encoding="utf-8") as handle:
                 for line in handle:
                     if line.startswith("VmRSS:"):
                         return int(line.split()[1]) / 1024
