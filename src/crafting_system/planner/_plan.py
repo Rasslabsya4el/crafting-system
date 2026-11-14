@@ -41,10 +41,10 @@ from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
-from ._limits import Limit, approximate_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
+from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
 from . import _packed
-from ._envelope import Net, NoPolicy, Standing
+from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._presenter import presenter_limits
@@ -190,6 +190,8 @@ class Plan:
         search = self.search
         if self.approximation is not None or (search is not None and not search.exact):
             object.__setattr__(self, "limits", approximate_limits(self.limits))
+        if search is not None and not search.exact and search.mean_error > ACCEPT_BOUND:  # its mean is certified only to `mean_error` (#867)
+            object.__setattr__(self, "limits", rough_mean_limits(self.limits, search.mean_error))
 
     @property
     def search(self) -> EnvelopeInfo | None:
@@ -1137,7 +1139,7 @@ def lumped_limit(item_states: int, shown: int) -> Limit:
         "The tree shows groups of states",
         f"the plan passes through {item_states:,} states and the tree shows {shown:,} groups of them: states that cost the same and lead on to "
         "the same groups with the same chances are one group, shown by one of its members",
-        "The odds and every cost figure are exact for the groups.",
+        _limits.GROUPS_EXACT,
     )
 
 
@@ -1183,7 +1185,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
                 _limits.not_computed(*_limits.QUANTILES),
                 f"the plan can lead from one state to another in {moves:,} ways, more than the {RISK_QUANTILE_TRANSITIONS:,} the calculation "
                 "of the cost figures can hold in memory",
-                "The odds, the mean and the variance are exact.",
+                _limits.RISK_EXACT,
             ),
         )
     return risk, risk_limits(risk)

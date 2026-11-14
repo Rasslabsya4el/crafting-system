@@ -26,7 +26,7 @@ from test_envelope_gap_stop_plan import at_once
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
-from crafting_system.planner import _envelope_plan
+from crafting_system.planner import _envelope_plan, _limits, _plan
 from crafting_system.planner._envelope_plan import (
     EnvelopeInfo,
     certificate_gap,
@@ -36,7 +36,7 @@ from crafting_system.planner._envelope_plan import (
     envelope_limits,
     mean_error_text,
 )
-from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, limit_text
+from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, Limit, limit_text
 from crafting_system.planner._plan import envelope_refusal
 from crafting_system.planner._envelope import NoPolicy
 from crafting_system.planner._starts import _proved
@@ -160,3 +160,52 @@ def test_the_text_report_the_json_and_the_page_say_one_gap_and_one_interval(monk
         assert sentence in entry["guarantee"], sentence
         assert escape(sentence) in page, sentence
     assert not EXACT_WORD.search(text) and not EXACT_WORD.search(json.dumps(policy_document(report))) and not EXACT_WORD.search(page)
+
+
+@pytest.mark.parametrize("sentence", _limits.EXACT_MEAN_SENTENCES)
+def test_a_figure_called_exact_is_said_to_be_worked_out_to_the_means_error(sentence):
+    """The risk's limits (quantiles not reached, a cycle of inputs, quantiles past memory) and the tree of groups call the mean exact; of a plan
+    whose mean is certified only to 5e-4 they say so instead, and every other limit is left as it is."""
+    other = Limit(SOLVE, "x", "y", "The answer holds.")
+    rough = _limits.rough_mean_limits((Limit(_limits.RISK, "Not computed: p50", "z", sentence), other), 5e-4)
+    assert rough[1] is other
+    assert rough[0].guarantee == (
+        "The plan takes so many steps that its mean cost is worked out only to within 0.0005 of itself, and its other figures are not claimed any closer."
+    )
+
+
+@pytest.mark.parametrize("loose", [True, False])
+def test_the_risk_of_a_plan_whose_mean_carries_an_error_does_not_call_it_exact(monkeypatch, loose):
+    """R12 with its risk made to leave its quantiles unreached ("the success chance and the mean cost are exact"): a search stopped at a gap whose
+    mean is certified only to 5e-4 says on every surface how far the mean is worked out, and nothing it prints says "exact"; the exact search,
+    whose mean is certified to 1e-6, keeps the sentence as it was."""
+    packed_risk = _plan.packed_risk
+
+    def unreached(*args, **kwargs):
+        risk, found = packed_risk(*args, **kwargs)
+        return risk, (*found, Limit(_limits.RISK, "Not computed: the median cost", "planted", _limits.UNRESOLVED_EXACT))
+
+    monkeypatch.setattr(_plan, "packed_risk", unreached)
+    if loose:
+        solve_walked, run = _envelope_plan.solve_walked, _envelope_plan.Search.run
+        monkeypatch.setattr(
+            _envelope_plan, "solve_walked",
+            lambda *a, **k: (lambda p: dataclasses.replace(p, solution=dataclasses.replace(p.solution, error_bound=5e-4)))(solve_walked(*a, **k)),
+        )  # fmt: skip
+        monkeypatch.setattr(
+            _envelope_plan.Search, "run",
+            lambda self, *a, **k: (lambda r: dataclasses.replace(r, exact=False, within=0.2, lower=r.lower * 0.9, upper=r.lower * 1.001))(run(self, *a, **k)),
+        )  # fmt: skip
+        plan = make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", budget=at_once(0.2))
+    else:
+        plan = make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope")
+    report = build_report(plan, DATA)
+    text, document = render_text(report), json.dumps(policy_document(report))
+    page = render_page(Page("x", (build_section(route_input(plan), DATA),)))
+    if loose:
+        assert not plan.search.exact and plan.search.mean_error == 5e-4
+        for surface in (text, document, page):
+            assert "mean cost is worked out only to within 0.0005 of itself" in surface and not EXACT_WORD.search(surface)
+    else:
+        assert plan.search.exact
+        assert _limits.UNRESOLVED_EXACT in text and _limits.UNRESOLVED_EXACT in document and _limits.UNRESOLVED_EXACT in page

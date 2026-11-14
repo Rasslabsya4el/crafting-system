@@ -822,7 +822,7 @@ class Search[S]:
                     # every tip is closed, but the solver certifies the values only to more than an exact answer may carry (a plan of very many
                     # steps): the plan is proved within the gap its two figures leave, which `refuse_above` keeps inside the gap of the run
                     upper = root * (1.0 + core.certificate.bound)
-                    if not upper <= (1.0 + self.gap) * lower:  # (cannot be, with GAP_SHARE below 1/3: said, not assumed)
+                    if not upper <= (1.0 + self.gap) * lower:  # (cannot be for a gap below about 8, with GAP_SHARE a tenth: said, not assumed)
                         raise ConvergenceError(
                             f"the search closed every tip, but its solver certifies the plan's cost only to {core.certificate.bound:.3g}, "
                             f"which leaves it outside the gap of {self.gap:.3g} the run allows",

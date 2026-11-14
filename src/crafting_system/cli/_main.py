@@ -11,7 +11,7 @@ is evaluated as a fixed policy at the same prices and printed next to the policy
 `--solver` picks the search (ticket #535): `auto` (the default) is the envelope search wherever its bound can be built and the older
 walk-and-solve path where the target is outside it (`make_plan` says which); `envelope`, `packed` and `object` name one. The envelope
 search stops by itself as soon as its plan is proved to cost at most `--gap` percent (1 by default) more than the cheapest, whatever the time,
-and says so beside the plan's exact mean (OR-32, OR-39, ticket #826); a proof that closes is the exact answer. `--exact`, or `--gap 0`, keeps
+and says so beside the plan's mean (OR-32, OR-39, ticket #826; the gap stated holds the mean's certified error, #867); a proof that closes is the exact answer. `--exact`, or `--gap 0`, keeps
 the exact proof however long it takes.
 
 A walk asked for by name (`--solver packed`, `object`) that would run longer than `--budget` seconds is
@@ -156,7 +156,7 @@ def main(
     )  # fmt: skip
     parser.add_argument("--exact", action="store_true", help="prove the plan the cheapest however long it takes: no approximate answer and no stop at --gap; the time and memory limits still stop it and say so, unless --time-limit none and --memory-limit none")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the plan aims at (default {BUDGET_SECONDS:g}): a walk of the whole graph asked for by name (packed, object) that would take longer is answered approximately; the search of auto and envelope does not read it (it stops at --gap), and auto walks exactly, to the time limit, where that search cannot be built")
-    parser.add_argument("--gap", type=_percent, default=PROOF_GAP * 100.0, metavar="PERCENT", help=f"stop the search once the plan is proved to cost at most this many percent more than the cheapest, and say so beside its exact mean (default {PROOF_GAP * 100.0:g}); 0 keeps the exact proof")
+    parser.add_argument("--gap", type=_percent, default=PROOF_GAP * 100.0, metavar="PERCENT", help=f"stop the search once the plan is proved to cost at most this many percent more than the cheapest, and say so beside its mean (default {PROOF_GAP * 100.0:g}); 0 keeps the exact proof")
     parser.add_argument(
         "--time-limit", type=_limit, default=_FROM_SETTINGS, metavar="SECONDS",
         help="stop the plan after this many seconds and say what it found and where it stopped, or none for no limit (default: the planner settings, 600)",
