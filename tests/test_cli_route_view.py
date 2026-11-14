@@ -237,7 +237,9 @@ def test_the_target_card_of_the_goal_row_is_the_target_item(r12_plan):
 
     assert card.name == "Paua Amulet"
     assert card.prefixes[0].text == GEM_TEXT
-    assert card.suffixes[0].text == "+#% to Lightning Resistance" and card.suffixes[0].note == "any tier"
+    # the start amulet's fractured resistance meets the leaf, so the goal shows that mod, marked (#895)
+    held = card.suffixes[0]
+    assert (held.text, held.tone, held.marks, held.note) == ("+(12-17)% to Lightning Resistance", "wanted", ("fractured",), "T7")
 
 
 def run_command(tmp_path: Path, *arguments: str, cache: Path | None = None):

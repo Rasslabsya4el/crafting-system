@@ -347,35 +347,43 @@ def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with
     route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
     wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
     verdict = t.verdict_on(f"{played.route} with the wrong law", played.exact_mean, wrong.mean_se())
+    print(verdict)  # the distance, shown with -rP
 
     assert not verdict.agrees, str(verdict)
     assert verdict.distance > 10
 
 # The rules of the draw, each turned off in turn, and a cheap covered route that must leave the 4-standard-error line because of it. Measured at
-# 3,000 plays and seed 7 (distance in standard errors): no level gate moves R05 by 24 (R10 0.0, R11 1.6); no family exclusion moves R10 by 7.8
-# and R11 by 11 (R05 3.4); a side chosen first instead of one pool moves R11 by 14.5 (R10 0.1, R05 1.2). Each rule moves at least one cheap route,
-# so none is a rule the comparison cannot see; the routes that do not move are named so that nobody counts them as evidence for that rule.
+# seed 7 on the targets of #895 (distance in standard errors; R05 and R10 at 12,000 plays): no level gate moves R05 by 6.0 (R10 0.5); no family
+# exclusion moves R10 by 14.8 (R05 0.5); a side chosen first instead of one pool moves R05 by 6.8 (R10 0.6). Each rule moves at least one cheap
+# route, so none is a rule the comparison cannot see; the routes that do not move are named so that nobody counts them as evidence for that rule.
+# On a runner at the plays of the rows below, with the essence prices of #885 (heavy run 43539062163): no family exclusion moves R10 by 6.4 and
+# R11 by 9.2, a side chosen first moves R11 by 13.7 (each at 3,000 plays), and the wrong count of mods above moves R11 by 75. A play of R11 is
+# about 362 essences, and its four tests take about 45 seconds of a runner together.
+# The last number of a row is its plays: R05's level gate moves its mean by about 6% since #895 (only the tier 1 Life is drawn for, and the gate
+# only thins the pool by the mods above item level 75; it was 24 standard errors while a tier 2 resistance counted), so it needs 12,000 plays
+# to stand clear of the line; a play of R05 is about 37 essences.
 MUTATIONS = [
-    ("no level gate", Laws(level_gate=False), "R05"),
-    ("no family exclusion", Laws(family_exclusion=False), "R10"),
-    ("no family exclusion", Laws(family_exclusion=False), "R11"),
-    ("a side chosen first, not one pool", Laws(one_pool=False), "R11"),
+    ("no level gate", Laws(level_gate=False), "R05", 12000),
+    ("no family exclusion", Laws(family_exclusion=False), "R10", 3000),
+    ("no family exclusion", Laws(family_exclusion=False), "R11", 3000),
+    ("a side chosen first, not one pool", Laws(one_pool=False), "R05", 12000),
+    ("a side chosen first, not one pool", Laws(one_pool=False), "R11", 3000),
     # the laws of #608 and #609. R09 does not move when the block is off (0.66 standard errors at 3,000 plays and seed 7: the blocked Defence mods are few next to the boosted
     # Life ones), so the block is shown by R08 and by `test_naive_mechanics.py`, and R09 is not counted as evidence for it.
-    ("no fossil boost", Laws(fossil_boost=False), "R08"),
-    ("no fossil boost", Laws(fossil_boost=False), "R09"),
-    ("no fossil block", Laws(fossil_block=False), "R08"),
-    ("no Harvest guarantee", Laws(harvest_guarantee=False), "R12"),
+    ("no fossil boost", Laws(fossil_boost=False), "R08", 3000),
+    ("no fossil boost", Laws(fossil_boost=False), "R09", 3000),
+    ("no fossil block", Laws(fossil_block=False), "R08", 3000),
+    ("no Harvest guarantee", Laws(harvest_guarantee=False), "R12", 3000),
 ]
 
 
-@pytest.mark.parametrize(("played", "name", "laws"), [(route, name, laws) for name, laws, route in MUTATIONS], indirect=["played"])
-def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(played, name, laws):
+@pytest.mark.parametrize(("played", "name", "laws", "plays"), [(route, name, laws, plays) for name, laws, route, plays in MUTATIONS], indirect=["played"])
+def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(played, name, laws, plays):
     stem, _ = COVERED[played.route]
     world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=laws)
     judge = Judge(world)
     route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
-    wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
+    wrong = t.simulate(Player(world, route, judge), plays, seed=7)
     verdict = t.verdict_on(f"{played.route} with {name}", played.exact_mean, wrong.mean_se())
     print(verdict)  # the distance, shown with -rP
 

@@ -179,10 +179,25 @@ fixtures(
         "a note that is not in the one format": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(130-144) to maximum Life", "w", "tier 1 of 10"), ANY, ANY))))),
         "a bench craft with a spawn tier (R05)": page(route(goal(), step(1, "Benchcraft: +# to maximum Life", after=item(suffixes=(slot("+(35-44) to maximum Life", "c", "T1"), ANY, ANY))))),
         "a base id inside the text": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(35-44) to Dexterity [DexMasterLifeCrafted1]", "m", "T2"), ANY, ANY))))),
+        "an essence tier the game does not have": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(43-50) to Intelligence", "w", "Roaring essence"), ANY, ANY))))),
+        "a tier number beside the essence's tier": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(43-50) to Intelligence", "w", "T2, Shrieking essence"), ANY, ANY))))),
     },
     example={
         "V01: the same shape in every card": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(LIFE, slot("+1 to Level of all Minion Skill Gems", "m", "T2"), ANY))), step(2, "Chaos Orb", after=item(prefixes=(LIFE, slot("(16-20)% chance to Avoid Elemental Ailments", "c", "crafted"), ANY))))),
         "the notes the page uses": page(route(goal(), step(1, "Orb of Alchemy", after=item(prefixes=(slot("+(51-58) to Strength", "w", "essence only"), slot("+# to maximum Life", "w", "tier too low, in some"), slot("36% chance to Avoid being Shocked", "w", "grade 2 (Greater)")))))),
+        "#895: a mod an essence forces says the essence's tier, and a line of several tiers says which": page(
+            route(
+                goal(),
+                step(
+                    1,
+                    "Shrieking Essence of Spite",
+                    after=item(
+                        prefixes=(slot("+# to maximum Life", "w", "T2 or better"), slot("#% increased Evasion Rating", "w", "T1 to T3, in some"), ANY),
+                        suffixes=(slot("+(43-50) to Intelligence", "w", "Shrieking essence"), slot("+(51-58) to Strength", "w", "Deafening essence"), slot("Damage Penetrates 5% Elemental Resistances during any Flask Effect", "w", "Essence of Hysteria")),
+                    ),
+                ),
+            )
+        ),
     },
 )
 
@@ -359,6 +374,14 @@ R10_ESSENCE = step(
     ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target", "+# to maximum Life: T1 to T9 ≈10% each · none ≈10% · every tier is the target"),
     ("Note", "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"),
 )
+# R10 as the owner fixed it (#895): Life tier 1 or 2, the Intelligence said by its essence, the bought Movement Speed marked fractured
+R10_OWNER_TARGET = item(
+    "Sorcerer Boots",
+    prefixes=(slot("30% increased Movement Speed", "w", "T2").replace("</div>", '<span class="b">fractured</span></div>'), slot("+# to maximum Life", "w", "T2 or better"), ANY),
+    suffixes=(slot("+(43-50) to Intelligence", "w", "Shrieking essence"), ANY, ANY),
+    target=True,
+)
+R10_OWNER_LIFE_LINE = "+# to maximum Life: T1 and T2 ≈2.6% each (target) · T3 to T9 ≈2.6% each · none ≈77%"  # the line of the new R10 page, step 2
 R05_LIFE_LINE = "+# to maximum Life: T1 ≈2.7% (target) · T2 to T8 ≈2.7% each · none ≈78%"  # the lines of the R05 golden, step 2
 R05_FIRE_LINE = "+#% to Fire Resistance: T2 ≈1% (target) · T3 to T8 ≈1% each · none ≈93%"
 R05_TARGET = item(
@@ -387,6 +410,12 @@ fixtures(
         "R10, R11: Life asked at any tier and only T1 to T4 marked as the target": page(route(goal(target=R10_TARGET), step(1, "Shrieking Essence of Spite", ("Goal", "+# to maximum Life · any tier"), ("Tier chances", "+# to maximum Life: T1 to T4 ≈10% each (target) · T5 to T9 ≈10% each · none ≈10%")))),
         "a line marks another tier than the target card when its step has no Goal line for the family": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% · T2 ≈10% (target) · T3 to T4 ≈10% each · none ≈60%")))),
         "a tier line of a family the target does not want": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
+        "a tier line of a mod the target wants crafted: the bench adds it, no draw does": page(
+            route(
+                goal(target=item("Sorcerer Boots", suffixes=(slot("(16-20)% chance to Avoid Elemental Ailments", "w", "crafted"), ANY, ANY), target=True)),
+                step(1, "Chaos Orb", ("Tier chances", "#% chance to Avoid Elemental Ailments: T1 ≈1% (target) · T2 to T4 ≈1% each · none ≈96%")),
+            )
+        ),
     },
     example={
         "V01: the target's tier apart, the rest joined": page(route(goal(), *TWO_ACTIONS)),
@@ -394,6 +423,13 @@ fixtures(
         "R10: Life asked at any tier and every shown tier marked, beside Intelligence at T2": page(route(goal(target=R10_TARGET), R10_ESSENCE)),
         "R05: the Goal asks T1 of Life and T2 of a resistance, and the line marks those tiers": page(route(goal(target=R05_TARGET), R05_ESSENCE)),
         "a Goal that asks T2 or better marks T1 and T2": page(route(goal(), step(1, "Regal Orb", ("Goal", "+# to maximum Life · T2 or better"), ("Tier chances", "+# to maximum Life: T1 and T2 ≈10% each (target) · T3 to T5 ≈10% each · none ≈50%")))),
+        "#895: a line of the target that says its essence's tier is still a family the target wants: a Chaos Orb of the same route shows its tiers": page(
+            route(
+                goal(target=R10_OWNER_TARGET),
+                step(1, "Shrieking Essence of Spite", ("Goal", "+(43-50) to Intelligence · Shrieking essence", "+# to maximum Life · T2 or better"), ("Tier chances", R10_OWNER_LIFE_LINE)),
+                step(2, "Chaos Orb", ("Goal", "+(43-50) to Intelligence · Shrieking essence"), ("Tier chances", "+# to Intelligence: T1 ≈1% · T2 ≈1% (target) · T3 to T9 ≈1% each · none ≈91%")),
+            )
+        ),
     },
 )
 
@@ -550,8 +586,6 @@ def test_the_lint_reads_the_text_and_the_structure_of_the_v01_page():
 
 # --- every golden page, every check -------------------------------------------------------------------------------
 
-ISSUE_ROLL_MINIMUM = 643  # found by #598: Life "any tier" with a roll minimum marks only some tiers as the target on the R10 and R11 pages
-
 ISSUE_UNPRICED = 552  # the issue #543 filed; OR-29 (#550 and #551, the other two, are fixed: no golden page is a known fault of their checks)
 ISSUE_FETCH_TRADE = 672  # the default fetch reads no trade listing for a resource poe.ninja lacks, so the product holds no evidence for it
 WHY = {ISSUE_UNPRICED: f"the fixture price file prices no Harvest good but Primal Crystallised Lifeforce, and the product has no evidence for the others unless a fetch reads their trade listings (#{ISSUE_FETCH_TRADE})"}
@@ -560,7 +594,6 @@ WHY = {ISSUE_UNPRICED: f"the fixture price file prices no Harvest good but Prima
 # is dropped, and the limit says so. The three real pages (R05, R10, R11) price those goods from the snapshot of 2026-11-10, whose evidence is poe.ninja and the trade site's offers.
 KNOWN: dict[tuple[str, str], int] = {  # (golden page, check) -> the issue that holds the fault; a strict xfail names it (OR-29)
     **{(name, "check_no_dropped_for_price"): ISSUE_UNPRICED for name in ("given_route_differs", "r12_fixture", "r12_fixture_given_route")},
-    **{(name, "check_tier_lines"): ISSUE_ROLL_MINIMUM for name in ("real_r10", "real_r11")},
 }
 JUDGES = pl.CHECKS  # check_no_internal_names is one of them since #553: no golden page is a known fault of it
 

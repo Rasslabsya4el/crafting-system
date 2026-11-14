@@ -60,7 +60,7 @@ import numpy as np
 from crafting_system.actions import DRAW_LABEL
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
-from crafting_system.items import Rarity
+from crafting_system.items import Item, Rarity
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
@@ -73,7 +73,7 @@ from ._marking import approximate_inputs, approximate_page_lines, price_inputs
 from ._price_marks import price_uses, use_line
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
-from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
+from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
 from ._route_chain import chain_of_packed_policy
 from ._route_flow import Chain, Edge, Flow, LossReader, Step, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
@@ -303,12 +303,17 @@ class _View:
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
         self.route_field = route_field
         self.ab = self.plan.abstraction
-        self.reader = _StateReader(self.ab)
         self.chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
         self.flow = steps_of_chain(self.chain)
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
         self.first: FirstStep | None = None if starts is None else first_step(starts.chosen, data, self.plan.target)
+        # the item the route starts from: its fractured mods are marked on the target card and on every card after a step (#895)
+        self.start_item: Item = self.plan.target.start_item if starts is None else starts.chosen.item
+        # the mods the essences of this route force, each with its essence's tier: a line that stands for one says where it comes from (#895)
+        used = [step.action.label for step in self.flow.steps if step.action is not None]
+        self.forced = essence_notes(data, self.ab.base_id, used)
+        self.reader = _StateReader(self.ab, self.start_item, self.forced)
 
     # -- anchors and links ---------------------------------------------------------------------------------
 
@@ -742,7 +747,7 @@ class _View:
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
         leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(limits))
-        return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
+        return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item, self.forced), leaves_out)
 
 
 def build_section(
