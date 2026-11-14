@@ -381,6 +381,8 @@ def exact_distribution(
             for tally, each in ways:
                 tallies[tally] += each
 
+    if not totals:
+        return {}
     start = (0,) * count
     picks_of: dict[int, Fraction] = {}
     for total, chance in totals.items():

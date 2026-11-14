@@ -1896,8 +1896,8 @@ class Abstraction:
             # every mod marked with the number of its family type, so one run of the engine tells which type was fractured (ticket #934). It used to be
             # one run per type with that type alone marked; the outcomes of such a run are those of this one with the other types' marks erased, and
             # an exact distribution seen through a coarser label adds the chances of the outcomes it merges, so the sums below are the same numbers.
-            # The families of two types are in two classes of the engine either way (a type is made of the same weights and labels), so the run
-            # walks the states one marked run walked, once instead of once per type.
+            # It walks the engine once instead of once per type. Its classes are the family types (a type is made of the weights and labels a class
+            # is made of, and the mark keeps two types apart), a few more than one marked run had where unmarked types shared a class.
             return (label_of(mod), "forced" if mod.id == part.forced else numbers.get(owner.get(mod.id), ""))
 
         types = list(numbers)

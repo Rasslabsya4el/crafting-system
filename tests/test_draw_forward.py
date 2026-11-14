@@ -11,7 +11,7 @@ mode (`floating`) the two agree to the float error.
 
 import dataclasses
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable
 from fractions import Fraction
 from functools import cache
@@ -20,8 +20,10 @@ import pytest
 from abstraction_support import real_game_data
 from proto_draw_support import family, synthetic_mod
 
+from crafting_system.abstraction._state import best_of
 from crafting_system.actions import draw
 from crafting_system.actions.draw import exact_distribution, floating, guaranteed_candidates, total_distribution
+from crafting_system.actions.mixture import Fractured
 from crafting_system.actions.pool import PoolFamily, PoolMod, build_pool
 from crafting_system.items import Item, Rarity, Side
 
@@ -258,3 +260,76 @@ def test_a_whole_real_pool_with_a_coarse_label_draws_exactly(real_pools):
     shown = exact_distribution(pool, {PREFIX: 3, SUFFIX: 3}, None, RARE, 0, LABELS["coarse"](wanted))
     assert sum(shown.values()) == 1
     assert len(shown) <= 3 * 4 * 2  # wanted or not, per side, at most six mods
+
+
+# ---- a Fractured Fossil: one marked run against one run per family type ---------------------------------------------------------------------
+
+
+def per_type_entries(ab, part) -> dict:
+    """`Abstraction._fracture_entries` before #934, as the oracle: one run of the engine for each family type, that type alone marked."""
+    influences = part.retained.influences
+    label_of = ab._labeller(influences)
+    owner = {}
+    for fam in part.pool:
+        family_type = ab._family_type(fam, None, influences)
+        for entry in fam.mods:
+            owner[entry.mod.id] = family_type
+    merged: dict = defaultdict(Fraction)
+    for number, marked in enumerate(list(dict.fromkeys(owner.values())) or [None]):
+
+        def label(mod, marked=marked):
+            return (label_of(mod), "forced" if mod.id == part.forced else "type" if owner.get(mod.id) == marked else "")
+
+        for outcome, chance in part.fracturing().distribution(label).items():
+            counts: Counter = Counter()
+            chosen = None
+            for found, count in outcome:
+                if isinstance(found, Fractured):
+                    chosen = found.label
+                else:
+                    counts[found[0]] += count
+            kind = "none" if chosen is None else "forced" if chosen[1] == "forced" else "pool" if chosen[1] == "type" else None
+            if kind is None or (kind != "pool" and number):
+                continue
+            tracked = ab._kinds.tracked
+            best = best_of(len(ab.goal.leaves), ((lab[0] if tracked else lab) for lab in counts))
+            fractured = None if chosen is None else chosen[0]
+            rest = None
+            if tracked:
+                if kind == "pool":
+                    counts[fractured] -= 1
+                rest = frozenset((lab, n) for lab, n in counts.items() if n > 0)
+            merged[(kind, marked if kind == "pool" else None, fractured, best, rest)] += chance
+    return dict(merged)
+
+
+def fracture_parts(ab, state, action):
+    prepared = ab._prepared(state, action)
+    return [(part, signature) for (_, part), signature in zip(prepared.outcomes.components, ab._signatures_of(prepared), strict=True) if hasattr(part, "pool")]
+
+
+def test_one_marked_run_gives_the_fracture_entries_of_one_run_per_type_on_the_fixture():
+    from test_prime_light import PLAIN_FRACTURE, SCORCHED_FRACTURE, fossil_abstraction, fossil_requests
+
+    ab = fossil_abstraction()
+    assert ab._kinds.tracked  # the junk is kept: the entries hold the rest of the drawn mods
+    checked = 0
+    for state, action in fossil_requests(ab):
+        assert action in (PLAIN_FRACTURE, SCORCHED_FRACTURE)
+        for part, signature in fracture_parts(ab, state, action):
+            assert dict(ab._fracture_entries(part, signature)) == per_type_entries(ab, part)
+            checked += 1
+    assert checked == 6
+
+
+@pytest.mark.parametrize("name", ["fractured", "fractured-and-forced"])
+def test_one_marked_run_gives_the_fracture_entries_of_one_run_per_type_on_real_boots(name):
+    from test_abstraction_fossil_real import SETS, fossils, rare, world
+
+    data, ab = world.__wrapped__()
+    parts = fracture_parts(ab, ab.compress(rare(data)), fossils(*SETS[name]))
+    assert len(parts) == 1
+    for part, signature in parts:
+        entries = dict(ab._fracture_entries(part, signature))
+        assert entries == per_type_entries(ab, part)
+        assert sum(entries.values()) == 1
