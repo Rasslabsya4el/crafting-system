@@ -376,7 +376,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
     problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting)
     ready = time.perf_counter()
     if problem.closed_start is not None:
-        say(f"first plan's order: the count solved on what it finished, the start at {problem.closed_start!r} ({ready - built:.0f} s)")
+        say(f"first plan's order: the count solved on what it finished, the start at {problem.closed_start!r} ({ready - built:.1f} s)")
     # the search has what the build and the problem left of the time (OR-40), and the aim is of the whole plan (OR-33): both count, the closed solve
     # of a stopped build (#948) included, which is one more solve of the model the build already solved and so of the same order as its own
     if net is not None and net.seconds is not None:
