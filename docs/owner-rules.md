@@ -499,6 +499,8 @@ The owner is not a developer or a mathematician and leaves the architecture, the
 
 ### OR-51. Every chat and helper runs on Fable 5.2 until the owner says to go back
 
+**Ended 2026-11-14** (owner in the dispatcher chat: the Fable allowance ran out; back to Opus 5.5). The rule of 2026-11-10 applies again: every chat on Opus 5.5 with effort medium, the helpers on their own models (`CLAUDE.md`, "How work is split").
+
 Every chat and helper runs on Fable 5.2 until he says to go back to the earlier rule.
 
 - **Example.** A chat passes `model: "fable"` when it starts `finder`, `checker` or `crafter`, whatever their own files say (`CLAUDE.md`, "How work is split").
