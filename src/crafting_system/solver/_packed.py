@@ -310,6 +310,61 @@ def kernel_sums(graph: PackedGraph, f: np.ndarray) -> np.ndarray:
     return out
 
 
+_SPLIT = 134217729.0  # 2^27 + 1: Dekker's split of a float64 into two halves of 26 bits
+_TINY = 1e-200  # a product below this could lose its low part to underflow: the sums are then not taken as rounded once (`kernel_sums_rounded_once`)
+_HUGE = 1e150  # and a factor above this could overflow in the split
+
+
+def rounded_once_allowance(terms: np.ndarray | float) -> np.ndarray | float:
+    """The share of itself by which a sum of `kernel_sums_rounded_once` over at most `terms` edges, with a cost added, can differ from the exact
+    one (the exact chances, the exact sum): `4 eps + 16 terms^3 eps^2`. See that function for the count."""
+    eps = np.finfo(np.float64).eps
+    return 4.0 * eps + 16.0 * eps * eps * np.asarray(terms, dtype=np.float64) ** 3
+
+
+def kernel_sums_rounded_once(graph: PackedGraph, f: np.ndarray) -> np.ndarray | None:
+    """`kernel_sums` for `f >= 0` with a rounding that does not grow with the length of the sum (ticket #867), or None when a product is out of the
+    range in which the steps below are exact.
+
+    `kernel_sums` adds the `m` products of a kernel one after the other, so its result is known only to `m eps` of itself: on a reroll with 35,000
+    outcomes that is 8e-12, and a certificate multiplies it by the value over the cost of a step. Here:
+
+    1. Each product `prob * f[successor]` is taken as `hi + lo` exactly (Dekker's product: no bit is lost).
+    2. Each `hi` of a kernel is split on one grid of the kernel, `hi = a + b`: `a` its nearest multiple of `U = 2^k`, where `2^k` is the least power
+       of two with `m * max(hi) <= 2^52 * U`. The `a` are multiples of `U` whose sum is below `2^53 U`, so adding them is exact in any order; `b`
+       is exact too and at most `U / 2`.
+    3. The result is `sum(a) + (sum(b) + sum(lo))`: one rounding, plus the rounding of the small sums, at most `2 m u` of `sum|b| + sum|lo| <=
+       (4 m^2 u + u) S` (`u = eps / 2`, `S` the sum): `10 m^3 u^2 S`.
+
+    With `prob` the exact chance rounded once (`probabilities`) and a cost added afterwards, the result is within `(1 + u)^3 + 2.5 m^3 eps^2` of the
+    exact Bellman sum: `rounded_once_allowance` gives a figure above it.
+    """
+    out = np.zeros(graph.num_kernels, dtype=np.float64)
+    k_ptr = graph.k_ptr
+    sizes = np.diff(k_ptr)
+    for k0, k1 in kernel_chunks(k_ptr):
+        lo_edge, hi_edge = int(k_ptr[k0]), int(k_ptr[k1])
+        if hi_edge == lo_edge:
+            continue
+        p, x = graph.k_prob[lo_edge:hi_edge], f[graph.k_succ[lo_edge:hi_edge]]
+        hi = p * x
+        if not np.all(np.isfinite(x)) or np.any(x < 0.0) or np.any(x > _HUGE) or np.any((hi < _TINY) & (hi > 0.0)):
+            return None
+        p1, x1 = _SPLIT * p, _SPLIT * x
+        ph, xh = p1 - (p1 - p), x1 - (x1 - x)
+        pl, xl = p - ph, x - xh
+        low = pl * xl - (((hi - ph * xh) - pl * xh) - ph * xl)
+        size = sizes[k0:k1]
+        full = size > 0
+        starts = (k_ptr[k0:k1] - lo_edge)[full]
+        largest = np.maximum.reduceat(hi, starts)
+        _, exponent = np.frexp(largest * size[full])  # largest * m < 2^exponent
+        shift = np.repeat(exponent.astype(np.int64) - 52, size[full])  # U = 2^shift: every hi is at most 2^52 U / m
+        a = np.ldexp(np.rint(np.ldexp(hi, -shift)), shift)
+        out[k0:k1][full] = np.add.reduceat(a, starts) + (np.add.reduceat(hi - a, starts) + np.add.reduceat(low, starts))
+    return out
+
+
 def kernel_any(graph: PackedGraph, flags: np.ndarray) -> np.ndarray:
     """For every kernel: whether `flags[successor]` holds for some successor."""
     out = np.empty(graph.num_kernels, dtype=bool)
@@ -341,6 +396,8 @@ __all__ = [
     "kernel_chunks",
     "kernel_min",
     "kernel_sums",
+    "kernel_sums_rounded_once",
     "pack_model",
     "probabilities",
+    "rounded_once_allowance",
 ]

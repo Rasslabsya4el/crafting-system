@@ -117,8 +117,12 @@ def pattern_lower_bound(
     item=None,
     stop: Callable[[], str | None] | None = None,
     approximate: bool | None = None,
+    refuse_above: float | None = None,
 ) -> PatternBound:
     """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`.
+
+    `refuse_above` is the certified error above which the model's solve is refused (default: the solver's `ACCEPT_BOUND`). The bound is used lowered
+    by that error (`PatternBound.error_bound`), so it is a lower bound whatever the error: a search that stops at a gap passes a share of its gap (#867).
 
     `item` (the start item) turns on the offers' floors when there are `MIN_OFFERS` offers or more: the model is then built on the offers that can
     matter (see the module text). `stop` is the net: it is asked while the model is built and returns the reason once one is reached.
@@ -172,7 +176,7 @@ def pattern_lower_bound(
             model, value, error, order = kept
             return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth")
         say(f"model {rounds}: solving the count on {len(model.keys):,} keys and {graph.num_kernels:,} kernels")
-        solved = solve_packed(graph, progress=None)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
+        solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
         solved_at = time.perf_counter()
         phases["solve"] += solved_at - built
         n = len(model.keys)

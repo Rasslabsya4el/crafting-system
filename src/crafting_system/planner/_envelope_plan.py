@@ -36,7 +36,7 @@ from crafting_system.abstraction._pattern import SINK, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 
 from . import _limits
-from ._envelope import BoundError, Net, NoPolicy, Refused, Search, Standing, resident_mb
+from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -258,6 +258,7 @@ class EnvelopeInfo:
     upper_refused: int = 0  # rounds in which the plan in hand could not be solved to a certified cost, so the stop at the gap waited (#769)
     upper_seconds: float = 0.0
     held: bool = False  # a net's stop kept an earlier plan, because the plan in hand could not be solved to a certified cost
+    mean_error: float = 0.0  # the certified relative error of `upper`, the mean shown (the final solve's bound): above 1e-6 only for a plan of very many steps (#867)
 
 
 def envelope_result(
@@ -306,7 +307,9 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
     """The body of `envelope_result`, under the run's memory net."""
     began = time.perf_counter()
     if bound is None:
-        bound = pattern_lower_bound(abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began))
+        bound = pattern_lower_bound(
+            abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after)
+        )  # fmt: skip
     built = time.perf_counter()
     expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)
     say(
@@ -328,14 +331,18 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
             raise
         raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}") from refusal
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
-    packed = solve_walked(abstraction, start, walked, tolerance=tolerance, progress=say)
+    # the mean shown: of an exact answer to the solver's 1e-6; of a plan proved within a gap, or one a net stopped, to the error the search took its
+    # figures at, and the limit says so when it is above 1e-6 (`mean_error_text`, #867): OR-33 asks for a plan with its gap, not a refusal
+    packed = solve_walked(
+        abstraction, start, walked, tolerance=tolerance, progress=say, refuse_above=None if result.exact else figure_error(gap, gap_after)
+    )  # fmt: skip
     mean = float(packed.solution.values[start])
     stats = result.stats
     packed.info["envelope"] = EnvelopeInfo(
         result.exact, result.stopped, result.lower, mean, stats.rounds, stats.touched, stats.expanded, stats.realized, stats.candidates,
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
-        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held,
+        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
     )  # fmt: skip
     return packed
 
@@ -390,7 +397,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
                 + (", buying the start item again wherever it had not looked" if info.restarts else "")
                 + waited,
                 f"The plan is {_limits.WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is exact for the "
-                "plan shown, not an estimate. " + certificate_text(info),
+                "plan shown, not an estimate. " + mean_error_text(info) + certificate_text(info),
             ),
         )
     return (
@@ -400,8 +407,20 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} states looked at"
             + ("; the plan restarts from the start item wherever the search had not looked" if info.restarts else "")
             + ("; the cost of the last plan it had could not be worked out to a certified figure, so the plan shown is the one before it" if info.held else ""),
-            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, exactly. " + certificate_text(info),
+            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, exactly. "
+            + mean_error_text(info)
+            + certificate_text(info),
         ),
+    )
+
+
+def mean_error_text(info: EnvelopeInfo) -> str:
+    """What is said of the mean when the solver certifies it only to more than the 1e-6 of an exact answer (#867, OR-13): empty otherwise."""
+    if not info.mean_error > ACCEPT_BOUND:
+        return ""
+    return (
+        f"The plan takes so many steps that its average cost is worked out only to within {info.mean_error:.2g} of itself "
+        f"({info.upper * info.mean_error:,.2f} Chaos either way); the gap stated allows for that. "
     )
 
 
