@@ -22,7 +22,9 @@ never realized: the optimal action has `Q_L <= Q* = V*(s)`, so it is cheaper tha
 ("an action is not expanded when its cost with lower bounds exceeds the best action's cost with upper bounds"), made with the upper bound
 `U >= V*` replaced by the stronger `V*` it stands for; the upper bound of an executable policy (the completed route of the guide, or the
 restart at every tip) does not move the cut. It is what a stop returns (below). A state is expanded only when the greedy policy of the lower graph
-reaches it, or when the first plan does (below: the least-`la` offer of a state has `la <= V*` there, so the cut's statement holds for it too).
+reaches it, or when the first plan does (below: the least-`la` offer of a state has `la <= V*` there, so the cut's statement holds for it too; an
+offer the first plan takes for another reason, a given route's or the problem's `first_choice`, may have `la > V*`: building it costs work, never
+the proof, since a realized action is a real one and the offers not realized keep their fake action).
 Nothing is cut by a number: no tolerance, no lumping by chance. The stop at a proved gap (below) cuts nothing either: it ends the proof early.
 
 **Why the mean is exact.** Each round takes the greedy policy `pi` of the lower graph. If it reaches no fake action, every state it reaches is
@@ -81,6 +83,14 @@ least `la` (the action the bound thinks best; an offer the game refuses passes t
 upper figure (`SearchStats.first_upper`): on R04 it is the optimum itself, on R14 0.0004% above it (research note 2026-11-13-planning-speed,
 section 3). From then on a caller can read the best plan so far and its proved gap at any time (`Search.standing`, `Search.plan_now`, `watch`).
 
+*A blind bound (#948).* The least `la` is the action the bound thinks best only where the bound saw the state's future. Where it did not (a bound
+whose build a net stopped: a key it never expanded, an offer it holds only by its floor), `la` is about the offer's own price, so the cheapest
+offer wins: a reroll that almost never lands, taken at every state, a first plan of 10^9 to 10^13 Chaos against an optimum of thousands (the large
+generated targets of #867: on every one of them the bound's build had been stopped; on every target whose build finished, the first plan was within
+a few percent of the bound). A problem can then give its own order (`Problem.first_choice`): the crafting problem ranks the offers by the model
+solved on what its build finished, every tip and floor a dead end (`_envelope_plan`). Where that order takes no offer, the state is left to the
+restart; with no restart, the least `la` follows. The plan is still solved exactly, so this changes which plan is in hand, never a figure's proof.
+
 **The stop at a proved gap (OR-32).** With `gap = eps > 0`, once `gap_after` seconds have passed, the search ends at the first round where
 `U <= (1 + eps) L(root)`: the answer is the upper graph's best policy, `exact` is False and `within` is `eps`. The stop is sound because of two
 facts and nothing else. (1) *The lower side is admissible*: `L(root) <= V*(root)` ("The lower graph", above), and the figure compared is
@@ -102,7 +112,11 @@ Before `gap_after` only the exact stop ends the search (the planner passes 0: by
 round and inside the first plan's chain (the state net waits for the first round, so the first plan's reach can pass it); the answer is then the
 best executable policy and `exact` is False, with `stopped` saying which net. When the plan in hand at the stop cannot be solved to a certified cost
 (#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal. A given start whose plan has not closed has no answer
-(`NoPolicy`).
+(`NoPolicy`). A round whose *lower* solve cannot be certified (a plan of 10^9 steps or more, #867, #948) ends a search that holds such a plan the
+same way, as a stop: the plan in hand, and the lower figure of the last round the solver certified (or the start's bound), which is a lower bound
+because `L` only rises. A search that holds no plan (no net: it keeps none) refuses as before, and so does every search on a refusal with no
+certified figure at all (an infinite error: a singular policy system, values that are not finite, a merge that did not settle), which is a fault and
+not the limit of the arithmetic.
 """
 
 import math
@@ -172,6 +186,8 @@ class Problem[S](Protocol):
         ...
 
     # optional: `prime(state, positions)` makes, side by side, what the kernels of these offers at the state will cost most (a process pool); it changes no answer
+    # optional: `first_choice(state)` is the offers the first plan tries at the state, best first, or None for the least `la` (see "The first plan"); a
+    # problem whose bound is blind at some states (a build a net stopped) gives one; it changes what the first plan realizes, never what the search proves
 
 
 @dataclass(frozen=True)
@@ -193,8 +209,9 @@ class SearchStats:
     kernels: int = 0
     lower_history: list[float] = field(default_factory=list)  # `L(root)` after each round
     largest_fall: float = 0.0  # the largest relative fall of `L(root)` from one round to the next: 0 for a consistent bound (it only rises)
-    first_upper: float | None = None  # the certified upper figure of the first plan (the least-`la` chain or the incumbent's, the restart at the rest); None when not finite or not certified
+    first_upper: float | None = None  # the certified upper figure of the first plan (the least-`la` chain, the problem's `first_choice` or the incumbent's, the restart at the rest); None when not finite or not certified
     seeded: int = 0  # (state, offer) pairs realized along the first plan's chain, before the first round
+    lower_refused: int = 0  # a round whose lower solve the solver could not certify, which ended a search that held a plan (#948): 0 or 1
     upper_solves: int = 0  # solves of the upper graph
     upper_refused: int = 0  # of those, the ones the solver could not certify (the stop at a gap waited)
     upper_seconds: float = 0.0
@@ -521,6 +538,7 @@ class Search[S]:
         """Realize one action along a chain from the start, the first plan (see the module text): the incumbent's where one is given, else the
         offer with the least `la`; an offer the game refuses passes to the next. Returns the reason when the time or the memory net ended the
         chain early (the states it had not come to stay tips, which restart)."""
+        choose = getattr(self.p, "first_choice", None) if self.incumbent is None else None
         queue = [0]
         seen = {0}
         walked: set[int] = set()  # the kernels whose successors are all in the queue: states that share a kernel (`kernel_key`) share its successors
@@ -537,7 +555,7 @@ class Search[S]:
             if not self.expanded[i]:
                 self.expand(i)
             rows, cands = self.rows[i], self.cands[i]
-            wanted = self.incumbent(self.states[i]) if self.incumbent is not None else [position for _, position in reversed(cands)]  # the least `la` is last
+            wanted = self._first_choice(i, choose)
             for position in wanted:
                 held = [c for c in cands if c[1] == position]
                 if not held:
@@ -559,6 +577,22 @@ class Search[S]:
                 break
             self.p.release()
         return None
+
+    def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> list[int]:
+        """The offers the first plan tries at node `i`, in order (the first the game allows is realized): the incumbent's; else the problem's
+        `first_choice` where it gives one, then, where no restart can stand in for it, the rest by least `la`; else every offer by least `la`."""
+        state = self.states[i]
+        if self.incumbent is not None:
+            return list(self.incumbent(state))
+        by_la = [position for _, position in reversed(self.cands[i])]  # the least `la` is last in `cands`
+        chosen = choose(state) if choose is not None else None
+        if chosen is None:
+            return by_la
+        chosen = list(chosen)
+        if self.p.restart is not None and i != 0:
+            return chosen  # none the problem would take: the state is left to the restart of the upper graph (a tip of the first plan)
+        taken = set(chosen)
+        return chosen + [position for position in by_la if position not in taken]
 
     # ---- the graphs ---------------------------------------------------------------------------------------------
 
@@ -742,8 +776,13 @@ class Search[S]:
             except ConvergenceError:  # the first plan is beyond what the solver certifies (#769): the search goes on without an upper figure
                 upper = math.inf
             self.stats.first_upper = upper if math.isfinite(upper) else None
+            how = (
+                "the given route" if self.incumbent is not None
+                else "the problem's own choice at each state" if getattr(self.p, "first_choice", None) is not None
+                else "the least lower cost at each state"
+            )  # fmt: skip
             self.say(
-                f"first plan ({'the given route' if self.incumbent is not None else 'the least lower cost at each state'}): {self.stats.seeded:,} actions "
+                f"first plan ({how}): {self.stats.seeded:,} actions "
                 f"realized along its chain over {len(self.states):,} states, costs at most {upper!r} ({time.perf_counter() - began:.0f} s)"
                 + (f"; its chain was cut short: {stopped}" if stopped is not None else "")
             )
@@ -764,10 +803,24 @@ class Search[S]:
                         graph, tolerance=self.tolerance, info=info, start_policy=warm[0], start_value=warm[1], self_mass=self.self_mass,
                         refuse_above=self.refuse_above,
                     )  # fmt: skip
-            except ConvergenceError:
+            except ConvergenceError as error:
                 if self.guard:
                     self._probe()  # a bound that is not consistent can leave the lower graph unsolvable: say so, with the fault found
-                raise
+                if self.held is None or not (math.isfinite(error.error_bound) and error.error_bound > self.refuse_above):
+                    raise
+                # the plan in hand stands (OR-33), with the lower figure of the last round the solver certified: a plan of 10^9 steps or more (#867,
+                # #948) is beyond what float64 certifies closer than about 1e-3, and a round whose solve is refused ends the search, not the answer.
+                # Only that refusal stops it: a finite figure above what the run allows. A fault with no figure at all (a singular system, values
+                # that are not finite, a merge that did not settle) is not the arithmetic limit and is raised as before
+                self.stats.solve_seconds += time.perf_counter() - mark
+                self.stats.lower_refused += 1
+                stopped = (
+                    f"the search could not go further: the lowest possible cost of its round {self.stats.rounds + 1:,} could be worked out only to within "
+                    f"{error.error_bound:.2g} of itself (the crafting takes too many steps for the computer's arithmetic), more than the "
+                    f"{self.refuse_above:.2g} this run allows"
+                )
+                self.say(f"  {stopped} ({error})")
+                break
             self.stats.solve_seconds += time.perf_counter() - mark
             for name, amount in info.items():
                 if amount is None:  # a figure the solver did not measure in this solve (a graph solved whole in its first evaluation)
