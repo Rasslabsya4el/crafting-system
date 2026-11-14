@@ -171,7 +171,7 @@ class CraftingProblem:
         )
 
     def release(self) -> None:
-        self.ab._prepared_by.clear()
+        self.ab.release_prepared(keep_erased=True)  # the pairs many states share stay (#827)
 
 
 SEARCH_PER_BUILD = 3.0  # the search after a build takes at least this many times the build's time: measured 3.7 (R04: build 99 s, search 364-510 s) and 6.2 (R14: 37 s, 231-238 s), research note 2026-11-13-planning-speed, section 1; rounded down

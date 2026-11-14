@@ -1,0 +1,8 @@
+--route r04
+--route r14
+--case essences/medium
+--case fossil-sets/small
+--case fracturing/medium
+--case growing-3-fossils/small
+--case start-fractured/medium
+--case basic-orbs/small

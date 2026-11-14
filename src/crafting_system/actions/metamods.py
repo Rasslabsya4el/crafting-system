@@ -38,6 +38,7 @@ from .errors import NotApplicableError
 __all__ = [
     "BLOCKED_TAG",
     "BLOCKING",
+    "is_lock",
     "allowed_by_tags",
     "blocked_tags",
     "crafted_limit_of",
@@ -63,6 +64,12 @@ BLOCKED_TAG: dict[Metamod, str] = {
     Metamod.NO_CASTER_MODS: "caster",
 }
 BLOCKING = frozenset(LOCKED_SIDE) | frozenset(BLOCKED_TAG)  # the four that essences and resonators refuse
+
+
+def is_lock(mod: Mod) -> bool:
+    """Whether `mod` is a lock (Prefixes or Suffixes Cannot Be Changed): the one thing that keeps ordinary mods through an action that erases them
+    (`kept_by_lock`). A lock is found by its family, as `Item.metamods` finds it."""
+    return any(family == metamod.value for family in mod.families for metamod in LOCKED_SIDE)
 
 
 def locked_sides(data: GameData, item: Item) -> frozenset[Side]:

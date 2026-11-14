@@ -270,4 +270,4 @@ def _kernel_of(ability, state, want, action, types: list[_Type], specs: list[Spe
     ability._check_fracture_without_partners(state, outcomes)
     ability._check_same_item_space(outcomes)
     prepared = _Prepared(outcomes, origins, item=mine_item, imprints=state.imprints, donors=(theirs_item,))
-    return ability._mixture_kernel(state, prepared)
+    return ability._mixture_kernel(prepared)
