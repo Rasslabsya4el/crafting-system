@@ -275,7 +275,7 @@ def essence_notes(data: GameData, base_id: str, names: Iterable[str]) -> dict[st
     """The mods the essences `names` (as the game data names them) force on the base, each with the note of its essence.
 
     These are the essences a route uses: a mod line of that route's page that stands for one of these mods says where it comes from
-    (`_leaf_slot`). The mod is the one the action itself forces (`actions.essence.forced_mod_id`). An essence that forces nothing on
+    (`_leaf_slot`). The mod is the one the action itself forces (`crafting_system.actions.forced_mod_id`). An essence that forces nothing on
     the base, and a name that is no essence, give nothing.
     """
     by_name = {essence.name: essence for essence in data.essences.values()}
