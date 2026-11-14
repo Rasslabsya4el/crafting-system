@@ -1029,7 +1029,7 @@ def envelope_refusal(solver: str, error: Exception) -> str:
         return f"no policy of the offered actions reaches the goal from the start item ({error})"
     cause = getattr(error, "player", None) or str(error)
     return (
-        f"the exact search for the cheapest route could not give an answer: {cause}. "
+        f"the search for the cheapest route could not give an answer: {cause}. "
         "The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`"
     )
 
