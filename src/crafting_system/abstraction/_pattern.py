@@ -279,18 +279,25 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
     `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for a goal with a roll
     limit, for an enabled action that rerolls values, and for one that reads the unveil offer or the imprints.
     """
-    causes = []
-    if abstraction._has_laws:
-        causes.append("the target asks for a roll limit on a mod")
-    if abstraction.rerolls_values:
-        causes.append("an offered action rerolls the values of mods")
-    if abstraction.tracks_offer:
-        causes.append("an offered action reads the unveil offer")
-    if abstraction.tracks_imprints:
-        causes.append("an offered action reads the imprints")
+    causes = refusal_causes(abstraction)
     if not causes:
         return None
     return f"the crafted-pattern bound has no members for it: {'; '.join(causes)} (#497)"
+
+
+# what the bound has no members for: the abstraction's attribute, the cause in the refusal's text, and in a player's words where those differ
+_CAUSES = (
+    ("_has_laws", "the target asks for a roll limit on a mod", None),
+    ("rerolls_values", "an offered action rerolls the values of mods", None),
+    ("tracks_offer", "an offered action reads the unveil offer", "an offered action reads the mods an unveil shows to pick from"),
+    ("tracks_imprints", "an offered action reads the imprints", None),
+)
+
+
+def refusal_causes(abstraction: Abstraction, player: bool = False) -> tuple[str, ...]:
+    """What of `abstraction` the crafted-pattern bound has no members for; empty when the bound can be built. `player`: each cause in the words
+    an answer may show (`make_plan` says them when a net stops the walk that `solver="auto"` takes instead of the envelope search, #926)."""
+    return tuple(shown if player and shown else text for name, text, shown in _CAUSES if getattr(abstraction, name))
 
 
 class Pattern:

@@ -4,7 +4,7 @@
 * `make_plan(solver="auto")` asks it before any solve: the envelope search where it is None, whatever the `budget` (never the ladder's approximate
   answer; R12 is proved the cheapest in its first round, so it is exact at any budget; under a budget a search stops at a proved gap whatever the time, #826, OR-39,
   `tests/test_envelope_gap_stop_plan.py`);
-  where it refuses, the path it was (the budget decision, the walk, the object solver for a small graph);
+  where it refuses, the walk (the object solver for a small graph), with or without a budget: the forecast and the ladder are no longer on `auto`'s way (#926);
 * an envelope search that cannot answer under `auto` is a `PlanError` that says why and names `--solver packed`: no silent walk;
 * the command's `--solver` choices are the planner's, `auto` by default, and reach `make_plan` through `plan_with_starts`.
 
@@ -78,15 +78,20 @@ def test_auto_never_takes_the_ladder_of_coarse_levels_where_the_envelope_search_
         assert auto.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
 
 
-def test_auto_where_the_bound_is_refused_is_the_old_path_with_its_budget_decision(monkeypatch, packed):
+def test_auto_where_the_bound_is_refused_is_the_walk_whatever_the_budget(monkeypatch, packed):
+    """#926: the budget decision (the forecast of ADR-0023 and its ladder) is no longer on `auto`'s way: a budget of any size gives the walk's
+    exact plan, as no budget does, and the run's net is what ends a walk that is too long."""
     monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "planted for the test")
 
-    small = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e12)
-    over = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9)
+    def reached(*_args, **_kwargs):
+        raise AssertionError("`auto` reached the retired forecast")
 
-    assert small.packed is None and small.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)  # the object solver, as always
-    assert not hasattr(small, "packed") or small.packed is None
-    assert [limit for limit in over.limits if limit.what.startswith("The whole search")]  # the budget decision ran: the forecast was over it
+    monkeypatch.setattr(_plan, "decide", reached)
+    for budget in (None, 1e12, 1e-9):
+        plan = make_plan(DATA, load_target(R12, DATA), price_file(), budget=budget)
+        assert plan.packed is None and plan.approximation is None  # the object solver, as always
+        assert plan.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
+        assert not [limit for limit in plan.limits if limit.what.startswith("The whole search")]  # no forecast ran
 
 
 def test_envelope_by_name_still_refuses_where_the_bound_is_refused(monkeypatch):
