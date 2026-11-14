@@ -11,7 +11,7 @@ A **coarse state** is a partition of the exact compressed states into blocks (AD
 
 So `V-(B) <= V*(s) <= J(pi)(s) <= V+(B)` for every member `s` of `B`. The answer shows `pi` and the mean `V+`, and the **certified gap** `V+/V- - 1`. Because `V*` lies in the interval too, the gap bounds the true error of the policy shown, `J(pi)/V* - 1 <= V+/V- - 1`, and bounds the error of the mean it reports the same way. It meets the tolerance when it is at most 1%. (Checked against brute force on 300 random models, 1,800 state checks, largest violation 4e-15, by the `checker` of PR #121.)
 
-The solver's own error enters the gap. `solve` returns values with `V(1-e) <= V* <= V(1+e)` (`Solution.error_bound`, ADR-0010), so the reported lower bound is `V-(1-e-)` and the upper `V+(1+e+)`; the gap is `V+(1+e+) / (V-(1-e-)) - 1`. A table in this ADR is **certified** only when its numbers come from `solve` with this correction; the numbers from the prototype's numpy value iteration are called measured.
+The solver's own error enters the gap. `solve` returns values with `V(1-e) <= V* <= V(1+e)` (`Solution.error_bound`, ADR-0010), so the reported lower bound is `V-(1-e-)` and the upper `V+(1+e+)`; the gap is `V+(1+e+) / (V-(1-e-)) - 1`. A table in this ADR is **certified** only when its numbers come from `solve` with this correction; the numbers from the prototype's numpy value iteration are called measured. How large that error may be before a search with a gap refuses a solve, and why the gap stays proved whatever it is: ADR-0063, "Update: #867".
 
 ### Per-member, never from one representative
 

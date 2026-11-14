@@ -1,0 +1,6 @@
+--case vaal/small
+--case bench-metamods/small
+--case divine-roll-limits/small
+--case influence/medium
+--case fossil-sets/small
+--case growing-1-basic/medium

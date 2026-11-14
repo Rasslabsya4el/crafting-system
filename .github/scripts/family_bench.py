@@ -36,7 +36,7 @@ summary takes a later record of a case over a "not run" one).
 
 **`summary`** reads the records of one or more runs and writes one JSON (the committed baseline is `tests/fixtures/family_bench/`): per case
 the record, and per method family and size the checks of section 10: `L(root) <= V* <= U` where the walk held, the mean equal to `V*` to
-1e-9 when the answer claims to be exact, the mean at most `(1 + gap) V*` when the search stopped at a proved gap (#826), |z| <= 4 of the
+1e-9 when the answer claims to be exact (or to the sum of the two solves' certified errors when larger, #867), the mean at most `(1 + gap) V*` when the search stopped at a proved gap (#826), |z| <= 4 of the
 simulation (OR-30), and every case whose outcome differs from the generator's "refused today" mark. It also counts the plans made within the
 aim of a minute (`planned_within_a_minute`). It asserts nothing: it is the record a later ticket is measured against.
 """
@@ -299,6 +299,8 @@ def path_of(plan) -> str:
 
 def describe_plan(plan, record: dict):
     """Write the plan's figures into `record` (path, mean, states, reach, the search's or the pruning's counts, `L` and `U`); return its `EnvelopeInfo` or None."""
+    from crafting_system.planner._envelope_plan import certificate_gap, certified_upper
+
     info = plan.packed.info.get("envelope") if plan.packed is not None else None
     mean = float(plan.mean_remaining)
     record["path"] = path_of(plan)
@@ -321,7 +323,7 @@ def describe_plan(plan, record: dict):
         }  # fmt: skip
     if info is not None:
         env = dataclasses.asdict(info)
-        env["gap"] = None if not info.lower else info.upper / info.lower - 1.0
+        env["gap"] = certificate_gap(info)  # as the plan's own limit states it: the mean's certified error is inside (#867)
         record["envelope"] = env
         # a search that ended at a proved gap (OR-32, #826) made its plan: "planned", with the gap it was proved within; only a net is "stopped"
         ended = info.exact or info.within is not None
@@ -329,6 +331,7 @@ def describe_plan(plan, record: dict):
         record["reason"] = None if ended else f"the envelope search stopped: {info.stopped}"
         record["exact"], record["within"] = info.exact, info.within
         record["lower"], record["upper"] = info.lower, info.upper
+        record["certified_upper"] = certified_upper(info)  # the mean with its certified error: what the gap and the checks of the bounds rest on (#867)
     else:
         record["status"] = "planned"
         record["reason"] = None
@@ -521,7 +524,7 @@ def run_walk_child(args) -> None:
             plan = plan_with_starts(data, target, prices, recipe_starts=True, start_price=case.start_price, solver="packed")
         else:
             plan = make_plan(data, target, prices, start_price=case.start_price, solver="packed", with_risk=False)
-        record.update(status="solved", optimum=float(plan.mean_remaining), states=len(plan.solution.values), reason=None)
+        record.update(status="solved", optimum=float(plan.mean_remaining), error_bound=getattr(plan.solution, "error_bound", None), states=len(plan.solution.values), reason=None)
     except PlanError as error:
         record.update(status="refused", reason=f"{type(error).__name__}: {error}"[:1000])
     except Exception as error:  # noqa: BLE001
@@ -644,7 +647,7 @@ def run_part(args) -> None:
             else:
                 walk = {"status": "not run", "reason": "the part's deadline"}
         elif full and planned.get("status") == "planned":
-            walk = {"status": "solved", "optimum": planned["plan"]["mean_remaining"], "states": planned["plan"]["states_known"], "reason": "the auto path was the full walk"}
+            walk = {"status": "solved", "optimum": planned["plan"]["mean_remaining"], "error_bound": planned["plan"].get("error_bound"), "states": planned["plan"]["states_known"], "reason": "the auto path was the full walk"}
         planned["walk"] = walk
         records.append(planned)
         say(f"{case.id}: {planned.get('status')} ({planned.get('path')}) {planned.get('reason') or ''}"[:300])
@@ -662,14 +665,18 @@ def checks(record: dict) -> dict:
     optimum = walk.get("optimum")
     lower, upper = record.get("lower"), record.get("upper")
     if optimum is not None and lower is not None and upper is not None:
-        slack = TOLERANCE * max(1.0, abs(optimum))
+        # the two figures compared are each certified to their solve's error, which a plan of very many steps can leave above 1e-9 (#867:
+        # growing-1-basic/large, 2.2e-7 of 3.07e7 Chaos): the slack is their sum, never less than `TOLERANCE`
+        errors = ((record.get("plan") or {}).get("error_bound") or 0.0) + (walk.get("error_bound") or 0.0)
+        slack = max(TOLERANCE, errors) * max(1.0, abs(optimum))
+        certified = record.get("certified_upper", upper)  # (a record from before #867 has the mean alone)
         out["lower_le_optimum"] = lower <= optimum + slack
-        out["optimum_le_upper"] = optimum <= upper + slack
+        out["optimum_le_upper"] = optimum <= certified + slack
         out["gap_to_optimum"] = upper / optimum - 1.0 if optimum else None
         if record.get("status") == "planned" and record.get("within") is None:
             out["exact_mean_equals_optimum"] = abs(upper - optimum) <= slack
         elif record.get("status") == "planned":  # ended at a proved gap (#826): the plan costs at most that share more than the walk's optimum
-            out["within_gap_of_optimum"] = upper <= (1.0 + record["within"]) * optimum + slack
+            out["within_gap_of_optimum"] = certified <= (1.0 + record["within"]) * optimum + slack
     sim = record.get("simulate") or {}
     if sim.get("z") is not None:
         out["z"] = sim["z"]

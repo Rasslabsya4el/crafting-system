@@ -113,7 +113,7 @@ def test_the_light_worlds_plan_is_within_its_gap_of_the_walks_optimum_and_its_me
     assert mean <= (1.0 + gap) * optimum * (1 + 1e-9)
     assert info.lower <= optimum * (1 + 1e-9) <= mean * (1 + 2e-9)
     assert info.upper == mean
-    assert mean == pytest.approx(chain_mean(result, start), rel=1e-9)  # exact for the plan shown, not an estimate
+    assert mean == pytest.approx(chain_mean(result, start), rel=1e-9)  # the mean of the plan shown, not an estimate
     if info.exact:
         assert info.within is None and mean == pytest.approx(optimum, rel=1e-9)
     else:
@@ -159,14 +159,14 @@ def test_the_aim_counts_the_bounds_build(light, monkeypatch):
 # ---- the limit ------------------------------------------------------------------------------------------------------------------------
 
 
-def test_the_limit_of_a_stop_at_a_gap_says_so_with_the_exact_mean_the_proof_figure_and_the_gap_proved(light):
+def test_the_limit_of_a_stop_at_a_gap_says_so_with_the_plans_mean_the_proof_figure_and_the_gap_proved(light):
     info = searched(light, gap=1.0, gap_after=0.0).info["envelope"]
     (limit,) = envelope_limits(info)
     text = limit_text(limit)
     assert limit.kind == SOLVE and limit.what == "The search stopped once the plan was proved close to the cheapest"
     assert "the search stopped by itself" in text and "at most 100.00% more than the cheapest possible (the gap this run allows)" in text
     assert "buying the start item again wherever it had not looked" in text
-    assert f"The plan is {WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is exact for the plan shown, not an estimate." in text
+    assert f"The plan is {WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is the average of the plan shown itself, not an estimate of the cheapest." in text
     assert f"[{info.lower:,.2f}, {info.upper:,.2f}]" in text and f"costs less than {info.lower:,.2f} on average" in text
     assert f"The plan costs at most {certificate_gap_text(certificate_gap(info))} more than the best possible cost." in text
     assert "not shown to be the best" not in text and "was stopped" not in text  # a net's words
@@ -184,7 +184,7 @@ def test_the_limit_says_when_the_stop_waited_for_a_cost_it_could_certify_and_whe
     assert "at most 1.00% more than the cheapest possible" in text and "at most 0.70% more than the best possible cost" in text
     stopped = EnvelopeInfo(False, "the time limit of 600 seconds was reached", 99.3, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None, restarts=False)
     text = limit_text(envelope_limits(stopped)[0])
-    assert "The search was stopped" in text and "restarts from the start item" not in text and "100.00 Chaos on average after the start item, exactly" in text
+    assert "The search was stopped" in text and "restarts from the start item" not in text and "100.00 Chaos on average after the start item, the average of the plan shown itself" in text
 
 
 # ---- the coarse fixture, through `make_plan` --------------------------------------------------------------------------------------------
@@ -212,7 +212,7 @@ def test_a_plan_past_its_aim_is_within_the_budgets_gap_of_the_walks_optimum(coar
     _, _, optimum = coarse
     plan = planned(coarse, budget=at_once(gap))
     info = plan.search
-    assert plan.approximation is None  # not the ladder's approximate answer: the mean is exact for the plan shown
+    assert plan.approximation is None  # not the ladder's approximate answer: the mean is the mean of the plan shown
     assert plan.mean_remaining == info.upper and plan.mean_remaining <= (1.0 + gap) * optimum * (1 + 1e-9)
     assert info.lower <= optimum * (1 + 1e-9) <= plan.mean_remaining * (1 + 2e-9)
     assert info.exact or info.within == gap
@@ -358,7 +358,7 @@ def test_what_a_start_options_row_says_of_a_plan_not_proved_the_cheapest():
     within = EnvelopeInfo(False, None, 99.3, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None, within=0.01)
     no_figure = EnvelopeInfo(False, "the time limit of 600 seconds was reached", 0.0, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None)
     assert _proved(plan(None)) == "" and _proved(plan(exact)) == ""
-    assert _proved(plan(within)) == "the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"
+    assert _proved(plan(within)) == "the crafting cost is the cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"
     assert _proved(plan(no_figure)).endswith("which is not proved the cheapest")
 
 
@@ -372,9 +372,9 @@ def test_the_pages_start_line_says_what_a_start_options_plan_proved():
         candidate = SimpleNamespace(label="a Magic helmet from the recipe", given=False, price=12.0)
         return SimpleNamespace(outcome=outcome, total=total, mean_remaining=None if total is None else total - 12.0, candidate=candidate, note=note)
 
-    rows = [row("chosen", 61.0, ""), row("planned", 84.0, "the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"), row("failed", None, "x")]
+    rows = [row("chosen", 61.0, ""), row("planned", 84.0, "the crafting cost is the cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it"), row("failed", None, "x")]
     view = SimpleNamespace(first=object(), plan=SimpleNamespace(starts=SimpleNamespace(considered=rows)))
     field = _View.start_field(view)
     texts = [line.text for line in field.lines]
     assert len(texts) == 2 and texts[0].startswith("chosen: ") and "proved" not in texts[0] and texts[0].endswith(")")
-    assert texts[1].startswith("planned: ") and texts[1].endswith("; the crafting cost is the exact cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it)")
+    assert texts[1].startswith("planned: ") and texts[1].endswith("; the crafting cost is the cost of the plan found from this start, proved at most 0.70% above the cheapest plan from it)")

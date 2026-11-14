@@ -18,8 +18,12 @@ the report and the risk read) and returns the `PackedResult` that `make_plan` ta
 
 The search ends in one of three ways, and `EnvelopeInfo` says which (ticket #826, OR-32, OR-39, OR-33): *exact* (the plan is proved the cheapest); *at a
 proved gap* (`within`: the plan is proved to cost at most that share more than the cheapest); *stopped by a net* (`stopped`: the
-best plan found, with the gap that was proved). In all three the mean is the exact mean of the plan returned: the graph the search ended with is
-solved again here, and that solve, not the search's upper figure, is the mean shown.
+best plan found, with the gap that was proved). In all three the mean shown is the mean of the plan returned: the graph the search ended with is
+solved again here, and that solve, not the search's upper figure, is the mean shown. Of an exact search it is certified to the solver's 1e-6 (the
+"exact mean" of OR-32) or the plan is refused. Of the other two it is certified to `EnvelopeInfo.mean_error`, which a plan of very many steps can
+leave above 1e-6 (#867), and nothing printed of such a plan calls its mean exact: the gap and the interval are taken from `certified_upper`, the
+mean with its certified error added, against `lower`, the bound with its error taken off, so the gap stated holds every error its figures carry
+(the reading of OR-32 of 2026-11-14 in `docs/owner-rules.md`).
 """
 
 import dataclasses
@@ -36,7 +40,7 @@ from crafting_system.abstraction._pattern import SINK, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 
 from . import _limits
-from ._envelope import BoundError, Net, NoPolicy, Refused, Search, Standing, resident_mb
+from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -83,6 +87,7 @@ class CraftingProblem:
         self.restart = next((p for p, priced in enumerate(self.offers) if isinstance(priced.offer.action, BuyStartItem)), None)
         self.start_lower = float(values[0])  # key 0 is the start's
         self.keys_missing = 0
+        self.bound_error = float(bound.error_bound)  # what the values below are lowered by: the search's consistency guard allows for it above 1e-6 (#867)
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.ab.is_goal(state)
@@ -235,7 +240,7 @@ class EnvelopeInfo:
     exact: bool
     stopped: str | None
     lower: float  # LB: no plan costs less (the start's remaining cost, without the price of the start item)
-    upper: float  # U: the plan returned costs this much on average
+    upper: float  # U: the plan returned costs this much on average (the mean shown; certified to `mean_error` of itself)
     rounds: int
     touched: int
     expanded: int
@@ -258,6 +263,8 @@ class EnvelopeInfo:
     upper_refused: int = 0  # rounds in which the plan in hand could not be solved to a certified cost, so the stop at the gap waited (#769)
     upper_seconds: float = 0.0
     held: bool = False  # a net's stop kept an earlier plan, because the plan in hand could not be solved to a certified cost
+    mean_error: float = 0.0  # the certified relative error of `upper`, the mean shown (the final solve's bound): above 1e-6 only for a plan of very many steps (#867)
+    proved_upper: float | None = None  # the search's own certified upper figure of the plan returned (its solve's value with its error added), when it is not exact: what its stop compared
 
 
 def envelope_result(
@@ -306,7 +313,9 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
     """The body of `envelope_result`, under the run's memory net."""
     began = time.perf_counter()
     if bound is None:
-        bound = pattern_lower_bound(abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began))
+        bound = pattern_lower_bound(
+            abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after)
+        )  # fmt: skip
     built = time.perf_counter()
     expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)
     say(
@@ -328,14 +337,19 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
             raise
         raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}") from refusal
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
-    packed = solve_walked(abstraction, start, walked, tolerance=tolerance, progress=say)
+    # the mean shown: of an exact answer to the solver's 1e-6; of a plan proved within a gap, or one a net stopped, to the error the search took its
+    # figures at, and the limit says so when it is above 1e-6 (`mean_error_text`, #867): OR-33 asks for a plan with its gap, not a refusal
+    packed = solve_walked(
+        abstraction, start, walked, tolerance=tolerance, progress=say, refuse_above=None if result.exact else figure_error(gap, gap_after)
+    )  # fmt: skip
     mean = float(packed.solution.values[start])
     stats = result.stats
     packed.info["envelope"] = EnvelopeInfo(
         result.exact, result.stopped, result.lower, mean, stats.rounds, stats.touched, stats.expanded, stats.realized, stats.candidates,
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
-        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held,
+        result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
+        None if result.exact else result.upper,
     )  # fmt: skip
     return packed
 
@@ -389,8 +403,8 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
                 f"as soon as its plan was proved to cost at most {certificate_gap_text(info.within)} more than the cheapest possible (the gap this run allows)"
                 + (", buying the start item again wherever it had not looked" if info.restarts else "")
                 + waited,
-                f"The plan is {_limits.WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is exact for the "
-                "plan shown, not an estimate. " + certificate_text(info),
+                f"The plan is {_limits.WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is the average of "
+                "the plan shown itself, not an estimate of the cheapest. " + mean_error_text(info) + certificate_text(info),
             ),
         )
     return (
@@ -400,16 +414,45 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             f"{info.stopped}, after {info.rounds:,} rounds and {info.expanded:,} states looked at"
             + ("; the plan restarts from the start item wherever the search had not looked" if info.restarts else "")
             + ("; the cost of the last plan it had could not be worked out to a certified figure, so the plan shown is the one before it" if info.held else ""),
-            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, exactly. " + certificate_text(info),
+            f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, the average of the plan shown itself. "
+            + mean_error_text(info)
+            + certificate_text(info),
         ),
     )
 
 
+def mean_error_text(info: EnvelopeInfo) -> str:
+    """What is said of the mean when the solver certifies it only to more than the 1e-6 of an exact answer (#867, OR-13): empty otherwise."""
+    if not info.mean_error > ACCEPT_BOUND:
+        return ""
+    return (
+        f"The plan takes so many steps that its average cost is worked out only to within {info.mean_error:.2g} of itself "
+        f"({info.upper * info.mean_error:,.2f} Chaos either way); the gap stated allows for that. "
+    )
+
+
+def certified_upper(info: EnvelopeInfo) -> float:
+    """The upper figure of the gap and of the interval: the most the plan returned costs on average, every error of the figure included (#867).
+
+    Of an exact search it is the mean (certified to the solver's 1e-6: OR-32's exact mean). Otherwise it is the mean with its certified error added,
+    `upper (1 + mean_error)`, or the search's own certified figure of the same plan (`proved_upper`) when that is lower: each is at least the
+    plan's true average cost, so the lower of the two is. With `lower`, which the search already took with its solve's error off, the gap
+    `certified_upper / lower - 1` is proved whatever the errors are, and at a stop at a gap it is at most `within` (the search stopped on
+    `proved_upper <= (1 + within) lower`).
+    """
+    if info.exact:
+        return info.upper
+    own = info.upper * (1.0 + info.mean_error)
+    return own if info.proved_upper is None else min(own, info.proved_upper)
+
+
 def certificate_gap(info: EnvelopeInfo) -> float | None:
-    """The most the stop can have cost, `U / LB - 1`: how far the plan can be above the best possible cost. None when `LB` is not above zero."""
-    if not info.lower > 0.0 or not math.isfinite(info.upper):
+    """The most the stop can have cost, `U / LB - 1` with `U` the `certified_upper`: how far the plan can be above the best possible cost. None when
+    `LB` is not above zero."""
+    upper = certified_upper(info)
+    if not info.lower > 0.0 or not math.isfinite(upper):
         return None
-    return max(info.upper / info.lower - 1.0, 0.0)
+    return max(upper / info.lower - 1.0, 0.0)
 
 
 def certificate_figures(lower: float, upper: float) -> tuple[str, str]:
@@ -434,15 +477,17 @@ def certificate_gap_text(gap: float) -> str:
 def certificate_text(info: EnvelopeInfo) -> str:
     """What a search that did not end exact still guarantees, next to the point answer (OR-13, OR-32): `[LB, U]`, the gap, the bound used and what it bounds.
 
-    The plan and its exact mean `U` stay the answer; the interval only says how far the stop could be from the best possible cost. `LB` is a
+    The plan and its mean stay the answer; the interval only says how far the stop could be from the best possible cost, and its upper end is
+    `certified_upper` (the mean with its certified error: the same figure to the cent unless the plan takes very many steps, #867). `LB` is a
     lower bound of the whole graph: the optimistic model of the crafted pattern (the walk-free bound), raised by the actions the search looked at,
     and never above the best cost of any plan over every state the item can reach, expanded or not. It holds because the bound is sound by
     construction (#497: the optimistic model costs no more than the real game at every key); the guard of the search (`BoundError`) checks the
     bound only at the states it expanded, and at the tips only when a lower solve fails, so the text never says the guard verified `LB`.
     """
     gap = certificate_gap(info)
-    lower = min(max(info.lower, 0.0), info.upper)  # a rounding of LB just above U never prints [x, y] with x above y
-    low, high = certificate_figures(lower, info.upper)
+    upper = certified_upper(info)
+    lower = min(max(info.lower, 0.0), upper)  # a rounding of LB just above U never prints [x, y] with x above y
+    low, high = certificate_figures(lower, upper)
     head = (
         f"The best possible cost lies in [{low}, {high}] Chaos after the start item: no way of crafting this item, including the ones the search "
         f"did not look at, costs less than {low} on average. "
@@ -468,5 +513,5 @@ def certificate_text(info: EnvelopeInfo) -> str:
 
 __all__ = [
     "BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "Standing", "certificate_figures", "certificate_gap", "certificate_gap_text",
-    "certificate_text", "envelope_limits", "envelope_result", "route_incumbent",
+    "certificate_text", "certified_upper", "envelope_limits", "envelope_result", "route_incumbent",
 ]  # fmt: skip

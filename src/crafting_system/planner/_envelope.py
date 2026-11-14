@@ -37,9 +37,11 @@ and `L(root)` only rises round after round. A bound that breaks either is not a 
 be unsolvable (an improper policy, ticket #539), so the search checks both as it goes and refuses at the first sign (`BoundError`, with `guard=True`):
 
 * when a state is expanded, its bound must not be above the least `la` of its offers by more than `CONSISTENCY_LIMIT` (the certified error that the bound's
-  own solve may leave in its values, at most 1e-6), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
+  own solve may leave in its values, at most 1e-6; a bound a search with a gap took with a larger certified error, `Problem.bound_error`, is allowed
+  three times that error on top, since a bound lowered by `e` can stand above its offers by `(1 + e) / (1 - e)`, #867), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
   relative error);
-* after each round, `L(root)` must not have fallen by more than `FALL_LIMIT` (the solver's own rounding is far below it); `SearchStats.largest_fall` is the
+* after each round, `L(root)` must not have fallen by more than `FALL_LIMIT` (the solver's own rounding is far below it; two rounds certified to `e1` and `e2` with one of
+  them above 1e-6 may differ by `e1 + e2` more, and a bound taken with an error above 1e-6 may fall by its slack of three times that error, #867); `SearchStats.largest_fall` is the
   largest relative fall that a round caused.
 
 A bound that passes both has shown no fault on the states the search has expanded. The tips it has not expanded are checked only when the solve of a lower graph
@@ -88,7 +90,12 @@ facts and nothing else. (1) *The lower side is admissible*: `L(root) <= V*(root)
 is an estimate, a heuristic's value or the value of a policy that reaches a state with no executable action would break (2); a bound that is not
 a lower bound would break (1), and the guard above refuses the ones it can see. A round whose upper solve cannot be certified (`ConvergenceError`:
 the free-action and stiff cases of #769) does not stop: the stop waits for a certified `U` (`SearchStats.upper_refused` counts the rounds it
-waited). Before `gap_after` only the exact stop ends the search (the planner passes 0: by OR-39 the stop applies whatever the time); `gap = 0`, or
+waited). *The solver's error under a gap* (#867): every figure the stop compares carries its certified error (`L (1 - e)`, `U (1 + e)`), so the
+inequality above is proved whatever `e` is, and a search with a gap refuses a solve only above `GAP_SHARE` of the gap (`figure_error`: 1e-3 at 1%)
+instead of the 1e-6 an exact answer needs. A plan worth 10^9 steps or more (the first plan of a hard target: 10^8 Chaos against steps of 0.008)
+cannot be certified closer than about 1e-6 in float64, whatever the solver does: each value is stored to `eps V` and the plan takes `V / g` steps.
+The exact search (`gap = 0`) is unchanged; a search with a gap whose last tip closes on an error above 1e-6 ends at the gap, not as exact.
+Before `gap_after` only the exact stop ends the search (the planner passes 0: by OR-39 the stop applies whatever the time); `gap = 0`, or
 `gap_after` None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
 
 **The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
@@ -109,15 +116,16 @@ import numpy as np
 from crafting_system import parallel
 from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
 from crafting_system.solver._packed import BIG_TOTAL
-from crafting_system.solver._packed_solve import solve_graph
+from crafting_system.solver._packed_solve import ACCEPT_BOUND, solve_graph
 
 FLOOR = 1e-200  # a fake action of bound 0 is carried at this cost: the certificate divides by the cheapest cost of a state (a rise of 1e-200 moves no cut)
 FAKE = -1  # the tag of a fake action (a tip's bound, or the least bound of the offers not realized yet)
 NO_ACTION = -2  # the tag of "no action" in the policy handed to the next round
 WARM_START = True  # each round's solve starts from the last round's policy and values (False: from the cheapest path, as the first round does; for measuring)
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
+GAP_SHARE = 0.1  # the share of the gap of a run that the solver's certified error may take in each figure the stop compares (`figure_error`, #867): both figures carry their error, so this bounds how early the stop comes, never what it proves
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
-CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
+CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (certified to 1e-6; a larger certified error is added, `Search._consistent`)
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
@@ -344,6 +352,7 @@ class Search[S]:
         self.net = net or Net()
         self.gap = gap  # OR-32: stop when the plan is proved to cost at most this share more than the cheapest; 0 is the exact search
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
+        self.refuse_above = figure_error(gap, gap_after)  # the certified error above which a solve is refused (#867)
         self.watch = watch
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
         self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
@@ -372,6 +381,10 @@ class Search[S]:
         self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
         self._last_root: float | None = None
+        self._last_error = 0.0  # the certified error of the solve that gave `_last_root` (0 for the start's own bound)
+        bound_error = float(getattr(problem, "bound_error", 0.0))  # the certified error the bound's values were lowered by, when the problem says it
+        self.bound_slack = 3.0 * bound_error if bound_error > ACCEPT_BOUND else 0.0  # (1 + e) / (1 - e) - 1 < 3 e: how far a bound lowered by `e` can stand above its offers
+        self.consistency = CONSISTENCY_LIMIT + self.bound_slack
         self.intern(problem.start)
 
     # ---- nodes and kernels --------------------------------------------------------------------------------------
@@ -440,7 +453,7 @@ class Search[S]:
     def _consistent(self, i: int, least: float) -> None:
         """Raise `BoundError` when the bound of node `i` is above `least`, the least lower bound of its offers (a consistent bound is at most that)."""
         bound = float(self.lb[i])
-        if bound > least * (1.0 + CONSISTENCY_LIMIT) + CONSISTENCY_LIMIT * float(self.lb[0]):  # the last term: values near 0 carry rounding, not a relative error
+        if bound > least * (1.0 + self.consistency) + self.consistency * float(self.lb[0]):  # the last term: values near 0 carry rounding, not a relative error
             raise BoundError(
                 f"the lower bound is not consistent: it puts the cost of a state at {bound:,.6g}, yet no action there costs less than {least:,.6g} even "
                 "at its best case, which a lower bound never does: it cannot be trusted for a cut"
@@ -662,7 +675,7 @@ class Search[S]:
         self.stats.upper_solves += 1
         try:
             graph = self._graph("upper")
-            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass)
+            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass, refuse_above=self.refuse_above)
         except ConvergenceError:
             self.stats.upper_refused += 1
             raise
@@ -745,11 +758,12 @@ class Search[S]:
             warm = self._warm(graph)
             try:
                 if warm is None:
-                    core = solve_graph(graph, tolerance=self.tolerance, info=info, self_mass=self.self_mass)
+                    core = solve_graph(graph, tolerance=self.tolerance, info=info, self_mass=self.self_mass, refuse_above=self.refuse_above)
                 else:
                     core = solve_graph(
-                        graph, tolerance=self.tolerance, info=info, start_policy=warm[0], start_value=warm[1], self_mass=self.self_mass
-                    )
+                        graph, tolerance=self.tolerance, info=info, start_policy=warm[0], start_value=warm[1], self_mass=self.self_mass,
+                        refuse_above=self.refuse_above,
+                    )  # fmt: skip
             except ConvergenceError:
                 if self.guard:
                     self._probe()  # a bound that is not consistent can leave the lower graph unsolvable: say so, with the fault found
@@ -772,12 +786,16 @@ class Search[S]:
             if self._last_root is not None and math.isfinite(root) and self._last_root > 0:
                 fall = (self._last_root - root) / self._last_root
                 self.stats.largest_fall = max(self.stats.largest_fall, fall)
-                if self.guard and fall > FALL_LIMIT:
+                error, before = core.certificate.bound, self._last_error
+                # two solves certified to 1e-6 on a bound certified to 1e-6 are held by FALL_LIMIT as before; a solve certified to more (a search
+                # with a gap, #867) may put its root that much lower without any fall of the exact `L(root)`, and a bound taken with a larger error
+                # may fall by its slack where a tip is replaced by its offers
+                if self.guard and fall > FALL_LIMIT + self.bound_slack + (error + before if max(error, before) > ACCEPT_BOUND else 0.0):
                     raise BoundError(
                         f"the lower bound fell by {fall:.2%} from one round of the search to the next, which a consistent bound never does: "
                         "it cannot be trusted for a cut (a declared block invariance may be wrong)"
                     )
-            self._last_root = root
+            self._last_root, self._last_error = root, core.certificate.bound
             self.stats.lower_history.append(lower)
             if not math.isfinite(root):
                 raise NoPolicy("no policy of the offers reaches the goal from the start")
@@ -800,6 +818,18 @@ class Search[S]:
                 self.stats.touched = len(self.states)
                 self.upper = min(root * (1.0 + core.certificate.bound), self.upper if self.upper is not None else math.inf)  # the greedy policy is executable and its value is `root`
                 self._stand(lower, began)
+                if core.certificate.bound > ACCEPT_BOUND:
+                    # every tip is closed, but the solver certifies the values only to more than an exact answer may carry (a plan of very many
+                    # steps): the plan is proved within the gap its two figures leave, which `refuse_above` keeps inside the gap of the run
+                    upper = root * (1.0 + core.certificate.bound)
+                    if not upper <= (1.0 + self.gap) * lower:  # (cannot be for a gap below about 8, with GAP_SHARE a tenth: said, not assumed)
+                        raise ConvergenceError(
+                            f"the search closed every tip, but the plan's cost is certified only to {core.certificate.bound:.3g}, "
+                            f"which leaves it outside the gap of {self.gap:.3g} the run allows",
+                            core.certificate.bound,
+                        )
+                    self.say(f"stop: every tip is closed; the plan costs at most {upper!r}, no plan costs less than {lower!r}: proved within {self.gap:.3%}")
+                    return SearchResult(self.states, self.index, self._graph("exact"), lower, False, None, False, self.stats, upper, self.gap)
                 return SearchResult(self.states, self.index, self._graph("exact"), lower, True, None, False, self.stats)
             if self.gap > 0.0 and self.gap_after is not None and time.perf_counter() - began >= self.gap_after:
                 try:
@@ -862,11 +892,17 @@ class Search[S]:
         return SearchResult(self.states, self.index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None)
 
 
+def figure_error(gap: float, gap_after: float | None) -> float:
+    """The certified error above which a solve of a search is refused: the solver's `ACCEPT_BOUND` for the exact search, and `GAP_SHARE` of the gap
+    for a search that stops at a gap (never less than `ACCEPT_BOUND`). See the module text, "The solver's error under a gap"."""
+    return max(ACCEPT_BOUND, GAP_SHARE * gap) if gap > 0.0 and gap_after is not None else ACCEPT_BOUND
+
+
 class NoPolicy(ValueError):
     """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it)."""
 
 
 __all__ = [
-    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "BoundError", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
+    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
     "resident_mb",
 ]  # fmt: skip

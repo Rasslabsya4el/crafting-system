@@ -198,6 +198,24 @@ def approximate_limits(limits: Iterable[Limit]) -> tuple[Limit, ...]:
     return tuple(replace(limit, guarantee=limit.approximate, approximate="") if limit.approximate else limit for limit in limits)
 
 
+RISK_EXACT = "The odds, the mean and the variance are exact."  # a risk whose quantiles do not fit in memory (`_plan.packed_risk`)
+UNORDERED_EXACT = "The success chance, the mean cost and the variance are exact."
+UNRESOLVED_EXACT = "The success chance and the mean cost are exact."
+GROUPS_EXACT = "The odds and every cost figure are exact for the groups."  # the tree of groups (`_plan.lumped_limit`)
+EXACT_MEAN_SENTENCES = (RISK_EXACT, UNORDERED_EXACT, UNRESOLVED_EXACT, GROUPS_EXACT)
+
+
+def rough_mean_limits(limits: Iterable[Limit], mean_error: float) -> tuple[Limit, ...]:
+    """The limits of a plan whose mean is certified only to `mean_error` of itself, above the solver's 1e-6 (a plan of very many steps that a
+    search with a gap or a net returned, #867): each guarantee that calls its mean or its figures exact says how far they are worked out instead,
+    so that no text of the plan says "exact" (the reading of OR-32 of 2026-11-14). The gap the search states already holds that error."""
+    rough = (
+        f"The plan takes so many steps that its mean cost is worked out only to within {mean_error:.2g} of itself, and its other figures are not "
+        "claimed any closer."
+    )
+    return tuple(replace(limit, guarantee=rough) if limit.guarantee in EXACT_MEAN_SENTENCES else limit for limit in limits)
+
+
 def kind_title(name: str) -> str:
     """An action kind of the catalog as a player writes it: `exalted-orb` is "Exalted Orb"."""
     if name in _NAMES:
@@ -478,7 +496,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
                 RISK,
                 not_computed(*QUANTILES),
                 "the inputs of the plan depend on each other in a cycle, so the cost of a run has no order to follow",
-                "The success chance, the mean cost and the variance are exact.",
+                UNORDERED_EXACT,
             )
         )
     loose = loose_figures(risk)
@@ -492,7 +510,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
                 not_computed(*cut),
                 "the cost of the whole craft is far above its cheapest step, so the calculation of these figures cannot reach them"
                 + (f"; the faster methods gave up first: {'; '.join(risk.grid.gave_up)}" if risk.grid.gave_up else ""),
-                "The success chance and the mean cost are exact.",
+                UNRESOLVED_EXACT,
             )
         )
     elif risk.grid.gave_up:
