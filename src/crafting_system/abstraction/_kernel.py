@@ -1870,8 +1870,8 @@ class Abstraction:
         included) and `rest`, with junk kept, the other drawn mods as `(label, count)` pairs (None
         otherwise). The probability of a "pool" entry is that of all the families of the type together:
         families of one type are interchangeable in the draw, so each is the fractured one with an equal
-        share (`_add_fractured` divides). It takes one run of the exact engine for each family type, with
-        that type's mods marked in the label.
+        share (`_add_fractured` divides). It takes one run of the exact engine, with each mod's family type
+        marked in the label (#934).
         """
         key = (signature, self._forced_label(part))
         found = self._fractures.get(key)
@@ -1890,30 +1890,33 @@ class Abstraction:
             family_type = self._family_type(family, None, influences)
             for entry in family.mods:
                 owner[entry.mod.id] = family_type
-        types = list(dict.fromkeys(owner.values())) or [None]
-        single = part.fracturing()
+        numbers = {family_type: number for number, family_type in enumerate(dict.fromkeys(owner.values()))}
+
+        def label(mod: Mod) -> Label:
+            # every mod marked with the number of its family type, so one run of the engine tells which type was fractured (ticket #934). It used to be
+            # one run per type with that type alone marked; the outcomes of such a run are those of this one with the other types' marks erased, and
+            # an exact distribution seen through a coarser label adds the chances of the outcomes it merges, so the sums below are the same numbers.
+            # It walks the engine once instead of once per type. Its classes are the family types (a type is made of the weights and labels a class
+            # is made of, and the mark keeps two types apart), a few more than one marked run had where unmarked types shared a class.
+            return (label_of(mod), "forced" if mod.id == part.forced else numbers.get(owner.get(mod.id), ""))
+
+        types = list(numbers)
         merged: dict[Hashable, Fraction] = defaultdict(Fraction)
-        for number, marked in enumerate(types):
-
-            def label(mod: Mod, marked=marked) -> Label:
-                mark = "forced" if mod.id == part.forced else "type" if owner.get(mod.id) == marked else ""
-                return (label_of(mod), mark)
-
-            for outcome, chance in single.distribution(label).items():
-                split = self._split_fractured(outcome, first=number == 0)
-                if split is not None:
-                    kind, fractured_label, best, rest = split
-                    merged[(kind, marked if kind == "pool" else None, fractured_label, best, rest)] += chance
+        for outcome, chance in part.fracturing().distribution(label).items():
+            split = self._split_fractured(outcome)
+            if split is not None:
+                kind, mark, fractured_label, best, rest = split
+                merged[(kind, types[mark] if kind == "pool" else None, fractured_label, best, rest)] += chance
         entries = tuple(merged.items())
         self._fractures[key] = entries
         self._kernels += 1
         return entries
 
-    def _split_fractured(self, outcome, *, first: bool):
-        """One outcome of the marked run as `(kind, label of the fractured mod, best, rest)`, or None to skip it.
+    def _split_fractured(self, outcome):
+        """One outcome of the marked run as `(kind, type number of the fractured mod, label of the fractured mod, best, rest)`.
 
-        The run that marks a type reports only the mods of that type as fractured ("pool"); the item
-        without a mod and the forced mod are the same in every run, so only the `first` takes them.
+        Every mod of the run is marked with the number of its family type ("forced" for the forced mod); the type number is None
+        unless a drawn mod ("pool") was fractured.
         """
         counts: Counter = Counter()
         chosen = None
@@ -1922,16 +1925,15 @@ class Abstraction:
                 chosen = found.label
             else:
                 counts[found[0]] += count
+        mark = None
         if chosen is None:
             kind = "none"
         elif chosen[1] == "forced":
             kind = "forced"
-        elif chosen[1] == "type":
-            kind = "pool"
+        elif chosen[1] == "":
+            return None  # a mod of no family type of the pool: every drawn mod has one, so this is never met (the marked runs skipped it too)
         else:
-            return None
-        if kind != "pool" and not first:
-            return None
+            kind, mark = "pool", chosen[1]
         ints = (lambda label: label[0]) if self._kinds.tracked else (lambda label: label)
         best = best_of(len(self.goal.leaves), (ints(label) for label in counts))
         fractured_label = None if chosen is None else chosen[0]
@@ -1940,7 +1942,7 @@ class Abstraction:
             if kind == "pool":
                 counts[fractured_label] -= 1
             rest = frozenset((label, count) for label, count in counts.items() if count > 0)
-        return kind, fractured_label, best, rest
+        return kind, mark, fractured_label, best, rest
 
     def _family_type(
         self,

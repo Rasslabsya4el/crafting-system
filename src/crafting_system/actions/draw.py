@@ -13,8 +13,9 @@ fewer mods (`DRY_POOL_LEAVES_FEWER_MODS`).
 
 The exact engine does not track which family was drawn. Two families that the caller's label cannot
 tell apart (same side, same weight per label) are interchangeable, so they are grouped into a class
-and the state is only how many families of each class have been drawn plus the free slots; states
-are memoised. This is exact. The number of states grows with the number of distinct
+and the state is only how many families of each class have been drawn (on which side); the states
+are walked forward, one draw at a time, and the labels of the drawn families are spread at the end
+(`exact_distribution` says why that is exact, ticket #934). This is exact. The number of states grows with the number of distinct
 (side, weight per label) classes, not with the number of families, so a pool whose families all
 have different weights, or a label that tells many mods apart, gives many states.
 
@@ -29,7 +30,7 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import contextmanager
 from fractions import Fraction
-from functools import cache
+from math import comb, gcd
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item, Side
@@ -178,8 +179,27 @@ def exact_distribution(
     guaranteed tag or None, `kept` how many mods the retained item holds. `label` is called once
     per candidate mod and must be pure. `blocked` are the tags the guaranteed draw may not pick (a
     Harvest reforge under an Attack or Caster metamod: it filters that first mod only).
+
+    **How, and why it is exact (ticket #934).** A *part* is one side of a class of families (see the module docstring). A draw
+    picks the part `p` of class `c` with chance `(families of c not drawn yet) x W_p / (open weight)`, `W_p` the weight of one
+    family's mods on that side, and then the label `l` of the mod with chance `w_pl / W_p`, `w_pl` the weight of that family's mods
+    of that side with label `l`. Only the first factor reads what was drawn before, and only how many families of each part were
+    taken (a family leaves the pool whichever of its mods was drawn); the second reads nothing of it (the families of a class have
+    the same weights per label). So the labels of the drawn families are independent of each other and of the order of the
+    draws, each with the chances `w_pl / W_p` of its part. The engine walks the parts alone, forward one draw at a time, a state
+    holding one number (the chance of having drawn these many families of each part), and spreads each end state over the labels at
+    the end: the `n` families drawn from part `p` take their labels as `n` independent draws from `w_pl / W_p` (a multinomial). The
+    chance of an outcome is the sum, over the ways of reaching it, of the same products of ratios a draw-by-draw walk multiplies,
+    grouped differently, so it is the same exact number. End states with the same counts give the same spread, so they are added
+    before it is made.
+
+    The earlier engine walked the same states backward and kept with each the whole distribution of the labels still to come; for a
+    pool of many classes and labels (a fossil set, an essence on a base of many family types) that held millions of distributions
+    and was most of the time of a fossil plan. A forward state holds one number, and the states of one draw are dropped once the
+    next draw is made.
     """
     number = NUMBER
+    zero = number(0)
     labels: list[Hashable] = []
     label_index: dict[Hashable, int] = {}
     classes: dict[tuple, int] = {}
@@ -212,75 +232,178 @@ def exact_distribution(
         class_of[name] = classes[key]
     width = len(labels)
 
-    @cache
-    def walk(
-        drawn: tuple[int, ...], room_prefix: int, room_suffix: int, picks: int
-    ) -> dict[tuple[int, ...], Fraction]:
-        """The distribution of the label counts of the draws still to come from this state.
+    # the parts: their class, side, the weight of one family's mods on that side and its (label, weight) pairs
+    part_class: list[int] = []
+    part_prefix: list[bool] = []
+    part_weight: list = []
+    part_labels: list[tuple[tuple[int, Fraction], ...]] = []
+    part_of: dict[tuple[int, bool], int] = {}
+    for index, parts in enumerate(class_parts):
+        for on_prefix, weights, total in parts:
+            part_of.setdefault((index, on_prefix), len(part_class))
+            part_class.append(index)
+            part_prefix.append(on_prefix)
+            part_weight.append(int(total) if isinstance(total, Fraction) and total.denominator == 1 else total)  # an int when it is one: cheaper to multiply
+            part_labels.append(weights)
+    count = len(part_class)
+    room = (free[Side.PREFIX], free[Side.SUFFIX])
 
-        A unit is a family: one part per side it has mods on, and drawing a mod of either part takes the unit out.
+    whole = number is Fraction and all(type(weight) is int for weight in part_weight)  # every weight an integer: the walk keeps (numerator, denominator) pairs
+
+    def ends(start: tuple[int, ...], picks_by_chance: Mapping[int, Fraction]) -> dict[tuple[int, ...], Fraction]:
+        """The chance of each end state of the draws from `start`, mixed over the numbers of draws to make.
+
+        It walks forward one draw at a time and keeps only the states of the current draw: a state where `made` draws were
+        made ends there when `made` is the number to make, or when nothing can be drawn from it and more were to be made.
+        With integer weights a chance is kept as a reduced pair of integers and added with one `gcd`, which is the same exact
+        number as a `Fraction` at a third of the time (the walk is where a large draw spends it); it is a `Fraction` again on the way out.
         """
-        nothing = {(0,) * width: number(1)}
-        if picks == 0:
-            return nothing
-        open_weight = {}
-        for index, taken in enumerate(drawn):
-            if class_count[index] > taken:
-                weight = sum(
-                    (total for on_prefix, _, total in class_parts[index] if (room_prefix if on_prefix else room_suffix) > 0),
-                    number(0),
-                )
-                if weight:
-                    open_weight[index] = weight
-        if not open_weight:
-            return nothing
-        total = sum(((class_count[i] - drawn[i]) * weight for i, weight in open_weight.items()), number(0))
         result: dict[tuple[int, ...], Fraction] = defaultdict(number)
-        for index in open_weight:
-            remaining = class_count[index] - drawn[index]
-            for on_prefix, weights, _ in class_parts[index]:
-                if (room_prefix if on_prefix else room_suffix) <= 0:
-                    continue
-                child = walk(
-                    drawn[:index] + (drawn[index] + 1,) + drawn[index + 1 :],
-                    room_prefix - on_prefix,
-                    room_suffix - (not on_prefix),
-                    picks - 1,
-                )
-                for lab, weight in weights:
-                    step = remaining * weight / total
-                    for tally, chance in child.items():
-                        result[tally[:lab] + (tally[lab] + 1,) + tally[lab + 1 :]] += step * chance
-        return dict(result)
+        picks = max(picks_by_chance)
+        more = {made: sum((weight for drawn, weight in picks_by_chance.items() if drawn > made), zero) for made in range(picks)}
 
-    start = (0,) * len(class_count)
-    guaranteed: list[tuple[int, bool, int, Fraction]] = []
-    if tag is not None:
-        groups: dict[tuple[int, bool, int, Fraction], int] = defaultdict(int)
-        for family, entry in guaranteed_candidates(pool, free, tag, blocked):
-            groups[(class_of[family.family], family.side is Side.PREFIX, mod_label[entry.mod.id], entry.weight)] += 1
-        tagged_total = sum((n * number(weight) for (_, _, _, weight), n in groups.items()), number(0))
-        guaranteed = [(cls, on_prefix, lab, n * number(weight) / tagged_total) for (cls, on_prefix, lab, weight), n in groups.items()]
+        def add(found: dict, weight) -> None:
+            if not weight:
+                return
+            for state, chance in found.items():
+                result[state] += weight * (Fraction(*chance) if whole else chance)
+
+        level: dict[tuple[int, ...], object] = {start: (1, 1) if whole else number(1)}
+        for made in range(picks + 1):
+            add(level, picks_by_chance.get(made, zero))
+            if made == picks:
+                break
+            stuck: dict[tuple[int, ...], object] = {}
+            following: dict[tuple[int, ...], object] = {}
+            for state, chance in level.items():
+                taken = [0] * len(class_count)
+                room_prefix, room_suffix = room
+                for part, n in enumerate(state):
+                    if n:
+                        taken[part_class[part]] += n
+                        if part_prefix[part]:
+                            room_prefix -= n
+                        else:
+                            room_suffix -= n
+                steps = []
+                total = 0
+                for part in range(count):
+                    if (room_prefix if part_prefix[part] else room_suffix) <= 0 or not part_weight[part]:
+                        continue
+                    remaining = class_count[part_class[part]] - taken[part_class[part]]
+                    if remaining > 0:
+                        weight = remaining * part_weight[part]
+                        steps.append((part, weight))
+                        total += weight
+                if not steps:
+                    stuck[state] = chance
+                    continue
+                if not whole:
+                    each = chance / total
+                    for part, weight in steps:
+                        child = state[:part] + (state[part] + 1,) + state[part + 1 :]
+                        step = each * weight
+                        before = following.get(child)
+                        following[child] = step if before is None else before + step
+                    continue
+                numerator, denominator = chance
+                common = gcd(numerator, total)
+                numerator, denominator = numerator // common, denominator * (total // common)  # chance / total, reduced
+                for part, weight in steps:
+                    child = state[:part] + (state[part] + 1,) + state[part + 1 :]
+                    common = gcd(weight, denominator)
+                    top, bottom = numerator * (weight // common), denominator // common  # chance x weight / total, reduced
+                    before = following.get(child)
+                    if before is not None:
+                        other, under = before
+                        if under == bottom:
+                            top += other
+                        else:
+                            top, bottom = top * under + other * bottom, bottom * under
+                        common = gcd(top, bottom)
+                        top, bottom = top // common, bottom // common
+                    following[child] = (top, bottom)
+            add(stuck, more[made])
+            level = following
+        return result
+
+    spreads: dict[tuple[int, int], list[tuple[tuple[tuple[int, int], ...], Fraction]]] = {}
+
+    def spread(part: int, n: int) -> list[tuple[tuple[tuple[int, int], ...], Fraction]]:
+        """The labels `n` families drawn from `part` take, `((label, count), ...)`, each with its multinomial chance."""
+        found = spreads.get((part, n))
+        if found is None:
+            options = part_labels[part]
+            ways: list[tuple[tuple[tuple[int, int], ...], Fraction, int]] = [((), number(1), n)]
+            for at, (lab, weight) in enumerate(options):
+                share = weight / part_weight[part]
+                grown = []
+                for counts, chance, left in ways:
+                    for k in [left] if at == len(options) - 1 else range(left + 1):
+                        grown.append(((*counts, (lab, k)) if k else counts, chance * share**k * comb(left, k), left - k))
+                ways = grown
+            found = spreads[(part, n)] = [(counts, chance) for counts, chance, _ in ways if chance]
+        return found
+
     tallies: dict[tuple[int, ...], Fraction] = defaultdict(number)
+
+    def spread_ends(found: Mapping[tuple[int, ...], Fraction], fixed: tuple[int, int] | None, scale) -> None:
+        """Add the outcomes of the end states `found`, times `scale`; `fixed` is the (part, label) of the guaranteed mod, whose label is known."""
+        grouped: dict[tuple, Fraction] = defaultdict(number)
+        for state, chance in found.items():
+            base = [0] * width
+            mixed = []
+            for part, n in enumerate(state):
+                if fixed is not None and part == fixed[0]:
+                    n -= 1
+                if not n:
+                    continue
+                if len(part_labels[part]) == 1:
+                    base[part_labels[part][0][0]] += n
+                else:
+                    mixed.append((part, n))
+            if fixed is not None:
+                base[fixed[1]] += 1
+            grouped[(tuple(base), tuple(mixed))] += chance
+        for (base, mixed), chance in grouped.items():
+            ways: list[tuple[tuple[int, ...], Fraction]] = [(base, chance * scale)]
+            for part, n in mixed:
+                grown = []
+                for tally, before in ways:
+                    for counts, each in spread(part, n):
+                        after = list(tally)
+                        for lab, k in counts:
+                            after[lab] += k
+                        grown.append((tuple(after), before * each))
+                ways = grown
+            for tally, each in ways:
+                tallies[tally] += each
+
+    if not totals:
+        return {}
+    start = (0,) * count
+    picks_of: dict[int, Fraction] = {}
     for total, chance in totals.items():
-        chance = number(chance)
         picks = max(0, total - kept - (tag is not None))
-        if tag is None:
-            for tally, inner in walk(start, free[Side.PREFIX], free[Side.SUFFIX], picks).items():
-                tallies[tally] += chance * inner
-            continue
-        for cls, on_prefix, lab, step in guaranteed:
-            inner_all = walk(
-                start[:cls] + (1,) + start[cls + 1 :],
-                free[Side.PREFIX] - on_prefix,
-                free[Side.SUFFIX] - (not on_prefix),
-                picks,
-            )
-            for tally, inner in inner_all.items():
-                tallies[tally[:lab] + (tally[lab] + 1,) + tally[lab + 1 :]] += chance * step * inner
+        picks_of[picks] = picks_of.get(picks, zero) + number(chance)
+    if tag is None:
+        spread_ends(ends(start, picks_of), None, number(1))
+    else:
+        groups: dict[tuple[int, int, Fraction], int] = defaultdict(int)
+        for family, entry in guaranteed_candidates(pool, free, tag, blocked):
+            groups[(part_of[(class_of[family.family], family.side is Side.PREFIX)], mod_label[entry.mod.id], entry.weight)] += 1
+        tagged_total = sum((n * number(weight) for (_, _, weight), n in groups.items()), number(0))
+        by_part: dict[int, list[tuple[int, Fraction]]] = defaultdict(list)
+        for (part, lab, weight), n in groups.items():
+            by_part[part].append((lab, n * number(weight) / tagged_total))
+        for part, chosen in by_part.items():
+            found = ends(start[:part] + (1,) + start[part + 1 :], picks_of)
+            for lab, step in chosen:
+                spread_ends(found, (part, lab), step)
     return {
         frozenset((labels[i], count) for i, count in enumerate(tally) if count): chance
         for tally, chance in tallies.items()
+        if chance
     }
 
 
