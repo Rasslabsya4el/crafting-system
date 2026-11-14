@@ -172,8 +172,18 @@ def veiled_placeholder(data: GameData, mod_id: str) -> ExplicitMod:
     return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats))
 
 
+class _Validated:
+    """The slot `_valid_in` of an item: the game data `validate` passed it against (ticket #935). Unset until then.
+
+    It is not a field of the item: no equality, hash, repr, `replace`, copy or pickle holds it, so only the very item that was validated
+    has it. `Item.changed` reads it to skip the checks a derived item cannot fail.
+    """
+
+    __slots__ = ("_valid_in",)
+
+
 @dataclass(frozen=True, slots=True)
-class Item:
+class Item(_Validated):
     """A concrete item. Construction checks only what needs no game data; see the module docstring."""
 
     base_id: str
@@ -355,6 +365,7 @@ class Item:
         self._check_enchantment(data, base)
         for entry in self.imprints:
             entry.validate(data)
+        object.__setattr__(self, "_valid_in", data)
 
     def _check_slot(self, entry: ExplicitMod, mod: Mod, base_domain: str) -> None:
         if mod.generation_type not in SIDE_VALUES:
@@ -631,12 +642,21 @@ class Item:
 
         When `mods` is replaced without `veil_offer` and no veiled placeholder is left, the offer is
         cleared: it exists only for its placeholder.
+
+        An item validated against `data` whose `mods` alone are replaced by some of its own mods, each with its values and its crafted
+        flag (a removal, a fracture: only `fractured` may differ), is valid without the checks (ticket #935), so `validate` is not run:
+        the base, rarity, implicits, quality, sockets, enchantment and imprints are the same; each mod is known and fits its slot, domain,
+        values and seed as before (none of these reads `fractured`); each side holds no more mods than before at the same capacity; no two
+        mods share a family, as no two did before; and the offer is the same with its one placeholder, or cleared with it.
         """
         updated = replace(self, **fields)
-        if "mods" in fields and "veil_offer" not in fields and not updated._has_placeholder(data):
+        if "mods" in fields and "veil_offer" not in fields and updated.veil_offer and not updated._has_placeholder(data):
             updated = replace(updated, veil_offer=())  # the offer goes with its placeholder
         updated = updated.canonical(data)
-        updated.validate(data)
+        if getattr(self, "_valid_in", None) is data and fields.keys() == {"mods"} and _kept_from(self.mods, updated.mods):
+            object.__setattr__(updated, "_valid_in", data)
+        else:
+            updated.validate(data)
         return updated
 
     def _has_placeholder(self, data: GameData) -> bool:
@@ -673,6 +693,12 @@ class Item:
         if mod is None:
             raise self._error(f"mod {entry.mod_id} is not in the game data", UnknownModError)
         return mod
+
+
+def _kept_from(before: tuple[ExplicitMod, ...], after: tuple[ExplicitMod, ...]) -> bool:
+    """Whether every mod of `after` is a mod of `before` with its values and crafted flag (its `fractured` flag may differ)."""
+    held = {entry.mod_id: (entry.values, entry.crafted) for entry in before}
+    return all(held.get(entry.mod_id) == (entry.values, entry.crafted) for entry in after)
 
 
 def _count(number: int, side: Side) -> str:
