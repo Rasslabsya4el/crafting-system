@@ -250,17 +250,28 @@ def exact_distribution(
 
     whole = number is Fraction and all(type(weight) is int for weight in part_weight)  # every weight an integer: the walk keeps (numerator, denominator) pairs
 
-    def forward(start: tuple[int, ...], picks: int) -> list[tuple[dict, dict]]:
-        """For 0 to `picks` draws made: the chance of each state reached, and of those of them where nothing can be drawn.
+    def ends(start: tuple[int, ...], picks_by_chance: Mapping[int, Fraction]) -> dict[tuple[int, ...], Fraction]:
+        """The chance of each end state of the draws from `start`, mixed over the numbers of draws to make.
 
+        It walks forward one draw at a time and keeps only the states of the current draw: a state where `made` draws were
+        made ends there when `made` is the number to make, or when nothing can be drawn from it and more were to be made.
         With integer weights a chance is kept as a reduced pair of integers and added with one `gcd`, which is the same exact
         number as a `Fraction` at a third of the time (the walk is where a large draw spends it); it is a `Fraction` again on the way out.
         """
-        out = []
+        result: dict[tuple[int, ...], Fraction] = defaultdict(number)
+        picks = max(picks_by_chance)
+        more = {made: sum((weight for drawn, weight in picks_by_chance.items() if drawn > made), zero) for made in range(picks)}
+
+        def add(found: dict, weight) -> None:
+            if not weight:
+                return
+            for state, chance in found.items():
+                result[state] += weight * (Fraction(*chance) if whole else chance)
+
         level: dict[tuple[int, ...], object] = {start: (1, 1) if whole else number(1)}
         for made in range(picks + 1):
+            add(level, picks_by_chance.get(made, zero))
             if made == picks:
-                out.append((level, {}))
                 break
             stuck: dict[tuple[int, ...], object] = {}
             following: dict[tuple[int, ...], object] = {}
@@ -312,21 +323,8 @@ def exact_distribution(
                         common = gcd(top, bottom)
                         top, bottom = top // common, bottom // common
                     following[child] = (top, bottom)
-            out.append((level, stuck))
+            add(stuck, more[made])
             level = following
-        if whole:
-            out = [tuple({state: Fraction(*pair) for state, pair in found.items()} for found in entry) for entry in out]
-        return out
-
-    def ends(start: tuple[int, ...], picks_by_chance: Mapping[int, Fraction]) -> dict[tuple[int, ...], Fraction]:
-        """The chance of each end state of the draws from `start`, mixed over the numbers of draws to make."""
-        levels = forward(start, max(picks_by_chance))
-        result: dict[tuple[int, ...], Fraction] = defaultdict(number)
-        for picks, weight in picks_by_chance.items():
-            for made in range(picks + 1):
-                level, stuck = levels[made]
-                for state, chance in (level if made == picks else stuck).items():
-                    result[state] += weight * chance
         return result
 
     spreads: dict[tuple[int, int], list[tuple[tuple[tuple[int, int], ...], Fraction]]] = {}
