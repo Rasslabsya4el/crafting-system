@@ -659,10 +659,10 @@ def check_approximate_marked(page: Page) -> list[Fault]:
     return faults
 
 
-_SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price")
+_SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price", "vendor upgrade recipe")  # the last: a lower essence tier priced as a third of the tier above (#885); always marked approximate
 _COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) (?:≈ )?[\d.,]+ c(?:\s|$)")
 _PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
-_MARKET_SOURCES = tuple(source for source in _SOURCES if source not in ("hand price", "default price"))  # a price of these rests on trades or listings: a plain fact shows how many
+_MARKET_SOURCES = tuple(source for source in _SOURCES if source not in ("hand price", "default price", "vendor upgrade recipe"))  # a price of these rests on trades or listings: a plain fact shows how many
 
 
 _BEHIND = re.compile(r"(?P<depth>[\d,]+(?:\.\d+)?) units behind it, the plan buys about (?P<uses>[\d,]+(?:\.\d+)?)")

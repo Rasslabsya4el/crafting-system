@@ -79,6 +79,16 @@ def test_a_beast_is_keyed_by_its_name():
     assert beasts()["Vivid Vulture"] == StashLine("Vivid Vulture", 88.1, 32, 101096, "Beast")
 
 
+def test_a_beast_poe_ninja_spells_differently_is_keyed_by_the_games_name():
+    """poe.ninja lists The Black Mórrígan as "Black Mórrigan" (no article, a plain i); the price file and the recipes use the game's name."""
+    lines = parse_stash_overview({"lines": [{"name": "Black Mórrigan", "chaosValue": 147.0, "count": 399, "id": 121387}]}, "Beast")
+
+    assert lines == [StashLine("The Black Mórrígan", 147.0, 399, 121387, "Beast")]
+    # a base of that name is not a beast: the spelling is mapped for beast lines only
+    base = parse_stash_overview({"lines": [{"name": "Black Mórrigan", "chaosValue": 1.0, "count": 9, "id": 1, "levelRequired": 86}]}, "BaseType")
+    assert all(line.key != "The Black Mórrígan" for line in base)
+
+
 def test_two_lines_with_one_key_keep_the_higher_count():
     data = {"lines": [base_line(id=1, count=7, chaosValue=10), base_line(id=2, count=9, chaosValue=20), base_line(id=3, count=8, chaosValue=30)]}
 

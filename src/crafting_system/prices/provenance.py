@@ -8,7 +8,7 @@ a plain fact or an approximate input; this module only holds the record, writes 
   rows of the league (history), the poe.ninja rows of an earlier league (previous league, Standard), poe.watch,
   the trade site's instant-buyout listings, a hand price, a default, or the vendor upgrade recipe (a lower essence tier priced as
   one third of the next tier up, `essence_recipe.py`, #885: its `league` and `date` are those of the price it rests on), or an
-  estimate (a number set by hand for an item no market lists, such as The Black Mórrígan, which poe.ninja has no line for: OR-23's
+  estimate (a number set by hand for an item no market lists: OR-23's
   best estimate, always marked; its `note` says what it rests on; `league` and `date` say for which economy and day it was set).
 * `league`, `date`: the league and the UTC day the reading is of.
 * `depth` and `depth_unit`: how much stood behind the number. For an exchange line it is the units traded on the day
