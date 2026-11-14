@@ -70,7 +70,7 @@ from typing import Literal
 
 from crafting_system.abstraction import CompressedState, Status, Wanted, status_of
 from crafting_system.abstraction import Slot as StateSlot
-from crafting_system.actions.essence import forced_mod_id
+from crafting_system.actions import forced_mod_id
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,

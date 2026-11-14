@@ -18,6 +18,7 @@ from .strand_use import SPEND_ESSENCE, SpendLaw, StrandUse
 
 __all__ = [
     "ApplyEssence",
+    "forced_mod_id",
 ]
 
 FORCED_MOD_BY_ITEM_CLASS = get_rule("essence.forced_mod_by_item_class")
