@@ -129,3 +129,23 @@ def test_an_item_never_validated_or_changed_elsewhere_is_checked():
         wrong.remove_mod(data, item.mods[0].mod_id)  # never validated: the checks run and find the unknown mod
     changed = item.changed(data, corrupted=True)  # another field: checked, as before
     assert getattr(changed, "_valid_in", None) is data
+
+
+def test_what_the_item_of_a_view_raised_is_raised_again_without_building_it_again(monkeypatch):
+    data, ab, states = generated("tiny", 2, steps=10)
+    view = ab._view(states[0], False)
+    calls = []
+
+    def no_item(*args):
+        calls.append(args)
+        raise ItemError("not an item")
+
+    monkeypatch.setattr(ab, "_item_of", no_item)
+    for _ in range(3):
+        with pytest.raises(ItemError, match="not an item"):
+            ab._item_of_view(view, False)
+    assert len(calls) == 1  # built once, its refusal kept
+    ab.release_prepared()
+    with pytest.raises(ItemError):
+        ab._item_of_view(view, False)
+    assert len(calls) == 2  # dropped with the pairs of the state

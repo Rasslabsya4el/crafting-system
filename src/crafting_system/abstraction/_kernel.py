@@ -120,7 +120,7 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
 Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
 TYPES_KEPT = 65_536  # the families of pool tables whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
 ITEMS_KEPT = 64  # the items of the latest views (`Abstraction._item_of_view`): the actions of one state are prepared one after the other
-SHARED_PAIRS = 4_096 # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
+SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
 # families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
 # 120 small objects a part: some kilobytes to some tens of kilobytes a pair, so at most a few hundred megabytes at the cap
