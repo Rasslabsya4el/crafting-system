@@ -14,8 +14,9 @@ search stops by itself as soon as its plan is proved to cost at most `--gap` per
 and says so beside the plan's exact mean (OR-32, OR-39, ticket #826); a proof that closes is the exact answer. `--exact`, or `--gap 0`, keeps
 the exact proof however long it takes.
 
-A query that the walk-and-solve path would run longer than `--budget` seconds is
-answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`);
+A walk asked for by name (`--solver packed`, `object`) that would run longer than `--budget` seconds is
+answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`: retired, and never
+reached by the default `--solver auto`, #926, #928);
 `--exact` solves it exactly however long it takes. An approximate answer gives no certified p90; its `--verify`
 runs the policy on concrete items and reports a simulated mean, p90 and CVaR labelled "simulated, not certified"
 (ADR-0023, `_lift`); it gives no `--route` and no route page yet.
@@ -154,7 +155,7 @@ def main(
         "With --exact the answer is the same exact mean whichever is chosen",
     )  # fmt: skip
     parser.add_argument("--exact", action="store_true", help="prove the plan the cheapest however long it takes: no approximate answer and no stop at --gap; the time and memory limits still stop it and say so, unless --time-limit none and --memory-limit none")
-    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the plan aims at (default {BUDGET_SECONDS:g}): a walk of the whole graph (packed, object, or auto where the search of auto and envelope cannot be built) that would take longer is answered approximately; that search does not read it (it stops at --gap)")
+    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the plan aims at (default {BUDGET_SECONDS:g}): a walk of the whole graph asked for by name (packed, object) that would take longer is answered approximately; the search of auto and envelope does not read it (it stops at --gap), and auto walks exactly, to the time limit, where that search cannot be built")
     parser.add_argument("--gap", type=_percent, default=PROOF_GAP * 100.0, metavar="PERCENT", help=f"stop the search once the plan is proved to cost at most this many percent more than the cheapest, and say so beside its exact mean (default {PROOF_GAP * 100.0:g}); 0 keeps the exact proof")
     parser.add_argument(
         "--time-limit", type=_limit, default=_FROM_SETTINGS, metavar="SECONDS",
