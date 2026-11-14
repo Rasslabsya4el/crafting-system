@@ -38,6 +38,7 @@ from crafting_system import parallel
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
 from crafting_system.abstraction._pattern import SINK, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.solver import ConvergenceError, solve_packed
 
 from . import _limits
 from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb
@@ -45,7 +46,7 @@ from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
 from ._packed import PackedResult, Walked, solve_walked
-from ._pattern_bound import PatternBound, pattern_lower_bound
+from ._pattern_bound import PatternBound, pack_pattern_model, pattern_lower_bound, pattern_offers
 from ._prune import corrupting_offer_pruned
 
 RESTART_KEY = ("restart",)
@@ -88,12 +89,62 @@ class CraftingProblem:
         self.start_lower = float(values[0])  # key 0 is the start's
         self.keys_missing = 0
         self.bound_error = float(bound.error_bound)  # what the values below are lowered by: the search's consistency guard allows for it above 1e-6 (#867)
+        self._last_key: tuple[CompressedState, int | None] | None = None
+        self.closed_start: float | None = None  # the closed model's value of the start key, when the first plan follows it (#948)
+        if not bound.complete:
+            self._closed(model, bound)
+
+    def _closed(self, model, bound: PatternBound) -> None:
+        """The first plan's order on a bound whose build a net stopped (#948, `_envelope`, "A blind bound"): the model solved on what the build
+        finished, with no floor action (a tip, and an offer held only by its floor, is a dead end), and at each key, for each offer, the least
+        backup of its abstract actions under those values. Not a bound of anything: only the order in which the first plan tries the offers.
+        Where that model reaches the goal from no start (it has nothing finished there), the first plan keeps the least `la`."""
+        graph = pack_pattern_model(model, pattern_offers([self.offers[p] for p in bound.positions]), None)
+        try:
+            closed = np.asarray(solve_packed(graph, refuse_above=math.inf).value, dtype=np.float64)
+        except ConvergenceError:  # an order is all it would give: without it the first plan takes the least `la`, as on a finished build
+            return
+        if not math.isfinite(float(closed[0])):
+            return
+        sink = len(model.keys)  # pack_pattern_model's last state, the goal the sink successor (-1) stands for
+        expected = []
+        for successors, weights in model.kernels:
+            total = sum(weights)
+            chance = np.array([w / total for w in weights])
+            expected.append(float(chance @ closed[[sink if key == SINK else key for key in successors]]))
+        self.closed_lowest: list[dict[int, float]] = []
+        for row in model.actions:
+            found: dict[int, float] = {}
+            for index, kernel in row:
+                position = bound.positions[index]
+                q = self.offers[position].cost + expected[kernel]
+                if math.isfinite(q) and (position not in found or q < found[position]):
+                    found[position] = q
+            self.closed_lowest.append(found)
+        self.closed_start = float(closed[0])
+        self.first_choice = self._closed_choice
+
+    def _closed_choice(self, state: CompressedState) -> list[int]:
+        """The offers of `state` by the closed model's backup, least first (an offer with none is left out); the restart at its price and the start's
+        closed value. An empty list where the closed model sees no way to the goal: the search leaves the state to the restart (`Search._first_choice`)."""
+        k = self._key(state)
+        found = {} if k is None else self.closed_lowest[k]
+        ranked = sorted((q, position) for position, q in found.items())
+        if self.restart is not None and state != self.start and self.restart not in found:
+            ranked.append((self.offers[self.restart].cost + self.closed_start, self.restart))
+            ranked.sort()
+        return [position for _, position in ranked]
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.ab.is_goal(state)
 
     def _key(self, state: CompressedState) -> int | None:
-        return self.index.get(self.pattern.key(state))
+        last = self._last_key
+        if last is not None and last[0] is state:  # `candidates` and then `first_choice` ask for the same state's key
+            return last[1]
+        k = self.index.get(self.pattern.key(state))
+        self._last_key = (state, k)
+        return k
 
     def _klass(self, state: CompressedState) -> int:
         return OTHER if self.floors is None else self.floors.klass(state.flags, state.fractured, state.status)
