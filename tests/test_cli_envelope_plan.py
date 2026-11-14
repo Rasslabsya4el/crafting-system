@@ -4,7 +4,8 @@
 * the limit that says which cut ran and what it guarantees is in `Plan.limits`, in the text report, in the JSON policy and on the route page, the way the
   other limits are (`tests/test_cli_limits.py`); a plan solved by another solver carries none;
 * a net given to `make_plan` ends the search, and the plan says it is not shown to be the best, with its bounds;
-* `solver="envelope"` ignores a time budget (it is always exact) and an abstraction the bound cannot be built for is a `PlanError`, not a silent walk.
+* a time budget never brings the ladder's approximate answer (under a budget the search stops at a proved gap, `tests/test_envelope_gap_stop_plan.py`, #826) and an
+  abstraction the bound cannot be built for is a `PlanError`, not a silent walk.
 
 The walk-free bound needs no game dump, so this runs on the committed fixture pool. Real routes (R05, R13) are `tests/test_cli_envelope_real.py`.
 """
@@ -163,13 +164,13 @@ def test_the_gap_is_not_stated_when_the_lower_end_is_not_above_zero():
 def test_a_net_that_stops_before_any_plan_exists_is_an_error_that_says_so(coarse):
     target, prices, _ = coarse
     with pytest.raises(PlanError, match="before any policy that can be executed was found"):
-        make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=1), with_risk=False)
+        make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(seconds=0.0), with_risk=False)  # the time net ends the first plan's chain at the start (#826: a state net waits for the first round, and by then the first plan exists)
 
 
-def test_a_time_budget_is_ignored_by_the_envelope_search():
+def test_a_time_budget_never_makes_the_envelope_search_answer_by_the_ladder_of_coarse_levels():
     target = load_target(R12, DATA)
     plan = make_plan(DATA, target, price_file(), solver="envelope", budget=0.0, with_risk=False)
-    assert plan.approximation is None and plan.packed.info["envelope"].exact
+    assert plan.approximation is None and plan.packed.info["envelope"].exact  # R12's first plan is proved the cheapest in its first round, whatever the budget
 
 
 def test_an_unknown_solver_is_still_refused():

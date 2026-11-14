@@ -510,7 +510,7 @@ def test_the_scripts_beast_reader_asks_the_overview_once_and_the_history_of_a_li
 
 
 def test_an_estimate_of_an_item_no_market_lists_is_kept_and_always_marked(tmp_path):
-    """The Black Mórrígan has no poe.ninja line in any league: a hand-made template gives it an estimate, which no reading replaces
+    """An item with no poe.ninja line in any league (the test uses a beast's name for one): a hand-made template gives it an estimate, which no reading replaces
     while none exists, and which is never a plain fact, however few of it a plan buys."""
     estimate = PriceEntry(100.0, "estimate", "no poe.ninja line in any league; the placeholder of #813", {"category": "Beast"}, Provenance("estimate", "Allflame", "2026-07-31"))
     hand = PriceFile("Allflame", datetime(2026, 7, 31, tzinfo=UTC), 176.6, {"The Black Mórrígan": estimate, "Wild Bristle Matron": estimate})

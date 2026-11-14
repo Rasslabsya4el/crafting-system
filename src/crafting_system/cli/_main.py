@@ -8,12 +8,15 @@ simulation that does not agree. With `--route` the given route (a YAML file of r
 is evaluated as a fixed policy at the same prices and printed next to the policy's numbers.
 `python -m crafting_system.cli benchmark [--out DIR]` runs the benchmark routes (see `_benchmark`).
 
-`--solver` picks the search (ticket #535): `auto` (the default) is the exact envelope search wherever its bound can be built and the older
+`--solver` picks the search (ticket #535): `auto` (the default) is the envelope search wherever its bound can be built and the older
 walk-and-solve path where the target is outside it (`make_plan` says which); `envelope`, `packed` and `object` name one. The envelope
-search is always exact, so `--budget` and `--exact` do not apply to it.
+search stops by itself as soon as its plan is proved to cost at most `--gap` percent (1 by default) more than the cheapest, whatever the time,
+and says so beside the plan's exact mean (OR-32, OR-39, ticket #826); a proof that closes is the exact answer. `--exact`, or `--gap 0`, keeps
+the exact proof however long it takes.
 
-A query that the walk-and-solve path would run longer than `--budget` seconds (about a minute by default) is
-answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`);
+A walk asked for by name (`--solver packed`, `object`) that would run longer than `--budget` seconds is
+answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`: retired, and never
+reached by the default `--solver auto`, #926, #928);
 `--exact` solves it exactly however long it takes. An approximate answer gives no certified p90; its `--verify`
 runs the policy on concrete items and reports a simulated mean, p90 and CVaR labelled "simulated, not certified"
 (ADR-0023, `_lift`); it gives no `--route` and no route page yet.
@@ -37,7 +40,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from crafting_system.actions import NotApplicableError, OutOfScopeError, imprints_held_at_most
-from crafting_system.budget import Budget, default_memory_mb
+from crafting_system.budget import PROOF_GAP, Budget, default_memory_mb
 from crafting_system.config import MEMORY_SHARE_SETTING, NO_LIMIT, PRICE_SOURCES, Config, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
@@ -88,16 +91,27 @@ def _limit(text: str) -> float | None:
     return value
 
 
+def _percent(text: str) -> float:
+    """A `--gap` value: a percent, zero or more."""
+    value = float(text)
+    if not (value >= 0 and math.isfinite(value)):
+        raise argparse.ArgumentTypeError(f"the gap is a percent, zero or more (0 keeps the exact proof); got {text!r}")
+    return value
+
+
 _FROM_SETTINGS = object()  # a limit not given on the command line: the planner settings' value
 
 
-def run_budget(config: Config, aim: float | None, time_limit: object = _FROM_SETTINGS, memory_limit: object = _FROM_SETTINGS) -> Budget:
-    """The run's budget (#825, OR-33): the aim (`--budget`, None with `--exact`), and the net from the command line, else the planner settings."""
+def run_budget(
+    config: Config, aim: float | None, time_limit: object = _FROM_SETTINGS, memory_limit: object = _FROM_SETTINGS, gap: float = PROOF_GAP
+) -> Budget:
+    """The run's budget (#825, OR-33): the aim (`--budget`, None with `--exact`), the net from the command line, else the planner settings, and
+    the proof the search owes (`--gap` as a share, 0 with `--exact`; OR-32, OR-39)."""
     seconds = config.time_limit_seconds if time_limit is _FROM_SETTINGS else time_limit
     memory = config.memory_limit_mb if memory_limit is _FROM_SETTINGS else memory_limit
     if memory == MEMORY_SHARE_SETTING:
         memory = default_memory_mb()
-    return Budget(aim_seconds=aim, seconds=seconds, memory_mb=memory)  # type: ignore[arg-type]
+    return Budget(aim_seconds=aim, seconds=seconds, memory_mb=memory, gap=gap)  # type: ignore[arg-type]
 
 
 def main(
@@ -133,15 +147,16 @@ def main(
     parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (or set it in the planner settings; default both)")
     parser.add_argument(
         "--solver", choices=SOLVERS, default="auto",
-        help="how the cheapest route is searched. auto (default): the exact search that looks only at the states that could matter, whenever it can be "
+        help="how the cheapest route is searched. auto (default): the search that looks only at the states that could matter, whenever it can be "
         "built for the target; the walk of the whole graph where it cannot, and with --route (judging your route needs the planner's choice at every "
-        "state your route reaches); for now, with 40 or more priced actions (the fossil sets), the walk that first proves most of them not needed. envelope: that exact search by name, and an error where it cannot be built. "
+        "state your route reaches); for now, with 40 or more priced actions (the fossil sets), the walk that first proves most of them not needed. envelope: that search by name, and an error where it cannot be built. "
         "packed: walk the whole graph, then solve it exactly; slower on a big target and it can need many GB of memory, but it names every state. "
         "object: the same walk of the whole graph in plain objects; fine for a small target, it runs out of memory on a big one. "
-        "The answer is the same exact mean whichever is chosen",
+        "With --exact the answer is the same exact mean whichever is chosen",
     )  # fmt: skip
-    parser.add_argument("--exact", action="store_true", help="where the answer would be approximate, solve exactly (the search that auto and envelope use is always exact); the time and memory limits still stop it and say so, unless --time-limit none and --memory-limit none")
-    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time a walk of the whole graph (packed, object, or auto where the exact search cannot be built) may take before the answer is approximate (default {BUDGET_SECONDS:g}); the exact search ignores it")
+    parser.add_argument("--exact", action="store_true", help="prove the plan the cheapest however long it takes: no approximate answer and no stop at --gap; the time and memory limits still stop it and say so, unless --time-limit none and --memory-limit none")
+    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the plan aims at (default {BUDGET_SECONDS:g}): a walk of the whole graph asked for by name (packed, object) that would take longer is answered approximately; the search of auto and envelope does not read it (it stops at --gap), and auto walks exactly, to the time limit, where that search cannot be built")
+    parser.add_argument("--gap", type=_percent, default=PROOF_GAP * 100.0, metavar="PERCENT", help=f"stop the search once the plan is proved to cost at most this many percent more than the cheapest, and say so beside its exact mean (default {PROOF_GAP * 100.0:g}); 0 keeps the exact proof")
     parser.add_argument(
         "--time-limit", type=_limit, default=_FROM_SETTINGS, metavar="SECONDS",
         help="stop the plan after this many seconds and say what it found and where it stopped, or none for no limit (default: the planner settings, 600)",
@@ -183,7 +198,7 @@ def main(
         settings = PlanSettings(
             recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, price_source=args.price_source or config.price_source,
-            price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit),
+            price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit, 0.0 if args.exact else args.gap / 100.0),
             strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
         )  # fmt: skip
         plan = plan_target(game, target, price_file, settings)

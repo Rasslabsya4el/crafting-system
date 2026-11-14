@@ -710,7 +710,8 @@ class _View:
             head = "chosen" if row.outcome == "chosen" else "planned"
             candidate = row.candidate
             start = "given, not counted" if candidate.given else "no price" if candidate.price is None else money(candidate.price)
-            lines.append(f"{head}: {candidate.label}: {money(row.total)} in all (start {start} + crafting {money(row.mean_remaining or 0.0)})")
+            proved = f"; {row.note}" if row.note else ""  # a plan the search did not prove the cheapest from this start (#826): what it proved
+            lines.append(f"{head}: {candidate.label}: {money(row.total)} in all (start {start} + crafting {money(row.mean_remaining or 0.0)}{proved})")
         return _plain("Start", *lines)
 
     def goal_card(self) -> GoalCard:

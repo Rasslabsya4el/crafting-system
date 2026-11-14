@@ -17,6 +17,7 @@ from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRI
 from crafting_system.targets import Target
 
 from . import _packed
+from ._envelope import Standing
 from ._plan import Plan
 from ._starts import plan_with_starts
 
@@ -28,7 +29,10 @@ class PlanSettings:
     * `recipe_starts`: also compare the start items a vendor recipe can make (ADR-0059); off, the plan starts from the target's own item.
     * `start_price`: what the target's own start item costs in Chaos for this run; None reads the price file.
     * `price_source`, `price_gap_percent`, `today`: how a bought start item is priced (`ninja`, `trade` or `both`; ticket #357).
-    * `budget`: the run's aim and its net of time and memory (`crafting_system.budget`, OR-33); None is no aim and no net.
+    * `budget`: the run's aim and its net of time and memory (`crafting_system.budget`, OR-33), and the proof it owes (`Budget.gap`,
+      OR-32, OR-39: the search stops once its plan is proved at most 1% above the cheapest); None is no aim and no net, and the proof is exact.
+    * `watch`: told where the search stands, from its first executable plan on (`Standing`: the best plan's cost so far and the figure no plan
+      can cost less than, both after the start item), so a caller can show a plan while the proof goes on; with start options, once per option.
     * `strands`: consider Memory Strands.
     * `solver`: the search, one of `SOLVERS` (`auto` by default).
     * `judges_route`: the caller will judge a given route against the plan, so `auto` keeps the walk of the whole graph (#535, #732).
@@ -43,6 +47,7 @@ class PlanSettings:
     strands: bool = False
     solver: str = "auto"
     judges_route: bool = False
+    watch: Callable[[Standing], None] | None = None
 
 
 def plan_target(data: GameData, target: Target, prices: PriceFile, settings: PlanSettings = PlanSettings()) -> Plan:
@@ -50,7 +55,7 @@ def plan_target(data: GameData, target: Target, prices: PriceFile, settings: Pla
     return plan_with_starts(
         data, target, prices, recipe_starts=settings.recipe_starts, start_price=settings.start_price, price_source=settings.price_source,
         price_gap_percent=settings.price_gap_percent, today=settings.today, budget=settings.budget, strands=settings.strands,
-        solver=settings.solver, judges_route=settings.judges_route,
+        solver=settings.solver, judges_route=settings.judges_route, watch=settings.watch,
     )  # fmt: skip
 
 

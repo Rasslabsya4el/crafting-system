@@ -23,6 +23,7 @@ from ._axes import axis_name, axis_what, reading_pair, value_text
 from ._bought_starts import bought_base_starts
 from ._decide import BUDGET_SECONDS
 from ._entry import PlanSettings, plan_target, progress, say_progress_to
+from ._envelope import Standing
 from ._foresight import Status as LockStatus
 from ._limits import (
     HEADING,
@@ -124,6 +125,7 @@ __all__ = [
     "PricedOffer",
     "ReadingChoice",
     "RefusedStart",
+    "Standing",
     "StartCandidate",
     "StartChoice",
     "StartContext",

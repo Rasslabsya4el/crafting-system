@@ -34,8 +34,8 @@ from crafting_system.targets import load_target
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 RUNS = 200
-BUDGET = 60.0  # the plan is made as the command makes it by default: exact when the forecast fits, else approximate
-RATES = Rates(4e-5, 7e-6)  # injected (ADR-0023), so the decision does not depend on the machine
+BUDGET = 60.0  # the plan is made as the command makes it by default: under a budget; a judged route is walked exactly, with no forecast (#926)
+RATES = Rates(4e-5, 7e-6)  # read by nothing since #926 (`auto` makes no forecast); they go with the forecast (#928)
 ROUTES = {
     "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.82716, "Dense Fossil"),
     "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.02716, "Pristine Fossil"),
@@ -93,7 +93,7 @@ def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, rout
 
 
 def test_the_policy_reaches_the_goal_with_exact_odds_and_mean(plan):
-    assert plan.approximation is None and notes(plan.limits) == []  # the forecast fits the budget: the answer is exact
+    assert plan.approximation is None and notes(plan.limits) == []  # no forecast under `auto` (#926): the answer is exact
     risk = plan.risk
 
     assert risk.success_probability.value == pytest.approx(1.0)

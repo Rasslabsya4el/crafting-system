@@ -34,6 +34,8 @@ from crafting_system.targets import StartBuyError, StartKind, Target, start_pric
 
 from ._offers import Offer
 from ._envelope import Net
+from ._envelope_plan import certificate_gap, certificate_gap_text
+from ._limits import approximate_limits
 from ._plan import Plan, PlanError, StartPrice, add_risk, as_budget, make_plan, resolve_start_price, with_bindings
 from ._start_options import StartContext, StartList, StartSource, combine, vendor_recipe_starts
 from ._start_types import (
@@ -101,6 +103,7 @@ class _Outcome:
     total: float
     error: str | None
     approximate: bool
+    proved: str = ""  # for a plan the envelope search did not prove the cheapest (it stopped at a proved gap or at a net, #826): what was proved
 
 
 def _plan_candidate(
@@ -119,7 +122,18 @@ def _plan_candidate(
             plan = make_plan(data, moved, prices, start_price_of=price, with_risk=False, **kwargs)
     except PlanError as error:
         return _Outcome(None, math.inf, math.inf, str(error), False)
-    return _Outcome(plan, plan.mean_remaining, plan.start_price.chaos + plan.mean_remaining, None, plan.approximation is not None)
+    return _Outcome(plan, plan.mean_remaining, plan.start_price.chaos + plan.mean_remaining, None, plan.approximation is not None, _proved(plan))
+
+
+def _proved(plan: Plan) -> str:
+    """What the row of a start option says when its plan was not proved the cheapest from that start (OR-13): the gap the search proved."""
+    search = plan.search
+    if search is None or search.exact:
+        return ""
+    gap = certificate_gap(search)
+    if gap is None:
+        return "the crafting cost is the exact cost of the plan found from this start, which is not proved the cheapest"
+    return f"the crafting cost is the exact cost of the plan found from this start, proved at most {certificate_gap_text(gap)} above the cheapest plan from it"
 
 
 def plan_with_starts(
@@ -215,11 +229,13 @@ def _with_starts(
             considered.append(ConsideredStart(candidate, "failed", None, None, False, outcome.error))
         else:
             state = "chosen" if candidate.key == chosen_key else "planned"
-            considered.append(ConsideredStart(candidate, state, outcome.mean_remaining, outcome.total, outcome.approximate))
+            considered.append(ConsideredStart(candidate, state, outcome.mean_remaining, outcome.total, outcome.approximate, outcome.proved))
     choice = StartChoice(
         chosen, tuple(considered), listing.refused, listing.axes, tuple(by_reading), _claims(chosen, order, tuple(by_reading))
     )
-    return dataclasses.replace(plan, starts=choice)
+    # a start whose plan is only proved within a gap can be cheaper than shown by that gap, so the answer is the cheapest only to within it (#826)
+    limits = approximate_limits(plan.limits) if any(outcome.proved for outcome in outcomes.values()) else plan.limits
+    return dataclasses.replace(plan, starts=choice, limits=limits)
 
 
 def _claims(chosen: StartCandidate, order: list[StartCandidate], by_reading: tuple[ReadingChoice, ...]) -> tuple[str, ...]:

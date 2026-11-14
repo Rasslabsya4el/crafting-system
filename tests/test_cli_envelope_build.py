@@ -290,7 +290,7 @@ def test_a_stopped_plan_the_solver_cannot_certify_is_a_refusal_with_the_lower_bo
     def uncertified(self):
         raise ConvergenceError("the policy iteration on 533,666 states certifies only a relative bound of 2.07e-06", 2.07e-06)
 
-    monkeypatch.setattr(_envelope.Search, "upper_value", uncertified)
+    monkeypatch.setattr(_envelope.Search, "_upper", uncertified)  # every solve of the upper graph: the first plan's (not fatal) and the stopped plan's
     fresh = abstraction()
     with pytest.raises(NoPolicy, match=r"cannot be solved to a certified cost .*no plan costs less than [0-9]"):
         envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100))

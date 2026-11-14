@@ -136,7 +136,7 @@ class TracedSearch(Search):
             "expanded": st.expanded, "realized": st.realized, "kernels": st.kernels, "lower": lower, "upper": upper, "u_seconds": round(u_time, 2),
         }
 
-    def _net(self, began):
+    def _net(self, began, *args, **kwargs):  # also asked inside the first plan's chain since #826, before any round
         if self.stats.rounds != self._seen_round:
             self._seen_round = self.stats.rounds
             upper = None
@@ -152,7 +152,7 @@ class TracedSearch(Search):
             self.trace.append(row)
             gap = (upper / row["lower"] - 1.0) if upper is not None and row["lower"] > 0 and math.isfinite(upper) else None
             say(f"TRACE round {row['round']} expanded {row['expanded']:,} L {row['lower']!r} U {upper!r} gap {gap!r} (U solve {spent:.1f} s)")
-        return super()._net(began)
+        return super()._net(began, *args, **kwargs)
 
     def _final(self, result) -> dict:
         """On the graph the search ended with: the optimal policy's reach, and the expanded states outside it or where it restarts."""

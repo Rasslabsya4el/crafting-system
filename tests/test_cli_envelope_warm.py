@@ -102,7 +102,7 @@ def test_a_start_that_is_improper_on_the_new_graph_is_repaired_inside_a_search_a
     monkeypatch.setattr(_envelope, "solve_graph", noting)
     graph = loop_graph()
     value, _ = dense_optimum(graph)
-    result = Search(ExplicitProblem(graph, value, alpha)).run()
+    result = Search(ExplicitProblem(graph, value, alpha), incumbent=lambda state: []).run()  # a first plan that names no action: the rounds build the graph, as they did before #826
     assert "repaired" in kinds, kinds
     assert result.exact
     assert result.lower == pytest.approx(value[0], rel=1e-6)
