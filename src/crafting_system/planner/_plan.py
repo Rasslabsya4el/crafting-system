@@ -7,8 +7,8 @@ are reported (the budget DP of `risk.evaluate` is pure Python and can be slow on
 
 Under a `budget` with a gap (1% by default) the default search (`solver="auto"`) is the envelope search wherever its bound can be built and no
 given route is judged: it stops by itself once its plan is proved within the budget's gap of the cheapest, whatever the time (OR-32, OR-39, #826),
-and the run's net, when the budget has one, guards it (OR-33, OR-40); the `Plan` has no `approximation` (its mean is the exact mean of the plan
-shown) and `Plan.search` says how the search ended. Where that search cannot take the target, `auto` walks every item exactly, as with no budget,
+and the run's net, when the budget has one, guards it (OR-33, OR-40); the `Plan` has no `approximation` (its mean is the mean of the plan
+shown, certified to `EnvelopeInfo.mean_error`: 1e-6 or less except for a plan of very many steps, #867) and `Plan.search` says how the search ended. Where that search cannot take the target, `auto` walks every item exactly, as with no budget,
 to the run's net (#926). Without a `budget`, or with a gap of 0, the plan is always exact. The forecast of ADR-0023 (`_decide.decide`) and its ladder of coarse levels (`_approx`), which answer with an `approximation`
 (a pessimistic `solution` on blocks and no `risk`), are retired: only a walk asked for by name (`solver="packed"`, `"object"`) under a budget
 still reaches them, until #928 deletes them.
@@ -41,10 +41,10 @@ from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
-from ._limits import Limit, approximate_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
+from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
 from . import _packed
-from ._envelope import Net, NoPolicy, Standing
+from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._presenter import presenter_limits
@@ -190,11 +190,13 @@ class Plan:
         search = self.search
         if self.approximation is not None or (search is not None and not search.exact):
             object.__setattr__(self, "limits", approximate_limits(self.limits))
+        if search is not None and not search.exact and search.mean_error > ACCEPT_BOUND:  # its mean is certified only to `mean_error` (#867)
+            object.__setattr__(self, "limits", rough_mean_limits(self.limits, search.mean_error))
 
     @property
     def search(self) -> EnvelopeInfo | None:
-        """How the envelope search ended, when it made this plan: exact, at a proved gap (`within`) or at a net (`stopped`), with the plan's exact
-        mean `upper` and the figure no plan can cost less than, `lower` (both after the start item). None for a plan of another path."""
+        """How the envelope search ended, when it made this plan: exact, at a proved gap (`within`) or at a net (`stopped`), with the plan's
+        mean `upper` (certified to `mean_error` of itself) and the figure no plan can cost less than, `lower` (both after the start item). None for a plan of another path."""
         return self.packed.info.get("envelope") if self.packed is not None else None
 
     @property
@@ -1019,10 +1021,15 @@ def envelope_refusal(solver: str, error: Exception) -> str:
     if solver == "envelope":
         return f"the envelope search cannot answer this target: {error}"
     if isinstance(error, NoPolicy):
+        cause = error.__cause__
+        while isinstance(cause, NoPolicy):  # (the note of a bound cut short is raised from the search's refusal)
+            cause = cause.__cause__
+        if isinstance(cause, ConvergenceError):  # a plan exists, but its cost could not be certified (#867): not "no route"
+            return f"a plan was found, but its average cost could not be worked out to a certified figure, so it is not shown ({error})"
         return f"no policy of the offered actions reaches the goal from the start item ({error})"
     cause = getattr(error, "player", None) or str(error)
     return (
-        f"the exact search for the cheapest route could not give an answer: {cause}. "
+        f"the search for the cheapest route could not give an answer: {cause}. "
         "The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`"
     )
 
@@ -1132,7 +1139,7 @@ def lumped_limit(item_states: int, shown: int) -> Limit:
         "The tree shows groups of states",
         f"the plan passes through {item_states:,} states and the tree shows {shown:,} groups of them: states that cost the same and lead on to "
         "the same groups with the same chances are one group, shown by one of its members",
-        "The odds and every cost figure are exact for the groups.",
+        _limits.GROUPS_EXACT,
     )
 
 
@@ -1178,7 +1185,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
                 _limits.not_computed(*_limits.QUANTILES),
                 f"the plan can lead from one state to another in {moves:,} ways, more than the {RISK_QUANTILE_TRANSITIONS:,} the calculation "
                 "of the cost figures can hold in memory",
-                "The odds, the mean and the variance are exact.",
+                _limits.RISK_EXACT,
             ),
         )
     return risk, risk_limits(risk)

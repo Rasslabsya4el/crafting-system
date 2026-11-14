@@ -209,6 +209,23 @@ def test_a_plan_that_ended_at_a_proved_gap_is_checked_against_its_gap_not_for_eq
     assert module.aim_seconds("none") is None and module.aim_seconds("60") == 60.0
 
 
+def test_an_exact_plan_is_checked_against_the_walk_to_the_certified_errors_of_both_solves():
+    """#867, growing-1-basic/large of run 43609753223: an exact plan of 3.07e7 Chaos certified to 2.2e-7 and the walk's optimum 2.7e-9 above it
+    are one figure; 1e-9 alone called it a violation. A difference past the two errors still is one."""
+    module = bench_script()
+    record = {
+        "status": "planned", "within": None, "lower": 30678261.298076097, "upper": 30678270.511898756, "plan": {"error_bound": 2.2198226257152953e-07},
+        "walk": {"optimum": 30678270.59623772, "error_bound": 1e-9}, "case": {"refused": None},
+    }  # fmt: skip
+    found = module.checks(record)
+    assert found["exact_mean_equals_optimum"] is True and found["optimum_le_upper"] is True and found["lower_le_optimum"] is True
+    record["plan"]["error_bound"] = None  # the old slack, 1e-9 of the figure
+    found = module.checks(record)
+    assert found["exact_mean_equals_optimum"] is False and found["optimum_le_upper"] is False
+    record["plan"]["error_bound"], record["walk"]["optimum"] = 2.2e-7, 30678270.511898756 * (1 + 3e-7)
+    assert module.checks(record)["exact_mean_equals_optimum"] is False
+
+
 def test_the_relation_is_fitted_on_the_envelope_plans_and_recovers_rates_it_was_given():
     """#826, "Done when" 3: seconds = 0.5 + 0.001 per key + 0.002 per action built + 0.0005 per state of the reach, on made-up records."""
     module = bench_script()

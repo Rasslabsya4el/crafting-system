@@ -252,10 +252,11 @@ def solve_walked(
     *,
     tolerance: float = 1e-10,
     progress: Callable[[str], None] | None = None,
+    refuse_above: float | None = None,
 ) -> PackedResult:
-    """Merge, solve and certify a walked graph; wrap it as the `Solution` of the concrete states."""
+    """Merge, solve and certify a walked graph; wrap it as the `Solution` of the concrete states. `refuse_above`: `solve_packed`'s (#867)."""
     say = progress or PROGRESS or (lambda _text: None)
-    solved = solve_packed(walked.graph, tolerance=tolerance, progress=say)
+    solved = solve_packed(walked.graph, tolerance=tolerance, progress=say, refuse_above=refuse_above)
     values = solved.value.tolist()
     solution = Solution(
         values=dict(zip(walked.states, values)),
