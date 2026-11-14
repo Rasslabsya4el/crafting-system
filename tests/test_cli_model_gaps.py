@@ -135,6 +135,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_coarse.py", "Coarsening._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),
     ("abstraction/_estimate.py", "_Pilot._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),
     ("abstraction/_estimate.py", "_Pilot.walked_kernel", ("ValueError",), NOT_A_REFUSAL, "after the clause for both families: a kernel error that is no refusal makes the forecast refuse (`EstimateRefused`)"),
+    ("abstraction/_kernel.py", "Abstraction._item_of_view", ("ValueError",), EITHER, "what `_item_of` raised for a view (a state that is no item, or a refusal) is kept and raised again, as it is, for every action prepared on the view (#935)"),
     ("abstraction/_kernel.py", "Abstraction._refusal_depends_on_the_family", ("ItemError", "ValueError"), NOT_A_REFUSAL, "the item cannot be built with another family: no other family is left to try; no action is called"),
     ("actions/corruption.py", "_vaal_orb", ("ValueError",), EITHER, "after the clause for a model gap, so no model gap reaches it: a class with no corrupted pool (the game) or a base the data lacks lists no Vaal Orb, silent"),
     ("actions/locus.py", "_locus", ("ValueError",), EITHER, "after the clause for a model gap, so no model gap reaches it: a class with no corrupted pool (the game) or a base the data lacks lists no Locus of Corruption, silent"),

@@ -214,7 +214,8 @@ def test_an_action_is_asked_once_for_each_projection_however_many_states_share_i
         ab.release_prepared(keep_erased=True)
     locked = sum(ab._holds_lock(state) for state in states)
     assert 0 < locked < len(states)  # the case has items with a lock and items without
-    assert calls["_outcomes"] == len(views) == calls["_item_of"]  # once for each projection ...
+    assert calls["_outcomes"] == len(views)  # once for each projection ...
+    assert len({view for _, view in views}) <= calls["_item_of"] <= len(views)  # (an item of a view serves every action of its state: #935)
     assert len(views) < sum(asked.values()) / 3  # ... which many states share
 
 
