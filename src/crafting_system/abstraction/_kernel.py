@@ -119,7 +119,8 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
 
 Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
 TYPES_KEPT = 65_536  # the families of pool tables whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
-SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
+ITEMS_KEPT = 64  # the items of the latest views (`Abstraction._item_of_view`): the actions of one state are prepared one after the other
+SHARED_PAIRS = 4_096 # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
 # families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
 # 120 small objects a part: some kilobytes to some tens of kilobytes a pair, so at most a few hundred megabytes at the cap
@@ -294,8 +295,10 @@ class Abstraction:
         self._canonical: dict[tuple[frozenset[Influence], str, tuple[Status, ...], bool], str] = {}
         self._prepared_by: dict[Hashable, _Prepared] = {}  # (action, view) -> the pair, for a view that holds the whole state: dropped after each state
         self._shared_by: dict[Hashable, _Prepared] = {}  # the same for a view smaller than its state (many states have it): kept, the latest used last
+        self._items_by: dict[tuple[_View, bool], tuple[Item, Origins] | ValueError] = {}  # (view, erasing) -> `_item_of` of it, or what it raised (`_item_of_view`)
         self._free_lock: bool | None = None  # whether the game data has a lock outside the crafted domain (`_holds_lock`)
         self._lock_mods: dict[str, bool] = {}  # mod id -> whether it is a lock (Prefixes or Suffixes Cannot Be Changed)
+        self.share_items = True  # False: every prepared pair builds its own item and asks validated results (the reference of ticket #935)
         self.project = True  # False: every action is prepared on the whole state (the reference the projection is tested against)
         self.outcome_calls = 0  # how many times an action was asked for its outcomes (`_outcomes`)
         self._has_partners: bool | None = None  # whether the pool of an empty rare item has a family with mods on both sides
@@ -1349,9 +1352,11 @@ class Abstraction:
 
         With `keep_erased` the pairs whose view is smaller than their state stay (`_shared_by`): an action that erases the ordinary mods is
         prepared on the flags, the fractured and the crafted mods alone, and every state that shares them finds the same pair (tickets #626,
-        #827). They are kept up to `SHARED_PAIRS`, the least recently used leaving first. Without it everything is dropped.
+        #827). They are kept up to `SHARED_PAIRS`, the least recently used leaving first. Without it everything is dropped. The items of the
+        views (`_item_of_view`) are dropped either way.
         """
         self._prepared_by.clear()
+        self._items_by.clear()
         if not keep_erased:
             self._shared_by.clear()
 
@@ -1453,7 +1458,7 @@ class Abstraction:
     def _build(self, view: _View, erasing: bool, action: Action) -> _Prepared:
         """The prepared pair of `action` and the item `view` stands for. Raises what the action raises for it, and the gaps of the checks."""
         try:
-            item, origins = self._item_of(view, erasing)
+            item, origins = self._item_of_view(view, erasing)
         except ItemError:
             bare = Item.build(
                 self.data,
@@ -1476,6 +1481,30 @@ class Abstraction:
         self._check_fracture_without_partners(view, outcomes)
         self._check_same_item_space(outcomes)
         return _Prepared(outcomes, origins, item=item, imprints=view.imprints)
+
+    def _item_of_view(self, view: _View, erasing: bool) -> tuple[Item, Origins]:
+        """`_item_of(view, erasing)`, made once for each view however many actions are prepared on it (ticket #935).
+
+        Every action that reads the ordinary mods has the whole state as its view, so at one state they were each given an item built and
+        validated anew, the same item: `_item_of` reads only the view and `erasing`, and returns a frozen item and origins that no caller
+        changes. What it raised (a state that is no item: `ItemError`, `ValueError`) is kept and raised again. They are dropped with the pairs of a
+        state (`release_prepared`) and at most `ITEMS_KEPT` are kept, the oldest leaving first, for a caller that does not drop them.
+        """
+        if not self.share_items:
+            return self._item_of(view, erasing)
+        key = (view, erasing)
+        found = self._items_by.get(key)
+        if found is None:
+            try:
+                found = self._item_of(view, erasing)
+            except ValueError as error:  # `ItemError` is a `ValueError`
+                found = error
+            self._items_by[key] = found
+            if len(self._items_by) > ITEMS_KEPT:
+                del self._items_by[next(iter(self._items_by))]
+        if isinstance(found, ValueError):
+            raise found.with_traceback(None)
+        return found
 
     def _refusal_depends_on_the_family(
         self, state: CompressedState, erasing: bool, action: Action, origins: Origins
