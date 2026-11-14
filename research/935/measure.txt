@@ -3,5 +3,4 @@ cprofile --route r04
 by_action --route r14
 by_action --case essences/medium
 by_action --case fracturing/medium
-by_action --case start-fractured/medium
 by_action --case bench-metamods/small

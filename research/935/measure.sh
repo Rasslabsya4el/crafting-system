@@ -1,5 +1,5 @@
 # The measurement of ticket #935 on GitHub runners, started only through the dispatcher:
-#   python .github/scripts/heavy_dispatch.py run --no-wait --ref <branch> --runners 7 --command 'bash research/935/measure.sh $RUNNER_INDEX'
+#   python .github/scripts/heavy_dispatch.py run --no-wait --ref <branch> --runners 6 --command 'bash research/935/measure.sh $RUNNER_INDEX'
 # Line $1 of research/935/measure.txt: a plan and how it is measured (by_action.py, or profile_plan.py --mode cprofile).
 set -euo pipefail
 job="$1"
