@@ -12,11 +12,14 @@ from typing import Any
 from .http_json import SourceError
 from .poe_ninja import is_text
 from .price_file import is_price
-from .price_names import base_price_name
+from .price_names import THE_BLACK_MORRIGAN, base_price_name
 
 BASE_TYPE = "BaseType"
 BEAST = "Beast"
 STASH_TYPES = (BEAST, BASE_TYPE)
+# poe.ninja's name of a beast line -> the price-file name (the game's own name), where the two differ. poe.ninja lists The Black
+# Mórrígan as "Black Mórrigan": read by its own spelling alone, the beast looked like one no market lists (#885).
+BEAST_PRICE_NAMES = {"Black Mórrigan": THE_BLACK_MORRIGAN}
 
 
 @dataclass(frozen=True)
@@ -67,5 +70,5 @@ def _stash_line(raw: Any, kind: str) -> StashLine | None:
         except ValueError:
             return None
     else:
-        key = raw["name"]
+        key = BEAST_PRICE_NAMES.get(raw["name"], raw["name"]) if kind == BEAST else raw["name"]
     return StashLine(key, float(raw["chaosValue"]), count, line_id, kind)
