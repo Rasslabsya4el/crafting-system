@@ -18,7 +18,8 @@
 5. CERTIFICATE. `certify` computes, on the graph as given and for the candidate values, the residuals of the Bellman
    operator and from them the relative error bound of `solver/_certify.py`, here per state: with g(s) the cheapest
    action cost at s, k(s) the cost of the greedy action, e(s) = (TV - V)+ and d(s) = (V - TV)+ (each widened by the
-   float64 rounding of the sum, (m + 2) eps of it, m the terms of the sum), the values satisfy
+   float64 rounding of the sum, (m + 2) eps of it, m the terms of the sum; `4 eps` when that does not reach the bound asked and the sums are
+   taken again rounded once, `_packed.kernel_sums_rounded_once`, #867), the values satisfy
    a_lo V <= V* <= a_hi V with a_lo = min g/(g + d) and a_hi = max k/(k - e) (infinite when some e >= k).
    g and k are the margins of h = 0; `certify` also measures d and e against the margins of the cost ahead (ticket #769),
    so that a state whose actions are all free (an unveil, a pick) is measured against the paid step after them and not
@@ -29,7 +30,10 @@
    merge and of the solve: it is run on the unmerged graph with the class values copied back to the members.
 
 The bound may exceed `tolerance` when the values are large next to the cheapest action (rounding amplification, as in
-`_certify.py`); the loop stops when the residuals reach the tolerance or the rounding floor.
+`_certify.py`); the loop stops when the residuals reach the tolerance or the rounding floor. A solve the certificate then refuses (a bound above
+`accept_bound`, 1e-6) is corrected (`corrected`: one step of iterative refinement, its residual taken with every sum rounded once, at most
+`CORRECTIONS` times) and measured again (#867). What is still above `accept_bound` raises `ConvergenceError`, unless the caller takes every
+value with its certified error and passed `refuse_above` (a search that stops at a gap): then only a bound above that is refused.
 """
 
 import math
@@ -272,7 +276,7 @@ def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Wor
     finer = _certify(graph, value, solved, work, wanted, True)
     if finer is None or not finer.bound < found.bound:
         return found
-    return replace(finer, at_floor=found.at_floor, own_bound=found.own_bound, own_cost=found.own_cost, rounded_once=True, term_bound=found.bound)
+    return replace(finer, at_floor=found.at_floor, residual=found.residual, own_bound=found.own_bound, own_cost=found.own_cost, rounded_once=True, term_bound=found.bound)
 
 
 def _certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Work, wanted: float, once: bool) -> Certificate | None:

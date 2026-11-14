@@ -22,9 +22,9 @@ import pytest
 from test_envelope_gap_stop import Hand
 from test_solver_packed_long_sum_certificate import TOTAL, WIDE_VALUE, build, wide
 
-from crafting_system.planner._envelope import GAP_SHARE, Search, figure_error
+from crafting_system.planner._envelope import GAP_SHARE, BoundError, Search, figure_error
 from crafting_system.solver import ConvergenceError
-from crafting_system.solver._packed_solve import ACCEPT_BOUND, Work, certify, corrected, solve_graph
+from crafting_system.solver._packed_solve import ACCEPT_BOUND, Work, certify, corrected, solve_graph, solve_packed
 
 EPS = sys.float_info.epsilon
 N = 2**32
@@ -115,3 +115,98 @@ def test_a_search_with_a_gap_returns_that_plan_with_both_figures_around_its_exac
     assert result.stats.upper_refused == 0  # the plan in hand was solved to a figure in every round
     assert result.lower <= exact <= result.upper  # hand-worked: both figures hold of the exact cost
     assert result.upper <= 1.01 * result.lower and result.upper / result.lower - 1.0 < 1e-4
+
+
+# ---- the guard of the bound allows for an error above 1e-6, and for nothing else ---------------------------------------------------------
+#
+# ONE: the start (0) has one offer, which costs 100 and finishes (goal 9). No plan costs less than 100.
+
+
+def one_offer(bound: float = 100.0) -> Hand:
+    return Hand(goal={9}, costs={1: 100.0}, actions={0: {1: {9: 1}}, 9: {}}, la={(0, 1): 100.0}, lb={0: bound, 9: 0.0})
+
+
+def test_a_bound_lowered_by_a_certified_error_above_the_exact_one_may_stand_that_much_above_its_offers():
+    # a bound whose solve is certified to e is lowered by e, and can still be (1 + e) / (1 - e) above the least of its offers: 100.1 at e = 5e-4
+    with pytest.raises(BoundError):
+        Search(one_offer(100.1), gap=0.01, gap_after=0.0).run()  # no error said: the 1e-5 of a bound certified to 1e-6
+    exact_error = one_offer(100.1)
+    exact_error.bound_error = 1e-6
+    with pytest.raises(BoundError):
+        Search(exact_error, gap=0.01, gap_after=0.0).run()
+
+    loose = one_offer(100.1)
+    loose.bound_error = 5e-4
+    result = Search(loose, gap=0.01, gap_after=0.0).run()  # allowed: 1e-5 + 3 * 5e-4 of the offer and as much of the root's bound, 100.30
+    assert result.exact and result.lower == pytest.approx(100.0, rel=1e-9)  # the one plan, at its cost of 100
+
+    wrong = one_offer(100.5)  # 0.5% above its only offer: no error of 5e-4 explains it
+    wrong.bound_error = 5e-4
+    with pytest.raises(BoundError):
+        Search(wrong, gap=0.01, gap_after=0.0).run()
+
+
+@pytest.mark.parametrize("certified, falls", [(5e-4, False), (1e-9, True)])
+def test_a_root_that_falls_within_the_certified_errors_of_its_solves_is_no_fall_of_the_bound(monkeypatch, certified, falls):
+    # every solve answers 0.03% low (99.97 for 100): inside a certified error of 5e-4, a fall of the bound when the solve is certified to 1e-9
+    import dataclasses
+
+    from crafting_system.planner import _envelope
+
+    solve = _envelope.solve_graph
+
+    def low(*args, **kwargs):
+        core = solve(*args, **kwargs)
+        return dataclasses.replace(core, value=core.value * (1.0 - 3e-4), certificate=dataclasses.replace(core.certificate, bound=certified))
+
+    monkeypatch.setattr(_envelope, "solve_graph", low)
+    search = Search(one_offer(), gap=0.01, gap_after=0.0)
+    if falls:
+        with pytest.raises(BoundError, match="fell"):
+            search.run()
+        return
+    result = search.run()
+    assert search.stats.largest_fall == pytest.approx(3e-4, rel=1e-6)  # the figure is still recorded as it is
+    assert result.lower == pytest.approx(99.97 * (1.0 - 5e-4), rel=1e-12) and result.lower <= 100.0 <= result.upper
+
+
+# ---- `refuse_above` through the callers of the solve --------------------------------------------------------------------------------------
+
+
+def test_the_merged_solve_takes_the_refusal_of_its_caller_and_gives_the_error_with_the_values():
+    with pytest.raises(ConvergenceError):
+        solve_packed(long_graph())
+    with pytest.raises(ConvergenceError):
+        solve_packed(long_graph(), refuse_above=2e-6)
+
+    solved = solve_packed(long_graph(), refuse_above=1e-3)
+
+    assert ACCEPT_BOUND < solved.error_bound < 1e-4
+    assert solved.value[0] * (1.0 - solved.error_bound) <= LONG_VALUE[0] <= solved.value[0] * (1.0 + solved.error_bound)
+
+
+def test_the_walks_solve_and_the_bounds_solve_pass_the_refusal_on(monkeypatch):
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _packed, _pattern_bound
+
+    seen = []
+
+    class Asked(Exception):
+        pass
+
+    def record(graph, **kwargs):
+        seen.append(kwargs.get("refuse_above"))
+        raise Asked
+
+    monkeypatch.setattr(_packed, "solve_packed", record)
+    with pytest.raises(Asked):
+        _packed.solve_walked(None, None, SimpleNamespace(graph=long_graph()), refuse_above=1e-3)
+    with pytest.raises(Asked):
+        _packed.solve_walked(None, None, SimpleNamespace(graph=long_graph()))
+    assert seen == [1e-3, None]  # None: the solver's own 1e-6, the exact search
+
+    import inspect
+
+    source = inspect.getsource(_pattern_bound.pattern_lower_bound)
+    assert "solve_packed(graph, progress=None, refuse_above=refuse_above)" in source

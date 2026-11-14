@@ -7,8 +7,8 @@ are reported (the budget DP of `risk.evaluate` is pure Python and can be slow on
 
 Under a `budget` with a gap (1% by default) the default search (`solver="auto"`) is the envelope search wherever its bound can be built and no
 given route is judged: it stops by itself once its plan is proved within the budget's gap of the cheapest, whatever the time (OR-32, OR-39, #826),
-and the run's net, when the budget has one, guards it (OR-33, OR-40); the `Plan` has no `approximation` (its mean is the exact mean of the plan
-shown) and `Plan.search` says how the search ended. Where that search cannot take the target, `auto` walks every item exactly, as with no budget,
+and the run's net, when the budget has one, guards it (OR-33, OR-40); the `Plan` has no `approximation` (its mean is the mean of the plan
+shown, certified to `EnvelopeInfo.mean_error`: 1e-6 or less except for a plan of very many steps, #867) and `Plan.search` says how the search ended. Where that search cannot take the target, `auto` walks every item exactly, as with no budget,
 to the run's net (#926). Without a `budget`, or with a gap of 0, the plan is always exact. The forecast of ADR-0023 (`_decide.decide`) and its ladder of coarse levels (`_approx`), which answer with an `approximation`
 (a pessimistic `solution` on blocks and no `risk`), are retired: only a walk asked for by name (`solver="packed"`, `"object"`) under a budget
 still reaches them, until #928 deletes them.
@@ -193,8 +193,8 @@ class Plan:
 
     @property
     def search(self) -> EnvelopeInfo | None:
-        """How the envelope search ended, when it made this plan: exact, at a proved gap (`within`) or at a net (`stopped`), with the plan's exact
-        mean `upper` and the figure no plan can cost less than, `lower` (both after the start item). None for a plan of another path."""
+        """How the envelope search ended, when it made this plan: exact, at a proved gap (`within`) or at a net (`stopped`), with the plan's
+        mean `upper` (certified to `mean_error` of itself) and the figure no plan can cost less than, `lower` (both after the start item). None for a plan of another path."""
         return self.packed.info.get("envelope") if self.packed is not None else None
 
     @property
@@ -1019,6 +1019,11 @@ def envelope_refusal(solver: str, error: Exception) -> str:
     if solver == "envelope":
         return f"the envelope search cannot answer this target: {error}"
     if isinstance(error, NoPolicy):
+        cause = error.__cause__
+        while isinstance(cause, NoPolicy):  # (the note of a bound cut short is raised from the search's refusal)
+            cause = cause.__cause__
+        if isinstance(cause, ConvergenceError):  # a plan exists, but its cost could not be certified (#867): not "no route"
+            return f"a plan was found, but its average cost could not be worked out to a certified figure, so it is not shown ({error})"
         return f"no policy of the offered actions reaches the goal from the start item ({error})"
     cause = getattr(error, "player", None) or str(error)
     return (

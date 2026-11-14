@@ -311,7 +311,8 @@ def kernel_sums(graph: PackedGraph, f: np.ndarray) -> np.ndarray:
 
 
 _SPLIT = 134217729.0  # 2^27 + 1: Dekker's split of a float64 into two halves of 26 bits
-_TINY = 1e-200  # a product below this could lose its low part to underflow: the sums are then not taken as rounded once (`kernel_sums_rounded_once`)
+_EXACT = 2.0**-960  # a product at or above this has its low part exact (its last bit is above 2^-1074, the least float64); below it the low part is dropped
+_CARRIED = 2.0**-900  # a kernel with a product below `_EXACT` is still taken as rounded once when its largest product is at least this: see `kernel_sums_rounded_once`
 _HUGE = 1e150  # and a factor above this could overflow in the split
 
 
@@ -338,6 +339,13 @@ def kernel_sums_rounded_once(graph: PackedGraph, f: np.ndarray) -> np.ndarray | 
 
     With `prob` the exact chance rounded once (`probabilities`) and a cost added afterwards, the result is within `(1 + u)^3 + 2.5 m^3 eps^2` of the
     exact Bellman sum: `rounded_once_allowance` gives a figure above it.
+
+    *Underflow.* Step 1 is exact while the last bit of the product is a float64, which holds for a product of at least `_EXACT` (2^-960). The guard
+    is relative to the kernel, never a fixed size of a value: the planner carries a tip of bound 0 at a cost of 1e-200 (`_envelope.FLOOR`), and no
+    figure a caller may use can switch these sums off. A smaller product (a positive chance times a positive value) is taken as `hi` alone, which
+    is within `2^-1013` of the exact product; in a kernel whose largest product is at least `_CARRIED` (2^-900) all of them together are within
+    `m 2^-113 < m eps^2` of the sum, which the `16 m^3 eps^2` of the allowance holds beside the `2.5 m^3 eps^2` above. Only a kernel whose products
+    are all below `_CARRIED` with one below `_EXACT` gives None: no value of the planner is there (1e-271; its least is the floor, 1e-200).
     """
     out = np.zeros(graph.num_kernels, dtype=np.float64)
     k_ptr = graph.k_ptr
@@ -348,16 +356,19 @@ def kernel_sums_rounded_once(graph: PackedGraph, f: np.ndarray) -> np.ndarray | 
             continue
         p, x = graph.k_prob[lo_edge:hi_edge], f[graph.k_succ[lo_edge:hi_edge]]
         hi = p * x
-        if not np.all(np.isfinite(x)) or np.any(x < 0.0) or np.any(x > _HUGE) or np.any((hi < _TINY) & (hi > 0.0)):
+        if not np.all(np.isfinite(x)) or np.any(x < 0.0) or np.any(x > _HUGE):
             return None
-        p1, x1 = _SPLIT * p, _SPLIT * x
-        ph, xh = p1 - (p1 - p), x1 - (x1 - x)
-        pl, xl = p - ph, x - xh
-        low = pl * xl - (((hi - ph * xh) - pl * xh) - ph * xl)
         size = sizes[k0:k1]
         full = size > 0
         starts = (k_ptr[k0:k1] - lo_edge)[full]
         largest = np.maximum.reduceat(hi, starts)
+        small = (hi < _EXACT) & (x > 0.0) & (p > 0.0)  # (`x > 0`, not `hi > 0`: a product that underflows to 0 is one of them)
+        if small.any() and np.any(np.logical_or.reduceat(small, starts) & (largest < _CARRIED)):
+            return None
+        p1, x1 = _SPLIT * p, _SPLIT * x
+        ph, xh = p1 - (p1 - p), x1 - (x1 - x)
+        pl, xl = p - ph, x - xh
+        low = np.where(small, 0.0, pl * xl - (((hi - ph * xh) - pl * xh) - ph * xl))
         _, exponent = np.frexp(largest * size[full])  # largest * m < 2^exponent
         shift = np.repeat(exponent.astype(np.int64) - 52, size[full])  # U = 2^shift: every hi is at most 2^52 U / m
         a = np.ldexp(np.rint(np.ldexp(hi, -shift)), shift)

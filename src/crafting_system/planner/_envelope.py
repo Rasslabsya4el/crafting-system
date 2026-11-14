@@ -37,9 +37,11 @@ and `L(root)` only rises round after round. A bound that breaks either is not a 
 be unsolvable (an improper policy, ticket #539), so the search checks both as it goes and refuses at the first sign (`BoundError`, with `guard=True`):
 
 * when a state is expanded, its bound must not be above the least `la` of its offers by more than `CONSISTENCY_LIMIT` (the certified error that the bound's
-  own solve may leave in its values, at most 1e-6), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
+  own solve may leave in its values, at most 1e-6; a bound a search with a gap took with a larger certified error, `Problem.bound_error`, is allowed
+  three times that error on top, since a bound lowered by `e` can stand above its offers by `(1 + e) / (1 - e)`, #867), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
   relative error);
-* after each round, `L(root)` must not have fallen by more than `FALL_LIMIT` (the solver's own rounding is far below it); `SearchStats.largest_fall` is the
+* after each round, `L(root)` must not have fallen by more than `FALL_LIMIT` (the solver's own rounding is far below it; two rounds certified to `e1` and `e2` with one of
+  them above 1e-6 may differ by `e1 + e2` more, and a bound taken with an error above 1e-6 may fall by its slack of three times that error, #867); `SearchStats.largest_fall` is the
   largest relative fall that a round caused.
 
 A bound that passes both has shown no fault on the states the search has expanded. The tips it has not expanded are checked only when the solve of a lower graph
@@ -123,7 +125,7 @@ WARM_START = True  # each round's solve starts from the last round's policy and 
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
 GAP_SHARE = 0.1  # the share of the gap of a run that the solver's certified error may take in each figure the stop compares (`figure_error`, #867): both figures carry their error, so this bounds how early the stop comes, never what it proves
 FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
-CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (it is certified to 1e-6)
+CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (certified to 1e-6; a larger certified error is added, `Search._consistent`)
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
@@ -379,6 +381,10 @@ class Search[S]:
         self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
         self._last_root: float | None = None
+        self._last_error = 0.0  # the certified error of the solve that gave `_last_root` (0 for the start's own bound)
+        bound_error = float(getattr(problem, "bound_error", 0.0))  # the certified error the bound's values were lowered by, when the problem says it
+        self.bound_slack = 3.0 * bound_error if bound_error > ACCEPT_BOUND else 0.0  # (1 + e) / (1 - e) - 1 < 3 e: how far a bound lowered by `e` can stand above its offers
+        self.consistency = CONSISTENCY_LIMIT + self.bound_slack
         self.intern(problem.start)
 
     # ---- nodes and kernels --------------------------------------------------------------------------------------
@@ -447,7 +453,7 @@ class Search[S]:
     def _consistent(self, i: int, least: float) -> None:
         """Raise `BoundError` when the bound of node `i` is above `least`, the least lower bound of its offers (a consistent bound is at most that)."""
         bound = float(self.lb[i])
-        if bound > least * (1.0 + CONSISTENCY_LIMIT) + CONSISTENCY_LIMIT * float(self.lb[0]):  # the last term: values near 0 carry rounding, not a relative error
+        if bound > least * (1.0 + self.consistency) + self.consistency * float(self.lb[0]):  # the last term: values near 0 carry rounding, not a relative error
             raise BoundError(
                 f"the lower bound is not consistent: it puts the cost of a state at {bound:,.6g}, yet no action there costs less than {least:,.6g} even "
                 "at its best case, which a lower bound never does: it cannot be trusted for a cut"
@@ -780,12 +786,16 @@ class Search[S]:
             if self._last_root is not None and math.isfinite(root) and self._last_root > 0:
                 fall = (self._last_root - root) / self._last_root
                 self.stats.largest_fall = max(self.stats.largest_fall, fall)
-                if self.guard and fall > FALL_LIMIT:
+                error, before = core.certificate.bound, self._last_error
+                # two solves certified to 1e-6 on a bound certified to 1e-6 are held by FALL_LIMIT as before; a solve certified to more (a search
+                # with a gap, #867) may put its root that much lower without any fall of the exact `L(root)`, and a bound taken with a larger error
+                # may fall by its slack where a tip is replaced by its offers
+                if self.guard and fall > FALL_LIMIT + self.bound_slack + (error + before if max(error, before) > ACCEPT_BOUND else 0.0):
                     raise BoundError(
                         f"the lower bound fell by {fall:.2%} from one round of the search to the next, which a consistent bound never does: "
                         "it cannot be trusted for a cut (a declared block invariance may be wrong)"
                     )
-            self._last_root = root
+            self._last_root, self._last_error = root, core.certificate.bound
             self.stats.lower_history.append(lower)
             if not math.isfinite(root):
                 raise NoPolicy("no policy of the offers reaches the goal from the start")

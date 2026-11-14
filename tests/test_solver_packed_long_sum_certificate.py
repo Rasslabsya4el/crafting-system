@@ -73,10 +73,59 @@ def test_a_sum_rounded_once_is_within_half_an_epsilon_of_the_exact_sum_of_its_pr
 
 def test_a_sum_that_cannot_be_taken_exactly_is_not_taken():
     graph = wide()
-    for bad in (np.inf, -1.0, 1e-250, 1e200):  # not finite, negative, a product whose low part could underflow, a factor whose split could overflow
+    for bad in (np.inf, -1.0, 1e200):  # not finite, negative, a factor whose split could overflow
         f = np.ones(graph.n)
         f[5] = bad
         assert kernel_sums_rounded_once(graph, f) is None
+    f = np.ones(graph.n)
+    f[0] = 1e-300  # the one product of each side state's sum is below 2^-960 (its low part underflows) and nothing larger stands beside it
+    assert kernel_sums_rounded_once(graph, f) is None
+
+
+def test_a_product_too_small_for_its_low_part_is_carried_beside_a_larger_one():
+    # the guard is relative to the kernel: a product below 2^-960 (here 1e-300 / 900,001, and one that underflows to 0) costs the sum at most
+    # 2^-1013 each, nothing beside the other products of the reroll
+    graph = wide()
+    f = np.ones(graph.n)
+    f[5], f[6] = 1e-300, 5e-324
+    exact = sum(Fraction(float(p)) * Fraction(float(f[s])) for p, s in zip(graph.k_prob[: SIDES + 1], graph.k_succ[: SIDES + 1]))
+
+    got = kernel_sums_rounded_once(graph, f)
+
+    assert got is not None and abs(Fraction(float(got[0])) - exact) <= Fraction(EPS) / 2 * exact
+
+
+# TIP: WIDE with weight 600 a side and one more outcome of weight 1, a tip the search has not looked at whose bound is 0. The planner carries such
+# a tip as an action of cost 1e-200 to the goal (`_envelope.FLOOR`, `_pattern_bound.FLOOR_COST`), so its value is 1e-200. With `L = 1,800,002`
+# the total weight: `V(0) = 1 + (1e-200 / L) + (1 - 2/L) (1 + V(0))`, so `V(0) = L - 1 + 5e-201 = 1,800,001` and the others `1,800,002`.
+# The allowance of state 0's sum term by term is `3,005 eps * 1,800,001 = 1.2e-6` of its cost of 1: above the 1e-6 accepted.
+TIP_WEIGHT = 600
+TIP_TOTAL = 2 + SIDES * TIP_WEIGHT
+FLOOR = 1e-200
+
+
+def with_a_tip():
+    reroll = (False, [(1.0, [(1, 1), (2, 1)] + [(3 + i, TIP_WEIGHT) for i in range(SIDES)])])
+    return build(reroll, (True, []), (False, [(FLOOR, [(1, 1)])]), *[(False, [(1.0, [(0, 1)])]) for _ in range(SIDES)])
+
+
+TIP_VALUE = np.array([TIP_TOTAL - 1.0, 0.0, FLOOR] + [float(TIP_TOTAL)] * SIDES)
+
+
+def test_a_tip_of_bound_zero_does_not_switch_the_sums_rounded_once_off():
+    from crafting_system.planner._envelope import FLOOR as SEARCH_FLOOR
+    from crafting_system.planner._pattern_bound import FLOOR_COST
+
+    assert SEARCH_FLOOR == FLOOR_COST == FLOOR  # the cost the planner gives a tip of bound 0: the figure the test is about
+    graph = with_a_tip()
+
+    sums = kernel_sums_rounded_once(graph, TIP_VALUE)  # the product of the tip is 1e-200 / 1,800,002: below the planner's floor
+    core = solve_graph(graph)  # with a guard at 1e-200: ConvergenceError, "certifies only a relative bound of 1.2e-06"
+
+    assert sums is not None and sums[0] == (TIP_TOTAL - 2.0) * TIP_TOTAL / TIP_TOTAL  # (L - 2) / L of L, and 5e-207 of the tip: nothing in float64
+    assert core.value == pytest.approx(TIP_VALUE, rel=1e-9)
+    assert core.certificate.bound < 1e-8 and core.certificate.rounded_once
+    assert abs(core.value[0] / TIP_VALUE[0] - 1.0) <= core.certificate.bound
 
 
 def test_the_allowance_of_a_long_sum_alone_refuses_exact_values_and_the_sum_rounded_once_certifies_them():

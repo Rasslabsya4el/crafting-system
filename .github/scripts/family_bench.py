@@ -299,6 +299,8 @@ def path_of(plan) -> str:
 
 def describe_plan(plan, record: dict):
     """Write the plan's figures into `record` (path, mean, states, reach, the search's or the pruning's counts, `L` and `U`); return its `EnvelopeInfo` or None."""
+    from crafting_system.planner._envelope_plan import certificate_gap, certified_upper
+
     info = plan.packed.info.get("envelope") if plan.packed is not None else None
     mean = float(plan.mean_remaining)
     record["path"] = path_of(plan)
@@ -321,7 +323,7 @@ def describe_plan(plan, record: dict):
         }  # fmt: skip
     if info is not None:
         env = dataclasses.asdict(info)
-        env["gap"] = None if not info.lower else info.upper / info.lower - 1.0
+        env["gap"] = certificate_gap(info)  # as the plan's own limit states it: the mean's certified error is inside (#867)
         record["envelope"] = env
         # a search that ended at a proved gap (OR-32, #826) made its plan: "planned", with the gap it was proved within; only a net is "stopped"
         ended = info.exact or info.within is not None
@@ -329,6 +331,7 @@ def describe_plan(plan, record: dict):
         record["reason"] = None if ended else f"the envelope search stopped: {info.stopped}"
         record["exact"], record["within"] = info.exact, info.within
         record["lower"], record["upper"] = info.lower, info.upper
+        record["certified_upper"] = certified_upper(info)  # the mean with its certified error: what the gap and the checks of the bounds rest on (#867)
     else:
         record["status"] = "planned"
         record["reason"] = None
@@ -663,13 +666,14 @@ def checks(record: dict) -> dict:
     lower, upper = record.get("lower"), record.get("upper")
     if optimum is not None and lower is not None and upper is not None:
         slack = TOLERANCE * max(1.0, abs(optimum))
+        certified = record.get("certified_upper", upper)  # (a record from before #867 has the mean alone)
         out["lower_le_optimum"] = lower <= optimum + slack
-        out["optimum_le_upper"] = optimum <= upper + slack
+        out["optimum_le_upper"] = optimum <= certified + slack
         out["gap_to_optimum"] = upper / optimum - 1.0 if optimum else None
         if record.get("status") == "planned" and record.get("within") is None:
             out["exact_mean_equals_optimum"] = abs(upper - optimum) <= slack
         elif record.get("status") == "planned":  # ended at a proved gap (#826): the plan costs at most that share more than the walk's optimum
-            out["within_gap_of_optimum"] = upper <= (1.0 + record["within"]) * optimum + slack
+            out["within_gap_of_optimum"] = certified <= (1.0 + record["within"]) * optimum + slack
     sim = record.get("simulate") or {}
     if sim.get("z") is not None:
         out["z"] = sim["z"]

@@ -67,7 +67,7 @@ from collections.abc import Callable, Sequence
 
 EPSILON = sys.float_info.epsilon
 INF = math.inf
-ACCEPT_BOUND = 1e-6  # a certified relative bound above this: the packed solve raises `ConvergenceError`, and either solver measures the cost ahead (the rounding of long sums gives 5e-8 on R04, 7e-8 on S02)
+ACCEPT_BOUND = 1e-6  # a certified relative bound above this: the packed solve raises `ConvergenceError` (unless its caller takes the values with their error and moved the refusal: `refuse_above`, #867), and either solver measures the cost ahead (the rounding of long sums gives 5e-8 on R04, 7e-8 on S02)
 AHEAD_FIRST = 2  # the first window of the cost ahead that a state's error is also measured against (#769): a free step and the paid one after it; it doubles while the bound is above the one wanted (`widen`). It decides no answer, only how tight the bound is
 AHEAD_LIMIT = 64  # the longest window of the cost ahead: a stop-and-say-so rail (OR-12) on its cost, one sweep of the graph a step; the packed solve's refusal names it
 AHEAD_WEIGHT = 0.5  # w of the cost ahead: a paid state keeps at least 1 - w of its own cost as its margin, a free state gets w / L of the paid steps in its window
