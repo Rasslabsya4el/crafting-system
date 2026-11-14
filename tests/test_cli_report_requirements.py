@@ -16,7 +16,8 @@ from crafting_system.planner._plan import leaf_labels
 from crafting_system.cli._report import FORMAT, requirements_document, requirements_text
 from crafting_system.targets import KOfN, StartKind, Target, load_target
 
-R05 = Path(__file__).resolve().parents[1] / "examples" / "targets" / "r05-strength-ring.yaml"
+# R05 as it was read before #895 ("at least 1 of Life and the three resistances"): the real group these texts were written for
+R05 = Path(__file__).resolve().parent / "real_targets" / "r05-life-or-resistance.yaml"
 
 
 def stand_in(data, target):

@@ -71,7 +71,7 @@ Patch 3.30 is applied once, at the end of November, with 3.30 week-one prices.
 
 A mod whose tier the guide does not state is the top tier of its ladder that the target's item level allows, rolled on the item, not made at the bench.
 
-- **Example.** R05 (`examples/targets/r05-strength-ring.yaml`, item level 75): the guide says only "Maximum Life or Resistances", so the target asks Life tier 1, +(100-114), and each resistance tier 2, +(42-45)%, because their tier 1 needs item level 84.
+- **Example.** R05 (`examples/targets/r05-strength-ring.yaml`, item level 75): the guide says only "Maximum Life or Resistances", so the target asked Life tier 1, +(100-114), and each resistance tier 2, +(42-45)%, because their tier 1 needs item level 84. Since [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895) the file asks the tier 1 Life alone (the owner's own reading, OR-4); the old reading is kept as the test fixture `tests/real_targets/r05-life-or-resistance.yaml`.
 - **Counter-example.** The same file counts a bench craft as "tier 1 of what it crafts whatever its range" (line 26), so a crafted +(26-40) Life meets "Life T1"; R05's mean came out at 12.2 c against the guide route's 135 c. R12 (`r12-lightning-amulet.yaml:28`) writes "every tier of the mod counts, because no minimum tier is given".
 - **Source.** Owner on the R10 page, 2026-10-31 (memory note `owner-route-reading.md`; issue [#96](https://github.com/Rasslabsya4el/crafting-system/issues/96), first comment). Audit #396, "The owner's rules".
 - **Replaces.** The default of ADR-0008 ("any tier, any source"), written on 2026-10-30. Narrowed by OR-4.
@@ -97,7 +97,8 @@ The start item's own mods are the tier priced on the trade site, and the target,
 When a guide gives a tier, a number or a soft wish, the target takes the guide's words; the top tier of OR-1 applies only where the guide states no tier.
 
 - **Example.** `r10-fractured-boots-70-life.yaml` reads the guide's "preferably at least 70" Life as a roll of at least 70 with no tier (about 46 c at 70). R14 asks `IncreasedAttackSpeed` `min_tier: 1` because the guide says "T1 Attack Speed"; R13 asks tier 1 Life because the guide says "tier-1 life".
-- **Counter-example.** `r10-fractured-boots.yaml` asks Life tier 1 where the guide says "preferably at least 70" (128 c). R11 asks Evasion and Life tier 1 where the guide says "prefixes you are happy with" (1,110 c).
+- **Counter-example.** `r10-fractured-boots.yaml` asks Life tier 1 where the guide says "preferably at least 70" (128 c). R11 asks Evasion and Life tier 1 where the guide says "prefixes you are happy with" (1,110 c). (The files as they stood on 2026-11-02: a tier nobody had stated, written by an agent. The owner's own reading below is not this case.)
+- **The owner's own reading.** When the owner reads a route as a player and states the target himself, his numbers are the target, also where the guide's wish is softer (OR-45: a reference target is an item a player would craft). On 2026-11-13 he fixed R05 (tier 1 Life as the prefix, not "Life or a resistance"), R10 (Life tier 1 or tier 2, not "at least 70" at any tier) and R11 (Evasion tier 1 to tier 3 and Life tier 1, not "any tier" and "over 95"). The guide's "at least 70" stays as `r10-fractured-boots-70-life.yaml`. Source: owner in the dispatcher chat, 2026-11-13 ([#895](https://github.com/Rasslabsya4el/crafting-system/issues/895)).
 - **A guide's "guarantee".** A guide that says an orb "guarantees" a mod guarantees its family, not its tier: R04's and R14's two Exalted Orbs after "Cannot roll Attack Modifiers" always add one of the two prefix families left, at a random tier. With no tier stated, OR-1 still asks the top tier, and the page shows the chance of each tier (OR-31). Source: owner in the main chat, 2026-11-06 ([#410](https://github.com/Rasslabsya4el/crafting-system/issues/410), point 2).
 - **Source.** Owner decisions on #396, point 1, 2026-11-02 (memory note `audit-decisions-2026-11-02.md`).
 - **Replaces.** OR-1 where a guide states a number, a tier or a wish. This is the answer to the first open question of the audit.
@@ -207,7 +208,7 @@ The search keeps no detail that a later decision never sees, like a crafter who 
 
 A good answer is exact among realistic routes; "approximate with an interval" reads as useless.
 
-- **Example.** R12 (56.6 c) is an exact mean that an independent Monte Carlo of the audit matched. (R10's 128 c and R11's 1,110 c are exact for their targets as written, but OR-4 calls those targets too strict.)
+- **Example.** R12 (56.6 c) is an exact mean that an independent Monte Carlo of the audit matched. (R10's 128 c and R11's 1,110 c were exact for their targets as written on 2026-11-02, which OR-4 calls too strict: tiers an agent wrote that nobody had stated. The targets of R05, R10 and R11 since #895 are the owner's own.)
 - **Counter-example.** R04 and R14 at default flags are refused or answered "within a certified 1%" with no route page (audit PLANNING-15).
 - **Source.** Memory note `realism-rails.md`, 2026-11-01.
 - **Replaces.** The resolution of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2 (owner, 2026-10-31): exact when a query fits in about a minute, otherwise an approximate answer marked as such, with an error of at most 1%.
@@ -297,6 +298,7 @@ All mod lines on a page share one format, and a mod never shows a different mod'
 
 - **Example.** The V01 golden (`tests/golden/v01_minion_helmet.txt`, `.html`): `+(130-144) to maximum Life · T1`, the same shape in every card.
 - **Counter-example.** R05's bench step draws `DexMasterLifeCrafted1` "+(35-44)", a mod no bench option adds; "at least 1 of 4" is flattened into four lines with notes (audit PRES-2, PRES-7).
+- **A fractured mod and an essence's mod.** The two marks the one format gained on 2026-11-13 are OR-47 (built by [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895)).
 - **Source.** Owner on the R10 page, 2026-10-31 (he had asked before); issue #96, first comment.
 - **Narrowed by** OR-47 (owner, 2026-11-13): the format gains the mark of a fractured mod, and an essence's mod carries the essence's tier in place of a tier number.
 
@@ -363,7 +365,7 @@ The p50 and p90 of a plan are given to within ±10% (the half-width of the brack
 
 A fractured mod is marked as fractured wherever the item is shown; a mod from an essence is shown with the essence's tier.
 
-- **Example.** None yet ([#895](https://github.com/Rasslabsya4el/crafting-system/issues/895) builds it): R10's Intelligence from the Shrieking Essence of Spite would read as the Shrieking tier's mod.
+- **Example.** The pages of R05, R10 and R11 since [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895): R11's target card and every card after it read `+(31-35)% to Chaos Resistance · T1`, marked fractured (the mod the bought helmet really holds, not "any tier"); R10's Intelligence reads `+(43-50) to Intelligence · Shrieking essence`, and R11's target names `Shrieking essence` and `Deafening essence` for its two reservation mods. Which essence a mod comes from is read from the essences the route uses, so the same mod rolled with no essence keeps its tier number.
 - **Counter-example.** The R10 and R11 pages the owner read on 2026-11-13 did not show the fracture, and R10's Intelligence from the essence carried "T2" where the owner wants the essence's tier (#895).
 - **Reason.** A player reads a fractured mod as the one he cannot lose, and an essence's mod by its essence.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 13).

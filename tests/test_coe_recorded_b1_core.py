@@ -21,8 +21,10 @@ The statistic is stated in `coe_recorded_support.py`: an exact two-sided binomia
 over every cell of this module, `ALPHA` = 0.01 for the module. There is no percentage threshold. A cell that fails is a
 disagreement between our model and the emulator: it is filed as an issue (OR-29), never hidden by a wider test.
 
-The roll cells (OR-4) are the goal lines that ask a roll, not a tier: R10's and R11's "+# to maximum Life" of at least 70 and
-96. The record holds, for those two essence cases, how many finished items carry each rolled value of each Life mod of ours;
+The roll cells (OR-4) are the goal lines that ask a roll, not a tier: R10's "+# to maximum Life" of at least 70, as
+`r10-fractured-boots-70-life.yaml` writes it (`ROLL_TARGET_OF`). Since #895 the benchmark targets of R10 and R11 ask the Life by
+tier (the owner's reading of 2026-11-13), so their Life lines are tier cells, and R11's roll of 96 is asked by no file any more. The
+record holds, for the two essence cases, how many finished items carry each rolled value of each Life mod of ours;
 the cell is the share of items that hold a Life mod whose roll the line's own judge passes, against our chance (the mod's
 chance times the share of its uniform rolls that reach the roll). The histogram cells (one per Life mod, the whole law of its rolled values) are the control: a model whose roll ranges are shifted by one must fail them.
 
@@ -95,6 +97,11 @@ TARGET_OF = {
     "exalt-v01-minion-five-mods": "v01-minion-helmet",
     "exalt-v01-life-three-mods": "v01-minion-helmet",
 }
+# the target file whose roll line (`min_roll`, OR-4) a case is also judged by: the benchmark target of R10 asks the Life by tier since
+# #895, and this file keeps the guide's "at least 70" as a roll
+ROLL_TARGET_OF = {"essence-r10-boots": "r10-fractured-boots-70-life"}
+# the cases whose record holds the rolled values of each Life mod (the histogram cells, the control of the roll law)
+HISTOGRAM_CASES = ("essence-r10-boots", "essence-r11-helmet")
 # #627: the cases whose action the target's `actions:` key leaves out; their one use is the planner's on the target with the key removed (`actions`
 # None, every kind not opt-in), as `.github/scripts/actions_key.py` plans the `removed` variant
 KEY_HIDES = {"essence-r08-fear", "essence-r09-spite", "essence-r13-hatred"}
@@ -153,7 +160,7 @@ def uses(data, targets):
 
 @pytest.fixture(scope="module")
 def targets(data):
-    return {name: load_target(TARGETS / f"{name}.yaml", data) for name in set(TARGET_OF.values()) if name}
+    return {name: load_target(TARGETS / f"{name}.yaml", data) for name in {*TARGET_OF.values(), *ROLL_TARGET_OF.values()} if name}
 
 
 def leaves(node):
@@ -212,7 +219,7 @@ def roll_cells(data, case, record, our, target) -> list[Cell]:
 @pytest.fixture(scope="module")
 def family(data, all_cells) -> int:
     """The one family of the module's Bonferroni correction: every testable binomial cell and every testable histogram cell."""
-    histograms = [cell for case in ROLL_CASES for cell in histogram_cells(data, case, CASES[case], "+# to maximum Life")]
+    histograms = [cell for case in HISTOGRAM_CASES for cell in histogram_cells(data, case, CASES[case], "+# to maximum Life")]
     return len([cell for cell in all_cells if cell.testable]) + len([cell for cell in histograms if cell.testable])
 
 
@@ -228,6 +235,8 @@ def all_cells(data, ours, targets, uses):
         if TARGET_OF[case]:
             cells += tier_cells(data, case, record, ours[case], targets[TARGET_OF[case]])
             cells += roll_cells(data, case, record, ours[case], targets[TARGET_OF[case]])
+        if case in ROLL_TARGET_OF:
+            cells += roll_cells(data, case, record, ours[case], targets[ROLL_TARGET_OF[case]])
     return cells
 
 
@@ -425,7 +434,7 @@ def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(data, o
     """
     tested = {(cell.case, cell.kind, cell.name) for cell in all_cells if cell.kind in ("tier", "roll") and cell.testable}
     asked = set()
-    for case, target_name in TARGET_OF.items():
+    for case, target_name in (*TARGET_OF.items(), *ROLL_TARGET_OF.items()):
         if not target_name:
             continue
         marginals = ours[case].marginals()
@@ -440,7 +449,7 @@ def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(data, o
     assert asked <= tested, f"goal lines with no tested cell: {sorted(asked - tested)}"
     # a line that asks a roll is covered by its roll cell alone: no tier cell (the mods of the line, any roll) stands for it
     rolls = {(case, name) for case, kind, name in asked if kind == "roll"}
-    assert {case for case, _ in rolls} == {"essence-r10-boots", "essence-r11-helmet"}
+    assert {case for case, _ in rolls} == set(ROLL_TARGET_OF)
     assert not [cell for cell in all_cells if cell.kind == "tier" and (cell.case, cell.name) in rolls]
     # the lines that matter are among them: Life T1 on the belt, Defences and Movement Speed on the boots, Life on the other routes
     for case, kind, family in [
@@ -451,27 +460,28 @@ def test_every_goal_line_of_the_five_routes_is_a_tested_or_a_forced_cell(data, o
         ("fossil-r08-boots", "tier", "MovementVelocity"),
         ("fossil-r09-boots", "tier", "IncreasedLife"),
         ("fossil-r09-boots", "tier", "MovementVelocity"),
-        ("essence-r10-boots", "roll", "+# to maximum Life"),
-        ("essence-r11-helmet", "roll", "+# to maximum Life"),
-        ("essence-r11-helmet", "tier", "DefencesPercent"),
+        ("essence-r10-boots", "roll", "+# to maximum Life"),  # the guide's "at least 70", from `r10-fractured-boots-70-life.yaml`
+        ("essence-r10-boots", "tier", "+# to maximum Life"),  # the owner's targets (#895): Life tier 1 or 2 on the boots,
+        ("essence-r11-helmet", "tier", "+# to maximum Life"),  # tier 1 on the helmet,
+        ("essence-r11-helmet", "tier", "DefencesPercent"),  # and Evasion tier 1 to tier 3
     ]:
         assert any(c == case and k == kind and name.startswith(family + " ") for c, k, name in asked), (case, family)
 
 
-ROLL_CASES = {"essence-r10-boots": 70, "essence-r11-helmet": 96}  # the roll each goal line asks, as the target files write it
+ROLL_CASES = {"essence-r10-boots": 70}  # the roll each goal line asks, as the target file (`ROLL_TARGET_OF`) writes it
 
 
 @pytest.mark.parametrize("case", sorted(ROLL_CASES))
 def test_the_roll_line_is_a_testable_cell_that_passes_the_binomial_test(data, ours, targets, all_cells, family, case):
     """One roll cell for the case's roll line, testable under MIN_EXPECTED, and not a failure at the module's correction."""
-    (line,) = [leaf for requirement in targets[TARGET_OF[case]].requirements for leaf in leaves(requirement) if leaf.min_roll is not None]
+    (line,) = [leaf for requirement in targets[ROLL_TARGET_OF[case]].requirements for leaf in leaves(requirement) if leaf.min_roll is not None]
     assert line.min_roll == (ROLL_CASES[case],) and line.stat == "+# to maximum Life"
     (cell,) = [cell for cell in all_cells if cell.case == case and cell.kind == "roll"]
     assert cell.name == line_name(line) and cell.testable, cell.describe()
     assert cell not in failures(all_cells, family=family), cell.describe()
 
 
-@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+@pytest.mark.parametrize("case", HISTOGRAM_CASES)
 def test_the_recorded_rolls_are_of_the_finished_items_and_inside_our_ranges(data, case):
     """The histogram of a Life mod adds up to the items the record counts with that mod, and no rolled value is outside our range."""
     record = CASES[case]
@@ -484,7 +494,7 @@ def test_the_recorded_rolls_are_of_the_finished_items_and_inside_our_ranges(data
         assert all(low <= float(value) <= high for value in histogram), (case, mod_id, low, high, sorted(histogram, key=float))
 
 
-@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+@pytest.mark.parametrize("case", HISTOGRAM_CASES)
 def test_the_histogram_of_each_life_mod_is_our_roll_law_under_the_correction(data, family, case):
     """One histogram cell per Life mod the record holds: its rolled values against the uniform law, not a failure at the module's correction."""
     cells = histogram_cells(data, case, CASES[case], "+# to maximum Life")
@@ -494,7 +504,7 @@ def test_the_histogram_of_each_life_mod_is_our_roll_law_under_the_correction(dat
 
 
 @pytest.mark.parametrize("by", [1, -1])
-@pytest.mark.parametrize("case", sorted(ROLL_CASES))
+@pytest.mark.parametrize("case", HISTOGRAM_CASES)
 def test_a_model_with_the_roll_ranges_shifted_by_one_fails_the_histogram_cells(data, family, case, by):
     """The control: our law with every range moved by one gives chance 0 to a value the emulator gave (one edge of the range).
 

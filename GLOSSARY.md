@@ -120,8 +120,8 @@ A requirement that names a mod and no tier because the guide states none. It mea
 _Avoid_: default tier, any tier
 
 **Guide wording**:
-What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft wish ("you are happy with"). The target takes it as written; the top tier of an unstated tier applies only where the guide says nothing about the tier (`docs/owner-rules.md`, OR-4). For a reference target a soft wish does not allow any tier of Life or defences (OR-45, 2026-11-13).
-_Avoid_: the owner's reading (it is the guide's words that win)
+What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft wish ("you are happy with"). The target takes it as written; the top tier of an unstated tier applies only where the guide says nothing about the tier (`docs/owner-rules.md`, OR-4). For a reference target a soft wish does not allow any tier of Life or defences (OR-45, 2026-11-13): the targets of R05, R10 and R11 are the owner's own since #895.
+_Avoid_: an agent's reading of a tier the guide does not state (it is the guide's words that win, or the owner's own for a reference target)
 
 **Start item**:
 The concrete item a query starts from. Every target file states it (`start_item:` with its `rarity:`), and the parser makes up none (#545). A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6. By OR-42 (owner, 2026-11-13) starting over costs the cheaper of buying it again or wiping the same item, the wipe a shown step; a restart that only buys again is what is built today (#687).

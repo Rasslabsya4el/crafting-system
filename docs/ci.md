@@ -247,7 +247,7 @@ is 12,000 Chaos, so its standard error there is about a quarter of the mean and 
     PYTHONPATH=tests python -m naive_crafter merge results        # pools the runners of a route, judges the pool, exits 1 on a disagreement
 
 An R13 play takes about 1.6 seconds, so 1,000 plays are about 30 minutes on one runner; the three cheap routes at 30,000 plays take a few minutes
-together. More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of the other sections) give R13 a smaller standard error.
+together (since #895 a play is about 37 essences on R05, 26 on R10 and 362 on R11, whose targets ask tiers of Life: R11 is most of that time). More runners (one `NAIVE_SEED` each, the `case $RUNNER_INDEX` form of the other sections) give R13 a smaller standard error.
 
 Since #608 to #610 it plays R08 and R09 (fossils), R12 (the Harvest reforge) and R04 and R14 (Exalted, Annulment and Fracturing Orbs, metamods, Remove Crafted Mods).
 R08, R09 and R12 are cheap like R05 (about 1 ms to 2 ms a play). R04 and R14 are heavy on both sides: a play takes about 0.5 s (R04, mean about 200,000 Chaos) and 0.06 s (R14, mean about 13,000

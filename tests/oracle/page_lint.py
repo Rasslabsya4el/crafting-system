@@ -377,9 +377,17 @@ def check_cut_guarantee(page: Page) -> list[Fault]:
 # --- OR-15: one format for a mod line ------------------------------------------------------------------------
 
 _TIER_NOTE = re.compile(r"T\d+")
-# The one shape of a note after a mod line: what the mod is (a tier, crafted, essence only, a grade of an implicit, a tier too
-# low for the target), then how the target holds it ("at least 1 of 4", "in some" of the states the card shows).
-_NOTE_OK = re.compile(r"^(?:T\d+|crafted|essence only|any tier|grade \d[^,]*|tier too low)?(?:,? ?(?:at least \d+ of \d+|in some))?$")
+# The one shape of a note after a mod line: what the mod is (a tier, the tiers a line of several mods accepts: "T2 or better",
+# "T1 to T3", "any tier"; crafted; the tier of the essence that forces it, "Shrieking essence", or the name of an essence with no
+# tier word, "Essence of Horror" (OR-47, #895: an essence's mod is said by the essence, not by a tier of the ladder); essence only; a grade
+# of an implicit; a tier too low for the target), then how the target holds it ("at least 1 of 4", "in some" of the states the card shows).
+_ESSENCE_TIERS = "Whispering|Muttering|Weeping|Wailing|Screaming|Shrieking|Deafening"  # the game's seven essence tiers, lowest first
+_ESSENCE_NOTE = rf"(?:(?:{_ESSENCE_TIERS}) essence|Essence of [A-Z][a-z]+)"
+_ESSENCE_SAID = re.compile(rf"^{_ESSENCE_NOTE}(?: or {_ESSENCE_NOTE})*$")
+_NOTE_OK = re.compile(
+    rf"^(?:T\d+ or better|T\d+ to T\d+|T\d+|crafted|{_ESSENCE_NOTE}(?: or {_ESSENCE_NOTE})*|essence only|any tier|grade \d[^,]*|tier too low)?"
+    r"(?:,? ?(?:at least \d+ of \d+|in some))?$"
+)
 _BAD_INSIDE_TEXT = re.compile(r"(^|[\s(])T\d+\b|\bTier \d+\b|\[[A-Za-z]+\d*\]")
 
 
@@ -404,7 +412,7 @@ def check_mod_format(page: Page) -> list[Fault]:
         elif _BAD_INSIDE_TEXT.search(slot.text):
             faults.append(_fault("OR-15", check_mod_format, where, f"the note is inside the mod text, not after it: {slot.text!r}"))
         if not _NOTE_OK.match(slot.note):
-            faults.append(_fault("OR-15", check_mod_format, where, f"a note that is not `T<n>`, `crafted` or `tier too low`: {slot.note!r} on {slot.text!r}"))
+            faults.append(_fault("OR-15", check_mod_format, where, f"a note that is not a tier (`T<n>`, `T<n> or better`, `T<a> to T<b>`), `crafted`, an essence's tier or `tier too low`: {slot.note!r} on {slot.text!r}"))
         if (slot.tone == "crafted" or slot.note.startswith("crafted")) and _TIER_NOTE.search(slot.note):
             faults.append(_fault("OR-15", check_mod_format, where, f"a bench-crafted mod with a spawn tier: {slot.text!r} {slot.note}"))
     return faults
@@ -777,7 +785,7 @@ def family_key(text: str) -> str:
 
 def asked_tiers(note: str) -> tuple[int, int] | None:
     """The tiers a note asks, as (best, worst) tier numbers: `T2` (2, 2), `T2 or better` (1, 2), `T1 to T3` (1, 3), `any tier` (1, no bound);
-    None for a note that asks no tier (`crafted`, `essence only`, `fractured`, none) or one the lint does not read (`tier too low, in some`: issue #667)."""
+    None for a note that asks no tier (`crafted`, `Shrieking essence`, `essence only`, `fractured`, none) or one the lint does not read (`tier too low, in some`: issue #667)."""
     found = _ASKED_TIER.match(note.strip())
     if not found:
         return None
@@ -819,6 +827,24 @@ def _target_families(route: Route) -> dict[str, tuple[int, int]] | None:
     return found
 
 
+def _target_family_names(route: Route) -> set[str] | None:
+    """The mods of the target that a draw can give, as family keys: the wanted lines of the target card whose note asks a tier or says an
+    essence's tier; None when the card has a group, as `_target_families`. A line said by its essence is a family the target wants
+    although it asks no tier number: a step of the route that draws that family by chance (not the essence that forces it) may show its
+    tier line (#895). A crafted line is no such family: the bench adds it, no draw does."""
+    if route.target is None:
+        return None
+    names: set[str] = set()
+    for slot in route.target.slots:
+        if slot.tone != "wanted":
+            continue
+        if "at least" in slot.note:
+            return None
+        if asked_tiers(slot.note) is not None or _ESSENCE_SAID.match(slot.note):
+            names.add(family_key(slot.text))
+    return names
+
+
 def check_tier_lines(page: Page) -> list[Fault]:
     """OR-31: each line of "Tier chances" lists the tiers of one family in order and with no gap, joins runs of equal chances
     ("T2 to T10 1.4% each") and never a target tier with one that is not, marks the target tier "(target)" (or says "every tier is the
@@ -829,7 +855,7 @@ def check_tier_lines(page: Page) -> list[Fault]:
     T3 while the Goal says T1 is a fault."""
     faults = []
     for route in page.routes:
-        wanted = _target_families(route)
+        wanted = _target_family_names(route)
         for step in route.steps:
             for line in step.lines("Tier chances"):
                 where = f"step {step.number} ({step.title})"

@@ -1,0 +1,90 @@
+# TEST FIXTURE, not a benchmark target: R05 as `examples/targets/r05-strength-ring.yaml` read it before ticket #895
+# ("at least 1 of Life and the three elemental resistances"). The owner fixed the benchmark target to tier 1 Life on
+# 2026-11-13; this copy stays for the tests that need what the old reading had: a real k-of-n group of one prefix and
+# three suffixes (`tests/test_cli_describe_state.py`, `tests/test_cli_report_requirements.py`) and a small real route
+# of 78 states (`tests/test_cli_envelope_real.py`, `tests/test_abstraction_pattern_real.py`; the new R05 has 6).
+# It lives outside `tests/fixtures/` because it is read with the real game data, not the fixture data.
+# Everything below is the old file, unchanged.
+#
+# Target for benchmark route R05: a budget ring with a fractured "+12-16 to All Attributes", the
+# Strength of a Deafening Essence of Rage, and a Life or Resistance modifier.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Budget fractured all-attributes Strength ring", docs/research/
+# 2026-10-30-5-reference-routes.md, id R05):
+#   1. Buy a rare ring of item level 75 or more with "+12-16 to All Attributes" fractured.
+#   2. Use Deafening Essence of Rage until the other modifiers are useful ones, such as Maximum
+#      Life or Resistances.
+#   3. Apply 20 Intrinsic Catalysts and use the crafting bench on any open modifier.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's
+# rule for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows
+# (nobody crafts that without a guaranteed top-tier mod); a mod the guide's essence or bench craft
+# forces is exactly that tier; a mod of the bought start item is the tier the buy spec prices.
+#   * "+12-16 to All Attributes": the game data has this mod as tier 1, "+(13-16) to all Attributes"
+#     (mod AllAttributes4); the next tier down is (9-12). The guide's 12 is read as that 13.
+#   * "Tier 1 Strength": exactly the Strength the Deafening Essence of Rage adds, "+(51-58) to
+#     Strength" (mod StrengthEssence7_).
+#   * "Life or Resistances": at least one of Life and the three elemental resistances, each at the
+#     top tier the item level (75) allows: Life tier 1, +(100-114); the resistances tier 2, +(42-45)%
+#     (their tier 1 needs item level 84). The guide ends with "use the crafting bench on any open
+#     modifier", which is a craft on a free slot, not a tier of these mods: a bench craft has no
+#     natural tier and meets no tier line (OR-1), whatever its range. (The
+#     guide calls them prefixes; in the game Life is a prefix and the resistances are suffixes.)
+#   * "20 Intrinsic Catalysts" (quality): left out, it is B2 (the guide's step 3 asks it; a target with a `quality:` block cannot be
+#     planned yet, issue #516, and the line is issue #159). The bench craft of the guide is the
+#     crafted Life or Resistance above; a bench craft of no use to the requirements below is not
+#     offered by the planner anyway.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+# The guide says only "rare ring"; every plain ring has the same pool of mods, so one is picked.
+base: Amethyst Ring
+
+# The item level of the ring, a whole number from 1 to 100. The guide says "75+".
+item_level: 75
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The fractured All Attributes, tier 1 (13-16). The fractured mod of the start item counts.
+  # Guide (poe-vault.com/guides/shrapnel-ballista-hierophant-gear-flasks, "Rings"): "Tier 1 to All Attributes" is mandatory.
+  - family: AllAttributes
+    min_tier: 1
+    not_crafted: true
+
+  # The Strength of the essence (see the readings above), exactly that tier. The bench Strength (up
+  # to 30) and the bench "Strength and X" mods are other mods and do not count.
+  - family: Strength
+    mod: StrengthEssence7_
+
+  # "At least 1 of these 4": Life, or one of the three elemental resistances. The guide names no tier for them (step 2: "use it on
+  # your fractured ring until you hit some extra useful modifiers like Maximum Life, Resistances, depending on what your character
+  # needs"), so there is no `min_tier` and OR-1 holds, as its own example says: the top tier the item level (75) allows, which is
+  # Life tier 1 and the resistances tier 2 (written `min_tier: 1` and `min_tier: 2` before #404, the same mods).
+  - at_least: 1
+    of:
+      - family: IncreasedLife
+      - family: FireResistance
+      - family: ColdResistance
+      - family: LightningResistance
+
+# Where the crafting starts: a ring that already has All Attributes fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id: AllAttributes4 is "+(13-16) to all Attributes". The file
+    # writes no tier: the tier is the game data's (OR-3).
+    - mod: AllAttributes4
+      # One whole number per stat of the mod, in the units of the game data.
+      values: [14]
+      # Locked in place by a Fracturing Orb.
+      fractured: true
+
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it.
+start: bought

@@ -35,6 +35,12 @@ from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
+# R05 here is the ring as it was read before #895 ("at least 1 of Life and the three resistances", `tests/real_targets/`): 78 states, so a
+# net of 60 stops its search. The benchmark's R05 asks the tier 1 Life alone since #895 and has 6 states, too few to stop anything.
+TARGETS = {
+    "R05": ROOT / "tests" / "real_targets" / "r05-life-or-resistance.yaml",
+    "R13": ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml",
+}
 ROUTES = {"R05": "r05-strength-ring", "R13": "r13-life-resist-belt"}
 TARGET_R13 = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 TOLERANCE = 1e-9
@@ -48,7 +54,7 @@ def data():
 @pytest.fixture(scope="module", params=list(ROUTES))
 def both(request, data):
     """(route id, full walk, envelope plan) of one route."""
-    target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[request.param]}.yaml", data)
+    target = load_target(TARGETS[request.param], data)
     prices = load_price_file(PRICES)
     return (
         request.param,
@@ -93,7 +99,7 @@ def stopped(data, both):
     first executable policy, and the net stops it after the first round.
     """
     route, full, _ = both
-    target = load_target(ROOT / "examples" / "targets" / f"{ROUTES[route]}.yaml", data)
+    target = load_target(TARGETS[route], data)
     prices = load_price_file(PRICES)
     options = {"net": Net(states=1)}
     if route == "R13":
