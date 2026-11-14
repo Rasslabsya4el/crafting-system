@@ -133,15 +133,16 @@ def test_whatever_order_the_problem_gives_the_search_proves_the_dense_optimum(se
 # lower figure; with no net it holds no plan and refuses, as before.
 
 
-def refusing_second_lower_solve(monkeypatch):
+def refusing_second_lower_solve(monkeypatch, error=None):
     real = _envelope.solve_graph
     lower_solves = []
+    error = error or ConvergenceError("the policy iteration on 3 states certifies only a relative bound of 0.005 (planted)", 5e-3)
 
     def solve(graph, **options):
         if (graph.act_tag == FAKE).any():
             lower_solves.append(1)
             if len(lower_solves) == 2:
-                raise ConvergenceError("the policy iteration on 3 states certifies only a relative bound of 0.005 (planted)", 5e-3)
+                raise error
         return real(graph, **options)
 
     monkeypatch.setattr(_envelope, "solve_graph", solve)
@@ -167,6 +168,21 @@ def test_a_round_the_solver_cannot_certify_is_a_refusal_when_the_search_holds_no
     world.first_choice = {0: [2, 1], 1: [3, 0, 1]}.get
     with pytest.raises(ConvergenceError, match="planted"):
         Search(world).run()  # no net: the search keeps no plan to fall back on
+
+
+# The solver raises the same error with no figure at all (an infinite bound) for faults that are not the arithmetic limit: a policy whose linear system
+# is singular, values that are not finite, an exact merge that did not settle. Those are faults, not a round beyond float64: raised even with a plan held.
+
+
+@pytest.mark.parametrize(
+    "message", ["policy is improper: its linear system is singular (planted)", "the solve did not give finite values (planted)"]
+)
+def test_a_solver_fault_with_no_figure_is_raised_even_when_the_search_holds_a_plan(monkeypatch, message):
+    refusing_second_lower_solve(monkeypatch, ConvergenceError(message, math.inf))
+    world = absorbing()
+    world.first_choice = {0: [2, 1], 1: [3, 0, 1]}.get
+    with pytest.raises(ConvergenceError, match="planted"):
+        Search(world, net=Net(seconds=1e9)).run()
 
 
 # ---- the crafting problem: the closed model of a stopped build ----------------------------------------------------------------------------
@@ -201,19 +217,27 @@ def test_a_stopped_build_orders_the_offers_by_the_model_of_what_it_finished(worl
     assert problem.first_choice(tips[0]) == [problem.restart]
 
 
-def test_on_a_stopped_build_the_exact_mean_is_the_same_whichever_first_plan(world, monkeypatch):  # noqa: F811
+# On the same world, stopped after 12 or 20 asks, the first plan that follows the closed model costs less than the one of the least `la` (measured by the
+# review of #948: 8.28 against 16.93 after 12 asks, 11.0 against 13.1 after 20), and the exact search ends on the same mean from either.
+
+
+@pytest.mark.parametrize("asks", [12, 20])
+def test_on_a_stopped_build_the_closed_order_gives_a_cheaper_first_plan_and_the_same_exact_mean(world, monkeypatch, asks):  # noqa: F811
     _, _, offers, full, _, _ = world
-    means = {}
+    means, firsts = {}, {}
     for closed in (True, False):
         if not closed:
             monkeypatch.setattr(_envelope_plan.CraftingProblem, "_closed", lambda self, model, bound: None)
         fresh = abstraction()
         begin = fresh.compress(START_ITEM)
-        bound = pattern_lower_bound(fresh, begin, offers, stop=counting_stop(12))
+        bound = pattern_lower_bound(fresh, begin, offers, stop=counting_stop(asks))
+        assert not bound.complete
         result = envelope_result(fresh, begin, offers, bound=bound)
         info = result.info["envelope"]
         assert info.exact
         means[closed] = result.solution.values[begin]
+        firsts[closed] = info.first_upper
+    assert firsts[True] < firsts[False]
     assert means[True] == pytest.approx(full.solution.values[begin], rel=1e-9)
     assert means[True] == pytest.approx(means[False], rel=1e-12)
 

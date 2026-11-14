@@ -373,11 +373,16 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
         f"bound built: {bound.model.stats.keys:,} keys ({expanded:,} expanded), {len(bound.positions):,} of {len(offers):,} offers in the model, start value "
         f"{bound.start_value!r} ({built - began:.0f} s)" + ("" if bound.complete else f"; STOPPED in the {bound.phase} phase: {bound.stopped}")
     )
-    if net is not None and net.seconds is not None:
-        net = dataclasses.replace(net, seconds=max(net.seconds - (built - began), 0.0))  # the search has what the build left of the time
-    if gap_after is not None:
-        gap_after = max(gap_after - (built - began), 0.0)  # the aim is of the whole plan: the build's time counts toward it
     problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting)
+    ready = time.perf_counter()
+    if problem.closed_start is not None:
+        say(f"first plan's order: the count solved on what it finished, the start at {problem.closed_start!r} ({ready - built:.0f} s)")
+    # the search has what the build and the problem left of the time (OR-40), and the aim is of the whole plan (OR-33): both count, the closed solve
+    # of a stopped build (#948) included, which is one more solve of the model the build already solved and so of the same order as its own
+    if net is not None and net.seconds is not None:
+        net = dataclasses.replace(net, seconds=max(net.seconds - (ready - began), 0.0))
+    if gap_after is not None:
+        gap_after = max(gap_after - (ready - began), 0.0)
     where = {priced.label: position for position, priced in enumerate(offers)}
     positions = None if incumbent is None else (lambda state: [where[label] for label in incumbent(state) if label in where])
     search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance, guard=guard, gap=gap, gap_after=gap_after, watch=watch)

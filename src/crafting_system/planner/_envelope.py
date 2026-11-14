@@ -114,7 +114,9 @@ best executable policy and `exact` is False, with `stopped` saying which net. Wh
 (#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal. A given start whose plan has not closed has no answer
 (`NoPolicy`). A round whose *lower* solve cannot be certified (a plan of 10^9 steps or more, #867, #948) ends a search that holds such a plan the
 same way, as a stop: the plan in hand, and the lower figure of the last round the solver certified (or the start's bound), which is a lower bound
-because `L` only rises. A search that holds no plan (no net: it keeps none) refuses as before.
+because `L` only rises. A search that holds no plan (no net: it keeps none) refuses as before, and so does every search on a refusal with no
+certified figure at all (an infinite error: a singular policy system, values that are not finite, a merge that did not settle), which is a fault and
+not the limit of the arithmetic.
 """
 
 import math
@@ -804,10 +806,12 @@ class Search[S]:
             except ConvergenceError as error:
                 if self.guard:
                     self._probe()  # a bound that is not consistent can leave the lower graph unsolvable: say so, with the fault found
-                if self.held is None:
+                if self.held is None or not (math.isfinite(error.error_bound) and error.error_bound > self.refuse_above):
                     raise
                 # the plan in hand stands (OR-33), with the lower figure of the last round the solver certified: a plan of 10^9 steps or more (#867,
-                # #948) is beyond what float64 certifies closer than about 1e-3, and a round whose solve is refused ends the search, not the answer
+                # #948) is beyond what float64 certifies closer than about 1e-3, and a round whose solve is refused ends the search, not the answer.
+                # Only that refusal stops it: a finite figure above what the run allows. A fault with no figure at all (a singular system, values
+                # that are not finite, a merge that did not settle) is not the arithmetic limit and is raised as before
                 self.stats.solve_seconds += time.perf_counter() - mark
                 self.stats.lower_refused += 1
                 stopped = (
