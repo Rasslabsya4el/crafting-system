@@ -20,6 +20,7 @@ from .outcomes import Outcomes
 
 __all__ = [
     "FossilOutcomes",
+    "add_fractured",
     "Fractured",
     "Mixture",
 ]
@@ -62,19 +63,7 @@ class Mixture:
         mixed: dict[Outcome, Fraction] = defaultdict(Fraction)
         for p, part in self.components:
             forced = None if part.forced is None else label(self.data.mods[part.forced])
-            for outcome, chance in part.distribution(label).items():
-                if not self.fractures:
-                    mixed[outcome] += p * chance
-                    continue
-                counts = dict(outcome)
-                if forced is not None:
-                    counts[forced] = counts.get(forced, 0) + 1
-                whole = sum(counts.values())
-                if whole == 0:
-                    mixed[outcome] += p * chance
-                    continue
-                for lab, count in counts.items():
-                    mixed[outcome | {(Fractured(lab), 1)}] += p * chance * Fraction(count, whole)
+            add_fractured(mixed, part.distribution(label), forced, p, self.fractures)
         return dict(mixed)
 
     def sample(self, rng: random.Random) -> Item:
@@ -89,6 +78,29 @@ class Mixture:
             for index, entry in enumerate(finished.mods)
         )
         return finished.changed(self.data, mods=mods)
+
+
+def add_fractured(
+    mixed: dict[Outcome, Fraction], distribution: Mapping[Outcome, Fraction], forced: Hashable | None, p: Fraction, fractures: bool
+) -> None:
+    """Add the outcomes of one part's `distribution`, times `p`, to `mixed`; with `fractures` each also says which mod was fractured.
+
+    `forced` is the label of the part's forced mod, None without one: it takes part in the choice of the fractured mod. The outcomes are added
+    in the order of `distribution`, each one's fractured labels in the order of its pairs.
+    """
+    for outcome, chance in distribution.items():
+        if not fractures:
+            mixed[outcome] += p * chance
+            continue
+        counts = dict(outcome)
+        if forced is not None:
+            counts[forced] = counts.get(forced, 0) + 1
+        whole = sum(counts.values())
+        if whole == 0:
+            mixed[outcome] += p * chance
+            continue
+        for lab, count in counts.items():
+            mixed[outcome | {(Fractured(lab), 1)}] += p * chance * Fraction(count, whole)
 
 
 FossilOutcomes = Mixture  # the name a resonator's result is known by

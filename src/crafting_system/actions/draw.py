@@ -27,7 +27,7 @@ when their parts have the same sides and the same weights per label, as one-side
 
 import random
 from collections import defaultdict
-from collections.abc import Callable, Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from fractions import Fraction
 from math import comb, gcd
@@ -193,43 +193,88 @@ def exact_distribution(
     grouped differently, so it is the same exact number. End states with the same counts give the same spread, so they are added
     before it is made.
 
+    **The order of the outcomes.** The dict is in the order the earlier engine gave (a draw-by-draw walk, backward, that went through
+    the parts in their order and each part's labels in theirs, and kept the outcomes in the order it first met them). Whoever reads
+    the dict in floats adds its chances in that order, so the order is part of the numbers a plan prints (#934: the recorded routes
+    keep every digit). That walk met an outcome first along its least sequence of draws `(part, label)`, and the limits of a draw (the
+    families of a class, the free slots of a side) read only how many draws of each part were made, never their order, so every order
+    of one set of draws is a sequence of the walk: the least is that set sorted. An outcome is therefore placed by the least, over the
+    end states and spreads that make it, of (the first total whose draws end there, the guaranteed group, the sorted draws); the
+    least of a group of end states is kept as the group is added, since adding the same draws to two sorted sets keeps their order.
+
     The earlier engine walked the same states backward and kept with each the whole distribution of the labels still to come; for a
     pool of many classes and labels (a fossil set, an essence on a base of many family types) that held millions of distributions
     and was most of the time of a fossil plan. A forward state holds one number, and the states of one draw are dropped once the
     next draw is made.
     """
+    return exact_distributions(pool, free, tag, totals, kept, label, (), blocked)[0]
+
+
+def exact_distributions(
+    pool: tuple[PoolFamily, ...],
+    free: Mapping[Side, int],
+    tag: str | None,
+    totals: Mapping[int, Fraction],
+    kept: int,
+    label: Callable[[Mod], Hashable],
+    views: Sequence[tuple[Callable[[Mod], Hashable], Callable[[Hashable], bool] | None]],
+    blocked: frozenset[str] = frozenset(),
+    *,
+    own: bool = True,
+) -> list[dict[Outcome, Fraction]]:
+    """The distribution of `exact_distribution` seen through `label` (unless not `own`), then through each of `views`, from one walk of `label`'s parts.
+
+    A view is `(its label, needed)`. Its label must be coarser than `label` (two mods that `label` gives one value get one value from the
+    view), and its distribution is what `exact_distribution` gives with the view's label: the same chances (the sums of those of `label`'s
+    outcomes it merges) in the same order (the order is that of the view's own parts and labels, see `exact_distribution`). With `needed`
+    (a test on the values of `label`) it holds only the outcomes made from outcomes of `label` with a value that passes it, which a view
+    whose label tells those values apart from the rest gets whole. A Fractured Fossil reads one view per family type out of one walk
+    (`Abstraction._fracture_entries`, #934).
+    """
     number = NUMBER
     zero = number(0)
-    labels: list[Hashable] = []
-    label_index: dict[Hashable, int] = {}
-    classes: dict[tuple, int] = {}
-    class_parts: list[tuple[tuple[bool, tuple[tuple[int, Fraction], ...], Fraction], ...]] = []
-    class_count: list[int] = []
-    class_of: dict[str, int] = {}
-    mod_label: dict[str, int] = {}
-    units: dict[str, list[PoolFamily]] = defaultdict(list)
-    for family in pool:
-        units[family.family].append(family)
-    for name, sides in units.items():
-        parts = []
-        for family in sides:
-            by_label: dict[int, Fraction] = defaultdict(number)
-            for entry in family.mods:
-                value = label(entry.mod)
-                index = label_index.setdefault(value, len(label_index))
-                if index == len(labels):
-                    labels.append(value)
-                mod_label[entry.mod.id] = index
-                by_label[index] += number(entry.weight)
-            weights = tuple(sorted(by_label.items()))
-            parts.append((family.side is Side.PREFIX, weights, sum((w for _, w in weights), number(0))))
-        key = tuple(sorted(parts))
-        if key not in classes:
-            classes[key] = len(class_parts)
-            class_parts.append(key)
-            class_count.append(0)
-        class_count[classes[key]] += 1
-        class_of[name] = classes[key]
+
+    def classify(label: Callable[[Mod], Hashable]):
+        """The labels, classes and parts of the pool seen through `label`, numbered as the engine numbers them."""
+        labels: list[Hashable] = []
+        label_index: dict[Hashable, int] = {}
+        classes: dict[tuple, int] = {}
+        class_parts: list[tuple[tuple[bool, tuple[tuple[int, Fraction], ...], Fraction], ...]] = []
+        class_count: list[int] = []
+        class_of: dict[str, int] = {}
+        mod_label: dict[str, int] = {}
+        units: dict[str, list[PoolFamily]] = defaultdict(list)
+        for family in pool:
+            units[family.family].append(family)
+        for name, sides in units.items():
+            parts = []
+            for family in sides:
+                by_label: dict[int, Fraction] = defaultdict(number)
+                for entry in family.mods:
+                    value = label(entry.mod)
+                    index = label_index.setdefault(value, len(label_index))
+                    if index == len(labels):
+                        labels.append(value)
+                    mod_label[entry.mod.id] = index
+                    by_label[index] += number(entry.weight)
+                weights = tuple(sorted(by_label.items()))
+                parts.append((family.side is Side.PREFIX, weights, sum((w for _, w in weights), number(0))))
+            key = tuple(sorted(parts))
+            if key not in classes:
+                classes[key] = len(class_parts)
+                class_parts.append(key)
+                class_count.append(0)
+            class_count[classes[key]] += 1
+            class_of[name] = classes[key]
+        part_of: dict[tuple[int, bool], int] = {}
+        flat = 0
+        for index, parts in enumerate(class_parts):
+            for on_prefix, _, _ in parts:
+                part_of.setdefault((index, on_prefix), flat)
+                flat += 1
+        return labels, class_parts, class_count, class_of, mod_label, part_of
+
+    labels, class_parts, class_count, class_of, mod_label, part_of = classify(label)
     width = len(labels)
 
     # the parts: their class, side, the weight of one family's mods on that side and its (label, weight) pairs
@@ -237,10 +282,8 @@ def exact_distribution(
     part_prefix: list[bool] = []
     part_weight: list = []
     part_labels: list[tuple[tuple[int, Fraction], ...]] = []
-    part_of: dict[tuple[int, bool], int] = {}
     for index, parts in enumerate(class_parts):
         for on_prefix, weights, total in parts:
-            part_of.setdefault((index, on_prefix), len(part_class))
             part_class.append(index)
             part_prefix.append(on_prefix)
             part_weight.append(int(total) if isinstance(total, Fraction) and total.denominator == 1 else total)  # an int when it is one: cheaper to multiply
@@ -248,10 +291,44 @@ def exact_distribution(
     count = len(part_class)
     room = (free[Side.PREFIX], free[Side.SUFFIX])
 
+    # the orderings: `label`'s own, then each view's, as (its part of each part, its label of each label, its labels, the labels one of
+    # which an outcome needs or None, whether its labels are `label`'s)
+    orderings: list[tuple[list[int], list[int], list[Hashable], list[int] | None, bool]] = []
+    if own:
+        orderings.append((list(range(count)), list(range(width)), labels, None, True))
+    a_mod: dict[int, str] = {}
+    for mod_id, index in mod_label.items():
+        a_mod.setdefault(index, mod_id)
+    a_family: dict[int, str] = {}
+    for name, index in class_of.items():
+        a_family.setdefault(index, name)
+    for view, needed in views:
+        view_labels, _, _, view_class_of, view_mod_label, view_part_of = classify(view)
+        orderings.append(
+            (
+                [view_part_of[(view_class_of[a_family[part_class[part]]], part_prefix[part])] for part in range(count)],
+                [view_mod_label[a_mod[index]] for index in range(width)],
+                view_labels,
+                None if needed is None else [index for index, value in enumerate(labels) if needed(value)],
+                False,
+            )
+        )
+    if not totals:
+        return [{} for _ in orderings]
+
     whole = number is Fraction and all(type(weight) is int for weight in part_weight)  # every weight an integer: the walk keeps (numerator, denominator) pairs
 
-    def ends(start: tuple[int, ...], picks_by_chance: Mapping[int, Fraction]) -> dict[tuple[int, ...], Fraction]:
-        """The chance of each end state of the draws from `start`, mixed over the numbers of draws to make.
+    # which total each end state serves first: the order of the outcomes reads it (see `exact_distribution`)
+    picks_list = [max(0, total - kept - (tag is not None)) for total in totals]
+    first_at: dict[int, int] = {}
+    for index, picks in enumerate(picks_list):
+        first_at.setdefault(picks, index)
+
+    def first_above(made: int) -> int | None:
+        return min((index for index, picks in enumerate(picks_list) if picks > made), default=None)
+
+    def ends(start: tuple[int, ...], picks_by_chance: Mapping[int, Fraction]) -> tuple[dict[tuple[int, ...], Fraction], dict[tuple[int, ...], int]]:
+        """The chance of each end state of the draws from `start`, mixed over the numbers of draws to make, and the first total it serves.
 
         It walks forward one draw at a time and keeps only the states of the current draw: a state where `made` draws were
         made ends there when `made` is the number to make, or when nothing can be drawn from it and more were to be made.
@@ -259,18 +336,21 @@ def exact_distribution(
         number as a `Fraction` at a third of the time (the walk is where a large draw spends it); it is a `Fraction` again on the way out.
         """
         result: dict[tuple[int, ...], Fraction] = defaultdict(number)
+        first: dict[tuple[int, ...], int] = {}
         picks = max(picks_by_chance)
         more = {made: sum((weight for drawn, weight in picks_by_chance.items() if drawn > made), zero) for made in range(picks)}
 
-        def add(found: dict, weight) -> None:
+        def add(found: dict, weight, at: int | None) -> None:
             if not weight:
                 return
             for state, chance in found.items():
                 result[state] += weight * (Fraction(*chance) if whole else chance)
+                if at is not None and (state not in first or at < first[state]):
+                    first[state] = at
 
         level: dict[tuple[int, ...], object] = {start: (1, 1) if whole else number(1)}
         for made in range(picks + 1):
-            add(level, picks_by_chance.get(made, zero))
+            add(level, picks_by_chance.get(made, zero), first_at.get(made))
             if made == picks:
                 break
             stuck: dict[tuple[int, ...], object] = {}
@@ -323,9 +403,9 @@ def exact_distribution(
                         common = gcd(top, bottom)
                         top, bottom = top // common, bottom // common
                     following[child] = (top, bottom)
-            add(stuck, more[made])
+            add(stuck, more[made], first_above(made))
             level = following
-        return result
+        return result, first
 
     spreads: dict[tuple[int, int], list[tuple[tuple[tuple[int, int], ...], Fraction]]] = {}
 
@@ -345,66 +425,113 @@ def exact_distribution(
             found = spreads[(part, n)] = [(counts, chance) for counts, chance, _ in ways if chance]
         return found
 
-    tallies: dict[tuple[int, ...], Fraction] = defaultdict(number)
+    # each ordering's number of each pair `part x width + label`: its own part and label, so that numbers sort as its (part, label) pairs do
+    codes = [[parts[pair // width] * len(names) + labs[pair % width] for pair in range(count * width)] for parts, labs, names, *_ in orderings]
+    sums: list[dict[tuple[int, ...], Fraction]] = [defaultdict(number) for _ in orderings]  # per ordering: its label counts -> chance
+    least: list[dict[tuple[int, ...], tuple]] = [{} for _ in orderings]  # per ordering: its label counts -> the key that places it
 
-    def spread_ends(found: Mapping[tuple[int, ...], Fraction], fixed: tuple[int, int] | None, scale) -> None:
-        """Add the outcomes of the end states `found`, times `scale`; `fixed` is the (part, label) of the guaranteed mod, whose label is known."""
-        grouped: dict[tuple, Fraction] = defaultdict(number)
+    def spread_ends(found: Mapping[tuple[int, ...], Fraction], first: Mapping[tuple[int, ...], int], fixed: tuple[int, int] | None, scale, groups: tuple[int, ...]) -> None:
+        """Add the outcomes of the end states `found`, times `scale`; `fixed` is the (part, label) of the guaranteed mod, whose label is known.
+
+        `first` is the first total each end state serves and `groups` the guaranteed group in each ordering (0 without a tag): with the
+        sorted draws they make the key that places an outcome (see `exact_distribution`).
+        """
+        grouped: dict[tuple, list] = {}
         for state, chance in found.items():
             base = [0] * width
             mixed = []
+            singles: list[int] = []  # the draws of the parts of one label, as pairs `part x width + label`
             for part, n in enumerate(state):
                 if fixed is not None and part == fixed[0]:
                     n -= 1
                 if not n:
                     continue
                 if len(part_labels[part]) == 1:
-                    base[part_labels[part][0][0]] += n
+                    lab = part_labels[part][0][0]
+                    base[lab] += n
+                    singles.extend([part * width + lab] * n)
                 else:
                     mixed.append((part, n))
             if fixed is not None:
                 base[fixed[1]] += 1
-            grouped[(tuple(base), tuple(mixed))] += chance
-        for (base, mixed), chance in grouped.items():
-            ways: list[tuple[tuple[int, ...], Fraction]] = [(base, chance * scale)]
+            group = (tuple(base), tuple(mixed))
+            known = grouped.get(group)
+            if known is None:
+                # the orderings an outcome of the group can reach: a view that needs a label is skipped where none can be drawn
+                drawable = {index for index, n in enumerate(base) if n} | {lab for part, _ in mixed for lab, _ in part_labels[part]}
+                known = grouped[group] = [zero, [None if needed is not None and drawable.isdisjoint(needed) else () for *_, needed, _ in orderings]]
+            known[0] += chance
+            at = first[state]
+            least_of = known[1]
+            for o, code in enumerate(codes):
+                if least_of[o] is not None:
+                    key = (at, tuple(sorted(map(code.__getitem__, singles))))
+                    if not least_of[o] or key < least_of[o]:
+                        least_of[o] = key
+        for (base, mixed), (chance, keys) in grouped.items():
+            ways: list[tuple[tuple[int, ...], Fraction, tuple[int, ...]]] = [(base, chance * scale, ())]
             for part, n in mixed:
                 grown = []
-                for tally, before in ways:
+                for tally, before, drawn in ways:
                     for counts, each in spread(part, n):
                         after = list(tally)
+                        pairs = list(drawn)
                         for lab, k in counts:
                             after[lab] += k
-                        grown.append((tuple(after), before * each))
+                            pairs.extend([part * width + lab] * k)
+                        grown.append((tuple(after), before * each, tuple(pairs)))
                 ways = grown
-            for tally, each in ways:
-                tallies[tally] += each
+            for tally, each, drawn in ways:
+                for o, (parts, labs, names, needed, same) in enumerate(orderings):
+                    if keys[o] is None or (needed is not None and not any(tally[index] for index in needed)):
+                        continue
+                    at, seq = keys[o]
+                    key = (at, groups[o], tuple(sorted(seq + tuple(map(codes[o].__getitem__, drawn)))))
+                    if not same:
+                        seen = [0] * len(names)
+                        for index, n in enumerate(tally):
+                            if n:
+                                seen[labs[index]] += n
+                        shown = tuple(seen)
+                    else:
+                        shown = tally
+                    sums[o][shown] += each
+                    before = least[o].get(shown)
+                    if before is None or key < before:
+                        least[o][shown] = key
 
-    if not totals:
-        return {}
     start = (0,) * count
     picks_of: dict[int, Fraction] = {}
-    for total, chance in totals.items():
-        picks = max(0, total - kept - (tag is not None))
+    for picks, chance in zip(picks_list, totals.values()):
         picks_of[picks] = picks_of.get(picks, zero) + number(chance)
     if tag is None:
-        spread_ends(ends(start, picks_of), None, number(1))
+        found, first = ends(start, picks_of)
+        spread_ends(found, first, None, number(1), (0,) * len(orderings))
     else:
         groups: dict[tuple[int, int, Fraction], int] = defaultdict(int)
+        group_numbers: list[dict[tuple, int]] = [{} for _ in orderings]  # the guaranteed groups each ordering makes, in the order it met them
         for family, entry in guaranteed_candidates(pool, free, tag, blocked):
-            groups[(part_of[(class_of[family.family], family.side is Side.PREFIX)], mod_label[entry.mod.id], entry.weight)] += 1
+            part, lab = part_of[(class_of[family.family], family.side is Side.PREFIX)], mod_label[entry.mod.id]
+            groups[(part, lab, entry.weight)] += 1
+            for numbers, (parts, labs, *_) in zip(group_numbers, orderings):
+                numbers.setdefault((parts[part], labs[lab], entry.weight), len(numbers))
         tagged_total = sum((n * number(weight) for (_, _, weight), n in groups.items()), number(0))
-        by_part: dict[int, list[tuple[int, Fraction]]] = defaultdict(list)
+        by_part: dict[int, list[tuple[int, Fraction, tuple[int, ...]]]] = defaultdict(list)
         for (part, lab, weight), n in groups.items():
-            by_part[part].append((lab, n * number(weight) / tagged_total))
+            numbered = tuple(numbers[(parts[part], labs[lab], weight)] for numbers, (parts, labs, *_) in zip(group_numbers, orderings))
+            by_part[part].append((lab, n * number(weight) / tagged_total, numbered))
         for part, chosen in by_part.items():
-            found = ends(start[:part] + (1,) + start[part + 1 :], picks_of)
-            for lab, step in chosen:
-                spread_ends(found, (part, lab), step)
-    return {
-        frozenset((labels[i], count) for i, count in enumerate(tally) if count): chance
-        for tally, chance in tallies.items()
-        if chance
-    }
+            found, first = ends(start[:part] + (1,) + start[part + 1 :], picks_of)
+            for lab, step, numbered in chosen:
+                spread_ends(found, first, (part, lab), step, numbered)
+    return [
+        {
+            frozenset((names[i], n) for i, n in enumerate(shown) if n): sums[o][shown]
+            for shown in sorted(least[o], key=least[o].__getitem__)
+            if sums[o][shown]
+        }
+        for o, (_, _, names, _, _) in enumerate(orderings)
+    ]
 
 
 def sample_new_mods(

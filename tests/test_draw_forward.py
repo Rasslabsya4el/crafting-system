@@ -3,7 +3,8 @@
 `exact_distribution` used to walk the states of a draw (how many families of each class are drawn) backward and keep with each the
 distribution of the labels still to come. It now walks the same states forward, one number per state, and spreads the labels at the end
 (its docstring says why that is the same number). `backward` below is the earlier engine, kept here as the oracle: every distribution the
-new engine gives must equal its distribution exactly, as a dict of `Fraction`s (the same outcomes, the same chances), on small hand-made
+new engine gives must equal its distribution exactly, as a dict of `Fraction`s (the same outcomes, the same chances, in the same order: a
+float sum over the dict is then the same number, #934), on small hand-made
 worlds that reach every branch (two-sided families, a guaranteed tag and blocked tags, kept mods, a dry pool, a full side, several labels in
 one family, weights that are not integers, a zero weight) and on pools of the real game data with fossil-like weights. In the planner's float
 mode (`floating`) the two agree to the float error.
@@ -22,6 +23,7 @@ from proto_draw_support import family, synthetic_mod
 
 from crafting_system.abstraction._state import best_of
 from crafting_system.actions import draw
+from crafting_system.actions import outcomes as outcomes_module
 from crafting_system.actions.draw import exact_distribution, floating, guaranteed_candidates, total_distribution
 from crafting_system.actions.mixture import Fractured
 from crafting_system.actions.pool import PoolFamily, PoolMod, build_pool
@@ -116,10 +118,10 @@ def backward(pool, free, tag, totals, kept, label, blocked=frozenset()):
 
 
 def same(pool, free, tag, totals, kept, label: Callable, blocked=frozenset()) -> dict:
-    """Both engines on one draw; they must give the same dict, exactly, and sum to exactly one."""
+    """Both engines on one draw; they must give the same dict, exactly and in the same order (a float sum over it is the same number), and sum to exactly one."""
     new = exact_distribution(pool, free, tag, totals, kept, label, blocked)
     old = {outcome: chance for outcome, chance in backward(pool, free, tag, totals, kept, label, blocked).items() if chance}
-    assert new == old
+    assert list(new.items()) == list(old.items())
     assert sum(new.values()) == 1
     return new
 
@@ -239,6 +241,32 @@ def test_the_forward_engine_equals_the_backward_walk_on_real_pools(real_pools, s
     same(picked, free, tag, RARE, kept, label)
 
 
+@pytest.mark.parametrize("seed", range(8))
+def test_a_coarser_view_of_one_walk_is_the_backward_walk_of_that_view(real_pools, seed):
+    """`exact_distributions` reads coarser labels out of one walk (a Fractured Fossil's types, #934): each must be the backward walk of its own label, in its order."""
+    rng = random.Random(934 * 1000 + seed)
+    pool = rng.choice(real_pools)
+    picked = reweighed(rng.sample(pool, min(len(pool), rng.randint(5, 10))), rng, rng.random() < 0.6)
+    wanted = {fam.family for fam in rng.sample(picked, min(3, len(picked)))}
+    one = sorted(wanted)[0]
+    views = [LABELS["coarse"](wanted), LABELS["coarse"]({one}), lambda mod: "any"]
+    free = {PREFIX: rng.randint(0, 3), SUFFIX: rng.randint(1, 3)}
+    kept = rng.randint(0, 2)
+    tags = sorted({tag for fam in picked for entry in fam.mods for tag in entry.mod.implicit_tags})
+    tag = rng.choice(tags) if tags and rng.random() < 0.5 else None
+    if tag is not None and not guaranteed_candidates(picked, free, tag):
+        tag = None
+    fine = LABELS["by-mod"](wanted)
+    ids = {entry.mod.id for fam in picked if fam.family == one for entry in fam.mods}
+    shown = draw.exact_distributions(picked, free, tag, RARE, kept, fine, [(view, None) for view in views] + [(views[1], lambda value: value in ids)])
+    for view, got in zip([fine, *views], shown[:-1], strict=True):
+        old = {outcome: chance for outcome, chance in backward(picked, free, tag, RARE, kept, view).items() if chance}
+        assert list(got.items()) == list(old.items())
+    # a view that needs a mod of the first wanted family holds the outcomes of its label that have one, whole and in their order
+    old = backward(picked, free, tag, RARE, kept, views[1])
+    assert list(shown[-1].items()) == [(outcome, chance) for outcome, chance in old.items() if chance and any(value[0] for value, _ in outcome)]
+
+
 def test_the_two_engines_agree_in_floats(real_pools):
     rng = random.Random(9340)
     picked = reweighed(rng.sample(real_pools[0], 9), rng, True)
@@ -247,7 +275,7 @@ def test_the_two_engines_agree_in_floats(real_pools):
     with floating():
         new = exact_distribution(picked, free, None, RARE, 0, label)
         old = backward(picked, free, None, RARE, 0, label)
-    assert new.keys() == {outcome for outcome, chance in old.items() if chance}
+    assert list(new) == [outcome for outcome, chance in old.items() if chance]
     assert all(abs(new[outcome] - old[outcome]) <= 1e-12 * old[outcome] for outcome in new)
     assert abs(sum(new.values()) - 1) <= 1e-12
 
@@ -266,7 +294,13 @@ def test_a_whole_real_pool_with_a_coarse_label_draws_exactly(real_pools):
 
 
 def per_type_entries(ab, part) -> dict:
-    """`Abstraction._fracture_entries` before #934, as the oracle: one run of the engine for each family type, that type alone marked."""
+    """`Abstraction._fracture_entries` before #934, as the oracle: one run of the backward engine for each family type, that type alone marked."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(outcomes_module, "exact_distribution", backward)
+        return _per_type_entries(ab, part)
+
+
+def _per_type_entries(ab, part) -> dict:
     influences = part.retained.influences
     label_of = ab._labeller(influences)
     owner = {}
@@ -317,7 +351,7 @@ def test_one_marked_run_gives_the_fracture_entries_of_one_run_per_type_on_the_fi
     for state, action in fossil_requests(ab):
         assert action in (PLAIN_FRACTURE, SCORCHED_FRACTURE)
         for part, signature in fracture_parts(ab, state, action):
-            assert dict(ab._fracture_entries(part, signature)) == per_type_entries(ab, part)
+            assert list(ab._fracture_entries(part, signature)) == list(per_type_entries(ab, part).items())
             checked += 1
     assert checked == 6
 
@@ -331,5 +365,5 @@ def test_one_marked_run_gives_the_fracture_entries_of_one_run_per_type_on_real_b
     assert len(parts) == 1
     for part, signature in parts:
         entries = dict(ab._fracture_entries(part, signature))
-        assert entries == per_type_entries(ab, part)
+        assert list(entries.items()) == list(per_type_entries(ab, part).items())
         assert sum(entries.values()) == 1

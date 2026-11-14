@@ -30,7 +30,7 @@ The fractions are exact and can be thousands of bits long: `str()` of one can hi
 """
 
 import random
-from collections.abc import Callable, Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import cached_property
@@ -45,6 +45,7 @@ from .cut import Cut
 from .draw import (
     Outcome,
     exact_distribution,
+    exact_distributions,
     guaranteed_candidates,
     sample_new_mods,
     total_distribution,
@@ -238,6 +239,15 @@ class Outcomes:
         """
         return exact_distribution(
             self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label, self.guaranteed_blocked
+        )
+
+    def distributions(
+        self, label: Callable[[Mod], Hashable], views: Sequence[tuple[Callable[[Mod], Hashable], Callable[[Hashable], bool] | None]]
+    ) -> list[Mapping[Outcome, Fraction]]:
+        """`distribution` through each of `views` (labels coarser than `label`, each with a test on the values of `label` one of which its
+        outcomes need, or None), from one walk of the engine (`exact_distributions`)."""
+        return exact_distributions(
+            self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label, views, self.guaranteed_blocked, own=False
         )
 
     @cached_property
