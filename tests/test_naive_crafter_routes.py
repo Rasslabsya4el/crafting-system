@@ -356,6 +356,9 @@ def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with
 # seed 7 on the targets of #895 (distance in standard errors; R05 and R10 at 12,000 plays): no level gate moves R05 by 6.0 (R10 0.5); no family
 # exclusion moves R10 by 14.8 (R05 0.5); a side chosen first instead of one pool moves R05 by 6.8 (R10 0.6). Each rule moves at least one cheap
 # route, so none is a rule the comparison cannot see; the routes that do not move are named so that nobody counts them as evidence for that rule.
+# On a runner at the plays of the rows below, with the essence prices of #885 (heavy run 43539062163): no family exclusion moves R10 by 6.4 and
+# R11 by 9.2, a side chosen first moves R11 by 13.7 (each at 3,000 plays), and the wrong count of mods above moves R11 by 75. A play of R11 is
+# about 362 essences, and its four tests take about 45 seconds of a runner together.
 # The last number of a row is its plays: R05's level gate moves its mean by about 6% since #895 (only the tier 1 Life is drawn for, and the gate
 # only thins the pool by the mods above item level 75; it was 24 standard errors while a tier 2 resistance counted), so it needs 12,000 plays
 # to stand clear of the line; a play of R05 is about 37 essences.
