@@ -118,9 +118,11 @@ def backward(pool, free, tag, totals, kept, label, blocked=frozenset()):
 
 
 def same(pool, free, tag, totals, kept, label: Callable, blocked=frozenset()) -> dict:
-    """Both engines on one draw; they must give the same dict, exactly and in the same order (a float sum over it is the same number), and sum to exactly one."""
+    """Both engines on one draw; they must give the same dict, exactly and in the same order (a float sum over it is the same number), and sum to
+    exactly one. No entry of the old engine is filtered out: every weight it walks is positive (`pool.py` and `fossil.py` drop weights of zero
+    or less), so it never gives an outcome a chance of zero."""
     new = exact_distribution(pool, free, tag, totals, kept, label, blocked)
-    old = {outcome: chance for outcome, chance in backward(pool, free, tag, totals, kept, label, blocked).items() if chance}
+    old = backward(pool, free, tag, totals, kept, label, blocked)
     assert list(new.items()) == list(old.items())
     assert sum(new.values()) == 1
     return new
@@ -260,11 +262,11 @@ def test_a_coarser_view_of_one_walk_is_the_backward_walk_of_that_view(real_pools
     ids = {entry.mod.id for fam in picked if fam.family == one for entry in fam.mods}
     shown = draw.exact_distributions(picked, free, tag, RARE, kept, fine, [(view, None) for view in views] + [(views[1], lambda value: value in ids)])
     for view, got in zip([fine, *views], shown[:-1], strict=True):
-        old = {outcome: chance for outcome, chance in backward(picked, free, tag, RARE, kept, view).items() if chance}
+        old = backward(picked, free, tag, RARE, kept, view)
         assert list(got.items()) == list(old.items())
     # a view that needs a mod of the first wanted family holds the outcomes of its label that have one, whole and in their order
     old = backward(picked, free, tag, RARE, kept, views[1])
-    assert list(shown[-1].items()) == [(outcome, chance) for outcome, chance in old.items() if chance and any(value[0] for value, _ in outcome)]
+    assert list(shown[-1].items()) == [(outcome, chance) for outcome, chance in old.items() if any(value[0] for value, _ in outcome)]
 
 
 def test_the_two_engines_agree_in_floats(real_pools):
@@ -275,7 +277,7 @@ def test_the_two_engines_agree_in_floats(real_pools):
     with floating():
         new = exact_distribution(picked, free, None, RARE, 0, label)
         old = backward(picked, free, None, RARE, 0, label)
-    assert list(new) == [outcome for outcome, chance in old.items() if chance]
+    assert list(new) == list(old)
     assert all(abs(new[outcome] - old[outcome]) <= 1e-12 * old[outcome] for outcome in new)
     assert abs(sum(new.values()) - 1) <= 1e-12
 
