@@ -42,6 +42,7 @@ __all__ = [
     "influence_spawn_test",
     "partners",
     "tiers_of",
+    "is_table_family",
 ]
 
 DOMAIN_MATCH = get_rule("affix_pool.domain_match")
@@ -88,6 +89,31 @@ ModFactor = Callable[[Mod], Fraction]
 
 _ADMITTED_LIMIT = 32
 _ADMITTED: dict[tuple, tuple[GameData, tuple[tuple[Mod, Fraction], ...]]] = {}  # the key ends with the live cut or None
+
+
+@dataclass(frozen=True, slots=True)
+class _Table:
+    """The admitted mods of one base, level, influences, extra mods, cut and set of blocked tags, read once into what every item of them shares.
+
+    What an item holds takes mods out of a pool by family only (`Item.blocks`: a mod leaves when the item holds it or a mod that shares a family
+    with it, and a candidate has exactly one family), so the candidates of an item are `candidates` without those of the families it holds, and
+    its pool is `families` without them: the same `PoolFamily` objects for every item (ticket #827).
+    """
+
+    data: GameData  # kept alive, so its `id` in the key cannot be reused
+    candidates: tuple[Candidate, ...]  # the admitted mods of exactly one family, in data order
+    families: tuple[PoolFamily, ...]  # `group_pool(candidates)`: one per family and side, in the order of its first candidate
+    odd: tuple[Mod, ...]  # the admitted mods that do not have exactly one family, in data order: one that no held mod blocks is refused
+
+
+_TABLE_LIMIT = 64
+_TABLES: dict[tuple, _Table] = {}  # (id(data), domain, tags, level limit, mod ids of extra, live cut, blocked tags) -> the table
+_TABLE_FAMILIES: dict[int, PoolFamily] = {}  # id -> each family of the tables held (the family is held, so the id stays its own)
+
+
+def is_table_family(family: PoolFamily) -> bool:
+    """Whether `family` is the object a pool table holds, the same for every item of the table: what is known of it can be kept by the object."""
+    return family is not None and _TABLE_FAMILIES.get(id(family)) is family
 
 
 _POOL_LIMIT = 256
@@ -256,21 +282,46 @@ def pool_candidates(
     return candidates
 
 
-def _compute_pool_candidates(
-    data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, ...], tag_filter: bool, cut: Cut | None
-) -> tuple[Candidate, ...]:
-    """`pool_candidates` without the cache; `extra` is already a tuple."""
+def _table(data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, ...], tag_filter: bool, cut: Cut | None) -> _Table:
+    """The table `item` draws from (cached): what `_admitted` gives its base, level and influences, without the mods its Attack and Caster metamods block."""
     base = data.base_items.get(item.base_id)
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
     tags = item_tags(data, item)
     blocked = blocked_tags(data, item) if tag_filter else frozenset()
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
+    key = (id(data), base.domain, tags, level_limit, tuple(mod.id for mod in extra), cut, blocked)
+    found = _TABLES.get(key)
+    if found is not None and found.data is data:
+        return found
     candidates: list[Candidate] = []
+    odd: list[Mod] = []
     for mod, weight in _admitted(data, base, tags, level_limit, extra, cut):
-        if item.blocks(data, mod) or not allowed_by_tags(mod, blocked):
+        if not allowed_by_tags(mod, blocked):
             continue
         if len(mod.families) != 1:
+            odd.append(mod)
+            continue
+        candidates.append(Candidate(mod, weight, mod.families[0], Side(mod.generation_type)))
+    found = _Table(data, tuple(candidates), group_pool(candidates), tuple(odd))
+    if len(_TABLES) >= _TABLE_LIMIT:
+        dropped = _TABLES.pop(next(iter(_TABLES)), None)
+        for family in dropped.families if dropped is not None else ():
+            _TABLE_FAMILIES.pop(id(family), None)
+    _TABLES[key] = found
+    _TABLE_FAMILIES.update((id(family), family) for family in found.families)
+    return found
+
+
+def _held_families(data: GameData, item: Item, table: _Table) -> frozenset[str]:
+    """The families of the mods `item` holds: the candidates of these families are the ones the item blocks. Raises `OutOfScopeError` for an
+    admitted mod of no family or of several that nothing on the item blocks (the first in data order, as the draw would meet it)."""
+    held = item.families(data)
+    if table.odd:
+        ids = {entry.mod_id for entry in item.mods}
+        for mod in table.odd:
+            if mod.id in ids or not held.isdisjoint(mod.families):
+                continue
             raise OutOfScopeError(
                 f"the mod {mod_words(mod)} is a candidate but belongs to {len(mod.families)} families; the model has only mods with exactly one family",
                 detail=(
@@ -278,8 +329,18 @@ def _compute_pool_candidates(
                     "only mods with exactly one family are modelled"
                 ),
             )
-        candidates.append(Candidate(mod, weight, mod.families[0], Side(mod.generation_type)))
-    return tuple(candidates)
+    return held
+
+
+def _compute_pool_candidates(
+    data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, ...], tag_filter: bool, cut: Cut | None
+) -> tuple[Candidate, ...]:
+    """`pool_candidates` without the cache; `extra` is already a tuple."""
+    table = _table(data, item, max_level, extra, tag_filter, cut)
+    held = _held_families(data, item, table)
+    if not held:
+        return table.candidates
+    return tuple(candidate for candidate in table.candidates if candidate.family not in held)
 
 
 def group_pool(candidates: Iterable[Candidate], factor: ModFactor | None = None) -> tuple[PoolFamily, ...]:
@@ -343,5 +404,15 @@ def build_pool(
     """The candidates for one more draw on `item`, grouped by family, in data order.
 
     See `pool_candidates` for `max_level`, `extra`, `tag_filter` and `cut`, `group_pool` for `factor`.
+
+    Without a `factor` the families are those of the item's table that it does not hold (`_Table`): what `group_pool` makes of its candidates,
+    without making them again for each item.
     """
-    return group_pool(pool_candidates(data, item, max_level, extra, tag_filter=tag_filter, cut=cut), factor)
+    if factor is not None:
+        return group_pool(pool_candidates(data, item, max_level, extra, tag_filter=tag_filter, cut=cut), factor)
+    extra = tuple(extra)
+    table = _table(data, item, max_level, extra, tag_filter, cut if cut is not None and cut.active else None)
+    held = _held_families(data, item, table)
+    if not held:
+        return table.families
+    return tuple(family for family in table.families if family.family not in held)

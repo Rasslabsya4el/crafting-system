@@ -66,7 +66,9 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_pattern.py", "PatternBuilder._offers_of_key", ("OutOfScopeError",), GAP, "a model gap at a member (its kernel): left out of the key only where `_gap_everywhere` says no member can take it, else the build refuses"),
     ("abstraction/_pattern.py", "_gap_everywhere", ("NotApplicableError", "OutOfScopeError"), EITHER, "asks whether any member of the key can take the action: a member refused by the game or by a gap cannot, whichever family"),
     ("abstraction/_kernel.py", "Abstraction.reachable", ("NotApplicableError", "OutOfScopeError"), EITHER, "a helper for tests, no caller in src: the states reachable by what can be applied"),
-    ("abstraction/_kernel.py", "Abstraction._prepare", ("NotApplicableError",), GAME, "a game refusal may depend on the family of a fractured mod; a model gap is not asked that"),
+    ("abstraction/_kernel.py", "Abstraction._build", ("NotApplicableError",), GAME, "a game refusal may depend on the family of a fractured mod; a model gap is not asked that"),
+    ("abstraction/_kernel.py", "Abstraction._prepare", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal of a projection is kept with it and raised again, as it is, for every state that has the projection (#827)"),
+    ("abstraction/_kernel.py", "Abstraction.kernel_key", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal of a key is kept with its prepared pair and raised again, as it is (#827)"),
     ("abstraction/_kernel.py", "Abstraction._refusal_depends_on_the_family", ("NotApplicableError",), GAME, "the other families of the fractured type are refused too"),
     ("actions/awakener.py", "_awakeners_orb", ("OutOfScopeError",), GAP, "an item class with no influence key lists no orb"),
     ("actions/contract.py", "Action.burn_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal's own text is returned, whichever family"),
@@ -440,7 +442,7 @@ def test_a_clause_for_a_game_refusal_lets_a_model_gap_through(monkeypatch):
     for error in (OutOfScopeError, NotApplicableError):
         asked.clear()
         monkeypatch.setattr(ChaosOrb, "outcomes_under", lambda self, data, item, reading=None, error=error: (_ for _ in ()).throw(error("planted")))
-        ability._prepared_by.clear()
+        ability.release_prepared()  # the refusal of a projection is kept with it (#827)
         with pytest.raises(error):
             ability.kernel(plan.start, chaos)
         assert bool(asked) is (error is NotApplicableError)  # `_prepare` asks whether a game refusal depends on a fractured family; a gap is no refusal

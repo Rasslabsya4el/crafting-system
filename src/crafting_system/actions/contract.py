@@ -147,7 +147,10 @@ class Reads:
     * `junk`: the result depends on, or keeps, the ordinary mods that are not fractured and not crafted
       (how many there are per side, and which families, if `families` says so). False means the action
       erases them all and redraws: the result holds none of them and does not look at them, so a state
-      need not store them. An action that does not read the junk MUST erase it.
+      need not store them. An action that does not read the junk MUST erase it. The one exception is an
+      item with a lock (Prefixes or Suffixes Cannot Be Changed, `metamods.is_lock`): the mods of the locked
+      side stay (`metamods.kept_by_lock`), so on such an item the action reads them. A planner may leave the
+      junk out of what it gives the action exactly when the item holds no lock (ticket #827).
     * `families`: the families of the junk the result may depend on, as family names, when `junk` is
       true; None means any family (every family of the junk is told apart: exact, but the number of
       states grows). A bench craft names the families of its mod, because it is refused when one is
