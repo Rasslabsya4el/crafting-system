@@ -22,6 +22,44 @@
       },
       "source": "poe.ninja-history"
     },
+    "Abrasive Catalyst": {
+      "chaos": 1.42,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "abrasive-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 4,551 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 4550.704225352113,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Accelerating Catalyst": {
+      "chaos": 1.63,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "accelerating-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,181 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 1180.9815950920247,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Aetheric Fossil": {
       "chaos": 6.76,
       "detail": {
@@ -132,6 +170,25 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 83391.90420408695,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Awakener's Orb": {
+      "chaos": 171.5,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "awakeners-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 338 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 337.5160349854227,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -269,6 +326,101 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 1338.1595092024538,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Craiceann, First of the Deep": {
+      "chaos": 30.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 162 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 162.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Craicic Croaker": {
+      "chaos": 63.3,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Craicic Maw": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 244 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 244.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Craicic Watcher": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Crusader's Exalted Orb": {
+      "chaos": 191.7,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "crusaders-exalted-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 88 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 88.35680751173709,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -712,6 +864,25 @@
       },
       "source": "poe.ninja-history"
     },
+    "Dextral Catalyst": {
+      "chaos": 40.92,
+      "detail": {
+        "age_days": 7,
+        "current_league": "Allflame",
+        "date": "2026-03-13",
+        "exchange": "dextral-catalyst",
+        "league": "Mirage"
+      },
+      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,089 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "provenance": {
+        "date": "2026-03-13",
+        "depth": 1089.0029325513196,
+        "depth_unit": "units",
+        "kind": "ninja-previous-league",
+        "league": "Mirage"
+      },
+      "source": "poe.ninja-previous-league"
+    },
     "Divine Orb": {
       "chaos": 176.6,
       "detail": {
@@ -725,6 +896,82 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 86465.96828992073,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Elder's Exalted Orb": {
+      "chaos": 105.7,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "elders-exalted-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 410 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 410.40681173131503,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Eldritch Chaos Orb": {
+      "chaos": 41.82,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "eldritch-chaos-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 4,433 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 4433.094213295074,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Eldritch Exalted Orb": {
+      "chaos": 3.31,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "eldritch-exalted-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,830 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 1830.2114803625377,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Eldritch Orb of Annulment": {
+      "chaos": 44.17,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "eldritch-orb-of-annulment",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 3,108 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 3107.5616934570976,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -845,6 +1092,44 @@
       },
       "source": "poe.ninja-history"
     },
+    "Exceptional Eldritch Ember": {
+      "chaos": 27.21,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "exceptional-eldritch-ember",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 608 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 607.9750091877986,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Exceptional Eldritch Ichor": {
+      "chaos": 26.5,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "exceptional-eldritch-ichor",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 695 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 694.8679245283018,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Faceted Fossil": {
       "chaos": 40.94,
       "detail": {
@@ -858,6 +1143,215 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 176.40449438202248,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Farric Frost Hellion Alpha": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Farric Goliath": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Farric Lynx Alpha": {
+      "chaos": 2.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Farric Wolf Alpha": {
+      "chaos": 2.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Farrul, First of the Plains": {
+      "chaos": 37.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 269 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 269.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Fenumal Devourer": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Fenumal Plagued Arachnid": {
+      "chaos": 95.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Fenumal Queen": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Fenumal Scrabbler": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Fenumus, First of the Night": {
+      "chaos": 24.85,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Fertile Catalyst": {
+      "chaos": 10.86,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "fertile-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 4,009 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 4009.2081031307553,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -1016,6 +1510,82 @@
       },
       "source": "poe.ninja-previous-league"
     },
+    "Grand Eldritch Ember": {
+      "chaos": 4.95,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "grand-eldritch-ember",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 23,081 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 23080.80808080808,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Grand Eldritch Ichor": {
+      "chaos": 3.17,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "grand-eldritch-ichor",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 23,557 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 23557.097791798107,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Greater Eldritch Ember": {
+      "chaos": 0.9668,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "greater-eldritch-ember",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 45,184 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 45184.1125362019,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Greater Eldritch Ichor": {
+      "chaos": 0.7426,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "greater-eldritch-ichor",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 34,313 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 34313.22380824131,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Hinekora's Lock": {
       "chaos": 96198.13754208753,
       "detail": {
@@ -1054,6 +1624,63 @@
       },
       "source": "poe.ninja-history"
     },
+    "Hunter's Exalted Orb": {
+      "chaos": 312.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "hunters-exalted-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 110 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 109.68910256410257,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Imbued Catalyst": {
+      "chaos": 1.4,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "imbued-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 5,299 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 5298.571428571429,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Intrinsic Catalyst": {
+      "chaos": 1.77,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "intrinsic-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 12,633 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 12633.333333333334,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Jagged Fossil": {
       "chaos": 7.24,
       "detail": {
@@ -1078,7 +1705,7 @@
       "detail": {
         "category": "BaseType"
       },
-      "note": "stand-in (OR-7): poe.ninja keeps no daily rows of a stash line of a finished league; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
+      "note": "stand-in (OR-7): the daily rows of a base's stash line are not read; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept",
       "provenance": {
         "date": "2026-11-10",
         "depth": 26.0,
@@ -1151,6 +1778,44 @@
         "listings": 5
       },
       "source": "trade-api"
+    },
+    "Lesser Eldritch Ember": {
+      "chaos": 0.2432,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "lesser-eldritch-ember",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 87,932 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 87931.74342105263,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Lesser Eldritch Ichor": {
+      "chaos": 0.2636,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "lesser-eldritch-ichor",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 73,949 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 73949.16540212443,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
     },
     "Lion Pelt, item level 84, fractured +(31-35)% to Chaos Resistance": {
       "chaos": 20.0,
@@ -1270,151 +1935,210 @@
       "source": "poe.ninja-history"
     },
     "Muttering Essence of Anger": {
-      "chaos": 0.21089630931458697,
+      "chaos": 0.009670781893004115,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Anger",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 1.0,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Weeping Essence of Anger",
+        "of_chaos": 0.029012345679012345,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.21089630931458697,
+          "source": "trade-api"
+        },
+        "steps": 5
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (1 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Anger (0.02901 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.2109 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Contempt": {
-      "chaos": 5.5254833040421785,
+      "chaos": 0.014156378600823047,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Contempt",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 26.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Weeping Essence of Contempt",
+        "of_chaos": 0.04246913580246914,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 5.5254833040421785,
+          "source": "trade-api"
+        },
+        "steps": 5
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (26.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Contempt (0.04247 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 5.525 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Fear": {
-      "chaos": 87.18453427065026,
+      "chaos": 0.008353909465020576,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Fear",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 413.40000000000003,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Weeping Essence of Fear",
+        "of_chaos": 0.025061728395061725,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 87.18453427065026,
+          "source": "trade-api"
+        },
+        "steps": 5
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (413.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Fear (0.02506 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 87.18 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Greed": {
-      "chaos": 5.103690685413005,
+      "chaos": 0.008106995884773663,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Greed",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 24.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Weeping Essence of Greed",
+        "of_chaos": 0.02432098765432099,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 5.103690685413005,
+          "source": "trade-api"
+        },
+        "steps": 5
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (24.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Greed (0.02432 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 5.104 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Hatred": {
-      "chaos": 0.9792,
+      "chaos": 0.00868312757201646,
       "detail": {
-        "as_of": "2026-07-31",
-        "date": "2026-07-30",
-        "exchange": "muttering-essence-of-hatred",
+        "anchor": "Deafening Essence of Hatred",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Weeping Essence of Hatred",
+        "of_chaos": 0.026049382716049382,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.9792,
+          "source": "poe.ninja-history"
+        },
+        "steps": 5
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-30 (league day 6), 0.9 units traded that day; 2026-07-31 had no traded row",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Hatred (0.02605 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.9792 Chaos (poe.ninja-history)",
       "provenance": {
-        "date": "2026-07-30",
-        "depth": 0.936172385620915,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Sorrow": {
-      "chaos": 3.17,
+      "chaos": 0.009876543209876543,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Sorrow",
         "date": "2026-07-31",
-        "exchange": "muttering-essence-of-sorrow",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Weeping Essence of Sorrow",
+        "of_chaos": 0.02962962962962963,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 3.17,
+          "source": "poe.ninja-history"
+        },
+        "steps": 5
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 0.8 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Sorrow (0.02963 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 3.17 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 0.8422712933753943,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Torment": {
-      "chaos": 5.103690685413005,
+      "chaos": 0.008312757201646091,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Torment",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 24.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Weeping Essence of Torment",
+        "of_chaos": 0.024938271604938275,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 5.103690685413005,
+          "source": "trade-api"
+        },
+        "steps": 5
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (24.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Torment (0.02494 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 5.104 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Muttering Essence of Woe": {
-      "chaos": 0.9186,
+      "chaos": 0.01823045267489712,
+      "detail": {
+        "anchor": "Deafening Essence of Woe",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Weeping Essence of Woe",
+        "of_chaos": 0.054691358024691356,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.9186,
+          "source": "poe.ninja-history"
+        },
+        "steps": 5
+      },
+      "note": "vendor upgrade recipe (#885): one third of Weeping Essence of Woe (0.05469 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.9186 Chaos (poe.ninja-history)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
+    },
+    "Noxious Catalyst": {
+      "chaos": 1.45,
       "detail": {
         "as_of": "2026-07-31",
         "date": "2026-07-31",
-        "exchange": "muttering-essence-of-woe",
+        "exchange": "noxious-catalyst",
         "league": "Allflame",
         "league_day": 7
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 6.0 units traded that day",
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 4,620 units traded that day",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 6.030916612236012,
+        "depth": 4620.0,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -1529,6 +2253,44 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 569832.4777087274,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Orb of Conflict": {
+      "chaos": 75.16,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "orb-of-conflict",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,324 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 1324.2150079829698,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Orb of Dominance": {
+      "chaos": 329.2,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "orb-of-dominance",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 234 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 233.9580801944107,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -1653,7 +2415,7 @@
       "detail": {
         "category": "BaseType"
       },
-      "note": "stand-in (OR-7): poe.ninja keeps no daily rows of a stash line of a finished league; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (poe.ninja BaseType overview, Allflame, 2026-11-10: the cheapest normal line of item level 81 or more with at least 5 observations (item level 84, 19 observations))",
+      "note": "stand-in (OR-7): the daily rows of a base's stash line are not read; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (poe.ninja BaseType overview, Allflame, 2026-11-10: the cheapest normal line of item level 81 or more with at least 5 observations (item level 84, 19 observations))",
       "provenance": {
         "date": "2026-11-10",
         "depth": 19.0,
@@ -1671,7 +2433,7 @@
       "detail": {
         "category": "BaseType"
       },
-      "note": "stand-in (OR-7): poe.ninja keeps no daily rows of a stash line of a finished league; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (poe.ninja BaseType overview, Allflame, 2026-11-10: the cheapest normal line of item level 81 or more with at least 5 observations (item level 84, 19 observations))",
+      "note": "stand-in (OR-7): the daily rows of a base's stash line are not read; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (poe.ninja BaseType overview, Allflame, 2026-11-10: the cheapest normal line of item level 81 or more with at least 5 observations (item level 84, 19 observations))",
       "provenance": {
         "date": "2026-11-10",
         "depth": 19.0,
@@ -1779,6 +2541,25 @@
       },
       "source": "poe.ninja-history"
     },
+    "Prismatic Catalyst": {
+      "chaos": 21.28,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "prismatic-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 3,975 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 3975.234962406015,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Prismatic Fossil": {
       "chaos": 6.77,
       "detail": {
@@ -1811,6 +2592,25 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 1872.6530612244899,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Redeemer's Exalted Orb": {
+      "chaos": 121.9,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "redeemers-exalted-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 89 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 89.02378999179655,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -1874,6 +2674,44 @@
       },
       "source": "poe.ninja-previous-league"
     },
+    "Saqawal, First of the Sky": {
+      "chaos": 5.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 78 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 78.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Saqawine Blood Viper": {
+      "chaos": 1.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Scorched Fossil": {
       "chaos": 6.35,
       "detail": {
@@ -1894,384 +2732,484 @@
       "source": "poe.ninja-history"
     },
     "Screaming Essence of Anger": {
-      "chaos": 3.1634446397188047,
+      "chaos": 0.2611111111111111,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Anger",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 15.0,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Shrieking Essence of Anger",
+        "of_chaos": 0.7833333333333333,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 3.1634446397188047,
+          "source": "trade-api"
+        },
+        "steps": 2
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (15 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Anger (0.7833 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 3.163 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Anguish": {
-      "chaos": 0.4272,
+      "chaos": 0.2111111111111111,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "screaming-essence-of-anguish",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Anguish",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Shrieking Essence of Anguish",
+        "of_chaos": 0.6333333333333333,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.4272,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 868 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Anguish (0.6333 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.4272 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 867.7434456928838,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Contempt": {
-      "chaos": 0.4842,
+      "chaos": 0.38222222222222224,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Contempt",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-contempt",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Contempt",
+        "of_chaos": 1.1466666666666667,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.4842,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 852 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Contempt (1.147 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.4842 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 852.12722015696,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Doubt": {
-      "chaos": 2.10896309314587,
+      "chaos": 0.21333333333333335,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Doubt",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 10.0,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Shrieking Essence of Doubt",
+        "of_chaos": 0.64,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.10896309314587,
+          "source": "trade-api"
+        },
+        "steps": 2
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (10 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Doubt (0.64 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.109 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Dread": {
-      "chaos": 0.7948,
+      "chaos": 0.21666666666666667,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Dread",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-dread",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Dread",
+        "of_chaos": 0.65,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.7948,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 412 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Dread (0.65 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.7948 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 412.1791645697031,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Envy": {
-      "chaos": 1.8,
+      "chaos": 0.82,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Envy",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-envy",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Envy",
+        "of_chaos": 2.46,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.8,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 903 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Envy (2.46 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.8 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 903.3333333333333,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Fear": {
-      "chaos": 0.3984,
+      "chaos": 0.22555555555555554,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Fear",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-fear",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Fear",
+        "of_chaos": 0.6766666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.3984,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 645 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Fear (0.6767 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.3984 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 645.0803212851406,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Greed": {
-      "chaos": 0.0421792618629174,
+      "chaos": 0.21888888888888888,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Greed",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 0.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Shrieking Essence of Greed",
+        "of_chaos": 0.6566666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.0421792618629174,
+          "source": "poe.ninja"
+        },
+        "steps": 2
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Greed (0.6567 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.04218 Chaos (poe.ninja)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "ninja-exchange",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Hatred": {
-      "chaos": 0.361,
+      "chaos": 0.23444444444444443,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Hatred",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-hatred",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Hatred",
+        "of_chaos": 0.7033333333333333,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.361,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 705 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Hatred (0.7033 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.361 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 704.7091412742383,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Loathing": {
-      "chaos": 0.3884,
+      "chaos": 0.55,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "screaming-essence-of-loathing",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Loathing",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Shrieking Essence of Loathing",
+        "of_chaos": 1.6500000000000001,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.3884,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 933 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Loathing (1.65 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.3884 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 933.3161688980432,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Misery": {
-      "chaos": 0.3461,
+      "chaos": 0.21555555555555553,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "screaming-essence-of-misery",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Misery",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Shrieking Essence of Misery",
+        "of_chaos": 0.6466666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.3461,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 628 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Misery (0.6467 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.3461 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 627.5642877780988,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Rage": {
-      "chaos": 2.51,
+      "chaos": 0.3577777777777778,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Rage",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-rage",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Rage",
+        "of_chaos": 1.0733333333333335,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.51,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,446 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Rage (1.073 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.51 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1445.8167330677293,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Scorn": {
-      "chaos": 1.9824253075571177,
+      "chaos": 0.49444444444444446,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Scorn",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 9.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Shrieking Essence of Scorn",
+        "of_chaos": 1.4833333333333334,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.9824253075571177,
+          "source": "trade-api"
+        },
+        "steps": 2
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (9.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Scorn (1.483 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.982 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Sorrow": {
-      "chaos": 0.7339,
+      "chaos": 0.26666666666666666,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Sorrow",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-sorrow",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Sorrow",
+        "of_chaos": 0.7999999999999999,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.7339,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,214 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Sorrow (0.8 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.7339 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1214.061861289004,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Spite": {
-      "chaos": 0.6693,
+      "chaos": 0.26666666666666666,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Spite",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-spite",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Spite",
+        "of_chaos": 0.7999999999999999,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.6693,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 666 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Spite (0.8 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.6693 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 665.9196175108322,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Suffering": {
-      "chaos": 1.729349736379613,
+      "chaos": 0.2077777777777778,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Suffering",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 8.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Shrieking Essence of Suffering",
+        "of_chaos": 0.6233333333333334,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.729349736379613,
+          "source": "trade-api"
+        },
+        "steps": 2
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (8.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Suffering (0.6233 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.729 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Torment": {
-      "chaos": 0.468,
+      "chaos": 0.22444444444444445,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Torment",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-torment",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Torment",
+        "of_chaos": 0.6733333333333333,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.468,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 737 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Torment (0.6733 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.468 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 736.9658119658119,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Woe": {
-      "chaos": 0.5913,
+      "chaos": 0.49222222222222217,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Woe",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-woe",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Woe",
+        "of_chaos": 1.4766666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.5913,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,197 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Woe (1.477 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.5913 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1197.1926264163706,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Wrath": {
-      "chaos": 0.4003,
+      "chaos": 0.22999999999999998,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Wrath",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-wrath",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Wrath",
+        "of_chaos": 0.69,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.4003,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 480 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Wrath (0.69 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.4003 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 479.89008243817136,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Screaming Essence of Zeal": {
-      "chaos": 0.8118,
+      "chaos": 0.6144444444444445,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Zeal",
         "date": "2026-07-31",
-        "exchange": "screaming-essence-of-zeal",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Shrieking Essence of Zeal",
+        "of_chaos": 1.8433333333333335,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.8118,
+          "source": "poe.ninja-history"
+        },
+        "steps": 2
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 662 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Shrieking Essence of Zeal (1.843 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.8118 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 662.1088938162109,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Serrated Fossil": {
       "chaos": 7.1,
@@ -2292,385 +3230,504 @@
       },
       "source": "poe.ninja-previous-league"
     },
-    "Shrieking Essence of Anger": {
-      "chaos": 1.11,
+    "Shaper's Exalted Orb": {
+      "chaos": 189.0,
       "detail": {
         "as_of": "2026-07-31",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-anger",
+        "exchange": "shapers-exalted-orb",
         "league": "Allflame",
         "league_day": 7
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,673 units traded that day",
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 391 units traded that day",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1672.972972972973,
+        "depth": 391.2857142857143,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
       },
       "source": "poe.ninja-history"
+    },
+    "Shrieking Essence of Anger": {
+      "chaos": 0.7833333333333333,
+      "detail": {
+        "anchor": "Deafening Essence of Anger",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Anger",
+        "of_chaos": 2.35,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.11,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
+      },
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Anger (2.35 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.11 Chaos (poe.ninja-history)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Anguish": {
-      "chaos": 0.3754,
+      "chaos": 0.6333333333333333,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Anguish",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-anguish",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Anguish",
+        "of_chaos": 1.9,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.3754,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 539 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Anguish (1.9 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.3754 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 538.6254661694193,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Contempt": {
-      "chaos": 0.9395,
+      "chaos": 1.1466666666666667,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Contempt",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-contempt",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Contempt",
+        "of_chaos": 3.44,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.9395,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,058 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Contempt (3.44 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.9395 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1058.0095795635978,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Doubt": {
-      "chaos": 0.3971,
+      "chaos": 0.64,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Doubt",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-doubt",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Doubt",
+        "of_chaos": 1.92,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.3971,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 833 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Doubt (1.92 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.3971 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 832.7877109040544,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Dread": {
-      "chaos": 0.8543,
+      "chaos": 0.65,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Dread",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-dread",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Dread",
+        "of_chaos": 1.95,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.8543,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 618 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Dread (1.95 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.8543 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 618.4010300831089,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Envy": {
-      "chaos": 4.0,
+      "chaos": 2.46,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Envy",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-envy",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Envy",
+        "of_chaos": 7.38,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 4.0,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 992 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Envy (7.38 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 4 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 992.25,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Fear": {
-      "chaos": 0.8484,
+      "chaos": 0.6766666666666666,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "shrieking-essence-of-fear",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Fear",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Fear",
+        "of_chaos": 2.03,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.8484,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,653 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Fear (2.03 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.8484 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1652.5223950966524,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Greed": {
-      "chaos": 0.8016,
+      "chaos": 0.6566666666666666,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "shrieking-essence-of-greed",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Greed",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Greed",
+        "of_chaos": 1.97,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.8016,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,713 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Greed (1.97 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.8016 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1712.8243512974052,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Hatred": {
-      "chaos": 0.8452,
+      "chaos": 0.7033333333333333,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "shrieking-essence-of-hatred",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Hatred",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Hatred",
+        "of_chaos": 2.11,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.8452,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,969 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Hatred (2.11 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.8452 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1968.764789398959,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Loathing": {
-      "chaos": 1.25,
+      "chaos": 1.6500000000000001,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "shrieking-essence-of-loathing",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Loathing",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Loathing",
+        "of_chaos": 4.95,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.25,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,632 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Loathing (4.95 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.25 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1632.0,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Misery": {
-      "chaos": 0.4728,
+      "chaos": 0.6466666666666666,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Misery",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-misery",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Misery",
+        "of_chaos": 1.94,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.4728,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 274 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Misery (1.94 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.4728 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 274.11167512690355,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Rage": {
-      "chaos": 2.1,
+      "chaos": 1.0733333333333335,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Rage",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-rage",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Rage",
+        "of_chaos": 3.22,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.1,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,669 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Rage (3.22 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.1 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1669.047619047619,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Scorn": {
-      "chaos": 1.85,
+      "chaos": 1.4833333333333334,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Scorn",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-scorn",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Scorn",
+        "of_chaos": 4.45,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.85,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 674 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Scorn (4.45 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.85 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 674.0540540540541,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Sorrow": {
-      "chaos": 1.28,
+      "chaos": 0.7999999999999999,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Sorrow",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-sorrow",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Sorrow",
+        "of_chaos": 2.4,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.28,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,421 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Sorrow (2.4 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.28 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1421.09375,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Spite": {
-      "chaos": 1.23,
+      "chaos": 0.7999999999999999,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "shrieking-essence-of-spite",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Spite",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Spite",
+        "of_chaos": 2.4,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.23,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,627 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Spite (2.4 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.23 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1626.8292682926829,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Suffering": {
-      "chaos": 0.3677,
+      "chaos": 0.6233333333333334,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Suffering",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-suffering",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Suffering",
+        "of_chaos": 1.87,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.3677,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 806 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Suffering (1.87 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.3677 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 806.0919227631219,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Torment": {
-      "chaos": 0.4332,
+      "chaos": 0.6733333333333333,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Torment",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-torment",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Torment",
+        "of_chaos": 2.02,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.4332,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 819 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Torment (2.02 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.4332 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 818.5595567867038,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Woe": {
-      "chaos": 1.76,
+      "chaos": 1.4766666666666666,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Woe",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-woe",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Woe",
+        "of_chaos": 4.43,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.76,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,284 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Woe (4.43 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.76 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1283.5227272727273,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Shrieking Essence of Wrath": {
-      "chaos": 0.9489,
+      "chaos": 0.69,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "shrieking-essence-of-wrath",
-        "league": "Mirage"
-      },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,735 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
-      "provenance": {
-        "date": "2026-03-13",
-        "depth": 1734.6401096005902,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
-      },
-      "source": "poe.ninja-previous-league"
-    },
-    "Shrieking Essence of Zeal": {
-      "chaos": 2.83,
-      "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Wrath",
         "date": "2026-07-31",
-        "exchange": "shrieking-essence-of-zeal",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Deafening Essence of Wrath",
+        "of_chaos": 2.07,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.9489,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 1
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,612 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Wrath (2.07 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.9489 Chaos (poe.ninja-previous-league)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 1612.3674911660778,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
+    },
+    "Shrieking Essence of Zeal": {
+      "chaos": 1.8433333333333335,
+      "detail": {
+        "anchor": "Deafening Essence of Zeal",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Deafening Essence of Zeal",
+        "of_chaos": 5.53,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.83,
+          "source": "poe.ninja-history"
+        },
+        "steps": 1
+      },
+      "note": "vendor upgrade recipe (#885): one third of Deafening Essence of Zeal (5.53 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.83 Chaos (poe.ninja-history)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
     },
     "Shuddering Fossil": {
       "chaos": 11.96,
@@ -2690,6 +3747,25 @@
         "league": "Allflame"
       },
       "source": "poe.ninja-history"
+    },
+    "Sinistral Catalyst": {
+      "chaos": 11.06,
+      "detail": {
+        "age_days": 7,
+        "current_league": "Allflame",
+        "date": "2026-03-13",
+        "exchange": "sinistral-catalyst",
+        "league": "Mirage"
+      },
+      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1,069 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "provenance": {
+        "date": "2026-03-13",
+        "depth": 1068.7160940325498,
+        "depth_unit": "units",
+        "kind": "ninja-previous-league",
+        "league": "Mirage"
+      },
+      "source": "poe.ninja-previous-league"
     },
     "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed": {
       "chaos": 17.0,
@@ -2853,6 +3929,44 @@
       },
       "source": "poe.ninja-previous-league"
     },
+    "Tempering Catalyst": {
+      "chaos": 2.63,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "tempering-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 2,227 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 2226.615969581749,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "The Black Mórrígan": {
+      "chaos": 147.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Thicket Bow, magic, item level 78-79, Hunter influence": {
       "chaos": 9.8,
       "detail": {
@@ -2928,6 +4042,25 @@
       },
       "source": "trade-api"
     },
+    "Turbulent Catalyst": {
+      "chaos": 1.92,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "turbulent-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 5,822 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 5821.875,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Two-Toned Boots [BootsAtlas1], item level 86-100": {
       "chaos": 5.02409,
       "detail": {
@@ -2994,6 +4127,25 @@
       },
       "source": "trade-api"
     },
+    "Unstable Catalyst": {
+      "chaos": 3.14,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "unstable-catalyst",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 2,171 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 2171.019108280255,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
     "Vaal Orb": {
       "chaos": 0.6097,
       "detail": {
@@ -3007,6 +4159,44 @@
       "provenance": {
         "date": "2026-07-31",
         "depth": 122447.10513367229,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Veiled Chaos Orb": {
+      "chaos": 18.48,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "veiled-chaos-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 1,842 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 1841.8290043290042,
+        "depth_unit": "units",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
+    },
+    "Veiled Exalted Orb": {
+      "chaos": 795.1,
+      "detail": {
+        "as_of": "2026-07-31",
+        "date": "2026-07-31",
+        "exchange": "veiled-exalted-orb",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 103 units traded that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 103.36184127782668,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
@@ -3033,593 +4223,810 @@
       "source": "poe.ninja-history"
     },
     "Wailing Essence of Anger": {
-      "chaos": 2.6151142355008785,
+      "chaos": 0.08703703703703704,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Anger",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 12.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Anger",
+        "of_chaos": 0.2611111111111111,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.6151142355008785,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Anger (0.2611 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.615 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Anguish": {
-      "chaos": 1.813708260105448,
+      "chaos": 0.07037037037037037,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Anguish",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 8.6,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Anguish",
+        "of_chaos": 0.2111111111111111,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.813708260105448,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (8.6 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Anguish (0.2111 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.814 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Contempt": {
-      "chaos": 3.4165202108963086,
+      "chaos": 0.1274074074074074,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Contempt",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 16.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Contempt",
+        "of_chaos": 0.38222222222222224,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 3.4165202108963086,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (16.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Contempt (0.3822 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 3.417 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Doubt": {
-      "chaos": 0.10544815465729349,
+      "chaos": 0.07111111111111111,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Doubt",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 0.5,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Doubt",
+        "of_chaos": 0.21333333333333335,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.10544815465729349,
+          "source": "poe.ninja"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.5 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Doubt (0.2133 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.1054 Chaos (poe.ninja)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "ninja-exchange",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Fear": {
-      "chaos": 2.6151142355008785,
+      "chaos": 0.07518518518518517,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Fear",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 12.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Fear",
+        "of_chaos": 0.22555555555555554,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.6151142355008785,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Fear (0.2256 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.615 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Greed": {
-      "chaos": 0.4779,
+      "chaos": 0.07296296296296297,
       "detail": {
-        "as_of": "2026-07-31",
+        "anchor": "Deafening Essence of Greed",
         "date": "2026-07-31",
-        "exchange": "wailing-essence-of-greed",
         "league": "Allflame",
-        "league_day": 7
+        "of": "Screaming Essence of Greed",
+        "of_chaos": 0.21888888888888888,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.4779,
+          "source": "poe.ninja-history"
+        },
+        "steps": 3
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 21 units traded that day",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Greed (0.2189 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.4779 Chaos (poe.ninja-history)",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 20.924879681941828,
-        "depth_unit": "units",
-        "kind": "ninja-history",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja-history"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Hatred": {
-      "chaos": 4.21792618629174,
+      "chaos": 0.07814814814814815,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Hatred",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 20.0,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Hatred",
+        "of_chaos": 0.23444444444444443,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 4.21792618629174,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (20 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Hatred (0.2344 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 4.218 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Loathing": {
-      "chaos": 0.15817223198594024,
+      "chaos": 0.18333333333333335,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Loathing",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 0.75,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Loathing",
+        "of_chaos": 0.55,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.15817223198594024,
+          "source": "poe.ninja"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.75 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Loathing (0.55 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.1582 Chaos (poe.ninja)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "ninja-exchange",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Rage": {
-      "chaos": 1.0123022847100174,
+      "chaos": 0.11925925925925927,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Rage",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 4.8,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Rage",
+        "of_chaos": 0.3577777777777778,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.0123022847100174,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (4.8 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Rage (0.3578 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.012 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Sorrow": {
-      "chaos": 0.0421792618629174,
+      "chaos": 0.08888888888888889,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Sorrow",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 0.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Sorrow",
+        "of_chaos": 0.26666666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.0421792618629174,
+          "source": "poe.ninja"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Sorrow (0.2667 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.04218 Chaos (poe.ninja)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "ninja-exchange",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Spite": {
-      "chaos": 2.6151142355008785,
+      "chaos": 0.08888888888888889,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Spite",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 12.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Spite",
+        "of_chaos": 0.26666666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.6151142355008785,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Spite (0.2667 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.615 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Suffering": {
-      "chaos": 2.6151142355008785,
+      "chaos": 0.06925925925925927,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Suffering",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 12.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Suffering",
+        "of_chaos": 0.2077777777777778,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.6151142355008785,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Suffering (0.2078 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.615 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Torment": {
-      "chaos": 0.7543,
+      "chaos": 0.07481481481481482,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "wailing-essence-of-torment",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Torment",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Screaming Essence of Torment",
+        "of_chaos": 0.22444444444444445,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.7543,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 3
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 5.3 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Torment (0.2244 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.7543 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 5.329444518096248,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Woe": {
-      "chaos": 1.26,
+      "chaos": 0.16407407407407407,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "wailing-essence-of-woe",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Woe",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Screaming Essence of Woe",
+        "of_chaos": 0.49222222222222217,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.26,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 3
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 9.9 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Woe (0.4922 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.26 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 9.857142857142858,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Wrath": {
-      "chaos": 2.994727592267135,
+      "chaos": 0.07666666666666666,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Wrath",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 14.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Wrath",
+        "of_chaos": 0.22999999999999998,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.994727592267135,
+          "source": "trade-api"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (14.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Wrath (0.23 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.995 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Wailing Essence of Zeal": {
-      "chaos": 1.93,
+      "chaos": 0.2048148148148148,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "wailing-essence-of-zeal",
-        "league": "Mirage"
-      },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 4.7 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
-      "provenance": {
-        "date": "2026-03-13",
-        "depth": 4.709844559585492,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
-      },
-      "source": "poe.ninja-previous-league"
-    },
-    "Weeping Essence of Anger": {
-      "chaos": 2.994727592267135,
-      "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Zeal",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 14.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Screaming Essence of Zeal",
+        "of_chaos": 0.6144444444444445,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.93,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 3
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (14.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Screaming Essence of Zeal (0.6144 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.93 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
-    "Weeping Essence of Contempt": {
-      "chaos": 2.6151142355008785,
-      "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
-        "league": "Allflame",
-        "reading_chaos": 12.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
-      },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
-      "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
-        "league": "Allflame"
-      },
-      "source": "trade-api"
-    },
-    "Weeping Essence of Doubt": {
-      "chaos": 1.88,
+    "Warlord's Exalted Orb": {
+      "chaos": 283.7,
       "detail": {
         "as_of": "2026-07-31",
         "date": "2026-07-31",
-        "exchange": "weeping-essence-of-doubt",
+        "exchange": "warlords-exalted-orb",
         "league": "Allflame",
         "league_day": 7
       },
-      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 17 units traded that day",
+      "note": "poe.ninja daily exchange rate of 2026-07-31 (league day 7), 95 units traded that day",
       "provenance": {
         "date": "2026-07-31",
-        "depth": 16.73404255319149,
+        "depth": 94.6774762072612,
         "depth_unit": "units",
         "kind": "ninja-history",
         "league": "Allflame"
       },
       "source": "poe.ninja-history"
     },
-    "Weeping Essence of Fear": {
-      "chaos": 2.994727592267135,
+    "Weeping Essence of Anger": {
+      "chaos": 0.029012345679012345,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Anger",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 14.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Wailing Essence of Anger",
+        "of_chaos": 0.08703703703703704,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.994727592267135,
+          "source": "trade-api"
+        },
+        "steps": 4
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (14.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Anger (0.08704 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.995 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
+    },
+    "Weeping Essence of Contempt": {
+      "chaos": 0.04246913580246914,
+      "detail": {
+        "anchor": "Deafening Essence of Contempt",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Wailing Essence of Contempt",
+        "of_chaos": 0.1274074074074074,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.6151142355008785,
+          "source": "trade-api"
+        },
+        "steps": 4
+      },
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Contempt (0.1274 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.615 Chaos (trade-api)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
+    },
+    "Weeping Essence of Doubt": {
+      "chaos": 0.023703703703703703,
+      "detail": {
+        "anchor": "Deafening Essence of Doubt",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Wailing Essence of Doubt",
+        "of_chaos": 0.07111111111111111,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.88,
+          "source": "poe.ninja-history"
+        },
+        "steps": 4
+      },
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Doubt (0.07111 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.88 Chaos (poe.ninja-history)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
+    },
+    "Weeping Essence of Fear": {
+      "chaos": 0.025061728395061725,
+      "detail": {
+        "anchor": "Deafening Essence of Fear",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Wailing Essence of Fear",
+        "of_chaos": 0.07518518518518517,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.994727592267135,
+          "source": "trade-api"
+        },
+        "steps": 4
+      },
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Fear (0.07519 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.995 Chaos (trade-api)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Greed": {
-      "chaos": 1.813708260105448,
+      "chaos": 0.02432098765432099,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Greed",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 8.6,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Wailing Essence of Greed",
+        "of_chaos": 0.07296296296296297,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.813708260105448,
+          "source": "trade-api"
+        },
+        "steps": 4
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (8.6 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Greed (0.07296 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.814 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Hatred": {
-      "chaos": 1.29,
+      "chaos": 0.026049382716049382,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "weeping-essence-of-hatred",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Hatred",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Wailing Essence of Hatred",
+        "of_chaos": 0.07814814814814815,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.29,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 4
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 0.8 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Hatred (0.07815 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.29 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 0.7751937984496123,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Rage": {
-      "chaos": 0.0421792618629174,
+      "chaos": 0.03975308641975309,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Rage",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 0.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Wailing Essence of Rage",
+        "of_chaos": 0.11925925925925927,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.0421792618629174,
+          "source": "poe.ninja"
+        },
+        "steps": 4
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Rage (0.1193 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.04218 Chaos (poe.ninja)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "ninja-exchange",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Sorrow": {
-      "chaos": 0.7769,
+      "chaos": 0.02962962962962963,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "weeping-essence-of-sorrow",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Sorrow",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Wailing Essence of Sorrow",
+        "of_chaos": 0.08888888888888889,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.7769,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 4
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1.3 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Sorrow (0.08889 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.7769 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1.287166945552838,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Suffering": {
-      "chaos": 0.6667,
+      "chaos": 0.023086419753086423,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "weeping-essence-of-suffering",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Suffering",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Wailing Essence of Suffering",
+        "of_chaos": 0.06925925925925927,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.6667,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 4
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 0.5 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Suffering (0.06926 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.6667 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 0.4999250037498125,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Torment": {
-      "chaos": 2.1933216168717045,
+      "chaos": 0.024938271604938275,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Torment",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 10.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Wailing Essence of Torment",
+        "of_chaos": 0.07481481481481482,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.1933216168717045,
+          "source": "trade-api"
+        },
+        "steps": 4
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (10.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Torment (0.07481 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.193 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Woe": {
-      "chaos": 0.10544815465729349,
+      "chaos": 0.054691358024691356,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Woe",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 0.5,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Wailing Essence of Woe",
+        "of_chaos": 0.16407407407407407,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 0.10544815465729349,
+          "source": "poe.ninja"
+        },
+        "steps": 4
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (0.5 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Woe (0.1641 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 0.1054 Chaos (poe.ninja)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "ninja-exchange",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "poe.ninja"
+      "source": "upgrade-recipe"
     },
     "Weeping Essence of Wrath": {
-      "chaos": 3.4165202108963086,
+      "chaos": 0.025555555555555554,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Wrath",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 16.2,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Wailing Essence of Wrath",
+        "of_chaos": 0.07666666666666666,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 3.4165202108963086,
+          "source": "trade-api"
+        },
+        "steps": 4
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (16.2 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Wailing Essence of Wrath (0.07667 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 3.417 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Whispering Essence of Contempt": {
-      "chaos": 1.33,
+      "chaos": 0.004718792866941016,
       "detail": {
-        "age_days": 7,
-        "current_league": "Allflame",
-        "date": "2026-03-13",
-        "exchange": "whispering-essence-of-contempt",
-        "league": "Mirage"
+        "anchor": "Deafening Essence of Contempt",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Muttering Essence of Contempt",
+        "of_chaos": 0.014156378600823047,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.33,
+          "source": "poe.ninja-previous-league"
+        },
+        "steps": 6
       },
-      "note": "poe.ninja daily exchange rate of 2026-03-13 in Mirage (its league day 7, the same age), 1.2 units traded that day: Allflame has no daily row from 2026-07-25 to 2026-07-31",
+      "note": "vendor upgrade recipe (#885): one third of Muttering Essence of Contempt (0.01416 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.33 Chaos (poe.ninja-previous-league)",
       "provenance": {
-        "date": "2026-03-13",
-        "depth": 1.2330827067669172,
-        "depth_unit": "units",
-        "kind": "ninja-previous-league",
-        "league": "Mirage"
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
       },
-      "source": "poe.ninja-previous-league"
+      "source": "upgrade-recipe"
     },
     "Whispering Essence of Greed": {
-      "chaos": 2.6151142355008785,
+      "chaos": 0.002702331961591221,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Greed",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 12.4,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Muttering Essence of Greed",
+        "of_chaos": 0.008106995884773663,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 2.6151142355008785,
+          "source": "trade-api"
+        },
+        "steps": 6
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (12.4 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Muttering Essence of Greed (0.008107 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 2.615 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
     },
     "Whispering Essence of Hatred": {
-      "chaos": 3.7961335676625656,
+      "chaos": 0.0028943758573388204,
       "detail": {
-        "date": "2026-11-10",
-        "divided_by": 4.741666666666667,
-        "group": "essence",
+        "anchor": "Deafening Essence of Hatred",
+        "date": "2026-07-31",
         "league": "Allflame",
-        "reading_chaos": 18.0,
-        "sample": 55,
-        "template": "routes-allflame-2026-11-10.json"
+        "of": "Muttering Essence of Hatred",
+        "of_chaos": 0.00868312757201646,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 3.7961335676625656,
+          "source": "trade-api"
+        },
+        "steps": 6
       },
-      "note": "stand-in (OR-7, OR-23): no poe.ninja daily row in Allflame from 2026-07-25 to 2026-07-31 nor in Mirage from 2026-03-07 to 2026-03-13; the reading of 2026-11-10 from routes-allflame-2026-11-10.json (18 Chaos) divided by 4.742, the median rise of the 55 essence names priced on both days",
+      "note": "vendor upgrade recipe (#885): one third of Muttering Essence of Hatred (0.008683 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 3.796 Chaos (trade-api)",
       "provenance": {
-        "date": "2026-11-10",
-        "kind": "trade",
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
         "league": "Allflame"
       },
-      "source": "trade-api"
+      "source": "upgrade-recipe"
+    },
+    "Whispering Essence of Woe": {
+      "chaos": 0.00607681755829904,
+      "detail": {
+        "anchor": "Deafening Essence of Woe",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "of": "Muttering Essence of Woe",
+        "of_chaos": 0.01823045267489712,
+        "per": 3,
+        "recipe": "essence-upgrade",
+        "replaced": {
+          "chaos": 1.4,
+          "source": "poe.ninja-history"
+        },
+        "steps": 6
+      },
+      "note": "vendor upgrade recipe (#885): one third of Muttering Essence of Woe (0.01823 Chaos); 3 essences of a tier make one of the next tier of the same type, so the lower tiers have no market of their own; it replaces the row of 1.4 Chaos (poe.ninja-history)",
+      "provenance": {
+        "date": "2026-07-31",
+        "kind": "upgrade-recipe",
+        "league": "Allflame"
+      },
+      "source": "upgrade-recipe"
+    },
+    "Wild Bristle Matron": {
+      "chaos": 235.0,
+      "detail": {
+        "as_of": "2026-07-31",
+        "category": "Beast",
+        "date": "2026-07-31",
+        "league": "Allflame",
+        "league_day": 7
+      },
+      "note": "poe.ninja daily value of the beast on 2026-07-31 (league day 7), 399 listings seen that day",
+      "provenance": {
+        "date": "2026-07-31",
+        "depth": 399.0,
+        "depth_unit": "observations",
+        "kind": "ninja-history",
+        "league": "Allflame"
+      },
+      "source": "poe.ninja-history"
     },
     "Wild Crystallised Lifeforce": {
       "chaos": 0.02044,
