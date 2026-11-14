@@ -18,6 +18,7 @@ from coarse_support import DATA as COARSE
 from test_cli_limit_words import read  # the rule of player words (#481)
 
 from crafting_system import budget
+from crafting_system.abstraction import refusal_causes
 from crafting_system.budget import MEMORY, STATES, TIME, Binding, Budget, BudgetExceeded
 from crafting_system.cli import _main, make_plan
 from crafting_system.planner import _plan
@@ -193,9 +194,13 @@ def test_the_bound_pruning_stops_at_the_net_instead_of_running_on(coarse, fake, 
         return real(*args, **kwargs)
 
     monkeypatch.setattr(_plan, "solve_pruned", late)
-    said = refusal(coarse, budget=Budget(seconds=100.0, memory_mb=None))
+    # a run that asks for the whole proof: with a gap `auto` is the envelope search whatever the number of offers (#926), not the bound pruning
+    said = refusal(coarse, budget=Budget(seconds=100.0, memory_mb=None, gap=0.0))
     assert seen, "the plan did not take the bound pruning"
-    assert said == f"stopped after 150 s: {PRUNED_STAGE} stopped at the time limit of 100 s (150 s spent): no plan found yet"
+    assert said == (
+        f"stopped after 150 s: {PRUNED_STAGE} stopped at the time limit of 100 s (150 s spent): no plan found yet; "
+        "the faster search, which proves its plan against the cheapest possible cost, was not used: 2 actions or more are offered and the run asks for the whole proof that no plan is cheaper"
+    )  # the stop says why `auto` walked instead of searching (OR-13, #926)
 
 
 def test_a_memory_net_stops_the_run_where_it_is_and_says_so(coarse):  # noqa: F811
@@ -206,9 +211,114 @@ def test_a_memory_net_stops_the_run_where_it_is_and_says_so(coarse):  # noqa: F8
 def test_the_bound_pruning_with_room_gives_the_plan_and_lists_nothing(coarse, monkeypatch):  # noqa: F811
     monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
     target, prices, full = coarse
-    plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(seconds=3_600.0, memory_mb=None))
+    plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(seconds=3_600.0, memory_mb=None, gap=0.0))
     assert plan.pruned is not None and plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-9)
     assert not [limit for limit in plan.limits if limit.kind == BUDGET]
+
+
+# ---- #926: under a budget `auto` never reaches the forecast of ADR-0023 or its ladder of approximate answers ----------------------------
+
+
+@pytest.fixture
+def no_forecast(monkeypatch):
+    """The forecast and the ladder fail the test that reaches them."""
+
+    def reached(*_args, **_kwargs):
+        raise AssertionError("a plan under `auto` reached the retired forecast or its ladder")
+
+    monkeypatch.setattr(_plan, "decide", reached)
+    monkeypatch.setattr(_plan, "climb", reached)
+
+
+def test_under_a_budget_many_offers_take_the_envelope_search_not_the_forecast(coarse, monkeypatch, no_forecast):  # noqa: F811
+    """The twelve family cases of #926 offered 43 to 140 actions: 40 or more sent `auto` to the bound pruning, and a budget put the forecast and the
+    ladder before it, which refused them. Under a budget with a gap it is the envelope search: its own stop at the proved gap, and the net as
+    the guard. The aim is not what decides it: a budget with no aim, and a number of seconds (the aim alone), take the same search."""
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
+    target, prices, full = coarse
+    for budget in (Budget(seconds=3_600.0, memory_mb=None), Budget(aim_seconds=None, seconds=3_600.0, memory_mb=None), 60.0):
+        plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=budget)
+        assert plan.pruned is None and plan.approximation is None and plan.search is not None
+        assert plan.search.exact or plan.search.within is not None  # it ended by itself: exact, or at the budget's proved gap (OR-39)
+        assert full.mean_remaining * (1 - 1e-9) <= plan.mean_remaining <= full.mean_remaining * (1 + Budget().gap)
+        assert not [limit for limit in plan.limits if limit.kind == BUDGET]
+
+
+def test_a_plan_inside_a_run_takes_the_search_by_the_runs_gap_as_the_search_itself_reads_it(coarse, monkeypatch, no_forecast):  # noqa: F811
+    """A plan inside a run that already has a clock (a start option, a reading) shares it: the gap that decides is the run's, the one
+    `search_gap` gives the search, whatever budget the inner call names."""
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
+    target, prices, _ = coarse
+    with budget.running(Budget(seconds=3_600.0, memory_mb=None).start()):  # the run has a gap: the search, though the inner call asks for none
+        for inner in (None, Budget(memory_mb=None, gap=0.0)):
+            plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=inner)
+            assert plan.search is not None and plan.pruned is None
+    with budget.running(Budget(seconds=3_600.0, memory_mb=None, gap=0.0).start()):  # the run owes the whole proof: the pruning
+        plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(memory_mb=None))
+        assert plan.pruned is not None and plan.search is None
+
+
+@pytest.mark.parametrize("budget", [None, Budget(seconds=3_600.0, memory_mb=None, gap=0.0), Budget(aim_seconds=60.0, seconds=None, memory_mb=None, gap=0.0)])
+def test_a_run_that_asks_for_the_whole_proof_keeps_the_bound_pruning_for_many_offers(coarse, monkeypatch, no_forecast, budget):  # noqa: F811
+    """#742's exception stands where the search has no stop of its own: no budget, or a gap of 0 (the command's `--exact` and `--gap 0`), with
+    or without an aim. Neither reaches the forecast."""
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
+    target, prices, full = coarse
+    plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=budget)
+    assert plan.pruned is not None and plan.search is None and plan.approximation is None
+    assert plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-9)
+
+
+def test_under_a_budget_many_offers_stop_at_the_net_in_the_searchs_own_words(coarse, monkeypatch, no_forecast):  # noqa: F811
+    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
+    target, prices, full = coarse
+    stopped = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(seconds=None, memory_mb=None, states=96, gap=1e-12))
+    info = stopped.search
+    assert info is not None and not info.exact and info.within is None  # the net ended it, with the best plan found and the figure below it
+    assert info.lower <= full.mean_remaining * (1 + 1e-9) <= info.upper * (1 + 1e-9)
+    assert [limit.names for limit in stopped.limits if limit.kind == BUDGET] == [(Binding(SEARCH_STAGE, STATES, 96, info.touched, _plan.SEARCH_KEPT).words(),)]
+
+
+@pytest.mark.parametrize("why", ["no bound", "a route to judge"])
+def test_under_a_budget_a_target_the_search_cannot_take_is_walked_to_the_net_with_no_forecast(coarse, monkeypatch, no_forecast, why):  # noqa: F811
+    """Where the envelope search cannot take the target (no lower bound for it yet, or a given route to judge) a budget changes nothing but the
+    net: the same exact walk as with no budget, and no approximate answer."""
+    if why == "no bound":
+        monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "planted for the test")
+    judged = dict(judges_route=why == "a route to judge")
+    target, prices, full = coarse
+    plan = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(aim_seconds=0.0, seconds=3_600.0, memory_mb=None), **judged)
+    assert plan.search is None and plan.approximation is None and plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-9)
+    assert not [limit for limit in plan.limits if limit.what.startswith(("The whole search", "The time of the search"))]  # the forecast's two limits
+
+
+def test_a_walk_the_net_stops_says_what_the_search_has_no_bound_for(coarse, monkeypatch, no_forecast):  # noqa: F811
+    """OR-13, #926: `auto` walked because the search has no lower bound for the target; the stop says which, in the words of `refusal_causes`."""
+    monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "planted")
+    monkeypatch.setattr(_plan, "refusal_causes", lambda _abstraction, player: ("an offered action reads the mods an unveil shows to pick from",) if player else ())
+    said = refusal(coarse, budget=Budget(seconds=0.0, memory_mb=None))
+    assert re.fullmatch(
+        rf"stopped after \d+ s: {WALK_STAGE} stopped at the time limit of 0 s \(\d+ s spent\): no plan found yet; the faster search, which proves "
+        r"its plan against the cheapest possible cost, was not used: it has no such cost yet where an offered action reads the mods an unveil shows to pick from",
+        said,
+    ), said
+    refused = make_plan(COARSE, coarse[0], coarse[1], start_price=5.0, solve_it=False).abstraction
+    refused._has_laws = True
+    for name in ("rerolls_values", "tracks_offer", "tracks_imprints"):
+        monkeypatch.setattr(type(refused), name, property(lambda self: True), raising=False)
+    every = refusal_causes(refused, player=True)
+    assert len(every) == len(refusal_causes(refused)) == 4  # every cause the bound has, in the words an answer may show (#481)
+    read(budget_limit([Binding(WALK_STAGE, TIME, 0.0, 1.0, _plan.walk_stop(_plan.walk_cause(every, False)))]))
+    monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: None)
+    judged = refusal(coarse, budget=Budget(seconds=0.0, memory_mb=None), judges_route=True)
+    assert judged.endswith("was not used: a given route is judged against the plan, which needs the planner's choice at every item the route can reach")
+    for cause in (_plan.walk_cause((), True), _plan.walk_cause((), False)):  # the two other causes, in the words an answer may show
+        read(budget_limit([Binding(WALK_STAGE, TIME, 0.0, 1.0, _plan.walk_stop(cause))]))
+
+
+@pytest.mark.parametrize("solver", ["packed", "object"])
+def test_a_walk_asked_for_by_name_says_no_cause(coarse, solver):  # noqa: F811
+    assert refusal(coarse, solver=solver, budget=Budget(seconds=0.0, memory_mb=None)).endswith(": no plan found yet")
 
 
 def test_a_stopped_search_keeps_its_plan_and_the_plan_says_which_limit_bound(coarse):  # noqa: F811
