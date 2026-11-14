@@ -824,7 +824,7 @@ class Search[S]:
                     upper = root * (1.0 + core.certificate.bound)
                     if not upper <= (1.0 + self.gap) * lower:  # (cannot be for a gap below about 8, with GAP_SHARE a tenth: said, not assumed)
                         raise ConvergenceError(
-                            f"the search closed every tip, but its solver certifies the plan's cost only to {core.certificate.bound:.3g}, "
+                            f"the search closed every tip, but the plan's cost is certified only to {core.certificate.bound:.3g}, "
                             f"which leaves it outside the gap of {self.gap:.3g} the run allows",
                             core.certificate.bound,
                         )
