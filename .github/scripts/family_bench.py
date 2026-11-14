@@ -668,7 +668,7 @@ def checks(record: dict) -> dict:
         # the two figures compared are each certified to their solve's error, which a plan of very many steps can leave above 1e-9 (#867:
         # growing-1-basic/large, 2.2e-7 of 3.07e7 Chaos): the slack is their sum, never less than `TOLERANCE`
         errors = ((record.get("plan") or {}).get("error_bound") or 0.0) + (walk.get("error_bound") or 0.0)
-        slack = max(TOLERANCE, errors) * max(1.0, abs(optimum))
+        slack = max(TOLERANCE, errors if math.isfinite(errors) else TOLERANCE) * max(1.0, abs(optimum))  # (an error that is not finite proves nothing)
         certified = record.get("certified_upper", upper)  # (a record from before #867 has the mean alone)
         out["lower_le_optimum"] = lower <= optimum + slack
         out["optimum_le_upper"] = optimum <= certified + slack

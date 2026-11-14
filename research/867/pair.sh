@@ -1,6 +1,6 @@
 # One paired measurement of ticket #867 on one GitHub runner: the same plan on `main` (commit $2) and on this branch, one after the other,
 # so the two times are of one machine (runners differ by up to 2 times). Started only through the dispatcher:
-#   python .github/scripts/heavy_dispatch.py run --no-wait --ref <branch> --runners 8 --command 'bash research/867/pair.sh $RUNNER_INDEX <sha of main>'
+#   python .github/scripts/heavy_dispatch.py run --no-wait --ref <branch> --runners 6 --command 'bash research/867/pair.sh $RUNNER_INDEX <sha of main>'
 # The plan is line $1 of research/867/pairs.txt, planned by research/881/profile_plan.py (no budget: the exact proof, the same work on both
 # sides). Order: main, branch, the branch with stage stopwatches, main, branch. The job fails when the four plain runs do not give one mean
 # and the same counts of the search. `peak.py` gives each run's peak memory (one process, see there).
