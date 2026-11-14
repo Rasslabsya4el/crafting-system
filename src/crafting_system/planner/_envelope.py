@@ -811,8 +811,9 @@ class Search[S]:
                 self.stats.solve_seconds += time.perf_counter() - mark
                 self.stats.lower_refused += 1
                 stopped = (
-                    f"the search could not go further: the count of its round {self.stats.rounds + 1:,} could be worked out only to within "
-                    f"{error.error_bound:.2g} of itself, more than the {self.refuse_above:.2g} this run allows"
+                    f"the search could not go further: the lowest possible cost of its round {self.stats.rounds + 1:,} could be worked out only to within "
+                    f"{error.error_bound:.2g} of itself (the crafting takes too many steps for the computer's arithmetic), more than the "
+                    f"{self.refuse_above:.2g} this run allows"
                 )
                 self.say(f"  {stopped} ({error})")
                 break
