@@ -619,8 +619,8 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
 
     A plan of the envelope search holds only the states it could not prove irrelevant (#535), so the route is never read on its graph: it is
-    walked here on its own reach as objects (#829). That reach is at most the graph `make_plan` checked: a judged plan comes from the search only
-    when the walk found at most `OBJECT_SOLVER_EDGES` transitions, or with `MIN_OFFERS` offers or more, where main's bound pruning read the route
+    walked here on its own reach as objects (#829). That reach is about the size of the graph `make_plan` checked (a route may also take an offer the walk
+    prunes, as on main): a judged plan comes from the search only when the walk found at most `OBJECT_SOLVER_EDGES` transitions, or with `MIN_OFFERS` offers or more, where main's bound pruning read the route
     as objects too. A bigger reach (R04's guide route is about 177,000 states of about 1,500 outcomes each, #70) does not fit as objects: its plan
     keeps the walk and the route is read on the walked graph (below; a packed walk of the route's own reach is #986). The divergences are read
     where the plan has a choice: on the states of its own policy.
