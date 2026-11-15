@@ -35,8 +35,9 @@ class PlanSettings:
       can cost less than, both after the start item), so a caller can show a plan while the proof goes on; with start options, once per option.
     * `strands`: consider Memory Strands.
     * `solver`: the search, one of `SOLVERS` (`auto` by default).
-    * `judges_route`: the caller will judge a given route against the plan. It decides nothing since #829: the route is evaluated on its own
-      reach, so `auto` takes the envelope search for it as for any plan; kept so that the callers need not change.
+    * `judges_route`: the caller will judge a given route against the plan. Since #829 the route is evaluated on its own reach, so `auto` takes
+      the envelope search for it as for any plan, except on a graph too big for that reach to be held as objects (more than
+      `OBJECT_SOLVER_EDGES` transitions, found by a walk first): there `auto` keeps the walk, solved on packed arrays (#986).
     """
 
     recipe_starts: bool = True
