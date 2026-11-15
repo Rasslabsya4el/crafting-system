@@ -7,7 +7,8 @@ action whose best case cannot beat the best exact one per Chaos can be dropped. 
 returns the exact chance itself, through `Outcomes.distribution` (one run of the exact engine).
 
 The argument, for one part of the outcomes (a pool draw) and one leaf L. X is the set of pool mods that
-are PASSING for L (under a roll limit, at some roll: a mod outside X never passes L, #830). The leaf is made PASSING if a kept mod (fractured, forced) is, or if some drawn mod
+are PASSING for L (under a roll limit, at some roll: a mod outside X never passes L,
+#830). The leaf is made PASSING if a kept mod (fractured, forced) is, or if some drawn mod
 is in X; a leaf a kept mod makes PASSING costs nothing (bound 1). The process (`actions/draw.py`): a
 total T is drawn from `totals`; with a tag one guaranteed draw comes first, from the tagged mods of the
 sides with room; then `max(0, T - kept - guaranteed)` ordinary draws, each picking one mod of an

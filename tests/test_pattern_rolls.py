@@ -20,7 +20,7 @@ over the key), the model is a lower bound at every state of the exact graph, and
 import random
 
 import pytest
-from abstraction_pool import DAMAGE_1, DAMAGE_2, LEVEL, LIFE_1, MANA_1
+from abstraction_pool import CRAFTED, DAMAGE_1, DAMAGE_2, LEVEL, LIFE_1, MANA_1
 from abstraction_rolls_oracle import TINY, rolled, tiny_item
 from items_support import AMULET
 from pattern_support import check_dominates, exact_values
@@ -28,6 +28,7 @@ from test_abstraction_rolls import GOALS
 
 from crafting_system.abstraction import Abstraction, Status
 from crafting_system.abstraction._kinds import MOD_PREFIX
+from crafting_system.abstraction import _pattern
 from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
 from crafting_system.actions import ActionError, AnnulmentOrb, ChaosOrb, DivineOrb, ExaltedOrb, OpenListing, unopened_listing
 from crafting_system.cli import Offer
@@ -96,6 +97,16 @@ def test_the_divine_orbs_one_member_is_as_good_as_every_member_of_its_key(goal):
     assert choices, "no key has a choice of pure junk: the check above compares nothing that `Mode.ONE` leaves out"
 
 
+def test_under_a_lock_the_divine_orb_takes_every_member():
+    """The locked side keeps its mods and their rolls through the orb: a key that holds a lock uses `Mode.ALL`, as a reroll under a lock does."""
+    ab = Abstraction(TINY, GOALS["life"], AMULET, LEVEL, (CHAOS, DIVINE), metamods=True)
+    pattern = Pattern(ab, None, [CHAOS, DIVINE])
+    locked = pattern.key(ab.compress(tiny_item(rolled(LIFE_1, 1), rolled(CRAFTED, 1, crafted=True))))  # the crafted suffix lock
+    assert pattern.holds_lock(locked) and pattern.mode_of(DIVINE, locked) is Mode.ALL
+    plain = pattern.key(ab.compress(tiny_item(rolled(LIFE_1, 1))))
+    assert pattern.mode_of(DIVINE, plain) is Mode.ONE
+
+
 @pytest.mark.parametrize("goal", CASES)
 def test_the_universe_holds_every_outcome_of_a_roll_before_any_kernel_is_run(goal):
     ab = abstraction(goal)
@@ -160,8 +171,12 @@ def test_the_divine_orb_is_worth_having_in_these_worlds(goal):
     assert cheaper < dearer * (1 - 1e-6)
 
 
-def test_the_draw_of_a_bought_listing_makes_no_member_at_an_opened_key():
-    """The listing's draw works only on the unopened listing (a flag of the key): the build makes no member for it anywhere else (#830)."""
+def test_the_draw_of_a_bought_listing_makes_no_member_at_an_opened_key(monkeypatch):
+    """The listing's draw works only on the unopened listing, and every other action only on an opened item (a flag of the key): the build
+    makes no member for either where the flag refuses it, nor asks the process pool for their distributions there (#830)."""
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 1)  # every key primes its offers (the product does from 16)
+    primed: list = []
+    monkeypatch.setattr(Abstraction, "prime", lambda self, requests: primed.extend(requests))
     draw = OpenListing(Rarity.RARE)
     ab = Abstraction(TINY, GOALS["life"], AMULET, LEVEL, (CHAOS, DIVINE, draw))
     start = ab.compress(unopened_listing(TINY, tiny_item()))
@@ -169,5 +184,6 @@ def test_the_draw_of_a_bought_listing_makes_no_member_at_an_opened_key():
     model = build_pattern_model(ab, start, offers)
     assert len(model.keys) > 2 and model.keys[0].flags.unopened
     assert sum(count for (_, label), count in model.stats.modes.items() if label == "draw") == 1  # the start key alone
+    assert primed and all((action is draw) == member.flags.unopened for member, action in primed)
     exact = exact_values(ab, start, offers)
     assert 0 < float(solve_packed(pack_pattern_model(model, offers)).value[0]) <= exact[start] * (1 + TOLERANCE)

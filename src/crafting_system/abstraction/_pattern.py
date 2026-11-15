@@ -834,7 +834,7 @@ class PatternBuilder:
         """
         requests = []
         for offer in self.offers[lo:hi]:
-            if offer.action is None:
+            if offer.action is None or _refused_by_flags(offer.action, key):
                 continue
             mode = self.pattern.mode_of(offer.action, key)
             members = by_mode.get(mode)
@@ -859,10 +859,7 @@ class PatternBuilder:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
                 continue
-            if getattr(offer.action, "opens_listing", False) and not key.flags.unopened:
-                # the draw of a bought listing's mods works only on the unopened listing (`actions.listing`), and the flag is the key's: the game
-                # refuses it at every member, so no member is made for it (it reads every family, and made them all at every key: #830, 99,272 of
-                # the 103,250 pairs of divine-roll-limits/medium)
+            if _refused_by_flags(offer.action, key):
                 continue
             mode = pattern.mode_of(offer.action, key)
             members = by_mode.get(mode)
@@ -907,6 +904,16 @@ class PatternBuilder:
                     seen.add(kid)
                     added.append((oi, kid))
         self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
+
+
+def _refused_by_flags(action: Action, key: PatternKey) -> bool:
+    """Whether the game refuses `action` at every member of `key` by the key's flags alone: the draw of a bought listing's mods works only on the
+    unopened listing and every other action only on an opened item (`Abstraction._prepare`), and whether the item is unopened is a flag of the key.
+
+    No member is made for such an offer: the draw reads every family, so it made them all at every key (#830: 99,272 of the 103,250 pairs of
+    divine-roll-limits/medium).
+    """
+    return bool(getattr(action, "opens_listing", False)) != bool(getattr(key.flags, "unopened", False))
 
 
 class _Stopped(Exception):
