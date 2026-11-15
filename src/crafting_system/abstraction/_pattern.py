@@ -79,10 +79,11 @@ gap). The offer of an unveil is in the key's `held`, whole: the k-th mod is the 
 the expectation, over the offers, of the least backup of the picks at each offer key: a minimum inside the expectation, as in the exact graph.
 
 **The folded families (#828).** The unveil and the picks name every family of the unveiled pool, so the abstraction tells apart by name each
-ordinary family the unveiled pool shares (on the Warstaff of R24, 12 of the 33 ordinary families: attack speed, strength, physical damage, ...).
+ordinary family the unveiled pool shares (on the boots of R24, 12 of the 33 ordinary families: attack speed, strength, physical damage, ...).
 Held as relevant slots, those would be enumerated exactly in every key, for every action: about 244 members a key for an Exalted Orb where the
 family types give a few. A family is *folded* (`Pattern._folded`) when only the veiled actions name it: no other enabled action that reads
-the junk does, and none reads every family. A folded family that gives the goal nothing is pure junk of its class (side, tags), a type of one
+the junk does, none reads every family, and it has mods on one side only (a family on both sides takes both out of a draw, which the weight
+of a pure type, of one side, does not hold). A folded family that gives the goal nothing is pure junk of its class (side, tags), a type of one
 family (`_PureType.named`), and its slots are left out of the relevant multisets. The key does not change: it counts the ordinary slots by
 class already. What has to be argued is each action's policy with folded families among the pure junk.
 
@@ -134,6 +135,7 @@ from math import gcd, lcm
 from typing import NamedTuple
 
 from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags
+from crafting_system.actions.pool import partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
 from crafting_system.items.model import VEILED_DOMAIN
@@ -512,13 +514,17 @@ class Pattern:
             if reads.families is None:
                 return frozenset()
             (veiled if self._veiled_reader(reads) else other).update(reads.families)
-        return frozenset(veiled - other - self._placeholder_families)
+        folded = veiled - other - self._placeholder_families
+        if folded:  # a family with mods on both sides takes both out of a draw; a pure type weighs one side only, so it stays a relevant slot
+            folded -= set(partners(kinds._pool()))
+        return frozenset(folded)
 
     def holds_placeholder(self, key: PatternKey) -> bool:
-        """Whether the key holds the veiled placeholder (not a mod unveiled from the pool)."""
+        """Whether the key holds the veiled placeholder (not a mod unveiled from the pool), in a veiled slot or fractured: a fractured
+        placeholder sits in `key.fractured`, and the unveil and the picks still act on it (`actions/veiled.py`, `holds_placeholder`)."""
         return any(
             not _base(slot.kind).startswith(UNVEILED_PREFIX) and kind_families(_base(slot.kind)) & self._placeholder_families for slot in key.veiled
-        )
+        ) or any(self.data.mods[entry.mod_id].domain == VEILED_DOMAIN for entry in key.fractured if entry.mod_id in self.data.mods)
 
     def named_of(self, action: Action, key: PatternKey) -> frozenset[str]:
         """The folded families whose holding the members of `key` must tell apart for `action` (#828): empty but for an unveil or a pick that is

@@ -20,7 +20,9 @@ a start with and without a lock: each offered member is as good as every member 
 successor keys), the model is a lower bound at every state of the exact graph, and the envelope search gives the exact graph's mean to 1e-9.
 """
 
+import dataclasses
 import random
+from types import SimpleNamespace
 
 import pytest
 from abstraction_pool import CRAFTED as LOCK_SUFFIXES
@@ -32,6 +34,7 @@ from veiled_support import LIFE_2 as VEIL_LIFE_2
 from veiled_support import SPEED
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted, pattern_refusal
+from crafting_system.abstraction import _pattern as pattern_module
 from crafting_system.abstraction._kinds import UNVEILED_PREFIX
 from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, _refused_by_key, build_pattern_model
 from crafting_system.actions import ActionError, AnnulmentOrb, ExaltedOrb, Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb
@@ -162,6 +165,46 @@ def test_a_family_only_the_veiled_actions_read_is_pure_junk_and_told_apart_only_
     walked = {pattern.key(state) for state in walked_states(ab, STARTS["plain"], seed=828)}
     told = [key for key in walked if len(pattern.members(key, Mode.ONE, pattern.named_of(UNVEIL, key))) > len(pattern.members(key, Mode.ONE))]
     assert told and all(pattern.holds_placeholder(key) for key in told)  # the folded family is enumerated at an unveil's key, and only there
+
+
+def test_a_family_another_action_names_or_a_reader_of_every_family_or_one_on_both_sides_is_not_folded(monkeypatch):
+    """`Pattern._folded`: a family a bench craft names (it is refused when the item holds the family) stays told apart by name, and an action
+    that reads every family folds none: either one would read a folded family that the other actions' members no longer tell apart. A family
+    with mods on both sides is not folded either: a pure type weighs one side, and a draw of it takes both out of the pool."""
+    ab = abstraction("speed")
+    pattern = Pattern(ab, None, VEILED)
+    pool = ab._context(frozenset()).kinds._pool
+
+    def kinds(*actions):
+        return SimpleNamespace(actions=(*VEILED, *actions), _pool=pool)
+
+    veiled_only = pattern._folded(kinds())
+    assert veiled_only
+    family = min(veiled_only)
+    pattern._reads["bench"] = dataclasses.replace(UNVEIL.reads(DATA), offer=False, needs_veiled=False, families=frozenset({family}))
+    pattern._reads["every"] = dataclasses.replace(UNVEIL.reads(DATA), offer=False, needs_veiled=False, families=None)
+    assert pattern._folded(kinds("bench")) == veiled_only - {family}
+    assert pattern._folded(kinds("every")) == frozenset()
+    monkeypatch.setattr(pattern_module, "partners", lambda pool: {family: ()})
+    assert pattern._folded(kinds()) == veiled_only - {family}
+
+
+def test_a_fractured_placeholder_keeps_the_unveil_and_the_picks_live():
+    """A fractured placeholder sits in `key.fractured`, not in the veiled slots; the unveil acts on it all the same (`actions/veiled.py`), so
+    the key does not refuse it, and the model stays a lower bound from such a start (the checker's case of round 2, #828)."""
+    start = amulet(dataclasses.replace(holder(SUF), fractured=True), rolled(RESIST_2))
+    ab = abstraction("speed")
+    first = ab.compress(start)
+    pattern = Pattern(ab, None, VEILED)
+    key = pattern.key(first)
+    assert key.veiled == () and pattern.holds_placeholder(key)
+    assert not any(_refused_by_key(pattern, action, key) for action in (UNVEIL, *PICKS))
+    assert ab.kernel(first, UNVEIL)
+    offers = pattern_offers()
+    exact = exact_values(ab, first, offers)
+    model = build_pattern_model(ab, first, offers)
+    solved = solve_packed(pack_pattern_model(model, offers))
+    assert 0 < solved.value[0] <= exact[first] * (1 + TOLERANCE)
 
 
 def _base_of(slot) -> str:
