@@ -105,7 +105,8 @@ inequality above is proved whatever `e` is, and a search with a gap refuses a so
 instead of the 1e-6 an exact answer needs. A plan worth 10^9 steps or more (the first plan of a hard target: 10^8 Chaos against steps of 0.008)
 cannot be certified closer than about 1e-6 in float64, whatever the solver does: each value is stored to `eps V` and the plan takes `V / g` steps.
 The exact search (`gap = 0`) is unchanged; a search with a gap whose last tip closes on an error above 1e-6 ends at the gap, not as exact.
-Before `gap_after` only the exact stop ends the search (the planner passes 0: by OR-39 the stop applies whatever the time); `gap = 0`, or
+Before `gap_after` only the exact stop ends the search (the planner passes what is left of the plan's aim, OR-39 as decided on #925, so a craft
+whose proof closes inside the aim is proved the cheapest; `_plan.search_gap`); `gap = 0`, or
 `gap_after` None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
 
 **The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
