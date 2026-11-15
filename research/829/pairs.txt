@@ -1,0 +1,7 @@
+--route r04
+--route r14
+--route r08
+--case fossil-sets/small
+--case fossil-sets/medium
+--case growing-3-fossils/small
+--case growing-3-fossils/medium
