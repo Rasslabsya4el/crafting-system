@@ -167,6 +167,26 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
     return kept
 
 
+AWAKENER_KIND = "awakeners-orb"
+
+
+def _with_wanted_donors(
+    data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str], named: set[str], kind_of: dict[Action, str]
+) -> dict[Action, str]:
+    """The Awakener's Orbs whose donor holds a mod the target names (ticket #832, `_limits` via `_awakener.donor_limits`), and the actions that work on
+    a donor: it starts as a normal base of its own influence (`AwakenersOrb.inputs`), so what applies to such a base is offered too (a Transmutation
+    Orb on a target whose start item is rare). Every other orb is left out: its donor gives the item a mod nobody asks for."""
+    from crafting_system.actions.awakener import AwakenersOrb
+
+    kept = {action: kind for action, kind in kind_of.items() if not isinstance(action, AwakenersOrb) or action.donor_mod in named}
+    for influence in sorted({a.donor_influence for a in kept if isinstance(a, AwakenersOrb)}, key=lambda i: i.value):
+        bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=frozenset({influence}))
+        for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
+            if kind != AWAKENER_KIND:
+                kept.setdefault(action, kind)
+    return kept
+
+
 def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
     """The seed of the lazy offer loop (ADR-0062 decision 4): a `Need` whose donor holds only mods the goal names.
 
@@ -376,6 +396,8 @@ def offers_for(
             for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
                 if kind != RECOMBINATOR_KIND:
                     kind_of.setdefault(action, kind)
+    if any(kind == AWAKENER_KIND for kind in kind_of.values()):
+        kind_of = _with_wanted_donors(data, start_item, kind_names, label_names, named, kind_of)
     if goal.allow_corrupted and not goal.asks_corrupted:  # a target that only allows corruption gets each corrupting action as it uses it (ADR-0037)
         kind_of = {_allowing(data, start_item, action): kind for action, kind in kind_of.items()}
     listed = list(kind_of)
