@@ -66,7 +66,7 @@
    "success_value": 1.0
   },
   "R14": {
-   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
+   "commit": "4a3b09131e09c715dcbc592ee950cfd842bbcb75",
    "gaps": 1,
    "inputs": {
     "costs": {
@@ -93,14 +93,14 @@
     "seed": 13
    },
    "pin": "3.29.3.3",
-   "run": "43381687684",
+   "run": "43681523684",
    "stem": "r14-hunter-bow",
    "success_high": 1.0,
    "success_low": 0.0,
    "success_value": 0.0
   },
   "R14 with restart": {
-   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
+   "commit": "4a3b09131e09c715dcbc592ee950cfd842bbcb75",
    "gaps": 0,
    "inputs": {
     "costs": {
@@ -118,10 +118,10 @@
     "route": "1162f2b3e55ee6b67ae005bfc545aa52aaac9234c625d75564af2fa5d0f81e63",
     "target": "dcfbec8bc9da74e7bf9cc2c11f3911dce8b34f4a9be9ed8bea9977b224f7fcf3"
    },
-   "mean_with_start": 6888.481912997789,
-   "mean_without_start": 6878.6819129977885,
+   "mean_with_start": 6888.481912997804,
+   "mean_without_start": 6878.681912997804,
    "pin": "3.29.3.3",
-   "run": "43381687684",
+   "run": "43681523684",
    "start_price": 9.8,
    "stem": "r14-hunter-bow-restart",
    "success_high": 1.0,
