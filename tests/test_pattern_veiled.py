@@ -34,7 +34,7 @@ from veiled_support import SPEED
 from crafting_system.abstraction import Abstraction, Goal, Wanted, pattern_refusal
 from crafting_system.abstraction._kinds import UNVEILED_PREFIX
 from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
-from crafting_system.actions import ActionError, AnnulmentOrb, Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb
+from crafting_system.actions import ActionError, AnnulmentOrb, ExaltedOrb, Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb
 from crafting_system.cli import Offer
 from crafting_system.planner._envelope_plan import envelope_result
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
@@ -44,6 +44,7 @@ from crafting_system.solver import solve_packed
 TOLERANCE = 1e-9
 VEILED_CHAOS, VEILED_EXALT, UNVEIL, ANNUL = VeiledChaosOrb(), VeiledExaltedOrb(), Unveil(), AnnulmentOrb()
 PICKS = (Pick(1), Pick(2), Pick(3))
+EXALT = ExaltedOrb()
 FREE = 1e-6  # what `price_offers` gives an action that consumes nothing (ADR-0026, the epsilon)
 ACTIONS = {
     "Veiled Chaos Orb": (VEILED_CHAOS, 5.0), "Veiled Exalted Orb": (VEILED_EXALT, 3.0), "Orb of Annulment": (ANNUL, 1.0), "Unveil": (UNVEIL, FREE),
@@ -71,12 +72,12 @@ def priced_offers(start) -> list[PricedOffer]:
     return [*offers, PricedOffer(Offer(RESTART, BuyStartItem(start), {}), RESTART_PRICE, ())]
 
 
-def walked_states(ab: Abstraction, start, seed: int, walks: int = 60, steps: int = 8) -> list:
+def walked_states(ab: Abstraction, start, seed: int, walks: int = 60, steps: int = 8, extra=()) -> list:
     """The states a seeded random walk of the offered actions meets from `start`, the picks taken where an offer is held (the keys checked)."""
     rng = random.Random(seed)
     first = ab.compress(start)
     found = {}
-    actions = [action for action, _ in ACTIONS.values()]
+    actions = [*(action for action, _ in ACTIONS.values()), *extra]
     for _ in range(walks):
         state = first
         for _ in range(steps):
@@ -126,27 +127,43 @@ def test_the_key_holds_the_placeholder_and_the_unveiled_mods_and_no_member_choos
     assert pattern.key(two) != pattern.key(ab.compress(amulet(holder(SUF), rolled(RESIST_2))))  # the side of the veil is in the key
 
 
+def test_a_pure_junk_type_that_holds_a_family_the_veiled_actions_read_makes_their_policy_every_member(monkeypatch):
+    """`ONE` rests on the families of the unveiled pool being told apart by name; a hybrid mod pooled into a pure junk type would break it."""
+    ab = abstraction("speed")
+    pattern = Pattern(ab, None, VEILED)
+    key = pattern.key(ab.compress(STARTS["plain"]))
+    universe = pattern.universe(frozenset())
+    pure = next(kind_type for side in universe.pure.values() for kind_type in side.values())
+    assert pattern._pure_holds(frozenset(), frozenset(pure.mods[0].families))
+    assert not pattern._pure_holds(frozenset(), UNVEIL.reads(DATA).families)
+    monkeypatch.setattr(Pattern, "_pure_holds", lambda self, influences, families: True)
+    assert all(pattern.mode_of(action, key) is Mode.ALL for action in (VEILED_EXALT, UNVEIL, *PICKS))
+
+
 @pytest.mark.parametrize("start", STARTS)
 @pytest.mark.parametrize("goal", GOALS)
 def test_each_veiled_actions_offered_member_is_as_good_as_every_member_of_its_key(goal, start):
-    """The soundness of `Mode.ANY` and `Mode.ONE` for the veiled actions, against every member of the key (`check_dominates`)."""
-    ab = abstraction(goal)
-    pattern = Pattern(ab, None, [action for action, _ in ACTIONS.values()])
-    keys = list(dict.fromkeys(pattern.key(state) for state in walked_states(ab, STARTS[start], seed=828)))
+    """The soundness of `Mode.ANY` and `Mode.ONE` for the veiled actions, against every member of the key (`check_dominates`); an Exalted
+    Orb is offered too, so that keys with a veiled slot meet its `Mode.EXTREMES` (the family types then count by pool weight)."""
+    ab = Abstraction(DATA, GOALS[goal], AMULET, LEVEL, (*(action for action, _ in ACTIONS.values()), EXALT), metamods=True)
+    pattern = Pattern(ab, None, [*(action for action, _ in ACTIONS.values()), EXALT])
+    keys = list(dict.fromkeys(pattern.key(state) for state in walked_states(ab, STARTS[start], seed=828, extra=(EXALT,))))
     rng = random.Random(1)
-    compared = {action: 0 for action in VEILED}
-    choices = 0
+    checked = (*VEILED, EXALT)
+    compared = {action: 0 for action in checked}
+    choices = veiled_keys = 0
     for key in keys:
-        for action in VEILED:
+        veiled_keys += bool(key.veiled)
+        for action in checked:
             mode = pattern.mode_of(action, key)
             if mode is Mode.ALL:
                 continue
             members, offered = check_dominates(pattern, ab, key, action, mode, rng, trials=6)
             compared[action] += offered
             choices += len(pattern.members(key, mode)) < members
-    assert all(compared[action] for action in (VEILED_CHAOS, UNVEIL, PICKS[0])), compared
-    assert compared[VEILED_EXALT] or start == "lock", compared  # the plain start's walk holds no veiled mod at some key
-    assert choices, "no key has a choice of pure junk: the check above compares nothing the member policies leave out"
+    assert all(compared[action] for action in (VEILED_EXALT, UNVEIL, PICKS[0], EXALT)), compared
+    assert compared[VEILED_CHAOS] or start == "lock", compared  # under the lock the Veiled Chaos Orb takes every member
+    assert veiled_keys and choices, "no key with a veiled slot, or no choice of pure junk: the check compares nothing the policies leave out"
 
 
 @pytest.mark.parametrize("start", STARTS)

@@ -44,7 +44,8 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   key. So its pushed kernel is the same for every pure junk assignment. **Proved** so, and checked against every member on the fixtures
   (`tests/test_pattern_rolls.py`); under a lock the locked side keeps its rolls and the mode is `ALL`.
   The unveil, the picks and the Veiled Exalted Orb (#828) are `ONE` too, a lock or not. Each reads of the junk its count and the families it
-  names (the unveiled pool's: those are told apart by name, so their slots are relevant and enumerated exactly; no pure junk type holds one) and
+  names (the unveiled pool's: those are told apart by name, so their slots are relevant and enumerated exactly; a pure junk type that holds a
+  mod of one, a hybrid whose family key is not that family alone, makes the policy `ALL`, `Pattern._pure_holds`; 3.29.3.3 has none) and
   keeps the rest (`Reads.junk`, `Reads.families`). The unveil draws the offer from the unveiled pool less the families on the item, and a pick
   puts the k-th mod of the offer in place of the placeholder, refused when its family is on the item: both read only named families and the key
   (the placeholder, the offer, a lock), and change no ordinary slot. The Veiled Exalted Orb removes one removable slot uniformly (the locked side
@@ -368,6 +369,7 @@ class Pattern:
         self._feasible: dict[CompressedState, bool] = {}
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
+        self._pure_reads: dict[tuple, bool] = {}
         self._placeholder_families = _placeholder_families(abstraction.data)
         self.grew = 0
         self.fallbacks = 0
@@ -415,7 +417,27 @@ class Pattern:
         found = self._veiled_kind.get(slot.kind)
         if found is None:
             base = _base(slot.kind)
-            found = self._veiled_kind[slot.kind] = base.startswith(UNVEILED_PREFIX) or bool(kind_families(base) & self._placeholder_families) if not base.startswith((TYPE_PREFIX, MOD_PREFIX)) else False
+            if base.startswith(UNVEILED_PREFIX):
+                found = True
+            elif base.startswith((TYPE_PREFIX, MOD_PREFIX)):  # a family type or one mod of the ordinary pool: never a placeholder
+                found = False
+            else:
+                found = bool(kind_families(base) & self._placeholder_families)
+            self._veiled_kind[slot.kind] = found
+        return found
+
+    def _pure_holds(self, influences: frozenset, families: frozenset[str]) -> bool:
+        """Whether a pure junk type of the universe has a mod of one of `families` (a hybrid mod whose family key is not one of them alone).
+
+        The member policy `ONE` of the veiled actions rests on the families they read being told apart by name; a pure junk slot of such a type
+        could change their kernel between the members of a class, so the policy is then `ALL`. The data of 3.29.3.3 has no such mod.
+        """
+        found = self._pure_reads.get((influences, families))
+        if found is None:
+            universe = self.universe(influences)
+            found = self._pure_reads[(influences, families)] = any(
+                set(mod.families) & families for side in SIDES for kind_type in universe.pure[side].values() for mod in kind_type.mods
+            )
         return found
 
     def universe(self, influences: frozenset) -> _Universe:
@@ -470,8 +492,8 @@ class Pattern:
             # the abstraction gives the action a view of the item without its ordinary slots (a Veiled Chaos Orb, #828): see the module text, `ANY`
             return Mode.ANY
         if reads.junk and reads.families is not None and (reads.offer or reads.families & self._placeholder_families):
-            # an unveil, a pick, a Veiled Exalted Orb (#828): see the module text, `ONE`
-            return Mode.ONE
+            # an unveil, a pick, a Veiled Exalted Orb (#828): see the module text, `ONE`, unless a pure junk type holds a family they read
+            return Mode.ALL if self._pure_holds(key.flags.influences, reads.families) else Mode.ONE
         return Mode.ALL
 
     def _erases(self, action: Action, key: PatternKey) -> bool:
