@@ -266,11 +266,10 @@ def test_a_walk_the_net_stops_says_what_the_search_has_no_bound_for(coarse, monk
         said,
     ), said
     refused = make_plan(COARSE, coarse[0], coarse[1], start_price=5.0, solve_it=False).abstraction
-    refused._has_laws = True
-    for name in ("rerolls_values", "tracks_offer", "tracks_imprints"):
+    for name in ("tracks_offer", "tracks_imprints"):
         monkeypatch.setattr(type(refused), name, property(lambda self: True), raising=False)
     every = refusal_causes(refused, player=True)
-    assert len(every) == len(refusal_causes(refused)) == 4  # every cause the bound has, in the words an answer may show (#481)
+    assert len(every) == len(refusal_causes(refused)) == 2  # every cause the bound has, in the words an answer may show (#481)
     read(budget_limit([Binding(WALK_STAGE, TIME, 0.0, 1.0, _plan.walk_stop(_plan.walk_cause(every)))]))
 
 

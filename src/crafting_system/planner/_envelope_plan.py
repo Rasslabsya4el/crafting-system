@@ -350,8 +350,8 @@ def envelope_result(
     `watch` is told where the search stands after the first plan and after each round (`_envelope.Standing`: the best plan's cost so far and the
     figure no plan can cost less than).
 
-    Raises `OutOfScopeError` when the bound cannot be built for this abstraction (a goal with a roll limit, an action that rerolls values, an unveil
-    offer, imprints: #507), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
+    Raises `OutOfScopeError` when the bound cannot be built for this abstraction (an unveil offer, imprints: #507; a roll limit and a
+    Divine Orb are built since #830), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
     `BoundError` when the bound is shown not to be a consistent lower bound as the search looks further (a state's bound above its offers', or the bound
     of the root falling from one round to the next: `_envelope`, "A guard for the bound"; `guard=False` turns that refusal off, for the tests that plant a
     wrong bound and check that the comparison with the full walk catches what the guard would have refused).

@@ -37,6 +37,12 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   of a class: the chance of a successor key is `(removable slots that lead to it) / (removable slots)`. **Proved** for the Annulment under
   protected tags when the tags are in the key or enumerated (an Attack/Caster metamod keeps the protected-tag slots out of the candidates, and
   that is a function of the class); the locked side is kept (a lock in the key makes the mode `ALL`).
+  A reroll of values in place that reads nothing of the junk but its count (`Reads.rerolls_values`, a Divine Orb; #830) is `ONE` too: it keeps
+  every slot and draws a new roll for each slot whose mod a roll limit tells apart. Those are relevant slots (a rollable mod is the kind
+  `$<mod id>` and gives its leaf BELOW or PASSING, never nothing), enumerated exactly; a pure junk slot gives the goal nothing at any roll, so
+  its roll is not in the state and it stays as it is. Its refusals read the rarity and whether a changeable mod is held, both functions of the
+  key. So its pushed kernel is the same for every pure junk assignment. **Proved** so, and checked against every member on the fixtures
+  (`tests/test_pattern_rolls.py`); under a lock the locked side keeps its rolls and the mode is `ALL`.
 * `EXTREMES` (the lightest and the heaviest assignment in each class that holds pure junk): an addition that keeps the mods (`Reads.variants`:
   Augmentation, Regal, Exalted; one mod drawn). The chance of a successor key is `(a + sum_c b_c H_c) / (W - H_rel - sum_c H_c)` with `H_c` the
   pool weight (under the protected tags the key's metamods impose) the held pure junk of class `c` takes out, `H_rel` that of the relevant slots
@@ -62,7 +68,7 @@ the action only at the states where the gap is, so leaving it out of the key cou
 model gap in `_item_of` always refuses.
 
 **The universe.** The members of a key are made of the ordinary slots an item can hold. They come from three places: the pool of an empty rare
-item (every mod a draw can give; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced
+item (every mod a draw can give, under a roll limit once for each outcome of its roll, #830; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced
 mod, which the pool does not list; `Universe._seed_named`), and every slot a kernel the build evaluates produces (`note`; a slot found this way
 that the two others missed starts the build again on the grown universe, `stats.universe_growth`). A slot that a non-offered member's kernel would produce, and no
 offered member's, cannot be one of the first two: a draw gives a mod of the pool, and a forced mod is the same at every member. What is left is
@@ -82,13 +88,14 @@ from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
 
-from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, allowed_by_tags
+from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
 
 from ._goal import Status
 from ._kernel import Abstraction
-from ._kinds import TYPE_PREFIX, kind_tags
+from ._kinds import MOD_PREFIX, TYPE_PREFIX, kind_tags
+from ._rolls import is_rollable
 from ._state import CompressedState, Slot, best_of
 
 # The two families of refusal an action raises (`actions/errors.py`, #506). A game refusal (`NotApplicableError`: the game forbids the action on that
@@ -104,6 +111,7 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
 
 
 class Mode(StrEnum):
@@ -164,9 +172,8 @@ class _Universe:
         for family in kinds._pool() if kinds.tracked else ():  # a state that keeps no junk holds no ordinary slot
             for entry in family.mods:
                 kind = kinds.of(entry.mod)
-                contribution = ab._drawn_contribution(entry.mod, False, influences)
-                slot = Slot(family.side, kind, contribution)
-                by_type[(family.side, _base(kind))].append((family, entry.mod, slot))
+                for contribution in _rolled_contributions(ab, entry.mod, influences):
+                    by_type[(family.side, _base(kind))].append((family, entry.mod, Slot(family.side, kind, contribution)))
         for (side, base), rows in by_type.items():
             pure = base.startswith(TYPE_PREFIX) and all(all(value is Status.ABSENT for value in slot.contribution) for _, _, slot in rows)
             if not pure:
@@ -225,6 +232,22 @@ class _Universe:
         return True
 
 
+def _rolled_contributions(ab: Abstraction, mod: Mod, influences: frozenset) -> list[tuple[Status, ...]]:
+    """What a drawn `mod` can give the goal: at its low rolls, and, under a roll limit that its values decide, every outcome of its law (#830).
+
+    A slot holds what its mod gives each leaf as it rolled, so a rollable mod is a slot for each outcome of its roll law (`_rolls.roll_law`;
+    a reroll of values in place moves a slot between them). Without the outcomes here the universe would learn them from the kernels only, and
+    each one learnt so begins the build again.
+    """
+    low = ab._drawn_contribution(mod, False, influences)
+    if not ab._has_laws:
+        return [low]
+    cells = ab._law(mod, influences)
+    if not is_rollable(cells):
+        return [low]
+    return list(dict.fromkeys([low, *(tuple(Status(value) for value in ints) for ints, _ in cells)]))
+
+
 def _base(kind: str) -> str:
     from ._kinds import base_kind
 
@@ -276,8 +299,9 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
     """Why the crafted-pattern bound cannot be built for `abstraction`, or None when it can (#497, #507).
 
     The one place that decides it: `Pattern.__init__` raises `OutOfScopeError` with this text, and `make_plan` asks it before any solve, so
-    `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for a goal with a roll
-    limit, for an enabled action that rerolls values, and for one that reads the unveil offer or the imprints.
+    `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for an enabled action that
+    reads the unveil offer or the imprints. A roll limit and a reroll of values have members since #830: the key's status holds what each
+    wanted mod gives its leaf as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`).
     """
     causes = refusal_causes(abstraction)
     if not causes:
@@ -287,8 +311,6 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
 
 # what the bound has no members for: the abstraction's attribute, the cause in the refusal's text, and in a player's words where those differ
 _CAUSES = (
-    ("_has_laws", "the target asks for a roll limit on a mod", None),
-    ("rerolls_values", "an offered action rerolls the values of mods", None),
     ("tracks_offer", "an offered action reads the unveil offer", "an offered action reads the mods an unveil shows to pick from"),
     ("tracks_imprints", "an offered action reads the imprints", None),
 )
@@ -304,8 +326,8 @@ class Pattern:
     """The key of a state and the members of a key, for one `Abstraction`.
 
     `tags` says whether the key carries the protected tags of the ordinary mods; it defaults to whether the abstraction models the metamods.
-    Raises `OutOfScopeError` for an abstraction whose slots the key cannot yet enumerate: roll limits on the goal, an enabled action that
-    rerolls values, or one that reads the unveil offer or the imprints.
+    Raises `OutOfScopeError` for an abstraction whose slots the key cannot yet enumerate: an enabled action that reads the unveil offer or the
+    imprints.
     """
 
     def __init__(self, abstraction: Abstraction, tags: bool | None = None, actions: Sequence[Action] = ()):
@@ -397,10 +419,14 @@ class Pattern:
         kinds = self.ab._context(key.flags.influences).kinds
         if reads.variants and reads.junk and reads.pool_weight and not reads.fractures:
             return Mode.ALL if kinds._tagged or kinds._levels else Mode.EXTREMES
-        if reads.block_invariant and not (reads.variants or reads.pool_weight or reads.fractures or reads.rerolls_values or reads.input_classes):
+        others = reads.variants or reads.pool_weight or reads.fractures or reads.input_classes
+        if reads.block_invariant and not (others or reads.rerolls_values):
             if self.holds_lock(key):
                 return Mode.ALL
             return Mode.ONE if reads.junk else Mode.ANY
+        if reads.rerolls_values and replace(reads, rerolls_values=False) == COUNT_ONLY:
+            # a reroll of values in place that reads nothing else of the junk than its count (a Divine Orb, #830): see the module text, `ONE`
+            return Mode.ALL if self.holds_lock(key) else Mode.ONE
         return Mode.ALL
 
     # ---- the members of a key ---------------------------------------------------------------------------------
@@ -430,21 +456,37 @@ class Pattern:
         return list(found)
 
     def _relevant(self, universe: _Universe, side: Side, count: int, status: tuple) -> list[tuple[Slot, ...]]:
-        """Every multiset of at most `count` relevant slots of `side` that none of its slots exceeds `status` in."""
+        """Every multiset of at most `count` relevant slots of `side` that none of its slots exceeds `status` in.
+
+        Two slots that each stand for one mod (`$<mod id>`) of a shared family are never on one item, so no multiset holds them both: `_ok` would
+        refuse every state made of it, and under a roll limit there are many (one slot per tier and per outcome of its roll, #830).
+        """
         pool = sorted(
             (slot for slot in universe.relevant[side] if all(c <= s for c, s in zip(slot.contribution, status))), key=_slot_key
         )
+        families = [self._families_of(slot) for slot in pool]
         out: list[tuple[Slot, ...]] = []
 
-        def grow(start: int, chosen: tuple[Slot, ...]) -> None:
+        def grow(start: int, chosen: tuple[Slot, ...], held: frozenset[str]) -> None:
             out.append(chosen)
             if len(chosen) == count:
                 return
             for at in range(start, len(pool)):
-                grow(at, (*chosen, pool[at]))
+                own = families[at]
+                if own & held:
+                    continue
+                grow(at, (*chosen, pool[at]), held | own)
 
-        grow(0, ())
+        grow(0, (), frozenset())
         return out
+
+    def _families_of(self, slot: Slot) -> frozenset[str]:
+        """The families of the one mod a slot stands for (a kind `$<mod id>`); empty for a slot that stands for a family or a type."""
+        base = _base(slot.kind)
+        if not base.startswith(MOD_PREFIX):
+            return frozenset()
+        mod = self.data.mods.get(base[len(MOD_PREFIX) :])
+        return frozenset(mod.families) if mod is not None else frozenset()
 
     def _compositions(self, universe: _Universe, key: PatternKey, rel_p, rel_s) -> Iterator[dict[tuple, int]]:
         """The ways the pure junk slots split into classes (side index, tag set): fixed by the key's tags, enumerated without them."""
@@ -816,6 +858,11 @@ class PatternBuilder:
             if offer.action is None:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
+                continue
+            if getattr(offer.action, "opens_listing", False) and not key.flags.unopened:
+                # the draw of a bought listing's mods works only on the unopened listing (`actions.listing`), and the flag is the key's: the game
+                # refuses it at every member, so no member is made for it (it reads every family, and made them all at every key: #830, 99,272 of
+                # the 103,250 pairs of divine-roll-limits/medium)
                 continue
             mode = pattern.mode_of(offer.action, key)
             members = by_mode.get(mode)

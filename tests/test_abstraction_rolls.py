@@ -36,6 +36,7 @@ from crafting_system.abstraction._state import status_of
 from crafting_system.abstraction._kinds import MOD_PREFIX
 from crafting_system.actions import (
     Action,
+    ActionError,
     Adds,
     ApplyFossils,
     AugmentationOrb,
@@ -523,6 +524,21 @@ def test_the_pilot_count_the_family_groups_and_the_bound_refuse_a_divine_orb(div
         Coarsening(ab, [])
 
 
-def test_the_bound_still_refuses_a_roll_limit_on_a_drawn_mod():
-    ab = build("life")
-    assert reach_bound(ab, ab.compress(tiny_item()), CHAOS, [0]) is None
+@pytest.mark.parametrize("start", STARTS)
+@pytest.mark.parametrize("goal", GOALS.keys() - {"crafted"})
+@pytest.mark.parametrize("action", [CHAOS, REFORGE, LUCKY_CHAOS], ids=["chaos", "reforge", "lucky"])
+def test_the_bound_on_a_roll_limit_of_a_drawn_mod_is_the_kernels_chance_exactly_and_never_below_it(goal, start, action):
+    """#830: `reach_bound` under a roll limit (it refused one before). The exact chance that every leaf of a subset ends PASSING is the kernel's,
+    itself checked against every item with its values above; the loose bound counts a mod that passes at some roll, so it is never below."""
+    ab = build(goal)
+    state = ab.compress(STARTS[start]())
+    try:
+        kernel = ab.kernel(state, action)
+    except ActionError:
+        pytest.skip("the action refuses this item")
+    leaves = range(len(ab.goal.leaves))
+    for size in range(1, len(leaves) + 1):
+        for subset in itertools.combinations(leaves, size):
+            want = sum((chance for after, chance in kernel.items() if all(after.status[index] is PASSING for index in subset)), Fraction(0))
+            assert reach_bound(ab, state, action, subset, exact=True) == want, subset
+            assert want <= reach_bound(ab, state, action, subset) <= 1, subset
