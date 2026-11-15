@@ -6,9 +6,10 @@ full walk is the oracle here because these worlds are small; nothing else is bui
 
 * for gaps from 1% to 100%, with the stop applying from the first round, the plan's mean is at most `(1 + gap)` times the walk's optimum, the lower
   figure is at most the optimum, and the mean shown is the exact mean of the plan shown (solved again from its own chain, with no code of the search);
-* a gap of 0 and no budget are the exact search: the walk's mean to 1e-9; under a budget the stop applies whatever the time (OR-39);
+* a gap of 0 and no budget are the exact search: the walk's mean to 1e-9; under a budget the search keeps proving while the plan is under its
+  aim and past it stops at the first round proved within the gap (OR-39 as decided on #925; `search_gap`, hand clocks: no test reads the time);
 * the limit of a search that stopped at a gap says so in a player's words, with the plan's exact mean, the figure no plan costs less than and the gap
-  proved; no limit of that plan claims "the cheapest";
+  actually proved (not only the gap the run allows, #925); no limit of that plan claims "the cheapest";
 * the settings: `Budget.gap` (a share, zero or more; `search_gap`), `--gap` on the command line;
 * a watcher given to `make_plan` and to `plan_target` is told the best plan's cost and the lower figure from the first plan on.
 
@@ -56,7 +57,7 @@ class HandClock:
 
 
 def at_once(gap: float) -> Budget:
-    """A run with no net and this gap: the stop at `gap` applies from the first round, as under any budget (OR-39)."""
+    """A run with no net and this gap, already past its aim of 0 seconds: the stop at `gap` applies from the first round (OR-39, #925)."""
     return Budget(aim_seconds=0.0, seconds=None, memory_mb=None, gap=gap)
 
 
@@ -164,9 +165,13 @@ def test_the_limit_of_a_stop_at_a_gap_says_so_with_the_plans_mean_the_proof_figu
     (limit,) = envelope_limits(info)
     text = limit_text(limit)
     assert limit.kind == SOLVE and limit.what == "The search stopped once the plan was proved close to the cheapest"
-    assert "the search stopped by itself" in text and "at most 100.00% more than the cheapest possible (the gap this run allows)" in text
+    proved = certificate_gap_text(certificate_gap(info))
+    assert certificate_gap(info) < 1.0 and proved != "100.00%"  # the gap proved is not the gap allowed: the text must say the one proved (#925)
+    assert "the search stopped by itself" in text and f"proved to cost at most {proved} more than the cheapest possible" in text
+    assert "(past the time the plan aims at, the run stops at a proved 100.00%)" in text
+    assert f"The plan is {WITHIN_GAP}, at most {proved} above it:" in text
     assert "buying the start item again wherever it had not looked" in text
-    assert f"The plan is {WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is the average of the plan shown itself, not an estimate of the cheapest." in text
+    assert f"it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is the average of the plan shown itself, not an estimate of the cheapest." in text
     assert f"[{info.lower:,.2f}, {info.upper:,.2f}]" in text and f"costs less than {info.lower:,.2f} on average" in text
     assert f"The plan costs at most {certificate_gap_text(certificate_gap(info))} more than the best possible cost." in text
     assert "not shown to be the best" not in text and "was stopped" not in text  # a net's words
@@ -181,7 +186,8 @@ def test_the_limit_says_when_the_stop_waited_for_a_cost_it_could_certify_and_whe
     text = limit_text(envelope_limits(waited)[0])
     assert "in 2 of its rounds the plan in hand could not be worked out to a certified cost, and the search went on until one could" in text
     assert "buying the start item again" not in text
-    assert "at most 1.00% more than the cheapest possible" in text and "at most 0.70% more than the best possible cost" in text
+    assert "proved to cost at most 0.70% more than the cheapest possible (past the time the plan aims at, the run stops at a proved 1.00%)" in text
+    assert "within the stated gap of the cheapest, at most 0.70% above it" in text and "at most 0.70% more than the best possible cost" in text
     stopped = EnvelopeInfo(False, "the time limit of 600 seconds was reached", 99.3, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None, restarts=False)
     text = limit_text(envelope_limits(stopped)[0])
     assert "The search was stopped" in text and "restarts from the start item" not in text and "100.00 Chaos on average after the start item, the average of the plan shown itself" in text
@@ -275,18 +281,75 @@ def test_the_gap_is_a_named_setting_of_the_budget_with_a_default_of_one_percent(
             Budget(gap=wrong)
 
 
-def test_the_stop_applies_whatever_the_time_and_never_without_a_gap():
-    """OR-39: the minute is the time a plan aims at, not the switch between two kinds of answer."""
+def hand_clocked(monkeypatch) -> HandClock:
+    """One hand clock for the run's clock (`budget`), `envelope_result` and the search: nothing here reads the time."""
+    from crafting_system import budget as budget_module
+    from crafting_system.planner import _envelope, _envelope_plan
+
+    clock = HandClock()
+    for module in (budget_module, _envelope_plan, _envelope):
+        monkeypatch.setattr(module, "time", clock)
+    return clock
+
+
+def test_the_stop_waits_for_the_aim_and_never_applies_without_a_gap(monkeypatch):
+    """OR-39 as the dispatcher decided on #925: under the aim the search keeps proving; past it, the stop at the gap applies at once."""
+    clock = hand_clocked(monkeypatch)
     assert search_gap(None) == (0.0, None)
     assert search_gap(Budget.unlimited().start()) == (0.0, None) and Budget.unlimited().gap == 0.0  # a measurement or a test of the exact answer
     assert search_gap(Budget(aim_seconds=60.0, gap=0.0).start()) == (0.0, None)
-    assert search_gap(Budget(aim_seconds=60.0, gap=0.02).start()) == (0.02, 0.0)  # from the first round, a minute or not
-    assert search_gap(Budget(aim_seconds=None, seconds=600.0).start()) == (PROOF_GAP, 0.0)  # with no aim too
+    run = Budget(aim_seconds=60.0, gap=0.02).start()
+    assert search_gap(run) == (0.02, 60.0)  # the whole aim is left: the stop waits for it
+    clock.now += 45.0
+    assert search_gap(run) == (0.02, 15.0)  # what is left of it
+    clock.now += 15.0
+    assert search_gap(run) == (0.02, 0.0)  # at the aim: from the search's first round
+    clock.now += 100.0
+    assert search_gap(run) == (0.02, 0.0)  # past it: never a negative wait
+    assert search_gap(Budget(aim_seconds=None, seconds=600.0).start()) == (PROOF_GAP, 0.0)  # with no aim, from the first round
 
 
-def test_a_plan_under_a_budget_stops_at_the_gap_long_before_its_aim(coarse):
-    plan = planned(coarse, budget=Budget(aim_seconds=1e9, seconds=None, gap=0.2))
-    assert not plan.search.exact and plan.search.within == 0.2 and plan.search.rounds == 1
+def test_a_plan_under_its_aim_is_proved_the_cheapest_and_past_it_stops_at_the_gap(coarse, monkeypatch):
+    """The same world and the same gap of 20%: a plan whose aim is far off finishes its proof and says "the cheapest"; at its aim it stops in its
+    first round (`test_a_plan_past_its_aim_is_within_the_budgets_gap_of_the_walks_optimum`)."""
+    _, _, optimum = coarse
+    hand_clocked(monkeypatch)
+    proved = planned(coarse, budget=Budget(aim_seconds=1e9, seconds=None, gap=0.2))
+    assert proved.search.exact and proved.search.within is None and proved.mean_remaining == pytest.approx(optimum, rel=1e-9)
+    assert any("The plan is the cheapest among" in limit.guarantee for limit in proved.limits)
+    stopped = planned(coarse, budget=at_once(0.2))
+    assert not stopped.search.exact and stopped.search.within == 0.2 and stopped.search.rounds == 1
+
+
+def test_the_aim_passed_while_the_search_runs_stops_it_at_the_next_round(light, monkeypatch):
+    """The clock passes the aim between two rounds: the search stops at the first round after it whose plan is proved within the gap. The
+    watcher is told the first plan and each round, and moves the hand clock 30 seconds each time: with 50 seconds left of the aim round 1 is
+    under it (30 s) and round 2 past it (60 s). A gap of 100% is proved from round 1 on (`test_a_wide_gap_stops_the_light_world_...`)."""
+    clock = hand_clocked(monkeypatch)
+
+    def tick(_standing: Standing) -> None:
+        clock.now += 30.0
+
+    exact = searched(light, watch=tick).info["envelope"]
+    assert exact.exact and exact.rounds > 3  # the world needs more rounds to close: each stop below is the aim's
+    for left, rounds in ((0.0, 1), (50.0, 2), (80.0, 3)):
+        info = searched(light, gap=1.0, gap_after=left, watch=tick).info["envelope"]
+        assert not info.exact and info.within == 1.0 and info.rounds == rounds
+
+
+def test_a_plan_whose_round_1_is_under_its_aim_goes_on_to_the_whole_proof(coarse, monkeypatch):
+    """Through the planner, on one hand clock: the coarse world is proved within 20% at round 1 and closes at round 2. With its aim at 50 seconds
+    and 30 seconds a round, round 1 is under the aim, so the search goes on and the plan is proved the cheapest."""
+    _, _, optimum = coarse
+    clock = hand_clocked(monkeypatch)
+
+    def tick(_standing: Standing) -> None:
+        clock.now += 30.0
+
+    plan = planned(coarse, budget=Budget(aim_seconds=50.0, seconds=None, gap=0.2), watch=tick)
+    assert plan.search.exact and plan.search.rounds == 2 and plan.mean_remaining == pytest.approx(optimum, rel=1e-9)
+    late = planned(coarse, budget=Budget(aim_seconds=20.0, seconds=None, gap=0.2), watch=tick)  # past the aim at round 1 (30 s)
+    assert not late.search.exact and late.search.within == 0.2 and late.search.rounds == 1
 
 
 def test_the_command_line_has_the_gap_as_a_percent(tmp_path):

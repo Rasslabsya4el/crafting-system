@@ -36,8 +36,8 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute (the forecast of the walk paths reads it; the search's stop at a proved 1% does not, OR-39)
-PROOF_GAP = 0.01  # OR-32, OR-39: the search stops by itself when its plan is proved to cost at most this share more than the cheapest, whatever the time; 0 keeps the exact proof (#826)
+AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the search stops at its proved gap (OR-39, #925), and the forecast of the walk paths reads it
+PROOF_GAP = 0.01  # OR-32, OR-39: past the aim, the search stops by itself when its plan is proved to cost at most this share more than the cheapest; 0 keeps the exact proof (#826, #925)
 NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every method family has its bound (#822, ticket 4)
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
@@ -54,13 +54,14 @@ STATES = "states"
 class Budget:
     """The time and memory one run may take (see the module text). None for a figure means no limit of that kind.
 
-    `aim_seconds` is what the plan aims at (#826's stop at a proved 1% does not read it, OR-39, and since #926 nothing on the way of the default
-    search does; the retired forecast of `_decide` reads it for a walk asked for by name); `seconds` and `memory_mb` are the
+    `aim_seconds` is what the plan aims at: under it the envelope search keeps proving, past it the search stops at the proved `gap` (OR-39 as
+    the dispatcher decided on #925; `_plan.search_gap`), and the retired forecast of `_decide` reads it for a walk asked for by name; with no aim
+    the stop at the gap applies from the first round. `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure.
-    `gap` is the proof the run owes (OR-32 as narrowed by OR-39): the envelope search stops by itself once its plan is proved to cost at most this
-    share more than the cheapest, whatever the time; 0 keeps the proof exact. The aim does not choose between two kinds of answer (OR-39): a proof
-    that closes is the same answer with a gap of 0. Every figure is a setting of the machine and the user the run is for, never a constant sized
+    `gap` is the proof the run owes once the plan has passed its aim (OR-32 as narrowed by OR-39, #925): the envelope search then stops by itself
+    at the first round whose plan is proved to cost at most this share more than the cheapest; 0 keeps the proof exact. A craft whose proof
+    closes inside the aim is proved the cheapest; a longer one ends at the gap it proved. Every figure is a setting of the machine and the user the run is for, never a constant sized
     for one machine (OR-40).
     """
 
