@@ -31,7 +31,7 @@ from crafting_system.actions import (
     is_table_family,
     partners,
 )
-from crafting_system.actions import PLAN_READING, Recounted, Spent, WeightReading, kept_tier_weights
+from crafting_system.actions import PLAN_READING, Recounted, Spent, WeightReading, add_fractured, kept_tier_weights
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -1870,8 +1870,8 @@ class Abstraction:
         included) and `rest`, with junk kept, the other drawn mods as `(label, count)` pairs (None
         otherwise). The probability of a "pool" entry is that of all the families of the type together:
         families of one type are interchangeable in the draw, so each is the fractured one with an equal
-        share (`_add_fractured` divides). It takes one run of the exact engine for each family type, with
-        that type's mods marked in the label.
+        share (`_add_fractured` divides). It takes one walk of the exact engine, with each mod's family type
+        marked in the label, read once per type with that type alone marked (#934).
         """
         key = (signature, self._forced_label(part))
         found = self._fractures.get(key)
@@ -1891,19 +1891,33 @@ class Abstraction:
             for entry in family.mods:
                 owner[entry.mod.id] = family_type
         types = list(dict.fromkeys(owner.values())) or [None]
-        single = part.fracturing()
+        numbers = {family_type: number for number, family_type in enumerate(types)}
+
+        def marked(number: int) -> Callable[[Mod], Label]:
+            def label(mod: Mod) -> Label:
+                return (label_of(mod), "forced" if mod.id == part.forced else "type" if owner.get(mod.id) == types[number] else "")
+
+            return label
+
+        def every_mark(mod: Mod) -> Label:
+            return (label_of(mod), "forced" if mod.id == part.forced else numbers.get(owner.get(mod.id), ""))
+
+        # one walk of the engine for every type (#934): each mod marked with the number of its family type, and each type read as a view of
+        # that walk with that type alone marked, which is the distribution one run with that type marked gives, in its order (see
+        # `exact_distributions`). The entries are then made run after run as before, so they are the same numbers in the same order. A run
+        # after the first takes only an outcome where a mod of its type was drawn (no other fractures a mod of it), so its view holds those alone.
+        views = [marked(number) for number in range(len(types))]
+        needed = [None] + [(lambda value, number=number: value[1] == number) for number in range(1, len(types))]
         merged: dict[Hashable, Fraction] = defaultdict(Fraction)
-        for number, marked in enumerate(types):
-
-            def label(mod: Mod, marked=marked) -> Label:
-                mark = "forced" if mod.id == part.forced else "type" if owner.get(mod.id) == marked else ""
-                return (label_of(mod), mark)
-
-            for outcome, chance in single.distribution(label).items():
+        for number, shown in enumerate(part.distributions(every_mark, list(zip(views, needed)))):
+            forced = None if part.forced is None else views[number](self.data.mods[part.forced])
+            mixed: dict[Hashable, Fraction] = defaultdict(Fraction)
+            add_fractured(mixed, shown, forced, ONE, True)
+            for outcome, chance in mixed.items():
                 split = self._split_fractured(outcome, first=number == 0)
                 if split is not None:
                     kind, fractured_label, best, rest = split
-                    merged[(kind, marked if kind == "pool" else None, fractured_label, best, rest)] += chance
+                    merged[(kind, types[number] if kind == "pool" else None, fractured_label, best, rest)] += chance
         entries = tuple(merged.items())
         self._fractures[key] = entries
         self._kernels += 1
