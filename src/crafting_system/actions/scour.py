@@ -133,12 +133,12 @@ class ScouringOrb(Action):
 WHY_NOT_PLANNER = (
     "the offers are listed once, for the start item (`planner/_offers.py` `_listed`), and a kind lists only what fits that item's rarity: "
     "on a Rare start the Normal item a Scouring leaves (or the Magic one holding the fractured mod) is offered nothing it takes, so the "
-    "Scouring would be a dead offer, and the Orb of Alchemy is offered only on a Normal start; both wait for the offers of the item a "
+    "Scouring would be a dead offer; the Orb of Alchemy is held back with it, on a Normal start too; both wait for the offers of the item a "
     "Scouring leaves (#973, #943)"
 )
 PLAYER_WHY = (
-    "a Scouring leaves a Normal item, or a Magic one with its fractured mod, and the planner does not yet offer an Orb of Alchemy "
-    "or any other action for that item, only for the start item; the two orbs come in together"
+    "not offered yet on any item, a Normal one included: a Scouring leaves the item Normal, or Magic with its fractured mod, and the "
+    "planner cannot yet choose actions for that item, only for the item it starts from, so the Orb of Alchemy waits with the Scouring"
 )
 
 
