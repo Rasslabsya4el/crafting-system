@@ -1,0 +1,7 @@
+--route r04
+--route r14
+--case essences/medium
+--case fracturing/medium
+--case start-fractured/medium
+--case basic-orbs/small
+--case bench-metamods/small
