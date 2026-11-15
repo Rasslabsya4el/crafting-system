@@ -74,14 +74,15 @@ def pushed(pattern: Pattern, ab: Abstraction, state: CompressedState, action) ->
     return dict(out)
 
 
-def check_dominates(pattern: Pattern, ab: Abstraction, key, action, mode, rng: random.Random, trials: int = 30) -> tuple[int, int]:
-    """The offered members of `mode` are at least as good as every member of the key, for random values of the successor keys.
+def check_dominates(pattern: Pattern, ab: Abstraction, key, action, mode, rng: random.Random, trials: int = 30, named=frozenset()) -> tuple[int, int]:
+    """The offered members of `mode` (with the folded families `named`, #828) are at least as good as every member of the key, for random values
+    of the successor keys.
 
     For `trials` random value functions, the least backup over the offered members must not exceed the backup of any member, and the action
     must be offered whenever some member can take it. Returns (members compared, offered members that could take the action).
     """
     members = all_members(pattern, key)
-    offered = pattern.members(key, mode)
+    offered = pattern.members(key, mode, named)
     assert set(offered) <= members, "an offered member is not a member of the key"
     kernels = {m: pushed(pattern, ab, m, action) for m in members}
     legal = {m: k for m, k in kernels.items() if k is not None}
