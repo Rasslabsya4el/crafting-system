@@ -134,8 +134,7 @@ from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
 
-from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags
-from crafting_system.actions.pool import partners
+from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
 from crafting_system.items.model import VEILED_DOMAIN
