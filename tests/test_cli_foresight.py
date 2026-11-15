@@ -354,17 +354,17 @@ class ToyBlind(GameAction):
         return ChaosOrb().outcomes(data, item)
 
 
-def test_on_the_bound_pruning_path_the_lock_plan_equals_the_one_solved_without_that_pruning(r12):
+def test_with_many_offers_the_lock_plan_of_the_search_equals_the_one_of_the_walk(r12):
     from crafting_system.planner._offers import offers_for
     from crafting_system.abstraction import Goal
 
     base = offers_for(DATA, Goal.from_target(r12), r12.base_id, r12.start_item, r12.actions).offers
     offers = (*base, *(Offer(ToyBlind(i).label(), ToyBlind(i), ToyBlind(i).resources()) for i in range(40)))
     prices = with_lock(price_file(), 0.05)
-    pruned = make_plan(DATA, r12, prices, offers=offers)
-    whole = make_plan(DATA, r12, prices, offers=offers, solver="packed")  # every offer after the twins, no bound pruning
+    pruned = make_plan(DATA, r12, prices, offers=offers)  # 40 offers and more: no bound pruning since #829 (a Lock: walked, `pattern_refusal`)
+    whole = make_plan(DATA, r12, prices, offers=offers, solver="packed")  # every offer after the twins, walked
 
-    assert pruned.pruned is not None and whole.pruned is None
+    assert whole.search is None
     assert pruned.foresight.status is whole.foresight.status is Status.USED
     assert pruned.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
     assert pruned.foresight.lock_free_mean == pytest.approx(whole.foresight.lock_free_mean, rel=1e-9)

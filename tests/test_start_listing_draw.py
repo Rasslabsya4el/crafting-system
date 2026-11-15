@@ -307,18 +307,20 @@ def test_a_simulated_craft_starts_from_the_listing_and_agrees_with_the_computed_
     assert check.agrees, check.reason
 
 
-def test_the_bound_pruning_bounds_the_offers_on_the_opened_item_and_keeps_the_draw(monkeypatch):
-    """The pruning of many offers (R08, R09) sees the unopened start as the item it opens into: the same values as the unpruned solve."""
-    from crafting_system.planner import _plan
+def test_the_offers_floors_see_the_opened_item_and_the_search_keeps_the_draw(monkeypatch):
+    """The floors of many offers (R08, R09) see the unopened start as the item it opens into (#731): the search with them gives the same values as
+    the object solve, and its plan takes the draw (#829: the bound pruning that did this before is gone)."""
+    from crafting_system.planner import _pattern_bound, _plan
 
     data = RARE
     aim = target(data, rarity="rare", actions="chaos-orb", wanted=("ToyP3", "ToyS3"))
     entries = prices(start_price_key(data, aim))
     entries.prices["Chaos Orb"] = type(entries.prices["Orb of Alteration"])(1.0, "fixture")
-    whole = make_plan(data, aim, entries, solver="object")  # the bound pruning is the object solver's path (#535)
-    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
-    pruned = make_plan(data, aim, entries, solver="object")
+    whole = make_plan(data, aim, entries, solver="object")
+    monkeypatch.setattr(_plan, "MIN_OFFERS", 2)
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 2)  # the floors on, as from 40 offers
+    searched = make_plan(data, aim, entries, solver="envelope")
 
-    assert pruned.pruned is not None and not pruned.pruned.fell_back
-    assert DRAW_LABEL in {offer.label for offer in pruned.pruned.used}
-    assert pruned.solution.values[pruned.start] == pytest.approx(whole.solution.values[whole.start], rel=1e-9)
+    assert searched.search is not None and searched.search.exact
+    assert DRAW_LABEL in {action.label for action in searched.policy.values()}
+    assert searched.solution.values[searched.start] == pytest.approx(whole.solution.values[whole.start], rel=1e-9)

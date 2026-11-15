@@ -288,8 +288,6 @@ def path_of(plan) -> str:
         return "approximate (budget)"
     if plan.readings is not None:
         return "readings (object solver per reading)"
-    if plan.pruned is not None:
-        return "bound pruning (solve_pruned)"
     if plan.packed is not None and "envelope" in plan.packed.info:
         return "envelope search"
     if plan.packed is not None:
@@ -298,7 +296,7 @@ def path_of(plan) -> str:
 
 
 def describe_plan(plan, record: dict):
-    """Write the plan's figures into `record` (path, mean, states, reach, the search's or the pruning's counts, `L` and `U`); return its `EnvelopeInfo` or None."""
+    """Write the plan's figures into `record` (path, mean, states, reach, the search's counts, `L` and `U`); return its `EnvelopeInfo` or None."""
     from crafting_system.planner._envelope_plan import certificate_gap, certified_upper
 
     info = plan.packed.info.get("envelope") if plan.packed is not None else None
@@ -315,12 +313,6 @@ def describe_plan(plan, record: dict):
         "limits": [limit.what for limit in plan.limits], "start_label": start_label,
         "start_option": None if plan.starts is None else repr(plan.starts)[:500], "lock": None if plan.foresight is None else repr(plan.foresight)[:300],
     }  # fmt: skip
-    if plan.pruned is not None:
-        pruned = plan.pruned
-        record["pruned"] = {
-            "rounds": pruned.rounds, "used": len(pruned.used), "bounded": len(pruned.bounded), "twins": len(pruned.twins), "inapplicable": len(pruned.inapplicable),
-            "fell_back": pruned.fell_back, "why": pruned.why[:300], "phases": [[name, round(seconds, 2)] for name, seconds in pruned.phases],
-        }  # fmt: skip
     if info is not None:
         env = dataclasses.asdict(info)
         env["gap"] = certificate_gap(info)  # as the plan's own limit states it: the mean's certified error is inside (#867)

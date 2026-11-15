@@ -11,8 +11,8 @@ search ended (exact, or within the gap), its lower and upper figures, its rounds
 V01 is planned as the benchmark plans it: with the start items a vendor recipe makes, at the price file its target names.
 
 `check` makes the production plan with the object solver (`solver="object"`), then solves the same offers on packed arrays and
-prints the relative difference of the mean cost, p50 and p90; for R08 the packed solve takes the offers the bound pruning
-ended on (`plan.pruned.used`), for the others every offer after the twins are merged (`solver="packed"`). Writes `<route>.check.json`.
+prints the relative difference of the mean cost, p50 and p90; the packed solve takes every offer after the twins are merged
+(`solver="packed"`; the bound pruning that gave R08 a smaller set is retired, #829). Writes `<route>.check.json`.
 
 Never run on a PC for the heavy routes: R04, R14 and S02 walk for minutes to half an hour. Run by `.github/scripts/heavy_dispatch.py`.
 """
@@ -164,20 +164,10 @@ def main() -> None:
     else:
         reference = make_plan(data, target, prices, start_price=start_price, budget=None, solver="object")
         say(f"object solver: mean {reference.mean_remaining!r} ({reference.solve_seconds:.0f} s)")
-        if reference.pruned is not None and arguments.route == "r08":
-            began_packed = time.perf_counter()
-            packed = _packed.packed_result(
-                reference.abstraction, reference.start, reference.pruned.used, solver="packed"
-            )
-            mean, bound = packed.solution.values[reference.start], packed.solution.error_bound
-            packed_info = packed.info
-            packed_seconds = time.perf_counter() - began_packed
-            candidate_risk = None
-        else:
-            began_packed = time.perf_counter()
-            candidate = make_plan(data, target, prices, start_price=start_price, budget=None, solver="packed")
-            mean, bound = candidate.mean_remaining, candidate.solution.error_bound
-            packed_info, packed_seconds, candidate_risk = {}, time.perf_counter() - began_packed, risk_row(candidate)
+        began_packed = time.perf_counter()
+        candidate = make_plan(data, target, prices, start_price=start_price, budget=None, solver="packed")
+        mean, bound = candidate.mean_remaining, candidate.solution.error_bound
+        packed_info, packed_seconds, candidate_risk = {}, time.perf_counter() - began_packed, risk_row(candidate)
         difference = abs(mean - reference.mean_remaining) / max(abs(reference.mean_remaining), 1e-300)
         result.update(
             object_mean=reference.mean_remaining, packed_mean=mean, relative_difference=difference,

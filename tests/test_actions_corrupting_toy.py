@@ -338,7 +338,7 @@ def test_pruning_the_toy_to_the_states_that_pass_never_changes_the_value_on_a_fi
 
 
 def test_a_corrupting_offer_is_terminal_for_the_bound_pruning():
-    from crafting_system.planner._bound_prune import TERMINAL, _kind_of
+    from crafting_system.planner._offer_kinds import TERMINAL, _kind_of
 
     start_item = fixture_items()["rare_junk"]
     assert _kind_of(TOY_DATA, start_item, _priced(ToyCorruption(), COST, start_item))[0] == TERMINAL

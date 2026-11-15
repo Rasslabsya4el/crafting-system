@@ -22,7 +22,6 @@ Like every real-data test it skips without the dump.
 
 import datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -87,12 +86,9 @@ def no_solve(monkeypatch):
     def solve_whole(model, starts, **_):
         return solved_nothing(model.start)
 
-    def solve_pruned_nothing(abstraction, start, priced, item, **_):
-        return SimpleNamespace(solution=solved_nothing(start), twins=(), inapplicable=(), bounded=())
-
     monkeypatch.setattr(_plan, "solve", solve_whole)
     monkeypatch.setattr(_plan, "packed_result", lambda *_, **__: None)  # S02 walks 106,002 states: this module only reads routes
-    monkeypatch.setattr(_plan, "solve_pruned", solve_pruned_nothing)
+    monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "no search in this module")  # `auto` walks, and the walk is the stub above
     monkeypatch.setattr(_plan, "evaluate_risk", lambda *_, **__: None)
 
 

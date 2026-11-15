@@ -64,7 +64,7 @@ model gap in `_item_of` always refuses.
 **The universe.** The members of a key are made of the ordinary slots an item can hold. They come from three places: the pool of an empty rare
 item (every mod a draw can give; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced
 mod, which the pool does not list; `Universe._seed_named`), and every slot a kernel the build evaluates produces (`note`; a slot found this way
-that the two others missed starts the build again, `stats.universe_growth`). A slot that a non-offered member's kernel would produce, and no
+that the two others missed starts the build again on the grown universe, `stats.universe_growth`). A slot that a non-offered member's kernel would produce, and no
 offered member's, cannot be one of the first two: a draw gives a mod of the pool, and a forced mod is the same at every member. What is left is
 a draw from a pool wider than the empty rare item's (a fossil's added mods) at a member that is not offered, which `Adds` does not name: the
 universe may miss that slot, and the members that hold it are not made (issue #520). No route of the benchmark has such an action.
@@ -324,6 +324,12 @@ class Pattern:
         self._tag_kind: dict[str, tuple] = {}
         self.grew = 0
         self.fallbacks = 0
+
+    def keep_universes(self, before: "Pattern") -> None:
+        """Take the universes of `before` (the slots its kernels found included), seeded with what this pattern's actions add by name."""
+        for influences, universe in before._universes.items():
+            self._universes[influences] = universe
+            universe._seed_named(self, self.actions)
 
     def add_actions(self, actions: Sequence[Action]) -> None:
         """Offer more actions: what they add by name joins the universe, and a universe that gains a slot counts as growth (`grew`), as a kernel's slot does."""
@@ -652,7 +658,13 @@ class PatternBuilder:
         self._reset()
 
     def _reset(self) -> None:
+        before = getattr(self, "pattern", None)
         self.pattern = Pattern(self.ab, self.tags, [offer.action for offer in self.offers if offer.action is not None])
+        if before is not None:
+            # the build begins again because the universe grew: it begins on the grown universe. Made afresh, the universe would lose the slots the
+            # kernels found (a fossil's added mods, which the pool does not list), find them again in the same pass, and begin again forever (#829:
+            # a fossil world with bench crafts, the build ran past 25 minutes on CI, 109 restarts in a minute here)
+            self.pattern.keep_universes(before)
         self.stats = PatternStats()
         self.index: dict[PatternKey, int] = {}
         self.keys: list[PatternKey] = []

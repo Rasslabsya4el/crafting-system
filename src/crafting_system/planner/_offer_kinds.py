@@ -1,0 +1,272 @@
+"""What each offer can cost at least, from what its action declares: the twins, the kinds, `pbar` and the floor `rho` (tickets #118, #626, #829).
+
+The bound pruning that used to solve the plan on a few offers and certify the rest (`solve_pruned`, retired with the 40-offer switch, #829)
+was built on these pieces; the offers' floors of the bound and of the envelope search (`_offer_floor`) are what is left of it. Everything is a
+filter over what an action declares (`reads`, `adds`, `twin_key`) and over `reach_bound`; no action class is named here.
+
+TWINS. Offers with an equal, non-None `Action.twin_key(data, item)` give equal outcomes in every state:
+only the cheapest of a group (the earliest on a tie) is kept. Exact: swapping a dearer twin for the
+cheaper one in any policy lowers or keeps its cost and changes nothing else.
+
+THE NUMBER pbar. Let U be a set of NECESSARY goal leaves (a leaf is necessary when it sits directly under
+the requirements, or only under `AtLeast` nodes with k equal to the number of members; U is the necessary
+leaves that are not PASSING at the start, less the ones a bench craft can finish when something is left).
+Let E be "every leaf of U is PASSING". The goal implies E, and the start is outside E. For an offer x,
+pbar(x) is a number such that one use of x, from ANY state outside E that has the flags and the fractured
+mods of the start, lands in E with chance at most pbar(x):
+  * `restart` lands on the start, outside E: pbar = 0. When the start is an unopened listing (ADR-0064) the restart lands
+    there instead, a state of another shape where only the draw that opens it works, and the draw can land in E. A restart
+    is then counted with the draw that must follow it (`through_listing`): one use of cost c(restart) + c(draw), with
+    pbar = the chance that the draw from the listing does not land outside E in the shape (the claim below holds because
+    from a state of the shape the listing is entered only by a restart, so each draw used follows a restart of its own).
+  * an erasing reroll (it does not read the junk, erases the crafted mods, does not fracture, keeps the
+    flags and the fractured mods of the item): its result does not depend on the state but through the
+    flags and the fractured mods, so the exact chance at one state is the chance at every such state.
+    Level 0 is pbar = 1, level 1 is `reach_bound` (an upper bound from the pool), level 2 is the exact
+    chance (`reach_bound(..., exact=True)`). All are read on the BARE item of the start's shape (no mods
+    but the fractured ones): a reroll refused there is refused wherever the shape holds (it reads
+    nothing else), so it is set aside as inapplicable.
+  * a bench craft (reads the junk, adds a named mod, draws nothing, does not fracture): it only adds a
+    mod, so it makes a leaf of U PASSING only if the mod is one of that leaf's: pbar = 1 if its named
+    mods meet the mods of a leaf of U, else 0. It stays in the model.
+  * anything else (it fractures, changes the flags, draws and reads the junk, has no bound, is unknown):
+    TERMINAL, pbar = 1, and the argument below is cut at its first use.
+
+THE LOWER BOUND rho. rho = min over the offers of cost / pbar (an offer with pbar = 0 counts for infinity);
+it is found best first, so that the dear bounds are computed only where they matter: a heap on cost / pbar
+with every reroll at level 0; pop the smallest; if it is a reroll below level 2, raise its level and push
+it back; stop when the smallest is at level 2 or is not a reroll. Raising a level only lowers pbar, so the
+ratios only grow, and the one that stops the loop is the least ratio of all. Claim (Wald): V*(s) >= rho for
+every state s outside E with the flags and the fractured mods of the start, in the FULL model.
+Proof. A policy from s that reaches the goal almost surely enters E (the goal implies E) at a first time T.
+Let tau be the first use of a terminal action and N = min(T, tau). Until N every action used is one of
+`restart`, a bench craft or an erasing reroll, none of which moves the flags and the fractured mods, so
+the state keeps the shape of the start and, given the history, the chance of entering E at step t is at
+most pbar(a_t). With probability 1 either E is entered at a step before tau, or a terminal action is used
+(and the first one is at step tau). So 1 <= sum over t <= N of E[w(a_t)] with w = pbar for the others and
+w = 1 for a terminal action, and the cost of the policy is at least E[sum over t <= N of cost(a_t)] >=
+rho * E[sum w(a_t)] >= rho, since cost(a) >= rho * w(a) for every offer a.
+
+WHAT THE CLAIM NEEDS, and what is checked. (1) An offer that the game refuses on the bare item of the start's shape never applies at a state
+of that shape (a reroll reads nothing of the item that the shape does not hold; a crafted mod can only add refusals). This is an assumption on
+the contract of `Reads`, not a check. (2) An erasing reroll keeps the shape, which `keeps_shape` checks at the bare item. (3) The bound of
+`reach_bound` is a proof by its own tests. Floats: rho is lowered by 1e-12 of itself.
+"""
+
+import heapq
+import math
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from fractions import Fraction
+
+from crafting_system.abstraction import (
+    Abstraction,
+    CompressedState,
+    Status,
+    Wanted,
+    keeps_shape,
+    reach_bound,
+)
+from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.data import GameData
+from crafting_system.items import Item
+
+from ._offers import BuyStartItem, PricedOffer
+
+ZERO, ONE = Fraction(0), Fraction(1)
+
+SMALL_START = 8  # the rerolls of least cost / pbar that the bound's model starts with (`_offer_floor.OfferFloors.initial`)
+SLACK = 1e-12  # float slack on rho and on the floors' test
+HUGE = 1e300  # stands for an infinite rho (nothing can reach E): keeps 0 * rho at 0
+
+RESTART_KIND, CRAFT, REROLL, TERMINAL, REFUSED = "restart", "craft", "reroll", "terminal", "refused"
+
+
+@dataclass
+class _Entry:
+    """One offer after the twins: what kind it is, the level of its bound, and its pbar."""
+
+    index: int
+    priced: PricedOffer
+    kind: str
+    level: int = 0
+    pbar: Fraction = ONE
+    extra: float = 0.0  # a cost that every use of the offer is followed by: the draw after a restart into an unopened listing (`through_listing`)
+
+    @property
+    def cost(self) -> float:
+        return self.priced.cost + self.extra
+
+    @property
+    def ratio(self) -> float:
+        """cost / pbar as a float; infinity for a pbar of 0."""
+        return math.inf if self.pbar == 0 else float(Fraction(self.cost) / self.pbar)
+
+
+def necessary_leaves(goal) -> tuple[int, ...]:
+    """The indexes (into `goal.leaves`) of the leaves every goal state must have PASSING.
+
+    A leaf sits directly under the requirements, or only under `AtLeast` nodes whose k is their number of members.
+    """
+    found: list[int] = []
+
+    def walk(node, position: int, necessary: bool) -> int:
+        if isinstance(node, Wanted):
+            if necessary:
+                found.append(position)
+            return position + 1
+        keep = necessary and node.k == len(node.members)
+        for member in node.members:
+            position = walk(member, position, keep)
+        return position
+
+    position = 0
+    for node in goal.requirements:
+        position = walk(node, position, True)
+    return tuple(found)
+
+
+def goal_set(goal, start: CompressedState, finished_by_crafts: frozenset[str]) -> tuple[int, ...]:
+    """U: the necessary leaves not PASSING at the start, less those a bench craft can finish (if any remain).
+
+    `finished_by_crafts` are the mod ids that offered crafts add by name.
+    """
+    open_leaves = [index for index in necessary_leaves(goal) if start.status[index] is not Status.PASSING]
+    kept = [index for index in open_leaves if not goal.leaves[index].mod_ids & finished_by_crafts]
+    return tuple(kept or open_leaves)
+
+
+def merge_twins(
+    data: GameData, item: Item, priced: Sequence[PricedOffer]
+) -> tuple[list[PricedOffer], list[tuple[str, str]]]:
+    """`priced` without the offers that have a cheaper twin (equal non-None `twin_key` on `item`), and the (dropped, kept) labels.
+
+    Exact (see TWINS above). `restart` has no twin. Used by the search and the walk with many offers (`_pattern_bound.MIN_OFFERS`),
+    which must not pay for 10,000 fossil sets that fall into a few thousand classes.
+    """
+    first_of: dict[object, int] = {}  # twin key -> position of the cheapest offer so far
+    twins: list[tuple[str, str]] = []
+    dropped: set[int] = set()
+    for position, offer in enumerate(priced):
+        if isinstance(offer.offer.action, BuyStartItem):
+            continue
+        key = offer.offer.action.twin_key(data, item)
+        if key is None:
+            continue
+        kept = first_of.get(key)
+        if kept is None:
+            first_of[key] = position
+        elif offer.cost < priced[kept].cost:
+            twins.append((priced[kept].label, offer.label))
+            dropped.add(kept)
+            first_of[key] = position
+        else:
+            twins.append((offer.label, priced[kept].label))
+            dropped.add(position)
+    return [offer for position, offer in enumerate(priced) if position not in dropped], twins
+
+
+def through_listing(abstraction: Abstraction, start: CompressedState, shape: CompressedState, chosen: Sequence[int], entries: Sequence[_Entry]) -> None:
+    """Count each restart with the draw that follows it when the start is an unopened listing (ADR-0064; see the module text, pbar).
+
+    The restart buys the listing, where only a draw works, so a policy that restarts pays a draw too and lands in E with that draw's chance: the
+    least cost of the draws offered and the largest of their chances bound every one of them. A draw outcome of another shape counts as landing (the
+    argument is cut there, as at a terminal offer). No draw offered, or a listing that is a goal, leaves the restart as it was.
+    """
+    if not getattr(start.flags, "unopened", False) or abstraction.is_goal(start):  # the light tests' states carry plain flags
+        return
+    draws = [entry for entry in entries if getattr(entry.priced.offer.action, "opens_listing", False)]
+    if not draws:
+        return
+    held = (shape.flags, shape.fractured)
+
+    def outside(state: CompressedState) -> bool:  # outside E, with the shape: where the claim's rho holds again
+        return (
+            not abstraction.is_goal(state)
+            and (state.flags, state.fractured) == held
+            and not all(state.status[index] is Status.PASSING for index in chosen)
+        )
+
+    landing = ZERO
+    for draw in draws:
+        try:
+            outcomes = abstraction.kernel(start, draw.priced.offer.action)
+        except NotApplicableError:
+            continue  # refused at the listing: never used after a restart
+        except OutOfScopeError:  # no rule for it proves no chance: counted as landing, the argument cut there as at a terminal offer
+            landing = ONE
+            continue
+        landing = max(landing, ONE - sum((chance for state, chance in outcomes.items() if outside(state)), ZERO))
+    cheapest = min(draw.priced.cost for draw in draws)
+    for entry in entries:
+        if isinstance(entry.priced.offer.action, BuyStartItem):
+            entry.pbar, entry.extra = landing, cheapest
+
+
+def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:
+    """The `(kind, pbar, level)` of a reroll brought to `target` (see `raise_level`); a function of its arguments alone."""
+    data = abstraction.data
+    if level == 0:
+        try:
+            same_shape = keeps_shape(abstraction, bare, action)
+        except NotApplicableError:
+            return REFUSED, ONE, level
+        except OutOfScopeError:  # no rule for the bare item proves nothing for the states: the offer stays in the search, and the walk writes its gap (ticket #506)
+            return TERMINAL, ONE, level
+        adds = action.adds(data, item)
+        if not same_shape or adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
+            return TERMINAL, ONE, level
+        level = 1
+        found = reach_bound(abstraction, bare, action, chosen) if chosen else ZERO
+        if found is None:
+            return TERMINAL, ONE, level
+        pbar = found
+    if target >= 2 and level < 2 and kind == REROLL:
+        level = 2
+        exact = reach_bound(abstraction, bare, action, chosen, exact=True) if chosen else ZERO
+        if exact is not None and exact < pbar:
+            pbar = exact
+    return kind, pbar, level
+
+
+def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int], None]) -> float:
+    """The least cost / pbar over the entries, found best first so that the dear bounds are computed only where needed.
+
+    A heap on cost / pbar holds every entry at its current level. Pop the smallest; a reroll below
+    level 2 is brought one level up (`raise_level`, which only lowers its pbar, so its ratio only grows)
+    and pushed back; the loop stops at the first pop that is not a reroll or is at level 2. Every other
+    entry has a current ratio at least as large and a true ratio at least as large as its current one,
+    so the popped ratio is the least of all. Returns it, lowered by `SLACK` of itself.
+    """
+    heap = [(entry.ratio, entry.index) for entry in entries]
+    heapq.heapify(heap)
+    while heap:
+        ratio, index = heapq.heappop(heap)
+        entry = entries[index]
+        if entry.kind == REFUSED:
+            continue
+        if entry.kind != REROLL or entry.level >= 2:
+            return min(ratio, HUGE) * (1 - SLACK)
+        raise_level(entry, entry.level + 1)
+        heapq.heappush(heap, (entry.ratio, index))
+    return 0.0
+
+
+def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]:
+    """The kind of an offer from what its action declares, and (for a craft) the mods it adds by name.
+
+    An action that does not read the junk starts as a reroll; whether it is refused, terminal or bounded
+    is found when its bound is first needed (`raise_level`), because that needs the bare item.
+    """
+    action = offer.offer.action
+    if isinstance(action, BuyStartItem) or getattr(action, "opens_listing", False):  # both are always in the solve: the draw is the one action of the unopened start (ADR-0064)
+        return RESTART_KIND, frozenset()
+    reads = action.reads(data)
+    if reads.item_state:
+        return TERMINAL, frozenset()  # its result depends on the implicits, the quality or the offer, which the bound read at one state does not hold fixed
+    if not reads.junk:
+        return REROLL, frozenset()
+    adds = action.adds(data, item)
+    if not adds.fractures and not adds.draws and adds.named is not None:
+        return CRAFT, frozenset(adds.named)
+    return TERMINAL, frozenset()

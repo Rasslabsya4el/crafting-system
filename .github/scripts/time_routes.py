@@ -16,7 +16,7 @@ from pathlib import Path
 
 from crafting_system.cli import make_plan
 
-from crafting_system.planner import _bound_prune, _packed
+from crafting_system.planner import _packed
 from crafting_system.planner._limits import limit_document
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
@@ -32,7 +32,7 @@ def main() -> None:
     parser.add_argument("--route", required=True, choices=sorted(TARGETS))
     parser.add_argument("--exact", action="store_true")
     parser.add_argument("--budget", type=float, default=60.0)
-    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto: what the player gets; object for the bound pruning)")
+    parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto: what the player gets, the envelope search)")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
     out = Path(arguments.out)
@@ -49,7 +49,7 @@ def main() -> None:
             pass
         print(f"[{time.perf_counter() - began:7.1f}s] {line}", flush=True)
 
-    _bound_prune.PROGRESS = progress
+    _packed.PROGRESS = progress
     data = load_game_data()
     target = load_target(ROOT / "examples" / "targets" / f"{TARGETS[arguments.route]}.yaml", data)
     progress("target loaded")

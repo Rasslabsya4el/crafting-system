@@ -272,7 +272,7 @@ def measure(route: str, variant: str, solver: str, data, *, net=None, say: Calla
     elapsed = time.perf_counter() - began
     say(f"planned in {plan.solve_seconds:.0f} s ({elapsed:.0f} s with the inputs)")
     info = plan.packed.info.get("envelope") if plan.packed is not None else None
-    path = "envelope" if info is not None else "packed" if plan.packed is not None else "pruned" if plan.pruned is not None else "object"
+    path = "envelope" if info is not None else "packed" if plan.packed is not None else "object"
     kinds = Counter(priced.offer.kind for priced in plan.offers)
     record.update(
         finished=True,

@@ -188,6 +188,13 @@ class CraftingProblem:
             out.append((low, position))
         return out
 
+    def tighten(self, state: CompressedState, position: int, best: float) -> float | None:
+        """The offer's own floor at `state`, its chance worked out until the floor is above `best` (`_offer_floor.OfferFloors.tighten`); None without
+        the offers' floors. Only a reroll of the start's shape has a chance to work out: any other offer keeps the floor `candidates` gave it."""
+        if self.floors is None or isinstance(self.offers[position].offer.action, BuyStartItem):
+            return None
+        return self.floors.tighten(position, self._klass(state), best)
+
     def cost(self, position: int) -> float:
         return self.offers[position].cost
 
@@ -307,7 +314,7 @@ class EnvelopeInfo:
     bound_stopped: str | None = None  # why the bound's build ended before it was complete (a net); None for a complete model
     bound_expanded: int = 0  # keys the build expanded (the others were tips with a floor)
     bound_offers: int = 0  # offers the model was built on (the rest are carried by their floors, `_pattern_bound`)
-    bound_rounds: int = 1
+    tightened: int = 0  # (state, offer) pairs the search did not build because the offer's own floor, worked out then, ruled it out (#829)
     within: float | None = None  # the gap setting, when the search ended because the plan was proved within it of the cheapest (OR-32); then `stopped` is None
     restarts: bool = True  # whether the plan of a search that is not exact buys the start item again wherever the search had not looked (False: a given start, whose plan closed)
     first_plan: int = 0  # actions built along the first plan's chain, before the first round
@@ -403,7 +410,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
     packed.info["envelope"] = EnvelopeInfo(
         result.exact, result.stopped, result.lower, mean, stats.rounds, stats.touched, stats.expanded, stats.realized, stats.candidates,
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
-        time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), bound.rounds,
+        time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), stats.tightened,
         result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
         None if result.exact else result.upper,
     )  # fmt: skip
@@ -413,7 +420,6 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
 BUILD_PHASES = {  # the phase of a stopped build, as a player reads it
     "floors": "working out the cheapest possible cost of each action",
     "model": "counting the kinds of item the crafting can reach",
-    "growth": "adding the actions that matter to that count",
     "solve": "solving that count",
 }
 

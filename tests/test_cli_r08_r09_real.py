@@ -14,7 +14,8 @@ finish in 40 minutes on a runner, so these tests could not plan it. The prices o
 search to scale (#702: R08 and R09 are not planned at the new prices; #703: their benchmark verdicts are measured at the old ones).
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees; at the same prices the
-solver's mean is no more than the given route's. Times and state counts are in the PR, not asserted (ADR-0014).
+solver's mean is no more than the given route's, within the gap the search proved (OR-32, OR-39: since #829 the plan is the envelope
+search's, which stops once its plan is proved within the gap of the cheapest). Times and state counts are in the PR, not asserted (ADR-0014).
 """
 
 import datetime
@@ -23,7 +24,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
-from limits_support import notes, of_kind
+from limits_support import of_kind
 
 from crafting_system.actions import DRAW_LABEL, ApplyFossils, BenchCraft
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
@@ -34,7 +35,7 @@ from crafting_system.targets import load_target
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 RUNS = 200
-BUDGET = 60.0  # the plan is made as the command makes it by default: under a budget; a judged route is walked exactly, with no forecast (#926)
+BUDGET = 60.0  # the plan is made as the command makes it by default: under a budget, by the envelope search, which stops at a proved gap (OR-39; a judged route included, #829)
 RATES = Rates(4e-5, 7e-6)  # read by nothing since #926 (`auto` makes no forecast); they go with the forecast (#928)
 ROUTES = {
     "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.82716, "Dense Fossil"),
@@ -66,7 +67,7 @@ def plans(data):
 @pytest.fixture(scope="module")
 def plan(data, route, plans):
     if route not in plans:
-        plans[route] = make_plan(data, load_target(paths(route)[0], data), load_price_file(PRICES), budget=BUDGET, rates=RATES, judges_route=True)  # the guide's route is judged against it (#535: `auto` walks)
+        plans[route] = make_plan(data, load_target(paths(route)[0], data), load_price_file(PRICES), budget=BUDGET, rates=RATES, judges_route=True)  # the guide's route is judged against it, on its own reach (#829)
     return plans[route]
 
 
@@ -93,7 +94,11 @@ def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, rout
 
 
 def test_the_policy_reaches_the_goal_with_exact_odds_and_mean(plan):
-    assert plan.approximation is None and notes(plan.limits) == []  # no forecast under `auto` (#926): the answer is exact
+    search = plan.search
+    assert plan.approximation is None  # no forecast under `auto` (#926)
+    assert search is not None and (search.exact or search.within is not None), search.stopped  # the search ended by itself: exact, or at a proved gap (OR-39)
+    assert search.lower <= plan.mean_remaining * (1 + 1e-9)
+    assert search.exact or plan.mean_remaining <= search.lower * (1 + search.within) * (1 + 1e-6)
     risk = plan.risk
 
     assert risk.success_probability.value == pytest.approx(1.0)
@@ -117,7 +122,9 @@ def test_the_solver_is_no_dearer_than_the_guides_given_route(plan, data, route):
 
     assert result.gaps == ()
     assert result.risk.success_probability.value == pytest.approx(1.0)
-    assert plan.risk.mean.value <= result.risk.mean.value * (1 + 1e-9)
+    search = plan.search
+    assert search.lower <= result.risk.mean.value * (1 + 1e-9)  # no plan costs less than the search's lower figure, the guide's route included
+    assert plan.risk.mean.value <= result.risk.mean.value * (1 + (0.0 if search.exact else search.within) + 1e-9)  # within the gap the search proved
 
 
 def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, route, capsys):

@@ -103,27 +103,6 @@ def test_m2_rate_a_plan_whose_forecast_used_the_guessed_speed_says_so_and_a_give
     assert limit.guarantee == "The answer's own guarantee does not depend on it: the size estimate only chose between the exact run and an approximate one."
     assert not [each for each in given.limits if each.what == "The time of the search was guessed"]
 
-
-# --- M2: the fall-back of the bound pruning ----------------------------------------------------------------------------------
-
-
-def test_m2_prune_a_bound_pruning_that_fell_back_to_all_the_actions_says_why(monkeypatch):
-    real = _plan.solve_pruned
-    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)  # R12 has 6 offers: the pruning runs
-    monkeypatch.setattr(_plan, "solve_pruned", lambda *args, **options: real(*args, **{**options, "rounds": 0}))  # no round to prove anything in
-
-    made = plan_of(solver="object")  # the bound pruning is the object solver's path (#535)
-
-    assert made.pruned is not None and made.pruned.fell_back
-    (limit,) = [each for each in made.limits if each.what == "All the actions were solved"]
-    assert limit.kind == "how-solved" and made.pruned.why == "the proof that the smaller set is enough did not finish in 0 rounds"
-    assert limit.why == "the search first solved a smaller set of actions and could not prove it enough (the proof that the smaller set is enough did not finish in 0 rounds)"
-    assert limit.guarantee == "The answer is exact among the methods offered."
-    monkeypatch.setattr(_plan, "solve_pruned", real)
-    clean = plan_of(solver="object")
-    assert clean.pruned is not None and not clean.pruned.fell_back and not [each for each in clean.limits if each.what == "All the actions were solved"]
-
-
 # --- C15, V8: the chance of reaching a state ---------------------------------------------------------------------------------
 
 

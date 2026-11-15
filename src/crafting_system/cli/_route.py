@@ -62,7 +62,7 @@ from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
-from crafting_system.planner import UNPRICED, PackedPolicy, Plan, PlanError, evaluate_risk, free_action_cost, offer_action
+from crafting_system.planner import UNPRICED, PackedPolicy, Plan, evaluate_risk, free_action_cost, offer_action
 
 from ._reach import policy_states
 
@@ -618,18 +618,17 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     action, built as the solver builds its own (same kernel, same integer weights). A state with no
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
 
-    Raises `PlanError` for a plan made by the envelope search: judging a route needs the planner's action at every state the route reaches,
-    and that search never decides the states it proves irrelevant, so the route would read as gaps there (#535). Such a plan is made with
-    `make_plan(..., judges_route=True)`, which keeps `solver="auto"` on the walk (a route judged without the full walk is #732).
+    A plan of the envelope search holds only the states it could not prove irrelevant (#535), so the route is never read on its graph: it is
+    walked here on its own reach as objects (#829). That reach is about the size of the graph `make_plan` checked (a route may also take an offer the walk
+    prunes, as on main): a judged plan comes from the search only when the walk found at most `OBJECT_SOLVER_EDGES` transitions, or with `MIN_OFFERS` offers or more, where main's bound pruning read the route
+    as objects too. A bigger reach (R04's guide route is about 177,000 states of about 1,500 outcomes each, #70) does not fit as objects: its plan
+    keeps the walk and the route is read on the walked graph (below; a packed walk of the route's own reach is #986). The divergences are read
+    where the plan has a choice: on the states of its own policy.
     """
-    if plan.packed is not None and "envelope" in plan.packed.info:
-        raise PlanError(
-            "a given route is judged against the planner's choice at every state the route reaches, and the exact search used for this plan "
-            "looks only at the states that can matter: plan it again with the search that walks every possible item (`--solver packed`)"
-        )
     if plan.donors is not None:  # the route makes second items too: it is read on the product of the target and its donors (#225)
         return _evaluate_route_with_donors(plan, route, data)
-    if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
+    searched = plan.packed is not None and "envelope" in plan.packed.info
+    if isinstance(plan.policy, PackedPolicy) and not searched:  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed
 
         return evaluate_route_packed(plan, route, data)
@@ -654,7 +653,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     # The risk is read on one state per block of states that behave alike (`risk.lump`, #717): the same cost distribution, and the budget DP runs over
     # the blocks and not over every state (R13's route has 2,887 states; the DP over them took 4 to 18 minutes).
     lumped = lump(policy, plan.start, plan.is_goal)
-    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the route costs at least the solver's mean
+    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the plan's mean only sizes the grid: a route may cost less than a plan stopped at a gap (#829)
 
     divergences: list[Divergence] = []
     for state in policy_states(plan.start, plan.policy, plan.is_goal):

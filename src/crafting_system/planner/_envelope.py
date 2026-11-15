@@ -120,9 +120,11 @@ certified figure at all (an infinite error: a singular policy system, values tha
 not the limit of the arithmetic.
 """
 
+import bisect
+import itertools
 import math
 import time
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -189,6 +191,10 @@ class Problem[S](Protocol):
     # optional: `prime(state, positions)` makes, side by side, what the kernels of these offers at the state will cost most (a process pool); it changes no answer
     # optional: `first_choice(state)` is the offers the first plan tries at the state, best first, or None for the least `la` (see "The first plan"); a
     # problem whose bound is blind at some states (a build a net stopped) gives one; it changes what the first plan realizes, never what the search proves
+    # optional: `tighten(state, position, best)` is a higher lower bound of the offer's `Q*` at the state than its `la`, worked out from the offer alone and
+    # kept for every state of the same class (an offer's own floor, #829), or None; asked before an offer is realized for its `la` being below `best`
+    # (`realize`). The search re-files the offer under the higher bound and realizes it only if that is still below `best`: a cut, never a change of
+    # what the search proves, since the bound is a lower bound of `Q*` all the same
 
 
 @dataclass(frozen=True)
@@ -212,6 +218,7 @@ class SearchStats:
     largest_fall: float = 0.0  # the largest relative fall of `L(root)` from one round to the next: 0 for a consistent bound (it only rises)
     first_upper: float | None = None  # the certified upper figure of the first plan (the least-`la` chain, the problem's `first_choice` or the incumbent's, the restart at the rest); None when not finite or not certified
     seeded: int = 0  # (state, offer) pairs realized along the first plan's chain, before the first round
+    tightened: int = 0  # (state, offer) pairs whose `la` the problem raised above the best realized lower cost, so they were not realized (`tighten`, #829)
     lower_refused: int = 0  # a round whose lower solve the solver could not certify, which ended a search that held a plan (#948): 0 or 1
     upper_solves: int = 0  # solves of the upper graph
     upper_refused: int = 0  # of those, the ones the solver could not certify (the stop at a gap waited)
@@ -509,6 +516,7 @@ class Search[S]:
         best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
         prime = getattr(self.p, "prime", None)
+        tighten = getattr(self.p, "tighten", None)
         primed = 0  # how many of the offers at the end of `cands` have been primed
         self.prime_skip = max(self.prime_skip - 1, 0)
         while cands and (first or cands[-1][0] < best):
@@ -523,9 +531,15 @@ class Search[S]:
                     self.prime_zero = 0 if made else self.prime_zero + 1
                     self.prime_skip = min(2**self.prime_zero, 64) if not made else 0
                 primed = len(ahead)
-            first = False
+            was_first, first = first, False
             primed -= 1
-            _, position = cands.pop()
+            la, position = cands.pop()
+            if tighten is not None and not was_first:
+                raised = tighten(self.states[i], position, best)
+                if raised is not None and (raised := raised * (1.0 - SLACK)) > la and raised >= best:
+                    bisect.insort(cands, (raised, position), key=lambda c: -c[0])  # `cands` holds the least `la` last
+                    self.stats.tightened += 1
+                    continue
             try:
                 kid = self._kernel(i, position)
             except Refused:
@@ -579,21 +593,45 @@ class Search[S]:
             self.p.release()
         return None
 
-    def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> list[int]:
+    def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> Iterable[int]:
         """The offers the first plan tries at node `i`, in order (the first the game allows is realized): the incumbent's; else the problem's
         `first_choice` where it gives one, then, where no restart can stand in for it, the rest by least `la`; else every offer by least `la`."""
         state = self.states[i]
         if self.incumbent is not None:
             return list(self.incumbent(state))
-        by_la = [position for _, position in reversed(self.cands[i])]  # the least `la` is last in `cands`
         chosen = choose(state) if choose is not None else None
         if chosen is None:
-            return by_la
+            return self._by_la(i)
         chosen = list(chosen)
         if self.p.restart is not None and i != 0:
             return chosen  # none the problem would take: the state is left to the restart of the upper graph (a tip of the first plan)
         taken = set(chosen)
-        return chosen + [position for position in by_la if position not in taken]
+        return itertools.chain(chosen, (position for position in self._by_la(i) if position not in taken))
+
+    def _by_la(self, i: int) -> Iterator[int]:
+        """The offers of node `i` by least `la`, each offer's `la` first raised by the problem's `tighten` against the next one's (#829), lazily: the
+        first plan takes the first offer the game allows, so in the main only one offer is settled.
+
+        Without that, the least `la` of an offer the bound left out of its model is its loose floor (a reroll: about its price), and the first plan takes
+        the cheapest reroll everywhere, a near-absorbing chain (R08: 1,062 Chaos where the optimum is 72.7). The offer at the end of `cands` is raised
+        until its floor is above the next one's `la` or is its own exact floor; one raised above the next is re-filed and the next is looked at. The
+        raised `la` stays in `cands`: it is a lower bound all the same, so the search proves the same figures. The caller removes from `cands` the
+        offer it was given (`_seed`); one it left there is removed here before the next is settled."""
+        cands = self.cands[i]
+        tighten = getattr(self.p, "tighten", None)
+        while cands:
+            entry = cands[-1]
+            la, position = entry
+            if tighten is not None and len(cands) > 1:
+                raised = tighten(self.states[i], position, cands[-2][0])
+                if raised is not None and (raised := raised * (1.0 - SLACK)) > la:
+                    cands.pop()
+                    bisect.insort(cands, (raised, position), key=lambda c: -c[0])  # `cands` holds the least `la` last
+                    self.stats.tightened += 1
+                    continue  # the same offer again when it is still the least, now settled against the next
+            yield position
+            if cands and cands[-1] is entry:
+                cands.pop()
 
     # ---- the graphs ---------------------------------------------------------------------------------------------
 

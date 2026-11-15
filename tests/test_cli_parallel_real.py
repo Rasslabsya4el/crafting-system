@@ -39,7 +39,8 @@ def answer(data, name: str, workers: int, monkeypatch) -> str:
 
 
 def test_r05_is_byte_identical_for_one_and_four_workers(data, monkeypatch):
-    from crafting_system.abstraction import _prime
+    from crafting_system.abstraction import _pattern, _prime
+    from crafting_system.planner import _envelope
 
     made: list[int] = []
     real = _prime.prime
@@ -49,6 +50,10 @@ def test_r05_is_byte_identical_for_one_and_four_workers(data, monkeypatch):
         return made[-1]
 
     monkeypatch.setattr(_prime, "prime", counting)
+    # R05 has 77 offers: the bound's model starts on a dozen of them and the search builds a few at a state, below the 16 a pool is worth
+    # (#829: the walk of the retired bound pruning built them all and primed them). Asked to prime from one offer, the pool works here.
+    monkeypatch.setattr(_envelope, "PRIME_FROM", 1)
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 1)
     pooled = answer(data, "r05-strength-ring", 4, monkeypatch)
     if parallel.can_inherit():
         assert sum(made) > 0  # the pool really made distributions
