@@ -421,6 +421,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
 BUILD_PHASES = {  # the phase of a stopped build, as a player reads it
     "floors": "working out the cheapest possible cost of each action",
     "model": "counting the kinds of item the crafting can reach",
+    "growth": "adding the actions that matter to that count",
     "solve": "solving that count",
 }
 

@@ -568,6 +568,28 @@ def test_tighten_raises_a_reroll_a_level_at_a_time_only_until_its_floor_is_above
     assert floors.tighten(craft, OUTSIDE, math.inf) == floors.lower(craft, OUTSIDE)
 
 
+def test_needed_raises_a_reroll_only_as_far_as_the_limits_ask_and_a_floor_with_nothing_to_raise_is_its_price(world):
+    """`OfferFloors.needed` (#988): an offer joins the bound's model when its floor in a class is not above that class's limit. In a class of another
+    shape the floor is the price, with nothing to raise; in the start's shape a reroll is raised a level at a time and stops at the first floor above the
+    limits, and the level it reached is the one `tighten` reads afterwards."""
+    _, _, offers, _, _, _ = world
+    begin = abstraction().compress(START_ITEM)
+    exact = OfferFloors(abstraction(), begin, offers, START_ITEM)
+    reroll = next(p for p, e in enumerate(exact.entries) if e.kind == "reroll")
+    top = exact.lower(reroll, OUTSIDE)
+
+    floors = OfferFloors(abstraction(), begin, offers, START_ITEM)
+    entry = floors.entries[reroll]
+    entry.level, entry.pbar = 0, Fraction(1)
+    loose = floors.lower(reroll, OUTSIDE)
+    none = dict.fromkeys((OTHER, INSIDE, OUTSIDE, UNOPENED))
+    assert floors.needed(reroll, {**none, OTHER: entry.cost}) == entry.cost and entry.level == 0  # another shape: its price, nothing worked out
+    assert floors.needed(reroll, {**none, OTHER: entry.cost * 0.5}) is None
+    assert floors.needed(reroll, {**none, OUTSIDE: loose * 0.5}) is None and entry.level == 0  # above the limit at its loosest: not needed
+    assert floors.needed(reroll, {**none, OUTSIDE: math.inf}) == pytest.approx(top, rel=1e-12) and entry.level == 2  # never above: the exact chance
+    assert floors.tighten(reroll, OUTSIDE, math.inf) == pytest.approx(top, rel=1e-12)  # the search reads the level the growth reached
+
+
 def test_the_search_primes_the_offers_it_is_about_to_build_and_the_answer_does_not_change(world, monkeypatch):
     _, start, offers, full, _, _ = world
     calls = []
