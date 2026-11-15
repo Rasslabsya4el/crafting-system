@@ -204,14 +204,12 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 25,
+      "count": 23,
       "labels": [
         "Harvest reforges that favour a mod",
         "Harvest quality enchants",
-        "Alchemy Orb",
         "Influenced Exalted Orb",
         "Orb of Dominance",
-        "Scouring Orb",
         "Awakener's Orb",
         "Beast influence recipe",
         "Blessed Orb",
@@ -231,6 +229,18 @@
         "Bench socket colours",
         "Quality currency",
         "Re-anoint"
+      ],
+      "names": []
+    },
+    {
+      "kind": "kinds-not-built",
+      "what": "Not offered",
+      "why": "not offered yet on any item, a Normal one included: a Scouring leaves the item Normal, or Magic with its fractured mod, and the planner cannot yet choose actions for that item, only for the item it starts from, so the Orb of Alchemy waits with the Scouring",
+      "guarantee": "The plan is the cheapest among the methods the planner can use.",
+      "count": 2,
+      "labels": [
+        "Alchemy Orb",
+        "Scouring Orb"
       ],
       "names": []
     },

@@ -21,6 +21,9 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
 * `write_route_page(path, report, data, ...)`: the route view, one self-contained HTML page next to the JSON
   (`<target>.route.html`): the goal card, then a row per step with its card and the item after it; the buy step of a
   target that buys its start item gets the trade-site search link of the buy spec computed from the target. The page model is `_route_view`, the HTML `_route_html`.
+  `route_page(report, data, ...)` is the same page as text, which the website serves (`crafting_system.web`, #961).
+* `run_budget(config, aim, ...)`: the budget of a run from the planner settings of the machine (OR-40), and `load_target_prices(path, config)`: a price
+  file with its overrides; the website reuses both.
 
 The planner's names this package gave out before the move (`make_plan`, `plan_with_starts`, `Plan`, `Offer`, `offers_for`, the start
 records, ...) are still importable from here, unchanged, for the tests and tools that read them from here.
@@ -65,8 +68,10 @@ from crafting_system.planner import (
     strand_setting,
     vendor_recipe_starts,
 )
-from ._main import main
+from ._inputs import load_target_prices
+from ._main import main, run_budget
 from ._report import Report, build_report, policy_document, render_text
+from ._route_view import route_page
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
 from ._start_step import FirstStep, first_step
@@ -111,6 +116,7 @@ __all__ = [
     "default_offers",
     "evaluate_route",
     "load_route",
+    "load_target_prices",
     "main",
     "make_plan",
     "offers_for",
@@ -119,6 +125,8 @@ __all__ = [
     "policy_document",
     "price_offers",
     "render_text",
+    "route_page",
+    "run_budget",
     "start_shares",
     "strand_setting",
     "vendor_recipe_starts",

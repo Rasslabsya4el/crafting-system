@@ -879,7 +879,25 @@ def write_route_page(
     cache_dir: Path | None = None,
     target_name: str = "",
 ) -> Path:
-    """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path`.
+    """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
+    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, target_name=target_name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(page, encoding="utf-8", newline="\n")
+    return path
+
+
+def route_page(
+    report: Report,
+    data: GameData,
+    *,
+    route: Route | None = None,
+    given: RouteResult | None = None,
+    buy_spec: BuySpec | None = None,
+    cache_dir: Path | None = None,
+    target_name: str = "",
+) -> str:
+    """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
+    `write_route_page` writes and the website serves (#961).
 
     The page makes no request: the trade link is built from `buy_spec` and the stat list in
     `<cache_dir>/trade/stats.json` when that exists.
@@ -897,6 +915,4 @@ def write_route_page(
             given_route_input(plan, route, given), data, buy, prefix="g-", anchor="given", route_field=False
         )
         sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_page(Page(target_name or "Route view", sections)), encoding="utf-8", newline="\n")
-    return path
+    return render_page(Page(target_name or "Route view", sections))

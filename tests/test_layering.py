@@ -1,4 +1,5 @@
-"""Layering guard (ADR-0018): each of the twelve modules may import only modules listed before it, and `cli` reads the planner only through its public names (#880)."""
+"""Layering guard (ADR-0018): each of the thirteen modules may import only modules listed before it, and `cli` and `web` read the planner (and
+`web` reads `cli`) only through their public names (#880, #961)."""
 
 import ast
 from pathlib import Path
@@ -20,6 +21,7 @@ LAYERS = (
     "targets",
     "planner",
     "cli",
+    "web",
 )
 
 
@@ -270,7 +272,7 @@ def test_every_module_folder_exists_in_the_real_package():
     assert missing == []
 
 
-def test_real_package_has_exactly_the_twelve_subpackages():
+def test_real_package_has_exactly_the_thirteen_subpackages():
     package_dir = Path(crafting_system.__file__).parent
 
     assert find_unexpected_subpackages(package_dir, LAYERS) == []
@@ -376,3 +378,11 @@ def test_cli_imports_the_planner_only_through_its_public_names():
 
     assert find_private_imports(package_dir, "cli", "planner") == []
     assert all(not name.startswith("_") and hasattr(planner, name) for name in planner.__all__)
+
+
+@pytest.mark.parametrize("layer", ["planner", "cli"])
+def test_web_imports_the_planner_and_cli_only_through_their_public_names(layer):
+    """Ticket #961: the website holds no planning code and no page code; it calls the planner's entry and the command's page by name."""
+    package_dir = Path(crafting_system.__file__).parent
+
+    assert find_private_imports(package_dir, "web", layer) == []
