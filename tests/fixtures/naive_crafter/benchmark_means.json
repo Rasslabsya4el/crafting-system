@@ -8,7 +8,7 @@
  },
  "routes": {
   "R04": {
-   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
+   "commit": "5179c851a74a9a32a5c20e5896d962f8e88b5bdd",
    "gaps": 13,
    "inputs": {
     "costs": {
@@ -32,14 +32,14 @@
     "seed": 23
    },
    "pin": "3.29.3.3",
-   "run": "43381687684",
+   "run": "43680935448",
    "stem": "r04-penetrating-quiver",
    "success_high": 0.5770098351914722,
    "success_low": 0.005936001866592888,
    "success_value": 0.005936001866592888
   },
   "R04 with restart": {
-   "commit": "fef5ae996477122ec525bc94e7785b014fd90923",
+   "commit": "5179c851a74a9a32a5c20e5896d962f8e88b5bdd",
    "gaps": 0,
    "inputs": {
     "costs": {
@@ -55,10 +55,10 @@
     "route": "4f6c0229e2688042115ba3bfe428cb8156b166f30f14135e31dd500b5b5c2c84",
     "target": "724ef091ef9f78b5e9954ce55b5c8c98c55148da71bea081531ebf38ed342d07"
    },
-   "mean_with_start": 91391.74184465811,
-   "mean_without_start": 91388.54184465812,
+   "mean_with_start": 91391.74184465589,
+   "mean_without_start": 91388.54184465589,
    "pin": "3.29.3.3",
-   "run": "43381687684",
+   "run": "43680935448",
    "start_price": 3.2,
    "stem": "r04-penetrating-quiver-restart",
    "success_high": 1.0,
