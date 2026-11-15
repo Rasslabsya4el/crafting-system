@@ -26,7 +26,9 @@ themselves treat a refused offer as any other, at its cost.
 
 `OfferFloors.lower(position, klass)` is the floor of an offer in a class of states, and `OfferFloors.tighten` raises it, level by level, only for an
 offer the envelope search would otherwise build at a state (#829), so that the exact chance of a reroll, which is an exact distribution, is computed
-only for an offer whose looser floors did not already rule it out, and once for all the states of its class.
+only for an offer whose looser floors did not already rule it out, and once for all the states of its class. `OfferFloors.needed` asks the same of
+the bound's model: whether an offer outside it, its floor raised as far as it goes, could lower a key where the floor action is the cheapest, so that
+the offer joins the model (`_pattern_bound`, #988).
 """
 
 import math
@@ -154,6 +156,34 @@ class OfferFloors:
         if not inside:
             inside.update(entry.index for entry in sorted(self.entries, key=lambda entry: (entry.cost, entry.index))[:SMALL_START])
         return sorted(inside)
+
+    def needed(self, position: int, limits: dict[int, float | None]) -> float | None:
+        """The floor that makes the offer at `position` worth building into the bound's model, or None when it cannot lower the value of any key it was
+        asked about (`_pattern_bound._binding`, #988).
+
+        `limits[klass]` is the largest model value of a key of that class where the floor action was the cheapest (None when there is none). The offer is
+        needed when its floor in a class is not above the limit of the class. A reroll's floor is brought from `pbar = 1` through the loose bound to the
+        exact chance, a level at a time, and stops at the first level whose floor is above the limits; a floor with nothing to raise (any offer in a
+        class of another shape, a terminal offer) is its price.
+        """
+        entry = self.entries[position]
+        for klass in (OTHER, UNOPENED):
+            if limits.get(klass) is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]:
+                return low
+        found: list[tuple[float, int]] = []
+        for level in (0, 1, 2):
+            if level and entry.kind == REROLL and entry.level < level:
+                self._raise(entry, level)
+            found = [
+                (low, klass)
+                for klass in (INSIDE, OUTSIDE)
+                if limits.get(klass) is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]
+            ]
+            if not found:
+                return None
+            if entry.kind != REROLL or entry.level >= 2:
+                break
+        return min(low for low, _ in found)
 
     def tighten(self, position: int, klass: int, above: float) -> float:
         """The floor of the offer at `position` in the class `klass`, its reroll's chance brought up a level at a time (the loose bound of the pool,
