@@ -4,9 +4,11 @@
 # Line $1 of research/829/pairs.txt holds the arguments of research/881/profile_plan.py. On main a fossil case of 40 offers or more is the
 # bound pruning (`solve_pruned`) and the envelope search grows its model; on the branch both are the envelope search with each offer's floor.
 # So the search counts may differ: the job fails only when the two means differ by more than 1e-9 of themselves (research/829/same.py).
+# A third argument `main` or `branch` runs that side alone (R08: the two sides in sequence pass the hour), and compares nothing.
 set -euo pipefail
 job="$1"
 base="$2"
+side="${3:-both}"
 out="${OUT_DIR:-out}"
 mkdir -p "$out"
 args="$(sed -n "${job}p" research/829/pairs.txt)"
@@ -20,6 +22,6 @@ run() {  # $1: tag, $2: source folder or ""
   grep -E '"seconds"|"mean_remaining"' "$out/log$1.txt" | head -2
   cat "$out/peak$1.json"; echo
 }
-run .main "$main_src"
-run .branch ""
-uv run --no-sync python research/829/same.py "$out"
+[ "$side" = branch ] || run .main "$main_src"
+[ "$side" = main ] || run .branch ""
+[ "$side" != both ] || uv run --no-sync python research/829/same.py "$out"

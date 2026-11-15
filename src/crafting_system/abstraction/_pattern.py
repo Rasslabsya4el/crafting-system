@@ -64,7 +64,7 @@ model gap in `_item_of` always refuses.
 **The universe.** The members of a key are made of the ordinary slots an item can hold. They come from three places: the pool of an empty rare
 item (every mod a draw can give; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced
 mod, which the pool does not list; `Universe._seed_named`), and every slot a kernel the build evaluates produces (`note`; a slot found this way
-that the two others missed starts the build again, `stats.universe_growth`). A slot that a non-offered member's kernel would produce, and no
+that the two others missed starts the build again on the grown universe, `stats.universe_growth`). A slot that a non-offered member's kernel would produce, and no
 offered member's, cannot be one of the first two: a draw gives a mod of the pool, and a forced mod is the same at every member. What is left is
 a draw from a pool wider than the empty rare item's (a fossil's added mods) at a member that is not offered, which `Adds` does not name: the
 universe may miss that slot, and the members that hold it are not made (issue #520). No route of the benchmark has such an action.
