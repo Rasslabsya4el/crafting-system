@@ -31,7 +31,7 @@ from crafting_system.planner import _envelope_plan
 from crafting_system.planner._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.planner._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
-from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, OfferFloors
+from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
 from crafting_system.actions import unopened_listing
 from crafting_system.planner._offers import BuyStartItem, listing_draw
 from crafting_system.solver import ConvergenceError
@@ -176,16 +176,99 @@ def floors_on(monkeypatch):
     monkeypatch.setattr(OfferFloors, "initial", lambda self: [0, 6])
 
 
-def test_the_model_on_part_of_the_offers_is_one_build_and_a_lower_bound(world, floors_on):
-    """One build and one solve on the offers `initial` names (#829: no growth rounds); the floor action stands for all the others. It stays a lower
-    bound, strictly weaker here than the model of every offer: the crafts are carried by their floor."""
+def test_the_model_on_part_of_the_offers_grows_until_it_equals_the_whole_at_the_start(world, floors_on):
+    """#988: the model starts on the Chaos Orb and the restart; the crafts are left to the floor action, whose floor there is the craft's price (a craft
+    has no chance to raise), so a model built once is capped by that price at every key. The floor action is the cheapest at keys the model's policy
+    reaches, the crafts join, and at the end the start's value is the model of every offer's, which the full walk checks at every state."""
     ab, start, offers, _, exact, whole = world
     fresh = abstraction()
     said = []
     bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
-    assert bound.complete and bound.floors is not None and bound.positions == (0, 6)
-    assert sum(line.startswith("model: solving") for line in said) == 1
-    assert bound.start_value < whole.start_value
+    assert bound.complete and bound.floors is not None
+    assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)  # the floor action is the cheapest nowhere at the end
+    assert bound.rounds > 1 and len(bound.positions) > 2  # the floor action was the cheapest at some key, so offers joined the model
+    assert sum(line.startswith("model ") and "solving the count" in line for line in said) == bound.rounds
+    assert_lower_bound(bound, ab, exact)
+
+
+def test_the_search_on_the_floors_looks_at_no_more_states_than_on_the_model_of_every_offer(world, floors_on):
+    """#988: the search on a bound whose model holds part of the offers expands the states the search on the model of every offer expands, and no
+    more: the offers left out are where their floors rule them out. Before the fix the model stayed on its first two offers, its value at the start
+    capped by the price of a craft, and the search expanded more states for the same mean."""
+    _, start, offers, full, _, whole = world
+    fresh = abstraction()
+    on_floors = envelope_result(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM).info["envelope"]
+    fresh = abstraction()
+    on_all = envelope_result(fresh, fresh.compress(START_ITEM), offers, bound=whole).info["envelope"]
+    assert on_floors.exact and on_all.exact
+    assert on_floors.upper == pytest.approx(on_all.upper, rel=TOLERANCE) == pytest.approx(full.solution.values[start], rel=TOLERANCE)
+    assert (on_floors.expanded, on_floors.realized) <= (on_all.expanded, on_all.realized), (on_floors, on_all)
+
+
+def test_the_floor_action_alone_is_a_lower_bound_whatever_part_of_the_offers_the_model_holds(world, floors_on, monkeypatch):
+    """Cut the growth off: the model holds only its first offers, and the floor action stands for all the others. It stays a lower bound, and it is
+    strictly weaker: what the growth of #988 brings back."""
+    ab, start, offers, _, exact, whole = world
+    monkeypatch.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: ([], {}))
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
+    assert bound.rounds == 1 and bound.positions == (0, 6)
+    assert bound.start_value < whole.start_value  # strictly weaker: the crafts are carried by their floor
+    assert_lower_bound(bound, ab, exact)
+
+
+def test_a_round_stopped_while_offers_join_leaves_the_round_before_as_the_bound(world, floors_on, monkeypatch):
+    ab, start, offers, _, exact, whole = world
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
+    asked = []
+    with monkeypatch.context() as inner:
+        inner.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: ([], {}))  # no growth: the questions of the first round alone
+        fresh = abstraction()
+        pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=lambda: asked.append(1) or None)
+    first_round = len(asked)
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=counting_stop(first_round + 4))
+    assert bound.stopped == "the test net" and bound.phase == "growth"
+    assert bound.rounds == 1 and bound.positions == (0, 6) and bound.model.stopped is None and all(bound.model.expanded)
+    assert_lower_bound(bound, ab, exact)
+
+
+def test_the_net_ends_the_examination_of_the_offers_outside_the_model_and_the_round_stands(world, floors_on, monkeypatch):
+    ab, start, offers, _, exact, _ = world
+
+    def stopped(self, position, limits):
+        raise FloorsStopped("the test net")
+
+    monkeypatch.setattr(OfferFloors, "needed", stopped)
+    said = []
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
+    assert bound.phase == "growth" and bound.stopped == "the test net" and bound.rounds == 1 and bound.positions == (0, 6)
+    assert any(line.startswith("binding: examining") for line in said)
+    assert_lower_bound(bound, ab, exact)
+
+
+def test_the_net_is_asked_before_the_solve_of_a_round_that_grew_and_the_round_before_stands(world, floors_on, monkeypatch):
+    ab, start, offers, _, exact, _ = world
+    packed, solved = [], []
+    real_pack, real_solve = _pattern_bound.pack_pattern_model, _pattern_bound.solve_packed
+
+    def pack(*args, **kwargs):
+        packed.append(1)
+        return real_pack(*args, **kwargs)
+
+    def solve(*args, **kwargs):
+        solved.append(1)
+        return real_solve(*args, **kwargs)
+
+    monkeypatch.setattr(_pattern_bound, "pack_pattern_model", pack)
+    monkeypatch.setattr(_pattern_bound, "solve_packed", solve)
+    said = []
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append, stop=lambda: "the test net" if len(packed) >= 2 else None)
+    assert len(packed) == 2 and len(solved) == 1  # the second round was packed, and the net was reached before its solve
+    assert bound.phase == "growth" and bound.stopped == "the test net" and bound.rounds == 1
+    assert any("before the solve" in line for line in said) and any(line.startswith("model 1: solving the count") for line in said)
     assert_lower_bound(bound, ab, exact)
 
 
@@ -483,6 +566,28 @@ def test_tighten_raises_a_reroll_a_level_at_a_time_only_until_its_floor_is_above
     assert floors.tighten(reroll, OUTSIDE, math.inf) == pytest.approx(top, rel=1e-12)  # worked out once: the same floor for every later state
     assert floors.tighten(reroll, INSIDE, math.inf) == floors.lower(reroll, INSIDE)  # the chance is the offer's own: the other class reads it
     assert floors.tighten(craft, OUTSIDE, math.inf) == floors.lower(craft, OUTSIDE)
+
+
+def test_needed_raises_a_reroll_only_as_far_as_the_limits_ask_and_a_floor_with_nothing_to_raise_is_its_price(world):
+    """`OfferFloors.needed` (#988): an offer joins the bound's model when its floor in a class is not above that class's limit. In a class of another
+    shape the floor is the price, with nothing to raise; in the start's shape a reroll is raised a level at a time and stops at the first floor above the
+    limits, and the level it reached is the one `tighten` reads afterwards."""
+    _, _, offers, _, _, _ = world
+    begin = abstraction().compress(START_ITEM)
+    exact = OfferFloors(abstraction(), begin, offers, START_ITEM)
+    reroll = next(p for p, e in enumerate(exact.entries) if e.kind == "reroll")
+    top = exact.lower(reroll, OUTSIDE)
+
+    floors = OfferFloors(abstraction(), begin, offers, START_ITEM)
+    entry = floors.entries[reroll]
+    entry.level, entry.pbar = 0, Fraction(1)
+    loose = floors.lower(reroll, OUTSIDE)
+    none = dict.fromkeys((OTHER, INSIDE, OUTSIDE, UNOPENED))
+    assert floors.needed(reroll, {**none, OTHER: entry.cost}) == entry.cost and entry.level == 0  # another shape: its price, nothing worked out
+    assert floors.needed(reroll, {**none, OTHER: entry.cost * 0.5}) is None
+    assert floors.needed(reroll, {**none, OUTSIDE: loose * 0.5}) is None and entry.level == 0  # above the limit at its loosest: not needed
+    assert floors.needed(reroll, {**none, OUTSIDE: math.inf}) == pytest.approx(top, rel=1e-12) and entry.level == 2  # never above: the exact chance
+    assert floors.tighten(reroll, OUTSIDE, math.inf) == pytest.approx(top, rel=1e-12)  # the search reads the level the growth reached
 
 
 def test_the_search_primes_the_offers_it_is_about_to_build_and_the_answer_does_not_change(world, monkeypatch):
