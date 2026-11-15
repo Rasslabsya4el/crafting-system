@@ -21,8 +21,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
 | Settings and flags the planner accepts | 34 |
-| - read by some code | 33 |
-| - never read | 1 |
+| - read by some code | 34 |
+| - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
 Kinds that no target is offered: 41 of 62 (25 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
@@ -143,13 +143,13 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 |---|---|---|---|---|
 | `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
 | `cache` | [paths] | `local/cache` | read | cli/_route_view.py: _trade_stats (compared; on the planning path); cli/_route_view.py: _trade_stats (used in an operation; on the planning path); and 4 more |
-| `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path) |
+| `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path); and 1 more |
 | `memory_strands` | [planner] | `false` | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
 | `recipe_starts` | [planner] | `true` | read | planner/_starts.py: _with_starts (used in an operation; on the planning path) |
-| `recombinator_junk_craft` | [planner] | `false` | **never read** | no code reads it |
-| `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_main.py: main (passed to `imprints_held_at_most` (outside src); on the planning path) |
+| `recombinator_junk_craft` | [planner] | `false` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path) |
+| `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_benchmark.py: render_summary (used as an index or container; on the planning path); and 2 more |
 | `price_source` | [planner] | `both` | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
-| `price_gap_percent` | [planner] | `20.0` | read | cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); cli/_main.py: main (used as an index or container; on the planning path); and 9 more |
+| `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 11 more |
 | `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 5 more |
 | `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 4 more |
@@ -175,10 +175,6 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--strands` | command `plan` |  | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--time-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 6 more |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
-
-Code that takes a never-read setting by its own name:
-
-- `recombinator_junk_craft`: context variable `recombinator_junk_craft` in `actions/recombinator.py`: set by `junk_craft_offered` (0 referrer(s) outside its module)
 
 ## 5. Built modules
 

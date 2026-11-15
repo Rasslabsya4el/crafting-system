@@ -1,6 +1,6 @@
-# Twelve modules, each depending only on those listed before it
+# Thirteen modules, each depending only on those listed before it
 
-The code splits into twelve modules (eleven until the amendment below); each may depend only on modules listed before it:
+The code splits into thirteen modules (eleven, then twelve, until the amendments below); each may depend only on modules listed before it:
 
 1. `data`: fetch, pin and normalize repoe-fork; knows nothing of crafting.
 2. `rules`: the registry of admitted mechanics with provenance (ADR-0004).
@@ -35,3 +35,12 @@ One seam is left open by the move and is [#882](https://github.com/Rasslabsya4el
 - **Leave planning in `cli` and give it a public function there.** Rejected: the website would import the command line to plan, and nothing would stop presentation code and planning code from reading each other's private parts, which is how they grew together.
 - **Put planning into `solver`.** Rejected: `solver` is generic and knows nothing of Path of Exile (`tests/test_solver_independence.py`), and planning reads `prices` and `targets`, which come after it.
 - **Move the page's maths into the planner with the rest.** Rejected for this step: it is presentation, it is large, and it gets its own ticket; the seam above is the price.
+
+## Amendment: the website is the thirteenth module, `web` ([#961](https://github.com/Rasslabsya4el/crafting-system/issues/961), OR-35, OR-36)
+
+13. `web`: the website's service, the planner behind an HTTP API (`docs/web.md`).
+
+It comes after `cli` because it serves the command's own outputs (the figures, the JSON policy, the route page) and holds no planning or
+page code of its own: a job calls `planner.plan_target`, and the page is `cli.route_page`. It reads both only through their public names
+(`tests/test_layering.py`), and nothing before it imports it. Its dependencies (Starlette, uvicorn) are the optional extra `web` of
+`pyproject.toml`, so the planner installs without them.

@@ -38,6 +38,7 @@ NAME_BUILDERS = {
     "cli/_route_card.py::_properties": "the words of the route card's item line, not a price name",
     "cli/_route_trade.py::_accepts": "the lines of the page that say what a buy spec accepts, not a price name",
     "prices/query_compare.py::_level_words": "the words that say how two stored searches differ, not a price name",
+    "web/_work.py::plan_request": "the target's name on the website's route page and policy (`target_name`), not a price name (#961)",
 }
 BUILDERS = {
     "targets/start_buy.py::_key": "the one place: the price key of a start item is made here, from the target's buy spec",

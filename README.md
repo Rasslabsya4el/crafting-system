@@ -7,11 +7,11 @@ A crafting planner for Path of Exile: for a target item it finds the cheapest cr
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then, from the repository root (Windows or Linux):
 
 ```
-uv sync
+uv sync --extra web
 uv run pytest
 ```
 
-uv downloads the pinned Python (3.14) by itself.
+uv downloads the pinned Python (3.14) by itself. The extra `web` is the website's service (Starlette and uvicorn, `docs/web.md`); the planner and the command line run without it, and only the website's tests need it.
 
 The naive crafter (`tests/naive_crafter/`) plays a guide's route by Monte Carlo without the planner's code and checks its cost against `risk.evaluate`; its long simulation runs on GitHub through the dispatcher, see `docs/ci.md` ("The naive crafter's long simulation").
 

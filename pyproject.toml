@@ -9,6 +9,12 @@ dependencies = [
     "pyyaml>=6.0.3",
 ]
 
+[project.optional-dependencies]
+web = [
+    "starlette>=1.10.0",
+    "uvicorn>=0.54.0",
+]
+
 [build-system]
 requires = ["uv_build>=0.13.6,<0.14"]
 build-backend = "uv_build"
@@ -20,5 +26,6 @@ addopts = "-ra --strict-markers"
 [dependency-groups]
 dev = [
     "highspy>=1.15.1",
+    "httpx2>=2.16.0",
     "pytest>=9.2.0",
 ]

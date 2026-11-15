@@ -20,7 +20,7 @@ runs:
         version: "0.13.6"
         enable-cache: true
     - shell: bash
-      run: uv sync --locked
+      run: uv sync --locked --extra web  # the website's tests (#961) need Starlette; the planner itself does not
     - name: Fetch the pinned game data (only on a cache miss)
       if: steps.data.outputs.cache-hit != 'true'
       shell: bash
