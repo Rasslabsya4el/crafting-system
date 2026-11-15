@@ -44,7 +44,7 @@ be unsolvable (an improper policy, ticket #539), so the search checks both as it
   values are 0, #830), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
   relative error);
 * after each round, `L(root)` must not have fallen by more than `FALL_LIMIT` (the solver's own rounding is far below it; two rounds certified to `e1` and `e2` with one of
-  them above 1e-6 may differ by `e1 + e2` more, and a bound taken with an error above 1e-6 may fall by its slack of three times that error, #867); `SearchStats.largest_fall` is the
+  them above 1e-6 may differ by `e1 + e2` more, and a bound taken with an error above 1e-6 may fall by its slack `2e / (1 - e)`, #867, #830); `SearchStats.largest_fall` is the
   largest relative fall that a round caused.
 
 A bound that passes both has shown no fault on the states the search has expanded. The tips it has not expanded are checked only when the solve of a lower graph
