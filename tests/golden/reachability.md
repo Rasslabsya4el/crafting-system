@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 25 |
-| - with `planner=True` | 37 |
-| - `planner=True` and offered by at least one target (reachable) | 21 |
-| - `planner=True` and offered by no target | 16 |
+| - with `planner=False` (no plan can use them) | 23 |
+| - with `planner=True` | 39 |
+| - `planner=True` and offered by at least one target (reachable) | 22 |
+| - `planner=True` and offered by no target | 17 |
 | Benchmark targets | 17 |
 | - the planner entry plans them | 15 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 1 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 41 of 62 (25 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 40 of 62 (23 closed by `planner=False`, 17 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -46,7 +46,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `bench-craft` | yes |  | r04, r07, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14, r17, r24 |  |  |
 | `remove-crafted-mods` | yes |  | r04, r07, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14, r24 |  |  |
 | `fossil-set` | yes | opt-in | r07, r08, r09 |  |  |
-| `alchemy-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
+| `alchemy-orb` | yes |  | none | not named in the target's `actions:` (11 of 18 entries); the kind lists no action for this start item (5 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT1-4, PLANNING-2 |
 | `transmutation-orb` | yes |  | r17, v01 |  |  |
 | `alteration-orb` | yes |  | r13, r14, r17, v01 |  |  |
 | `augmentation-orb` | yes |  | r13, r14, r17, v01 |  |  |
@@ -58,7 +58,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `veiled-exalted-orb` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `unveil` | yes | opt-in, reads: any | r07, r24 |  |  |
 | `pick` | yes | opt-in, reads: any | r07, r24 |  |  |
-| `scouring-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
+| `scouring-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  | ACT1-4, PLANNING-2 |
 | `annulment-orb` | yes | opt-in | r04, r07, r14, r17, r24 |  |  |
 | `fracturing-orb` | yes | opt-in | r04 |  |  |
 | `talisman-fracture` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
@@ -103,15 +103,15 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
 | r03 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
-| r05 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
+| r05 | plans | no key | 78 | 0 | 0 | 4 | chaos-orb, essence, harvest-reforge, scouring-orb |
 | r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
-| r10-fractured-boots | plans | no key | 79 | 0 | 0 | 5 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods |
-| r10-fractured-boots-70-life | plans | no key | 80 | 0 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
-| r11 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
-| r12 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
+| r10-fractured-boots | plans | no key | 80 | 0 | 0 | 6 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods, scouring-orb |
+| r10-fractured-boots-70-life | plans | no key | 81 | 0 | 0 | 7 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods, scouring-orb |
+| r11 | plans | no key | 78 | 0 | 0 | 4 | chaos-orb, essence, harvest-reforge, scouring-orb |
+| r12 | plans | no key | 78 | 0 | 0 | 4 | chaos-orb, essence, harvest-reforge, scouring-orb |
 | r13 | plans | 5 names | 6 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
 | r14 | plans | 9 names | 11 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
 | r17 | plans | 11 names | 14 | 0 | 0 | 9 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, harvest-add-remove, imprint, regal-orb, restore, transmutation-orb |

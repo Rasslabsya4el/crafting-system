@@ -130,6 +130,8 @@ class ScouringOrb(Action):
         return ScourOutcomes(data, item.changed(data, rarity=rarity, mods=kept))
 
 
-@kind("scouring-orb", order=80, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+# a planner kind (#943): a B1 core orb is in the beta (OR-37), and the speed cut that kept it out of the offers ("pruning, #118")
+# is one OR-37 forbids; the page no longer lists it among the methods the planner cannot use
+@kind("scouring-orb", order=80)
 def _scouring_orb(data: GameData, item: Item):
     yield ScouringOrb()

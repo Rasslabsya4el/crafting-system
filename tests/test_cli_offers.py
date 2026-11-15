@@ -14,9 +14,11 @@ from items_support import AMULET, DATA, item, roll
 from limits_support import labels_of, only
 
 from crafting_system.abstraction import Goal, Wanted
+from crafting_system.actions.catalog import kinds
 from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods, bench_crafts
 from crafting_system.cli import RESTART, BuyStartItem, make_plan, offers_for
 from crafting_system.items import Rarity
+from crafting_system.planner._limits import kind_title
 from crafting_system.targets import load_target
 
 BELT = "Metadata/Items/Belts/Belt3"
@@ -201,8 +203,34 @@ def test_a_rare_start_item_is_offered_none_of_the_orbs_of_magic_items_and_a_norm
 
 
 def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
-    with pytest.raises(ValueError, match=r"scouring-orb cannot be used by the planner yet; the kinds the planner can use are"):
-        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["scouring-orb"])
+    with pytest.raises(ValueError, match=r"blessed-orb cannot be used by the planner yet; the kinds the planner can use are"):
+        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["blessed-orb"])
+
+
+B1_CORE_ORBS = (
+    "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb", "chaos-orb", "exalted-orb", "annulment-orb",
+    "scouring-orb", "divine-orb",
+)  # ADR-0013's "B1, core actions", every one in the beta (OR-37)  # fmt: skip
+
+
+def test_every_core_orb_of_b1_is_a_kind_the_planner_can_use_and_none_is_listed_as_not_built():
+    """#943: the Orb of Scouring and the Orb of Alchemy were `planner=False` for speed ("pruning, #118"), which OR-37 forbids for a
+    beta method, and every route page listed them under "Methods the planner cannot use yet"."""
+    usable = {entry.name for entry in kinds(planner_only=True)}
+    assert set(B1_CORE_ORBS) <= usable
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    for start in (item(roll(LIFE), base_id=BELT), item(base_id=BELT, rarity=Rarity.NORMAL)):
+        chosen = offers_for(PRICED_DATA, goal, BELT, start)
+        not_built = labels_of(chosen.limits, "kinds-not-built")
+        assert not {kind_title(name) for name in B1_CORE_ORBS} & not_built
+
+
+def test_the_orb_of_scouring_is_offered_on_a_rare_start_and_the_orb_of_alchemy_on_a_normal_one():
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    rare = {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, item(roll(LIFE), base_id=BELT)).offers}
+    normal = {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, item(base_id=BELT, rarity=Rarity.NORMAL)).offers}
+    assert "Orb of Scouring" in rare and "Orb of Alchemy" not in rare  # the game takes an Alchemy on a normal item only
+    assert "Orb of Alchemy" in normal
 
 
 # --- kinds offered only when named, and single actions named by label (ticket #70) ---------------------------------
