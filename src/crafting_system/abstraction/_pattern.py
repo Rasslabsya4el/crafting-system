@@ -43,6 +43,17 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   its roll is not in the state and it stays as it is. Its refusals read the rarity and whether a changeable mod is held, both functions of the
   key. So its pushed kernel is the same for every pure junk assignment. **Proved** so, and checked against every member on the fixtures
   (`tests/test_pattern_rolls.py`); under a lock the locked side keeps its rolls and the mode is `ALL`.
+  The unveil, the picks and the Veiled Exalted Orb (#828) are `ONE` too, a lock or not. Each reads of the junk its count and the families it
+  names (the unveiled pool's: those are told apart by name, so their slots are relevant and enumerated exactly; no pure junk type holds one) and
+  keeps the rest (`Reads.junk`, `Reads.families`). The unveil draws the offer from the unveiled pool less the families on the item, and a pick
+  puts the k-th mod of the offer in place of the placeholder, refused when its family is on the item: both read only named families and the key
+  (the placeholder, the offer, a lock), and change no ordinary slot. The Veiled Exalted Orb removes one removable slot uniformly (the locked side
+  and the fractured mods are not removable, every other slot is, whatever its tags) and puts a placeholder on the side with room: the removable
+  slots are counted by class, so the chance of a successor key is `(removable slots of that class) / (removable slots)`; it is refused when the
+  key holds a veiled mod. **Proved** so, and checked against every member on the fixtures (`tests/test_pattern_veiled.py`).
+* `ANY` for an action the abstraction gives a view of the item without its ordinary slots (`Abstraction._erases`: the action reads no junk and
+  no lock keeps a side), whether or not it declares block invariance (the Veiled Chaos Orb, #828): every member has the same view, so the same
+  kernel and the same refusals. **Proved** by the construction of the kernel (#827), not by a declaration.
 * `EXTREMES` (the lightest and the heaviest assignment in each class that holds pure junk): an addition that keeps the mods (`Reads.variants`:
   Augmentation, Regal, Exalted; one mod drawn). The chance of a successor key is `(a + sum_c b_c H_c) / (W - H_rel - sum_c H_c)` with `H_c` the
   pool weight (under the protected tags the key's metamods impose) the held pure junk of class `c` takes out, `H_rel` that of the relevant slots
@@ -59,6 +70,12 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   cheaper, and exact by construction.**
 
 Every member offered is checked to be an item (`Abstraction._item_of`), so a member that no item has is never offered.
+
+**The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
+`^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
+holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
+gap). The offer of an unveil is in the key's `held`, whole: the k-th mod is the one `Pick(k)` takes. The unveil's backup in the model is then
+the expectation, over the offers, of the least backup of the picks at each offer key: a minimum inside the expectation, as in the exact graph.
 
 **Refusals.** An action that the game forbids at a member (`NotApplicableError`) is not an action of that member and is left out
 of it. An action that raises a model gap at a member (`OutOfScopeError`: no admitted rule covers the item) is left out only when
@@ -91,10 +108,11 @@ from typing import NamedTuple
 from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
+from crafting_system.items.model import VEILED_DOMAIN
 
 from ._goal import Status
 from ._kernel import Abstraction
-from ._kinds import MOD_PREFIX, TYPE_PREFIX, kind_tags
+from ._kinds import MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags
 from ._rolls import is_rollable
 from ._state import CompressedState, Slot, best_of
 
@@ -131,8 +149,9 @@ class PatternKey(NamedTuple):
     status: tuple
     held: tuple
     crafted: tuple
-    counts: tuple  # the ordinary (not crafted) slots per side: (prefix, suffix)
+    counts: tuple  # the ordinary (not crafted, not veiled) slots per side: (prefix, suffix)
     tags: tuple | None  # ((side index, protected tags), count) of the ordinary slots, or None when the key carries no tags
+    veiled: tuple = ()  # the veiled placeholder and the mods unveiled from the pool, as slots, exactly (#828): never a member's choice
 
 
 @dataclass(frozen=True)
@@ -254,6 +273,11 @@ def _base(kind: str) -> str:
     return base_kind(kind)
 
 
+def _placeholder_families(data) -> frozenset[str]:
+    """The families of the veiled placeholders (domain `veiled`): the kind of a placeholder slot is its family key (`_kinds.Kinds.of`)."""
+    return frozenset(family for mod in data.mods.values() if mod.domain == VEILED_DOMAIN for family in mod.families)
+
+
 def _tagset(kind: str) -> tuple:
     return tuple(sorted(kind_tags(kind)))
 
@@ -300,8 +324,9 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
 
     The one place that decides it: `Pattern.__init__` raises `OutOfScopeError` with this text, and `make_plan` asks it before any solve, so
     `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for an enabled action that
-    reads the unveil offer or the imprints. A roll limit and a reroll of values have members since #830: the key's status holds what each
-    wanted mod gives its leaf as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`).
+    reads the imprints. A roll limit and a reroll of values have members since #830: the key's status holds what each wanted mod gives its leaf
+    as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`). The unveil offer has since #828: the key holds the veiled slots
+    and the offer, and the veiled actions have member policies.
     """
     causes = refusal_causes(abstraction)
     if not causes:
@@ -311,7 +336,6 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
 
 # what the bound has no members for: the abstraction's attribute, the cause in the refusal's text, and in a player's words where those differ
 _CAUSES = (
-    ("tracks_offer", "an offered action reads the unveil offer", "an offered action reads the mods an unveil shows to pick from"),
     ("tracks_imprints", "an offered action reads the imprints", None),
 )
 
@@ -326,8 +350,7 @@ class Pattern:
     """The key of a state and the members of a key, for one `Abstraction`.
 
     `tags` says whether the key carries the protected tags of the ordinary mods; it defaults to whether the abstraction models the metamods.
-    Raises `OutOfScopeError` for an abstraction whose slots the key cannot yet enumerate: an enabled action that reads the unveil offer or the
-    imprints.
+    Raises `OutOfScopeError` for an abstraction whose slots the key cannot yet enumerate: an enabled action that reads the imprints.
     """
 
     def __init__(self, abstraction: Abstraction, tags: bool | None = None, actions: Sequence[Action] = ()):
@@ -344,6 +367,8 @@ class Pattern:
         self._reads: dict[Action, object] = {}
         self._feasible: dict[CompressedState, bool] = {}
         self._tag_kind: dict[str, tuple] = {}
+        self._veiled_kind: dict[str, bool] = {}
+        self._placeholder_families = _placeholder_families(abstraction.data)
         self.grew = 0
         self.fallbacks = 0
 
@@ -364,10 +389,14 @@ class Pattern:
     def key(self, state: CompressedState) -> PatternKey:
         counts = [0, 0]
         crafted = []
+        veiled = []
         tags: Counter | None = Counter() if self.tags else None
         for slot in state.slots:
             if slot.crafted:
                 crafted.append(slot)
+                continue
+            if self.is_veiled(slot):
+                veiled.append(slot)
                 continue
             side = 0 if slot.side is Side.PREFIX else 1
             counts[side] += 1
@@ -378,8 +407,16 @@ class Pattern:
                 tags[(side, tagset)] += 1
         return PatternKey(
             state.flags, state.fractured, state.status, state.held, tuple(crafted), (counts[0], counts[1]),
-            tuple(sorted(tags.items())) if tags is not None else None,
+            tuple(sorted(tags.items())) if tags is not None else None, tuple(veiled),
         )
+
+    def is_veiled(self, slot: Slot) -> bool:
+        """Whether an ordinary slot is the veiled placeholder or a mod unveiled from the pool (ADR-0026): a slot the key holds exactly (#828)."""
+        found = self._veiled_kind.get(slot.kind)
+        if found is None:
+            base = _base(slot.kind)
+            found = self._veiled_kind[slot.kind] = base.startswith(UNVEILED_PREFIX) or bool(kind_families(base) & self._placeholder_families) if not base.startswith((TYPE_PREFIX, MOD_PREFIX)) else False
+        return found
 
     def universe(self, influences: frozenset) -> _Universe:
         found = self._universes.get(influences)
@@ -391,7 +428,7 @@ class Pattern:
         """Learn the ordinary slots of a state a kernel produced (the pool may not list them)."""
         universe = self.universe(state.flags.influences)
         for slot in state.slots:
-            if not slot.crafted and universe.note(slot):
+            if not slot.crafted and not self.is_veiled(slot) and universe.note(slot):  # a veiled slot is in the key, never a member's choice
                 self.grew += 1
 
     # ---- the member policy of an action -----------------------------------------------------------------------
@@ -427,7 +464,21 @@ class Pattern:
         if reads.rerolls_values and replace(reads, rerolls_values=False) == COUNT_ONLY:
             # a reroll of values in place that reads nothing else of the junk than its count (a Divine Orb, #830): see the module text, `ONE`
             return Mode.ALL if self.holds_lock(key) else Mode.ONE
+        if others or reads.rerolls_values:
+            return Mode.ALL
+        if not reads.junk and self._erases(action, key):
+            # the abstraction gives the action a view of the item without its ordinary slots (a Veiled Chaos Orb, #828): see the module text, `ANY`
+            return Mode.ANY
+        if reads.junk and reads.families is not None and (reads.offer or reads.families & self._placeholder_families):
+            # an unveil, a pick, a Veiled Exalted Orb (#828): see the module text, `ONE`
+            return Mode.ONE
         return Mode.ALL
+
+    def _erases(self, action: Action, key: PatternKey) -> bool:
+        """Whether the abstraction makes the kernel of `action` at the members of `key` from a view without their ordinary slots (`Abstraction._erases`):
+        it reads the lock from the crafted and the fractured mods alone, which the key holds."""
+        probe = CompressedState(key.flags, key.fractured, key.status, tuple(key.crafted), *key.held)
+        return self.ab._erases(probe, action)
 
     # ---- the members of a key ---------------------------------------------------------------------------------
 
@@ -436,11 +487,11 @@ class Pattern:
         if not self.ab._context(key.flags.influences).kinds.tracked:
             # no enabled action reads the junk, so a state keeps none of it: its status is a fact about mods that are not stored, and the one
             # state the key stands for is the key itself (no ordinary slot to choose, nothing to check the status against)
-            only = CompressedState(key.flags, key.fractured, key.status, key.crafted, *key.held)
+            only = CompressedState(key.flags, key.fractured, key.status, tuple(sorted((*key.crafted, *key.veiled), key=_slot_key)), *key.held)
             return [only] if self._ok(only) else []
         universe = self.universe(key.flags.influences)
         blocked = self.blocked_tags(key)
-        base = best_of(self.width, [slot.contribution for slot in key.crafted] + [entry.contribution for entry in key.fractured])
+        base = best_of(self.width, [slot.contribution for slot in (*key.crafted, *key.veiled)] + [entry.contribution for entry in key.fractured])
         found: dict[CompressedState, None] = {}
         for rel_p, rel_s in product(
             self._relevant(universe, Side.PREFIX, key.counts[0], key.status), self._relevant(universe, Side.SUFFIX, key.counts[1], key.status)
@@ -537,7 +588,7 @@ class Pattern:
     def _states(self, key: PatternKey, relevant, options) -> list[CompressedState]:
         out = []
         for pick in product(*options) if options else [()]:
-            slots = [*key.crafted, *relevant]
+            slots = [*key.crafted, *key.veiled, *relevant]
             for part in pick:
                 slots.extend(part)
             slots.sort(key=_slot_key)

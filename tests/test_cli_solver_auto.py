@@ -50,14 +50,16 @@ def test_the_bound_can_be_built_for_r12_and_the_refusal_names_each_cause(monkeyp
     assert str(raised.value) == text  # one check, one text: `Pattern` and `make_plan` read the same
 
 
-def test_the_text_of_the_refusal_names_every_cause_there_is(monkeypatch):
+def test_the_unveil_offer_is_no_refusal_of_the_bound_and_the_imprints_still_are(monkeypatch):
+    """#828: the key holds the veiled slots and the offer, and the veiled actions have members (`tests/test_pattern_veiled.py`)."""
     abstraction = unsolved().abstraction
-    for name in ("tracks_offer", "tracks_imprints"):
-        monkeypatch.setattr(type(abstraction), name, property(lambda self: True), raising=False)
+    monkeypatch.setattr(type(abstraction), "tracks_offer", property(lambda self: True), raising=False)
+    assert pattern_refusal(abstraction) is None
 
+    monkeypatch.setattr(type(abstraction), "tracks_imprints", property(lambda self: True), raising=False)
     text = pattern_refusal(abstraction)
 
-    assert all(words in text for words in ("unveil offer", "imprints"))
+    assert "imprints" in text and "unveil" not in text
 
 
 def test_a_roll_limit_and_a_reroll_of_values_are_no_refusal_of_the_bound(monkeypatch):

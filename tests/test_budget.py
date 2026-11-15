@@ -258,18 +258,18 @@ def test_under_a_budget_a_target_the_search_cannot_take_is_walked_to_the_net_wit
 def test_a_walk_the_net_stops_says_what_the_search_has_no_bound_for(coarse, monkeypatch, no_forecast):  # noqa: F811
     """OR-13, #926: `auto` walked because the search has no lower bound for the target; the stop says which, in the words of `refusal_causes`."""
     monkeypatch.setattr(_plan, "pattern_refusal", lambda _abstraction: "planted")
-    monkeypatch.setattr(_plan, "refusal_causes", lambda _abstraction, player: ("an offered action reads the mods an unveil shows to pick from",) if player else ())
+    monkeypatch.setattr(_plan, "refusal_causes", lambda _abstraction, player: ("an offered action reads the imprints",) if player else ())
     said = refusal(coarse, budget=Budget(seconds=0.0, memory_mb=None))
     assert re.fullmatch(
         rf"stopped after \d+ s: {WALK_STAGE} stopped at the time limit of 0 s \(\d+ s spent\): no plan found yet; the faster search, which proves "
-        r"its plan against the cheapest possible cost, was not used: it has no such cost yet where an offered action reads the mods an unveil shows to pick from",
+        r"its plan against the cheapest possible cost, was not used: it has no such cost yet where an offered action reads the imprints",
         said,
     ), said
     refused = make_plan(COARSE, coarse[0], coarse[1], start_price=5.0, solve_it=False).abstraction
     for name in ("tracks_offer", "tracks_imprints"):
         monkeypatch.setattr(type(refused), name, property(lambda self: True), raising=False)
     every = refusal_causes(refused, player=True)
-    assert len(every) == len(refusal_causes(refused)) == 2  # every cause the bound has, in the words an answer may show (#481)
+    assert len(every) == len(refusal_causes(refused)) == 1  # every cause the bound has, in the words an answer may show (#481); the unveil offer is none since #828
     read(budget_limit([Binding(WALK_STAGE, TIME, 0.0, 1.0, _plan.walk_stop(_plan.walk_cause(every)))]))
 
 
