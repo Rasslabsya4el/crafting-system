@@ -48,10 +48,11 @@ def main() -> None:
     K.Abstraction.kernel_key = timed("key", K.Abstraction.kernel_key)
     members = P.Pattern.members
 
-    def counted(self, key, mode):
-        out = members(self, key, mode)
-        calls[f"members {mode.value}"] += 1
-        spent[f"members {mode.value} (count)"] += len(out)
+    def counted(self, key, mode, named=frozenset()):
+        out = members(self, key, mode, named)
+        label = mode.value + ("+named" if named else "")
+        calls[f"members {label}"] += 1
+        spent[f"members {label} (count)"] += len(out)
         return out
 
     P.Pattern.members = counted

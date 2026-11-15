@@ -365,11 +365,11 @@ def test_a_reached_key_with_no_member_makes_the_build_refuse(world, monkeypatch)
     real = Pattern.members
     emptied = []
 
-    def members(self, key, mode):
+    def members(self, key, mode, named=frozenset()):
         if key != start_key and (not emptied or emptied[0] == key):
             emptied[:] = [key]
             return []
-        return real(self, key, mode)
+        return real(self, key, mode, named)
 
     monkeypatch.setattr(Pattern, "members", members)
     with pytest.raises(OutOfScopeError, match="no member of"):

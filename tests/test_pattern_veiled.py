@@ -133,11 +133,38 @@ def test_a_pure_junk_type_that_holds_a_family_the_veiled_actions_read_makes_thei
     pattern = Pattern(ab, None, VEILED)
     key = pattern.key(ab.compress(STARTS["plain"]))
     universe = pattern.universe(frozenset())
-    pure = next(kind_type for side in universe.pure.values() for kind_type in side.values())
+    pure = next(kind_type for side in universe.pure.values() for kind_type in side.values() if not kind_type.named)
     assert pattern._pure_holds(frozenset(), frozenset(pure.mods[0].families))
     assert not pattern._pure_holds(frozenset(), UNVEIL.reads(DATA).families)
     monkeypatch.setattr(Pattern, "_pure_holds", lambda self, influences, families: True)
     assert all(pattern.mode_of(action, key) is Mode.ALL for action in (VEILED_EXALT, UNVEIL, *PICKS))
+
+
+def test_a_family_only_the_veiled_actions_read_is_pure_junk_and_told_apart_only_where_an_unveil_or_a_pick_is_live():
+    """The folded families (#828): an ordinary family of the unveiled pool that gives the goal nothing is pure junk of its class, so the other
+    actions see a class as before; an unveil at a key with the placeholder and no offer tells apart every way the junk holds the families it
+    reads, a pick at a key with an offer those of the offer's mods, and neither anything at a key without the placeholder."""
+    ab = abstraction("speed")
+    pattern = Pattern(ab, None, VEILED)
+    universe = pattern.universe(frozenset())
+    folded = [kind_type for side in universe.pure.values() for kind_type in side.values() if kind_type.named]
+    assert folded and universe.folded and not any(_base_of(slot) in {t.base for t in folded} for side in universe.relevant.values() for slot in side)
+    plain = pattern.key(ab.compress(STARTS["plain"]))
+    assert all(pattern.named_of(action, plain) == frozenset() for action in (*VEILED,))
+    veil = pattern.key(ab.compress(amulet(holder(SUF), rolled(RESIST_2))))
+    assert pattern.named_of(UNVEIL, veil) == universe.folded and pattern.named_of(VEILED_EXALT, veil) == frozenset()
+    offered = ab.compress(amulet(holder(SUF), rolled(RESIST_2), veil_offer=(SPEED,)))
+    speed_families = frozenset(DATA.mods[SPEED].families)
+    assert all(pattern.named_of(pick, pattern.key(offered)) == speed_families & universe.folded for pick in PICKS)
+    walked = {pattern.key(state) for state in walked_states(ab, STARTS["plain"], seed=828)}
+    told = [key for key in walked if len(pattern.members(key, Mode.ONE, pattern.named_of(UNVEIL, key))) > len(pattern.members(key, Mode.ONE))]
+    assert told and all(pattern.holds_placeholder(key) for key in told)  # the folded family is enumerated at an unveil's key, and only there
+
+
+def _base_of(slot) -> str:
+    from crafting_system.abstraction._kinds import base_kind
+
+    return base_kind(slot.kind)
 
 
 @pytest.mark.parametrize("start", STARTS)
@@ -152,18 +179,21 @@ def test_each_veiled_actions_offered_member_is_as_good_as_every_member_of_its_ke
     checked = (*VEILED, EXALT)
     compared = {action: 0 for action in checked}
     choices = veiled_keys = 0
+    named_keys = 0
     for key in keys:
         veiled_keys += bool(key.veiled)
         for action in checked:
-            mode = pattern.mode_of(action, key)
+            mode, named = pattern.policy(action, key)
             if mode is Mode.ALL:
                 continue
-            members, offered = check_dominates(pattern, ab, key, action, mode, rng, trials=6)
+            members, offered = check_dominates(pattern, ab, key, action, mode, rng, trials=6, named=named)
             compared[action] += offered
-            choices += len(pattern.members(key, mode)) < members
+            choices += len(pattern.members(key, mode, named)) < members
+            named_keys += bool(named)
     assert all(compared[action] for action in (VEILED_EXALT, UNVEIL, PICKS[0], EXALT)), compared
     assert compared[VEILED_CHAOS] or start == "lock", compared  # under the lock the Veiled Chaos Orb takes every member
     assert veiled_keys and choices, "no key with a veiled slot, or no choice of pure junk: the check compares nothing the policies leave out"
+    assert named_keys, "no unveil or pick live at a key: the folded family is never enumerated"
 
 
 @pytest.mark.parametrize("start", STARTS)

@@ -43,9 +43,9 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   its roll is not in the state and it stays as it is. Its refusals read the rarity and whether a changeable mod is held, both functions of the
   key. So its pushed kernel is the same for every pure junk assignment. **Proved** so, and checked against every member on the fixtures
   (`tests/test_pattern_rolls.py`); under a lock the locked side keeps its rolls and the mode is `ALL`.
-  The unveil, the picks and the Veiled Exalted Orb (#828) are `ONE` too, a lock or not. Each reads of the junk its count and the families it
-  names (the unveiled pool's: those are told apart by name, so their slots are relevant and enumerated exactly; a pure junk type that holds a
-  mod of one, a hybrid whose family key is not that family alone, makes the policy `ALL`, `Pattern._pure_holds`; 3.29.3.3 has none) and
+  The unveil, the picks and the Veiled Exalted Orb (#828) are `ONE` too, a lock or not, with the folded families of "The folded families"
+  below. Each reads of the junk its count and the families it names (the unveiled pool's: told apart by name; a pure junk family type that
+  holds a mod of one, a hybrid whose family key is not that family alone, makes the policy `ALL`, `Pattern._pure_holds`; 3.29.3.3 has none) and
   keeps the rest (`Reads.junk`, `Reads.families`). The unveil draws the offer from the unveiled pool less the families on the item, and a pick
   puts the k-th mod of the offer in place of the placeholder, refused when its family is on the item: both read only named families and the key
   (the placeholder, the offer, a lock), and change no ordinary slot. The Veiled Exalted Orb removes one removable slot uniformly (the locked side
@@ -77,6 +77,33 @@ Every member offered is checked to be an item (`Abstraction._item_of`), so a mem
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
 gap). The offer of an unveil is in the key's `held`, whole: the k-th mod is the one `Pick(k)` takes. The unveil's backup in the model is then
 the expectation, over the offers, of the least backup of the picks at each offer key: a minimum inside the expectation, as in the exact graph.
+
+**The folded families (#828).** The unveil and the picks name every family of the unveiled pool, so the abstraction tells apart by name each
+ordinary family the unveiled pool shares (on the Warstaff of R24, 12 of the 33 ordinary families: attack speed, strength, physical damage, ...).
+Held as relevant slots, those would be enumerated exactly in every key, for every action: about 244 members a key for an Exalted Orb where the
+family types give a few. A family is *folded* (`Pattern._folded`) when only the veiled actions name it: no other enabled action that reads
+the junk does, and none reads every family. A folded family that gives the goal nothing is pure junk of its class (side, tags), a type of one
+family (`_PureType.named`), and its slots are left out of the relevant multisets. The key does not change: it counts the ordinary slots by
+class already. What has to be argued is each action's policy with folded families among the pure junk.
+
+* The actions that do not name a folded family (every action but the unveil and the picks, by the definition) see a folded family as a family
+  type of one family. `ANY` and `ONE` read no pure junk but its count and class, so they hold as they did. `EXTREMES` holds as above: a folded
+  family has the weight of its mods in the pool like a type, a drawn mod of it is pure junk of its class in the successor key, and the box of
+  `H_c` keeps its corners (a type of capacity one is filled or not). The Veiled Exalted Orb names them, but reads no ordinary slot by family:
+  its refusal reads the veiled slots, which the key holds, and its removal is uniform over the removable slots. `ALL` makes every assignment.
+* The unveil and the picks read them, and only where they are live (`Pattern.named_of`, the members `Pattern.members(key, ONE, named)`).
+  Both need the placeholder: at a key without it each is refused at every member, by the key. At a key with the placeholder and an offer, the
+  unveil is refused at every member (the offer is drawn once), and a pick reads, of the ordinary slots, whether one shares a family with the
+  mod it takes: `named` is the offer's families. At a key with the placeholder and no offer, the picks are refused at every member, and the
+  unveil reads which families of the unveiled pool the item holds: `named` is every folded family it names. Those members are every way the
+  pure junk of each class holds the folded families of `named` (each within its capacity), the other slots the lightest fill of the other kinds
+  (`_named_fills`), and the kernel of the action at a member is a function of the key, the relevant slots and the folded families of `named`
+  it holds: a family type's representative is never a family the abstraction tells apart by name (`Kinds._members_of`), and the action reads
+  nothing else of the junk. So every member's kernel is the kernel of an offered member. **Proved** so.
+
+Every member of a key is then matched, for each action, by an offered member with the same pushed kernel or one whose least backup is no
+higher, and the induction of the first paragraph gives `V_key(key(s)) <= V*(s)`: the bound stays a lower bound. Checked against every member of
+the walked keys and against the exact graph's values, with and without a lock, on the fixture of `tests/test_pattern_veiled.py`.
 
 **Refusals.** An action that the game forbids at a member (`NotApplicableError`) is not an action of that member and is left out
 of it. An action that raises a model gap at a member (`OutOfScopeError`: no admitted rule covers the item) is left out only when
@@ -113,7 +140,7 @@ from crafting_system.items.model import VEILED_DOMAIN
 
 from ._goal import Status
 from ._kernel import Abstraction
-from ._kinds import MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags
+from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags
 from ._rolls import is_rollable
 from ._state import CompressedState, Slot, best_of
 
@@ -157,13 +184,18 @@ class PatternKey(NamedTuple):
 
 @dataclass(frozen=True)
 class _PureType:
-    """A family type none of whose mods gives the goal anything: `capacity` families of one `weight`, on a side."""
+    """A family type none of whose mods gives the goal anything: `capacity` families of one `weight`, on a side.
+
+    A folded family (`named` not empty, #828) is a family that only the veiled actions tell apart by name: one family, `capacity` 1, held
+    among the pure junk of its class; `named` are its families, which an unveil or a pick live at a key enumerates (`Pattern.named_of`).
+    """
 
     side: Side
     base: str
     capacity: int
     mods: tuple[Mod, ...]  # the mods of one family of the type, with the weight they have in the pool
     weights: tuple[Fraction, ...]
+    named: frozenset[str] = frozenset()  # the families of a folded family; empty for a family type ("~n")
 
     def weight(self, blocked: frozenset[str]) -> Fraction:
         """The pool weight a family of this type takes out of a draw under the metamods that block `blocked` tags."""
@@ -194,15 +226,19 @@ class _Universe:
                 kind = kinds.of(entry.mod)
                 for contribution in _rolled_contributions(ab, entry.mod, influences):
                     by_type[(family.side, _base(kind))].append((family, entry.mod, Slot(family.side, kind, contribution)))
+        folded = self.folded = pattern._folded(kinds)
         for (side, base), rows in by_type.items():
-            pure = base.startswith(TYPE_PREFIX) and all(all(value is Status.ABSENT for value in slot.contribution) for _, _, slot in rows)
-            if not pure:
+            silent = all(all(value is Status.ABSENT for value in slot.contribution) for _, _, slot in rows)
+            named = _foldable(base, folded) if silent else frozenset()
+            if not (silent and (base.startswith(TYPE_PREFIX) or named)):
                 for _, _, slot in rows:
                     self.relevant[side][slot] = None
                 continue
             families = {family.family: family for family, _, _ in rows}
             first = next(iter(families.values()))  # the families of one type have the same mods and weights (the type is made of them)
-            kind_type = _PureType(side, base, len(families), tuple(entry.mod for entry in first.mods), tuple(entry.weight for entry in first.mods))
+            kind_type = _PureType(
+                side, base, len(families), tuple(entry.mod for entry in first.mods), tuple(entry.weight for entry in first.mods), named
+            )
             self.pure[side][base] = kind_type
             for kind in sorted({slot.kind for _, _, slot in rows}):
                 self.classes[side][_tagset(kind)].append(_PureKind(kind, Slot(side, kind, zero), kind_type))
@@ -272,6 +308,14 @@ def _base(kind: str) -> str:
     from ._kinds import base_kind
 
     return base_kind(kind)
+
+
+def _foldable(base: str, folded: frozenset[str]) -> frozenset[str]:
+    """The families of a kind told apart by name that only the veiled actions read (`Pattern._folded`), or none for any other kind (#828)."""
+    if not folded or base == ALIKE or base.startswith((TYPE_PREFIX, MOD_PREFIX, UNVEILED_PREFIX)):
+        return frozenset()
+    families = frozenset(kind_families(base))
+    return families if families <= folded else frozenset()
 
 
 def _placeholder_families(data) -> frozenset[str]:
@@ -436,9 +480,62 @@ class Pattern:
         if found is None:
             universe = self.universe(influences)
             found = self._pure_reads[(influences, families)] = any(
-                set(mod.families) & families for side in SIDES for kind_type in universe.pure[side].values() for mod in kind_type.mods
+                set(mod.families) & families
+                for side in SIDES
+                for kind_type in universe.pure[side].values()
+                if not kind_type.named  # a folded family is told apart by name: `named_of` enumerates it where it is read
+                for mod in kind_type.mods
             )
         return found
+
+    def _veiled_reader(self, reads) -> bool:
+        """Whether an action reads the junk as the unveil, the picks and the Veiled Exalted Orb do (#828): its count, and families it names of
+        which the veiled ones are a part (or an offer), and nothing else (no draw, no weight, no reroll of values: those have policies of their own)."""
+        others = reads.variants or reads.pool_weight or reads.fractures or reads.input_classes or reads.rerolls_values or reads.block_invariant
+        return bool(
+            reads.junk and reads.families is not None and not others and (reads.offer or reads.families & self._placeholder_families)
+        )
+
+    def _folded(self, kinds) -> frozenset[str]:
+        """The families told apart by name only because a veiled action names them (#828): no other enabled action that reads the junk names
+        them, and none reads every family. A folded family that gives the goal nothing is pure junk of its class (`_Universe`), not a relevant
+        slot: an unveil and a pick enumerate it where they are live (`named_of`), the other actions do not read it (see the module docstring)."""
+        veiled: set[str] = set()
+        other: set[str] = set()
+        for action in kinds.actions:
+            reads = self.reads(action)
+            if not reads.junk:
+                continue
+            if reads.families is None:
+                return frozenset()
+            (veiled if self._veiled_reader(reads) else other).update(reads.families)
+        return frozenset(veiled - other - self._placeholder_families)
+
+    def holds_placeholder(self, key: PatternKey) -> bool:
+        """Whether the key holds the veiled placeholder (not a mod unveiled from the pool)."""
+        return any(
+            not _base(slot.kind).startswith(UNVEILED_PREFIX) and kind_families(_base(slot.kind)) & self._placeholder_families for slot in key.veiled
+        )
+
+    def named_of(self, action: Action, key: PatternKey) -> frozenset[str]:
+        """The folded families whose holding the members of `key` must tell apart for `action` (#828): empty but for an unveil or a pick that is
+        live at the key, see the module docstring ("The folded families").
+
+        An action that reads the offer and needs the placeholder (an unveil, a pick) is refused at every member of a key without the placeholder.
+        With an offer drawn, the unveil is refused at every member and a pick reads, of the ordinary slots, only whether one shares a family with
+        the mod it takes: the offer's families. With no offer, the picks are refused at every member and the unveil reads which families of the
+        unveiled pool the item holds: all it names. The Veiled Exalted Orb reads no ordinary family (its refusal reads the veiled slots alone).
+        """
+        reads = self.reads(action)
+        if not (reads.offer and self._veiled_reader(reads)) or not self.holds_placeholder(key):
+            return frozenset()
+        folded = self.universe(key.flags.influences).folded
+        if not folded:
+            return frozenset()
+        offer = CompressedState(key.flags, key.fractured, key.status, (), *key.held).offer
+        if offer:
+            return frozenset(family for entry in offer for family in self.data.mods[entry.mod_id].families) & folded
+        return frozenset(reads.families) & folded
 
     def universe(self, influences: frozenset) -> _Universe:
         found = self._universes.get(influences)
@@ -491,10 +588,16 @@ class Pattern:
         if not reads.junk and self._erases(action, key):
             # the abstraction gives the action a view of the item without its ordinary slots (a Veiled Chaos Orb, #828): see the module text, `ANY`
             return Mode.ANY
-        if reads.junk and reads.families is not None and (reads.offer or reads.families & self._placeholder_families):
-            # an unveil, a pick, a Veiled Exalted Orb (#828): see the module text, `ONE`, unless a pure junk type holds a family they read
+        if self._veiled_reader(reads):
+            # an unveil, a pick, a Veiled Exalted Orb (#828): see the module text, `ONE` (with the folded families `named_of` gives), unless a
+            # pure junk family type holds a family they read
             return Mode.ALL if self._pure_holds(key.flags.influences, reads.families) else Mode.ONE
         return Mode.ALL
+
+    def policy(self, action: Action, key: PatternKey) -> tuple[Mode, frozenset[str]]:
+        """The member policy of `action` at `key`: its mode, and the folded families its members must tell apart (`named_of`, with `ONE`)."""
+        mode = self.mode_of(action, key)
+        return mode, self.named_of(action, key) if mode is Mode.ONE else frozenset()
 
     def _erases(self, action: Action, key: PatternKey) -> bool:
         """Whether the abstraction makes the kernel of `action` at the members of `key` from a view without their ordinary slots (`Abstraction._erases`):
@@ -504,8 +607,11 @@ class Pattern:
 
     # ---- the members of a key ---------------------------------------------------------------------------------
 
-    def members(self, key: PatternKey, mode: Mode) -> list[CompressedState]:
-        """The concrete states of `key` that stand for all of its members for an action of the policy `mode`; each is an item."""
+    def members(self, key: PatternKey, mode: Mode, named: frozenset[str] = frozenset()) -> list[CompressedState]:
+        """The concrete states of `key` that stand for all of its members for an action of the policy `mode`; each is an item.
+
+        `named` (with `ONE`): the folded families the action reads at this key (`named_of`): every way the pure junk holds them is a member.
+        """
         if not self.ab._context(key.flags.influences).kinds.tracked:
             # no enabled action reads the junk, so a state keeps none of it: its status is a fact about mods that are not stored, and the one
             # state the key stands for is the key itself (no ordinary slot to choose, nothing to check the status against)
@@ -522,7 +628,7 @@ class Pattern:
             if best_of(self.width, [slot.contribution for slot in relevant] + [base]) != key.status:
                 continue
             for compositions in self._compositions(universe, key, rel_p, rel_s):
-                for state in self._assemble(universe, key, relevant, compositions, blocked, mode):
+                for state in self._assemble(universe, key, relevant, compositions, blocked, mode, named):
                     found[state] = None
                 if mode is Mode.ANY and found:
                     return list(found)
@@ -588,11 +694,13 @@ class Pattern:
         for first, second in product(*per_side):
             yield {**first, **second}
 
-    def _assemble(self, universe: _Universe, key: PatternKey, relevant, need: dict[tuple, int], blocked, mode: Mode) -> Iterator[CompressedState]:
+    def _assemble(
+        self, universe: _Universe, key: PatternKey, relevant, need: dict[tuple, int], blocked, mode: Mode, named: frozenset[str] = frozenset()
+    ) -> Iterator[CompressedState]:
         options = []
         for (side_index, tagset), count in sorted(need.items()):
             side = SIDES[side_index]
-            fills = _fills(universe.classes[side].get(tagset, []), count, blocked, mode)
+            fills = _fills(universe.classes[side].get(tagset, []), count, blocked, mode, named)
             if not fills:
                 return
             options.append(fills)
@@ -646,13 +754,18 @@ def _splits(total: int, parts: int) -> Iterator[tuple[int, ...]]:
             yield (first, *rest)
 
 
-def _fills(items: Sequence[_PureKind], count: int, blocked: frozenset[str], mode: Mode) -> list[tuple[Slot, ...]]:
-    """The ways `count` pure junk slots of one class sit on its kinds: the lightest, the heaviest, or every one, by the pool weight they take out."""
+def _fills(items: Sequence[_PureKind], count: int, blocked: frozenset[str], mode: Mode, named: frozenset[str] = frozenset()) -> list[tuple[Slot, ...]]:
+    """The ways `count` pure junk slots of one class sit on its kinds: the lightest, the heaviest, or every one, by the pool weight they take out.
+
+    With `named` (`ONE` only), every way the slots hold the folded families of `named`, the rest the lightest fill of the other kinds.
+    """
     if count == 0:
         return [()]
     order = sorted(items, key=lambda item: (item.type.weight(blocked), item.kind))
     if mode is Mode.ALL:
         return _all_fills(order, count)
+    if named and mode is Mode.ONE:
+        return _named_fills(order, count, named)
     lightest = _greedy(order, count)
     if mode is not Mode.EXTREMES:
         return [lightest] if lightest is not None else []
@@ -669,6 +782,31 @@ def _greedy(order: Sequence[_PureKind], count: int) -> tuple[Slot, ...] | None:
             used[item.type.base] += 1
             chosen.append(item.slot)
     return tuple(sorted(chosen, key=_slot_key)) if len(chosen) == count else None
+
+
+def _named_fills(order: Sequence[_PureKind], count: int, named: frozenset[str]) -> list[tuple[Slot, ...]]:
+    """Every choice of the kinds of folded families in `named` (each within its capacity) for some of the `count` slots, the others the
+    lightest fill of the remaining kinds (none of which holds a family of `named`); a choice whose rest cannot be filled is no member."""
+    read = [item for item in order if item.type.named & named]
+    rest = [item for item in order if not item.type.named & named]
+    out: dict[tuple[Slot, ...], None] = {}
+    used: Counter = Counter()
+
+    def grow(at: int, chosen: tuple[Slot, ...]) -> None:
+        fill = _greedy(rest, count - len(chosen))
+        if fill is not None:
+            out[tuple(sorted((*chosen, *fill), key=_slot_key))] = None
+        if len(chosen) == count:
+            return
+        for index in range(at, len(read)):
+            item = read[index]
+            if used[item.type.base] < item.type.capacity:
+                used[item.type.base] += 1
+                grow(index, (*chosen, item.slot))
+                used[item.type.base] -= 1
+
+    grow(0, ())
+    return list(out)
 
 
 def _all_fills(order: Sequence[_PureKind], count: int) -> list[tuple[Slot, ...]]:
@@ -791,7 +929,7 @@ class PatternBuilder:
         self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key holds
-        self.members_kept: dict[int, dict[Mode, list[CompressedState]]] = {}
+        self.members_kept: dict[int, dict[tuple[Mode, frozenset[str]], list[CompressedState]]] = {}
         self.pattern.note(self.start)
         self.start_id = self._intern(self.start)
 
@@ -909,10 +1047,10 @@ class PatternBuilder:
         for offer in self.offers[lo:hi]:
             if offer.action is None or _refused_by_flags(offer.action, key):
                 continue
-            mode = self.pattern.mode_of(offer.action, key)
-            members = by_mode.get(mode)
+            policy = self.pattern.policy(offer.action, key)
+            members = by_mode.get(policy)
             if members is None:
-                members = by_mode[mode] = self.pattern.members(key, mode)
+                members = by_mode[policy] = self.pattern.members(key, *policy)
                 self.stats.members += len(members)
             requests.extend((member, offer.action) for member in members)
         self.ab.prime(requests)
@@ -921,7 +1059,7 @@ class PatternBuilder:
         """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
         key = self.keys[i]
-        by_mode: dict[Mode, list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
+        by_mode: dict[tuple[Mode, frozenset[str]], list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
         added: list[tuple[int, int]] = []
         for oi in range(first, len(offers)):
             offer = offers[oi]
@@ -934,12 +1072,12 @@ class PatternBuilder:
                 continue
             if _refused_by_flags(offer.action, key):
                 continue
-            mode = pattern.mode_of(offer.action, key)
-            members = by_mode.get(mode)
+            policy = pattern.policy(offer.action, key)
+            members = by_mode.get(policy)
             if members is None:
-                members = by_mode[mode] = pattern.members(key, mode)
+                members = by_mode[policy] = pattern.members(key, *policy)
                 stats.members += len(members)
-            stats.modes[(mode.value, offer.label)] += 1
+            stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             seen: set[int] = set()
             for member in members:
                 stats.pairs += 1
