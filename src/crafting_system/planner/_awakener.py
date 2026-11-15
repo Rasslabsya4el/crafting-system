@@ -28,7 +28,7 @@ target's search (and, for a check, the full walk) sees an ordinary action with a
 * **Where the effort goes.** A donor's search stops as the target's does (`_plan.search_gap`): exact under the plan's aim, at a proved gap past
   it, and each donor gets an equal share of the time left with the target (`_plan.search_net`), so the donors never leave the target nothing
   (OR-33). A donor stopped at a gap or a net leaves its `[lower, upper]`, and `r` carries it into the bound of the whole. Effort is not yet
-  moved between the donors and the target by their share of the gap (#832's "refinement"; filed as its own ticket).
+  moved between the donors and the target by their share of the gap (#832's "refinement", #1001).
 
 Only donors whose mod the target names are offered (`_offers`): a donor mod the target does not ask for gives the item nothing it wants.
 """
