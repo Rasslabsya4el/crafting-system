@@ -3,9 +3,23 @@ a failed job in the planner's own words, two identical requests at once plan onc
 
 import pytest
 from targets_support import DATA
-from web_support import API, client, fixture_world, r12_target, stand_still, wait_until, wait_until_done
+from web_support import (
+    API,
+    MOMENT,
+    client,
+    fixture_world,
+    r12_target,
+    stand_still,
+    stuck_in_a_pool,
+    wait_until,
+    wait_until_done,
+    with_a_pool,
+    world_with_newer_prices_in_workers,
+)
 
-from crafting_system.web import QUEUED, RUNNING, STOPPED_WORDS, JobRecord, RequestError, SqliteStore, parse_request
+from crafting_system.web import QUEUED, RUNNING, STOPPED_WORDS, JobRecord, RequestError, Service, SqliteStore, parse_request
+
+DAY = MOMENT.date()
 
 
 def test_a_request_is_planned_as_a_job_and_its_route_is_stored_with_its_page():
@@ -75,7 +89,7 @@ def planner_words_for_a_priced_given_start() -> str:
     from crafting_system.planner import PlanError, PlanSettings, plan_target
 
     world = fixture_world()
-    request = parse_request({"target": r12_target(start="given"), "settings": {"start_price": 5.0}}, "poe1", world)
+    request = parse_request({"target": r12_target(start="given"), "settings": {"start_price": 5.0}}, "poe1", world, DAY)
     with pytest.raises(PlanError) as refused:
         plan_target(DATA, request.target, price_file(), PlanSettings(start_price=5.0))
     return str(refused.value)
@@ -112,7 +126,7 @@ def test_a_queued_job_that_is_stopped_never_runs():
 
 def test_a_job_cut_off_by_a_restart_is_planned_again(tmp_path):
     db = tmp_path / "site.sqlite3"
-    request = parse_request({"target": r12_target()}, "poe1", fixture_world())
+    request = parse_request({"target": r12_target()}, "poe1", fixture_world(), DAY)
     store = SqliteStore(db)
     store.add_job(JobRecord("cutoff", request.key, request.document, RUNNING, "2026-10-31T11:00:00Z", "2026-10-31T11:00:00Z"))
     store.close()
@@ -144,6 +158,14 @@ def test_a_request_that_cannot_be_planned_as_written_is_refused_at_once(body, wo
     assert service.started == 0
 
 
+def test_a_body_nested_too_deep_is_refused_in_words():
+    deep = "[" * 100_000 + "]" * 100_000
+    with client() as (http, service):
+        answer = http.post(f"{API}/jobs", content=deep, headers={"content-type": "application/json"})
+
+    assert answer.status_code in (400, 413)
+
+
 def test_unknown_jobs_routes_and_games_are_not_found():
     with client() as (http, service):
         assert http.get(f"{API}/jobs/nothing").status_code == 404
@@ -157,15 +179,16 @@ def test_unknown_jobs_routes_and_games_are_not_found():
 
 def test_the_key_is_the_request_not_its_spelling():
     world = fixture_world()
-    plain = parse_request({"target": r12_target()}, "poe1", world)
-    spelled = parse_request({"target": r12_target(), "methods": {"recipe_starts": True, "strands": False}, "settings": {"start_price": None}}, "poe1", world)
-    priced = parse_request({"target": r12_target(), "settings": {"start_price": 6}}, "poe1", world)
+    plain = parse_request({"target": r12_target()}, "poe1", world, DAY)
+    spelled = parse_request({"target": r12_target(), "methods": {"recipe_starts": True, "strands": False}, "settings": {"start_price": None}}, "poe1", world, DAY)
+    priced = parse_request({"target": r12_target(), "settings": {"start_price": 6}}, "poe1", world, DAY)
 
     assert plain.key == spelled.key
     assert priced.key != plain.key
-    assert parse_request({"target": r12_target()}, "poe2", world).key != plain.key
+    assert parse_request({"target": r12_target()}, "poe2", world, DAY).key != plain.key
+    assert parse_request({"target": r12_target()}, "poe1", world, DAY.replace(day=1)).key != plain.key  # the day judges a price's age
     with pytest.raises(RequestError):
-        parse_request([], "poe1", world)
+        parse_request([], "poe1", world, DAY)
 
 
 def test_the_store_lists_routes_newest_first_and_keeps_jobs_in_order(tmp_path):
@@ -183,3 +206,42 @@ def test_the_store_lists_routes_newest_first_and_keeps_jobs_in_order(tmp_path):
     assert [job.id for job in store.jobs_in((QUEUED,))] == ["j0", "j1", "j2"]
     with pytest.raises(ValueError):
         store.update_job("j0", colour="red")
+
+
+def test_a_plan_that_starts_the_planners_own_pool_runs_in_a_worker():
+    """A worker is not a daemon process: the planner's pool (`parallel.WorkerPool`) starts processes of its own inside it."""
+    with client(work=with_a_pool) as (http, service):
+        job = wait_until_done(http, http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"])
+
+        assert job["state"] == "done", job["error"]
+        assert http.get(job["route"]["url"]).json()["summary"] == {"doubled": [2, 4, 6]}
+
+
+def test_a_stopped_job_frees_its_worker_even_while_its_pool_runs():
+    with client(workers=1, work=stuck_in_a_pool) as (http, service):
+        first = http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"]
+        wait_until(http, first, "standing")
+        second = http.post(f"{API}/jobs", json={"target": r12_target(), "methods": {"strands": True}}).json()["id"]
+
+        http.post(f"{API}/jobs/{first}/stop")
+
+        assert wait_until(http, second, "standing")["state"] == "standing"  # the one worker's place was freed
+        http.post(f"{API}/jobs/{second}/stop")
+        assert service.started == 2
+
+
+def test_a_route_is_stored_under_the_prices_it_was_planned_with():
+    """A price file refreshed between the request and its run: the route is stored under the key of what the worker read, never under
+    the older snapshot's key, so a request keyed on the older prices is not answered with it."""
+    service = Service(SqliteStore(":memory:"), world_with_newer_prices_in_workers, workers=1, clock=lambda: MOMENT)
+    from starlette.testclient import TestClient
+
+    from crafting_system.web import create_app
+
+    with TestClient(create_app({"poe1": service})) as http:
+        posted = http.post(f"{API}/jobs", json={"target": r12_target()}).json()
+        job = wait_until_done(http, posted["id"])
+        route = http.get(job["route"]["url"]).json()
+
+        assert job["state"] == "done" and route["key"] != posted["key"]
+        assert http.post(f"{API}/jobs", json={"target": r12_target()}).status_code == 202  # not answered from the newer route

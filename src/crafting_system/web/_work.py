@@ -1,7 +1,8 @@
 """What a worker process does with one job: load the world, call the planner's entry, and send its words back to the service.
 
 `run_job` is the body of a worker process. It talks to the service only through `send`: `("standing", {...})` each time the search says
-where it stands, then one last message, `("done", {...})` with the route or `("failed", text)` with the planner's own words. A `Work`
+where it stands, then one last message, `("done", {...}, key)` with the route and the key of the inputs it was planned with (the price
+file read in this process, which may be newer than the one the job was keyed with), or `("failed", text)` with the planner's own words. A `Work`
 function takes the world, the checked request and a `watch`, and returns the route: `plan_request` is the site's; tests name their own.
 """
 
@@ -54,7 +55,7 @@ def _search_document(plan) -> dict | None:
 
 def plan_request(world: World, request: dict, game: str, today: date, watch: Watch) -> dict:
     """The site's work: the plan of `request` in `world`, its figures as the planner states them, the JSON policy and the route page."""
-    checked = parse_request(request, game, world)
+    checked = parse_request(request, game, world, today)
     methods, settings = checked.document["methods"], checked.document["settings"]
     with imprints_held_at_most(world.config.max_imprints):
         plan = plan_target(
@@ -87,10 +88,11 @@ def run_job(world_source: WorldSource, work: Work, request: dict, game: str, tod
     """The body of a worker process: one job, start to end, every word of it through `send`."""
     try:
         world = world_source()
+        key = parse_request(request, game, world, today).key
         route = work(world, request, game, today, lambda standing: send(("standing", standing)))
     except REFUSALS as error:
         send(("failed", str(error)))
     except Exception as error:  # noqa: BLE001  (a fault of the service, not a refusal of the planner: said, never swallowed)
         send(("failed", f"internal error: {type(error).__name__}: {error}\n{traceback.format_exc(limit=8)}"))
     else:
-        send(("done", route))
+        send(("done", route, key))

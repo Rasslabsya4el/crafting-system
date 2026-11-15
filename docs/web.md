@@ -99,11 +99,12 @@ A request's key is the SHA-256 of one canonical JSON text (sorted keys) of:
 - the machine's planner settings that change an answer: the proof gap, the time and memory limits, the imprint cap, the recombinator
   variant, the price-gap flag;
 - the price snapshot: its league, the time it was fetched and a digest of every price in it (a hand override changes it);
-- the game data version and the planner version.
+- the game data version, the planner version and the day of the run.
 
 Why these: a route is reused only where it is the answer the planner would give now. A new price snapshot, a patch or a new planner makes
-the old route stale, so each of them is in the key; the day of the run is not, because it only marks a price as old and the snapshot it is
-read against is in the key. The target is keyed as the object sent, so two different spellings of the same item (a stat text against its
+the old route stale, so each of them is in the key. The day is in it because the planner judges a price's age on it; prices are refreshed
+about as often (OR-9). A worker keys its route on the inputs it read itself, so a route planned after a price refresh is stored under the
+new snapshot, never under the one the request was keyed with. The target is keyed as the object sent, so two different spellings of the same item (a stat text against its
 family) are two keys until the site sends one canonical form.
 
 ## Not built yet

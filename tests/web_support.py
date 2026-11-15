@@ -5,6 +5,7 @@ The world sources and works here are module-level so a worker process (spawned, 
 
 import contextlib
 import datetime
+import multiprocessing
 import threading
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from targets_support import DATA
 
 from crafting_system.budget import Budget
 from crafting_system.config import load_config
+from crafting_system.parallel import WorkerPool
 from crafting_system.planner import Standing
 from crafting_system.web import STANDING, Service, SqliteStore, World, create_app, standing_document
 
@@ -41,6 +43,43 @@ def r12_target(**changes: object) -> dict:
     target.pop("price_file", None)
     target.update(changes)
     return target
+
+
+def world_with_newer_prices_in_workers() -> World:
+    """The fixture world in the service's own process, and the same world with a dearer start item in a worker: a price file refreshed
+    after the request was keyed."""
+    if multiprocessing.parent_process() is None:
+        return fixture_world()
+    return FixtureWorld(DATA, price_file(start=4.5), load_config({}))
+
+
+def _nothing() -> None:
+    return None
+
+
+def _double(value: int) -> int:
+    return 2 * value
+
+
+def _until_the_parent_ends(value: int) -> int:
+    """A pool piece that runs until the process that started the pool has ended (killed by a stop)."""
+    multiprocessing.parent_process().join()
+    return value
+
+
+def with_a_pool(world, request, game, today, watch) -> dict:
+    """A work that maps over the planner's process pool with two workers, as a long plan does."""
+    with WorkerPool(_nothing, workers=2) as pool:
+        doubled = pool.map(_double, [1, 2, 3])
+    return {"summary": {"doubled": doubled}, "policy": {}, "page": None}
+
+
+def stuck_in_a_pool(world, request, game, today, watch) -> dict:
+    """A work that says where it stands, then waits on its pool's two processes until it is stopped."""
+    watch(standing_document(Standing(lower=90.0, upper=100.0, rounds=1, seconds=0.5)))
+    with WorkerPool(_nothing, workers=2) as pool:
+        pool.map(_until_the_parent_ends, [1, 2])
+    raise AssertionError("unreachable")
 
 
 def stand_still(world, request, game, today, watch) -> dict:

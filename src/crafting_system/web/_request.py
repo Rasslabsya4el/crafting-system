@@ -13,14 +13,15 @@ target may not name a `price_file`.
 The **key** of a request is the SHA-256 of one canonical JSON text: the game, the target object, the method switches and settings with
 their defaults filled in, the planner settings of the machine that change an answer (the proof gap, the time and memory nets, the imprint
 cap, the recombinator variant), the price snapshot, the game data version and the planner version. Two requests with the same key get the
-same plan, so the second is answered from the store (OR-36). The day of the run is not in it: the day only marks a price as old, and the
-snapshot it is read against is in the key.
+same plan, so the second is answered from the store (OR-36). The day of the run is in it too: the planner judges a price's age on it
+(`PlanSettings.today`), so a route is reused on the day it was planned, and the price snapshot is refreshed about as often anyway (OR-9).
 """
 
 import hashlib
 import json
 import math
 from dataclasses import dataclass
+from datetime import date
 
 from crafting_system.config import PRICE_SOURCES
 from crafting_system.targets import Target, TargetError, parse_target
@@ -69,8 +70,8 @@ def _switch(value: object, where: str, default: bool) -> bool:
     return value
 
 
-def parse_request(body: object, game: str, world: World) -> Request:
-    """Check `body` against `world` and give the request with its key; raises `RequestError` with what is wrong."""
+def parse_request(body: object, game: str, world: World, day: date) -> Request:
+    """Check `body` against `world` and give the request with its key for a run on `day`; raises `RequestError` with what is wrong."""
     top = _object(body, "the request", _TOP_KEYS)
     if not isinstance(top.get("target"), dict):
         raise RequestError("the request must hold the target as a JSON object under \"target\"")
@@ -101,5 +102,6 @@ def parse_request(body: object, game: str, world: World) -> Request:
         },
         "settings": {"start_price": None if start_price is None else float(start_price), "price_source": price_source},
     }
-    keyed = {"game": game, **document, "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version}
+    keyed = {"game": game, **document, "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version,
+             "day": day.isoformat()}
     return Request(game, target, document, hashlib.sha256(_canonical(keyed).encode("utf-8")).hexdigest())

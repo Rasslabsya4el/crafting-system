@@ -28,6 +28,7 @@ from ._store import DONE, STATES, JobRecord, RouteRecord
 
 API = "/api/v1"
 ROUTES_PAGE_LIMIT = 100
+MAX_BODY_BYTES = 1_000_000  # a target is a few kB; a larger body is refused before it is read whole
 
 
 def _error(status: int, text: str) -> JSONResponse:
@@ -96,12 +97,14 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
             return _error(404, f"no game {request.path_params['game']!r}; the site plans {sorted(services)}")
         try:
             body = await request.json()
-        except ValueError:
-            return _error(400, "the request body must be JSON")
+        except (ValueError, RecursionError):
+            return _error(400, "the request body must be JSON, nested at most a few hundred deep")
         try:
             job = await run_in_threadpool(service.submit, body)
         except RequestError as problem:
             return _error(400, str(problem))
+        except RecursionError:
+            return _error(400, "the request is nested too deep to be a target")
         return JSONResponse(job_document(job, service.game), status_code=200 if job.state == DONE else 202)
 
     async def job(request: Request) -> JSONResponse:
@@ -197,6 +200,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
             Route(base + "/routes/{route_id}/page", page, methods=["GET"]),
         ],
         lifespan=lifespan,
+        max_body_size=MAX_BODY_BYTES,
     )
 
 
