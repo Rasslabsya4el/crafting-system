@@ -36,6 +36,18 @@ def fixed_clock(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def progress_sink_restored(monkeypatch):
+    """Where the planner says the phases of a long plan (`planner._packed.PROGRESS`) is put back after each test.
+
+    A script run in the test's own process (`state_bloat.main`, `family_bench`, ...) sets it to a printer and leaves it set; a later test of
+    the same shard then found those lines in what it captured (`test_planner_entry`, PR #944).
+    """
+    from crafting_system.planner import _packed
+
+    monkeypatch.setattr(_packed, "PROGRESS", _packed.PROGRESS)
+
+
+@pytest.fixture(autouse=True)
 def network_guard(request, monkeypatch):
     """Any connection (or name lookup) to a host other than loopback fails with AssertionError.
 
