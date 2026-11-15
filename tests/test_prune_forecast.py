@@ -34,11 +34,13 @@ from abstraction_support import real_game_data
 from limits_support import notes, only
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal
+from crafting_system.abstraction._pattern import PatternBuilder
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, Offer, make_plan
 from crafting_system.planner._offer_kinds import merge_twins
 from crafting_system.planner._decide import LADDER, Rates
 from crafting_system.planner._offers import BuyStartItem, PricedOffer, price_offers
+from crafting_system.planner._pattern_bound import pattern_offers
 from crafting_system.items import Item, Rarity
 from crafting_system.targets import StartKind, Target
 
@@ -108,7 +110,7 @@ CRAFT_FIRE, CRAFT_COLD = "HelenaMasterFireResist1", "HelenaMasterColdResist1_"
 
 
 @pytest.fixture(scope="module")
-def pooled(real):
+def pooled_world(real):
     """The same boots world with 120 fossil sets, the life craft, and crafts for Fire and Cold Resistance.
 
     Those two crafts tell the two families apart from the rest, and no goal leaf needs them, so a coarse level can
@@ -125,6 +127,13 @@ def pooled(real):
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring", "Orb of Transmutation")
     life, speed = requirement(data, "IncreasedLife"), requirement(data, "MovementVelocity", min_tier=1)
     target = Target(BASE, LEVEL, frozenset(), (life, speed), item, start=StartKind.BOUGHT)  # the restart of the budget tests buys it again
+    return SimpleNamespace(data=data, item=item, target=target, offers=offers, prices=prices)
+
+
+@pytest.fixture(scope="module")
+def pooled(pooled_world):
+    """The pooled world planned exactly, its twins merged, and the forecast's seconds on the merged offers and on the first coarse level."""
+    data, item, target, offers, prices = (getattr(pooled_world, name) for name in ("data", "item", "target", "offers", "prices"))
     exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)  # `auto`: the envelope search (#829)
     merged = merge_twins(data, item, exact.offers)[0]
     forecast = exact.abstraction.estimate([exact.start], [p.offer.action for p in merged if not isinstance(p.offer.action, BuyStartItem)])
@@ -176,6 +185,30 @@ def test_a_budget_that_no_coarse_level_fits_runs_exactly_and_says_why_the_graph_
     assert plan.approximation is None
     assert only(plan.limits, "how-solved").why.startswith("no approximate answer was possible (none fits the time)")  # G12
     assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)
+
+
+# --- 3. the bound's build on fossils that keep junk (ticket #829) -----------------------------------------------------
+
+
+def test_a_build_that_grows_the_universe_begins_again_once_on_the_grown_universe(pooled_world):
+    """A fossil adds mods the pool of an empty rare item does not list (a socket, gem levels); with bench crafts offered the junk is kept,
+    so the build learns those slots from its kernels and begins again. It begins on the universe it grew: made afresh, the universe lost
+    them, found them again in the same pass and began again forever (#829: 109 restarts in a minute, CI killed the test after 25 minutes)."""
+    world = pooled_world
+    enabled = [offer.action for offer in world.offers if not isinstance(offer.action, BuyStartItem)]
+    abstraction = Abstraction(world.data, Goal.from_target(world.target), BASE, LEVEL, enabled)
+    priced, _ = price_offers(world.offers, world.prices)
+    crafts = [p for p in priced if not p.label.startswith("Fossils") and not isinstance(p.offer.action, BuyStartItem)]
+    adding = [p for p in priced if p.label.startswith("Fossils") and ("Hollow" in p.label or "Faceted" in p.label)][:4]  # a socket, gem levels
+    assert crafts and adding
+    offers = pattern_offers([*crafts, *adding])
+    builder = PatternBuilder(abstraction, abstraction.compress(world.item), approximate=True)
+    builder.stop = lambda: "begins again forever" if builder.restarts > 3 else None
+
+    model = builder.extend(offers)
+
+    assert model.stopped is None
+    assert model.stats.universe_growth == 1  # the fossils' slots are found in the first pass, and the second pass finds none
 
 
 # --- 4. G17: the twins an answer leaves out are a limit on every path (ticket #506, OR-13) --------------------------------

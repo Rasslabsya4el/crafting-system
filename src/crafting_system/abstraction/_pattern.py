@@ -325,6 +325,12 @@ class Pattern:
         self.grew = 0
         self.fallbacks = 0
 
+    def keep_universes(self, before: "Pattern") -> None:
+        """Take the universes of `before` (the slots its kernels found included), seeded with what this pattern's actions add by name."""
+        for influences, universe in before._universes.items():
+            self._universes[influences] = universe
+            universe._seed_named(self, self.actions)
+
     def add_actions(self, actions: Sequence[Action]) -> None:
         """Offer more actions: what they add by name joins the universe, and a universe that gains a slot counts as growth (`grew`), as a kernel's slot does."""
         self.actions = (*self.actions, *actions)
@@ -652,7 +658,13 @@ class PatternBuilder:
         self._reset()
 
     def _reset(self) -> None:
+        before = getattr(self, "pattern", None)
         self.pattern = Pattern(self.ab, self.tags, [offer.action for offer in self.offers if offer.action is not None])
+        if before is not None:
+            # the build begins again because the universe grew: it begins on the grown universe. Made afresh, the universe would lose the slots the
+            # kernels found (a fossil's added mods, which the pool does not list), find them again in the same pass, and begin again forever (#829:
+            # a fossil world with bench crafts, the build ran past 25 minutes on CI, 109 restarts in a minute here)
+            self.pattern.keep_universes(before)
         self.stats = PatternStats()
         self.index: dict[PatternKey, int] = {}
         self.keys: list[PatternKey] = []
