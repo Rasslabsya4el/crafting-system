@@ -67,14 +67,14 @@ def _until_the_parent_ends(value: int) -> int:
     return value
 
 
-def with_a_pool(world, request, game, today, watch) -> dict:
+def with_a_pool(world, request, game, watch) -> dict:
     """A work that maps over the planner's process pool with two workers, as a long plan does."""
     with WorkerPool(_nothing, workers=2) as pool:
         doubled = pool.map(_double, [1, 2, 3])
     return {"summary": {"doubled": doubled}, "policy": {}, "page": None}
 
 
-def stuck_in_a_pool(world, request, game, today, watch) -> dict:
+def stuck_in_a_pool(world, request, game, watch) -> dict:
     """A work that says where it stands, then waits on its pool's two processes until it is stopped."""
     watch(standing_document(Standing(lower=90.0, upper=100.0, rounds=1, seconds=0.5)))
     with WorkerPool(_nothing, workers=2) as pool:
@@ -82,11 +82,42 @@ def stuck_in_a_pool(world, request, game, today, watch) -> dict:
     raise AssertionError("unreachable")
 
 
-def stand_still(world, request, game, today, watch) -> dict:
+def stand_still(world, request, game, watch) -> dict:
     """A work that says where it stands once and then waits until its process is killed."""
     watch(standing_document(Standing(lower=90.0, upper=100.0, rounds=3, seconds=1.5)))
     threading.Event().wait()
     raise AssertionError("unreachable")
+
+
+def at_once(world, request, game, watch) -> dict:
+    """A work that answers at once, with no plan."""
+    return {"summary": {"game": game}, "policy": {}, "page": None}
+
+
+class FailingStore:
+    """A store that raises on the next `times` calls of one method (for `update_job`, only those that set `state`), then works.
+
+    `armed` stays False until a test sets it, so a service starts on it as on a sound store."""
+
+    def __init__(self, store, method: str, times: int = 1, state: str | None = None) -> None:
+        self._store = store
+        self._method = method
+        self._state = state
+        self.times = times
+        self.armed = False
+
+    def __getattr__(self, name: str):
+        real = getattr(self._store, name)
+        if name != self._method:
+            return real
+
+        def call(*args, **kwargs):
+            if self.armed and self.times > 0 and (self._state is None or kwargs.get("state") == self._state):
+                self.times -= 1
+                raise OSError(f"the disk is gone ({name})")
+            return real(*args, **kwargs)
+
+        return call
 
 
 def fixed_clock() -> datetime.datetime:

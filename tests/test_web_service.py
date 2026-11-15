@@ -1,11 +1,16 @@
 """The website's service through HTTP on the fixture world (#961): submit, poll to done, the store answers the same request, a stopped job,
 a failed job in the planner's own words, two identical requests at once plan once, and a restart that plans again what was cut off."""
 
+import datetime
+import multiprocessing
+
 import pytest
 from targets_support import DATA
 from web_support import (
     API,
+    FailingStore,
     MOMENT,
+    at_once,
     client,
     fixture_world,
     r12_target,
@@ -17,9 +22,7 @@ from web_support import (
     world_with_newer_prices_in_workers,
 )
 
-from crafting_system.web import QUEUED, RUNNING, STOPPED_WORDS, JobRecord, RequestError, Service, SqliteStore, parse_request
-
-DAY = MOMENT.date()
+from crafting_system.web import ACTIVE, QUEUED, RUNNING, STOPPED_WORDS, JobRecord, RequestError, Service, SqliteStore, parse_request
 
 
 def test_a_request_is_planned_as_a_job_and_its_route_is_stored_with_its_page():
@@ -89,7 +92,7 @@ def planner_words_for_a_priced_given_start() -> str:
     from crafting_system.planner import PlanError, PlanSettings, plan_target
 
     world = fixture_world()
-    request = parse_request({"target": r12_target(start="given"), "settings": {"start_price": 5.0}}, "poe1", world, DAY)
+    request = parse_request({"target": r12_target(start="given"), "settings": {"start_price": 5.0}}, "poe1", world)
     with pytest.raises(PlanError) as refused:
         plan_target(DATA, request.target, price_file(), PlanSettings(start_price=5.0))
     return str(refused.value)
@@ -126,7 +129,7 @@ def test_a_queued_job_that_is_stopped_never_runs():
 
 def test_a_job_cut_off_by_a_restart_is_planned_again(tmp_path):
     db = tmp_path / "site.sqlite3"
-    request = parse_request({"target": r12_target()}, "poe1", fixture_world(), DAY)
+    request = parse_request({"target": r12_target()}, "poe1", fixture_world())
     store = SqliteStore(db)
     store.add_job(JobRecord("cutoff", request.key, request.document, RUNNING, "2026-10-31T11:00:00Z", "2026-10-31T11:00:00Z"))
     store.close()
@@ -179,16 +182,15 @@ def test_unknown_jobs_routes_and_games_are_not_found():
 
 def test_the_key_is_the_request_not_its_spelling():
     world = fixture_world()
-    plain = parse_request({"target": r12_target()}, "poe1", world, DAY)
-    spelled = parse_request({"target": r12_target(), "methods": {"recipe_starts": True, "strands": False}, "settings": {"start_price": None}}, "poe1", world, DAY)
-    priced = parse_request({"target": r12_target(), "settings": {"start_price": 6}}, "poe1", world, DAY)
+    plain = parse_request({"target": r12_target()}, "poe1", world)
+    spelled = parse_request({"target": r12_target(), "methods": {"recipe_starts": True, "strands": False}, "settings": {"start_price": None}}, "poe1", world)
+    priced = parse_request({"target": r12_target(), "settings": {"start_price": 6}}, "poe1", world)
 
     assert plain.key == spelled.key
     assert priced.key != plain.key
-    assert parse_request({"target": r12_target()}, "poe2", world, DAY).key != plain.key
-    assert parse_request({"target": r12_target()}, "poe1", world, DAY.replace(day=1)).key != plain.key  # the day judges a price's age
+    assert parse_request({"target": r12_target()}, "poe2", world).key != plain.key
     with pytest.raises(RequestError):
-        parse_request([], "poe1", world, DAY)
+        parse_request([], "poe1", world)
 
 
 def test_the_store_lists_routes_newest_first_and_keeps_jobs_in_order(tmp_path):
@@ -245,3 +247,87 @@ def test_a_route_is_stored_under_the_prices_it_was_planned_with():
 
         assert job["state"] == "done" and route["key"] != posted["key"]
         assert http.post(f"{API}/jobs", json={"target": r12_target()}).status_code == 202  # not answered from the newer route
+
+
+def test_a_route_is_reused_on_a_later_day_while_its_price_snapshot_stands(tmp_path):
+    """The calendar day is not in the key: a plan judges prices on its snapshot's day (`World.price_day`), so the same request on the
+    next day, with the same snapshot, is answered from the store (OR-36)."""
+    db = tmp_path / "site.sqlite3"
+    first = Service(SqliteStore(db), fixture_world, clock=lambda: MOMENT)
+    first.start()
+    try:
+        job = first.submit({"target": r12_target()})
+        assert first.wait(job.id, 60).state == "done"
+    finally:
+        first.close()
+        first.store.close()
+
+    later = Service(SqliteStore(db), fixture_world, clock=lambda: MOMENT + datetime.timedelta(days=3))
+    later.start()
+    try:
+        again = later.submit({"target": r12_target()})
+        assert again.state == "done" and again.from_store is True and later.started == 0
+    finally:
+        later.close()
+        later.store.close()
+
+
+def _service_on(store, work=at_once) -> Service:
+    service = Service(store, fixture_world, workers=1, clock=lambda: MOMENT, work=work)
+    service.start()
+    return service
+
+
+def _ends(service: Service, job_id: str) -> JobRecord:
+    for _ in range(20):
+        job = service.wait(job_id, 60)
+        if job.state not in ACTIVE:
+            return job
+    raise AssertionError(f"job {job_id} owes an answer: {job}")
+
+
+def _runs_after(service: Service) -> None:
+    """The one worker's place is free and the dispatcher alive: another request runs to its end."""
+    other = service.submit({"target": r12_target(), "methods": {"strands": True}})
+    assert _ends(service, other.id).state == "done"
+
+
+def test_a_job_whose_end_cannot_be_stored_fails_and_frees_its_place():
+    store = FailingStore(SqliteStore(":memory:"), "add_route")
+    service = _service_on(store)
+    try:
+        store.armed = True
+        job = _ends(service, service.submit({"target": r12_target()}).id)
+
+        assert job.state == "failed" and "could not be stored" in job.error and "the disk is gone (add_route)" in job.error
+        _runs_after(service)
+    finally:
+        service.close()
+
+
+def test_a_job_that_cannot_be_marked_running_fails_and_its_worker_is_ended():
+    store = FailingStore(SqliteStore(":memory:"), "update_job", state=RUNNING)
+    service = _service_on(store, work=stand_still)
+    try:
+        store.armed = True
+        job = _ends(service, service.submit({"target": r12_target()}).id)
+
+        assert job.state == "failed" and "did not start" in job.error
+        assert not [child for child in multiprocessing.active_children() if child.name == f"poe1-job-{job.id}"]  # killed and reaped
+        service._work = at_once  # noqa: SLF001  (the next worker answers at once)
+        _runs_after(service)
+    finally:
+        service.close()
+
+
+def test_the_dispatcher_outlives_a_store_that_fails_to_read_the_queue():
+    store = FailingStore(SqliteStore(":memory:"), "jobs_in", times=2)
+    service = _service_on(store)
+    try:
+        store.armed = True
+        job = _ends(service, service.submit({"target": r12_target()}).id)
+
+        assert job.state == "done" and store.times == 0
+        assert service._dispatcher.is_alive()  # noqa: SLF001
+    finally:
+        service.close()

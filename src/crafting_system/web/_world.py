@@ -8,6 +8,7 @@ site's: the pinned game data from the cache, the configured price file with its 
 import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from functools import cached_property
 from importlib.metadata import PackageNotFoundError, version
 
@@ -57,6 +58,12 @@ class World:
             "recombinator_junk_craft": self.config.recombinator_junk_craft,
             "price_gap_percent": self.config.price_gap_percent,
         }
+
+    @property
+    def price_day(self) -> date:
+        """The day a price's age is judged on (`PlanSettings.today`): the day the snapshot was fetched, so a plan depends on the snapshot
+        and never on the calendar, and a route stays the answer for as long as its snapshot stands (OR-36)."""
+        return self.prices.fetched_at.date()
 
     @cached_property
     def price_snapshot(self) -> str:

@@ -9,7 +9,6 @@ function takes the world, the checked request and a `watch`, and returns the rou
 import math
 import traceback
 from collections.abc import Callable
-from datetime import date
 
 from crafting_system.actions import NotApplicableError, OutOfScopeError, imprints_held_at_most
 from crafting_system.data import DataError
@@ -26,7 +25,7 @@ from ._world import World, WorldSource
 REFUSALS = (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError)
 
 Watch = Callable[[dict], None]
-Work = Callable[[World, dict, str, date, Watch], dict]
+Work = Callable[[World, dict, str, Watch], dict]
 
 
 def _number(value: float | None) -> float | None:
@@ -53,16 +52,16 @@ def _search_document(plan) -> dict | None:
     return {"exact": search.exact, "within": search.within, "stopped": search.stopped, "gap": gap}
 
 
-def plan_request(world: World, request: dict, game: str, today: date, watch: Watch) -> dict:
+def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
     """The site's work: the plan of `request` in `world`, its figures as the planner states them, the JSON policy and the route page."""
-    checked = parse_request(request, game, world, today)
+    checked = parse_request(request, game, world)
     methods, settings = checked.document["methods"], checked.document["settings"]
     with imprints_held_at_most(world.config.max_imprints):
         plan = plan_target(
             world.data, checked.target, world.prices,
             PlanSettings(
                 recipe_starts=methods["recipe_starts"], strands=methods["strands"], start_price=settings["start_price"],
-                price_source=settings["price_source"], price_gap_percent=world.config.price_gap_percent, today=today, budget=world.budget,
+                price_source=settings["price_source"], price_gap_percent=world.config.price_gap_percent, today=world.price_day, budget=world.budget,
                 watch=lambda standing: watch(standing_document(standing)),
             ),
         )  # fmt: skip
@@ -84,12 +83,12 @@ def plan_request(world: World, request: dict, game: str, today: date, watch: Wat
     return {"summary": summary, "policy": policy, "page": page}
 
 
-def run_job(world_source: WorldSource, work: Work, request: dict, game: str, today: date, send: Callable[[tuple], None]) -> None:
+def run_job(world_source: WorldSource, work: Work, request: dict, game: str, send: Callable[[tuple], None]) -> None:
     """The body of a worker process: one job, start to end, every word of it through `send`."""
     try:
         world = world_source()
-        key = parse_request(request, game, world, today).key
-        route = work(world, request, game, today, lambda standing: send(("standing", standing)))
+        key = parse_request(request, game, world).key
+        route = work(world, request, game, lambda standing: send(("standing", standing)))
     except REFUSALS as error:
         send(("failed", str(error)))
     except Exception as error:  # noqa: BLE001  (a fault of the service, not a refusal of the planner: said, never swallowed)

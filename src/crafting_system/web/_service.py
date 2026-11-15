@@ -10,11 +10,16 @@ A user may stop a job: a queued one is never started, a running one's process is
 **Restarts.** The store keeps every job. A service started on a store that holds jobs still owing an answer (the server stopped while they
 were queued or running) queues them again, oldest first.
 
-**Time.** The service reads the time only through `clock` (when a job was made and changed, and the day a plan judges its prices on), so a
-test gives its own.
+**Time.** The service reads the time only through `clock` (when a job was made and changed), so a test gives its own. A plan judges its
+prices on the day of its snapshot (`World.price_day`), never on the calendar.
+
+**Faults of the store.** A store that fails never leaves a job running for ever nor a thread dead: a job whose end cannot be stored is
+failed with the error (when even that write fails, the job stays as it was until a restart queues it again), its place is freed in any
+case, and the dispatcher outlives a failed read and tries again.
 """
 
 import contextlib
+import logging
 import multiprocessing
 import os
 import secrets
@@ -34,6 +39,9 @@ Clock = Callable[[], datetime]
 STOPPED_WORDS = "stopped by the user"
 VANISHED_WORDS = "the worker process ended without an answer (exit code {code})"
 WAIT_LIMIT_SECONDS = 60.0  # the longest a `wait` holds a request open; a caller asks again
+RETRY_SECONDS = 1.0  # how long the dispatcher waits after a fault of the store before it reads the queue again
+
+_log = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -114,7 +122,7 @@ class Service:
 
     def check(self, body: object) -> Request:
         """The request checked and keyed; raises `RequestError` with what is wrong."""
-        return parse_request(body, self.game, self.world, self._clock().date())
+        return parse_request(body, self.game, self.world)
 
     def submit(self, body: object) -> JobRecord:
         """The job that answers `body`: done at once from the store, the open job of the same request, or a new queued one."""
@@ -167,29 +175,46 @@ class Service:
 
     def _dispatch(self) -> None:
         while True:
-            with self._changed:
-                self._changed.wait_for(lambda: self._closing or (len(self._running) < self.workers and self._next() is not None))
-                if self._closing:
+            try:
+                if self._dispatch_one():
                     return
-                job = self._next()
-                assert job is not None
-                try:
-                    run = self._start_worker(job)
-                except Exception as error:  # noqa: BLE001  (a worker that cannot start fails its job, never the dispatcher)
-                    self.store.update_job(job.id, state=FAILED, error=f"internal error: the worker did not start: {error}", updated_at=self._now())
-                    self._changed.notify_all()
-                    continue
-                self._running[job.id] = run
-                self.started += 1
-                self._changed.notify_all()
-            run.listener.start()
+            except Exception:  # a fault of the store: the dispatcher waits a little and reads the queue again, it never dies of it
+                _log.exception("the dispatcher of %s could not read or change the queue", self.game)
+                with self._changed:
+                    if self._closing:
+                        return
+                    self._changed.wait(RETRY_SECONDS)
+
+    def _dispatch_one(self) -> bool:
+        """Start the next queued job once a place is free; True when the service is closing."""
+        with self._changed:
+            self._changed.wait_for(lambda: self._closing or (len(self._running) < self.workers and self._next() is not None))
+            if self._closing:
+                return True
+            job = self._next()
+            if job is None:
+                return False
+            try:
+                run = self._start_worker(job)
+            except Exception as error:  # noqa: BLE001  (a worker that cannot start fails its job, never the dispatcher)
+                self._fail(job.id, f"internal error: the worker did not start: {type(error).__name__}: {error}")
+                return False
+            self._running[job.id] = run
+            self.started += 1
+            self._changed.notify_all()
+            try:
+                run.listener.start()  # under the lock, so `close` never finds a run whose listener has not started
+            except Exception as error:  # noqa: BLE001  (no thread to read the worker: it is ended and its job failed)
+                del self._running[job.id]
+                _end(run)
+                self._fail(job.id, f"internal error: the worker could not be listened to: {type(error).__name__}: {error}")
+        return False
 
     def _start_worker(self, job: JobRecord) -> "_Running":
-        today = self._clock().date()
         reader, writer = self._context.Pipe(duplex=False)
         # not a daemon: a daemonic process may not start children, and the planner's own pool does (`parallel.WorkerPool`)
         process = self._context.Process(
-            target=_worker_main, args=(self._world_source, self._work, job.request, self.game, today, writer), name=f"{self.game}-job-{job.id}"
+            target=_worker_main, args=(self._world_source, self._work, job.request, self.game, writer), name=f"{self.game}-job-{job.id}"
         )
         try:
             process.start()
@@ -198,10 +223,23 @@ class Service:
             raise
         finally:
             writer.close()  # the worker holds the only writing end
-        self.store.update_job(job.id, state=RUNNING, updated_at=self._now())
         run = _Running(process, reader)
+        try:
+            self.store.update_job(job.id, state=RUNNING, updated_at=self._now())
+        except BaseException:  # no listener will ever read this worker: it is ended here, and the caller fails the job
+            _end(run)
+            raise
         run.listener = threading.Thread(target=self._listen, args=(job.id, run), name=f"{self.game}-listen-{job.id}", daemon=True)
         return run
+
+    def _fail(self, job_id: str, error: str) -> None:
+        """Fail a job with `error` and wake the waiters; a store that cannot take even that leaves the job as it is (a restart queues it
+        again), and the fault goes to the log."""
+        try:
+            self.store.update_job(job_id, state=FAILED, error=error, updated_at=self._now())
+        except Exception:
+            _log.exception("job %s of %s could not be failed with: %s", job_id, self.game, error)
+        self._changed.notify_all()
 
     def _next(self) -> JobRecord | None:
         waiting = [job for job in self.store.jobs_in((QUEUED,)) if job.id not in self._running]
@@ -229,6 +267,8 @@ class Service:
             with self._changed:
                 try:
                     self._finish(job_id, run, last)
+                except Exception as error:  # noqa: BLE001  (the end could not be stored: the job is failed with it, never left running)
+                    self._fail(job_id, f"internal error: the job's end could not be stored: {type(error).__name__}: {error}")
                 finally:
                     del self._running[job_id]
                     self._changed.notify_all()
@@ -280,20 +320,27 @@ def _messages(run: _Running) -> Iterator[tuple]:
             return
 
 
+def _end(run: _Running) -> None:
+    """End a worker that no listener reads: kill it, reap it and close its pipe."""
+    _kill(run.process)
+    run.process.join()
+    run.reader.close()  # type: ignore[attr-defined]
+
+
 def _kill(process: multiprocessing.process.BaseProcess) -> None:
     """Kill a worker and, on Linux and macOS, every process it started (it leads a process group of its own, `_worker_main`), so the
-    planner's pool does not run on after a stop. On Windows the pool's processes end when they find their parent gone."""
+    planner's pool does not run on after a stop. On Windows only the worker is killed: its pool's processes may outlive it (#971)."""
     if os.name == "posix" and process.pid is not None:
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(process.pid, signal.SIGKILL)
     process.kill()
 
 
-def _worker_main(world_source: WorldSource, work: Work, request: dict, game: str, today, writer) -> None:
+def _worker_main(world_source: WorldSource, work: Work, request: dict, game: str, writer) -> None:
     """A worker process: one job, every word through `writer`."""
     if os.name == "posix":
         os.setsid()  # a session and process group of its own, so a stop kills the planner's pool with it (`_kill`)
     try:
-        run_job(world_source, work, request, game, today, writer.send)
+        run_job(world_source, work, request, game, writer.send)
     finally:
         writer.close()
