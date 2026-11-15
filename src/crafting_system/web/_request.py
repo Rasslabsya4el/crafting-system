@@ -1,0 +1,105 @@
+"""A request of the website: what a user asks (a target, the method switches, his settings), checked, and its canonical key.
+
+The body of `POST /api/v1/<game>/jobs` is a JSON object:
+
+    {"target": {...},                                   # the target as a JSON object, with the keys of a target file (`targets`)
+     "methods": {"recipe_starts": true, "strands": false},   # optional: the method switches the planner has today
+     "settings": {"start_price": null, "price_source": "both"}}  # optional: the user's settings
+
+A missing switch or setting is the machine's planner setting (`crafting.toml`, `Config`). Unknown keys are refused, so a key added later
+(the economy modes of #323, more method switches) never changes what an older request meant. The prices are the site's snapshot, so a
+target may not name a `price_file`.
+
+The **key** of a request is the SHA-256 of one canonical JSON text: the game, the target object, the method switches and settings with
+their defaults filled in, the planner settings of the machine that change an answer (the proof gap, the time and memory nets, the imprint
+cap, the recombinator variant), the price snapshot, the game data version and the planner version. Two requests with the same key get the
+same plan, so the second is answered from the store (OR-36). The day of the run is not in it: the day only marks a price as old, and the
+snapshot it is read against is in the key.
+"""
+
+import hashlib
+import json
+import math
+from dataclasses import dataclass
+
+from crafting_system.config import PRICE_SOURCES
+from crafting_system.targets import Target, TargetError, parse_target
+
+from ._world import World
+
+_TOP_KEYS = ("target", "methods", "settings")
+_METHOD_KEYS = ("recipe_starts", "strands")
+_SETTING_KEYS = ("start_price", "price_source")
+
+
+class RequestError(ValueError):
+    """The request cannot be planned as written; the text says what is wrong in the user's words."""
+
+
+@dataclass(frozen=True)
+class Request:
+    """A checked request: the target parsed, every switch and setting filled in, and its key. `document` is what the store keeps."""
+
+    game: str
+    target: Target
+    document: dict
+    key: str
+
+
+def _canonical(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
+
+
+def _object(value: object, where: str, allowed: tuple[str, ...]) -> dict:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise RequestError(f"{where} must be a JSON object")
+    unknown = sorted(set(value) - set(allowed))
+    if unknown:
+        raise RequestError(f"{where} has unknown keys {unknown}; the known ones are {list(allowed)}")
+    return value
+
+
+def _switch(value: object, where: str, default: bool) -> bool:
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise RequestError(f"{where} must be true or false")
+    return value
+
+
+def parse_request(body: object, game: str, world: World) -> Request:
+    """Check `body` against `world` and give the request with its key; raises `RequestError` with what is wrong."""
+    top = _object(body, "the request", _TOP_KEYS)
+    if not isinstance(top.get("target"), dict):
+        raise RequestError("the request must hold the target as a JSON object under \"target\"")
+    target_object = top["target"]
+    if "price_file" in target_object:
+        raise RequestError("target.price_file: the site prices every request with its own price snapshot; leave the key out")
+    methods = _object(top.get("methods"), "methods", _METHOD_KEYS)
+    settings = _object(top.get("settings"), "settings", _SETTING_KEYS)
+    config = world.config
+
+    start_price = settings.get("start_price")
+    if start_price is not None and (isinstance(start_price, bool) or not isinstance(start_price, (int, float)) or not math.isfinite(start_price) or start_price <= 0):
+        raise RequestError("settings.start_price must be a number of Chaos above zero, or null to read the price snapshot")
+    price_source = settings.get("price_source", config.price_source)
+    if price_source not in PRICE_SOURCES:
+        raise RequestError(f"settings.price_source must be one of {list(PRICE_SOURCES)}")
+
+    try:
+        target = parse_target(json.dumps(target_object, indent=2, ensure_ascii=False), world.data, source="target")
+    except TargetError as problem:
+        raise RequestError(str(problem)) from None
+
+    document = {
+        "target": target_object,
+        "methods": {
+            "recipe_starts": _switch(methods.get("recipe_starts"), "methods.recipe_starts", config.recipe_starts),
+            "strands": _switch(methods.get("strands"), "methods.strands", config.memory_strands),
+        },
+        "settings": {"start_price": None if start_price is None else float(start_price), "price_source": price_source},
+    }
+    keyed = {"game": game, **document, "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version}
+    return Request(game, target, document, hashlib.sha256(_canonical(keyed).encode("utf-8")).hexdigest())
