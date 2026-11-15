@@ -36,7 +36,7 @@ from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind,
 
 from ._approx import Approximation, climb
 from ._axes import axis_what
-from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
+from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
@@ -47,6 +47,7 @@ from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
+from ._pattern_bound import MIN_OFFERS
 from ._presenter import presenter_limits
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
@@ -54,8 +55,7 @@ from ._start_types import StartChoice
 VIEW_FROM_STATES = 1_000  # a packed plan whose policy visits more item states than this is shown by its lumped chain (ticket #70)
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
 PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
-PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
-MIN_OFFERS_TO_PRUNE = 40  # fewer priced offers than this are solved whole
+PRUNE_BOUND = True  # with `MIN_OFFERS` offers or more the dearer twins are left out of the solve (exact; a test turns it off for the reference)
 FORECAST_SOLVERS = ("packed", "object")  # a walk asked for by name: the only way left to the retired forecast and its ladder under a budget (#926)
 
 
@@ -176,7 +176,6 @@ class Plan:
     solve_seconds: float
     risk_seconds: float
     approximation: Approximation | None = None  # set when the answer is approximate: `start`, `solution` and `policy` are then of blocks
-    pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
     readings: IntervalReport[CompressedState, Reading] | None = None  # set when an offer reads a rule axis that is not planned: the solve of every reading (#589)
@@ -481,7 +480,6 @@ def with_bindings(plan: Plan, clock: Clock | None) -> Plan:
 
 SEARCH_STAGE = "the search for the cheapest plan"
 APPROXIMATE_STAGE = "the search for a plan within the stated gap of the cheapest"
-PRUNED_STAGE = "the search for the cheapest plan, first on a smaller set of actions"
 WALK_STAGE = "the walk of every item the actions can reach"
 READINGS_STAGE = "the plan made once for each reading of a rule the sources leave open"
 LOCK_STAGE = "the check of Hinekora's Lock"
@@ -594,16 +592,14 @@ def _make_plan(
     imprints refuse it, #507), whatever the size of the graph and whatever the `budget`, because that search is exact, ends in seconds on the small
     graphs and expands far less than the walk on the big ones. Where the bound cannot be built, "auto" is the path it was before the envelope search,
     with or without a `budget` (#926: no forecast and no approximate answer; the run's net ends a walk that is too long, and the stop says what the
-    search has no bound for, `walk_cause`): `solve_pruned` for 40 offers or more, otherwise the graph is walked on packed arrays and
+    search has no bound for, `walk_cause`): the graph is walked on packed arrays (the dearer twins left out with `MIN_OFFERS` offers or more) and
     solved there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02) and by the object solver below that.
     There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
-    `solver="packed"`. With 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the fossil sets) "auto" keeps the bound pruning for now when the run asks
-    for the whole proof (no budget, or a gap of 0): on those worlds the envelope search is 1.2 to 40 times slower (#696, #742), and a search
-    that owes the whole proof has no stop of its own; #742 carries removing the exception. Under a budget with a gap it is the envelope search
-    there too (#926). With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
+    `solver="packed"`. The number of offers decides nothing: the fossil sets (B1) take the envelope search too, with or without a budget, each offer
+    carrying its own floor into it (#829; the bound pruning `solve_pruned` and its switch at 40 offers are retired). With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
     older path too, decided before solving: judging a route needs the planner's action at every state the route reaches, and the envelope
-    search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with 40 offers or more it solves the offers left after the twins are
-    merged, without the bound pruning (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
+    search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with `MIN_OFFERS` offers or more it solves the offers left after the twins are
+    merged (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
     "envelope" is the same search asked for by name: it refuses with `PlanError` an abstraction the bound cannot be built for (#507). It is the
     exact branch-and-bound of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds
     only the actions, the bound cannot rule out (`_envelope`); it gives the same plan and mean as "packed" and says so in `Plan.limits` (which
@@ -705,7 +701,6 @@ def _make_plan(
 
     abstraction = model()
     start = abstraction.compress(listing or target.start_item)
-    shape = abstraction.compress(target.start_item) if listing is not None else None  # the item the start opens into: what the pruning bounds the offers on (ADR-0064)
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
@@ -715,15 +710,8 @@ def _make_plan(
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
     # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
-    # Nor, for a run that asks for the whole proof (no budget, or a gap of 0), with 40 offers or more (`MIN_OFFERS_TO_PRUNE`, the switch to the
-    # bound pruning that already existed, not a new cut-off): on fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound
-    # pruning (#696, #742), both paths are exact (OR-11, OR-12), and a search that owes the whole proof has no stop of its own to end early;
-    # #742 carries removing this exception. A run whose budget has a gap takes the envelope search there too (#926): it stops by itself once its
-    # plan is proved within that gap (`search_gap`, OR-39) and the run's net, where it has one, guards it (OR-33, OR-40); the bound pruning had
-    # only the forecast below to keep a walk in bounds.
-    many_offers = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
-    stops_at_gap = search_gap(clock)[0] > 0.0
-    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route and not (many_offers and not stops_at_gap))
+    # The number of offers decides nothing (#829): the fossil sets take the envelope search with or without a budget, as every other target does.
+    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route)
     # why `auto` walks every item instead of searching, said when a net stops that walk before a plan closed (OR-13, #926)
     unbounded = () if refusal is None else refusal_causes(abstraction, player=True) or (refusal,)  # the causes in a player's words, else the refusal's own text
     walks_because = None if solver != "auto" or envelope or axes else walk_cause(unbounded, judges_route)
@@ -733,18 +721,16 @@ def _make_plan(
     if aim is not None and solver in FORECAST_SOLVERS and not axes:
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
-        if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
-            # The exact run solves a small set first and proves the rest not needed: it is forecast on that set, not on
-            # a pilot over thousands of fossil sets. An approximate answer is made of all the offers, twins merged.
+        if PRUNE_BOUND and len(priced) >= MIN_OFFERS:  # the walk and an approximate answer are made of the offers after the twins
             merged, merged_twins = (tuple(each) for each in merge_twins(data, target.start_item, priced))
-            forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape))
+            forecast = merged
         decision = decide(abstraction, start, forecast, aim, rates)
         if decision.message:
             limits += (whole_search_limit(decision.message, decision.detail),)
         if decision.rate_why:
             limits += (guessed_rate_limit(decision.rate_why, decision.rate_detail),)
         if decision.action == "refused":
-            if solver == "object" or (PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE):
+            if solver == "object":
                 raise PlanError(decision.message)
             # no coarse level exists and the graph is beyond the object solver: the packed solver holds it (ticket #70, ADR-0063), so the
             # answer is exact and takes the walk's minutes instead of being refused
@@ -768,11 +754,10 @@ def _make_plan(
             ))  # fmt: skip
 
     began = time.perf_counter()
-    pruned = None
     packed = None
     readings = None
     donor_plan = None
-    many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
+    many = PRUNE_BOUND and len(priced) >= MIN_OFFERS
     # every stage below stops at the run's net (#825): `make_plan` says a stop before a plan closed, "no plan found yet", with where (OR-33)
     if axes:
         with stage(READINGS_STAGE):
@@ -784,16 +769,10 @@ def _make_plan(
             limits += (_limits.feeder_donors_limit(), _limits.free_donor_base_limit(), _limits.second_items_shown_limit())
         limits += reading_limits(abstraction, others, aim is not None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
-    elif many and not envelope and solver != "packed":
-        with stage(PRUNED_STAGE, walk_stop(walks_because)):  # #702: the walks of the bound pruning stop at the net between two states
-            pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, shape=shape)
-        solution = pruned.solution
-        limits += _pruned_limits(pruned)
-        offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     else:
         offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
         if twins:
-            limits += (twins_limit(twins),)  # G17: the packed path leaves out the dearer twins, as the bound pruning does
+            limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
         if envelope:
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
@@ -824,7 +803,7 @@ def _make_plan(
     else:
         try:
             with stage(LOCK_STAGE, LOCK_KEPT):
-                foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, pruned, price_source)
+                foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source)
         except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
             if clock is not None:
                 clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
@@ -861,7 +840,7 @@ def _make_plan(
 
     return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
-        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed, readings=readings, foresight=foresight, finish=finish, donors=donor_plan,
+        solution, risk, solve_seconds, risk_seconds, None, packed=packed, readings=readings, foresight=foresight, finish=finish, donors=donor_plan,
     ))
 
 
@@ -968,21 +947,19 @@ def plan_foresight(
     solution: Solution[CompressedState],
     priced: Sequence[PricedOffer],
     offered: Sequence[PricedOffer] | None,
-    pruned: Pruned | None,
     price_source: str = DEFAULT_PRICE_SOURCE,
 ) -> tuple[Foresight, Solution | None]:
     """Hinekora's Lock of an exact plan (`_foresight.foresee`): its status, N and, when the plan takes it, the solution with the Lock.
 
-    The options come from the full list `priced`; the fallback of the gains for N reads the offers the Lock-free solve used (`offered`, or the offers
-    the bound pruning kept, a subset whose fallback is never cheaper, so N is never overstated); the second solve and the fallback of its Peeks read the
-    offers after the twins, with no bound pruning (`offered`, or the twins merged from `priced`). Nothing is built for a Lock the target switched off.
+    The options come from the full list `priced`; the fallback of the gains for N reads the offers the Lock-free solve used (`offered`, or `priced`);
+    the second solve and the fallback of its Peeks read the offers after the twins (`offered`, or the twins merged from `priced`). Nothing is built for a Lock the target switched off.
     """
     lock = lock_price(prices, price_source)
     if not lock_wanted(target.actions):  # switched off: nothing is built
         return Foresight(LockStatus.SWITCHED_OFF, lock), None
     burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
     cache: dict = {}
-    plain = offered if offered is not None else (pruned.used if pruned is not None else priced)
+    plain = offered if offered is not None else priced
     sites = PlanSites(abstraction, priced, plain, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
 
     def second_solve():
@@ -997,14 +974,11 @@ def plan_foresight(
 
 def walk_cause(unbounded: Sequence[str], judges_route: bool) -> str:
     """Why `solver="auto"` walks every item the actions can reach instead of running the envelope search (#926): the cause that `make_plan`
-    decided on before solving, in the order it decides: what the search has no lower bound for yet (`refusal_causes`), a route to judge, or, for
-    a run that asks for the whole proof (no gap), the number of offers (#742)."""
+    decided on before solving, in the order it decides: what the search has no lower bound for yet (`refusal_causes`), or a route to judge."""
     said = "the faster search, which proves its plan against the cheapest possible cost, was not used: "
     if unbounded:
         return said + f"it has no such cost yet where {'; '.join(unbounded)}"
-    if judges_route:
-        return said + "a given route is judged against the plan, which needs the planner's choice at every item the route can reach"
-    return said + f"{MIN_OFFERS_TO_PRUNE} actions or more are offered and the run asks for the whole proof that no plan is cheaper"
+    return said + "a given route is judged against the plan, which needs the planner's choice at every item the route can reach"
 
 
 def walk_stop(cause: str | None) -> str:
@@ -1255,44 +1229,6 @@ def evaluate_risk(
     paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
     apart = UNRESOLVED_BINS if 2 * RISK_BINS * paid < mean else RISK_BINS  # the grid is set by the actions that cost something
     return evaluate(policy, start, is_goal, max_bins=apart, max_coarse_bins=COARSE_BINS, free_cost=free_cost, free_fallback_bins=bins, **extra)
-
-
-def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
-    """The offers the pruning left out of the solve, by reason (the plan still prices and evaluates all of them); the answer stays exact (K15)."""
-    found = []
-    if pruned.fell_back:
-        found.append(
-            Limit(
-                _limits.SOLVE,
-                "All the actions were solved",
-                f"the search first solved a smaller set of actions and could not prove it enough ({pruned.why})",
-                "The answer is exact among the methods offered.",
-                detail=(pruned.detail,) if pruned.detail else (),
-            )
-        )
-    if pruned.twins:
-        found.append(twins_limit(pruned.twins))
-    if pruned.inapplicable:
-        found.append(
-            Limit(
-                _limits.PROVED,
-                "Not searched",
-                "the game refuses it on this item wherever it can be",
-                "The answer is exact among the methods offered: the game never lets these be used here.",
-                tuple(pruned.inapplicable),
-            )
-        )
-    if pruned.bounded:
-        found.append(
-            Limit(
-                _limits.PROVED,
-                "Not searched",
-                "proved never better: even its best case costs more than the plan",
-                "The answer is exact among the methods offered: none of these can beat the plan.",
-                tuple(pruned.bounded),
-            )
-        )
-    return tuple(found)
 
 
 def _finite(value: float) -> bool:

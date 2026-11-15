@@ -35,7 +35,7 @@ import crafting_system
 from crafting_system.abstraction import Abstraction, Coarsening, Gap, ModelGaps
 from crafting_system.actions import ActionError, ChaosOrb, ConsumesInputsError, NotApplicableError, OutOfScopeError
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
-from crafting_system.planner import _approx, _bound_prune, _donors, _plan
+from crafting_system.planner import _approx, _offer_kinds, _donors, _plan
 from crafting_system.planner._limits import SHOWN_LABELS, WITHIN_GAP, limit_text, model_gap_limits
 from crafting_system.planner._offers import offer_of
 from crafting_system.cli._route_html import render_page
@@ -89,10 +89,10 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_approx.py", "ExactModel.actions", ("OutOfScopeError",), RECORDS, "a model gap in an expanded state: written"),
     ("cli/_benchmark_use.py", "per_use_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the action cannot be used at the divergence state, for either reason: the row of the benchmark says so in the words of the refusal and goes on"),
     ("cli/_benchmark_use.py", "one_step_short", ("NotApplicableError", "OutOfScopeError"), EITHER, "a bench craft that cannot be used on this state is not a sure step to the target; nothing is left out of a plan and nothing is written"),
-    ("planner/_bound_prune.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
-    ("planner/_bound_prune.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
-    ("planner/_bound_prune.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
-    ("planner/_bound_prune.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
+    ("planner/_offer_kinds.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
+    ("planner/_offer_kinds.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
+    ("planner/_offer_kinds.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
+    ("planner/_offer_kinds.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
     ("planner/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
     ("planner/_donors.py", "DonorModel._candidate", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_donors.py", "DonorModel._candidate", ("OutOfScopeError",), RECORDS, "a model gap: written"),
@@ -426,11 +426,11 @@ def test_the_bound_pruning_keeps_an_offer_the_model_has_no_rule_for_and_sets_asi
 
     kinds = {}
     for error in (NotApplicableError, OutOfScopeError):
-        monkeypatch.setattr(_bound_prune, "keeps_shape", lambda *args, error=error: (_ for _ in ()).throw(error("planted")))
-        kinds[error] = _bound_prune._raised(SimpleNamespace(data=None), None, None, (), ChaosOrb(), _bound_prune.REROLL, 0, Fraction(1), 1)
+        monkeypatch.setattr(_offer_kinds, "keeps_shape", lambda *args, error=error: (_ for _ in ()).throw(error("planted")))
+        kinds[error] = _offer_kinds._raised(SimpleNamespace(data=None), None, None, (), ChaosOrb(), _offer_kinds.REROLL, 0, Fraction(1), 1)
 
-    assert kinds[NotApplicableError][0] == _bound_prune.REFUSED  # proved never usable: set aside, and said so
-    assert kinds[OutOfScopeError][0] == _bound_prune.TERMINAL  # not proved: it stays in the search, where its gap is written
+    assert kinds[NotApplicableError][0] == _offer_kinds.REFUSED  # proved never usable: set aside, and said so
+    assert kinds[OutOfScopeError][0] == _offer_kinds.TERMINAL  # not proved: it stays in the search, where its gap is written
 
 
 def test_a_clause_for_a_game_refusal_lets_a_model_gap_through(monkeypatch):

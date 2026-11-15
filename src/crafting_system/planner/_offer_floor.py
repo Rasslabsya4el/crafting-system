@@ -2,12 +2,12 @@
 
 The walk-free bound (`_pattern_bound`) builds, for each offer, the kernel of every member of every key, and the kernel of a fossil set is a Fraction
 distribution of seconds (R08: 1.6 s on average, 6.9 s when the set fractures; 3,938 sets). Most offers cannot be the best action anywhere, and
-the pruned walk proves it without the kernel (`_bound_prune`: the number `pbar` and the Wald floor `rho`). This module gives the bound the same
+the number `pbar` and the Wald floor `rho` of `_offer_kinds` prove it without the kernel. This module gives the bound the same
 two numbers, and the proof that they are a floor of the cost of the offers it leaves out of the model.
 
 For an offer `a` and a state `s` outside `E` (every necessary leaf of the goal that is open at the start is PASSING) that has the flags and the
 fractured mods of the start (of the item it opens into when the start is an unopened listing, ADR-0064), one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
-with the same shape (the claim and its proof are in `_bound_prune`: Wald's identity over the number of uses). So, with three classes of states,
+with the same shape (the claim and its proof are in `_offer_kinds`: Wald's identity over the number of uses). So, with three classes of states,
 
     class OUTSIDE (outside E, the start's shape):   Q*(s, a) >= c(a) + (1 - pbar(a)) rho,  V*(s) >= rho,
     class INSIDE  (in E, the start's shape):        Q*(s, a) >= c(a) + (1 - pbar(a)) rho  for an *erasing reroll* `a` (its result does not depend on the state
@@ -20,13 +20,13 @@ with the same shape (the claim and its proof are in `_bound_prune`: Wald's ident
 and `V*(s) >= 0` everywhere (costs are not negative).
 
 An offer that fractures, changes the flags or reads the item's implicits, quality or offer has `pbar = 1`: its floor is its cost. The one thing taken
-on the contract of `Reads` and not checked is the assumption of `_bound_prune` (2): an offer the game refuses on the bare item of the start's shape
+on the contract of `Reads` and not checked is the assumption of `_offer_kinds` (1): an offer the game refuses on the bare item of the start's shape
 is refused at every state of that shape; it only moves `rho` (the refused offers are not in the minimum that makes `rho`). The floors of the offers
 themselves treat a refused offer as any other, at its cost.
 
-`OfferFloors.lower(position, klass)` is the floor of an offer in a class of states, and `OfferFloors.needed` says whether an offer outside the model
-could lower the value of a key whose model value is `limit` (the test of the certificate of `_bound_prune`, level by level, so that the exact chance of a
-reroll, which is an exact distribution, is computed only for an offer whose looser floors did not already rule it out).
+`OfferFloors.lower(position, klass)` is the floor of an offer in a class of states, and `OfferFloors.tighten` raises it, level by level, only for an
+offer the envelope search would otherwise build at a state (#829), so that the exact chance of a reroll, which is an exact distribution, is computed
+only for an offer whose looser floors did not already rule it out, and once for all the states of its class.
 """
 
 import math
@@ -35,7 +35,7 @@ from dataclasses import replace
 
 from crafting_system.abstraction import Abstraction, CompressedState, Status
 
-from ._bound_prune import (
+from ._offer_kinds import (
     CRAFT,
     REROLL,
     RESTART_KIND,
@@ -84,7 +84,7 @@ class OfferFloors:
             kinds.append(_kind_of(data, item, offer))
         crafts = frozenset().union(*(named for kind, named in kinds if kind == CRAFT)) if kinds else frozenset()
         # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
-        # as the pruned walk's are (`_bound_prune._run`, `shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
+        # as the retired bound pruning's were (`shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
         # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
         shape = abstraction.compress(item) if start.flags.unopened else start
         self.chosen = goal_set(goal, shape, crafts)
@@ -150,30 +150,20 @@ class OfferFloors:
             inside.update(entry.index for entry in sorted(self.entries, key=lambda entry: (entry.cost, entry.index))[:SMALL_START])
         return sorted(inside)
 
-    def needed(self, position: int, limits: dict[int, float | None]) -> float | None:
-        """The floor that makes the offer at `position` worth building, or None when it cannot lower the value of any key it was asked about.
+    def tighten(self, position: int, klass: int, above: float) -> float:
+        """The floor of the offer at `position` in the class `klass`, its reroll's chance brought up a level at a time (the loose bound of the pool,
+        then the exact chance on the bare item) until the floor is above `above` or the chance is exact.
 
-        `limits[klass]` is the largest model value of a key of that class that the model capped (None when none was). The offer is needed when its floor in a
-        class is not above the limit of the class. A reroll's floor is brought from `pbar = 1` through the loose bound to the exact chance, a level at a time,
-        and stops at the first level whose floor is above the limits.
+        The chance is the offer's own, the same at every state of the start's shape (see the module text), so it is worked out once and every later
+        floor of the offer reads it. The net is not asked: the search that calls this keeps its own net, and one raise is one exact distribution,
+        of the size of the kernel it may spare (#829).
         """
         entry = self.entries[position]
-        for klass in (OTHER, UNOPENED):
-            if limits.get(klass) is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]:
-                return low
-        for level in (0, 1, 2):
-            if level and entry.kind == REROLL and entry.level < level:
-                self._raise(entry, level)
-            found = [
-                (low, klass)
-                for klass in (INSIDE, OUTSIDE)
-                if limits[klass] is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]
-            ]
-            if not found:
-                return None
-            if entry.kind != REROLL or entry.level >= 2:
-                return min(low for low, _ in found)
-        return min(low for low, _ in found)
+        while entry.kind == REROLL and entry.level < 2 and klass in (INSIDE, OUTSIDE) and self.lower(position, klass) * (1 - SLACK) <= above:
+            entry.kind, entry.pbar, entry.level = _raised(
+                self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, entry.level + 1
+            )
+        return self.lower(position, klass)
 
 
 __all__ = ["CLASSES", "FloorsStopped", "OfferFloors"]
