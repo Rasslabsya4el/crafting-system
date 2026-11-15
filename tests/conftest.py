@@ -36,12 +36,15 @@ def fixed_clock(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def no_measuring_progress(monkeypatch):
-    """A measuring script's `run` sets `_packed.PROGRESS` and never clears it (a script is its own process); a test that runs one leaves
-    it set no further than its own end, so no later test in the same process prints the script's phase lines (#925's CI)."""
+def progress_sink_restored(monkeypatch):
+    """Where the planner says the phases of a long plan (`planner._packed.PROGRESS`) is put back after each test.
+
+    A script run in the test's own process (`state_bloat.main`, `family_bench`, ...) sets it to a printer and leaves it set; a later test of
+    the same shard then found those lines in what it captured (`test_planner_entry`, PR #944).
+    """
     from crafting_system.planner import _packed
 
-    monkeypatch.setattr(_packed, "PROGRESS", None)
+    monkeypatch.setattr(_packed, "PROGRESS", _packed.PROGRESS)
 
 
 @pytest.fixture(autouse=True)
