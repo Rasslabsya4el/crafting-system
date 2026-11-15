@@ -1,25 +1,23 @@
-"""Pruning offers by twins and by a lower bound on the cost, with a certificate (ticket #118, piece E).
+"""The fossil sets through the one envelope search, each offer carried by its own floor (tickets #118, #829).
 
-`planner._bound_prune.solve_pruned` solves the plan on a small set of the offers and proves that the others
-cannot improve any value (its module text has the argument). This file checks:
+Since #829 the bound pruning (`solve_pruned`, which solved a few offers and certified the rest) is gone: with `MIN_OFFERS` offers
+or more the envelope search builds its bound on the offers that can matter and carries the others by their floors
+(`_offer_kinds`, `_offer_floor`). This file checks:
 
-1. the pieces: which goal leaves are necessary, the set U, the kind of each offer, the best-first rho;
-2. EXACTNESS on a small real world: the Sorcerer Boots pool cut to seven families, with the real fossil
-   records and a few hundred fossil sets (every set of one or two fossils and some of three and four,
-   Tangled, Fractured, Hollow and Glyphic among them), at made-up prices that are fixed by a hash of the
-   name. The plan with the pruning has the mean, and at every state it solves the value, of the plan
-   without it, and its policy picks at each state an action whose cost-to-go (by the values of the plan
-   without pruning) is that value; start items with and without a fractured mod, four goals, and a world
-   with bench crafts;
-3. a deliberately wrong bound is caught by that comparison (the certificate trusts `reach_bound`: it
-   proves the offers left out against the bounds, it does not check the bounds);
-4. the routes R10, R11 and R05 on the real dump give the mean and the policy that the unmodified code gave
-   (`tests/golden/plans_118.json`, the three targets planned by `make_plan` with the pruning turned off, at the
-   route prices; when a target file or a price changes, `UPDATE_GOLDEN=1` rewrites it on a runner);
-5. the plan still prices and evaluates an offer the pruning left out.
+1. the pieces the floors are made of: which goal leaves are necessary, the set U, the kind of each offer, the best-first rho;
+2. EXACTNESS on a small real world: the Sorcerer Boots pool cut to seven families, with the real fossil records and a few
+   hundred fossil sets (every set of one or two fossils and some of three and four, Tangled, Fractured, Hollow and Glyphic
+   among them), at made-up prices fixed by a hash of the name. The plan of the search has the mean of the plan of the
+   whole walk (the object solver with nothing left out), and at every state its policy visits the walk's value and an
+   action whose cost-to-go by the walk's values is that value; start items with and without a fractured mod, four goals,
+   a restart, and a world with bench crafts. The search's values off its policy are bounds, not V*, so only its policy is
+   compared;
+3. the routes R10, R11 and R05 on the real dump give the mean and the policy that the whole walk gave
+   (`tests/golden/plans_118.json`, the three targets planned with the twins and the floors turned off, at the route prices;
+   when a target file or a price changes, `UPDATE_GOLDEN=1` rewrites it on a runner).
 
-The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`) and skip cleanly without it, as in CI. No
-test asserts a run time (ADR-0014).
+The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`) and skip cleanly without it, as in CI. No test asserts a
+run time (ADR-0014).
 """
 
 import datetime
@@ -34,7 +32,6 @@ from types import SimpleNamespace
 import golden_diff
 import pytest
 from abstraction_support import real_game_data
-from limits_support import of_kind
 from test_abstraction_b1_real import LEVEL, rolled, subset
 from test_abstraction_fossil_real import BASE, FORCED, FRACTURED
 
@@ -47,13 +44,12 @@ from crafting_system.actions import (
     fossil_actions,
 )
 from crafting_system.actions.fossil import CHAOTIC_RESONATOR_SOCKETS
-from crafting_system.cli import RESTART, Offer, evaluate_route, make_plan, parse_route
-from crafting_system.planner import _bound_prune, _plan
-from crafting_system.planner._bound_prune import (
+from crafting_system.cli import RESTART, Offer, make_plan
+from crafting_system.planner import _offer_kinds, _plan
+from crafting_system.planner._offer_kinds import (
     CRAFT,
     REROLL,
     RESTART_KIND,
-    TERMINAL,
     _Entry,
     _kind_of,
     best_first_rho,
@@ -61,6 +57,7 @@ from crafting_system.planner._bound_prune import (
     necessary_leaves,
 )
 from crafting_system.planner._offers import BuyStartItem, PricedOffer, offer_of, price_offers
+from crafting_system.planner._pattern_bound import MIN_OFFERS
 from crafting_system.planner._prune import solver_actions
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file
@@ -138,7 +135,7 @@ def test_the_best_first_rho_stops_at_a_craft_that_is_smaller_than_every_bound():
 
     rho = best_first_rho(entries, raise_level)
 
-    assert rho == pytest.approx(2.0 * (1 - _bound_prune.SLACK))
+    assert rho == pytest.approx(2.0 * (1 - _offer_kinds.SLACK))
     assert asked == [(0, 1)]  # only entry 0 (ratio 1) was below the craft; its loose bound (ratio 10) put it past 2
 
 
@@ -157,7 +154,7 @@ def test_the_best_first_rho_raises_the_levels_of_the_few_that_could_be_the_least
 
     truth = min(cost / float(exact) for cost, _, exact in table)
     assert truth == 11.0
-    assert rho == pytest.approx(truth * (1 - _bound_prune.SLACK))
+    assert rho == pytest.approx(truth * (1 - _offer_kinds.SLACK))
     assert (0, 2) in asked and (1, 2) in asked  # the two whose exact ratio (20, 12) had to be seen to pass 11
     assert (4, 2) not in asked  # entry 4: the loose ratio 40 is past 11 already
     assert (3, 2) in asked  # entry 3 is the least in the end, so it was brought to the exact level to stop the loop
@@ -167,7 +164,7 @@ def test_a_restart_never_lowers_rho_and_is_an_infinite_ratio():
     entry = _Entry(0, SimpleNamespace(cost=5.0), "restart", 0, Fraction(0))
 
     assert entry.ratio == float("inf")
-    assert best_first_rho([entry], lambda *_: None) == pytest.approx(_bound_prune.HUGE * (1 - _bound_prune.SLACK))
+    assert best_first_rho([entry], lambda *_: None) == pytest.approx(_offer_kinds.HUGE * (1 - _offer_kinds.SLACK))
 
 
 # --- the small real world ----------------------------------------------------------------------------------
@@ -255,18 +252,17 @@ def offers_of(data, item, actions):
 
 
 class Planned:
-    """A plan with the pruning and the same plan without it."""
+    """The plan of the envelope search, with the floors on, and the plan of the whole walk with nothing left out."""
 
     def __init__(self, data, target, prices, offers, start_price=None):
         self.data = data
+        self.searched = make_plan(data, target, prices, offers=offers, start_price=start_price, solver="envelope")
         with pytest.MonkeyPatch.context() as patch:
-            patch.setattr(_plan, "PRUNE_BOUND", True)
-            self.pruned = make_plan(data, target, prices, offers=offers, start_price=start_price, solver="object")  # the subject is the bound pruning, the object solver's path (`auto` is the envelope search since #535)
-            patch.setattr(_plan, "PRUNE_BOUND", False)
+            patch.setattr(_plan, "PRUNE_BOUND", False)  # no twin left out, no floor: every offer at every state
             self.whole = make_plan(data, target, prices, offers=offers, start_price=start_price, solver="object")
 
     def cost_to_go(self, state, action) -> float:
-        """The cost of `action` at `state` plus the expected value after it, by the values of the plan WITHOUT pruning."""
+        """The cost of `action` at `state` plus the expected value after it, by the values of the whole walk."""
         plan = self.whole
         built = _plan.offer_action(plan.abstraction, plan.offer_of(action), state, plan.start)
         total = sum(weight for _, weight in built.outcomes)
@@ -274,14 +270,13 @@ class Planned:
 
 
 def assert_exact(planned: Planned) -> None:
-    """Same mean, same value at every state the pruned plan solved, and a policy that is optimal by the unpruned values."""
-    pruned, whole = planned.pruned, planned.whole
-    assert pruned.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
-    assert pruned.solution.values.keys() <= whole.solution.values.keys()
-    for state, value in pruned.solution.values.items():
-        assert value == pytest.approx(whole.solution.values[state], rel=1e-9), state
-    assert pruned.policy, "the plan has no policy"
-    for state, action in pruned.policy.items():
+    """Same mean, and at every state of the search's policy the walk's value and an action that is optimal by the walk's values."""
+    searched, whole = planned.searched, planned.whole
+    assert len(searched.offers) >= MIN_OFFERS, "fewer offers than turn the floors on"
+    assert searched.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
+    assert searched.policy, "the plan has no policy"
+    for state, action in searched.policy.items():
+        assert searched.solution.values[state] == pytest.approx(whole.solution.values[state], rel=1e-9), state
         assert planned.cost_to_go(state, action) == pytest.approx(whole.solution.values[state], rel=1e-9), (state, action.label)
 
 
@@ -309,166 +304,32 @@ def planned(world):
 
 
 @pytest.mark.parametrize(("start", "goal"), [case for case in CASES if case[0] == "fractured"])
-def test_with_a_fractured_mod_on_the_start_the_pruned_plan_is_the_plan_without_pruning(planned, start, goal):
-    result = planned(start, goal)
-    pruned = result.pruned.pruned
-
-    assert_exact(result)
-    assert pruned is not None and not pruned.fell_back, pruned.why
-    assert len(pruned.twins) + len(pruned.bounded) + len(pruned.inapplicable) > len(result.pruned.offers) / 2
-    assert len(pruned.used) < len(result.pruned.offers) / 5
+def test_with_a_fractured_mod_on_the_start_the_search_gives_the_plan_of_the_whole_walk(planned, start, goal):
+    assert_exact(planned(start, goal))
 
 
 @pytest.mark.parametrize(("start", "goal"), [case for case in CASES if case[0] == "plain"])
-def test_without_a_fractured_mod_and_without_fractured_sets_the_pruned_plan_is_the_plan_without_pruning(planned, start, goal):
-    result = planned(start, goal, with_fractured_sets=False)
-    pruned = result.pruned.pruned
-
-    assert_exact(result)
-    assert pruned is not None and not pruned.fell_back, pruned.why
-    assert len(pruned.twins) + len(pruned.bounded) + len(pruned.inapplicable) > len(result.pruned.offers) / 2
+def test_without_a_fractured_mod_and_without_fractured_sets_the_search_gives_the_plan_of_the_whole_walk(planned, start, goal):
+    assert_exact(planned(start, goal, with_fractured_sets=False))
 
 
-def test_a_fractured_fossil_set_in_the_model_moves_the_item_to_another_shape_and_the_pruning_steps_back(world):
-    """A Fractured set cheaper than the plan cannot be proved dear, so it enters the model; then the item can
-    change shape and the bound (read on the start's shape) no longer holds: the pruning keeps only the twins."""
-    item = world.plain
-    prices = PriceFile(
-        "Test", world.prices.fetched_at, 300.0, {**world.prices.prices, "Fractured Fossil": PriceEntry(0.01, "made-up")}
-    )
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item, start=StartKind.GIVEN)
-    actions = [a for a in fossil_actions(world.data, item) if len(a.fossils) <= 2][:40]
-    actions.append(next(a for a in actions if a.fossils == ("Fractured Fossil",)))
-    offers = offers_of(world.data, item, list(dict.fromkeys(actions)))
-    abstraction = Abstraction(world.data, Goal.from_target(target), BASE, LEVEL)
-    start = abstraction.compress(item)
-    priced, _ = price_offers(offers, prices)
-
-    found = _bound_prune.solve_pruned(abstraction, start, priced, item, min_offers=0)
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(_plan, "PRUNE_BOUND", False)
-        whole = make_plan(world.data, target, prices, offers=offers, solver="object")
-
-    assert found.fell_back and "kind of item" in found.why
-    assert found.solution.values[start] == pytest.approx(whole.mean_remaining, rel=1e-9)
-    assert len(found.used) == len(priced) - len(found.twins)
-
-
-def test_the_pruning_has_tangled_and_fractured_sets_among_the_offers(planned):
+def test_the_search_has_tangled_and_fractured_sets_among_the_offers(planned):
     result = planned("plain", "two")  # Fractured sets are listed only for an item without a fractured mod
-    fossils = [priced.offer.action.fossils for priced in result.pruned.offers if priced.label != "Chaos Orb"]
+    fossils = [priced.offer.action.fossils for priced in result.searched.offers if priced.label != "Chaos Orb"]
 
     assert_exact(result)
     assert sum("Tangled Fossil" in names for names in fossils) >= 5
     assert sum("Fractured Fossil" in names for names in fossils) >= 5
     assert sum("Hollow Fossil" in names for names in fossils) >= 5 and sum("Glyphic Fossil" in names for names in fossils) >= 5
-    assert len(result.pruned.pruned.twins) + len(result.pruned.pruned.bounded) > len(result.pruned.offers) / 2
     # an item with a fractured mod is offered no Fractured set at all
-    assert not any("Fractured Fossil" in names for names in (priced.offer.action.fossils for priced in planned("fractured", "two").pruned.offers if priced.label != "Chaos Orb"))
+    assert not any("Fractured Fossil" in names for names in (priced.offer.action.fossils for priced in planned("fractured", "two").searched.offers if priced.label != "Chaos Orb"))
 
 
 def test_a_restart_is_kept_and_the_plan_stays_exact(planned):
     result = planned("fractured", "three-top-tier", start_price=RESTART_PRICE)
 
     assert_exact(result)
-    assert RESTART in {priced.label for priced in result.pruned.offers}
-    assert RESTART in {priced.label for priced in result.pruned.pruned.used}
-
-
-def test_the_plan_keeps_every_priced_offer_and_says_what_it_left_out(planned):
-    result = planned("fractured", "two-top-tier")
-    plan = result.pruned
-    reasons = {limit.why: limit.labels for limit in of_kind(plan.limits, "proved-unneeded")}  # K15
-    labels = {priced.label for priced in plan.offers}
-
-    assert len(plan.offers) == len(result.whole.offers)
-    assert reasons["same outcome as a cheaper action"] == tuple(dropped for dropped, _ in plan.pruned.twins)
-    assert reasons["proved never better: even its best case costs more than the plan"] == plan.pruned.bounded
-    assert set(reasons["same outcome as a cheaper action"]) | set(plan.pruned.bounded) <= labels
-    assert not {priced.label for priced in plan.pruned.used} & set(plan.pruned.bounded)
-    assert plan.pruned.rho > 0 and plan.pruned.j_max >= plan.pruned.rho * (1 - 1e-9)
-    assert result.whole.pruned is None and not of_kind(result.whole.limits, "proved-unneeded")
-    assert all(limit.guarantee.startswith("The answer is exact") for limit in of_kind(plan.limits, "proved-unneeded"))  # OR-13
-
-
-def test_a_route_may_name_an_offer_the_pruning_left_out_and_it_is_priced_and_evaluated(planned, world):
-    plan = planned("fractured", "two").pruned
-    dropped, kept = plan.pruned.twins[0]
-    route = parse_route(f"name: names a twin\nrules:\n  - do: {dropped}\n", plan, world.data)
-
-    result = evaluate_route(plan, route, world.data)
-
-    assert dropped not in {priced.label for priced in plan.pruned.used}
-    assert not result.gaps
-    assert {action.label for action in result.policy.values()} == {dropped}
-    assert plan.offer_of(result.policy[plan.start]).cost == next(p for p in plan.offers if p.label == dropped).cost
-
-
-def test_the_rounds_grow_the_set_when_the_first_guess_is_too_small(world, monkeypatch):
-    """With one offer in the first round and two more per round the certificate still closes on the same plan."""
-    monkeypatch.setattr(_bound_prune, "SMALL_START", 1)
-    monkeypatch.setattr(_bound_prune, "PER_ROUND", 2)
-    item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["with-an-either-or"], item, start=StartKind.GIVEN)
-    offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
-
-    result = Planned(world.data, target, world.prices, offers)
-
-    assert_exact(result)
-    assert not result.pruned.pruned.fell_back, result.pruned.pruned.why
-
-
-def test_the_last_round_takes_every_offer_that_fails_and_still_closes(world, monkeypatch):
-    monkeypatch.setattr(_bound_prune, "SMALL_START", 1)
-    monkeypatch.setattr(_bound_prune, "PER_ROUND", 1)
-    item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["three-top-tier"], item, start=StartKind.GIVEN)
-    offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
-
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(_plan, "PRUNE_BOUND", True)
-        plan = make_plan(world.data, target, world.prices, offers=offers, solver="object")
-    whole = Planned(world.data, target, world.prices, offers).whole
-
-    assert plan.mean_remaining == pytest.approx(whole.mean_remaining, rel=1e-9)
-
-
-def test_a_model_with_no_proper_policy_in_the_first_round_gets_more_offers_not_a_wrong_answer(world, monkeypatch):
-    """Only the cheapest offers at first: when they cannot reach the goal, the next round adds more."""
-    monkeypatch.setattr(_bound_prune, "SMALL_START", 0)
-    item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item, start=StartKind.GIVEN)
-    offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
-
-    result = Planned(world.data, target, world.prices, offers)
-
-    assert_exact(result)
-
-
-def test_too_few_rounds_step_back_to_the_whole_model(world, monkeypatch):
-    monkeypatch.setattr(_bound_prune, "SMALL_START", 0)
-    monkeypatch.setattr(_bound_prune, "PER_ROUND", 1)
-    item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["three-top-tier"], item, start=StartKind.GIVEN)
-    offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
-    abstraction = Abstraction(world.data, Goal.from_target(target), BASE, LEVEL)
-    start = abstraction.compress(item)
-    priced, _ = price_offers(offers, world.prices)
-
-    found = _bound_prune.solve_pruned(abstraction, start, priced, item, rounds=1)
-
-    assert found.fell_back and "rounds" in found.why
-    assert len(found.used) == len(priced) - len(found.twins)
-
-
-def test_fewer_than_min_offers_are_solved_whole(world):
-    item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two"], item, start=StartKind.GIVEN)
-    offers = offers_of(world.data, item, fossil_sets(world.data, item)[:10])
-
-    plan = make_plan(world.data, target, world.prices, offers=offers, solver="object")
-
-    assert plan.pruned is None and not of_kind(plan.limits, "proved-unneeded")
+    assert RESTART in {priced.label for priced in result.searched.offers}
 
 
 # --- the bench: a goal leaf a craft can finish ---------------------------------------------------------------
@@ -487,14 +348,8 @@ def bench(real):
     return SimpleNamespace(data=data, item=item, target=target, offers=offers, prices=prices)
 
 
-def test_with_bench_crafts_offered_the_pruned_plan_is_the_plan_without_pruning(bench):
-    result = Planned(bench.data, bench.target, bench.prices, bench.offers)
-    pruned = result.pruned.pruned
-
-    assert_exact(result)
-    assert not pruned.fell_back, pruned.why
-    assert {BenchCraft(LIFE_CRAFT).label(bench.data), "Remove Crafted Mods"} <= {priced.label for priced in pruned.used}
-    assert len(pruned.twins) + len(pruned.bounded) + len(pruned.inapplicable) > len(result.pruned.offers) / 2
+def test_with_bench_crafts_offered_the_search_gives_the_plan_of_the_whole_walk(bench):
+    assert_exact(Planned(bench.data, bench.target, bench.prices, bench.offers))
 
 
 def test_the_leaf_a_craft_can_finish_is_dropped_from_the_set_the_bound_is_read_on(bench):
@@ -504,15 +359,6 @@ def test_the_leaf_a_craft_can_finish_is_dropped_from_the_set_the_bound_is_read_o
 
     assert goal_set(abstraction.goal, start, crafted) == (1,)  # life is leaf 0: the craft finishes it
     assert goal_set(abstraction.goal, start, frozenset()) == (0, 1)
-
-
-def test_with_bench_crafts_and_small_rounds_the_certificate_still_closes_on_the_same_plan(bench, monkeypatch):
-    monkeypatch.setattr(_bound_prune, "SMALL_START", 1)
-    monkeypatch.setattr(_bound_prune, "PER_ROUND", 3)
-
-    result = Planned(bench.data, bench.target, bench.prices, bench.offers)
-
-    assert_exact(result)
 
 
 # --- the kind of an offer -----------------------------------------------------------------------------------
@@ -551,50 +397,6 @@ def test_keeps_shape_tells_a_reroll_from_an_action_that_fractures_or_changes_the
     assert not keeps_shape(ab, bare, ScouringOrb())  # a rare item with no mod scours to a normal one
 
 
-def test_the_kind_of_a_scouring_orb_is_a_reroll_until_its_shape_is_read(world):
-    """A Scouring Orb reads no junk, so it starts as a reroll; `raise_level` makes it terminal (it moves the rarity)."""
-    data, item = world.data, world.plain
-    abstraction = Abstraction(data, Goal.from_target(Target(BASE, LEVEL, frozenset(), (requirement(data, "IncreasedLife"),), item, start=StartKind.GIVEN)), BASE, LEVEL)
-    start = abstraction.compress(item)
-    priced = [priced_of(world, ScouringOrb()), *(priced_of(world, a) for a in fossil_actions(data, item)[:45])]
-
-    found = _bound_prune.solve_pruned(abstraction, start, priced, item)
-
-    assert "Orb of Scouring" not in {p.label for p in found.used} or found.fell_back
-    assert found.solution.values[start] > 0
-
-
-# --- 3. a wrong bound is caught -----------------------------------------------------------------------------
-
-
-def test_a_wrong_bound_gives_a_wrong_plan_and_the_comparison_with_the_unpruned_plan_catches_it(world, monkeypatch):
-    """The certificate proves the offers left out against the bounds it is given; it does not check them.
-
-    So the safeguard is the bound's own tests (tests/test_abstraction_bound.py: never below the exact chance)
-    and this comparison. Here `reach_bound` is made to say 0 for the best offer ("it can never reach the
-    goal"): the best offer is then dropped as proved dear, and the plan is dearer than the true optimum.
-    """
-    item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item, start=StartKind.GIVEN)
-    offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
-    honest = Planned(world.data, target, world.prices, offers)
-    best = honest.whole.policy[honest.whole.start].label
-    best_action = honest.whole.offer_of(honest.whole.policy[honest.whole.start]).offer.action
-    real_bound = _bound_prune.reach_bound
-
-    def lying(abstraction, state, action, leaves, **kwargs):
-        return Fraction(0) if action == best_action else real_bound(abstraction, state, action, leaves, **kwargs)
-
-    monkeypatch.setattr(_bound_prune, "reach_bound", lying)
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(_plan, "PRUNE_BOUND", True)
-        wrong = make_plan(world.data, target, world.prices, offers=offers, solver="object")
-
-    assert wrong.mean_remaining > honest.whole.mean_remaining * (1 + 1e-6), best
-    assert best not in {priced.label for priced in wrong.pruned.used}
-    assert honest.pruned.mean_remaining == pytest.approx(honest.whole.mean_remaining, rel=1e-9)
-
-
 # --- the cache of built actions -----------------------------------------------------------------------------
 
 
@@ -621,7 +423,7 @@ def test_the_cache_of_built_actions_builds_each_state_and_offer_once(world, monk
     assert len(built) > count
 
 
-# --- 4. the routes on the real dump ---------------------------------------------------------------------------
+# --- 3. the routes on the real dump ---------------------------------------------------------------------------
 
 ROUTES = ["r11-reservation-helmet", "r10-fractured-boots", "r05-strength-ring"]
 
@@ -634,14 +436,14 @@ def golden():
 @pytest.fixture(scope="module", params=ROUTES)
 def route_plan(request, real):
     target = load_target(ROOT / "examples" / "targets" / f"{request.param}.yaml", real)
-    return request.param, make_plan(real, target, load_price_file(ROUTE_PRICES), solver="object")  # the subject is the bound pruning, the object solver's path (#535)
+    return request.param, make_plan(real, target, load_price_file(ROUTE_PRICES))  # `auto`: the envelope search (#829)
 
 
-def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gave(route_plan, golden, real, monkeypatch):
-    """Mean to 1e-9 and the same action at every state, against the plan without the pruning (the golden file).
+def test_the_routes_give_the_mean_and_the_policy_of_the_whole_walk(route_plan, golden, real, monkeypatch):
+    """Mean to 1e-9 and the same action at every state, against the plan of the whole walk (the golden file).
 
-    `UPDATE_GOLDEN=1` rewrites this route's entry from the plan with the pruning turned off (`_plan.PRUNE_BOUND`), the
-    reference the pruned plan is held to, at the current prices (#838), then compares as usual."""
+    `UPDATE_GOLDEN=1` rewrites this route's entry from the walk with the twins and the floors turned off (`_plan.PRUNE_BOUND`), the
+    reference the plan is held to, at the current prices (#838), then compares as usual."""
     stem, plan = route_plan
     if os.environ.get("UPDATE_GOLDEN"):
         monkeypatch.setattr(_plan, "PRUNE_BOUND", False)
@@ -662,8 +464,8 @@ def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gav
     golden_diff.check_objects(
         expected["mean_remaining"], plan.mean_remaining, f"{stem}: the mean differs from tests/golden/plans_118.json", rel=1e-9
     )
-    # The pruned model leaves out offers that are never better, so it may reach FEWER states than the golden
-    # plan (R05: 262 of 597); every state it does solve has the action the golden plan has there.
+    # The twins left out may leave FEWER states reached than the golden plan has; every state the plan solves has the
+    # action the golden plan has there.
     assert len(plan.solution.values) <= expected["states"]
     policy = {repr(state): action.label for state, action in plan.policy.items()}
     title = f"{stem}: the policy differs from tests/golden/plans_118.json"
@@ -671,18 +473,3 @@ def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gav
     golden_diff.check_objects(
         {state: expected["policy"][state] for state in policy}, policy, f"{title} (the action at a state both reach)"
     )
-    if plan.pruned is None or not plan.pruned.fell_back and not plan.pruned.bounded:
-        assert len(plan.solution.values) == expected["states"]
-
-
-def test_the_route_with_more_than_the_minimum_of_offers_ran_the_pruning(route_plan):
-    stem, plan = route_plan
-    if len(plan.offers) < _plan.MIN_OFFERS_TO_PRUNE:
-        assert plan.pruned is None
-    else:
-        assert plan.pruned is not None, stem
-        print(f"\n{stem}: {len(plan.offers)} offers, twins {len(plan.pruned.twins)}, bounded {len(plan.pruned.bounded)}, "
-              f"used {len(plan.pruned.used)}, rounds {plan.pruned.rounds}, fell back {plan.pruned.fell_back}")
-
-
-# --- 5. R12 through the fixture is unchanged: tests/test_cli_plan.py and tests/test_prune_equal.py hold it ------

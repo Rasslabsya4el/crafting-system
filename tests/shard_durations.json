@@ -671,10 +671,6 @@
   "seconds": 20.926,
   "tests": 21
  },
- "tests/test_bound_prune_light.py": {
-  "seconds": 0.033,
-  "tests": 67
- },
  "tests/test_budget.py": {
   "seconds": 5.155,
   "tests": 36

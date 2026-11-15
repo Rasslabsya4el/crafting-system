@@ -89,7 +89,6 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = (int(piece) for piece in arguments.part.split("/"))
     routes = arguments.routes.split(",")[index - 1 :: count]
-    from crafting_system.planner import _bound_prune
 
     def progress(line: str) -> None:
         try:
@@ -100,7 +99,7 @@ def main() -> None:
             pass
         print("  ", line, flush=True)
 
-    _bound_prune.PROGRESS = progress
+    _packed.PROGRESS = progress
     data = load_game_data()
     for route in routes:
         if route in EXAMPLES:

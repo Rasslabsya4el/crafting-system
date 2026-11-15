@@ -57,7 +57,7 @@ def timed(owner, name: str, stage: str | None = None) -> None:
 
 def install_timers() -> None:
     from crafting_system.abstraction import Abstraction, Coarsening
-    from crafting_system.planner import _approx, _bound_prune, _decide, _plan
+    from crafting_system.planner import _approx, _decide, _offer_kinds, _plan
     from crafting_system.solver import _bounds, _solve, _tail
 
     for name in ("kernel", "kernel_key"):
@@ -73,10 +73,9 @@ def install_timers() -> None:
     timed(_approx, "solve_level", "approx.solve_level")
     timed(_plan, "decide", "decide (pilot walk and rates)")
     timed(_plan, "solve", "plan.solve (exact, whole)")
-    timed(_plan, "solve_pruned", "plan.solve_pruned (bound pruning, solves inside)")
     timed(_plan, "evaluate_risk", "plan.evaluate_risk (risk run)")
     timed(_plan, "climb", "plan.climb (approximate ladder)")
-    timed(_bound_prune, "reach_bound", "prune.reach_bound")
+    timed(_offer_kinds, "reach_bound", "offer_kinds.reach_bound (the offers' floors)")
     timed(_plan._Model, "prefetch", "model.prefetch (keys here + the pool's distributions)")
     timed(_plan._Model, "actions", "model.actions (calls = states expanded)")
     timed(Abstraction, "prime", "abstraction.prime (distributions in the pool)")
@@ -88,8 +87,6 @@ def install_job_log() -> None:
     import sys
 
     from crafting_system.abstraction import _prime
-    from crafting_system.planner import _bound_prune
-
     def logged(module, name: str, kind: str) -> None:
         original = getattr(module, name)
 
@@ -104,7 +101,6 @@ def install_job_log() -> None:
         setattr(module, name, wrapper)
 
     logged(_prime, "_compute", "prime")
-    logged(_bound_prune, "_raise_job", "bound")
 
 
 def filled_prices(data, target, offers):
@@ -223,7 +219,6 @@ def main() -> None:
             states=len(plan.solution.values),
             offers=len(plan.offers),
             answer_sha256=answer_hash(plan),
-            pruning_phases=[[name, round(spent, 1)] for name, spent in plan.pruned.phases] if plan.pruned is not None else None,
         )
     tag = f"{arguments.case}-w{arguments.workers}" if arguments.workers is not None else arguments.case
     (out / f"{tag}.json").write_text(json.dumps(result, indent=1), encoding="utf-8")

@@ -1,19 +1,17 @@
-"""The forecast of a plan with a budget runs on the pruning's starting set (ticket #63).
+"""The forecast of a plan with a budget runs on the twin-merged offers (tickets #63, #829).
 
-`planner._bound_prune.merge_twins` is the twin step of `solve_pruned`, taken out so that `make_plan(..., budget=...)` can
-use it; `starting_offers` is the set `solve_pruned` solves first (restart, the bench crafts, the K best rerolls after the
-twins). `make_plan` forecasts (`decide`) on that set instead of on every offer, and an approximate answer is climbed on
-the twin-merged offers. This file checks, on the reduced boots world of `tests/test_prune_bound.py` (the Sorcerer Boots
-pool cut to seven families, with the real fossil records and made-up prices):
+`planner._offer_kinds.merge_twins` leaves out the dearer of offers with equal outcomes, so that `make_plan(..., budget=...)` forecasts
+(`decide`) on the offers left and an approximate answer is climbed on them. The starting set of the retired bound pruning
+(`starting_offers`) is gone with it (#829). This file checks, on the reduced boots world of `tests/test_prune_bound.py` (the
+Sorcerer Boots pool cut to seven families, with the real fossil records and made-up prices):
 
-1. `merge_twins` leaves out exactly what `solve_pruned` reports as `twins`: the cheaper of a pair stays, `restart` stays;
-2. `starting_offers` is a part of the twin-merged offers that holds `restart` and every bench craft, is smaller in a world
-   with many rerolls, and is the whole list when there are fewer than `min_offers`;
-3. a plan with a budget that fits has the mean of the plan without a budget; a budget that does not fit is answered
-   approximately (on the merged offers) or refused with the message of `decide`.
+1. `merge_twins` keeps the cheaper of a pair and `restart`, in the order of the list;
+2. a plan with a budget that fits has the mean of the plan without a budget; a budget that does not fit is answered
+   approximately (on the merged offers) or exactly with the message of `decide`.
 
-The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`) and skip cleanly without it, as in CI. No test asserts a
-run time (ADR-0014): the rates are injected.
+The forecast and its ladder are retired (direction of 2026-11-13) and reached only by a walk asked for by name until #928
+deletes them; these tests hold them as they are, nothing more. The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`)
+and skip cleanly without it, as in CI. No test asserts a run time (ADR-0014): the rates are injected.
 """
 
 from types import SimpleNamespace
@@ -38,10 +36,9 @@ from limits_support import notes, only
 from crafting_system.abstraction import Abstraction, Coarsening, Goal
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, Offer, make_plan
-from crafting_system.planner import _bound_prune
-from crafting_system.planner._bound_prune import merge_twins, solve_pruned, starting_offers
+from crafting_system.planner._offer_kinds import merge_twins
 from crafting_system.planner._decide import LADDER, Rates
-from crafting_system.planner._offers import BuyStartItem, PricedOffer, offer_of, price_offers
+from crafting_system.planner._offers import BuyStartItem, PricedOffer, price_offers
 from crafting_system.items import Item, Rarity
 from crafting_system.targets import StartKind, Target
 
@@ -80,15 +77,13 @@ def labels(offers) -> list[str]:
 # --- 1. merge_twins -------------------------------------------------------------------------------------------------
 
 
-def test_merge_twins_leaves_out_what_solve_pruned_reports_as_twins_and_keeps_the_cheaper_of_each_pair(world):
+def test_merge_twins_keeps_the_cheaper_of_each_pair_and_the_restart(world):
     priced = [*world.priced, restart_of(world)]
     cost_of = {offer.label: offer.cost for offer in priced}
 
     kept, twins = merge_twins(world.data, world.item, priced)
-    found = solve_pruned(world.abstraction, world.start, priced, world.item, min_offers=0)
 
     assert len(twins) >= 1, "the world has no pair of twins to check"
-    assert tuple(twins) == found.twins
     assert sorted(labels(priced)) == sorted([*labels(kept), *(dropped for dropped, _ in twins)])
     assert len(kept) == len(priced) - len(twins)
     for dropped, stays in twins:
@@ -107,61 +102,7 @@ def test_merge_twins_of_offers_without_twins_is_the_same_list(world):
     assert kept == one_of_each and twins == []
 
 
-# --- 2. starting_offers ---------------------------------------------------------------------------------------------
-
-
-def test_the_starting_offers_are_a_part_of_the_merged_offers_with_the_restart_and_fewer_offers(world):
-    priced = [*world.priced, restart_of(world)]
-    merged = merge_twins(world.data, world.item, priced)[0]
-
-    start_set = starting_offers(world.abstraction, world.start, merged, world.item, min_offers=40)
-
-    assert set(labels(start_set)) <= set(labels(merged))
-    assert RESTART in labels(start_set)
-    assert len(merged) > 40 and len(start_set) < len(merged)
-    assert labels(start_set) == [label for label in labels(merged) if label in set(labels(start_set))]  # in the order of the list
-
-
-def test_the_starting_offers_hold_every_bench_craft(world):
-    data, item = world.data, world.item
-    actions = [BenchCraft(LIFE_CRAFT), RemoveCraftedMods()]
-    crafts = [offer_of(action, action.label(data), data, item) for action in actions]
-    priced, _ = price_offers([*world.offers, *crafts], made_up_prices(data, "Orb of Alteration", "Orb of Scouring"))
-    merged = merge_twins(data, item, priced)[0]
-
-    start_set = starting_offers(world.abstraction, world.start, merged, item, min_offers=40)
-
-    assert {BenchCraft(LIFE_CRAFT).label(data), "Remove Crafted Mods"} <= set(labels(start_set))
-    assert len(start_set) < len(merged)
-
-
-def test_with_fewer_than_min_offers_the_starting_offers_are_all_of_them_in_order(world):
-    few = list(world.priced[:10])
-
-    assert starting_offers(world.abstraction, world.start, few, world.item) == few  # the default is 40
-    assert starting_offers(world.abstraction, world.start, few, world.item, min_offers=11) == few
-
-
-def test_the_starting_set_is_where_the_first_solve_of_the_pruning_starts(world, monkeypatch):
-    """`solve_pruned` solves the starting set first: its first round holds the offers `starting_offers` names."""
-    priced = [*world.priced, restart_of(world)]
-    merged = merge_twins(world.data, world.item, priced)[0]
-    start_set = starting_offers(world.abstraction, world.start, merged, world.item, min_offers=0)
-    solved: list[list[str]] = []
-    real_solve = _bound_prune.solve
-
-    def watch(model, starts):
-        solved.append(labels(model.offers) if hasattr(model, "offers") else [])
-        return real_solve(model, starts)
-
-    monkeypatch.setattr(_bound_prune, "solve", watch)
-
-    solve_pruned(world.abstraction, world.start, priced, world.item, min_offers=0)
-
-    assert solved and solved[0] == labels(start_set)
-
-
-# --- 3. make_plan with a budget -------------------------------------------------------------------------------------
+# --- 2. make_plan with a budget -------------------------------------------------------------------------------------
 
 CRAFT_FIRE, CRAFT_COLD = "HelenaMasterFireResist1", "HelenaMasterColdResist1_"
 
@@ -184,31 +125,26 @@ def pooled(real):
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring", "Orb of Transmutation")
     life, speed = requirement(data, "IncreasedLife"), requirement(data, "MovementVelocity", min_tier=1)
     target = Target(BASE, LEVEL, frozenset(), (life, speed), item, start=StartKind.BOUGHT)  # the restart of the budget tests buys it again
-    exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)  # 40 offers or more: `auto` is the bound pruning (#535, until #742)
+    exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)  # `auto`: the envelope search (#829)
     merged = merge_twins(data, item, exact.offers)[0]
-    first = starting_offers(exact.abstraction, exact.start, merged, item, min_offers=40)
-    forecast = {}
-    for name, chosen in (("merged", merged), ("first", first)):
-        actions = [p.offer.action for p in chosen if not isinstance(p.offer.action, BuyStartItem)]
-        forecast[name] = exact.abstraction.estimate([exact.start], actions)
+    forecast = exact.abstraction.estimate([exact.start], [p.offer.action for p in merged if not isinstance(p.offer.action, BuyStartItem)])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     seconds = SimpleNamespace(
-        merged=forecast["merged"].seconds(*(RATES.kernel, RATES.solve)),
-        first=forecast["first"].seconds(*(RATES.kernel, RATES.solve)),
-        coarse=forecast["first"].coarsened(pooling).seconds(*(RATES.kernel, RATES.solve)),
+        merged=forecast.seconds(*(RATES.kernel, RATES.solve)),
+        coarse=forecast.coarsened(pooling).seconds(*(RATES.kernel, RATES.solve)),
     )
-    return SimpleNamespace(data=data, target=target, offers=offers, prices=prices, exact=exact, merged=merged, first=first, seconds=seconds)
+    return SimpleNamespace(data=data, target=target, offers=offers, prices=prices, exact=exact, merged=merged, seconds=seconds)
 
 
 def planned(pooled, budget):
     return make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, budget=budget, rates=RATES, solver="object")
 
 
-def test_the_world_of_the_budget_tests_has_a_forecast_set_far_smaller_than_the_offers_and_a_coarse_level(pooled):
+def test_the_world_of_the_budget_tests_has_twins_and_a_coarse_level(pooled):
     seconds = pooled.seconds
 
-    assert len(pooled.exact.offers) > len(pooled.merged) > 40 > len(pooled.first)
-    assert seconds.coarse < seconds.first < seconds.merged  # the order that the three budgets below sit in
+    assert len(pooled.exact.offers) > len(pooled.merged) > 40
+    assert seconds.coarse < seconds.merged  # the order that the budgets below sit in
 
 
 def test_a_budget_that_fits_gives_the_exact_mean_of_the_plan_without_a_budget(pooled):
@@ -216,29 +152,17 @@ def test_a_budget_that_fits_gives_the_exact_mean_of_the_plan_without_a_budget(po
 
     assert plan.approximation is None and notes(plan.limits) == []
     assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)
-    assert plan.risk is not None and plan.pruned is not None
+    assert plan.risk is not None
 
 
-def test_a_budget_the_starting_set_fits_but_all_the_merged_offers_would_not_is_answered_exactly(pooled):
-    """The forecast is made on the starting set, not on the twin-merged offers (nor, as before, on every offer)."""
+def test_a_budget_that_the_merged_offers_exceed_and_the_first_coarse_level_fits_is_answered_approximately_on_them(pooled):
     seconds = pooled.seconds
-    budget = (seconds.first + seconds.merged) / 2
-
-    plan = planned(pooled, budget)
-
-    assert seconds.first <= budget < seconds.merged
-    assert plan.approximation is None and notes(plan.limits) == []
-    assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)
-
-
-def test_a_budget_that_the_starting_set_exceeds_and_the_first_coarse_level_fits_is_answered_approximately_on_the_merged_offers(pooled):
-    seconds = pooled.seconds
-    budget = (seconds.first + seconds.coarse) / 2
+    budget = (seconds.merged + seconds.coarse) / 2
 
     plan = planned(pooled, budget)
 
     found = plan.approximation
-    assert seconds.coarse <= budget < seconds.first
+    assert seconds.coarse <= budget < seconds.merged
     assert found is not None and found.level == LADDER[0].name
     assert found.lower <= pooled.exact.mean_remaining <= found.upper
     assert found.within_tolerance and plan.mean_remaining == found.upper
@@ -257,24 +181,24 @@ def test_a_budget_that_no_coarse_level_fits_runs_exactly_and_says_why_the_graph_
 # --- 4. G17: the twins an answer leaves out are a limit on every path (ticket #506, OR-13) --------------------------------
 
 
-def test_g17_the_packed_path_says_which_twins_it_left_out_as_the_bound_pruning_does(pooled):
-    """The packed solver solves the offers left after the twins are merged. It wrote nothing; the object path wrote one limit (K15)."""
+def test_g17_the_packed_path_says_which_twins_it_left_out_as_the_search_does(pooled):
+    """The packed solver solves the offers left after the twins are merged, and says so in the same limit as the envelope search."""
     twins = merge_twins(pooled.data, pooled.target.start_item, pooled.exact.offers)[1]
     assert len(twins) >= 1
 
     packed = make_plan(pooled.data, pooled.target, pooled.prices, offers=pooled.offers, start_price=RESTART_PRICE, solver="packed")
-    pruned = pooled.exact
+    searched = pooled.exact
 
     (left_out,) = [limit for limit in packed.limits if limit.what == "Not searched" and limit.why == "same outcome as a cheaper action"]
-    assert packed.packed is not None and pruned.pruned is not None
+    assert packed.packed is not None
     assert left_out.labels == tuple(dropped for dropped, _ in twins)
-    assert left_out in pruned.limits  # the same limit, in the same words, whichever solver answered
+    assert left_out in searched.limits  # the same limit, in the same words, whichever solver answered
     assert left_out.guarantee == "The answer is exact among the methods offered: a cheaper action does the same."
 
 
 def test_g17_an_approximate_answer_says_which_twins_it_left_out_and_claims_only_the_gap(pooled):
     seconds = pooled.seconds
-    plan = planned(pooled, (seconds.first + seconds.coarse) / 2)
+    plan = planned(pooled, (seconds.merged + seconds.coarse) / 2)
 
     (left_out,) = [limit for limit in plan.limits if limit.why == "same outcome as a cheaper action"]
     assert plan.approximation is not None
