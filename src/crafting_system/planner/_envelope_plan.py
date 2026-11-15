@@ -46,7 +46,7 @@ from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
 from ._packed import PackedResult, Walked, solve_walked
-from ._pattern_bound import PatternBound, pack_pattern_model, pattern_lower_bound, pattern_offers
+from ._pattern_bound import PatternBound, lowering, pack_pattern_model, pattern_lower_bound, pattern_offers
 from ._prune import corrupting_offer_pruned
 
 RESTART_KEY = ("restart",)
@@ -68,7 +68,9 @@ class CraftingProblem:
         self.floors = bound.floors
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
         self.tip = [not built for built in model.expanded] if model.expanded else [False] * len(model.keys)  # keys the build did not reach
-        values = np.asarray(bound.value, dtype=np.float64) * (1.0 - bound.error_bound)  # lowered by what the solver cannot certify
+        raw = np.asarray(bound.value, dtype=np.float64)
+        factor = lowering(bound.error_bound)  # lowered by what the solver cannot certify (to 0 where it certifies nothing, #830)
+        values = raw * factor if factor > 0.0 else np.where(np.isinf(raw), raw, 0.0)
         self.values = values
         expected: list[float] = []  # the lowered value of each pushed kernel of the model, in expectation
         sink = len(values) - 1  # the successor `SINK` (-1) of a float kernel is the model's last state, the goal that costs nothing (`_pattern_bound`, `close_state`)

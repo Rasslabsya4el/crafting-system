@@ -17,6 +17,8 @@ Annulment, a Divine Orb and the restart, for three goals with roll limits: the D
 over the key), the model is a lower bound at every state of the exact graph, and the envelope search gives the exact graph's mean to 1e-9.
 """
 
+import dataclasses
+import math
 import random
 
 import pytest
@@ -35,8 +37,9 @@ from crafting_system.cli import Offer
 from crafting_system.items import Rarity, Side
 from crafting_system.planner._envelope_plan import envelope_result
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
+from crafting_system.planner import _pattern_bound
 from crafting_system.planner._pattern_bound import pack_pattern_model
-from crafting_system.solver import solve_packed
+from crafting_system.solver import ConvergenceError, solve_packed
 
 TOLERANCE = 1e-9
 CHAOS, EXALT, ANNUL, DIVINE = ChaosOrb(), ExaltedOrb(), AnnulmentOrb(), DivineOrb()
@@ -160,6 +163,32 @@ def test_the_envelope_search_gives_the_exact_graphs_mean(goal, divine):
     assert info.exact and info.bound_stopped is None
     assert result.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
     assert info.lower <= exact * (1 + TOLERANCE)
+
+
+def test_a_bound_the_solver_cannot_certify_is_lowered_by_its_error_not_refused(monkeypatch):
+    """divine-roll-limits/large (#830): the bound's model of 2,917 keys is certified only to 0.577 of its value, and the refusal ended the whole
+    target. The bound is now its value lowered by the error certified (0 when none is), so the search still gives the exact answer, from a
+    weaker bound."""
+    real = _pattern_bound.solve_packed
+    asked: list = []
+
+    def stiff(graph, progress=None, refuse_above=None):
+        asked.append(refuse_above)
+        if refuse_above != math.inf:
+            raise ConvergenceError("planted: certifies only a relative bound of 0.6", 0.6)
+        solved = real(graph, progress=progress)
+        return dataclasses.replace(solved, error_bound=0.6)
+
+    monkeypatch.setattr(_pattern_bound, "solve_packed", stiff)
+    ab = abstraction("life")
+    start = ab.compress(START)
+    exact = exact_values(ab, start, pattern_offers_of())[start]
+    bound = _pattern_bound.pattern_lower_bound(ab, start, priced_offers())
+    assert asked[-1] == math.inf and bound.error_bound == 0.6
+    assert bound.lower == pytest.approx(0.4 * bound.start_value) and bound.lower <= exact
+    result = envelope_result(ab, start, priced_offers(), bound=bound)
+    assert result.info["envelope"].exact and result.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
+    assert _pattern_bound.lowering(0.25) == 0.75 and _pattern_bound.lowering(1.5) == 0.0 == _pattern_bound.lowering(math.inf)
 
 
 @pytest.mark.parametrize("goal", CASES)
