@@ -103,7 +103,7 @@ LOWERED = {
     "r09-life-boots": 68,
     "r10-fractured-boots": 55,
     "r10-fractured-boots-70-life": 55,
-    "r11-reservation-helmet": 81,  # no leaf asks tier 1 any more (#404): the start helmet's fractured Chaos Resistance (tier 1) needs 81
+    "r11-reservation-helmet": 81,  # the start helmet's fractured Chaos Resistance (tier 1) needs 81; the tier 1 Life opens at 64 and the tier 3 Evasion at 60 (#895)
     "r12-lightning-amulet": 75,  # the +1 gem level needs 75; the start amulet already holds the resistance (any tier)
     "r13-life-resist-belt": 84,  # the tier-1 resistances need 84
     "r17-lightning-talisman": 75,  # the two +1 gem levels need 75

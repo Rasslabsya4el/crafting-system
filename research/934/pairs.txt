@@ -1,0 +1,10 @@
+plan --case fossil-sets/small
+plan --case growing-3-fossils/small
+plan --route r04
+plan --case essences/medium
+bench start-given/large
+bench harvest/small
+bench bench-metamods/medium
+bench growing-4-harvest/large
+bench harvest/medium
+bench fossil-sets/medium

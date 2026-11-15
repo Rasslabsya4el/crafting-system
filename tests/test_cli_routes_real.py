@@ -93,7 +93,11 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
 
 
 def test_the_json_policy_keeps_the_group_of_the_target(solved, data):
-    """`policy_document(...)["requirements"]` of the real plan (ticket #630): R05 asks for 1 of 4 (Life or one resistance), not for all four."""
+    """`policy_document(...)["requirements"]` of the real plan (ticket #630): a group of the target stays a group, not a list of required mods.
+
+    R11 asks for 1 of 2 (the reservation of the Shrieking or of the Deafening essence). R05 asked for 1 of 4 (Life or one resistance) until
+    #895; the owner's target asks the Life itself, so it has no group (the old reading is the fixture of `test_cli_report_requirements.py`).
+    """
     route_id, _, target, plan = solved
 
     requirements = policy_document(build_report(plan, data))["requirements"]
@@ -101,11 +105,13 @@ def test_the_json_policy_keeps_the_group_of_the_target(solved, data):
     groups = [node for node in target.requirements if isinstance(node, KOfN)]
     assert len(requirements["groups"]) == len(groups)
     assert len(requirements["plain"]) == len(target.requirements) - len(groups)
-    if route_id == "R05":
+    if route_id == "R11":
         [group] = requirements["groups"]
-        assert group["at_least"] == 1 and len(group["of"]) == 4
-        assert sorted(member["side"] for member in group["of"]) == ["prefix", "suffix", "suffix", "suffix"]  # Life, then the three resistances
-        assert not any("IncreasedLife" in label or "Resistance" in label for label in requirements["plain"])
+        assert group["at_least"] == 1 and len(group["of"]) == 2
+        assert [member["side"] for member in group["of"]] == ["suffix", "suffix"]  # the Shrieking and the Deafening reservation
+        assert not any("ReducedManaReservationsCost" in label for label in requirements["plain"])
+    if route_id == "R05":
+        assert requirements["groups"] == [] and len(requirements["plain"]) == 3  # the attributes, the Strength and the Life, each asked itself
 
 
 def test_verify_agrees_with_the_computed_mean(solved, data):
@@ -223,7 +229,7 @@ def test_a_fractured_mod_reads_as_the_mod_of_the_item_not_as_a_mod_only_an_essen
         assert all("for each nearby Enemy" not in slot.text for slot in fractured)
 
 
-NOTE_PARTS = re.compile(r"T\d+( or better| to T\d+)?|any tier|crafted|essence only|tier too low|in some|at least \d+ of \d+")
+NOTE_PARTS = re.compile(r"T\d+( or better| to T\d+)?|any tier|crafted|(Shrieking|Deafening) essence|essence only|tier too low|in some|at least \d+ of \d+")
 
 
 def test_no_step_prints_two_lines_that_read_alike(solved, data):
@@ -250,6 +256,70 @@ def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_
     bought = section.rows[0].after
     assert all(slot.text != "empty" for slot in (*bought.prefixes, *bought.suffixes))
     assert any("fractured" in slot.marks and slot.note.startswith("T") for slot in (*bought.prefixes, *bought.suffixes))
+
+
+# what each page must say of its target, its fractured mod and its essence's mod (#895, the owner's reading of 2026-11-13): the lines of the
+# target card as (text, note, marks), and the essence tier the finished item shows
+OWNER_TARGETS = {
+    "R05": (
+        [("+(100-114) to maximum Life", "T1", ()), ("+(13-16) to all Attributes", "T1", ("fractured",)), ("+(51-58) to Strength", "Deafening essence", ())],
+        "Deafening essence",
+    ),
+    "R10": (
+        [
+            ("30% increased Movement Speed", "T2", ("fractured",)),
+            ("+# to maximum Life", "T2 or better", ()),
+            ("+(43-50) to Intelligence", "Shrieking essence", ()),
+            ("(16-20)% chance to Avoid Elemental Ailments", "crafted", ()),
+        ],
+        "Shrieking essence",
+    ),
+    "R11": (
+        [("#% increased Evasion Rating", "T3 or better", ()), ("+(130-144) to maximum Life", "T1", ()), ("+(31-35)% to Chaos Resistance", "T1", ("fractured",))],
+        "Shrieking essence",
+    ),
+}
+
+
+def test_the_page_shows_the_owners_target_the_fracture_on_every_card_and_the_one_essence_tier_the_plan_uses(solved, data):
+    """#895: the target card states the owner's target and marks the fractured mod; every card after it keeps that mark on the same
+    line; a mod an essence forces says the essence's tier and no tier number; R11's group names both essences, and its steps and its
+    finished item show the one the plan chose."""
+    route_id, _, _, plan = solved
+    wanted, essence = OWNER_TARGETS[route_id]
+    section = build_section(route_input(plan), data)
+
+    card = section.goal.target
+    assert [(slot.text, slot.note, slot.marks) for slot in (*card.prefixes, *card.suffixes) if slot.tone == "wanted"] == wanted
+    (held,) = [(text, note) for text, note, marks in wanted if marks == ("fractured",)]
+    for row in section.rows:
+        for shown in (row.after, *(branch.card for branch in row.branches)):
+            fractured = [(slot.text, slot.note) for slot in (*shown.prefixes, *shown.suffixes) if "fractured" in slot.marks]
+            assert fractured == [held], (row.title, fractured)
+    last = section.rows[-1].after
+    forced = [slot for slot in last.suffixes if slot.note.endswith("essence")]
+    assert [slot.note for slot in forced] == [essence]
+    lines = [line.text for row in section.rows for field in row.fields if field.label in ("Goal", "Tier chances") for line in field.lines]
+    assert not any(text.startswith(forced[0].text.split(" · ")[0]) and " · T" in text for text in lines)  # no tier number for the essence's mod
+    assert not any(text.startswith(("+# to Intelligence:", "+# to Strength:")) for text in lines)  # and no tier chance line for a mod that always comes
+    if route_id == "R11":
+        (group,) = card.groups
+        assert [member.note for member in group.members] == ["Shrieking essence", "Deafening essence"]
+        essences = {row.title for row in section.rows if "Essence of" in row.title}
+        assert essences == {"Shrieking Essence of Loathing"}  # one choice, in the steps, the prices and the finished item
+
+
+def test_the_owners_r10_target_is_searched_itself_and_costs_more_than_the_guides_roll_of_70(solved, data):
+    """#895, the owner's worry: nothing ties the plan to the old "any tier" target. The plan of the boots with Life tier 1 or 2 is made from
+    that target and is dearer than the plan of the same boots with the guide's "at least 70" (tiers 1 to 4 reach it), at the same prices."""
+    route_id, _, _, plan = solved
+    if route_id != "R10":
+        pytest.skip("R10 has the second target file, the guide's roll of 70")
+    roll_70 = load_target(ROOT / "examples" / "targets" / "r10-fractured-boots-70-life.yaml", data)
+
+    looser = make_plan(data, roll_70, load_price_file(PRICES))
+
+    assert plan.risk.mean.value > looser.risk.mean.value * 1.3  # two Life tiers of the four: about twice the essences
 
 
 def test_the_tiers_the_target_asks_for_can_appear_at_its_item_level(solved, data):

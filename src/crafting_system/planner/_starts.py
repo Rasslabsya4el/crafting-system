@@ -132,8 +132,8 @@ def _proved(plan: Plan) -> str:
         return ""
     gap = certificate_gap(search)
     if gap is None:
-        return "the crafting cost is the exact cost of the plan found from this start, which is not proved the cheapest"
-    return f"the crafting cost is the exact cost of the plan found from this start, proved at most {certificate_gap_text(gap)} above the cheapest plan from it"
+        return "the crafting cost is the cost of the plan found from this start, which is not proved the cheapest"
+    return f"the crafting cost is the cost of the plan found from this start, proved at most {certificate_gap_text(gap)} above the cheapest plan from it"
 
 
 def plan_with_starts(

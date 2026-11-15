@@ -195,7 +195,7 @@ def test_the_oracle_alone_reads_r05_as_the_rules_do(export):
         resist = ladder(family)
         assert resist[0].level == 84 and oracle.top_tier(resist) == 2 and resist[1].stats[0][1:] == (42, 45)
     # a bench Life craft is not Life T1, at its lowest or its highest roll
-    life_leaf = spec.requirements[2].members[0]
+    life_leaf = spec.requirements[2]  # the Life is asked itself since #895 (it was the first member of "at least 1 of 4")
     for craft in ("EinharMasterIncreasedLife2", "EinharMasterIncreasedLife3"):
         for roll in (g.OMod(craft, (export.mods[craft]["stats"][0]["min"],)), g.OMod(craft, (export.mods[craft]["stats"][0]["max"],))):
             assert not oracle.counts(life_leaf, roll)
