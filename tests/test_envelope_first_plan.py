@@ -86,6 +86,30 @@ def test_a_stop_at_a_gap_from_the_problems_order_returns_that_plan():
     assert result.lower <= 20.0 * (1 + 1e-12)
 
 
+# The same world on a finished bound whose `la` of the reroll is its loose floor, its price (#829: an offer the bound's model left out, carried by its
+# own floor). The problem's `tighten` works out the offer's own floor: Q*(0, 1) = 0.1 + (1 - 1e-6) 20 = 20.09998 and Q*(1, 1) = 10.09999, so 20.05
+# and 10.05 are lower bounds of them, above the craft (10) and the finish (10); the restart at 1 is Q*(1, 0) = 3 + 20, so 23. The first plan settles
+# the least `la` against the next before it takes it: craft, then finish, the optimum (20), not the reroll chain (100,000; R08: 1,062 Chaos against
+# 72.7 before the fix). The rounds ask `tighten` before they build an offer whose `la` is below the best at its state: the reroll is never built.
+
+
+def test_the_first_plan_and_the_rounds_take_the_lower_cost_the_problem_tightens():
+    world = absorbing()
+    asked = []
+
+    def tighten(state, position, above):
+        asked.append((state, position))
+        return {(0, 1): 20.05, (1, 1): 10.05, (1, 0): 23.0}.get((state, position))
+
+    world.tighten = tighten
+    result = Search(world).run()
+    assert result.stats.first_upper == pytest.approx(20.0, rel=1e-9)
+    assert world.asked[:2] == [(0, 2), (1, 3)] and result.stats.seeded == 2
+    assert (0, 1) in asked and (1, 1) in asked and result.stats.tightened >= 2
+    assert (0, 1) not in world.asked and (1, 1) not in world.asked  # never built: its own floor is above the optimum at its state
+    assert result.exact and answer(result) == (pytest.approx(20.0, rel=1e-9), {0: 2, 1: 3})
+
+
 # State 1 of a world where the craft finishes half the time: the problem takes no offer there, so the first plan leaves it to the restart.
 # The first plan: craft at 0 (10, the goal or state 1 half each), restart at 1 (3): U = 10 + (3 + U) / 2, U = 23.
 

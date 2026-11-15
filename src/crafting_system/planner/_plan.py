@@ -596,9 +596,9 @@ def _make_plan(
     solved there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02) and by the object solver below that.
     There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
     `solver="packed"`. The number of offers decides nothing: the fossil sets (B1) take the envelope search too, with or without a budget, each offer
-    carrying its own floor into it (#829; the bound pruning `solve_pruned` and its switch at 40 offers are retired). With `judges_route` (the caller will judge a given route against the plan: `--route`, `benchmark`), "auto" is that
-    older path too, decided before solving: judging a route needs the planner's action at every state the route reaches, and the envelope
-    search by design never decides a state it can prove irrelevant (#535; a route judged without the full walk is #732). "object" never packs; "packed" always walks, and with `MIN_OFFERS` offers or more it solves the offers left after the twins are
+    carrying its own floor into it (#829; the bound pruning `solve_pruned` and its switch at 40 offers are retired). A given route judged against the plan (`judges_route`: `--route`, `benchmark`)
+    changes nothing here: the route is a fixed policy, evaluated exactly on its own reach (`cli._route.evaluate_route`), so it needs neither the
+    walk nor the planner's choice at the states the search proved irrelevant (#829; the part of #732 it covers). "object" never packs; "packed" always walks, and with `MIN_OFFERS` offers or more it solves the offers left after the twins are
     merged (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
     "envelope" is the same search asked for by name: it refuses with `PlanError` an abstraction the bound cannot be built for (#507). It is the
     exact branch-and-bound of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds
@@ -708,13 +708,12 @@ def _make_plan(
     if donated and solver not in ("auto", "object"):
         raise PlanError(f"an offered action takes donors, so the plan is made by the search that holds every item it reaches; `--solver {solver}` does not do that")
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
-    # #535: "auto" is the envelope search wherever its bound can be built, but not for a plan a given route is to be judged against: the
-    # judgement needs the planner's action at every state the route reaches, and the envelope search never decides the states it proves irrelevant.
-    # The number of offers decides nothing (#829): the fossil sets take the envelope search with or without a budget, as every other target does.
-    envelope = solver == "envelope" or (solver == "auto" and refusal is None and not judges_route)
+    # "auto" is the envelope search wherever its bound can be built (#535), a plan a given route is judged against included: the route is evaluated on
+    # its own reach (#829). The number of offers decides nothing (#829): the fossil sets take the envelope search with or without a budget.
+    envelope = solver == "envelope" or (solver == "auto" and refusal is None)
     # why `auto` walks every item instead of searching, said when a net stops that walk before a plan closed (OR-13, #926)
     unbounded = () if refusal is None else refusal_causes(abstraction, player=True) or (refusal,)  # the causes in a player's words, else the refusal's own text
-    walks_because = None if solver != "auto" or envelope or axes else walk_cause(unbounded, judges_route)
+    walks_because = None if solver != "auto" or envelope or axes else walk_cause(unbounded)
     # The forecast of ADR-0023 and its ladder of approximate answers are retired (direction of 2026-11-13) and `auto` never reaches them (#926):
     # under a budget it is the envelope search, or, where that search cannot take the target, the same walk as with no budget, to the run's net.
     # They stand only behind a walk asked for by name, for the tests and measurements of the ladder itself, until #928 deletes them.
@@ -972,13 +971,10 @@ def plan_foresight(
     )  # fmt: skip
 
 
-def walk_cause(unbounded: Sequence[str], judges_route: bool) -> str:
-    """Why `solver="auto"` walks every item the actions can reach instead of running the envelope search (#926): the cause that `make_plan`
-    decided on before solving, in the order it decides: what the search has no lower bound for yet (`refusal_causes`), or a route to judge."""
-    said = "the faster search, which proves its plan against the cheapest possible cost, was not used: "
-    if unbounded:
-        return said + f"it has no such cost yet where {'; '.join(unbounded)}"
-    return said + "a given route is judged against the plan, which needs the planner's choice at every item the route can reach"
+def walk_cause(unbounded: Sequence[str]) -> str:
+    """Why `solver="auto"` walks every item the actions can reach instead of running the envelope search (#926): what the search has no lower
+    bound for yet (`refusal_causes`), the one cause `make_plan` decides on before solving (a route to judge is none since #829)."""
+    return "the faster search, which proves its plan against the cheapest possible cost, was not used: " + f"it has no such cost yet where {'; '.join(unbounded)}"
 
 
 def walk_stop(cause: str | None) -> str:

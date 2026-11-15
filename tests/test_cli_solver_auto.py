@@ -20,7 +20,7 @@ from targets_support import DATA
 from crafting_system.abstraction import Pattern, pattern_refusal
 from crafting_system.actions import OutOfScopeError
 from crafting_system.cli import evaluate_route, load_route, main
-from crafting_system.planner import _plan, _starts
+from crafting_system.planner import _pattern_bound, _plan, _starts
 from crafting_system.planner._envelope import NoPolicy
 from crafting_system.planner._packed import SOLVERS
 from crafting_system.planner._plan import PlanError, make_plan
@@ -164,19 +164,17 @@ def test_a_start_item_that_already_meets_the_target_costs_nothing_under_the_defa
     assert plan.risk is not None and plan.risk.success_probability.value == pytest.approx(1.0) and plan.risk.mean.value == pytest.approx(0.0)
 
 
-def test_with_40_offers_or_more_auto_keeps_the_bound_pruning_until_742(monkeypatch, packed):
-    """#535: on fossil-set worlds the envelope search is 1.2 to 40 times slower than the bound pruning (#696, #742) and refuses R09 (#731), so `auto`
-    keeps the existing switch to the bound pruning at `MIN_OFFERS_TO_PRUNE`; `envelope` by name still searches. Both are exact."""
-    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)  # R12 has 6 offers: they count as many
-    real = _plan.envelope_result
-    monkeypatch.setattr(_plan, "envelope_result", lambda *_a, **_k: pytest.fail("auto searched with 40 offers or more"))
+def test_with_40_offers_or_more_auto_takes_the_envelope_search(monkeypatch, packed):
+    """#829: the number of offers decides nothing. With 40 offers or more (`MIN_OFFERS`: the twins merged, each offer carrying its own floor into
+    the search) and no budget, `auto` is the envelope search to the end, exact, as with a few offers: the bound pruning and its switch are gone."""
+    monkeypatch.setattr(_plan, "MIN_OFFERS", 2)
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 2)  # R12 has 6 offers: they count as many
+    monkeypatch.setattr(_plan, "packed_result", lambda *_a, **_k: pytest.fail("auto walked with 40 offers or more"))
 
     plan = make_plan(DATA, load_target(R12, DATA), price_file())
 
-    assert plan.pruned is not None and plan.packed is None
+    assert plan.search is not None and plan.search.exact
     assert plan.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
-    monkeypatch.setattr(_plan, "envelope_result", real)
-    assert make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", with_risk=False).packed.info["envelope"].exact
 
 
 def test_the_command_has_the_planners_solver_choices_and_auto_by_default(monkeypatch, tmp_path):
@@ -199,22 +197,20 @@ def test_the_command_has_the_planners_solver_choices_and_auto_by_default(monkeyp
 ROUTE = R12.parents[1] / "routes" / "r12-lightning-amulet.yaml"
 
 
-def test_a_plan_a_route_is_judged_against_walks_under_auto_and_judges_the_route_with_no_false_gap(packed):
-    """Option A of #535 (#732 is the route judged without the walk): the envelope search never decides the states it proves irrelevant, so a
-    plan a given route is judged against is made on the walk, decided before solving; the route reads the same as on the packed plan."""
+def test_a_route_is_judged_against_a_plan_of_the_search_on_its_own_reach(packed):
+    """#829 (the part of #732 a guide's route needs): a given route is a fixed policy, evaluated exactly on the states it reaches itself, so the plan it
+    is judged against is the envelope search's under `auto`. The route reads the same against it as against the walked plan: the same gaps, the
+    same exact mean and chance, the same divergences (read on the plan's own states)."""
     judged = make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)
-    route = load_route(ROUTE, judged, DATA)
-
-    assert judged.packed is None or "envelope" not in judged.packed.info
+    assert judged.search is not None and judged.search.exact
     assert judged.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
-    assert evaluate_route(judged, route, DATA).gaps == evaluate_route(packed, load_route(ROUTE, packed, DATA), DATA).gaps
 
-
-def test_a_route_judged_against_an_envelope_plan_is_refused_in_words_not_read_as_gaps():
-    envelope = make_plan(DATA, load_target(R12, DATA), price_file())
-
-    with pytest.raises(PlanError, match="judged against the planner's choice at every state the route reaches"):
-        evaluate_route(envelope, load_route(ROUTE, envelope, DATA), DATA)
+    searched = evaluate_route(judged, load_route(ROUTE, judged, DATA), DATA)
+    walked = evaluate_route(packed, load_route(ROUTE, packed, DATA), DATA)
+    assert searched.gaps == walked.gaps
+    assert searched.risk.mean.value == pytest.approx(walked.risk.mean.value, rel=1e-9)
+    assert searched.risk.success_probability.value == pytest.approx(walked.risk.success_probability.value, rel=1e-9)
+    assert [(d.solver_action, d.route_action) for d in searched.divergences] == [(d.solver_action, d.route_action) for d in walked.divergences]
 
 
 def test_the_command_with_a_route_asks_for_a_plan_a_route_is_judged_against(monkeypatch, tmp_path):

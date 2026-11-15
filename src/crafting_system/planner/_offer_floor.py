@@ -9,7 +9,7 @@ For an offer `a` and a state `s` outside `E` (every necessary leaf of the goal t
 fractured mods of the start (of the item it opens into when the start is an unopened listing, ADR-0064), one use of `a` lands in `E` with chance at most `pbar(a)` and `V*(s') >= rho` for a successor `s'` outside `E`
 with the same shape (the claim and its proof are in `_offer_kinds`: Wald's identity over the number of uses). So, with three classes of states,
 
-    class OUTSIDE (outside E, the start's shape):   Q*(s, a) >= c(a) + (1 - pbar(a)) rho,  V*(s) >= rho,
+    class OUTSIDE (outside E, the start's shape):   Q*(s, a) >= max(c(a) + (1 - pbar(a)) rho, rho),  V*(s) >= rho  (Q* >= V* for any offer, #829),
     class INSIDE  (in E, the start's shape):        Q*(s, a) >= c(a) + (1 - pbar(a)) rho  for an *erasing reroll* `a` (its result does not depend on the state
                                                     but through the flags and the fractured mods, so it lands in E with the same chance as from outside),
                                                     Q*(s, a) >= c(a) for any other offer (a craft from a state in E may stay in E),
@@ -133,6 +133,11 @@ class OfferFloors:
         if klass == UNOPENED:  # only the draw works on a listing; the restart buys it again
             action = entry.priced.offer.action
             return entry.cost if getattr(action, "opens_listing", False) or isinstance(action, BuyStartItem) else math.inf
+        if klass == OUTSIDE:
+            # Q*(s, a) >= V*(s) >= rho for every offer at a state of this class, whatever the offer is: one the bare item refuses (the assumption `rho`
+            # rests on) or one that leaves the shape has a floor of `rho` too, not its bare cost. Without that the state's bound (`rho`) stood above the
+            # least floor of its offers (R12 with the floors on: 8.98 against a refused reforge's 0.75) and the search refused it as inconsistent (#829)
+            return max(entry.cost + float(1 - entry.pbar) * self.rho, self.rho)
         if entry.pbar == ONE or klass == OTHER or (klass == INSIDE and entry.kind != REROLL):
             return entry.cost
         return entry.cost + float(1 - entry.pbar) * self.rho

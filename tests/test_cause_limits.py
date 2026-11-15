@@ -19,7 +19,7 @@ from types import SimpleNamespace
 
 from crafting_system.abstraction import Abstraction, EstimateRefused, Gap, ModelGaps
 from crafting_system.actions import OutOfScopeError
-from crafting_system.planner import _bound_prune, _decide, _plan
+from crafting_system.planner import _decide, _plan
 from crafting_system.planner._limits import SHOWN_CAUSES, limit_document, limit_text, model_gap_limits
 from crafting_system.planner._plan import skipped_level_limits, whole_search_limit
 from crafting_system.solver import ConvergenceError
@@ -110,25 +110,6 @@ def test_the_ladder_keeps_the_developers_text_of_a_skipped_level(approximate):
     assert len(solved.skipped[0]) == 3 and solved.skipped[0][2]
     assert faults_in(limit.reason()) == [] and solved.skipped[0][2] not in limit_text(limit)
     assert limit_document(limit)["detail"] == [solved.skipped[0][2]]
-
-
-def test_the_fall_back_of_the_bound_pruning_carries_the_solvers_text(monkeypatch):
-    real_solve = _bound_prune.solve
-    calls = []
-
-    def failing_once(model, starts):
-        calls.append(1)
-        if len(calls) == 1:
-            raise ConvergenceError(f"{SECRET}: no luck in 3000 sweeps", float("inf"))
-        return real_solve(model, starts)
-
-    monkeypatch.setattr(_plan, "MIN_OFFERS_TO_PRUNE", 2)
-    monkeypatch.setattr(_bound_prune, "solve", failing_once)
-    made = plan_of(solver="object")  # the bound pruning is the object solver's path (#535)
-
-    (limit,) = [each for each in made.limits if each.what == "All the actions were solved"]
-    assert made.pruned.fell_back and "did not settle" in made.pruned.why and SECRET in made.pruned.detail
-    reads_as_words(limit)
 
 
 def test_the_timing_run_carries_the_solvers_text(monkeypatch):

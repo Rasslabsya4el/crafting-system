@@ -62,7 +62,7 @@ from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
-from crafting_system.planner import UNPRICED, PackedPolicy, Plan, PlanError, evaluate_risk, free_action_cost, offer_action
+from crafting_system.planner import UNPRICED, PackedPolicy, Plan, evaluate_risk, free_action_cost, offer_action
 
 from ._reach import policy_states
 
@@ -618,18 +618,14 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     action, built as the solver builds its own (same kernel, same integer weights). A state with no
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
 
-    Raises `PlanError` for a plan made by the envelope search: judging a route needs the planner's action at every state the route reaches,
-    and that search never decides the states it proves irrelevant, so the route would read as gaps there (#535). Such a plan is made with
-    `make_plan(..., judges_route=True)`, which keeps `solver="auto"` on the walk (a route judged without the full walk is #732).
+    A plan of the envelope search holds only the states it could not prove irrelevant (#535), so the route is never read on its graph: it is
+    walked here on its own reach, whatever the plan's solver (#829; a guide's route is a few hundred to a thousand states). The divergences are
+    read where the plan has a choice: on the states of its own policy. A walked plan of a big graph is read on the walked graph (below).
     """
-    if plan.packed is not None and "envelope" in plan.packed.info:
-        raise PlanError(
-            "a given route is judged against the planner's choice at every state the route reaches, and the exact search used for this plan "
-            "looks only at the states that can matter: plan it again with the search that walks every possible item (`--solver packed`)"
-        )
     if plan.donors is not None:  # the route makes second items too: it is read on the product of the target and its donors (#225)
         return _evaluate_route_with_donors(plan, route, data)
-    if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
+    searched = plan.packed is not None and "envelope" in plan.packed.info
+    if isinstance(plan.policy, PackedPolicy) and not searched:  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed
 
         return evaluate_route_packed(plan, route, data)

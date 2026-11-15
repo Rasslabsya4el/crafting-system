@@ -32,7 +32,7 @@ import numpy as np
 
 from crafting_system.abstraction import Abstraction, Goal, integer_weights
 from crafting_system.actions import BLOCKING, ActionError
-from crafting_system.planner._offer_kinds import merge_twins, starting_offers
+from crafting_system.planner._offer_kinds import merge_twins
 from crafting_system.planner._offers import RESTART, BuyStartItem, Offer, PricedOffer, offers_for, price_offers, usable_actions
 from crafting_system.planner._plan import resolve_start_price
 from crafting_system.data import load_game_data
@@ -116,16 +116,14 @@ def build_model(target_path: Path, offers_mode: str, with_restart: bool = True, 
     if offers_mode in ("twins", "start"):
         merged = tuple(merge_twins(data, target.start_item, priced)[0])
         info["after_twins"] = len(merged)
-        priced = merged
-        if offers_mode == "start":
-            priced = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=40))
+        priced = merged  # "start" (the bound pruning's starting offers) is the same since #829 retired that pruning
     elif offers_mode.startswith("plan:"):
         # the offers the exact production plan of ANOTHER target ends up using (e.g. R08 from the empty rare), plus the restart and the Alchemy
         from crafting_system.cli import make_plan
 
         began_plan = time.perf_counter()
         reference = make_plan(data, load_target(Path(offers_mode[5:]), data), prices, budget=None)
-        used = {p.label for p in reference.pruned.used} if reference.pruned else {p.label for p in reference.offers}
+        used = {action.label for action in reference.policy.values()}  # the offers its plan takes
         priced = tuple(p for p in priced if p.label in used | {RESTART, "Orb of Alchemy"})
         info["reference_plan_mean_remaining"] = reference.mean_remaining
         info["reference_plan_seconds"] = round(time.perf_counter() - began_plan, 1)

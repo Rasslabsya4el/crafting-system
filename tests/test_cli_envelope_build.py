@@ -31,8 +31,7 @@ from crafting_system.planner import _envelope_plan
 from crafting_system.planner._envelope_plan import CraftingProblem, build_stop, certificate_text, envelope_limits, envelope_result
 from crafting_system.planner._limits import limit_text
 from crafting_system.actions import NotApplicableError, OutOfScopeError
-from crafting_system.planner._bound_prune import solve_pruned
-from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
+from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, UNOPENED, OfferFloors
 from crafting_system.actions import unopened_listing
 from crafting_system.planner._offers import BuyStartItem, listing_draw
 from crafting_system.solver import ConvergenceError
@@ -177,24 +176,16 @@ def floors_on(monkeypatch):
     monkeypatch.setattr(OfferFloors, "initial", lambda self: [0, 6])
 
 
-def test_the_model_on_part_of_the_offers_is_a_lower_bound_and_equals_the_whole_at_the_start(world, floors_on):
+def test_the_model_on_part_of_the_offers_is_one_build_and_a_lower_bound(world, floors_on):
+    """One build and one solve on the offers `initial` names (#829: no growth rounds); the floor action stands for all the others. It stays a lower
+    bound, strictly weaker here than the model of every offer: the crafts are carried by their floor."""
     ab, start, offers, _, exact, whole = world
     fresh = abstraction()
-    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
-    assert bound.complete and bound.floors is not None
-    assert bound.rounds > 1 and len(bound.positions) > 2  # the floor action was the cheapest at some key, so offers joined the model
-    assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)  # the floor action is the cheapest nowhere at the end
-    assert_lower_bound(bound, ab, exact)
-
-
-def test_the_floor_action_alone_is_a_lower_bound_whatever_part_of_the_offers_the_model_holds(world, floors_on, monkeypatch):
-    """Cut the growth off: the model holds only its first offers, and the floor action stands for all the others. It must stay a lower bound (weaker)."""
-    ab, start, offers, _, exact, whole = world
-    monkeypatch.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: ([], {}))
-    fresh = abstraction()
-    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
-    assert bound.rounds == 1 and bound.positions == (0, 6)
-    assert bound.start_value < whole.start_value  # strictly weaker: the crafts are carried by their floor
+    said = []
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
+    assert bound.complete and bound.floors is not None and bound.positions == (0, 6)
+    assert sum(line.startswith("model: solving") for line in said) == 1
+    assert bound.start_value < whole.start_value
     assert_lower_bound(bound, ab, exact)
 
 
@@ -243,22 +234,6 @@ def test_a_model_grown_by_offers_is_the_model_built_on_all_of_them_at_once(world
     assert len(first.keys) <= len(grown.keys) and first.stopped is None
     assert all(len(a) <= len(b) for a, b in zip(first.actions, grown.actions))  # a snapshot stays what it was when the builder went on
     assert grown.stats.kernels == whole.stats.kernels  # each distinct kernel once, however the offers came
-
-
-def test_a_round_stopped_while_offers_join_leaves_the_round_before_as_the_bound(world, floors_on, monkeypatch):
-    ab, start, offers, _, exact, whole = world
-    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
-    asked = []
-    with monkeypatch.context() as inner:
-        inner.setattr(_pattern_bound, "_binding", lambda *args, **kwargs: ([], {}))  # no growth: the questions of the first round alone
-        fresh = abstraction()
-        pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=lambda: asked.append(1) or None)
-    first_round = len(asked)
-    fresh = abstraction()
-    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=counting_stop(first_round + 4))
-    assert bound.stopped == "the test net" and bound.phase == "growth"
-    assert bound.rounds == 1 and bound.positions == (0, 6) and bound.model.stopped is None and all(bound.model.expanded)
-    assert_lower_bound(bound, ab, exact)
 
 
 def test_the_net_of_the_search_is_asked_inside_a_round_that_expands_many_states(world, monkeypatch):
@@ -470,15 +445,6 @@ def test_the_envelope_search_from_an_unopened_start_with_the_floors_gives_the_fu
     assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE) == pytest.approx(exact[start], rel=TOLERANCE)
 
 
-@pytest.mark.parametrize("restart_price", [3.0, 0.05])
-def test_the_pruned_walk_from_an_unopened_start_gives_the_exact_mean(restart_price):
-    """The bound pruning shares `through_listing` with the floors: from a listing, with a dear or a cheap restart, its certificate holds (#626)."""
-    _, start, opened, offers, exact = listing_world(restart_price)
-    fresh = abstraction()
-    pruned = solve_pruned(fresh, fresh.compress(unopened_listing(DATA, opened)), offers, opened, min_offers=0, shape=fresh.compress(opened))
-    assert pruned.solution.values[start] == pytest.approx(exact[start], rel=TOLERANCE)
-
-
 def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):
     _, _, offers, _, _, _ = world
     fresh = abstraction()
@@ -492,6 +458,31 @@ def test_a_craft_has_no_floor_above_its_cost_inside_e_but_a_reroll_has(world):
     assert floors.lower(position, INSIDE) == floors.lower(position, OUTSIDE) > reroll.cost
     assert floors.lower(craft, INSIDE) == floors.entries[craft].cost < floors.lower(craft, OUTSIDE)
     assert floors.lower(position, OTHER) == reroll.cost
+
+
+def test_tighten_raises_a_reroll_a_level_at_a_time_only_until_its_floor_is_above_the_figure_asked(world):
+    """`OfferFloors.tighten` (#829): a reroll's floor in a class of the start's shape is raised from its level, one level at a time, and stops at the
+    first floor above the figure asked (or at the exact chance, level 2); a craft, and any offer in a class of another shape, keeps its floor."""
+    _, _, offers, _, _, _ = world
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    exact = OfferFloors(fresh, begin, offers, START_ITEM)
+    reroll = next(p for p, e in enumerate(exact.entries) if e.kind == "reroll")  # the Chaos Orb, at level 2 already (`rho` worked it out)
+    craft = next(p for p, e in enumerate(exact.entries) if e.kind == "craft")
+    assert exact.entries[reroll].level == 2
+    top = exact.lower(reroll, OUTSIDE)
+
+    floors = OfferFloors(abstraction(), begin, offers, START_ITEM)
+    entry = floors.entries[reroll]
+    entry.level, entry.pbar = 0, Fraction(1)  # back to the loose floor, its price: a reroll `rho` did not need (R08: most of 3,938 sets)
+    loose = floors.lower(reroll, OUTSIDE)
+    assert loose < top
+    assert floors.tighten(reroll, OUTSIDE, loose / 2) == loose and entry.level == 0  # already above: nothing worked out
+    assert floors.tighten(reroll, OTHER, math.inf) == entry.cost and entry.level == 0  # another shape: the floor is the cost
+    assert floors.tighten(reroll, OUTSIDE, math.inf) == pytest.approx(top, rel=1e-12) and entry.level == 2  # never above: the exact chance
+    assert floors.tighten(reroll, OUTSIDE, math.inf) == pytest.approx(top, rel=1e-12)  # worked out once: the same floor for every later state
+    assert floors.tighten(reroll, INSIDE, math.inf) == floors.lower(reroll, INSIDE)  # the chance is the offer's own: the other class reads it
+    assert floors.tighten(craft, OUTSIDE, math.inf) == floors.lower(craft, OUTSIDE)
 
 
 def test_the_search_primes_the_offers_it_is_about_to_build_and_the_answer_does_not_change(world, monkeypatch):
@@ -599,42 +590,3 @@ def test_the_net_ends_the_offers_floors_and_the_bound_is_the_cheapest_offer_at_e
     with pytest.raises(NoPolicy, match="while working out the cheapest possible cost of each action"):
         fresh = abstraction()
         envelope_result(fresh, fresh.compress(START_ITEM), build_world_offers(offers), net=Net(states=12), bound=bound)
-
-
-def test_the_net_ends_the_examination_of_the_offers_outside_the_model_and_the_round_stands(world, floors_on, monkeypatch):
-    ab, start, offers, _, exact, _ = world
-
-    def stopped(self, position, limits):
-        raise FloorsStopped("the test net")
-
-    monkeypatch.setattr(OfferFloors, "needed", stopped)
-    said = []
-    fresh = abstraction()
-    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
-    assert bound.phase == "growth" and bound.stopped == "the test net" and bound.rounds == 1 and bound.positions == (0, 6)
-    assert any(line.startswith("binding: examining") for line in said)
-    assert_lower_bound(bound, ab, exact)
-
-
-def test_the_net_is_asked_before_the_solve_of_a_round_that_grew_and_the_round_before_stands(world, floors_on, monkeypatch):
-    ab, start, offers, _, exact, _ = world
-    packed, solved = [], []
-    real_pack, real_solve = _pattern_bound.pack_pattern_model, _pattern_bound.solve_packed
-
-    def pack(*args, **kwargs):
-        packed.append(1)
-        return real_pack(*args, **kwargs)
-
-    def solve(*args, **kwargs):
-        solved.append(1)
-        return real_solve(*args, **kwargs)
-
-    monkeypatch.setattr(_pattern_bound, "pack_pattern_model", pack)
-    monkeypatch.setattr(_pattern_bound, "solve_packed", solve)
-    said = []
-    fresh = abstraction()
-    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append, stop=lambda: "the test net" if len(packed) >= 2 else None)
-    assert len(packed) == 2 and len(solved) == 1  # the second round was packed, and the net was reached before its solve
-    assert bound.phase == "growth" and bound.stopped == "the test net" and bound.rounds == 1
-    assert any("before the solve" in line for line in said) and any(line.startswith("model 1: solving the count") for line in said)
-    assert_lower_bound(bound, ab, exact)

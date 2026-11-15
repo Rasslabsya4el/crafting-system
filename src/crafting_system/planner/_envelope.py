@@ -120,9 +120,10 @@ not the limit of the arithmetic.
 """
 
 import bisect
+import itertools
 import math
 import time
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -591,21 +592,45 @@ class Search[S]:
             self.p.release()
         return None
 
-    def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> list[int]:
+    def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> Iterable[int]:
         """The offers the first plan tries at node `i`, in order (the first the game allows is realized): the incumbent's; else the problem's
         `first_choice` where it gives one, then, where no restart can stand in for it, the rest by least `la`; else every offer by least `la`."""
         state = self.states[i]
         if self.incumbent is not None:
             return list(self.incumbent(state))
-        by_la = [position for _, position in reversed(self.cands[i])]  # the least `la` is last in `cands`
         chosen = choose(state) if choose is not None else None
         if chosen is None:
-            return by_la
+            return self._by_la(i)
         chosen = list(chosen)
         if self.p.restart is not None and i != 0:
             return chosen  # none the problem would take: the state is left to the restart of the upper graph (a tip of the first plan)
         taken = set(chosen)
-        return chosen + [position for position in by_la if position not in taken]
+        return itertools.chain(chosen, (position for position in self._by_la(i) if position not in taken))
+
+    def _by_la(self, i: int) -> Iterator[int]:
+        """The offers of node `i` by least `la`, each offer's `la` first raised by the problem's `tighten` against the next one's (#829), lazily: the
+        first plan takes the first offer the game allows, so in the main only one offer is settled.
+
+        Without that, the least `la` of an offer the bound left out of its model is its loose floor (a reroll: about its price), and the first plan takes
+        the cheapest reroll everywhere, a near-absorbing chain (R08: 1,062 Chaos where the optimum is 72.7). The offer at the end of `cands` is raised
+        until its floor is above the next one's `la` or is its own exact floor; one raised above the next is re-filed and the next is looked at. The
+        raised `la` stays in `cands`: it is a lower bound all the same, so the search proves the same figures. The caller removes from `cands` the
+        offer it was given (`_seed`); one it left there is removed here before the next is settled."""
+        cands = self.cands[i]
+        tighten = getattr(self.p, "tighten", None)
+        while cands:
+            entry = cands[-1]
+            la, position = entry
+            if tighten is not None and len(cands) > 1:
+                raised = tighten(self.states[i], position, cands[-2][0])
+                if raised is not None and (raised := raised * (1.0 - SLACK)) > la:
+                    cands.pop()
+                    bisect.insort(cands, (raised, position), key=lambda c: -c[0])  # `cands` holds the least `la` last
+                    self.stats.tightened += 1
+                    continue  # the same offer again when it is still the least, now settled against the next
+            yield position
+            if cands and cands[-1] is entry:
+                cands.pop()
 
     # ---- the graphs ---------------------------------------------------------------------------------------------
 
