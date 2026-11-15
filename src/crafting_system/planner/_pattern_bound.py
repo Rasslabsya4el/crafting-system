@@ -170,6 +170,8 @@ def pattern_lower_bound(
     try:
         solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
     except ConvergenceError:
+        if refuse_above == math.inf:
+            raise  # nothing looser to ask for
         # A model of very many steps (divine-roll-limits/large, #830: 2,917 keys whose certified error is 0.577 of the value): the bound is the
         # value lowered by whatever error the solver does certify (`PatternBound.lower`, 0 when it certifies none), a weaker bound and still a
         # lower one. Refusing it refused the whole target, where OR-33 wants a plan with its gap; the search's own figures then say how far it is.

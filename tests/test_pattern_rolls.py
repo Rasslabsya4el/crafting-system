@@ -21,6 +21,7 @@ import dataclasses
 import math
 import random
 
+import numpy as np
 import pytest
 from abstraction_pool import CRAFTED, DAMAGE_1, DAMAGE_2, LEVEL, LIFE_1, MANA_1
 from abstraction_rolls_oracle import TINY, rolled, tiny_item
@@ -37,7 +38,7 @@ from crafting_system.cli import Offer
 from crafting_system.items import Rarity, Side
 from crafting_system.planner._envelope_plan import envelope_result
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
-from crafting_system.planner import _pattern_bound
+from crafting_system.planner import _envelope, _pattern_bound
 from crafting_system.planner._pattern_bound import pack_pattern_model
 from crafting_system.solver import ConvergenceError, solve_packed
 
@@ -189,6 +190,30 @@ def test_a_bound_the_solver_cannot_certify_is_lowered_by_its_error_not_refused(m
     result = envelope_result(ab, start, priced_offers(), bound=bound)
     assert result.info["envelope"].exact and result.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
     assert _pattern_bound.lowering(0.25) == 0.75 and _pattern_bound.lowering(1.5) == 0.0 == _pattern_bound.lowering(math.inf)
+
+
+@pytest.mark.parametrize("error", [0.2, 0.5, 0.6, 0.9])
+def test_a_bound_whose_values_are_truly_off_by_its_error_passes_the_searchs_guard(monkeypatch, error):
+    """The model's values off by `error` either way (here: above the exact ones at every other key and below them at the rest, as a certificate
+    allows) and lowered by it can stand above a state's offers by up to `2e / (1 - e)` (`_envelope.slack_of`; the guard allowed `3e`, too little
+    past `e = 1/3`). The search on such a bound still gives the exact answer. This world does not reach the worst case, so it passes with `3e` too:
+    the formula is checked by its own line below."""
+    real = _pattern_bound.solve_packed
+
+    def high(graph, progress=None, refuse_above=None):
+        solved = real(graph, progress=progress)
+        value = np.asarray(solved.value, dtype=np.float64).copy()
+        value[0::2] *= 1 + error
+        value[1::2] *= 1 - error
+        return dataclasses.replace(solved, value=value, error_bound=error)
+
+    monkeypatch.setattr(_pattern_bound, "solve_packed", high)
+    ab = abstraction("life")
+    start = ab.compress(START)
+    exact = exact_values(ab, start, pattern_offers_of())[start]
+    result = envelope_result(ab, start, priced_offers())
+    assert result.info["envelope"].exact and result.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
+    assert _envelope.slack_of(error) == pytest.approx(2 * error / (1 - error)) and _envelope.slack_of(1.0) == math.inf
 
 
 @pytest.mark.parametrize("goal", CASES)

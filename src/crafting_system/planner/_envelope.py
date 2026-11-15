@@ -40,7 +40,8 @@ be unsolvable (an improper policy, ticket #539), so the search checks both as it
 
 * when a state is expanded, its bound must not be above the least `la` of its offers by more than `CONSISTENCY_LIMIT` (the certified error that the bound's
   own solve may leave in its values, at most 1e-6; a bound a search with a gap took with a larger certified error, `Problem.bound_error`, is allowed
-  three times that error on top, since a bound lowered by `e` can stand above its offers by `(1 + e) / (1 - e)`, #867), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
+  `2e / (1 - e)` on top (`slack_of`), since a bound lowered by `e` can stand above its offers by `(1 + e) / (1 - e)`, #867; no limit for `e >= 1`, whose
+  values are 0, #830), nor by more than that share of the root's bound in absolute terms (a value near 0 carries rounding, not a
   relative error);
 * after each round, `L(root)` must not have fallen by more than `FALL_LIMIT` (the solver's own rounding is far below it; two rounds certified to `e1` and `e2` with one of
   them above 1e-6 may differ by `e1 + e2` more, and a bound taken with an error above 1e-6 may fall by its slack of three times that error, #867); `SearchStats.largest_fall` is the
@@ -408,7 +409,7 @@ class Search[S]:
         self._last_root: float | None = None
         self._last_error = 0.0  # the certified error of the solve that gave `_last_root` (0 for the start's own bound)
         bound_error = float(getattr(problem, "bound_error", 0.0))  # the certified error the bound's values were lowered by, when the problem says it
-        self.bound_slack = 3.0 * bound_error if bound_error > ACCEPT_BOUND else 0.0  # (1 + e) / (1 - e) - 1 < 3 e: how far a bound lowered by `e` can stand above its offers
+        self.bound_slack = slack_of(bound_error) if bound_error > ACCEPT_BOUND else 0.0  # how far a bound lowered by `e` can stand above its offers
         self.consistency = CONSISTENCY_LIMIT + self.bound_slack
         self.intern(problem.start)
 
@@ -478,7 +479,7 @@ class Search[S]:
     def _consistent(self, i: int, least: float) -> None:
         """Raise `BoundError` when the bound of node `i` is above `least`, the least lower bound of its offers (a consistent bound is at most that)."""
         bound = float(self.lb[i])
-        if bound > least * (1.0 + self.consistency) + self.consistency * float(self.lb[0]):  # the last term: values near 0 carry rounding, not a relative error
+        if math.isfinite(self.consistency) and bound > least * (1.0 + self.consistency) + self.consistency * float(self.lb[0]):  # the last term: values near 0 carry rounding, not a relative error
             raise BoundError(
                 f"the lower bound is not consistent: it puts the cost of a state at {bound:,.6g}, yet no action there costs less than {least:,.6g} even "
                 "at its best case, which a lower bound never does: it cannot be trusted for a cut"
@@ -982,6 +983,13 @@ class Search[S]:
             )
         self._stand(lower, began)
         return SearchResult(self.states, self.index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None)
+
+
+def slack_of(error: float) -> float:
+    """How far, relative to its offers, a bound whose values were lowered by a certified relative `error` can stand above them: `(1 + e) / (1 - e) - 1
+    = 2e / (1 - e)` (the values off by `e` either way), and no limit for an error of 1 or more (the values are then 0, #830). It was `3e`, which holds
+    only below `e = 1/3`; divine-roll-limits/large's bound is certified to 0.577."""
+    return 2.0 * error / (1.0 - error) if error < 1.0 else math.inf
 
 
 def figure_error(gap: float, gap_after: float | None) -> float:
