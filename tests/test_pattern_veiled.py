@@ -33,7 +33,7 @@ from veiled_support import SPEED
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted, pattern_refusal
 from crafting_system.abstraction._kinds import UNVEILED_PREFIX
-from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
+from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, _refused_by_key, build_pattern_model
 from crafting_system.actions import ActionError, AnnulmentOrb, ExaltedOrb, Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb
 from crafting_system.cli import Offer
 from crafting_system.planner._envelope_plan import envelope_result
@@ -153,6 +153,9 @@ def test_a_family_only_the_veiled_actions_read_is_pure_junk_and_told_apart_only_
     assert all(pattern.named_of(action, plain) == frozenset() for action in (*VEILED,))
     veil = pattern.key(ab.compress(amulet(holder(SUF), rolled(RESIST_2))))
     assert pattern.named_of(UNVEIL, veil) == universe.folded and pattern.named_of(VEILED_EXALT, veil) == frozenset()
+    # an action that needs the placeholder is refused by a key without it, and no member is made for it there
+    assert all(_refused_by_key(pattern, action, plain) for action in (UNVEIL, *PICKS)) and not _refused_by_key(pattern, VEILED_EXALT, plain)
+    assert not any(_refused_by_key(pattern, action, veil) for action in (UNVEIL, *PICKS))
     offered = ab.compress(amulet(holder(SUF), rolled(RESIST_2), veil_offer=(SPEED,)))
     speed_families = frozenset(DATA.mods[SPEED].families)
     assert all(pattern.named_of(pick, pattern.key(offered)) == speed_families & universe.folded for pick in PICKS)

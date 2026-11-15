@@ -128,7 +128,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from fractions import Fraction
-from functools import reduce
+from functools import cache, reduce
 from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
@@ -323,7 +323,10 @@ def _placeholder_families(data) -> frozenset[str]:
     return frozenset(family for mod in data.mods.values() if mod.domain == VEILED_DOMAIN for family in mod.families)
 
 
+@cache
 def _tagset(kind: str) -> tuple:
+    """The protected tags of a kind, sorted: the class of a pure junk slot (asked for each slot of each multiset a member enumeration tries: 39 M
+    times in 20 minutes of R07 before #828, so kept)."""
     return tuple(sorted(kind_tags(kind)))
 
 
@@ -1045,7 +1048,7 @@ class PatternBuilder:
         """
         requests = []
         for offer in self.offers[lo:hi]:
-            if offer.action is None or _refused_by_flags(offer.action, key):
+            if offer.action is None or _refused_by_key(self.pattern, offer.action, key):
                 continue
             policy = self.pattern.policy(offer.action, key)
             members = by_mode.get(policy)
@@ -1070,7 +1073,7 @@ class PatternBuilder:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
                 continue
-            if _refused_by_flags(offer.action, key):
+            if _refused_by_key(pattern, offer.action, key):
                 continue
             policy = pattern.policy(offer.action, key)
             members = by_mode.get(policy)
@@ -1117,14 +1120,18 @@ class PatternBuilder:
         self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
 
 
-def _refused_by_flags(action: Action, key: PatternKey) -> bool:
-    """Whether the game refuses `action` at every member of `key` by the key's flags alone: the draw of a bought listing's mods works only on the
-    unopened listing and every other action only on an opened item (`Abstraction._prepare`), and whether the item is unopened is a flag of the key.
+def _refused_by_key(pattern: Pattern, action: Action, key: PatternKey) -> bool:
+    """Whether the game refuses `action` at every member of `key` by the key alone: the draw of a bought listing's mods works only on the
+    unopened listing and every other action only on an opened item (`Abstraction._prepare`), and whether the item is unopened is a flag of the key;
+    an action that needs the veiled placeholder (`Reads.needs_veiled`: an unveil, a pick) is refused at a key that does not hold it, and the
+    placeholder is in the key (`PatternKey.veiled`, #828).
 
     No member is made for such an offer: the draw reads every family, so it made them all at every key (#830: 99,272 of the 103,250 pairs of
-    divine-roll-limits/medium).
+    divine-roll-limits/medium); the unveil and the three picks were asked at every member of every key (#828: 98,572 times each on R07).
     """
-    return bool(getattr(action, "opens_listing", False)) != bool(getattr(key.flags, "unopened", False))
+    if bool(getattr(action, "opens_listing", False)) != bool(getattr(key.flags, "unopened", False)):
+        return True
+    return pattern.reads(action).needs_veiled and not pattern.holds_placeholder(key)
 
 
 class _Stopped(Exception):
