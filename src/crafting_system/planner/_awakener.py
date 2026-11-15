@@ -25,8 +25,10 @@ target's search (and, for a check, the full walk) sees an ordinary action with a
   the bound of the whole. `tests/test_awakener_search.py` checks it against the exact product of ADR-0022 (`solver.Acquisition`) on a small pool.
 * **The least fixed point.** A donor never takes an Awakener's Orb: the orb's result holds two influences and the want holds one, and no offered
   action removes an influence, so no donor's plan reads a donor's value and the system of ADR-0022 is solved in one pass, donors first.
-* **Where the effort goes.** The donors are searched exactly (no stop at a gap): a donor is one wanted mod on one base, so its search is small,
-  and an exact donor leaves the whole gap to the target. A net that stops a donor's search leaves its `[lower, upper]`, and `r` carries it.
+* **Where the effort goes.** A donor's search stops as the target's does (`_plan.search_gap`): exact under the plan's aim, at a proved gap past
+  it, and each donor gets an equal share of the time left with the target (`_plan.search_net`), so the donors never leave the target nothing
+  (OR-33). A donor stopped at a gap or a net leaves its `[lower, upper]`, and `r` carries it into the bound of the whole. Effort is not yet
+  moved between the donors and the target by their share of the gap (#832's "refinement"; filed as its own ticket).
 
 Only donors whose mod the target names are offered (`_offers`): a donor mod the target does not ask for gives the item nothing it wants.
 """
@@ -79,7 +81,8 @@ def donor_abstraction(target_abstraction: Abstraction, action: AwakenersOrb) -> 
     ab = target_abstraction
     goal = Goal((Wanted(frozenset({action.donor_mod})),))
     return Abstraction(
-        ab.data, goal, ab.base_id, ab.item_level, ab._actions, metamods=ab.models_metamods, enchantment=ab.enchantment, allow_inputs=False
+        ab.data, goal, ab.base_id, ab.item_level, ab._actions, metamods=ab.models_metamods, enchantment=ab.enchantment, allow_inputs=False,
+        weights=ab._weights,
     )
 
 
@@ -91,9 +94,12 @@ def solve_donor(
     net=None,
     tolerance: float = 1e-10,
     progress: Callable[[str], None] | None = None,
+    gap: float = 0.0,
+    gap_after: float | None = None,
 ) -> tuple[Donor, object]:
-    """Search the donor of `action` exactly with the offers of the target (the Awakener's Orbs and the target's restart left out); returns the
-    `Donor` and the search's `PackedResult`. Raises what `envelope_result` raises (`NoPolicy` when no donor plan reaches the want)."""
+    """Search the donor of `action` with the offers of the target (the Awakener's Orbs and the target's restart left out); returns the `Donor`
+    and the search's `PackedResult`. Exact unless `gap`/`gap_after` (the target's stop, `envelope_result`) or `net` stops it. Raises what
+    `envelope_result` raises (`NoPolicy` when no donor plan reaches the want, or the net stopped it before one)."""
     from ._envelope_plan import envelope_result
 
     import time
@@ -106,13 +112,47 @@ def solve_donor(
     restart = PricedOffer(Offer(RESTART, BuyStartItem(need.start), {}, shares=False), donor_base_cost(priced), ())
     offers = (*(p for p in priced if not isinstance(p.offer.action, (AwakenersOrb, BuyStartItem)) and _applies_to_donors(p)), restart)
     packed = envelope_result(
-        ab, start, offers, net=net, tolerance=tolerance, progress=progress, goal=lambda state: ab.donor_key(state, action) == want
+        ab, start, offers, net=net, tolerance=tolerance, progress=progress, gap=gap, gap_after=gap_after,
+        goal=lambda state: ab.donor_key(state, action) == want,
     )  # fmt: skip
     info = packed.info["envelope"]
     upper = float(packed.solution.values[start])
     lower = upper if info.exact else min(float(info.lower) * (1.0 - _error(info)), upper)
     donor = Donor(action, lower, upper, bool(info.exact), info.stopped, len(packed.solution.policy), time.perf_counter() - began)
     return donor, packed
+
+
+def solve_donors(
+    target_abstraction: Abstraction,
+    awakened: Sequence[PricedOffer],
+    priced: Sequence[PricedOffer],
+    *,
+    net: Callable[[int], object] | None = None,
+    gap: float = 0.0,
+    gap_after: float | None = None,
+) -> tuple[tuple[Donor, ...], tuple[Limit, ...]]:
+    """Each orb's donor by `solve_donor`; an orb whose donor no plan makes is left out and the plan says why (`no_donor_limit`, OR-13).
+
+    `net(searches)` is the net of a donor's search when `searches` searches are still to run, the target's included (`_plan.search_net`: an
+    equal share of the time left, so the donors never leave the target nothing, OR-33); `gap` and `gap_after` are the target's stop (`search_gap`)."""
+    from crafting_system.actions import NotApplicableError, OutOfScopeError
+    from crafting_system.solver import ConvergenceError
+
+    from ._envelope import NoPolicy
+    from ._envelope_plan import BoundError
+
+    donors, left_out = [], []
+    for done, orb in enumerate(awakened):
+        searches = len(awakened) - done + 1
+        try:
+            donor, _ = solve_donor(
+                target_abstraction, orb.offer.action, priced, net=None if net is None else net(searches), gap=gap, gap_after=gap_after
+            )
+        except (NoPolicy, BoundError, ConvergenceError, OutOfScopeError, NotApplicableError) as error:  # either family: the orb is left out, said
+            left_out.append(no_donor_limit(orb.label, str(error)))
+            continue
+        donors.append(donor)
+    return tuple(donors), tuple(left_out)
 
 
 def _error(info) -> float:
@@ -151,18 +191,25 @@ def whole_lower(lower: float, priced: Sequence[PricedOffer], donors: Sequence[Do
 
 def no_donor_limit(label: str, why: str) -> Limit:
     """An Awakener's Orb left out because no plan makes its donor (OR-13)."""
-    return Limit(CONSUMES, "An Awakener's Orb is not offered", f"{label}: no plan of the offered actions makes its second item ({why})", "The plan is the cheapest without it.")
+    return Limit(
+        CONSUMES,
+        "An Awakener's Orb is not offered",
+        f"{label}: no plan of the offered actions makes its second item ({why})",
+        **claim("the plans without this Awakener's Orb", "A plan with it could be cheaper."),
+    )
 
 
-def donor_limits(donors: Sequence[Donor]) -> tuple[Limit, ...]:
-    """What a plan with Awakener's Orbs says (OR-13): the donor's base is a stand-in price, the donors are the target's own mods, how a donor
-    is made is not drawn, and a donor whose search a net stopped carries its gap into the plan's."""
+def donor_limits(donors: Sequence[Donor], stand_in: float) -> tuple[Limit, ...]:
+    """What a plan with Awakener's Orbs says (OR-13): the donor's base has a stand-in price (`stand_in`, `donor_base_cost`), the donors are the
+    target's own mods, how a donor is made is not drawn, and a donor whose search a net stopped carries its gap into the plan's."""
     found = [
         Limit(
             CONSUMES,
-            "A second item's base is not counted",
-            "each Awakener's Orb takes a second item of another influence, made from a Normal base of that influence; the planner does not price that base",
-            "The plan costs at least what it says: each second item it makes adds the price of one influenced Normal base.",
+            "A second item's base is a stand-in price",
+            "each Awakener's Orb takes a second item of another influence, made from a Normal base of that influence; the planner has no price for "
+            f"that base: the first one is not counted and each one bought again is counted at a stand-in of {stand_in:,.2f} Chaos (a tenth of the "
+            "cheapest paid action)",
+            "The plan costs at least what it says less the stand-ins, plus the price of each influenced Normal base it buys.",
         ),
         Limit(
             CONSUMES,

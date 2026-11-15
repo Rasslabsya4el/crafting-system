@@ -1,0 +1,164 @@
+"""The Awakener's Orb in the one envelope search: its donor searched by the same search and folded into the orb's price (ticket #832, ADR-0022, ADR-0032).
+
+On the small ring pool of `test_abstraction_awakener` (four plain mods, the Crusader and the Shaper mods), a Crusader ring that wants a Crusader
+prefix and the Shaper suffix, which only an Awakener's Orb's donor brings:
+
+* the donor's search gives the exact mean of the donor's own graph (every state its offers reach, solved exactly, goal: the want's key);
+* the target's search, with the orb priced at its orb and that mean (`_awakener.fold`), gives the exact value of ADR-0022's product (the target
+  and its donor's acquisition solved together, `solve_with_donors`), to 1e-9;
+* the bound of the whole (`whole_lower`) is at most that value, also when a donor is given a bound below its value;
+* the planner offers only the orbs whose donor the target names, and says what it leaves out (OR-13).
+"""
+
+import dataclasses
+
+import pytest
+from pattern_support import exact_values
+from test_abstraction_awakener import CRUS_CURSE, CRUS_P1, CRUS_P2, DATA, LEVEL, PLAIN_P1, RING, SHAP_S1, ring
+
+from crafting_system.abstraction import Abstraction, Goal, Wanted
+from crafting_system.abstraction._pattern import Pattern, PatternOffer, build_pattern_model
+from crafting_system.actions import AlchemyOrb, AwakenersOrb, ChaosOrb, Reading
+from crafting_system.cli import Offer
+from crafting_system.items import Influence
+from crafting_system.planner._awakener import Donor, donor_abstraction, donor_base_cost, donor_limits, fold, solve_donor, whole_lower
+from crafting_system.planner._donors import solve_with_donors
+from crafting_system.planner._envelope_plan import envelope_result
+from crafting_system.planner._limits import limit_text
+from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
+from crafting_system.planner._pattern_bound import pack_pattern_model
+from crafting_system.solver import solve_packed
+
+TOLERANCE = 1e-9
+CRUSADER, SHAPER = Influence.CRUSADER, Influence.SHAPER
+ORB = AwakenersOrb(RING, LEVEL, SHAPER, SHAP_S1)
+RECEIVER = Reading.of({"awakener.group_conflict": "receiver"})  # the reading the plan answers at (`planned`, ADR-0032 as built #832)
+GOAL = Goal((Wanted(frozenset({CRUS_P1, CRUS_P2})), Wanted(frozenset({SHAP_S1}))))
+START = ring(CRUS_CURSE, PLAIN_P1, influences={CRUSADER})  # no Crusader prefix yet: Chaos Orbs first, and an orb keeps one of two
+PRICES = {"Chaos Orb": (ChaosOrb(), 1.0), "Orb of Alchemy": (AlchemyOrb(), 1.0), "Awakener's Orb": (ORB, 3.0)}
+RESTART_PRICE = 5.0
+
+
+def abstraction() -> Abstraction:
+    return Abstraction(DATA, GOAL, RING, LEVEL, tuple(action for action, _ in PRICES.values()), reading=RECEIVER, allow_inputs=True)
+
+
+def priced() -> list[PricedOffer]:
+    offers = [PricedOffer(Offer(label, action, {label: 1}), cost, ()) for label, (action, cost) in PRICES.items()]
+    return [*offers, PricedOffer(Offer(RESTART, BuyStartItem(START), {}), RESTART_PRICE, ())]
+
+
+class _DonorGoal:
+    """The donor's graph for `exact_values`: the donor abstraction's kernels, its goal the states with the want's key."""
+
+    def __init__(self, ab: Abstraction, want) -> None:
+        self.ab, self.want = ab, want
+        self.kernel = ab.kernel
+
+    def is_goal(self, state) -> bool:
+        return self.ab.donor_key(state, ORB) == self.want
+
+
+@pytest.fixture(scope="module")
+def solved():
+    ab = abstraction()
+    offers = priced()
+    donor, packed = solve_donor(ab, ORB, offers)
+    return ab, offers, donor, packed
+
+
+def test_the_donor_search_gives_the_exact_mean_of_the_donors_graph(solved):
+    ab, offers, donor, packed = solved
+    dab = donor_abstraction(ab, ORB)
+    (need,) = ORB.inputs(DATA)
+    start = dab.compress(need.start)
+    want = dab.donor_key(dab.compress(need.want), ORB)
+    graph = [PatternOffer(label, action, cost) for label, (action, cost) in PRICES.items() if action is not ORB]
+    graph.append(PatternOffer(RESTART, None, donor_base_cost(offers)))  # the donor's restart buys its normal base again
+    exact = exact_values(_DonorGoal(dab, want), start, graph)[start]
+    assert donor.exact and donor.stopped is None
+    assert donor.upper == pytest.approx(exact, rel=TOLERANCE)
+    assert donor.lower == donor.upper
+    assert packed.info["envelope"].lower <= exact * (1 + TOLERANCE)
+
+
+def test_the_target_with_the_folded_orb_gives_the_exact_value_of_the_product(solved):
+    ab, offers, donor, _ = solved
+    start = ab.compress(START)
+    product = solve_with_donors(ab, start, offers, reaches=ab.reaches_donor(ORB))
+    assert product.solution.error_bound < TOLERANCE
+    result = envelope_result(ab, start, fold(offers, [donor]))
+    info = result.info["envelope"]
+    assert info.exact
+    assert result.solution.values[start] == pytest.approx(product.value, rel=TOLERANCE)
+    assert whole_lower(info.lower, offers, [donor]) <= product.value * (1 + TOLERANCE)
+
+
+def test_the_bound_of_the_whole_holds_when_a_donor_is_not_proved(solved):
+    """A donor stopped at a gap: the target's bound at the upper donor price, divided by 1 + r, is still below the product's value."""
+    ab, offers, donor, _ = solved
+    start = ab.compress(START)
+    product = solve_with_donors(ab, start, offers, reaches=ab.reaches_donor(ORB)).value
+    for share in (0.5, 0.1):  # the donor's bound at a share of its value, its plan at 1.5 times
+        loose = dataclasses.replace(donor, lower=donor.upper * share, upper=donor.upper * 1.5, exact=False, stopped="a test's net")
+        result = envelope_result(ab, start, fold(offers, [loose]))
+        bound = whole_lower(result.info["envelope"].lower, offers, [loose])
+        assert bound <= product * (1 + TOLERANCE)
+        assert result.solution.values[start] >= product * (1 - TOLERANCE)  # the plan with the dearer donor costs at least the optimum
+
+
+def test_the_folded_orb_carries_its_donor_as_a_part_and_the_page_says_the_base_is_a_stand_in(solved):
+    _, offers, donor, _ = solved
+    (orb,) = [p for p in fold(offers, [donor]) if p.offer.action == ORB]
+    assert orb.cost == pytest.approx(3.0 + donor.upper)
+    assert orb.parts[-1][0] == "second item" and orb.parts[-1][2] == donor.upper
+    stand_in = donor_base_cost(offers)
+    assert stand_in == pytest.approx(0.1)  # a tenth of the cheapest paid action, the Chaos Orb and the Orb of Alchemy at 1
+    (base,) = [limit for limit in donor_limits([donor], stand_in) if limit.what == "A second item's base is a stand-in price"]
+    assert "stand-in of 0.10 Chaos" in limit_text(base)  # the page's "leaves out" lines are `limit_text` (`cli._route_view`): it says the figure (OR-13)
+    stopped = dataclasses.replace(donor, exact=False, stopped="a test's net", lower=donor.upper / 2)
+    assert "A second item's plan is not proved the cheapest" in [limit.what for limit in donor_limits([stopped], stand_in)]
+
+
+def test_whole_lower_is_the_targets_bound_when_every_donor_is_exact():
+    donor = Donor(ORB, 4.0, 4.0, True, None, 3, 0.0)
+    assert whole_lower(10.0, priced(), [donor]) == 10.0
+    loose = Donor(ORB, 2.0, 4.0, False, "net", 3, 0.0)  # r = (4 - 2) / (3 + 2) = 0.4
+    assert whole_lower(10.0, priced(), [loose]) == pytest.approx(10.0 / 1.4)
+
+
+def test_the_bound_is_a_lower_bound_at_every_state_of_the_targets_exact_graph(solved):
+    """The crafted-pattern bound with the orb at its folded price, at every state the target's offers reach (`Reads.influenced`, `input_mods`)."""
+    ab, offers, donor, _ = solved
+    start = ab.compress(START)
+    folded = fold(offers, [donor])
+    graph = [PatternOffer(p.label, None if isinstance(p.offer.action, BuyStartItem) else p.offer.action, p.cost) for p in folded]
+    exact = exact_values(ab, start, graph)
+    model = build_pattern_model(ab, start, graph)
+    assert model.stopped is None
+    solved_model = solve_packed(pack_pattern_model(model, graph))
+    pattern = Pattern(ab, None, [offer.action for offer in graph if offer.action is not None])
+    for state, value in exact.items():
+        key = pattern.key(state)
+        assert key in model.index, "a state of the exact graph has a key the model never reached"
+        assert float(solved_model.value[model.index[key]]) <= value * (1 + TOLERANCE) + TOLERANCE, (state, value)
+
+
+@pytest.mark.parametrize("error", ["OutOfScopeError", "NotApplicableError", "NoPolicy"])
+def test_an_orb_whose_donor_cannot_be_planned_is_left_out_and_the_plan_says_why(monkeypatch, error):
+    """`solve_donors`' clause (`test_cli_model_gaps.CLAUSES`): a model gap, a game refusal or no policy leaves the orb out with a limit."""
+    import crafting_system.actions as actions
+    from crafting_system.planner import _awakener, _envelope
+
+    raised = {"OutOfScopeError": actions.OutOfScopeError, "NotApplicableError": actions.NotApplicableError, "NoPolicy": _envelope.NoPolicy}[error]
+
+    def refuse(*_args, **_options):
+        raise raised("planted")
+
+    monkeypatch.setattr(_awakener, "solve_donor", refuse)
+    offers = priced()
+    orbs = [p for p in offers if p.offer.action == ORB]
+    donors, left_out = _awakener.solve_donors(abstraction(), orbs, offers)
+    assert donors == ()
+    (limit,) = left_out
+    assert limit.what == "An Awakener's Orb is not offered" and "planted" in limit.why and "Awakener's Orb" in limit.why

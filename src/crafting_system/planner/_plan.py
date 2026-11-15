@@ -25,7 +25,7 @@ from crafting_system import parallel
 from crafting_system.budget import NO_PLAN, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal, refusal_causes
-from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, unopened_listing
+from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile, lock_price, planned_price
@@ -36,7 +36,7 @@ from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
-from ._awakener import Donor, awakener_offers, donor_limits, fold, no_donor_limit, solve_donor, whole_lower
+from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_lower
 from ._axes import axis_what
 from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
@@ -491,14 +491,16 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None) -> Net | None:
-    """The envelope search's net from the run's clock: the time left, and the memory and state nets as they are; None when the run has no net."""
+def search_net(clock: Clock | None, searches: int = 1) -> Net | None:
+    """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
+    Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net."""
     if clock is None:
         return None
     given: Budget = clock.budget
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
-    return Net(seconds=clock.left(), states=given.states, memory_mb=given.memory_mb)
+    left = clock.left()
+    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb)
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
@@ -721,19 +723,12 @@ def _make_plan(
     donors: tuple[Donor, ...] = ()
     unfolded = priced
     if awakened:  # each donor first, by the same search (#832): the orb is then an ordinary offer whatever solver takes the target
-        found = []
-        for orb in awakened:
-            try:
-                donor, _ = solve_donor(abstraction, orb.offer.action, priced, net=search_net(clock))
-            except (NoPolicy, BoundError, ConvergenceError, OutOfScopeError, NotApplicableError) as error:  # no donor plan: the orb is not offered
-                limits += (no_donor_limit(orb.label, str(error)),)
-                continue
-            found.append(donor)
-        donors = tuple(found)
+        gap, gap_after = search_gap(clock)  # a donor stops as the target does: past the aim, at a proved gap; its [lower, upper] goes into `whole_lower`
+        donors, left_out = solve_donors(abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), gap=gap, gap_after=gap_after)
         kept_orbs = {d.action for d in donors}
         priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
-        limits += donor_limits(donors)
-    refusal =pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
+        limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
+    refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # "auto" is the envelope search wherever its bound can be built (#535), a plan a given route is judged against included: the route is evaluated on
     # its own reach (#829), unless the walk below finds the graph too big for that reach to be held as objects. The number of offers decides nothing
     # (#829): the fossil sets take the envelope search with or without a budget.
