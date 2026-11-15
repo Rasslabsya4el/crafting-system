@@ -586,7 +586,7 @@ def _kind_limits(
                 ),
             )
     found += listing_gap_limits(listing_gaps, goal)
-    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner)
+    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner and not entry.player_why)
     if not_built:
         found += (
             Limit(
@@ -594,6 +594,20 @@ def _kind_limits(
                 "Not offered",
                 "methods the planner cannot use yet",
                 labels=not_built,
+                **claim("the methods the planner can use"),
+            ),
+        )
+    stated: dict[str, list[str]] = {}  # a kind with its reason in a player's words is named apart, with that reason (#943, OR-13)
+    for entry in kinds():
+        if not entry.planner and entry.player_why:
+            stated.setdefault(entry.player_why, []).append(kind_title(entry.name))
+    for why, labels in stated.items():
+        found += (
+            Limit(
+                _limits.NOT_BUILT,
+                "Not offered",
+                why,
+                labels=tuple(labels),
                 **claim("the methods the planner can use"),
             ),
         )

@@ -12,6 +12,7 @@ from .contract import Action, Adds, Previewable, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+from .scour import PLAYER_WHY, WHY_NOT_PLANNER
 from .strand_use import SPEND_CHAOS_FAMILY, SpendLaw, StrandUse
 
 __all__ = [
@@ -68,7 +69,7 @@ class AlchemyOrb(Action):
         return Outcomes.reroll(data, item, tag=None, cut=self.cut_of(data, item))
 
 
-@kind("alchemy-orb", order=70, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("alchemy-orb", order=70, planner=False, why_not=WHY_NOT_PLANNER, player_why=PLAYER_WHY)
 def _alchemy_orb(data: GameData, item: Item):
     if item.rarity is Rarity.NORMAL:
         yield AlchemyOrb()
