@@ -325,6 +325,7 @@ class EnvelopeInfo:
     held: bool = False  # a net's stop kept an earlier plan, because the plan in hand could not be solved to a certified cost
     mean_error: float = 0.0  # the certified relative error of `upper`, the mean shown (the final solve's bound): above 1e-6 only for a plan of very many steps (#867)
     proved_upper: float | None = None  # the search's own certified upper figure of the plan returned (its solve's value with its error added), when it is not exact: what its stop compared
+    bound_rounds: int = 1  # models the bound's build solved (more than one when offers joined the model, `_pattern_bound`, #988)
 
 
 def envelope_result(
@@ -414,7 +415,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), stats.tightened,
         result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
-        None if result.exact else result.upper,
+        None if result.exact else result.upper, bound.rounds,
     )  # fmt: skip
     return packed
 
@@ -422,6 +423,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
 BUILD_PHASES = {  # the phase of a stopped build, as a player reads it
     "floors": "working out the cheapest possible cost of each action",
     "model": "counting the kinds of item the crafting can reach",
+    "growth": "adding the actions that matter to that count",
     "solve": "solving that count",
 }
 
