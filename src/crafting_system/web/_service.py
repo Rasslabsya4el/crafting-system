@@ -197,17 +197,20 @@ class Service:
             try:
                 run = self._start_worker(job)
             except Exception as error:  # noqa: BLE001  (a worker that cannot start fails its job, never the dispatcher)
-                self._fail(job.id, f"internal error: the worker did not start: {type(error).__name__}: {error}")
+                if not self._fail(job.id, f"internal error: the worker did not start: {type(error).__name__}: {error}"):
+                    raise  # the job is still queued: the dispatcher waits before it tries again, never spawns in a loop
                 return False
             self._running[job.id] = run
-            self.started += 1
-            self._changed.notify_all()
             try:
                 run.listener.start()  # under the lock, so `close` never finds a run whose listener has not started
             except Exception as error:  # noqa: BLE001  (no thread to read the worker: it is ended and its job failed)
                 del self._running[job.id]
                 _end(run)
-                self._fail(job.id, f"internal error: the worker could not be listened to: {type(error).__name__}: {error}")
+                if not self._fail(job.id, f"internal error: the worker could not be listened to: {type(error).__name__}: {error}"):
+                    raise
+                return False
+            self.started += 1
+            self._changed.notify_all()
         return False
 
     def _start_worker(self, job: JobRecord) -> "_Running":
@@ -232,14 +235,17 @@ class Service:
         run.listener = threading.Thread(target=self._listen, args=(job.id, run), name=f"{self.game}-listen-{job.id}", daemon=True)
         return run
 
-    def _fail(self, job_id: str, error: str) -> None:
-        """Fail a job with `error` and wake the waiters; a store that cannot take even that leaves the job as it is (a restart queues it
-        again), and the fault goes to the log."""
+    def _fail(self, job_id: str, error: str) -> bool:
+        """Fail a job with `error` and wake the waiters; False when the store cannot take even that: the job is left as it is (a restart
+        queues it again), and the fault goes to the log."""
         try:
             self.store.update_job(job_id, state=FAILED, error=error, updated_at=self._now())
+            return True
         except Exception:
             _log.exception("job %s of %s could not be failed with: %s", job_id, self.game, error)
-        self._changed.notify_all()
+            return False
+        finally:
+            self._changed.notify_all()
 
     def _next(self) -> JobRecord | None:
         waiting = [job for job in self.store.jobs_in((QUEUED,)) if job.id not in self._running]

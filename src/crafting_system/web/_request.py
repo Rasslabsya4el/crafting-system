@@ -70,6 +70,15 @@ def _switch(value: object, where: str, default: bool) -> bool:
     return value
 
 
+def _chaos_or_none(value: object, where: str) -> float | None:
+    """A price the user gives: a finite number of Chaos above zero (a price of 0 is never "free", #505), or None to read the snapshot."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not value > 0:
+        raise RequestError(f"{where} must be a number of Chaos above zero, or null to read the price snapshot")
+    return float(value)
+
+
 def parse_request(body: object, game: str, world: World) -> Request:
     """Check `body` against `world` and give the request with its key; raises `RequestError` with what is wrong."""
     top = _object(body, "the request", _TOP_KEYS)
@@ -82,9 +91,7 @@ def parse_request(body: object, game: str, world: World) -> Request:
     settings = _object(top.get("settings"), "settings", _SETTING_KEYS)
     config = world.config
 
-    start_price = settings.get("start_price")
-    if start_price is not None and (isinstance(start_price, bool) or not isinstance(start_price, (int, float)) or not math.isfinite(start_price) or start_price <= 0):
-        raise RequestError("settings.start_price must be a number of Chaos above zero, or null to read the price snapshot")
+    start_price = _chaos_or_none(settings.get("start_price"), "settings.start_price")
     price_source = settings.get("price_source", config.price_source)
     if price_source not in PRICE_SOURCES:
         raise RequestError(f"settings.price_source must be one of {list(PRICE_SOURCES)}")
@@ -100,7 +107,7 @@ def parse_request(body: object, game: str, world: World) -> Request:
             "recipe_starts": _switch(methods.get("recipe_starts"), "methods.recipe_starts", config.recipe_starts),
             "strands": _switch(methods.get("strands"), "methods.strands", config.memory_strands),
         },
-        "settings": {"start_price": None if start_price is None else float(start_price), "price_source": price_source},
+        "settings": {"start_price": start_price, "price_source": price_source},
     }
     keyed = {"game": game, **document, "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version}
     return Request(game, target, document, hashlib.sha256(_canonical(keyed).encode("utf-8")).hexdigest())

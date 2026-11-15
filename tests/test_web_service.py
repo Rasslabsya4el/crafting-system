@@ -331,3 +331,15 @@ def test_the_dispatcher_outlives_a_store_that_fails_to_read_the_queue():
         assert service._dispatcher.is_alive()  # noqa: SLF001
     finally:
         service.close()
+
+
+def test_a_job_the_store_can_neither_start_nor_fail_waits_queued_and_runs_later():
+    store = FailingStore(SqliteStore(":memory:"), "update_job", times=2)  # marking it running fails, and so does failing it
+    service = _service_on(store)
+    try:
+        store.armed = True
+        job = _ends(service, service.submit({"target": r12_target()}).id)
+
+        assert job.state == "done" and store.times == 0 and service.started == 1
+    finally:
+        service.close()
