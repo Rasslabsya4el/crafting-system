@@ -13,7 +13,9 @@ item's mods (a full side, a family already on it) is `outcomes`'s, because the c
 for the start item and the policy then visits many states.
 
 A kind is `planner=False` when the planner cannot use it yet (a reason in `why_not`): it stays in the
-catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out.
+catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out. `why_not` is the developer's
+text; `player_why`, when a kind has one, is the same reason in a player's words, and the answer states it beside the kind
+instead of the general "methods the planner cannot use yet" (`planner/_offers.py`, OR-13; #943).
 
 A kind is `opt_in` when the planner can use it but offers it only when a target names it in `actions:` (the fossil
 sets: 12,696 of them on boots, which a target that is not about fossils must not pay for). `catalog(..., names=None)`
@@ -85,6 +87,7 @@ class Kind:
     reads_item_state_while_not_planner: str = ""
     needs_strands: bool = False
     burns: bool = False
+    player_why: str = field(default="", compare=False)
 
 
 _KINDS: dict[str, Kind] = {}
@@ -141,11 +144,12 @@ def kind(
     reads_item_state_while_not_planner: str = "",
     needs_strands: bool = False,
     burns: bool = False,
+    player_why: str = "",
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands, burns))
+        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands, burns, player_why))
         return members
 
     return decorate

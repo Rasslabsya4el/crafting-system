@@ -46,7 +46,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `bench-craft` | yes |  | r04, r07, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14, r17, r24 |  |  |
 | `remove-crafted-mods` | yes |  | r04, r07, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14, r24 |  |  |
 | `fossil-set` | yes | opt-in | r07, r08, r09 |  |  |
-| `alchemy-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
+| `alchemy-orb` | **no** |  | none | `planner=False`: the offers are listed once, for the start item (`planner/_offers.py` `_listed`), and a kind lists only what fits that item's rarity: on a Rare start the Normal item a Scouring leaves (or the Magic one holding the fractured mod) is offered nothing it takes, so the Scouring would be a dead offer, and the Orb of Alchemy is offered only on a Normal start; both wait for the offers of the item a Scouring leaves (#973, #943) | ACT1-4, PLANNING-2 |
 | `transmutation-orb` | yes |  | r17, v01 |  |  |
 | `alteration-orb` | yes |  | r13, r14, r17, v01 |  |  |
 | `augmentation-orb` | yes |  | r13, r14, r17, v01 |  |  |
@@ -58,7 +58,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `veiled-exalted-orb` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `unveil` | yes | opt-in, reads: any | r07, r24 |  |  |
 | `pick` | yes | opt-in, reads: any | r07, r24 |  |  |
-| `scouring-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
+| `scouring-orb` | **no** |  | none | `planner=False`: the offers are listed once, for the start item (`planner/_offers.py` `_listed`), and a kind lists only what fits that item's rarity: on a Rare start the Normal item a Scouring leaves (or the Magic one holding the fractured mod) is offered nothing it takes, so the Scouring would be a dead offer, and the Orb of Alchemy is offered only on a Normal start; both wait for the offers of the item a Scouring leaves (#973, #943) | ACT1-4, PLANNING-2 |
 | `annulment-orb` | yes | opt-in | r04, r07, r14, r17, r24 |  |  |
 | `fracturing-orb` | yes | opt-in | r04 |  |  |
 | `talisman-fracture` | yes | opt-in | none | an opt-in kind and the target has no `actions:` key (5 of 18 entries); not named in the target's `actions:` (11 of 18 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |

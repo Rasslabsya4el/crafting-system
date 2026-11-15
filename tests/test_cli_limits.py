@@ -87,10 +87,26 @@ def test_k4_the_sentence_of_the_ticket_is_what_the_report_prints():
 
 
 def test_k2_the_kinds_the_planner_cannot_use_yet_are_listed_in_every_answer(plan):
-    cannot = only(plan.limits, "kinds-not-built")
+    cannot = of_kind(plan.limits, "kinds-not-built")
 
-    assert len(cannot.labels) == sum(not entry.planner for entry in kinds())
-    assert {"Alchemy Orb", "Scouring Orb"} <= set(cannot.labels)
+    assert sum(len(limit.labels) for limit in cannot) == sum(not entry.planner for entry in kinds())
+    assert all("cheapest among the methods the planner can use" in limit.guarantee for limit in cannot)
+
+
+def test_k2_the_scouring_and_the_alchemy_orb_are_named_apart_with_their_true_reason_in_player_words(plan):
+    """#943: the two are held back because the offers are listed for the start item only (#973), not for speed; the answer says so."""
+    general, stated = of_kind(plan.limits, "kinds-not-built")
+
+    assert general.why == "methods the planner cannot use yet" and not {"Alchemy Orb", "Scouring Orb"} & set(general.labels)
+    assert stated.labels == ("Alchemy Orb", "Scouring Orb")
+    assert limit_text(stated) == (
+        "Not offered: Alchemy Orb, Scouring Orb (a Scouring leaves a Normal item, or a Magic one with its fractured mod, and the planner does not yet "
+        "offer an Orb of Alchemy or any other action for that item, only for the start item; the two orbs come in together). "
+        "The plan is the cheapest among the methods the planner can use."
+    )
+    assert "pruning" not in stated.why and "#" not in stated.why  # a player's words, no ticket numbers and no speed cut
+    registered = {entry.name: entry for entry in kinds()}
+    assert all("#973" in registered[name].why_not and "pruning" not in registered[name].why_not for name in ("alchemy-orb", "scouring-orb"))
 
 
 def test_g1_k3_k6_the_kinds_that_need_memory_strands_are_one_limit_named_in_player_words(plan):
