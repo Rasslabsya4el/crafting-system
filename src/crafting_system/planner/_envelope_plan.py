@@ -338,7 +338,7 @@ def envelope_result(
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
 
     `gap` and `gap_after` are the stop at a proved gap (OR-32, OR-39, `_envelope`): once `gap_after` seconds of this call have passed (the bound's build
-    counts; the planner passes 0, the stop applies whatever the time), the search ends when its plan is proved to cost at most `gap` more than the
+    counts; the planner passes what is left of the plan's aim, `_plan.search_gap`, #925), the search ends when its plan is proved to cost at most `gap` more than the
     cheapest; `gap` 0 or `gap_after` None is the exact search.
     `watch` is told where the search stands after the first plan and after each round (`_envelope.Standing`: the best plan's cost so far and the
     figure no plan can cost less than).
@@ -451,16 +451,21 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             if info.upper_refused
             else ""
         )
+        proved = certificate_gap(info)  # the gap actually proved (#925): often far below the gap the run allows, and never above it
+        proved = info.within if proved is None else proved
         return (
             Limit(
                 _limits.SOLVE,
                 "The search stopped once the plan was proved close to the cheapest",
                 f"the search stopped by itself, after {info.rounds:,} rounds and {info.expanded:,} states looked at, "
-                f"as soon as its plan was proved to cost at most {certificate_gap_text(info.within)} more than the cheapest possible (the gap this run allows)"
+                f"as soon as its plan was proved to cost at most {certificate_gap_text(proved)} more than the cheapest possible "
+                f"(the gap this run allows is {certificate_gap_text(info.within)})"
                 + (", buying the start item again wherever it had not looked" if info.restarts else "")
                 + waited,
-                f"The plan is {_limits.WITHIN_GAP}: it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is the average of "
-                "the plan shown itself, not an estimate of the cheapest. " + mean_error_text(info) + certificate_text(info),
+                f"The plan is {_limits.WITHIN_GAP}, at most {certificate_gap_text(proved)} above it: it costs {info.upper:,.2f} Chaos on average "
+                "after the start item, and that figure is the average of the plan shown itself, not an estimate of the cheapest. "
+                + mean_error_text(info)
+                + certificate_text(info),
             ),
         )
     return (
