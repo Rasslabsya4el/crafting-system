@@ -1,0 +1,6 @@
+r10 70 --seconds 1500
+r10 75 --seconds 1500
+family divine-roll-limits/small
+family divine-roll-limits/medium
+family divine-roll-limits/large
+r10 70 --budget

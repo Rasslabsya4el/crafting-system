@@ -7,7 +7,8 @@ action whose best case cannot beat the best exact one per Chaos can be dropped. 
 returns the exact chance itself, through `Outcomes.distribution` (one run of the exact engine).
 
 The argument, for one part of the outcomes (a pool draw) and one leaf L. X is the set of pool mods that
-are PASSING for L. The leaf is made PASSING if a kept mod (fractured, forced) is, or if some drawn mod
+are PASSING for L (under a roll limit, at some roll: a mod outside X never passes L,
+#830). The leaf is made PASSING if a kept mod (fractured, forced) is, or if some drawn mod
 is in X; a leaf a kept mod makes PASSING costs nothing (bound 1). The process (`actions/draw.py`): a
 total T is drawn from `totals`; with a tag one guaranteed draw comes first, from the tagged mods of the
 sides with room; then `max(0, T - kept - guaranteed)` ordinary draws, each picking one mod of an
@@ -261,33 +262,44 @@ def _leaf_bound(
     return _part_bound(pool, free, totals, kept, tag, [passing])
 
 
-def _passing_ids(abstraction: Abstraction, pool: Sequence[PoolFamily], leaf: int, memo: dict) -> dict[str, bool]:
-    """For every mod of `pool`: whether it is PASSING for leaf number `leaf` when drawn."""
-    found: dict[str, bool] = {}
-    for family in pool:
-        for entry in family.mods:
-            key = (entry.mod.id, leaf)
-            if key not in memo:
-                memo[key] = abstraction.passes(entry.mod, leaf)
-            found[entry.mod.id] = memo[key]
-    return found
-
-
-def _guard(abstraction: Abstraction, pool: Sequence[PoolFamily], leaves: Sequence[int]) -> None:
-    """Raise `OutOfScopeError` when a leaf asks for a roll of a mod that the pool can draw."""
+def _guard(pool: Sequence[PoolFamily]) -> None:
+    """Raise `OutOfScopeError` for a pool the bound has no argument for: a family with mods on both sides."""
     if partners(pool):
         raise OutOfScopeError(
             "a family with mods on both sides of the item (a jewel) is not modelled yet",
             detail="a family with mods on both sides is not modelled in the bound, so no bound is given",
         )
-    ids = {entry.mod.id for family in pool for entry in family.mods}
-    for index in leaves:
-        leaf = abstraction.goal.leaves[index]
-        if leaf.has_roll_limit and ids & leaf.mod_ids:
-            raise OutOfScopeError(
-                "a roll limit on a mod that the action draws is not modelled yet",
-                detail="a roll limit on a drawn mod is not modelled yet, so no bound is given",
-            )
+
+
+def _roll_cells(abstraction: Abstraction, mod: Mod, leaves: Sequence[int], influences, lucky: bool) -> tuple[tuple[tuple[bool, ...], Fraction], ...]:
+    """What a drawn `mod` does for `leaves` over its rolls: (which leaves it makes PASSING, chance), one entry per pattern (#830).
+
+    Under a roll limit a drawn mod of a leaf passes it only at some rolls: its roll law (`_rolls.roll_law`, lucky for a draw that rolls twice
+    and keeps the better). Without one the mod does the same at every roll, its low roll's judgement (`Abstraction.passes`).
+    """
+    if not abstraction._has_laws:
+        return ((tuple(abstraction.passes(mod, index) for index in leaves), ONE),)
+    found: dict[tuple[bool, ...], Fraction] = {}
+    for ints, chance in abstraction._law(mod, influences, lucky):
+        flags = tuple(ints[index] == Status.PASSING for index in leaves)
+        found[flags] = found.get(flags, ZERO) + chance
+    return tuple(sorted(found.items()))
+
+
+def _may_pass(abstraction: Abstraction, pool: Sequence[PoolFamily], leaf: int, influences, memo: dict) -> dict[str, bool]:
+    """For every mod of `pool`: whether some roll of it, drawn, makes leaf number `leaf` PASSING (the X of the loose bound, #830).
+
+    A mod that passes at some rolls only is counted in X: the leaf is PASSING only if a mod of X is drawn, so the chance of drawing one stays
+    above the chance of the leaf, and the argument of the module text holds as it is.
+    """
+    found: dict[str, bool] = {}
+    for family in pool:
+        for entry in family.mods:
+            key = (entry.mod.id, leaf)
+            if key not in memo:
+                memo[key] = any(flags[0] for flags, _ in _roll_cells(abstraction, entry.mod, (leaf,), influences, False))
+            found[entry.mod.id] = memo[key]
+    return found
 
 
 def reach_bound(
@@ -303,7 +315,8 @@ def reach_bound(
     `leaves` are indexes into `abstraction.goal.leaves`. The bound uses the pool alone and costs
     milliseconds; with `exact=True` the result is the exact chance. Returns None when the action
     cannot be bounded: it reads the junk (it does not erase it), a part of its result is a `Fixed`
-    or a `Rerolled` one, it fractures a mod, or a leaf of `leaves` limits the roll of a mod in its pool.
+    or a `Rerolled` one, or it fractures a mod. A roll limit on a mod of its pool is bounded since
+    #830: the bound counts a mod that passes at some roll, and the exact chance follows the mod's roll law.
     """
     checkpoint()  # the run's net (#825, #702): the bound pruning raises thousands of these, in pool workers too (they inherit the run's clock by fork)
     leaves = tuple(leaves)
@@ -323,7 +336,7 @@ def reach_bound(
         memo: dict = {}
         total = ZERO
         for share, part in outcomes.components:
-            _guard(abstraction, part.pool, leaves)
+            _guard(part.pool)
             retained = abstraction._split(part.retained, prepared.origins).status
             todo = [index for index in leaves if retained[index] is not Status.PASSING]
             if not todo:
@@ -337,7 +350,7 @@ def reach_bound(
                     part.totals,
                     len(part.retained.mods),
                     part.tag,
-                    [_passing_ids(abstraction, part.pool, index, memo) for index in todo],
+                    [_may_pass(abstraction, part.pool, index, part.retained.influences, memo) for index in todo],
                 )
         return min(ONE, total)
     except OutOfScopeError:
@@ -345,19 +358,31 @@ def reach_bound(
 
 
 def _exact_part(abstraction: Abstraction, part, leaves: Sequence[int], retained: Sequence[Status]) -> Fraction:
-    """The exact chance that the retained mods and the draws of `part` make every leaf PASSING."""
+    """The exact chance that the retained mods and the draws of `part` make every leaf PASSING.
+
+    A drawn mod is labelled by what it does for the leaves over its rolls (`_roll_cells`): one pattern without a roll limit, the law's patterns
+    with one. The rolls of the drawn mods are independent (`actions.rolls`), so the chance that every leaf ends PASSING, given the mods drawn, is
+    found by joining their patterns one mod at a time (a leaf passes when any mod passes it).
+    """
+    influences, lucky = part.retained.influences, bool(getattr(part, "rolls_lucky", False))
 
     def label(mod: Mod) -> Hashable:
-        return tuple(abstraction.passes(mod, index) for index in leaves)
+        return _roll_cells(abstraction, mod, leaves, influences, lucky)
 
+    start = tuple(retained[index] is Status.PASSING for index in leaves)
     total = ZERO
     for outcome, chance in part.distribution(label).items():
         checkpoint()
-        if all(
-            retained[index] is Status.PASSING or any(flags[position] for flags, _ in outcome)
-            for position, index in enumerate(leaves)
-        ):
-            total += chance
+        held: dict[tuple[bool, ...], Fraction] = {start: ONE}
+        for cells, count in outcome:
+            for _ in range(count):
+                joined: dict[tuple[bool, ...], Fraction] = {}
+                for passed, before in held.items():
+                    for flags, each in cells:
+                        key = tuple(a or b for a, b in zip(passed, flags))
+                        joined[key] = joined.get(key, ZERO) + before * each
+                held = joined
+        total += chance * sum((each for passed, each in held.items() if all(passed)), ZERO)
     return total
 
 

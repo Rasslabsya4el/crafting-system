@@ -197,13 +197,14 @@ def test_an_unspawnable_leaf_gets_zero():
     assert reach_bound(ab, state, CHAOS, [1]) == 0 == reach_bound(ab, state, CHAOS, [1], exact=True)
 
 
-def test_a_roll_limit_on_a_mod_in_the_pool_gives_none():
+def test_a_roll_limit_on_a_mod_in_the_pool_is_bounded():
+    """#830: a roll limit is no refusal; the exact chance and the bound against the kernel are in `test_abstraction_rolls.py`."""
     ab = abstraction(Goal((Wanted(frozenset({GEM}), min_roll=(1,)), GEM_LEAF)))
     state = ab.compress(small_item())
 
-    assert reach_bound(ab, state, CHAOS, [0]) is None
-    assert reach_bound(ab, state, CHAOS, [0], exact=True) is None
-    assert reach_bound(ab, state, CHAOS, [1]) is not None  # the roll limit is on the other leaf
+    exact = reach_bound(ab, state, CHAOS, [0], exact=True)
+    assert exact is not None and exact <= reach_bound(ab, state, CHAOS, [0]) <= 1
+    assert reach_bound(ab, state, CHAOS, [1]) is not None
 
 
 def test_a_bench_craft_reads_the_junk_so_it_gives_none():

@@ -36,15 +36,15 @@ def unsolved():
     return make_plan(DATA, load_target(R12, DATA), price_file(), solve_it=False)
 
 
-def test_the_bound_can_be_built_for_r12_and_the_refusal_names_each_cause():
+def test_the_bound_can_be_built_for_r12_and_the_refusal_names_each_cause(monkeypatch):
     abstraction = unsolved().abstraction
 
     assert pattern_refusal(abstraction) is None
     Pattern(abstraction)  # builds
 
-    abstraction._has_laws = True
+    monkeypatch.setattr(type(abstraction), "tracks_imprints", property(lambda self: True))
     text = pattern_refusal(abstraction)
-    assert text is not None and "a roll limit" in text
+    assert text is not None and "imprints" in text
     with pytest.raises(OutOfScopeError) as raised:
         Pattern(abstraction)
     assert str(raised.value) == text  # one check, one text: `Pattern` and `make_plan` read the same
@@ -52,13 +52,22 @@ def test_the_bound_can_be_built_for_r12_and_the_refusal_names_each_cause():
 
 def test_the_text_of_the_refusal_names_every_cause_there_is(monkeypatch):
     abstraction = unsolved().abstraction
-    abstraction._has_laws = True
-    for name in ("rerolls_values", "tracks_offer", "tracks_imprints"):
+    for name in ("tracks_offer", "tracks_imprints"):
         monkeypatch.setattr(type(abstraction), name, property(lambda self: True), raising=False)
 
     text = pattern_refusal(abstraction)
 
-    assert all(words in text for words in ("a roll limit", "rerolls the values", "unveil offer", "imprints"))
+    assert all(words in text for words in ("unveil offer", "imprints"))
+
+
+def test_a_roll_limit_and_a_reroll_of_values_are_no_refusal_of_the_bound(monkeypatch):
+    """#830: the key holds what each wanted mod gives its leaf as it rolled (BELOW or PASSING a roll limit), and a Divine Orb is an action of
+    the model like any other (`tests/test_pattern_rolls.py` compares the bound and the search with the walk on such worlds)."""
+    abstraction = unsolved().abstraction
+    abstraction._has_laws = True
+    monkeypatch.setattr(type(abstraction), "rerolls_values", property(lambda self: True))
+
+    assert pattern_refusal(abstraction) is None
 
 
 def test_auto_is_the_envelope_search_where_the_bound_can_be_built_and_gives_the_walks_mean(packed):

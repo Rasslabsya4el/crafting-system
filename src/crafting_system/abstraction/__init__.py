@@ -174,8 +174,9 @@ a mod a fresh contribution drawn from its law; the fractured mods and the mods o
 Out of scope, all `OutOfScopeError`: a `min_roll` on a mod that an action forces (an essence), crafts or puts on the item as a
 fixed result (a bench craft); a Divine Orb on a crafted slot that a roll limit looks at (the range of the real mod is not known
 from its canonical id); a draw that fractures one of its mods (a Fractured Fossil) from a pool with a rollable mod; and, as
-refusals of the planner's helpers, `reach_bound` (None), the pilot count (`EstimateRefused`) and `Coarsening` with a Divine
-Orb enabled. A concrete item's mod is judged by its stored tier and values.
+refusals of the planner's helpers, `reach_bound` (None) for a Divine Orb itself, the pilot count (`EstimateRefused`) and
+`Coarsening` with a Divine Orb enabled. `reach_bound` bounds a drawn mod under a roll limit (#830), and the crafted-pattern bound
+holds both (`pattern_refusal`). A concrete item's mod is judged by its stored tier and values.
 
 Metamods, removals, new fractures and influence (#69). `metamods=True` (forced when an enabled action adds a lock
 or an Attack/Caster metamod by name) lets items hold them: every mod is then kept as a slot told apart by family

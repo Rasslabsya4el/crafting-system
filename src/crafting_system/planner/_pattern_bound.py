@@ -28,6 +28,7 @@ solved as it is: its value is still a lower bound, weaker where the build did no
 which phase it was in.
 """
 
+import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -36,7 +37,7 @@ import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.abstraction._pattern import PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats
-from crafting_system.solver import PackedBuilder, policy_reach, solve_packed
+from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
 from ._offers import BuyStartItem, PricedOffer
@@ -67,7 +68,7 @@ class PatternBound:
     @property
     def lower(self) -> float:
         """A lower bound of the exact cost of the start, with the solver's error taken off."""
-        return self.start_value * (1.0 - self.error_bound)
+        return self.start_value * lowering(self.error_bound)
 
     @property
     def stats(self) -> PatternStats:
@@ -80,6 +81,11 @@ class PatternBound:
     def value_of(self, pattern, state: CompressedState) -> float:
         """The value of the key of a concrete state (`pattern` is the `Pattern` the model was built with, or any with the same `tags`)."""
         return float(self.value[self.model.index[pattern.key(state)]])
+
+
+def lowering(error: float) -> float:
+    """What a value certified to a relative `error` is multiplied by to be a lower bound: `1 - error`, and 0 for an error of 1 or more."""
+    return max(0.0, 1.0 - error) if math.isfinite(error) else 0.0
 
 
 def pattern_offers(priced: Sequence[PricedOffer]) -> list[PatternOffer]:
@@ -186,7 +192,15 @@ def pattern_lower_bound(
             model, value, error, order = kept
             return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth")
         say(f"model {rounds}: solving the count on {len(model.keys):,} keys and {graph.num_kernels:,} kernels")
-        solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
+        try:
+            solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
+        except ConvergenceError:
+            if refuse_above == math.inf:
+                raise  # nothing looser to ask for
+            # A model of very many steps (divine-roll-limits/large, #830: 2,917 keys whose certified error is 0.577 of the value): the bound is the
+            # value lowered by whatever error the solver does certify (`PatternBound.lower`, 0 when it certifies none), a weaker bound and still a
+            # lower one. Refusing it refused the whole target, where OR-33 wants a plan with its gap; the search's own figures then say how far it is.
+            solved = solve_packed(graph, progress=None, refuse_above=math.inf)
         solved_at = time.perf_counter()
         phases["solve"] += solved_at - built
         n = len(model.keys)
