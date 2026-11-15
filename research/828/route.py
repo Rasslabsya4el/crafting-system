@@ -12,6 +12,8 @@ import sys
 import time
 from pathlib import Path
 
+import crafting_system.cli  # noqa: F401  (names the page's presenter, #882)
+from crafting_system.budget import Budget
 from crafting_system.data import load_game_data
 from crafting_system.planner import _packed
 from crafting_system.planner._plan import PlanError, make_plan
@@ -30,7 +32,7 @@ def main() -> None:
     began = time.perf_counter()
     record: dict = {"route": stem}
     try:
-        plan = make_plan(data, target, prices, with_risk=False)
+        plan = make_plan(data, target, prices, with_risk=False, budget=Budget.default())
     except PlanError as error:
         record.update(status="refused", reason=str(error)[:2000])
     else:
