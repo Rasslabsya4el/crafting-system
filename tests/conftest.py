@@ -36,6 +36,15 @@ def fixed_clock(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_measuring_progress(monkeypatch):
+    """A measuring script's `run` sets `_packed.PROGRESS` and never clears it (a script is its own process); a test that runs one leaves
+    it set no further than its own end, so no later test in the same process prints the script's phase lines (#925's CI)."""
+    from crafting_system.planner import _packed
+
+    monkeypatch.setattr(_packed, "PROGRESS", None)
+
+
+@pytest.fixture(autouse=True)
 def network_guard(request, monkeypatch):
     """Any connection (or name lookup) to a host other than loopback fails with AssertionError.
 
