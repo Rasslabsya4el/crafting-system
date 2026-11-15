@@ -43,7 +43,8 @@ class Classes:
 def _big_signature(graph: PackedGraph, kernel: int, blk: np.ndarray):
     """(signature, sorted block ids, reduced sums) of a big kernel: Python integers all the way.
 
-    The signature is the bytes of int64 pairs when the reduced sums fit them (the form every other kernel has), else the tuple of
+    The signature is the bytes of int64 pairs when the reduced sums fit them and add up to less than `BIG_TOTAL` (then the distribution
+    is one an ordinary kernel can have, and it gets the same key as that kernel), else the tuple of
     (block, sum) pairs itself: exact integers compared and hashed as integers, never turned into decimal text. A kernel's weights are on
     the common denominator of its chances, which grows with every distinct denominator (#868: a Chaos Orb kernel of 148,436 successors
     whose chances have at most 490 bits each has a common denominator of 22,965 bits), so a weight can have thousands of digits; text
