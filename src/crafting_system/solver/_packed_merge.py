@@ -9,7 +9,8 @@ R11, R12, R13, S13 and R08 with the Alchemy to 1e-12 in ticket #312).
 The partition is found by refinement from {goals, the rest}: each round gives every kernel its distribution over the
 current classes (successors grouped by class, weights added, divided by their gcd), gives every state the sorted pairs
 (distribution, cheapest cost), and splits the classes by that signature. The refinement only splits, so it stops when a
-round splits nothing. Distributions and signatures are compared as exact integer bytes, never as hashes.
+round splits nothing. Distributions and signatures are compared as exact integer bytes (a big kernel's as a tuple of exact Python
+integers, #868), never as hashes.
 
 The quotient has one state per class and the actions of its first member: the pairs above, with the cheapest offer tag.
 """
@@ -40,7 +41,14 @@ class Classes:
 
 
 def _big_signature(graph: PackedGraph, kernel: int, blk: np.ndarray):
-    """(signature bytes, sorted block ids, reduced sums) of a big kernel: Python integers all the way."""
+    """(signature, sorted block ids, reduced sums) of a big kernel: Python integers all the way.
+
+    The signature is the bytes of int64 pairs when the reduced sums fit them (the form every other kernel has), else the tuple of
+    (block, sum) pairs itself: exact integers compared and hashed as integers, never turned into decimal text. A kernel's weights are on
+    the common denominator of its chances, which grows with every distinct denominator (#868: a Chaos Orb kernel of 148,436 successors
+    whose chances have at most 490 bits each has a common denominator of 22,965 bits), so a weight can have thousands of digits; text
+    is quadratic in them and refused past 4,300 digits. A tuple never equals a bytes key, so the two forms cannot collide.
+    """
     lo, hi = int(graph.k_ptr[kernel]), int(graph.k_ptr[kernel + 1])
     sums: dict[int, int] = {}
     for state, weight in zip(graph.k_succ[lo:hi].tolist(), graph.k_big[kernel]):
@@ -51,7 +59,7 @@ def _big_signature(graph: PackedGraph, kernel: int, blk: np.ndarray):
     if all(total < _INT64_LIMIT for _, total in items) and sum(total for _, total in items) < BIG_TOTAL:
         inter = np.array([x for item in items for x in item], dtype=np.int64)
         return inter.tobytes(), [b for b, _ in items], [t for _, t in items]
-    return b"B" + repr(items).encode(), [b for b, _ in items], tuple(t for _, t in items)  # a total of 2^62 or more stays exact Python ints
+    return tuple(items), [b for b, _ in items], tuple(t for _, t in items)  # a total of 2^62 or more stays exact Python ints
 
 
 def kernel_distributions(graph: PackedGraph, blk: np.ndarray, nblk: int, keep_runs: bool = False):
@@ -63,7 +71,7 @@ def kernel_distributions(graph: PackedGraph, blk: np.ndarray, nblk: int, keep_ru
     """
     count = graph.num_kernels
     ids = np.empty(count, dtype=np.int64)
-    seen: dict[bytes, int] = {}
+    seen: dict[bytes | tuple, int] = {}
     runs: list = []
     k_ptr = graph.k_ptr
     big = graph.k_big
