@@ -650,7 +650,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     # The risk is read on one state per block of states that behave alike (`risk.lump`, #717): the same cost distribution, and the budget DP runs over
     # the blocks and not over every state (R13's route has 2,887 states; the DP over them took 4 to 18 minutes).
     lumped = lump(policy, plan.start, plan.is_goal)
-    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the route costs at least the solver's mean
+    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the plan's mean only sizes the grid: a route may cost less than a plan stopped at a gap (#829)
 
     divergences: list[Divergence] = []
     for state in policy_states(plan.start, plan.policy, plan.is_goal):

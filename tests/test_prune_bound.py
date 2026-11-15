@@ -44,7 +44,7 @@ from crafting_system.actions import (
     fossil_actions,
 )
 from crafting_system.actions.fossil import CHAOTIC_RESONATOR_SOCKETS
-from crafting_system.cli import RESTART, Offer, make_plan
+from crafting_system.cli import RESTART, Offer, evaluate_route, make_plan, parse_route
 from crafting_system.planner import _offer_kinds, _plan
 from crafting_system.planner._offer_kinds import (
     CRAFT,
@@ -330,6 +330,22 @@ def test_a_restart_is_kept_and_the_plan_stays_exact(planned):
 
     assert_exact(result)
     assert RESTART in {priced.label for priced in result.searched.offers}
+
+
+def test_a_route_may_name_a_twin_the_search_left_out_and_it_is_priced_and_evaluated(planned, world):
+    """A judged route is walked on its own reach (#829): an offer the search never built, a dearer twin among them, is priced and evaluated."""
+    plan = planned("fractured", "two").searched
+    (twins,) = [limit for limit in plan.limits if limit.why == "same outcome as a cheaper action"]
+    dropped = twins.labels[0]
+    route = parse_route(f"name: names a twin\nrules:\n  - do: {dropped}\n", plan, world.data)
+
+    result = evaluate_route(plan, route, world.data)
+
+    assert dropped not in {action.label for action in plan.policy.values()}
+    assert not result.gaps
+    assert {action.label for action in result.policy.values()} == {dropped}
+    assert plan.offer_of(result.policy[plan.start]).cost == next(p for p in plan.offers if p.label == dropped).cost
+    assert result.risk.mean.value >= plan.mean_remaining * (1 - 1e-9)  # the plan is exact here: no route is cheaper
 
 
 # --- the bench: a goal leaf a craft can finish ---------------------------------------------------------------
