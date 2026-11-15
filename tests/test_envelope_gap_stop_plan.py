@@ -20,6 +20,7 @@ measured on runners (`.github/scripts/family_bench.py`).
 import dataclasses
 import json
 import re
+from html import escape
 
 import numpy as np
 import pytest
@@ -33,10 +34,12 @@ from test_packed_walk_light import START_ITEM, make_offers
 
 from crafting_system.budget import PROOF_GAP, Budget
 from crafting_system.cli import _main, build_report, make_plan, policy_document, render_text
+from crafting_system.cli._route_html import render_page
+from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.config import Config
 from crafting_system.planner import PlanSettings, Standing, _packed, plan_target
 from crafting_system.planner._envelope_plan import EnvelopeInfo, certificate_gap, certificate_gap_text, envelope_limits, envelope_result
-from crafting_system.planner._limits import SOLVE, WITHIN_GAP, limit_text
+from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, WITHIN_GAP, limit_text
 from crafting_system.planner._offers import offer_of
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.planner._plan import search_gap
@@ -168,7 +171,7 @@ def test_the_limit_of_a_stop_at_a_gap_says_so_with_the_plans_mean_the_proof_figu
     proved = certificate_gap_text(certificate_gap(info))
     assert certificate_gap(info) < 1.0 and proved != "100.00%"  # the gap proved is not the gap allowed: the text must say the one proved (#925)
     assert "the search stopped by itself" in text and f"proved to cost at most {proved} more than the cheapest possible" in text
-    assert "(past the time the plan aims at, the run stops at a proved 100.00%)" in text
+    assert "(the gap this run allows is 100.00%)" in text
     assert f"The plan is {WITHIN_GAP}, at most {proved} above it:" in text
     assert "buying the start item again wherever it had not looked" in text
     assert f"it costs {info.upper:,.2f} Chaos on average after the start item, and that figure is the average of the plan shown itself, not an estimate of the cheapest." in text
@@ -186,7 +189,7 @@ def test_the_limit_says_when_the_stop_waited_for_a_cost_it_could_certify_and_whe
     text = limit_text(envelope_limits(waited)[0])
     assert "in 2 of its rounds the plan in hand could not be worked out to a certified cost, and the search went on until one could" in text
     assert "buying the start item again" not in text
-    assert "proved to cost at most 0.70% more than the cheapest possible (past the time the plan aims at, the run stops at a proved 1.00%)" in text
+    assert "proved to cost at most 0.70% more than the cheapest possible (the gap this run allows is 1.00%)" in text
     assert "within the stated gap of the cheapest, at most 0.70% above it" in text and "at most 0.70% more than the best possible cost" in text
     stopped = EnvelopeInfo(False, "the time limit of 600 seconds was reached", 99.3, 100.0, 4, 30, 20, 25, 60, 0, False, None, 9, 0.0, 0.0, None, restarts=False)
     text = limit_text(envelope_limits(stopped)[0])
@@ -224,7 +227,7 @@ def test_a_plan_past_its_aim_is_within_the_budgets_gap_of_the_walks_optimum(coar
     assert info.exact or info.within == gap
 
 
-def test_the_plan_of_a_stop_at_a_gap_claims_no_cheapest_plan_in_any_limit_and_says_the_stop_everywhere(coarse):
+def test_the_plan_of_a_stop_at_a_gap_claims_no_cheapest_plan_in_any_limit_and_says_the_stop_everywhere(coarse, monkeypatch):
     target, prices, _ = coarse
     plan = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", budget=at_once(0.2))  # with its risk: the text report prints it
     assert not plan.search.exact and plan.search.within == 0.2
@@ -235,6 +238,13 @@ def test_the_plan_of_a_stop_at_a_gap_claims_no_cheapest_plan_in_any_limit_and_sa
     assert limit_text(cut) in render_text(report)
     assert any(entry["what"] == cut.what and entry["guarantee"] == cut.guarantee for entry in policy_document(report)["limits"])
     assert not [limit for limit in plan.limits if limit.what.startswith("Stopped by a time or memory limit")]  # no net bound: the stop is not one
+    from crafting_system.cli import _route_card
+
+    monkeypatch.setattr(_route_card, "_implicits", lambda *_args: ())  # the coarse fixture's data has no text for the amulet's implicit mod
+    page = render_page(Page("x", (build_section(route_input(plan), COARSE),)))  # the route page says the same limit, with the gap proved (#925)
+    proved = certificate_gap_text(certificate_gap(plan.search))
+    assert escape(limit_text(cut, SHOWN_LABELS)) in page and f"proved to cost at most {proved} more than the cheapest possible" in page
+    assert "The plan is the cheapest" not in page
 
 
 @pytest.mark.parametrize("budget", [None, Budget.unlimited(), at_once(0.0), Budget(aim_seconds=60.0, seconds=600.0, gap=0.0)])

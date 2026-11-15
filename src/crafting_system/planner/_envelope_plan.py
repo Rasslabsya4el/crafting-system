@@ -459,7 +459,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
                 "The search stopped once the plan was proved close to the cheapest",
                 f"the search stopped by itself, after {info.rounds:,} rounds and {info.expanded:,} states looked at, "
                 f"as soon as its plan was proved to cost at most {certificate_gap_text(proved)} more than the cheapest possible "
-                f"(past the time the plan aims at, the run stops at a proved {certificate_gap_text(info.within)})"
+                f"(the gap this run allows is {certificate_gap_text(info.within)})"
                 + (", buying the start item again wherever it had not looked" if info.restarts else "")
                 + waited,
                 f"The plan is {_limits.WITHIN_GAP}, at most {certificate_gap_text(proved)} above it: it costs {info.upper:,.2f} Chaos on average "
