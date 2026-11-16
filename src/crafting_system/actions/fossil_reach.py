@@ -16,7 +16,9 @@ family leaving the pool and its side losing a slot. When the set can force a mod
 number at least the chance that draw j hits X given any history of earlier draws without a hit, P(hit) <= 1 - prod_j (1 - c_j). The forced mod
 is counted as an earlier draw without a hit (it took one slot of its side and, if its family is in the pool, that family): so draw j of the
 ordinary draws has `prior = j + forced` earlier draws, split as `a` on the prefix side and `prior - a` on the suffix side in every way the free
-slots allow. A side is open when its count is below its free slots. For a family f of the pool, x_f is the weight of its mods in X and j_f the
+slots allow. That holds only when the forced mod takes out of the pool at most one family, and on its own side, as a draw does; a forced mod
+that takes a family of the other side (a Glyphic suffix whose family is a prefix family on a shield) takes junk from a side no split charges,
+so such a set declares nothing (`_forced_takes_one_own_family`). A side is open when its count is below its free slots. For a family f of the pool, x_f is the weight of its mods in X and j_f the
 weight of the rest. After the earlier draws took a set R of families (|R| of each side as the split says), the chance of a hit is
 (X - X_R) / (W - W_R) over the open sides, and
 
@@ -64,6 +66,7 @@ from .pool import group_pool, partners, pool_candidates
 
 MARGIN = 1e-9  # the relative raise of every positive bound: above the float error of the module text
 PERCENT = 100
+BATCH = 64  # sets whose rows of factors are worked at once (a Tangled set has one row per class of outcome records, up to 420)
 
 
 def declared(data: GameData, item: Item, actions: Sequence, passes: Callable[[Mod], tuple[bool, ...]]) -> tuple[ReachDeclared | None, ...]:
@@ -118,9 +121,21 @@ def declared(data: GameData, item: Item, actions: Sequence, passes: Callable[[Mo
                 continue
         except OutOfScopeError:
             continue
+        members = [member for member in members if _forced_takes_one_own_family(candidates, member[2])]
         for (index, _records, _forced_mods), (chances, together) in zip(members, _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, totals)):
             found[index] = ReachDeclared(True, chances, together)
     return tuple(found)
+
+
+def _forced_takes_one_own_family(candidates, forced: Sequence[Mod]) -> bool:
+    """Whether every mod the set may force takes out of the pool at most one family, on its own side: what counting it as an earlier draw on
+    its side assumes (module text). A Glyphic suffix whose family is a prefix family of the pool (`SpellBlockOnLowLifeEssence1` on a shield)
+    takes a family from the other side, which no split of the earlier draws charges: such a set declares nothing (#1073, checker round 1)."""
+    for mod in forced:
+        taken = {(candidate.family, candidate.side) for candidate in candidates if conflicts(mod, candidate.mod)}
+        if len(taken) > 1 or any(side != Side(mod.generation_type) for _family, side in taken):
+            return False
+    return True
 
 
 def _forced(data: GameData, item: Item, item_class: str, records: list, tangled: bool) -> list[Mod]:
@@ -183,28 +198,29 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
 
     pool = _Pool(candidates, passing, spawn, free, kept, totals)
     factors = _Factors(pool.tag_sets, pairs)
-    rows: list[np.ndarray] = []  # each: rows x tag sets, the factor of each tag set for one member of a set's mixture
-    owner: list[np.ndarray] = []
-    share: list[np.ndarray] = []
-    lucky: list[np.ndarray] = []
-    forced_rows: list[np.ndarray] = []
-    for position in todo:
-        records, forced = members[position][1], members[position][2]
-        opulent = any(F._special(record, "opulent") for record in records)
-        table, shares = factors.table(records, opulent, any(F._special(record, "tangled") for record in records))
-        rows.append(table)
-        owner.append(np.full(len(table), position))
-        share.append(shares)
-        lucky.append(np.full(len(table), any(record.rolls_lucky for record in records)))
-        forced_rows.append(np.full(len(table), 1 if forced else 0))
-    shares = np.concatenate(share)[:, None]
     joint = _disjoint(passing, leaves)
-    singles, together = pool.bounds(np.concatenate(rows), np.concatenate(lucky), np.concatenate(forced_rows), leaves, joint)
-    owners = np.concatenate(owner)
     per_set = np.zeros((len(members), leaves))
-    np.add.at(per_set, owners, singles * shares)  # a Tangled set: the mean over its outcome records, by their shares
     per_set_all = np.zeros(len(members))
-    np.add.at(per_set_all, owners, together * shares[:, 0])
+    for start in range(0, len(todo), BATCH):  # a batch of sets at a time: a Tangled set is up to 420 rows of factors
+        rows: list[np.ndarray] = []  # each: rows x tag sets, the factor of each tag set for one member of a set's mixture
+        owner: list[np.ndarray] = []
+        share: list[np.ndarray] = []
+        lucky: list[np.ndarray] = []
+        forced_rows: list[np.ndarray] = []
+        for position in todo[start : start + BATCH]:
+            records, forced = members[position][1], members[position][2]
+            opulent = any(F._special(record, "opulent") for record in records)
+            table, shares = factors.table(records, opulent, any(F._special(record, "tangled") for record in records))
+            rows.append(table)
+            owner.append(np.full(len(table), position))
+            share.append(shares)
+            lucky.append(np.full(len(table), any(record.rolls_lucky for record in records)))
+            forced_rows.append(np.full(len(table), 1 if forced else 0))
+        shares = np.concatenate(share)[:, None]
+        singles, together = pool.bounds(np.concatenate(rows), np.concatenate(lucky), np.concatenate(forced_rows), leaves, joint)
+        owners = np.concatenate(owner)
+        np.add.at(per_set, owners, singles * shares)  # a Tangled set: the mean over its outcome records, by their shares
+        np.add.at(per_set_all, owners, together * shares[:, 0])
     for position in todo:
         forced = members[position][2]
         hits = [any(leaf_flags(mod)[leaf] for mod in forced) for leaf in range(leaves)]
