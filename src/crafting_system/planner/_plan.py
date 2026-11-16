@@ -437,7 +437,8 @@ def make_plan(
     exact answer or a measurement needs). `net` is the older way to give the net (its time, memory and states), and is folded into the budget.
     Every stage runs on the one clock of the run (a plan inside a run that already has a clock, a start option or a reading, shares it), and a
     stage that a limit stopped is listed in one limit of the answer (`_limits.budget_limit`, #378). A stop before any plan closed is a `PlanError`
-    that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. The rest is `_make_plan`'s text.
+    that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. `judges_route` changes nothing since #986
+    (a judged route is evaluated on its own reach, `cli._route.evaluate_route`). The rest is `_make_plan`'s text.
     """
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
@@ -446,7 +447,7 @@ def make_plan(
             plan = _make_plan(
                 data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
                 strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
-                incumbent=incumbent, clock=clock, judges_route=judges_route, watch=watch,
+                incumbent=incumbent, clock=clock, watch=watch,
             )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
             if clock is not None:
@@ -563,7 +564,6 @@ def _make_plan(
     with_risk: bool,
     incumbent: Callable[[CompressedState], Sequence[str]] | None,
     clock: Clock | None,
-    judges_route: bool,
     watch: Callable[[Standing], None] | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
@@ -605,10 +605,9 @@ def _make_plan(
     There is no fallback once the envelope search has started: a search that cannot answer is a `PlanError` that says why and names
     `solver="packed"`. The number of offers decides nothing: the fossil sets (B1) take the envelope search too, with or without a budget, each offer
     carrying its own floor into it (#829; the bound pruning `solve_pruned` and its switch at 40 offers are retired). A given route judged against the plan (`judges_route`: `--route`, `benchmark`)
-    takes the search too when the graph is small: the route is a fixed policy, evaluated exactly on its own reach (`cli._route.evaluate_route`), so it
-    needs neither the walk nor the planner's choice at the states the search proved irrelevant (#829; the part of #732 it covers). With fewer than
-    `MIN_OFFERS` offers the graph is walked first to know its size: one of more than `_packed.OBJECT_SOLVER_EDGES` transitions keeps the path it had
-    before #829 (solved on the walked packed arrays, the route read there), since a route's reach that big does not fit as objects (R04, R14; #986). "object" never packs; "packed" always walks, and with `MIN_OFFERS` offers or more it solves the offers left after the twins are
+    takes the search too, whatever the size of the graph: the route is a fixed policy, evaluated exactly on its own reach (`cli._route.evaluate_route`:
+    as objects, or on packed arrays when that reach is too big for objects, #986), so it needs neither the walk nor the planner's choice at the states
+    the search proved irrelevant (#829, #986). "object" never packs; "packed" always walks, and with `MIN_OFFERS` offers or more it solves the offers left after the twins are
     merged (the cross-check of the solvers). The means are the same to the certificate; only the cost differs.
     "envelope" is the same search asked for by name: it refuses with `PlanError` an abstraction the bound cannot be built for (#507). It is the
     exact branch-and-bound of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds
@@ -730,8 +729,8 @@ def _make_plan(
         limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # "auto" is the envelope search wherever its bound can be built (#535), a plan a given route is judged against included: the route is evaluated on
-    # its own reach (#829), unless the walk below finds the graph too big for that reach to be held as objects. The number of offers decides nothing
-    # (#829): the fossil sets take the envelope search with or without a budget.
+    # its own reach, as objects or packed (#829, #986). The number of offers decides nothing (#829): the fossil sets take the envelope search with or
+    # without a budget.
     envelope = solver == "envelope" or (solver == "auto" and refusal is None)
     # why `auto` walks every item instead of searching, said when a net stops that walk before a plan closed (OR-13, #926)
     unbounded = () if refusal is None else refusal_causes(abstraction, player=True) or (refusal,)  # the causes in a player's words, else the refusal's own text
@@ -794,20 +793,6 @@ def _make_plan(
         offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
         if twins:
             limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
-        walked = None
-        if envelope and solver == "auto" and judges_route and not many:
-            # A route judged against a plan of the search is walked on its own reach as objects (`cli._route.evaluate_route`). The object
-            # structures hold the whole graph main's object solver held: at most `OBJECT_SOLVER_EDGES` transitions, the walk's own switch to
-            # packed arrays. Above it (R04's guide route alone is about 177,000 states of about 1,500 outcomes each, #70) the route's reach does
-            # not fit as objects, so the plan keeps the path it had before #829: the walk, solved on packed arrays, the route read on that graph.
-            # So the graph is walked first; a small one is dropped and searched (#829). Judging a big route by a packed walk of its own reach is #986.
-            with stage(WALK_STAGE, walk_stop(walk_cause((), judges_route=True))):
-                walked = _packed.walk(abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING)
-            if walked.graph.edges_counted() > _packed.OBJECT_SOLVER_EDGES:
-                envelope = False
-                walks_because = walk_cause((), judges_route=True)
-            else:
-                walked = None
         if envelope:
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
@@ -823,11 +808,7 @@ def _make_plan(
             bind_search(clock, packed.info["envelope"])
         else:
             with stage(WALK_STAGE, walk_stop(walks_because)):
-                if walked is not None:
-                    packed = _packed.solve_walked(abstraction, start, walked)
-                    walked = None
-                else:
-                    packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
+                packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
         with stage(WALK_STAGE, walk_stop(walks_because)):
             solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
         if packed is not None:
@@ -1012,16 +993,12 @@ def plan_foresight(
     )  # fmt: skip
 
 
-def walk_cause(unbounded: Sequence[str], judges_route: bool = False) -> str:
+def walk_cause(unbounded: Sequence[str]) -> str:
     """Why `solver="auto"` walks every item the actions can reach instead of running the envelope search (#926): what the search has no lower
-    bound for yet (`refusal_causes`), decided before solving, or a route to judge on a graph too big for its reach to be walked as objects
-    (decided after the walk, #829)."""
-    said = "the faster search, which proves its plan against the cheapest possible cost, was not used: "
-    if unbounded:
-        return said + f"it has no such cost yet where {'; '.join(unbounded)}"
-    if judges_route:
-        return said + "a given route is judged against the plan, which needs the planner's choice at every item the route can reach"
-    raise ValueError("a walk has a cause: an abstraction the search has no bound for, or a big route to judge")
+    bound for yet (`refusal_causes`), decided before solving. A route to judge is never a cause since #986: it is evaluated on its own reach."""
+    if not unbounded:
+        raise ValueError("a walk has a cause: an abstraction the search has no bound for")
+    return "the faster search, which proves its plan against the cheapest possible cost, was not used: " + f"it has no such cost yet where {'; '.join(unbounded)}"
 
 
 def walk_stop(cause: str | None) -> str:

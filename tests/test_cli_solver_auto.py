@@ -224,25 +224,26 @@ def test_a_route_is_judged_against_a_plan_of_the_search_on_its_own_reach(packed)
     assert [(d.solver_action, d.route_action) for d in searched.divergences] == [(d.solver_action, d.route_action) for d in walked.divergences]
 
 
-def test_a_route_judged_on_a_graph_too_big_for_objects_keeps_the_walk_and_is_read_on_its_packed_graph(monkeypatch, packed):
-    """#829, decision (a): a judged route on a graph the walk finds above `OBJECT_SOLVER_EDGES` transitions (R04's guide route, about 177,000
-    states, does not fit as objects) keeps main's path: the walk, solved on packed arrays, no search, the route read there with the same numbers.
-    The graph is walked first only to know its size; below the limit the search makes the plan (the test above). Lowered here to R12's size."""
-    from crafting_system.planner import PackedPolicy, _packed
+def test_a_route_too_big_for_objects_is_judged_against_the_search_on_a_packed_walk_of_its_own_reach(monkeypatch, packed):
+    """#986: a judged plan is the search's whatever the size of the graph (no walk first, whatever the walk's switch), and a route whose reach is
+    above `OBJECT_ROUTE_EDGES` transitions (R04's guide route, about 177,000 states, does not fit as objects) walks its own reach on packed arrays,
+    with the numbers of the walked plan's reading. Both limits are lowered here to R12's size."""
+    from crafting_system.cli import _route
+    from crafting_system.planner import _packed
 
     monkeypatch.setattr(_packed, "OBJECT_SOLVER_EDGES", 0)
+    monkeypatch.setattr(_route, "OBJECT_ROUTE_EDGES", 0)
     judged = make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)
-    assert judged.search is None and isinstance(judged.policy, PackedPolicy)
+    assert judged.search is not None and judged.search.exact
     assert judged.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
 
     big = evaluate_route(judged, load_route(ROUTE, judged, DATA), DATA)
     walked = evaluate_route(packed, load_route(ROUTE, packed, DATA), DATA)
+    assert big.chain is not None  # read on packed arrays: the route page reads its item chain
     assert big.gaps == walked.gaps
     assert big.risk.mean.value == pytest.approx(walked.risk.mean.value, rel=1e-9)
+    assert big.risk.success_probability.value == pytest.approx(walked.risk.success_probability.value, rel=1e-9)
     assert [(d.solver_action, d.route_action) for d in big.divergences] == [(d.solver_action, d.route_action) for d in walked.divergences]
-
-    unjudged = make_plan(DATA, load_target(R12, DATA), price_file())  # a plan no route is judged against is searched whatever the graph's size
-    assert unjudged.search is not None
 
 
 def test_the_command_with_a_route_asks_for_a_plan_a_route_is_judged_against(monkeypatch, tmp_path):

@@ -118,6 +118,8 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_route_completion.py", "losses_at_item.refused", ("NotApplicableError", "OutOfScopeError"), EITHER, "the action cannot be used on this item, for either reason: the check of a completed route counts it as refused"),
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route has no action here; the gap line says the game refuses it or the walk left it out"),
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "that offer is not a twin here"),
+    ("cli/_route_packed.py", "walk_route.act", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route's rule cannot be used here on its own reach (#986), and the gap line says why"),
+    ("cli/_route_packed.py", "route_label", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route has no action at this state of the plan: a gap, not a divergence"),
     ("cli/_route_sim.py", "route_policy.policy", ("NotApplicableError", "OutOfScopeError"), EITHER, "the rule's action cannot be used on this item: a gap of the route"),
     ("targets/corrupted.py", "CorruptedResolver._pools", ("NotApplicableError", "OutOfScopeError"), EITHER, "the target cannot ask for `corrupted: true` here, and the error says why"),
     ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
