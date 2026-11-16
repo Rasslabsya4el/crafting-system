@@ -436,9 +436,9 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
         return None  # the cut follows the Memory Strand count, which the uses before it spend: not the same draw at every state of the shape
     prepared = abstraction._prepared(state, action)
     outcomes = prepared.outcomes
-    components = getattr(outcomes, "components", None)
-    if components is None or getattr(outcomes, "fractures", True):
+    if outcomes.fractures:  # `components` and `fractures` are on the `ActionOutcomes` contract
         return None
+    components = outcomes.components
     tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
     memo: dict = {}
     best = ZERO
