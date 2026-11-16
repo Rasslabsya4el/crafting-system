@@ -5,6 +5,7 @@ or a route that cannot be evaluated is written into that route's entry and the e
 The tests check which fields are there and of what kind, never how long anything took.
 """
 
+import dataclasses
 import datetime
 import json
 from pathlib import Path
@@ -129,7 +130,7 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
 
     assert code == 0
     document = read_json(path)
-    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R24", "V01"]
+    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R20", "R06", "R24", "V01"]
     assert [entry["id"] for entry in document["routes"] if not entry["reference"]] == ["V01"]  # the smoke test is marked in its entry (#901)
     entry = entry_of(document)
     assert entry["missing_price"]["name"] == START
@@ -179,6 +180,21 @@ def test_a_route_with_a_bad_file_is_recorded_and_the_others_still_run(tmp_path, 
     assert "no-such-route.yaml" in entry_of(document, "R99")["error"]
     assert entry_of(document, "R99")["solver"]["mean"] > 0  # the solver half was done before the route failed
     assert entry_of(document)["error"] is None
+
+
+def test_a_route_that_waits_is_not_planned_and_its_entry_says_why(tmp_path, monkeypatch):
+    """A reference the planner cannot plan yet (R06, #516): no plan is tried, with or without --heavy, and no odds that need a plan are given (#901)."""
+    good = benchmark_module.BENCHMARKS[0]
+    waiting = dataclasses.replace(good, waits="the planner does not plan this yet (#516)")
+    monkeypatch.setattr(benchmark_module, "BENCHMARKS", (waiting,))
+
+    code, path = run_benchmark(tmp_path, "--heavy")
+
+    assert code == 0
+    entry = entry_of(read_json(path))
+    assert entry["error"] == "not planned: the planner does not plan this yet (#516)"
+    assert entry["solver"] is None and entry["given_route"] is None
+    assert entry["published_odds"] == []  # R12's odds are read off the plan's start item
 
 
 def test_a_published_odds_mismatch_is_recorded_and_fails_nothing(tmp_path, monkeypatch):
@@ -235,12 +251,14 @@ def test_the_target_form_still_works_next_to_the_benchmark_command(tmp_path):
 
 def test_the_benchmark_lists_its_reference_crafts_and_the_v01_smoke_test_with_their_target_and_route_files():
     """The reference crafts after the owner's review of 2026-11-13 (#901, OR-45): R07, R15, R18, R01, R21, R16, R03 and R23 are not references
-    (R22 is the boots route with Eldritch implicits kept of the three); V01 is kept as a smoke test only (a target the project made up), with no verdict and off the checkpoint list (OR-46)."""
+    (R22 is the boots route with Eldritch implicits kept of the three; its files wait, see the PR of #901 part 2); R20 and R06 were added in part 2,
+    R06 as "not planned" until the planner plans its implicit and quality (#516); V01 is kept as a smoke test only (a target the project made up), with no verdict and off the checkpoint list (OR-46)."""
     root = Path(__file__).resolve().parents[1]
 
-    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R24", "V01"]
+    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R20", "R06", "R24", "V01"]
     for bench in benchmark_module.BENCHMARKS:
         assert (root / bench.target).is_file(), bench.id
         assert bench.route is None or (root / bench.route).is_file(), bench.id
         assert (bench.route is None) == (bench.id == "V01")  # only the route that starts from a vendor recipe has no guide to compare with
-    assert [bench.id for bench in benchmark_module.REFERENCES] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R24"]
+    assert {bench.id: bench.waits.rsplit("(", 1)[-1].split(")")[0] for bench in benchmark_module.BENCHMARKS if bench.waits is not None} == {"R06": "#516"}
+    assert [bench.id for bench in benchmark_module.REFERENCES] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R20", "R06", "R24"]

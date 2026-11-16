@@ -91,6 +91,9 @@ class BenchmarkRoute:
 
     `reference` is False for a smoke test: a target the project made up itself (V01, OR-45), run so that its machinery stays exercised,
     never a reference craft, never a verdict against a guide and never on the checkpoint list of OR-46 (`REFERENCES`, #901).
+
+    `waits` is set for a reference craft the planner cannot plan yet: what it waits for, with the open issue (R06: quality and an implicit,
+    #516). No plan is tried, with or without --heavy; the entry's error says "not planned" and why (the published outcomes, which need no plan, are still read).
     """
 
     id: str
@@ -103,6 +106,7 @@ class BenchmarkRoute:
     start: ExpectedStart | None = None
     completed: str | None = None  # the given route with a last rule that restarts, so that its mean is finite (the guide's own route has gaps): evaluated beside it
     reference: bool = True
+    waits: str | None = None
 
 
 GEM = "+1 to Level of all Lightning Skill Gems"
@@ -252,6 +256,26 @@ BENCHMARKS = (
         "examples/routes/r17-lightning-talisman.yaml",
         (),
         heavy="with no net the one search's count of the cheapest cost did not end in 55 minutes at the week-one prices (heavy run 43828591390: 54,703 keys, 23,230 expanded; #1057); at the 10-minute net it plans with a gap (#1031)",
+    ),
+    # The guide publishes no odds (its own words: "about 70 essences", 16% and 15% for its two Harvest steps, pinned beside ours in
+    # tests/test_cli_r20_real.py); the start helmet, made by the guide with an Awakener's Orb, is hand-set in the route's price file (#901, #1046).
+    BenchmarkRoute(
+        "R20",
+        "Shaper/Elder Righteous Fire Trap and Mine helmet with Harvest Burning Damage and Concentrated Effect (Reddit guide)",
+        "examples/targets/r20-rf-helmet.yaml",
+        "examples/routes/r20-rf-helmet.yaml",
+        (),
+        heavy="an influenced rare helmet reforged by Harvest with the bench lock and the Wild Bristle Matron: minutes of a big machine (#150, #901)",
+    ),
+    # The guide publishes no odds; the start belt has no market (#515). Its steps 2 and 3 are the route file; step 4 (catalysts, Divine and
+    # Blessed Orbs) waits with the target's implicit and quality for the planner (#516).
+    BenchmarkRoute(
+        "R06",
+        "Hunter-influenced Strength Heavy Belt with the essence Strength, catalyst quality and a 42 Strength implicit (PoE Vault guide)",
+        "examples/targets/r06-strength-heavy-belt.yaml",
+        "examples/routes/r06-strength-heavy-belt.yaml",
+        (),
+        waits="the target asks for an implicit roll and catalyst quality, which the planner does not plan yet (#516); the route file holds the guide's steps 2 and 3 only",
     ),
     # The guide publishes no odds; the start boots are hand-set in the route's own price file (#901). Unveil is through the one search since #828.
     BenchmarkRoute(
@@ -416,6 +440,9 @@ def run_route(
     try:
         target = load_target(root / bench.target, data)
         entry["published_odds"] = published_outcomes(data, target, bench.outcomes)  # needs no plan, so a refused route still has them
+        if bench.waits is not None:
+            entry["error"] = f"not planned: {bench.waits}"
+            raise _Skipped
         if bench.heavy is not None and not heavy:
             entry["error"] = f"not solved: {bench.heavy} (run `benchmark --heavy` to solve it)"
             raise _Skipped

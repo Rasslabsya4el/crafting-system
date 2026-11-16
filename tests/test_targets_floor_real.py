@@ -108,6 +108,7 @@ LOWERED = {
     "r12-lightning-amulet": 75,  # the +1 gem level needs 75; the start amulet already holds the resistance (any tier)
     "r13-life-resist-belt": 84,  # the tier-1 resistances need 84
     "r17-lightning-talisman": 75,  # the two +1 gem levels need 75
+    "r20-rf-helmet": 82,  # the tier-1 Burning Damage and Concentrated Effect supports need 82
     "v01-minion-helmet": 64,
 }
 

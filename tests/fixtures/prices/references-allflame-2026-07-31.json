@@ -1078,6 +1078,11 @@
       },
       "source": "poe.ninja-history"
     },
+    "Eternal Burgonet, item level 86-100, Shaper/Elder influence": {
+      "chaos": 181.5,
+      "source": "hand",
+      "note": "hand-set start price of reference route R20 (#901, OR-44): the week-one file has no line for a dual-influenced helmet and Allflame has left the trade site; the guide's step 1 makes it with an Awakener's Orb (171.5 Chaos in the week-one file) from two single-influence Eternal Burgonets, about 5 Chaos each (the stand-in of #150, PR #816). The plan and the guide's route pay the same start, so the comparison does not depend on it"
+    },
     "Exalted Orb": {
       "chaos": 1.36,
       "detail": {

@@ -1,0 +1,86 @@
+# Given route for benchmark route R06: a Hunter-influenced Heavy Belt with the top "% increased Attributes", the Strength of a Deafening
+# Essence of Rage, a Life, Armour or Resistance mod, a 42 Strength implicit and 20% Intrinsic Catalyst quality (ticket #901).
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices as the
+# solver's route. In every state the FIRST rule whose conditions match is followed; a goal state is never acted on. The conditions
+# and actions are explained in examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (POEGuy / PoE Vault, "Strength-stacking influenced Heavy Belt", 3.29, docs/research/2026-10-30-5-reference-routes.md, id R06):
+#   1. Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt (the target buys a Normal Hunter belt, #515).
+#   2. Use Deafening Essence of Rage until Tier 1 % Increased Attributes.
+#   3. Use Orb of Annulment to remove unwanted modifiers and Exalted Orb to add useful ones; if Strength or Increased Attributes is
+#      removed, back to step 2.
+#   4. Apply 20 Intrinsic Catalysts; use a Divine Orb until 14% Increased Attributes; use a Blessed Orb until the implicit is 42
+#      Strength; bench-craft an open modifier.
+#
+# What this file holds, and what it cannot hold yet:
+#   * Steps 2 and 3 are the rules below. Step 4 is not written: a rule cannot yet ask for the item's quality or its implicit roll (the
+#     conditions of cli/_route.py speak of the explicit mods only), and the planner refuses a target that asks for quality or an
+#     implicit (#516). Until both are built R06 is not planned and this file is read by no plan; tests/test_cli_r06_route.py reads it
+#     against the target without its implicit and quality, so its rules stay valid.
+#   * "Tier 1 % Increased Attributes" is the Hunter mod the target names, rolled 12 (the 14% shown with 20% quality). A lower tier or a
+#     lower roll of it is `below`: the guide's step 2 rerolls until tier 1 and its step 4 Divines the roll; with step 4 not written, a
+#     `below` Attributes is rerolled with the essence, which can cost more than the guide's Divine Orbs.
+#   * Step 3: "unwanted modifiers" are annulled while the item has no free prefix, and an Exalted Orb fills a free prefix while none of
+#     Life, Armour and the three resistances is on the item at the target's tier. A belt with the two suffixes and one of those five is
+#     where step 4 begins: no rule matches it, so it is a gap of this route until step 4 can be written. The Exalted Orb is the plain
+#     one, as the guide writes; the item is Hunter-influenced, so it can add a Hunter mod.
+
+name: R06, PoE Vault guide
+skip_refused: true
+
+rules:
+  # Step 3: the two suffixes are there, nothing useful yet, a prefix is free: Exalted Orb.
+  - when:
+      rarity: rare
+      open_prefixes: 1
+      requirements:
+        - family: PercentageAllAttributes
+          status: passing
+        - family: Strength
+          status: passing
+        - family: IncreasedLife
+          status: [absent, below]
+        - family: IncreasedPhysicalDamageReductionRating
+          status: [absent, below]
+        - family: FireResistance
+          status: [absent, below]
+        - family: ColdResistance
+          status: [absent, below]
+        - family: LightningResistance
+          status: [absent, below]
+    do: Exalted Orb
+  # Step 3: the two suffixes are there and the prefixes are full of unwanted mods: annul (a lost suffix sends the route back to 2).
+  - when:
+      rarity: rare
+      requirements:
+        - family: PercentageAllAttributes
+          status: passing
+        - family: Strength
+          status: passing
+        - family: IncreasedLife
+          status: [absent, below]
+        - family: IncreasedPhysicalDamageReductionRating
+          status: [absent, below]
+        - family: FireResistance
+          status: [absent, below]
+        - family: ColdResistance
+          status: [absent, below]
+        - family: LightningResistance
+          status: [absent, below]
+    do: Orb of Annulment
+  # Step 2: the Normal belt takes the first essence.
+  - when:
+      rarity: normal
+    do: Deafening Essence of Rage
+  # Step 2 (and every way back to it): no tier-1 Attributes at the top roll, or no essence Strength: the essence again.
+  - when:
+      requirements:
+        - family: PercentageAllAttributes
+          status: [absent, below]
+    do: Deafening Essence of Rage
+  - when:
+      requirements:
+        - family: Strength
+          status: [absent, below]
+    do: Deafening Essence of Rage
