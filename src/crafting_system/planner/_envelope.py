@@ -148,8 +148,9 @@ PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at 
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
 # Whether every kernel the search shares by its key is built again and compared (`Search._kernel`). Off in a run: equal keys give equal kernels at
-# any two states by construction (`Abstraction.kernel_key`, its three steps, #886), so no check is owed; the tests turn it on over hand-worked
-# worlds of every kind in scope, where it compares every shared kernel instead of a sample (it replaced the first 20 and 1 in 4,096 of #374).
+# any two states by construction (`Abstraction.kernel_key`, its three steps, #886), so no check is owed; the tests turn it on over small
+# worlds (`tests/test_planner_blocking_crafts.py`: an Exalted Orb with bench crafts; R12 with its essences and Harvest reforges), where it compares
+# every shared kernel instead of a sample (it replaced the first 20 and 1 in 4,096 of #374).
 CHECK_SHARED = False
 
 

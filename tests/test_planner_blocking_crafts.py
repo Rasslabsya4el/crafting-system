@@ -130,7 +130,7 @@ def test_with_no_action_that_keeps_a_craft_and_reads_the_mods_only_the_metamods_
     rerolls = offers_for(data, goal, BELT, target.start_item, ["chaos-orb", "bench-craft"], blocking=True)
     crafts = [entry for entry in rerolls.offers if entry.kind == "bench-craft"]
     assert crafts and all(entry.blocks is not None for entry in crafts)  # every one is offered by the rule ...
-    assert all(_offers._families_of(data, entry.action.adds(data, target.start_item).named) & _offers.METAMOD_FAMILIES for entry in crafts)  # ... as a metamod
+    assert all({family for mod_id in entry.action.adds(data, target.start_item).named for family in data.mods[mod_id].families} & _offers.METAMOD_FAMILIES for entry in crafts)  # ... as a metamod
     assert any(_fills(label) for limit in rerolls.limits for label in limit.labels)
 
 
@@ -146,3 +146,25 @@ def test_a_filler_and_a_family_a_draw_gives_are_different_classes(data, target):
         (("prefix",), frozenset({"IncreasedEnergyShield"}), frozenset()),  # the Armour and Energy Shield craft blocks a family the belt draws
         (("suffix",), frozenset({"ItemGenerationCannotChangePrefixes"}), frozenset()),  # a metamod is told apart
     }
+
+
+def test_on_an_item_that_takes_a_second_craft_two_fillers_are_told_apart_and_both_offered(tmp_path, data, monkeypatch):
+    # with the multimod on the item a craft of a family already crafted is refused and one of another family is not: the two fillers differ
+    held = TARGET.replace("    - mod: ColdResist1\n      values: [6]\n", "    - mod: StrIntMasterItemGenerationCanHaveMultipleCraftedMods\n      values: [1]\n      crafted: true\n")
+    path = tmp_path / "multimod.yaml"
+    path.write_text(held, encoding="utf-8")
+    multimod = load_target(path, data)
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    plan = plan_target(data, multimod, _prices(), PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
+    assert {entry.label for entry in plan.offers if _fills(entry.label)} == {"Bench craft +1 to Filling [TestMasterFiller]", "Bench craft +1 to Filling [TestMasterFillerTwo]"}
+
+
+def test_r12_with_every_shared_kernel_checked_gives_the_plan_it_gives_unchecked(monkeypatch):
+    from cli_support import R12, price_file
+    from items_support import DATA
+
+    settings = PlanSettings(recipe_starts=False, solver="envelope")
+    checked = plan_target(DATA, load_target(R12, DATA), price_file(), settings)  # `CHECK_SHARED` is on (the fixture of this module)
+    monkeypatch.setattr(_envelope, "CHECK_SHARED", False)
+    unchecked = plan_target(DATA, load_target(R12, DATA), price_file(), settings)
+    assert checked.mean_remaining == unchecked.mean_remaining

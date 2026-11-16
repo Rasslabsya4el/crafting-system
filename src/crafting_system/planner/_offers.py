@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from itertools import combinations, product
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
+from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, crafted_limit_of, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Influence, Item, ItemError, Metamod, Rarity, eldritch_grade, eldritch_side, spawn_weight
@@ -964,26 +964,33 @@ def blocking_crafts(data: GameData, goal: Goal, start_item: Item, candidates: It
 def _told_families(data: GameData, start_item: Item, candidates: Iterable[Action], crafts: Collection[Action]) -> frozenset[str] | None:
     """The families of a crafted mod that some offered action can tell apart (`blocking_crafts`), or None for every family.
 
-    A draw on this base (`drawable_mod_ids`, for the start item and for it with each influence an action may give it), an unveil offer of the
-    base, a family an action reads by name (`Reads.families`, `Reads.by_mod`; None there is every family) and the metamods. A craft reads its own families
-    because a second craft of one is refused; while an item holds one crafted mod (no multimod among the crafts, `metamods.ONE_CRAFTED_MOD`)
-    any second craft is refused, so those reads tell nothing apart and are not counted.
+    A draw on this base (`drawable_mod_ids`, for the start item, for it with each influence an action may give it, and at each item level an
+    action draws at, `Reads.draw_levels`), an unveil offer of the base, a family an action reads by name (`Reads.families`, `Reads.by_mod`; None
+    there is every family), the families of the start item's own mods (a craft of one is refused while it stays) and the metamods. A craft
+    reads its own families because a second craft of one is refused; while an item holds one crafted mod at most (`crafted_limit_of`: no
+    multimod among the crafts or on the start item, and no enchantment that grants a slot) any second craft is refused whatever its family,
+    so those reads tell nothing apart and are not counted.
     """
-    multimod = Metamod.MULTIPLE_CRAFTED_MODS.value in _families_of(data, (m for action in crafts for m in action.adds(data, start_item).named or ()))
-    found: set[str] = set(METAMOD_FAMILIES)
+    held = [entry.mod_id for entry in start_item.mods]
+    named = [mod_id for action in crafts for mod_id in action.adds(data, start_item).named or ()]
+    multimod = Metamod.MULTIPLE_CRAFTED_MODS.value in _families_of(data, (*held, *named))
+    several = crafted_limit_of(data, multimod=multimod, enchantment=start_item.enchantment) > 1
+    found: set[str] = set(METAMOD_FAMILIES) | _families_of(data, held)
+    levels: set[int] = {start_item.item_level}
     for action in candidates:
-        if action in crafts and not multimod:
-            continue
         reads = action.reads(data)
+        levels |= set(reads.draw_levels or ())
+        if action in crafts and not several:
+            continue
         if reads.junk and reads.families is None:
             return None
         found |= reads.families or frozenset()
         found |= frozenset(reads.by_mod or ())
     found |= unveil_pool_families(data, start_item.base_id)
-    for influences in (start_item.influences, *(frozenset({influence}) for influence in Influence)):
+    for level, influences in product(sorted(levels), (start_item.influences, *(frozenset({influence}) for influence in Influence))):
         try:
-            probe = start_item if influences == start_item.influences else Item.build(
-                data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.RARE, influences=influences
+            probe = start_item if (level, influences) == (start_item.item_level, start_item.influences) else Item.build(
+                data, base_id=start_item.base_id, item_level=level, rarity=Rarity.RARE, influences=influences
             )
             found |= _families_of(data, drawable_mod_ids(data, probe))
         except (ItemError, NotApplicableError, OutOfScopeError):  # a base that takes no such influence, or whose pool the model cannot build: no draw there to tell apart
