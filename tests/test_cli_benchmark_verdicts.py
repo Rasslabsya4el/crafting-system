@@ -240,31 +240,34 @@ def test_the_project_config_states_the_tolerance():
 # --- the verdicts of the repository -------------------------------------------------------------------------
 
 
-def test_r04_carries_its_verdict_as_a_real_find():
+def test_r04_and_r09_carry_their_verdicts_as_real_finds():
     found = {(each.id, each.side): each for each in verdicts.VERDICTS}
 
-    assert found[("R04", COMPLETED)].issues == (599, 628)
+    assert found[("R04", COMPLETED)].issues == (599, 628) and found[("R09", GUIDE)].issues == (901,)
     assert {each.kind for each in found.values()} == {REAL_FIND}
     assert found[("R04", COMPLETED)].ratio == pytest.approx(0.331, abs=1e-3)
+    assert found[("R09", GUIDE)].ratio == pytest.approx(0.168, abs=1e-3)
 
 
 def test_only_a_reference_route_carries_a_verdict():
-    """A smoke test (V01) and a dropped route (R07, R08 and R09 before their new targets are reviewed) carry none (OR-45, #901)."""
+    """A smoke test (V01) and a dropped route (R07, R03) carry none (OR-45, #901)."""
     references = {bench.id for bench in REFERENCES}
     assert {each.id for each in verdicts.VERDICTS} <= references
     assert "V01" not in references
 
 
-# What the heavy run 42395491917 (R04) measured at the committed price snapshot: the ratio planner mean / guide mean and the planner's first
-# divergent action. The verdict was written from it. R08's and R09's (run 42433997611) left with their verdicts (#901).
+# What the heavy runs 42395491917 (R04, at the committed price snapshot) and 43828591390 (R09, at the week-one prices, #901) measured: the ratio
+# planner mean / guide mean and the planner's first divergent action. The verdicts were written from them. R08's and R09's old ones (run
+# 42433997611, Prismatic Fossil) left with their old targets (#901).
 MEASURED = {
     ("R04", COMPLETED): (0.33095397065170684, "Exalted Orb"),
+    ("R09", GUIDE): (0.16765561098943751, "Fossils Pristine Fossil"),
 }
 
 
 @pytest.mark.parametrize("key", sorted(MEASURED))
 def test_the_verdicts_of_the_real_routes_stand_at_the_measured_ratios_and_flag_again_when_prices_move_them(key):
-    """The benchmark prints R04 reviewed at the numbers of the heavy run, and "NEEDS A HUMAN AGAIN" if a price moved a ratio by a quarter."""
+    """The benchmark prints R04 and R09 reviewed at the numbers of the heavy run, and "NEEDS A HUMAN AGAIN" if a price moved a ratio by a quarter."""
     ratio, action = MEASURED[key]
     found = next(each for each in verdicts.VERDICTS if (each.id, each.side) == key)
     bench = next(each for each in BENCHMARKS if each.id == key[0])
