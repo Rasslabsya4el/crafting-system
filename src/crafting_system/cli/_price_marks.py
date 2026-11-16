@@ -22,6 +22,10 @@ from crafting_system.planner import Plan
 
 from ._reach import policy_states
 
+UNIT_WORDS = "the unit every price is in"
+RATE_WORDS = "the price file's Divine rate"
+
+
 @dataclass(frozen=True)
 class PriceUse:
     """One priced resource of the answer: what it costs, where the price is from, what the plan expects to use, and why it is marked (if it is)."""
@@ -62,8 +66,9 @@ def _counts(plan: Plan, labels: Mapping[str, Action]) -> dict[str, dict[str, int
 def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *, solve_uses: bool = True, all_uses: bool = False) -> tuple[PriceUse, ...]:
     """The priced resources the policy buys with, in the order its actions are first met (the start item first when it is bought).
 
-    A resource with no entry in the price file (a Chaos Orb, a Divine Orb at the file's rate, a start price given on the command line)
-    is not listed: it carries no source to show. With `policy` None, or `solve_uses` False, no expected use is solved and a depth is
+    Every currency a step spends is listed, a bench craft's included (#983, OR-7): the Chaos Orb as the unit every price is in, the
+    Divine Orb by its row of the file or, with none, as the file's rate, as `planner._offers.price_offers` prices them. Any other resource
+    with no entry in the price file (a start price given on the command line) is not listed: it carries no source to show. With `policy` None, or `solve_uses` False, no expected use is solved and a depth is
     compared with one unit, the least a plan that takes the action buys. `mean` is the policy's expected cost without the start item
     (default: the plan's own, `Plan.mean_remaining`); a given route passes its own, which the plan's optimum does not bound. With `all_uses`
     the expected uses of every resource are solved, not only of those whose depth could matter (a report of what a plan buys).
@@ -73,7 +78,7 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
         return ()
     labels = _labels(plan, policy) if policy is not None else {}
     counts = _counts(plan, labels) if labels else {}
-    names = [name for name in dict.fromkeys(counts) if name not in (CHAOS_ORB, DIVINE_ORB) and name in prices.prices]
+    names = [name for name in dict.fromkeys(counts) if name in prices.prices or name in (CHAOS_ORB, DIVINE_ORB)]
     start_name = plan.start_price.name if plan.start_price.bought else None
     if start_name is not None and start_name in prices.prices and start_name not in names:
         names.insert(0, start_name)
@@ -85,6 +90,8 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
     ceiling = spent + (plan.start_price.chaos if plan.start_price.bought else 0.0)
     need: list[str] = []
     for name in names:
+        if name not in prices.prices:
+            continue  # a Chaos or Divine Orb the file has no row for: a unit, with no depth to judge
         entry = prices.prices[name]
         depth = judged_depth(entry, prices)  # a recipe price is as deep as the market price it rests on (#885)
         if depth is not None and depth < ceiling / entry.chaos:
@@ -105,9 +112,15 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
             solved[name] = total
     found = []
     for name in names:
+        uses = solved.get(name)
+        if name == CHAOS_ORB:  # the unit every price is in: it has no market of its own, and no mark (price_offers prices it at 1)
+            found.append(PriceUse(name, 1.0, UNIT_WORDS, None, uses, ()))
+            continue
+        if name not in prices.prices:  # a Divine Orb the file lists no row for is priced at the file's rate (price_offers)
+            found.append(PriceUse(name, prices.chaos_per_divine, f"{RATE_WORDS}, {prices.league}, {prices.fetched_at:%Y-%m-%d}", None, uses, ()))
+            continue
         entry = prices.prices[name]
         provenance = provenance_of(entry, prices)
-        uses = solved.get(name)
         marks = price_marks(entry, prices, uses if uses is not None or name in need else ceiling / entry.chaos)
         source = "no source recorded" if provenance is None else provenance.words
         depth = None if provenance is None else provenance.depth

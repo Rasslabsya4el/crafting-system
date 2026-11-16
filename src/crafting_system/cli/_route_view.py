@@ -66,7 +66,7 @@ from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 from crafting_system.targets import plain_base_names
-from crafting_system.planner import GIVEN_SOURCE, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown
+from crafting_system.planner import GIVEN_SOURCE, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
 from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
@@ -89,6 +89,7 @@ class PageError(ValueError):
 
 
 NEVER_FINISHES = "never finishes from here"
+SURE_NEXT = "Next step, by the item it is used on"  # the field of a sure action's branches, in place of "Chance per use" (#984)
 GAPS = "never finishes: the route has gaps"
 NEVER = "never finishes"
 
@@ -393,26 +394,38 @@ class _View:
 
     def lost(self, edge: Edge) -> list[str]:
         """What a failure edge costs the item, in words: the wanted mod its uses lose, or the list of those they may lose."""
-        texts = [self.leaf_text(i) for i in edge.lost]
+        texts = list(dict.fromkeys(self.leaf_text(i) for i in edge.lost))  # two leaves that read alike are one mod to a player (#984)
         if len(texts) <= 1:
             return [f"{text} lost" for text in texts]
         return [f"one of these lost: {'; '.join(texts)}"]
 
     def appeared(self, step: Step, edge: Edge) -> list[str]:
-        """What every state of a forward edge has that no state of the step has (a leaf met, a mod fractured or crafted)."""
+        """What every state of a forward edge has that no state of the step has (a leaf met, a mod fractured or crafted).
+
+        A leaf that a new fractured or crafted mod meets is named once, as the mod (as `gains` does), and no text twice (#984)."""
         before = self._passing(step.states)
+        before_fractured = set().union(*(self._fractured(state) for state in step.states))
+        before_crafted = set().union(*(self._crafted(state) for state in step.states))
+        new_fractured = sorted(set.intersection(*(self._fractured(state) for state in edge.states)) - before_fractured)
+        new_crafted = sorted(set.intersection(*(self._crafted(state) for state in edge.states)) - before_crafted)
+        explained = {
+            i
+            for state in edge.states
+            for contribution in (
+                *(entry.contribution for entry in state.fractured if entry.mod_id in new_fractured),
+                *(slot.contribution for slot in state.slots if slot.crafted and slot.kind in new_crafted),
+            )
+            for i, status in enumerate(contribution)
+            if status is Status.PASSING
+        }
         found = [
             self.leaf_text(i)
             for i in range(len(self.plan.leaf_labels))
-            if i not in before and all(state.status[i] is Status.PASSING for state in edge.states)
+            if i not in before and i not in explained and all(state.status[i] is Status.PASSING for state in edge.states)
         ]
-        shared_fractured = set.intersection(*(self._fractured(state) for state in edge.states))
-        shared_crafted = set.intersection(*(self._crafted(state) for state in edge.states))
-        before_fractured = set().union(*(self._fractured(state) for state in step.states))
-        before_crafted = set().union(*(self._crafted(state) for state in step.states))
-        found += [f"{self._mod(mod_id)} · fractured" for mod_id in sorted(shared_fractured - before_fractured)]
-        found += [f"{self._mod(mod_id)} · crafted" for mod_id in sorted(shared_crafted - before_crafted)]
-        return found
+        found += [f"{self._mod(mod_id)} · fractured" for mod_id in new_fractured]
+        found += [f"{self._mod(mod_id)} · crafted" for mod_id in new_crafted]
+        return list(dict.fromkeys(found))
 
     # -- the fields of a step ----------------------------------------------------------------------------------
 
@@ -440,16 +453,24 @@ class _View:
             return " and ".join(appeared), False
         return f"the item of step {edge.to + 1}", True
 
-    def chance_lines(self, step: Step, action: Action, shown: list[Edge], below: int) -> list[Line]:
-        """One line per place the outcomes that lose no wanted mod lead to, with the exact mixture of their chances."""
-        random = sum(1 for outcome in action.outcomes if outcome.weight > 0) > 1
-        if len(shown) == 1 and not random:
+    @staticmethod
+    def sure(action: Action) -> bool:
+        """Whether one use of the action always gives the same item (a bench craft, Remove Crafted Mods): it never misses, and where its
+        items go on to differs only by the item it was used on, not by chance (#984)."""
+        return sum(1 for outcome in action.outcomes if outcome.weight > 0) <= 1
+
+    def chance_lines(self, step: Step, action: Action, shown: list[Edge], below: int, sure: bool) -> list[Line]:
+        """One line per place the outcomes that lose no wanted mod lead to, with the exact mixture of their chances.
+
+        For a sure action (`sure`) the lines are the shares of its uses that go on to each step, by the item it was used on (`step_row`
+        titles them so): a chance of a sure use would read as a miss (#984). A restart is never sure here: what it buys is a new random item."""
+        if len(shown) == 1 and self.sure(action):  # one place and one outcome says nothing
             return []
         if len(shown) == 1:
             return [Line(chance_text(shown[0].chance))]
         lines = []
         for edge, (what, names_row) in zip(shown, self.phrases(step, shown)):
-            text = f"{what}: {chance_text(edge.chance)}"
+            text = f"{what}: {chance_text(edge.chance)}" + (" of uses" if sure else "")
             lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1, below, always=names_row))
         return lines
 
@@ -680,10 +701,11 @@ class _View:
             goal = ["the target"]
         never = step.never_finishes
         step_cost = step.step_cost
-        uses = [NEVER_FINISHES] if never else [] if step.uses is None else [count(step.uses)]
+        sure = self.sure(action) and not restart
+        uses = [NEVER_FINISHES] if never else [] if step.uses is None else [self.uses_text(step.uses, step.reached, sure)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
-        chances = self.chance_lines(step, action, shown, number + 1)
+        chances = self.chance_lines(step, action, shown, number + 1, sure)
         if restart:
             after = self.start_card()
         else:
@@ -693,7 +715,7 @@ class _View:
             _plain("Goal", *goal),
             _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
-            Field("Chance per use", tuple(chances)) if chances else None,
+            Field(SURE_NEXT if sure else "Chance per use", tuple(chances)) if chances else None,
             self.tier_field(step, action),
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
@@ -703,6 +725,17 @@ class _View:
         )
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after))
+
+    @staticmethod
+    def uses_text(uses: float, reached: float | None, sure: bool) -> str:
+        """The expected uses of a step in a run. A sure action is used once each time the run reaches it, so it reads as one use, and as the
+        times a run that reaches the step is there when that is more than once: never as a use that may miss (#984)."""
+        if not sure:
+            return count(uses)
+        if not reached:  # no reach solved: the times a run is at the step are not known, each of them is still one sure use
+            return "1 each time"
+        times = count(uses / reached)
+        return "1" if times in ("1", "≈ 1") else f"1 each time, {times.replace('≈ ', '≈')} times in a run that reaches it"
 
     def start_field(self) -> Field | None:
         """When the start item is made at a vendor: the start options with their totals, so the choice can be read off the page."""
@@ -751,6 +784,7 @@ class _View:
         )
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
+        limits = spent_kinds_named(limits, (use.name for use in uses))  # a kind named by a currency a step pays with is named by its use (#983)
         leaves_out = tuple(Field(title, tuple(limit_line(limit) for limit in group)) for title, group in grouped(limits))
         return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item, self.forced), leaves_out)
 

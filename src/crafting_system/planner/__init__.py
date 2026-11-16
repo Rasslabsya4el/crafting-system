@@ -44,6 +44,7 @@ from ._limits import (
     more_labels,
     not_shown,
     ordered,
+    spent_kinds_named,
     unresolved,
 )
 from ._offers import (
@@ -149,6 +150,7 @@ __all__ = [
     "grouped",
     "limit_document",
     "limit_text",
+    "spent_kinds_named",
     "lumped_policy",
     "lumped_view",
     "main_view",
