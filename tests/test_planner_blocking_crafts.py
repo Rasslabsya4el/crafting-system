@@ -115,7 +115,7 @@ def test_without_the_rule_the_plan_exalts_until_a_prefix_at_16e_over_3_plus_2s(d
 
 def test_the_groups_grow_from_the_least_refining_and_fewest_offers_and_one_kind_of_thousands_comes_after_them():
     # no number decides a group: offers that add nothing beyond the junk count are one group; once one adds more, each kind and what it adds is a
-    # group, ordered by the features, then the number of offers; the target's named offers lead the first group
+    # group, ordered by the features beyond the junk count, then the number of offers; the target's named offers lead the first group
     from types import SimpleNamespace
 
     from crafting_system.planner import _rounds
@@ -129,7 +129,8 @@ def test_the_groups_grow_from_the_least_refining_and_fewest_offers_and_one_kind_
     assert only.positions == (0, 1, 2, 3)  # main's defaults: one search
     offers = [offer("fossil")] * 9 + [offer("essence")] * 3 + [offer("lock", blocks=("prefix",)), offer("annul"), offer("exalt")]
     groups = _rounds.round_groups(offers, ("exalt",), lambda o: adds[o.kind])
-    assert [(g.kinds, len(g.positions)) for g in groups] == [(("essence", "exalt"), 4), (("fossil",), 9), (("annul",), 1), (("lock",), 1)]
+    # the junk count is no refinement in the order (the Annulment Orb's one offer comes first), a metamod is (the lock comes after the 9 fossils)
+    assert [(g.kinds, len(g.positions)) for g in groups] == [(("annul", "exalt"), 2), (("essence",), 3), (("fossil",), 9), (("lock",), 1)]
     assert sorted(i for g in groups for i in g.positions) == list(range(len(offers)))  # every offer has its round
 
 
@@ -155,6 +156,43 @@ def test_a_first_round_with_no_plan_closes_joins_the_next_and_its_record_holds_n
     assert seen == [("a",), ("a", "b")] and widened.plan.mean_remaining == 5.0  # the round with no plan is the base of the next
     assert [record.status for record in widened.records] == ["no plan", "closed"] and _rounds.all_closed(widened.records)
     json.dumps([record.document() for record in widened.records], allow_nan=False)
+
+
+def test_a_refused_round_joins_the_next_and_a_round_with_no_plan_in_hand_has_all_the_time_left():
+    # a refusal (a solve that failed) proves nothing against its offers: they stay in the next rounds, and the round is not closed (OR-13); until
+    # a plan is in hand a round may take all the time left (one search's share), and once one is, the rounds left share it
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abcd"))
+    seen = []
+
+    def run(chosen, call):
+        seen.append((chosen, call.searches))
+        if chosen == ("a", "b"):
+            raise ValueError("the policy is improper")
+        if len(chosen) == 1:
+            raise _rounds.NoPlan("no plan of a alone")
+        return SimpleNamespace(search=SimpleNamespace(lower=5.0), mean_remaining=5.0)
+
+    widened = _rounds.widen(
+        groups, tuple("abcd"), run, upper_of=lambda plan: 5.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: 600.0, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert seen == [(("a",), 1), (("a", "b"), 1), (("a", "b", "c"), 1), (("a", "b", "c", "d"), 1)]  # the last round is alone in its share too
+    assert [record.status for record in widened.records] == ["no plan", "refused", "closed", "closed"] and not _rounds.all_closed(widened.records)
+    shares = []
+
+    def planned(chosen, call):
+        shares.append(call.searches)
+        return SimpleNamespace(search=SimpleNamespace(lower=5.0), mean_remaining=5.0)
+
+    _rounds.widen(
+        groups[1:], tuple("abcd"), planned, upper_of=lambda plan: 5.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: 600.0, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert shares == [1, 2, 1]  # round 1 has no plan in hand; then the plan is, and the two rounds left share the time
 
 
 def test_with_the_rule_the_plan_fills_the_suffix_with_the_cheaper_craft_then_exalts_at_3_c_plus_e_plus_2s(data, target, monkeypatch):

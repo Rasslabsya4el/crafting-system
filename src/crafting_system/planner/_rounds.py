@@ -7,17 +7,20 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
 * **Groups.** An offer adds to the model the features beyond the target's own that a model of that offer alone has (`Abstraction.features`).
   When no offer adds more than the junk count (`FIRST_ROUND`), the offers are one group and one search, as before the rounds (every benchmark
   route on main's default methods). Otherwise each offer is in the group of its kind and the features it adds, and the target's named offers
-  join the first group; the groups go by the features they add, then by their number of offers, then by their kinds' names. So the rounds grow
-  from the offers that refine the model least and are fewest, and a kind of thousands of offers (the fossil sets) comes after the small kinds
-  that refine the model as little: the plan of the cheap rounds is in hand in seconds. The order decides only when a group is tried and with
+  join the first group; the groups go by the features they add beyond `FIRST_ROUND` (the junk count every reroll needs is no refinement here,
+  as in the test for one group), then by their number of offers, then by their kinds' names. So the rounds grow from the offers that refine the
+  model least and are fewest, and a kind of thousands of offers (the fossil sets) comes after the small kinds that refine the model as little:
+  the plan of the cheap rounds is in hand in seconds. The order decides only when a group is tried and with
   what share of the time; it drops no offer and no group, and changes nothing the answer proves: a group a run did not reach is listed as not
   tried, with what the plan is proved against without it (OR-13). No kind is named and no count is a cut.
 * **Rounds.** Round 1 is the first group. Each later round is the offers of every round that closed before it, plus its own group. It is cut
   against the best plan so far: the exact price cut (`_price_cut`) with that plan's certified upper figure, and the search ends at once when its
   lower figure reaches that figure (`_envelope.Beaten`). A round that closes (exact, within the gap, beaten, or shown to reach no plan) joins
-  the base of the next rounds; one that its share of the time, the memory net or a refusal stopped is set aside, and its plan is kept if it is
-  cheaper. The share of a round is the run's time left over the rounds left (`_plan.search_net`), so time a round does not use goes to the
-  rounds after it.
+  the base of the next rounds, and so does one a refusal ended (a solve that failed proves nothing against its offers and took no time from the
+  others: a wider round may solve them); one that its share of the time or the memory net stopped is set aside, and its plan is kept if it is
+  cheaper. Until a round has made a plan, a round may take all the time left: the answer must hold a plan (OR-33), and a later round cannot
+  give one sooner than the rounds before it. Once a plan is in hand, the share of a round is the run's time left over the rounds left
+  (`_plan.search_net`), so time a round does not use goes to the rounds after it.
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
   figure no plan of its offers costs less than (OR-13). A main tree whose every benchmark route has one group never enters the rounds.
@@ -100,8 +103,8 @@ def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object
 
     One group, every offer, when the offers refine the model in one way only (each adds no feature beyond `FIRST_ROUND`): the search is one
     search, as before the rounds. Otherwise the target's named offers lead the first group, and every other offer is in the group of its kind
-    and the features it adds; the groups go by the features they add, then by their number of offers, then by their kinds' names, so the rounds
-    grow from the offers that refine the model least and are fewest. No kind is named and no count is a cut: every group gets its round."""
+    and the features it adds; the groups go by the features they add beyond `FIRST_ROUND`, then by their number of offers, then by their kinds'
+    names, so the rounds grow from the offers that refine the model least and are fewest. No kind is named and no count is a cut: every group gets its round."""
     names = set(named or ())
     features = [added(offer) for offer in offers]
     if all(found <= FIRST_ROUND for found in features):
@@ -112,7 +115,7 @@ def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object
         if not asked[i]:
             by_key.setdefault((kind_of(offer), features[i]), []).append(i)
     groups = [Group(tuple(positions), (kind,), found) for (kind, found), positions in by_key.items()]
-    groups.sort(key=lambda group: (len(group.features), sorted(group.features), len(group.positions), group.kinds))
+    groups.sort(key=lambda group: (len(group.features - FIRST_ROUND), sorted(group.features - FIRST_ROUND), len(group.positions), sorted(group.features), group.kinds))
     first = [i for i in range(len(offers)) if asked[i]]
     if first:  # the named offers are searched from the first round
         head = groups.pop(0) if groups else Group((), (), frozenset())
@@ -175,7 +178,7 @@ def widen(
         began = clock_now()
         plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
         try:
-            plan = run(chosen, RoundCall(rest, best_upper, k == 0))
+            plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0))  # no plan in hand: all the time left
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
             reason = (
@@ -206,8 +209,8 @@ def widen(
         if lower is not None and not math.isfinite(lower):
             lower = None  # a round with no plan states no figure (the JSON holds no infinity)
         records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features))))
-        if k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE):
-            base = positions  # the first round is the base whatever its end: every later round widens it
+        if k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED):
+            base = positions  # the first round is the base whatever its end, a refused one too: every later round widens it
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error)
