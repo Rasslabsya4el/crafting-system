@@ -24,6 +24,7 @@ from functools import cached_property
 
 from crafting_system.data import BenchOption, GameData, Mod, conflicts
 from crafting_system.items import ExplicitMod, Item, Rarity, Side
+from crafting_system.items.words import ranges_low_first
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -71,8 +72,9 @@ def without_ranges(text: str) -> str:
 
 
 def _one_line(text: str) -> str:
-    """A mod text on one line: some mods read over two lines, such as a Life craft that also regenerates Mana."""
-    return " / ".join(part.strip() for part in text.splitlines() if part.strip())
+    """A mod text on one line, its ranges low to high (`items.words.ranges_low_first`, #991): some mods read over two lines, such as a Life
+    craft that also regenerates Mana."""
+    return ranges_low_first(" / ".join(part.strip() for part in text.splitlines() if part.strip()))
 
 
 def _cost(data: GameData, option: BenchOption) -> tuple[CurrencyCost, ...]:

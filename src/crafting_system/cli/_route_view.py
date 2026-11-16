@@ -104,6 +104,7 @@ class Line:
     href: str | None = None
     anchor: str = ""
     more: tuple[str, ...] = ()  # entries the text does not name: the page holds them in a "details" element, closed by default
+    more_title: str = ""  # the summary of that element; "" for "the other N"
 
 
 @dataclass(frozen=True)
@@ -313,7 +314,7 @@ class _View:
         # the mods the essences of this route force, each with its essence's tier: a line that stands for one says where it comes from (#895)
         used = [step.action.label for step in self.flow.steps if step.action is not None]
         self.forced = essence_notes(data, self.ab.base_id, used)
-        self.reader = _StateReader(self.ab, self.start_item, self.forced)
+        self.reader = _StateReader(self.ab, self.start_item, self.forced, self.plan.target.influences)
 
     # -- anchors and links ---------------------------------------------------------------------------------
 
@@ -507,11 +508,15 @@ class _View:
 
         Runs of tiers with the same chance are joined ("T2 to T10 1.4% each", two tiers "T2 and T3 1.4% each"); a tier the target accepts is
         never joined with one it does not, and is marked "(target)"; when every tier is the target's, none is marked and the line ends with that.
+        A mod of a base with no tiers (a base jewel) has no tier: `(5-7)% increased maximum Life: 3.3% · none 97%` (#963).
         """
         every = all(share.wanted for share in line.tiers)
 
         def percent(chance: float) -> str:
             return "0%" if chance == 0.0 else chance_text(chance)
+
+        if not line.tiered:
+            return f"{line.text}: {percent(math.fsum(share.chance for share in line.tiers))} · none {percent(line.none)}"
 
         runs: list[list] = []  # [first tier, last tier, chance, wanted]
         for share in line.tiers:
@@ -746,8 +751,25 @@ class _View:
         )
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
-        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(limits))
+        leaves_out = tuple(Field(title, tuple(limit_line(limit) for limit in group)) for title, group in grouped(limits))
         return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item, self.forced), leaves_out)
+
+
+BENCH_LABEL = "Bench craft "  # how an action label names a bench craft (`actions.bench`)
+
+
+def limit_line(limit) -> Line:
+    """A limit as one line of the page: its first `SHOWN_LABELS` labels named, the rest in a closed "details" element (OR-13).
+
+    A limit that leaves out more bench crafts than that is said as one short statement, `Not offered: 146 bench crafts, each because its mod
+    counts toward no requirement, ...`, and every craft is in the closed element, by its mod (#991): the first three of 146 crafts tell a player nothing
+    the count and the cause do not.
+    """
+    labels = limit.labels
+    if len(labels) > SHOWN_LABELS and all(label.startswith(BENCH_LABEL) for label in labels):
+        text = f"{limit.what}: {len(labels):,} bench crafts" + (f", each because {limit.reason()}" if limit.why else "") + f". {limit.guarantee}"
+        return Line(text, more=tuple(label.removeprefix(BENCH_LABEL) for label in labels), more_title="which crafts")
+    return Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit))
 
 
 def build_section(

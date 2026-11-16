@@ -11,7 +11,11 @@ the mod an essence forces (it is kept, not drawn). The chance of tier t is the c
 states of one step they are mixed as the chances of the step are (OR-20): the sum over its states of (weight x chance) divided by the
 sum of the weights, the weight being the expected visits of the state from the start (`_route_flow`). "None" is what is left: the
 use adds no mod of the family (it holds one already, the draw picked another family, or the action adds nothing). The tiers are the
-table tiers of the base (`items.tier_table`, 1 is the best); the tiers the target accepts are marked (`Abstraction.passes`).
+tiers of the base with the item's influences (`_route_card.page_tiers`, 1 is the best), one ladder per mod type as the game counts them: a
+family the target names can hold several mods of other types (the Hunter's Chaos Damage over Time shares its family with spell damage),
+and a line is only for a ladder that holds a mod the leaf accepts (#980). The tiers the target accepts are marked (`Abstraction.passes`).
+A base with no tiers (a base jewel, `TierTable.tierless`) has no ladder: its line gives the chance of the mod in the page's one mod format,
+its ranges written out (#963). A mod alone on its ladder on a base with ladders keeps `T1`, as its mod line does.
 
 Two states with the same draw (the same pool on the same free slots) share one distribution, so a step of thousands of states asks
 for as many distributions as it has pools.
@@ -24,10 +28,10 @@ from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.actions import Action
-from crafting_system.items import tier_table
+from crafting_system.items import Influence
 from crafting_system.items.words import mod_text
 
-from ._route_card import _hashes
+from ._route_card import _hashes, page_tiers
 
 
 @dataclass(frozen=True)
@@ -41,24 +45,32 @@ class TierShare:
 
 @dataclass(frozen=True)
 class TierLine:
-    """One family the target wants: its text (the game's, ranges as `#`), the chance of each tier, the chance of none of them."""
+    """One family the target wants: its text (the game's, ranges as `#`), the chance of each tier, the chance of none of them.
+
+    `tiered` False: the base has no tiers (a base jewel), so the text has its ranges and the page writes no tier (#963)."""
 
     text: str
     tiers: tuple[TierShare, ...]
     none: float
+    tiered: bool = True
 
 
 @dataclass(frozen=True)
 class _Family:
     text: str
-    ladder: dict[str, int]  # mod id -> table tier, for every mod of the family that can spawn on the base
+    ladder: dict[str, int]  # mod id -> table tier, for every mod of the ladder that can spawn on the base
     wanted: frozenset[int]
+    tiered: bool = True  # False on a base with no tiers (#963)
 
 
-def wanted_families(ab: Abstraction) -> list[_Family]:
-    """The families the target wants, one per (families, side, domain): the ladder of the family and the tiers a leaf accepts."""
+def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozenset()) -> list[_Family]:
+    """The ladders the target wants, one per (mod type, side, domain) as the game counts tiers: the ladder and the tiers a leaf accepts.
+
+    `influences` are the item's: an influence adds its own mods and ladders (`page_tiers`). A ladder no mod of which the leaf accepts gets no
+    line: a family can hold the mods of other ladders (the Hunter's Chaos Damage over Time shares its family with spell damage, #980).
+    """
     data = ab.data
-    tiers = tier_table(data, ab.base_id)
+    tiers = page_tiers(data, ab.base_id, influences)
     found: dict[tuple, dict[str, int]] = {}
     accepted: dict[tuple, set[int]] = {}
     for index, leaf in enumerate(ab.goal.leaves):
@@ -67,15 +79,19 @@ def wanted_families(ab: Abstraction) -> list[_Family]:
             # a mod the item level lets spawn: a higher tier of the table cannot come at all; a crafted mod is no draw
             if mod is None or mod_id not in tiers or mod.domain == "crafted" or mod.required_level > ab.item_level:
                 continue
-            key = (mod.families, mod.generation_type, mod.domain)
+            key = (mod.type, mod.generation_type, mod.domain)
             found.setdefault(key, {})[mod_id] = tiers[mod_id]  # the ladder is the leaf's own mods: a family can hold other mods (a gem level of another skill)
             accepted.setdefault(key, set())
             if ab.passes(mod, index):
                 accepted[key].add(tiers[mod_id])
     families = []
     for key, ladder in found.items():
+        if not accepted[key]:
+            continue  # no tier of this ladder meets a leaf: it is another mod of the family, not a wanted one
         best = min(ladder, key=lambda mod_id: (ladder[mod_id], mod_id))
-        families.append(_Family(_hashes(mod_text(data.mods[best])), ladder, frozenset(accepted[key])))
+        tiered = not tiers.tierless  # a base jewel has no tiers (#963)
+        text = mod_text(data.mods[best])
+        families.append(_Family(_hashes(text) if tiered else text, ladder, frozenset(accepted[key]), tiered))
     return families
 
 
@@ -127,7 +143,7 @@ def tier_lines(
     one of the states (an essence's own mod) gets no line: it comes every time, there is no chance of a tier to show, and the page says
     that mod by its essence, not by a tier of the ladder (#895). Any other action of the same route that can draw the family keeps its line.
     """
-    families = wanted_families(ab)
+    families = wanted_families(ab, frozenset().union(*(state.flags.influences for state in states)))
     if not families:
         return []
     ids = frozenset(mod_id for family in families for mod_id in family.ladder)
@@ -170,6 +186,7 @@ def tier_lines(
                 family.text,
                 tuple(TierShare(tier, shares.get(tier, 0.0), tier in family.wanted) for tier in shown),
                 max(0.0, 1.0 - math.fsum(shares.values())),
+                family.tiered,
             )
         )
     return lines

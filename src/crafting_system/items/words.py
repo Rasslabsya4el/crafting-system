@@ -7,6 +7,7 @@ it says a mod by its text as the route page prints it, and a base by its game na
 * `mod_text(mod)`: the text of a mod as the page prints it, the markup of the data stripped and the lines of a hybrid joined with ` / `; a mod with no
   text is its name, a veiled placeholder "veiled prefix" or "veiled suffix".
 * `mod_words(mod)` and `mod_words_of(data, mod_id)`: `mod_text`, for a sentence. A mod the data lacks, or that has no text and no name, is "a mod the game data gives no text", not its id.
+* `ranges_low_first(text)`: every range of a mod text written low to high, `(24-30)%` where the data writes `(30-24)%` (#991).
 * `base_words(data, base_id)`: the base's name in the game; a base the data lacks is "an item base the game data does not hold".
 """
 
@@ -16,18 +17,34 @@ from crafting_system.data import GameData, Mod
 
 from .model import VEILED_DOMAIN
 
-__all__ = ["base_words", "clean_text", "mod_text", "mod_words", "mod_words_of"]
+__all__ = ["base_words", "clean_text", "mod_text", "mod_words", "mod_words_of", "ranges_low_first"]
 
 _LINK_WITH_LABEL = re.compile(r"\[[^\]|]*\|([^\]]*)\]")
 _LINK = re.compile(r"\[([^\]|]*)\]")
+_NUMBER = r"-?\d+(?:\.\d+)?"
+_RANGE = re.compile(rf"\(({_NUMBER})-({_NUMBER})\)")
 
 NO_TEXT = "a mod the game data gives no text"
 NO_BASE = "an item base the game data does not hold"
 
 
+def _low_first(found: re.Match) -> str:
+    low, high = sorted((found.group(1), found.group(2)), key=float)
+    return f"({low}-{high})"
+
+
+def ranges_low_first(text: str) -> str:
+    """`text` with every range written low to high: the data writes a negative stat shown as "reduced" from its larger end, `(30-24)%
+    reduced Effect of Chill and Shock on you`, which a player reads as `(24-30)%` (#991)."""
+    return _RANGE.sub(_low_first, text)
+
+
 def clean_text(text: str) -> str:
-    """The data's text of a mod with its markup stripped (`[Resistances|Lightning Resistance]` is `Lightning Resistance`), a hybrid's line break as ` / `."""
-    text = _LINK.sub(r"\1", _LINK_WITH_LABEL.sub(r"\1", text))
+    """The data's text of a mod with its markup stripped (`[Resistances|Lightning Resistance]` is `Lightning Resistance`), a hybrid's line break as ` / `.
+
+    A range is written low to high (`ranges_low_first`, #991).
+    """
+    text = ranges_low_first(_LINK.sub(r"\1", _LINK_WITH_LABEL.sub(r"\1", text)))
     return " / ".join(line.strip() for line in text.split("\n"))
 
 
