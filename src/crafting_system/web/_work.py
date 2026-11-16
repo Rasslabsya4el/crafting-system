@@ -1,7 +1,7 @@
 """What a worker process does with one job: load the world, call the planner's entry, and send its words back to the service.
 
 `run_job` is the body of a worker process. It talks to the service only through `send`: `("standing", {...})` each time the search says
-where it stands, then one last message, `("done", {...}, key)` with the route and the key of the inputs it was planned with (the price
+where it stands, then one last message, `("done", {...}, key)` with the route (its `summary` names the price snapshot it was planned on, `snapshot`) and the key of the inputs it was planned with (the price
 file read in this process, which may be newer than the one the job was keyed with), or `("failed", text)` with the planner's own words. A `Work`
 function takes the world, the checked request and a `watch`, and returns the route: `plan_request` is the site's; tests name their own.
 """
@@ -9,6 +9,7 @@ function takes the world, the checked request and a `watch`, and returns the rou
 import math
 import traceback
 from collections.abc import Callable
+from datetime import UTC
 
 from crafting_system.actions import NotApplicableError, OutOfScopeError, imprints_held_at_most
 from crafting_system.data import DataError
@@ -19,7 +20,7 @@ from crafting_system.cli import build_report, policy_document, route_page
 from crafting_system.planner import PlanError, PlanSettings, Standing, plan_target
 
 from ._request import parse_request
-from ._world import World, WorldSource
+from ._world import SNAPSHOT_TIME_FORMAT, World, WorldSource
 
 # the refusals a plan run gives in its own words; the command line prints the same set as an `Error:` line (`cli._main`)
 REFUSALS = (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError)
@@ -89,6 +90,9 @@ def run_job(world_source: WorldSource, work: Work, request: dict, game: str, sen
         world = world_source()
         key = parse_request(request, game, world).key
         route = work(world, request, game, lambda standing: send(("standing", standing)))
+        prices = world.prices  # the snapshot the route was planned on, so the API can say its age on any later day (#976)
+        snapshot = {"league": prices.league, "fetched_at": prices.fetched_at.astimezone(UTC).strftime(SNAPSHOT_TIME_FORMAT)}
+        route = {**route, "summary": {**route["summary"], "snapshot": snapshot}}
     except REFUSALS as error:
         send(("failed", str(error)))
     except Exception as error:  # noqa: BLE001  (a fault of the service, not a refusal of the planner: said, never swallowed)
