@@ -1,10 +1,13 @@
 # Family cases of ticket #833 on main ($1, a commit) and on this branch, one after the other on one GitHub runner, with the family bench's
-# default settings (no aim: the net alone) and no walk, so the two outcomes are of one machine. $2: the case ids, comma-separated.
+# default settings (no aim: the net alone) and no walk, so the two outcomes are of one machine. $1 is a full sha (a fetch by a short one
+# fails). $2: the case ids, comma-separated; with $3 (the runner's index) only the $3-th of them, so one dispatch pairs each case on its own runner.
 # Started only through the dispatcher:
-#   python .github/scripts/heavy_dispatch.py run --no-wait --ref <branch> --runners 1 --timeout-minutes 55 --command 'bash research/833/pair.sh <main sha> <ids>'
+#   python .github/scripts/heavy_dispatch.py run --no-wait --ref <branch> --runners 1 --timeout-minutes 55 --command 'bash research/833/pair.sh <main sha> <ids> $RUNNER_INDEX'
 set -euo pipefail
 base="$1"
 only="$2"
+if [ -n "${3:-}" ]; then only="$(echo "$2" | cut -d, -f"$3")"; fi
+[ -n "$only" ] || { echo "no case $3"; exit 2; }
 out="${OUT_DIR:-out}"
 mkdir -p "$out/main" "$out/branch"
 git fetch --depth 1 origin "$base"
