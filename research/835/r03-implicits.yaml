@@ -1,0 +1,45 @@
+# Research target of ticket #835: R03's Eldritch implicit alone. R03 (examples/targets/r03-avoid-shock-boots.yaml) cannot be planned
+# whole: its bought start item has no price (#483). This target starts from R03's finished item, every explicit of the guide already on
+# it, and asks the guide's last step only: "use Grand Eldritch Embers until the boots show the Avoid Shock implicit", 40% or more.
+# The start item is given (the player holds the boots the earlier steps made), so its cost is not counted; the plan's mean is the cost
+# of the implicit alone. Prices: the committed snapshot of the heavy routes, the only one that prices the Embers and Ichors.
+
+base: Velour Boots
+item_level: 100
+influence: []
+
+requirements:
+  - family: MovementVelocity
+    mod: JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently
+  - family: IncreasedLife
+    mod: EinharMasterIncreasedLife4
+  - family: ReducedShockChance
+    mod: ChanceToAvoidShockEssence7
+  - family: ChanceToSuppressSpells
+    min_tier: 1
+  - family: FireResistance
+    min_tier: 2
+
+implicits:
+  - stat: "#% chance to Avoid being Shocked"
+    min_roll: 40
+
+start_item:
+  rarity: rare
+  mods:
+    - mod: JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently
+      values: [30, 10]
+    - mod: EinharMasterIncreasedLife4
+      values: [67]
+      crafted: true
+    - mod: ChanceToAvoidShockEssence7
+      values: [60]
+    - mod: ChanceToSuppressSpells5__
+      values: [13]
+      fractured: true
+    - mod: FireResist7
+      values: [43]
+
+start: given
+
+price_file: ../../tests/fixtures/prices/routes-allflame-2026-07-31.json
