@@ -12,8 +12,8 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 `beast_mods.py` holds `WildBristleMatron()` (adds one of the five metamods, uniformly among those the item allows) and
 `BeastSideSwap(Side.PREFIX or Side.SUFFIX, beast_level=83)` (Farric Wolf and Lynx: draws a mod on one side, capped by the
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
-Every beast kind is an opt-in planner kind (ticket #149): the compressed state holds what the crafts read and change, and a target names the
-kinds it wants in `actions:` (the aspects are offered only for a target that names an aspect as well, `Adds.wanted_only`).
+Every beast kind is a planner kind (ticket #149), offered by default since #886 (OR-41): the compressed state holds what the crafts read and
+change (the aspects are offered only for a target that names an aspect, `Adds.wanted_only`).
 """
 
 from collections.abc import Callable, Hashable, Mapping
@@ -169,7 +169,7 @@ class TalismanFracture(Action):
         return TalismanFractureOutcomes(data, item, results)
 
 
-@kind("talisman-fracture", order=83, opt_in=True)
+@kind("talisman-fracture", order=83)
 def _talisman_fractures(data: GameData, item: Item):
     if item.rarity is Rarity.RARE and _is_talisman(data, item):
         yield TalismanFracture(1)
@@ -242,7 +242,7 @@ class AspectBeast(Action):
         return Finite(data, item, ((Fraction(1), added),))
 
 
-@kind("aspect-beast", order=84, opt_in=True)
+@kind("aspect-beast", order=84)
 def _aspect_beasts(data: GameData, item: Item):
     if item.rarity is not Rarity.RARE:
         return

@@ -22,8 +22,8 @@ Four actions, one file:
 An item with a signature placeholder, or with two, is out of scope (grill B2, `OutOfScopeError`); a jewel has no veiled
 pool, so the two orbs refuse it.
 
-The four kinds are planner kinds since ticket #145, offered only when a target names them in `actions:` (`opt_in`: they make a state
-keep the junk and the offer). In the compressed state (ADR-0009, ADR-0026) the placeholder is a slot of the kind of its family
+The four kinds are planner kinds since ticket #145, offered by default since #886 (OR-41; before, only when a target named them: they make a
+state keep the junk and the offer). In the compressed state (ADR-0009, ADR-0026) the placeholder is a slot of the kind of its family
 (`VeiledPrefix`, `VeiledSuffix`), a mod unveiled from the pool a slot of the kind `^<family>`, never merged with an ordinary mod of
 the same family (Movement Speed on boots), and the craftable version of an unveiled mod a crafted slot told apart from the other
 crafted mods of its family; so the refusals of the two orbs, which look for a veiled mod, are exact on a state. An item that holds
@@ -474,7 +474,6 @@ class Pick(Action):
 @kind(
     "veiled-chaos-orb",
     order=76,
-    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _veiled_chaos_orb(data: GameData, item: Item):
@@ -485,7 +484,6 @@ def _veiled_chaos_orb(data: GameData, item: Item):
 @kind(
     "veiled-exalted-orb",
     order=77,
-    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _veiled_exalted_orb(data: GameData, item: Item):
@@ -496,7 +494,6 @@ def _veiled_exalted_orb(data: GameData, item: Item):
 @kind(
     "unveil",
     order=78,
-    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _unveil(data: GameData, item: Item):
@@ -507,7 +504,6 @@ def _unveil(data: GameData, item: Item):
 @kind(
     "pick",
     order=79,
-    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _pick(data: GameData, item: Item):
