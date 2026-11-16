@@ -63,6 +63,7 @@ class RoundCall:
     searches: int
     upper: float | None
     watched: bool
+    give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
 
 
 @dataclass(frozen=True)

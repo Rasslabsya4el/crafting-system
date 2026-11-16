@@ -208,6 +208,9 @@ class Net:
     seconds: float | None = None
     states: int | None = None  # states known (touched)
     memory_mb: float | None = None
+    # the caller's word on where the search stands, asked after each round (a round of the planner's widening, `_rounds.Progress`): the reason it
+    # gives the rest of its time back, or None to go on. The search stops there as at any net: it keeps its plan in hand, or says it had none
+    give_way: "Callable[[Standing], str | None] | None" = None
 
 
 @dataclass
@@ -978,7 +981,7 @@ class Search[S]:
                     self.say(f"stop: the plan costs at most {upper!r}, no plan costs less than {lower!r}: proved within {self.gap:.3%}")
                     return SearchResult(self.states, self.index, plan, lower, False, None, self.p.restart is not None, self.stats, upper, self.gap)
             self._stand(lower, began)
-            stopped = self._net(began)
+            stopped = self._net(began) or (self.net.give_way(self.standing) if self.net.give_way is not None else None)
             if stopped is not None:
                 break
             mark = time.perf_counter()

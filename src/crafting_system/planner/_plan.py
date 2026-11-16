@@ -496,7 +496,7 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None, searches: int = 1) -> Net | None:
+def search_net(clock: Clock | None, searches: int = 1, give_way=None) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
     Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net."""
     if clock is None:
@@ -505,7 +505,7 @@ def search_net(clock: Clock | None, searches: int = 1) -> Net | None:
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
     left = clock.left()
-    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb)
+    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb, give_way=give_way)
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
@@ -857,7 +857,7 @@ def _make_plan(
                     gap, gap_after = search_gap(clock)
                     packed = envelope_result(
                         abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
-                        net=search_net(clock, round_call.searches if round_call is not None else 1), item=target.start_item if many else None, gap=gap,
+                        net=search_net(clock, round_call.searches, round_call.give_way) if round_call is not None else search_net(clock), item=target.start_item if many else None, gap=gap,
                         gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
                         beaten_at=round_call.upper if round_call is not None else None,
                     )  # fmt: skip
