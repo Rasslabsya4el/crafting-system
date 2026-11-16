@@ -22,7 +22,6 @@ from crafting_system.actions import EldritchAnnulmentOrb, EldritchChaosOrb, Eldr
 from crafting_system.cli import Offer
 from crafting_system.items import EldritchSide
 from crafting_system.planner._envelope_plan import envelope_result
-from crafting_system.planner import _limits
 from crafting_system.planner._offers import ELDRITCH_KINDS, RESTART, BuyStartItem, PricedOffer, eldritch_unreachable, offers_for
 from crafting_system.planner._pattern_bound import pack_pattern_model
 from crafting_system.solver import solve_packed
@@ -139,16 +138,11 @@ def test_the_envelope_search_gives_the_exact_graphs_mean(world):
     assert info.lower <= exact[first] * (1 + TOLERANCE)
 
 
-def test_the_eldritch_currencies_are_offered_only_to_a_target_that_asks_for_an_eldritch_implicit():
-    """`offers_for` (#835): with the wish, every Eldritch kind the boots take is offered; without it none is, and the answer says so."""
-    asked = offers_for(DATA, GOAL, BOOTS, START)
-    kinds = {offer.kind for offer in asked.offers}
-    assert ELDRITCH_KINDS <= kinds, ELDRITCH_KINDS - kinds
-    assert not any(limit.kind == _limits.ELDRITCH_ASKED for limit in asked.limits)
-    plain = offers_for(DATA, Goal(GOAL.leaves), BOOTS, START)
-    assert not {offer.kind for offer in plain.offers} & ELDRITCH_KINDS
-    (limit,) = [limit for limit in plain.limits if limit.kind == _limits.ELDRITCH_ASKED]
-    assert limit.labels
+def test_the_eldritch_currencies_are_offered_to_a_target_whether_or_not_it_asks_for_an_eldritch_implicit():
+    """`offers_for` (#886 lifted the gate of #835, #919): every Eldritch kind the boots take is offered with the wish and without it, as tools."""
+    for goal in (GOAL, Goal(GOAL.leaves)):
+        kinds = {offer.kind for offer in offers_for(DATA, goal, BOOTS, START).offers}
+        assert ELDRITCH_KINDS <= kinds, ELDRITCH_KINDS - kinds
 
 
 def test_an_addition_that_reads_the_implicits_takes_every_member_where_a_family_has_mods_on_both_sides():
