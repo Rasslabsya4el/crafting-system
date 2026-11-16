@@ -1,4 +1,4 @@
-# Target for benchmark route R09: Pristine + Shuddering Life boots.
+# Target for reference route R09: Pristine + Shuddering Life boots.
 #
 # This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
 # it: the planner finds that. Lines starting with # are comments and are ignored.
@@ -14,10 +14,12 @@
 #     the Life-based version you can use any base you want. For the latter, I suggest looking for a pair of Two-Toned Boots (cold
 #     and lightning resistances)", so it accepts any base and this file takes the one it suggests (the Evasion and Energy Shield
 #     one has the cold and lightning implicit); no other base is made up.
-#   * "high Life": the top tier of "+# to maximum Life", tier 1, +(115-129) (mod IncreasedLife8, needs item
-#     level 54), rolled and not crafted. The guide names no tier ("focus on a higher Life tier as well as a movement speed
-#     modifier alongside modifiers you'll be satisfied with"), so the leaf has no `min_tier` and OR-1 holds (OR-4; it said
-#     `min_tier: 1` before #404, the same mod).
+#   * "high Life": "+# to maximum Life", tier 1 or tier 2: +(115-129) (mod IncreasedLife8, needs item level 54) or +(100-114)
+#     (IncreasedLife7, item level 44), rolled and not crafted. The guide names no tier ("focus on a higher Life tier as well as a
+#     movement speed modifier alongside modifiers you'll be satisfied with"). A reference target names its tiers (OR-45, #901:
+#     "named tiers instead of high Life"), and "high" is read as the two top tiers, as the owner read R10's Life on boots (#895).
+#     The selector is the stat text, so the two-stat Life hybrids of the family do not count (as in R10). Until #901 the leaf was
+#     the family with no `min_tier` and asked tier 1 alone (OR-1).
 #   * "Movement Speed": as in R08, the rolled tier 1 (35%) or the plain bench craft at its top tier (no hybrid craft, #404).
 #   * "useful Resistances if rolled" and "acceptable other modifiers": not required. The guide asks for them only
 #     "if rolled", so a resistance is a bonus of the item, not a goal of the plan.
@@ -47,9 +49,10 @@ start: bought
 actions: [fossil-set, bench-craft]
 
 requirements:
-  # High Life, rolled. Guide (poe-vault.com/guides/crafting-basic-boots): "When reforging, focus on a higher Life tier as well as a
-  # movement speed modifier". It names no tier, so OR-1 holds: the top tier.
-  - family: IncreasedLife
+  # High Life, rolled: tier 1 or tier 2 (`min_tier: 2` is the worst tier that counts; OR-45, #901). Guide
+  # (poe-vault.com/guides/crafting-basic-boots): "When reforging, focus on a higher Life tier as well as a movement speed modifier".
+  - stat: "+# to maximum Life"
+    min_tier: 2
     not_crafted: true
 
   # Movement Speed: the rolled tier 1 (35%), or the plain bench craft (see R08: the guide says "tier 1 movement speed" and

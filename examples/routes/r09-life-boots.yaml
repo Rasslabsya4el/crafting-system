@@ -22,7 +22,7 @@ rules:
   - when:
       rarity: rare
       requirements:
-        - family: IncreasedLife
+        - stat: "+# to maximum Life"
           status: passing
         - family: MovementVelocity
           status: absent

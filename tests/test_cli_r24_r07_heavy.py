@@ -1,10 +1,13 @@
-"""R24 and R07 end to end through the CLI, on the real 3.29.3.3 dump at their committed prices (ticket #146).
+"""R24 end to end through the CLI, on the real 3.29.3.3 dump at its committed prices (ticket #146).
 
-"Done when" (as #70's): both run, `--verify` passes, the solver's mean is no more than the given route's, and the approximate inputs
+R07 left this test with #901: it is no longer a reference craft (OR-45, its guide rests on the old Veiled Chaos Orb), so no test sets its
+plan against its guide. R24's prices are the week-one file plus its hand-set start boots since #901 (OR-44).
+
+"Done when" (as #70's): it runs, `--verify` passes, the solver's mean is no more than the given route's, and the approximate inputs
 are listed. The plans walk the veiled kinds with the junk told apart by family (ADR-0026), so they are heavy runs, not a CI shard or a PC:
 
-    python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 2 --timeout-minutes 60 \
-        --command 'CRAFTING_ROUTES=$([ "$RUNNER_INDEX" = 1 ] && echo R24 || echo R07) CRAFTING_HEAVY=1 uv run --no-sync pytest -q -s -p no:cacheprovider tests/test_cli_r24_r07_heavy.py'
+    python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH --runners 1 --timeout-minutes 60 \
+        --command 'CRAFTING_HEAVY=1 uv run --no-sync pytest -q -s -p no:cacheprovider tests/test_cli_r24_r07_heavy.py'
 
 Without `CRAFTING_HEAVY` they skip, and without the cached dump the data fixture skips. The CLI runs with its default budget (the aim) and no
 time or memory limit (`--time-limit none --memory-limit none`): this test measures the whole walk, which OR-33's 10-minute net would stop (#825).
@@ -25,8 +28,8 @@ from crafting_system.cli import main
 from crafting_system.prices import load_price_file
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "veiled-r24-r07-2026-11-12.json"
-FILES = {"R24": "r24-avoid-shock-boots", "R07": "r07-minion-wand"}
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "references-allflame-2026-07-31.json"
+FILES = {"R24": "r24-avoid-shock-boots"}
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 RUNS = int(os.environ.get("CRAFTING_VERIFY_RUNS", "300"))
 
@@ -36,7 +39,7 @@ def data():
     return real_game_data()
 
 
-@pytest.fixture(scope="module", params=os.environ.get("CRAFTING_ROUTES", "R24,R07").split(","))
+@pytest.fixture(scope="module", params=os.environ.get("CRAFTING_ROUTES", "R24").split(","))
 def route_id(request):
     return request.param
 

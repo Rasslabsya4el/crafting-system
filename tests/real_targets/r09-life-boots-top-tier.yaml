@@ -1,0 +1,67 @@
+# TEST FIXTURE, not a reference target: R09 as `examples/targets/r09-life-boots.yaml` read it before ticket #901 (the Life at its top
+# tier alone, OR-1). Since #901 the reference target names tier 1 or tier 2 (OR-45); this copy stays for the Craft of Exile recordings
+# of `tests/test_coe_recorded_b1_core.py` (#617, #627), whose target-met counts were recorded against this reading.
+#
+# Target for benchmark route R09: Pristine + Shuddering Life boots.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Basic boots crafting", docs/research/2026-10-30-5-reference-routes.md, id R09):
+#   1. Use 2-socket resonators (Potent Chaotic Resonators) with a Pristine Fossil and a Shuddering Fossil until
+#      the boots hold high Life, Movement Speed and acceptable other modifiers.
+#   2. Bench-craft the missing useful modifier.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's rule for
+# tiers: a mod whose tier the guide does not state is the TOP tier the item level allows.
+#   * "Two-Toned Boots or preferred Life base", item level 86: the Two-Toned Boots with Evasion and Energy Shield. The guide: "for
+#     the Life-based version you can use any base you want. For the latter, I suggest looking for a pair of Two-Toned Boots (cold
+#     and lightning resistances)", so it accepts any base and this file takes the one it suggests (the Evasion and Energy Shield
+#     one has the cold and lightning implicit); no other base is made up.
+#   * "high Life": the top tier of "+# to maximum Life", tier 1, +(115-129) (mod IncreasedLife8, needs item
+#     level 54), rolled and not crafted. The guide names no tier ("focus on a higher Life tier as well as a movement speed
+#     modifier alongside modifiers you'll be satisfied with"), so the leaf has no `min_tier` and OR-1 holds (OR-4; it said
+#     `min_tier: 1` before #404, the same mod).
+#   * "Movement Speed": as in R08, the rolled tier 1 (35%) or the plain bench craft at its top tier (no hybrid craft, #404).
+#   * "useful Resistances if rolled" and "acceptable other modifiers": not required. The guide asks for them only
+#     "if rolled", so a resistance is a bonus of the item, not a goal of the plan.
+#   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
+#     and made rare with an Orb of Alchemy; see `start_item` below for how that is modelled.
+
+# Three bases of the game are named Two-Toned Boots (Metadata/Items/Armours/Boots/BootsAtlas1, 2 and 3: one each
+# for Armour and Evasion, Armour and Energy Shield, Evasion and Energy Shield), so the base is written by its id.
+# BootsAtlas1 is the Evasion and Energy Shield one; all three have the same Life and Movement Speed mods.
+base: Metadata/Items/Armours/Boots/BootsAtlas1
+item_level: 86
+influence: []
+
+# The start: the rare boots the market sells (ADR-0064). The target names none of their mods, and the guide fossils a rare pair of boots, so the
+# item is a bought Normal base made rare with an Orb of Alchemy, priced as that base plus the Alchemy (OR-16). It holds what an Orb of Alchemy
+# leaves on the base: 4, 5 or 6 mods at their game weights. The plan opens with that draw and decides on each outcome of it; mods that no
+# requirement asks for are junk, counted and not told apart (OR-10), and the first fossil erases whatever the rare holds.
+start_item:
+  rarity: rare
+  mods: []
+
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
+start: bought
+
+# See R08: the guide's fossils and the bench.
+actions: [fossil-set, bench-craft]
+
+requirements:
+  # High Life, rolled. Guide (poe-vault.com/guides/crafting-basic-boots): "When reforging, focus on a higher Life tier as well as a
+  # movement speed modifier". It names no tier, so OR-1 holds: the top tier.
+  - family: IncreasedLife
+    not_crafted: true
+
+  # Movement Speed: the rolled tier 1 (35%), or the plain bench craft (see R08: the guide says "tier 1 movement speed" and
+  # "bench-craft the movement speed").
+  - at_least: 1
+    of:
+      - family: MovementVelocity
+        min_tier: 1
+        not_crafted: true
+      - stat: "#% increased Movement Speed"
+        mod: EinharMasterMovementVelocity3

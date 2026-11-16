@@ -1,4 +1,4 @@
-# Target for benchmark route R24: boots with a fractured Mana, Movement Speed + Onslaught unveiled from a veil, the Avoid Shock
+# Target for reference route R24: boots with a fractured Mana, Movement Speed + Onslaught unveiled from a veil, the Avoid Shock
 # essence suffix, top-tier Spell Suppression and a tier 2 or better elemental resistance (ticket #146).
 #
 # This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
@@ -97,6 +97,7 @@ start_item:
 # The start item is bought. Its buy spec, trade query and price key are computed from this file.
 start: bought
 
-# The price file of this route (a path from this file's folder): the 2026-11-10 snapshot of the other routes plus the Veiled Chaos Orb and
-# the start items of R24 and R07 (ticket #146).
-price_file: ../../tests/fixtures/prices/veiled-r24-r07-2026-11-12.json
+# The price file of this route (a path from this file's folder): the 3.29 week-one prices of the tests (OR-44,
+# routes-allflame-2026-07-31.json, which holds the Veiled Chaos Orb) plus the start boots, hand-set and marked there (#901). Until #901
+# it was the 2026-11-10 file of #146 (veiled-r24-r07-2026-11-12.json), which R07 still reads.
+price_file: ../../tests/fixtures/prices/references-allflame-2026-07-31.json

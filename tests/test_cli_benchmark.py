@@ -129,7 +129,8 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
 
     assert code == 0
     document = read_json(path)
-    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "V01"]
+    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R24", "V01"]
+    assert [entry["id"] for entry in document["routes"] if not entry["reference"]] == ["V01"]  # the smoke test is marked in its entry (#901)
     entry = entry_of(document)
     assert entry["missing_price"]["name"] == START
     assert entry["missing_price"]["override_line"] == f'"{START}" = <the price in Chaos Orbs>'  # a missing price is an error, never a 0 placeholder (OR-6)
@@ -137,6 +138,7 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
     out = capsys.readouterr().out
     assert f'"{START}" = <the price in Chaos Orbs>' in [line.strip() for line in out.splitlines()]
     assert f"add to {expected_overrides_file()} under [prices]:" in out
+    assert [line for line in out.splitlines() if "(smoke test, not a reference craft: no verdict)" in line][0].startswith("V01: ")
     for route_id in ("R10", "R11", "R05", "R08", "R09"):  # their own files fail first: the test data has no such base
         assert entry_of(document, route_id)["error"] is not None
         assert "no price for the start item" not in entry_of(document, route_id)["error"]
@@ -231,11 +233,14 @@ def test_the_target_form_still_works_next_to_the_benchmark_command(tmp_path):
     assert code == 0 and json.loads(out.read_text(encoding="utf-8"))["format"] == "crafting-system-policy/3"
 
 
-def test_the_benchmark_lists_r12_r10_r11_r05_r13_r08_r09_r04_r14_r17_and_v01_with_their_target_and_route_files():
+def test_the_benchmark_lists_its_reference_crafts_and_the_v01_smoke_test_with_their_target_and_route_files():
+    """The reference crafts after the owner's review of 2026-11-13 (#901, OR-45): R07, R15, R18, R01, R21, R16, R03 and R23 are not references
+    (R22 is the boots route with Eldritch implicits kept of the three); V01 is kept as a smoke test only (a target the project made up), with no verdict and off the checkpoint list (OR-46)."""
     root = Path(__file__).resolve().parents[1]
 
-    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "V01"]
+    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R24", "V01"]
     for bench in benchmark_module.BENCHMARKS:
         assert (root / bench.target).is_file(), bench.id
         assert bench.route is None or (root / bench.route).is_file(), bench.id
         assert (bench.route is None) == (bench.id == "V01")  # only the route that starts from a vendor recipe has no guide to compare with
+    assert [bench.id for bench in benchmark_module.REFERENCES] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R24"]

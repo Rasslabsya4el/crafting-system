@@ -66,8 +66,9 @@ requirements:
 start_item:
   rarity: normal
 
-# Its own price file: the beasts of the imprint and the Talisman are priced from poe.ninja (Allflame, 2026-11-10), the
-# currency from the snapshot of the same day (tests/fixtures/prices/routes-allflame-2026-11-10.json).
-price_file: ../../tests/fixtures/prices/r17-allflame-2026-11-10.json
+# Its own price file: the 3.29 week-one prices of the tests (OR-44, routes-allflame-2026-07-31.json, which holds the beasts of the
+# imprint) plus the start Talisman, hand-set and marked there because the week-one file has no line for it (#901). The prices of
+# 2026-11-10 (r17-allflame-2026-11-10.json) were this route's until #901.
+price_file: ../../tests/fixtures/prices/references-allflame-2026-07-31.json
 
 start: bought

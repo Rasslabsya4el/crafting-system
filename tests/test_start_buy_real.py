@@ -176,9 +176,6 @@ NO_PRICE = {
 }  # bought, and the market holds fewer listings than the rail: kept bought, no price written (#505, #483)
 
 
-VEILED = {"r07-minion-wand", "r24-avoid-shock-boots"}  # priced only in their own file, by hand stand-ins (#758)
-
-
 def price_row(stem: str):
     marks = [pytest.mark.xfail(strict=True, raises=AssertionError, reason=NO_PRICE[stem])] if stem in NO_PRICE else []
     return pytest.param(stem, id=stem, marks=marks)
@@ -189,16 +186,20 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
     key = expected_keys()[stem]
     committed = [path.name for path in sorted(PRICES.glob("*.json")) if key in json.loads(path.read_text(encoding="utf-8"))["prices"]]
 
-    # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries; the veiled file is R24's and R07's own
-    # (`price_file:`) and holds a copy of the 2026-11-10 file (#146)
+    # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries; the veiled file is R07's own
+    # (`price_file:`) and holds a copy of the 2026-11-10 file (#146); the references file is R17's and R24's own since #901: the
+    # week-one file plus their hand-set start items
     if stem == "v01-minion-helmet":
         assert committed == ["vendor-v01-2026-11-01.json"]
-    elif stem in VEILED:
+    elif stem == "r07-minion-wand":
         assert committed == ["veiled-r24-r07-2026-11-12.json"]
-    elif stem == "r17-lightning-talisman":  # R17's own file (`price_file:`, #223): the 2026-11-10 file without the other routes' start items, plus its beasts and Talisman
-        assert committed == ["r17-allflame-2026-11-10.json"]
+    elif stem == "r24-avoid-shock-boots":
+        assert committed == ["references-allflame-2026-07-31.json", "veiled-r24-r07-2026-11-12.json"]
+    elif stem == "r17-lightning-talisman":  # R17's file of 2026-11-10 (#223) and the references file (#901)
+        assert committed == ["r17-allflame-2026-11-10.json", "references-allflame-2026-07-31.json"]
     else:
         assert committed == [
+            "references-allflame-2026-07-31.json",  # the week-one file plus the hand-set starts of R17 and R24 (#901)
             "routes-allflame-2026-07-31.json",  # the default of the tests and benchmarks (#838); its start items are stand-ins of the 2026-11-10 readings
             "routes-allflame-2026-10-31.json",
             "routes-allflame-2026-11-10.json",

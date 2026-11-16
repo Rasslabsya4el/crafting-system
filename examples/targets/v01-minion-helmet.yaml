@@ -1,3 +1,6 @@
+# A SMOKE TEST, NOT A REFERENCE CRAFT since #901 (owner's review of 2026-11-13, OR-45): a target the project made up. The benchmark
+# still runs it to exercise the vendor-recipe start, marks its entry as a smoke test and sets no verdict on it.
+#
 # Target for benchmark route V01: a helmet with "+1 to Level of all Minion Skill Gems" and top-tier Life,
 # crafted from a Normal base with the four basic orbs. The plan that wins starts at the vendor, not at the
 # bench (ticket #331, ADR-0059).

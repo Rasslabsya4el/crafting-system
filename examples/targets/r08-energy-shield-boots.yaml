@@ -1,4 +1,4 @@
-# Target for benchmark route R08: Dense + Shuddering Energy Shield boots.
+# Target for reference route R08: Dense + Shuddering Energy Shield boots.
 #
 # This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
 # it: the planner finds that. Lines starting with # are comments and are ignored.
@@ -12,11 +12,12 @@
 # tiers: a mod whose tier the guide does not state is the TOP tier the item level allows.
 #   * "Sorcerer Boots, item level 86": an Intelligence base (Energy Shield armour). 86 is what the 35% Movement
 #     Speed needs.
-#   * "high Energy Shield": the "#% increased Energy Shield" prefix (family DefencesPercent) at its top tier, tier 1,
-#     "(92-100)% increased Energy Shield" (mod LocalIncreasedEnergyShieldPercent7_, needs item level 84), rolled
-#     and not crafted. The flat Energy Shield prefixes and the hybrid ones are not asked for. The guide says "high" and names
-#     no tier ("Ideally, you'll want an item with both a high Energy Shield and an included movement speed roll"), so the
-#     leaf has no `min_tier` and OR-1 holds (OR-4; it said `min_tier: 1` before #404, the same mod).
+#   * "high Energy Shield": the "#% increased Energy Shield" prefix (family DefencesPercent), tier 1 or tier 2: "(92-100)%"
+#     (mod LocalIncreasedEnergyShieldPercent7_, needs item level 84) or "(80-91)%" (LocalIncreasedEnergyShieldPercent6, item
+#     level 72), rolled and not crafted. The flat Energy Shield prefixes and the hybrid ones are not asked for. The guide says
+#     "high" and names no tier ("Ideally, you'll want an item with both a high Energy Shield and an included movement speed
+#     roll"). A reference target names its tiers (OR-45, #901: "named tiers instead of high Energy Shield"), and "high" is read
+#     as the two top tiers, as the owner read R10's Life (#895). Until #901 the leaf had no `min_tier` and asked tier 1 alone (OR-1).
 #   * "tier 1 movement speed, increasing your speed by 35%" or "bench-craft the movement speed": the rolled tier 1 (35%, mod
 #     MovementVelocity6, needs item level 86; the guide: "You'll want a minimum item level of 86 so you'll be able to hit tier 1
 #     movement speed"), or the bench's Movement Speed at its top tier: the plain craft, (20-24)% increased Movement Speed (mod
@@ -32,8 +33,8 @@ base: Sorcerer Boots
 
 # The item level of the boots, a whole number from 1 to 100.
 item_level: 86
-# Not pinned (ADR-0061, ticket #352): the tier-1 Energy Shield % needs only item level 84 and the Movement Speed has a bench
-# source, so the planner may plan the boots at 84 or 85 as well; this file's 86 is the guide's level, not the lowest.
+# Not pinned (ADR-0061, ticket #352): the tier-2 Energy Shield % the target accepts needs only item level 72 (tier 1 needs 84) and the
+# Movement Speed has a bench source, so the planner may plan the boots from item level 72 up; this file's 86 is the guide's level, not the lowest.
 
 # Influences on the base. [] means none.
 influence: []
@@ -56,9 +57,11 @@ actions: [fossil-set, bench-craft]
 
 # Everything below must be present on the finished item.
 requirements:
-  # High Energy Shield, rolled: "#% increased Energy Shield". Guide (poe-vault.com/guides/crafting-basic-boots): "Ideally, you'll want an
-  # item with both a high Energy Shield and an included movement speed roll". It names no tier, so OR-1 holds: the top tier.
+  # High Energy Shield, rolled: "#% increased Energy Shield", tier 1 or tier 2 (`min_tier: 2` is the worst tier that counts; OR-45, #901).
+  # Guide (poe-vault.com/guides/crafting-basic-boots): "Ideally, you'll want an item with both a high Energy Shield and an included
+  # movement speed roll".
   - family: DefencesPercent
+    min_tier: 2
     not_crafted: true
 
   # Movement Speed: the rolled tier 1 (35%), or the plain bench craft.

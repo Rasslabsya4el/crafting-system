@@ -18,7 +18,13 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "veiled-r24-r07-2026-11-12.json"
+# Each target's own price file: R24's is the week-one file plus its hand-set start boots since #901 (OR-44); R07, no longer a reference
+# craft (#901, OR-45: its guide rests on the old Veiled Chaos Orb), keeps the 2026-11-10 file of #146 and stays here as a test of the
+# unveil conditions, not of a cost.
+PRICES = {
+    "R24": ROOT / "tests" / "fixtures" / "prices" / "references-allflame-2026-07-31.json",
+    "R07": ROOT / "tests" / "fixtures" / "prices" / "veiled-r24-r07-2026-11-12.json",
+}
 ROUTES = {
     "R24": ("examples/targets/r24-avoid-shock-boots.yaml", "examples/routes/r24-avoid-shock-boots.yaml"),
     "R07": ("examples/targets/r07-minion-wand.yaml", "examples/routes/r07-minion-wand.yaml"),
@@ -73,11 +79,11 @@ def r24(data):
 
 def test_the_targets_read_their_committed_price_file(data, route_id):
     target = load_target(ROOT / ROUTES[route_id][0], data)
-    assert target.price_file.resolve() == PRICES.resolve()
+    assert target.price_file.resolve() == PRICES[route_id].resolve()
 
 
 def test_the_start_item_costs_its_committed_stand_in_price(unsolved, route_id):
-    entry = load_price_file(PRICES).prices[START[route_id]]
+    entry = load_price_file(PRICES[route_id]).prices[START[route_id]]
     assert unsolved.start_price.name == START[route_id]
     assert unsolved.start_price.chaos == pytest.approx(entry.chaos)
 
@@ -88,7 +94,8 @@ def test_the_plan_offers_the_route_actions_all_priced_and_no_unveil_block(unsolv
     assert BLOCKS[route_id] not in labels
     assert {label for label in labels if label.startswith("Bench craft")} <= ROUTE_ACTIONS[route_id]
     assert not [limit for limit in unsolved.limits if limit.kind == "unpriced"]
-    assert {priced.label: priced.cost for priced in unsolved.offers}["Veiled Chaos Orb"] == pytest.approx(146.5)
+    veiled = load_price_file(PRICES[route_id]).prices["Veiled Chaos Orb"].chaos  # 18.48 at the week-one prices (R24), 146.5 on 2026-11-10 (R07)
+    assert {priced.label: priced.cost for priced in unsolved.offers}["Veiled Chaos Orb"] == pytest.approx(veiled)
 
 
 def test_the_given_route_reads_against_the_offers(unsolved, data, route_id):

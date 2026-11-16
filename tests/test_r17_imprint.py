@@ -31,7 +31,7 @@ from crafting_system.targets import load_target, start_price_key
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "examples" / "targets" / "r17-lightning-talisman.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r17-lightning-talisman.yaml"
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "r17-allflame-2026-11-10.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "references-allflame-2026-07-31.json"  # R17's own file since #901: the week-one prices (OR-44)
 ARACHNID, CROAKER = "Fenumal Plagued Arachnid", "Craicic Croaker"
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 

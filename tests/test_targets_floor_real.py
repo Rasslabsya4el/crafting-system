@@ -5,8 +5,8 @@ when it is not there; CI fetches it (ticket #165).
 
 * Since ticket #457 the key `tiers_top_at_item_level` is gone: a leaf with no `min_tier` asks the top tier of its ladder at the file's level (OR-1) and the
   floor asks the one judgement of each source. Five targets stay at their level (their leaves need it, or no source gives a leaf), nine are lowered:
-  J01 to 1, R05 to 44, R08 to 84, R09 to 68, R10 and R10-70-life to 55, V01 to 64, R12 to 75 and R13 to 84 (the bench craft its damage line names needs 81).
-* R08 (Sorcerer Boots) needs only item level 84 (tier-1 Energy Shield %), not the 86 its file says; its levels 84 to 100 are three plans: 84, 85 and 86 and up.
+  J01 to 1, R05 to 44, R08 to 72, R09 to 68, R10 and R10-70-life to 55, V01 to 64, R12 to 75 and R13 to 84 (the bench craft its damage line names needs 81).
+* R08 (Sorcerer Boots) needs only item level 72 (tier-2 Energy Shield %, the worst its target accepts since #901), not the 86 its file says.
 * A level below the floor is refused with the requirement that needs more; the level is set on the target and on its start item.
 """
 
@@ -61,16 +61,17 @@ def test_r13_needs_only_item_level_84_for_its_tier_1_resistances(data):
     assert [node.level for node in options.floor.nodes] == [64, 84, 81]  # tier-1 Life needs 64; the named damage craft (bench) 81
 
 
-def test_r08_needs_only_item_level_84_for_its_tier_1_energy_shield(data):
+def test_r08_needs_only_item_level_72_for_its_tier_2_energy_shield(data):
     target = target_of(data, "r08-energy-shield-boots")
 
     options = item_level_options(data, target)
 
     assert target.item_level == 86
-    assert (options.floor.level, options.floor.kind) == (84, "derived")
-    assert spans(options) == [(84, 84), (85, 85), (86, 100)]
+    assert (options.floor.level, options.floor.kind) == (72, "derived")
+    found = spans(options)
+    assert found[0][0] == 72 and found[-1] == (86, 100) and (84, 84) in found  # each level where another tier opens is a plan of its own
     shield, speed = options.floor.nodes
-    assert (shield.level, shield.source) == (84, "pool")
+    assert (shield.level, shield.source) == (72, "pool")  # tier 2, (80-91)%: tier 1 or tier 2 counts since #901
     assert (speed.level, speed.source) == (68, "bench")  # the bench Movement Speed (level 68) is named by `mod:`, so it is a way to the leaf; the rolled 35% needs 86
 
 
@@ -99,7 +100,7 @@ STAYS = {
 LOWERED = {
     "j01-cobalt-life-attack-speed": 1,  # a jewel's mods all open at level 1
     "r05-strength-ring": 44,
-    "r08-energy-shield-boots": 84,
+    "r08-energy-shield-boots": 72,
     "r09-life-boots": 68,
     "r10-fractured-boots": 55,
     "r10-fractured-boots-70-life": 55,
