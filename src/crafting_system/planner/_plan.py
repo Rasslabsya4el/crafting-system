@@ -53,6 +53,8 @@ from ._packed import SOLVERS, PackedResult, packed_result
 from ._pattern_bound import MIN_OFFERS
 from ._presenter import presenter_limits
 from ._price_cut import price_cut_limit, restart_dominated
+from . import _rounds
+from ._rounds import RoundCall
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
@@ -569,6 +571,7 @@ def _make_plan(
     watch: Callable[[Standing], None] | None = None,
     judges_route: bool = False,
     foresee: bool = True,
+    round_call: RoundCall | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -628,6 +631,10 @@ def _make_plan(
     With `with_risk` False the policy is solved but its risk (the p50, p90 and CVaR grid, which can take minutes where the solve takes
     seconds) is left out, `Plan.risk` is None, and `add_risk` fills it in later: the choice among start options compares the
     means and measures the risk of the one it keeps (ticket #331).
+
+    When the offers fall in more than one group of the features they add to the model (`_rounds`, #1069), the envelope search widens them in
+    rounds and keeps the cheapest plan of every round (`widened_plan`); `round_call` is set on the plan of one round (its share of the time, the
+    plan in hand to cut against), which widens nothing itself.
     """
     if solver not in SOLVERS:
         raise ValueError(f"solver must be one of {', '.join(SOLVERS)}, got {solver!r}")
@@ -652,6 +659,7 @@ def _make_plan(
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
     mod_names, finish_names = split_names(data, target.start_item, target.actions) if target.sockets is not None else (target.actions, None)
+    chosen_here = offers is None  # the planner's own offers (a caller's are searched as given, in one search)
     if offers is None:
         try:
             chosen = offers_for(data, goal, target.base_id, target.start_item, mod_names)
@@ -685,10 +693,24 @@ def _make_plan(
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
         marks = ((bought, price_of_start.mark),) if price_of_start.mark else ()
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
+    judged = incumbent is not None or judges_route
+    if round_call is None and chosen_here and rounds_apply(data, target, priced, solve_it=solve_it, judged=judged, solver=solver):
+        own = {id(offer) for offer in offers}
+        grouped = tuple(p.offer for p in priced if id(p.offer) in own)
+        groups = offer_groups(data, goal, target, grouped)
+        if len(groups) > 1:  # the offers refine the model in more than one way: they are searched in rounds (#1069)
+            return widened_plan(
+                data, target, prices, groups, grouped, limits, aim=aim, rates=rates, strands=strands, price_of_start=price_of_start,
+                price_source=price_source, solver=solver, with_risk=with_risk, clock=clock, watch=watch, foresee=foresee,
+            )  # fmt: skip
+    if round_call is not None and round_call.upper is not None and price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=judged):
+        priced, cut = restart_dominated(priced, price_of_start.chaos, round_call.upper)  # cut against the plan in hand (`_rounds`)
+        if cut:
+            limits += (price_cut_limit(cut, price_of_start.chaos, round_call.upper),)
     # a metamod craft the target did not ask for, offered by the rule of blocking crafts (#886), makes the model track every mod's protected tags on
     # every state (#1069): a plan without those crafts is made first, and each offer that a restart and that plan beat is left out (`_price_cut`)
     speculative = lambda offer: offer.blocks is not None and adds_metamod(data, offer.action)  # noqa: E731
-    if price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=incumbent is not None or judges_route) and any(
+    if round_call is None and price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=judged) and any(
         speculative(p.offer) for p in priced
     ):
         known = plan_without(
@@ -834,14 +856,17 @@ def _make_plan(
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
                     gap, gap_after = search_gap(clock)
                     packed = envelope_result(
-                        abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=search_net(clock),
-                        item=target.start_item if many else None, gap=gap, gap_after=gap_after, watch=watch,
+                        abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
+                        net=search_net(clock, round_call.searches if round_call is not None else 1), item=target.start_item if many else None, gap=gap,
+                        gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
+                        beaten_at=round_call.upper if round_call is not None else None,
                     )  # fmt: skip
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 raise PlanError(envelope_refusal(solver, error)) from error
             packed.info["envelope"] = whole_info(packed.info["envelope"], unfolded, donors)  # the target and its donors together (`_awakener`)
             limits += envelope_limits(packed.info["envelope"])
-            bind_search(clock, packed.info["envelope"])
+            if round_call is None:  # a round's stop is said by the rounds (`widened_plan`)
+                bind_search(clock, packed.info["envelope"])
         else:
             with stage(WALK_STAGE, walk_stop(walks_because)):
                 packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
@@ -857,17 +882,11 @@ def _make_plan(
             limits += (_limits.lock_with_donors_limit(),)
         status = LockStatus.WITH_SECOND_ITEMS if wanted else LockStatus.SWITCHED_OFF
         foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
-    elif not foresee:  # a plan made only for its mean without the Lock (`plan_without`, #1069)
+    elif not foresee or round_call is not None:  # a plan made only for its mean without the Lock (`plan_without`, a round: #1069)
         status = LockStatus.STOPPED if lock_wanted(target.actions) else LockStatus.SWITCHED_OFF
         foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
     else:
-        try:
-            with stage(LOCK_STAGE, LOCK_KEPT):
-                foresight, with_lock = plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source)
-        except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
-            if clock is not None:
-                clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
-            foresight, with_lock = Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
+        foresight, with_lock = lock_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, clock)
     if with_lock is not None and readings is not None:
         raise PlanError(
             "the cheapest plan takes Hinekora's Lock, and a plan made once for each reading of a rule the sources leave open "
@@ -902,6 +921,132 @@ def _make_plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
         solution, risk, solve_seconds, risk_seconds, None, packed=packed, readings=readings, foresight=foresight, finish=finish, donors=donor_plan,
     ))
+
+
+def lock_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, clock):
+    """What the plan finds about Hinekora's Lock (`plan_foresight`), and the plan with the Lock when it takes it; a stop of the run's net keeps
+    the plan without the Lock and the clock lists the stop (OR-33)."""
+    try:
+        with stage(LOCK_STAGE, LOCK_KEPT):
+            return plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source)
+    except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
+        if clock is not None:
+            clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
+        return Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
+
+
+def rounds_apply(data: GameData, target: Target, priced: Sequence[PricedOffer], *, solve_it: bool, judged: bool, solver: str) -> bool:
+    """Whether the offers may be searched in rounds (`_rounds`, #1069): a plan the envelope search solves, of one reading (no rule axis), with no
+    offer that searches a second item (an Awakener's Orb's donor, an offer that takes donors), and no route judged against it (a route is a fixed
+    policy and may name any offer)."""
+    if not solve_it or judged or solver not in ("auto", "envelope"):
+        return False
+    if interval_axes(data, priced) or awakener_offers(priced):
+        return False
+    return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem))
+
+
+def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Offer]) -> tuple[_rounds.Group, ...]:
+    """The groups of `offers` by the features each adds to the target's own model (`Abstraction.features`, `_rounds.round_groups`). An offer
+    that reads neither the junk nor the item's state is never in the model (`_make_plan`'s `enabled`) and adds nothing."""
+    holds = bool(target.start_item.metamods(data) & BLOCKING)
+
+    def model(actions) -> Abstraction:
+        return Abstraction(
+            data, goal, target.base_id, target.item_level, actions, metamods=holds, enchantment=target.start_item.enchantment, allow_inputs=True
+        )  # fmt: skip
+
+    own = model(()).features()
+    known: dict = {}
+
+    def added(offer: Offer) -> frozenset[str]:
+        reads = offer.action.reads(data)
+        if not (reads.junk or reads.item_state):
+            return frozenset()
+        try:
+            key = (reads, offer.action.adds(data))
+            hash(key)
+        except TypeError:
+            key = None
+        if key is not None and key in known:
+            return known[key]
+        try:
+            found = model((offer.action,)).features() - own
+        except (ValueError, OutOfScopeError) as error:  # a model of this offer alone is refused (an unveil offer needs a junk reader): a group of its own
+            found = frozenset({f"refused alone: {error}"[:120]})
+        if key is not None:
+            known[key] = found
+        return found
+
+    return _rounds.round_groups(offers, target.actions, added)
+
+
+def round_end(plan: Plan) -> tuple[str, str]:
+    """How a round's plan ended (`_rounds.widen`): closed (exact, or a walk), within the gap, or stopped, with the reason."""
+    info = plan.search
+    if info is None or info.exact:
+        return _rounds.CLOSED, ""
+    if info.within is not None:
+        return _rounds.WITHIN, f"proved within {info.within:.2%} of the cheapest of its methods"
+    return _rounds.STOPPED, info.stopped or "the search was stopped"
+
+
+def widened_plan(
+    data: GameData, target: Target, prices: PriceFile, groups: Sequence[_rounds.Group], grouped: tuple[Offer, ...], limits: tuple[Limit, ...], *,
+    price_of_start: StartPrice, clock: Clock | None, with_risk: bool, watch, foresee: bool, **kwargs,
+) -> Plan:
+    """The plan of `groups` of `grouped` searched in rounds (`_rounds`, #1069): the cheapest plan of every round, with the Lock foreseen and its
+    risk, and the answer says over which methods it is proved and which rounds were set aside or not tried (OR-13). `limits` are what the choice
+    of the offers said; `kwargs` go to each round's `_make_plan`."""
+
+    def run(chosen: tuple[Offer, ...], call: RoundCall) -> Plan:
+        try:
+            return _make_plan(
+                data, target, prices, start_price=None, offers=chosen, solve_it=True, start_price_of=price_of_start, with_risk=False,
+                incumbent=None, clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, **kwargs,
+            )  # fmt: skip
+        except PlanError as error:  # the search's `NoPolicy`: a net stopped it before a plan closed (a stop), or no plan of the offers exists
+            cause = error.__cause__
+            while cause is not None and not isinstance(cause, NoPolicy):
+                cause = cause.__cause__
+            stopped = cause
+            while stopped is not None and getattr(stopped, "stopped", None) is None:
+                stopped = stopped.__cause__ if isinstance(stopped.__cause__, NoPolicy) else None
+            if stopped is not None:
+                raise _rounds.Stopped(stopped.stopped, stopped.lower) from error
+            if cause is not None and cause.__cause__ is None:  # the search's own proof, its bound whole: no plan of these offers reaches the target
+                raise _rounds.NoPlan(str(error)) from error
+            raise
+
+    widened = _rounds.widen(
+        groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
+        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter,
+    )  # fmt: skip
+    if widened.plan is None:
+        raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
+    plan, records = widened.plan, widened.records
+    closed = _rounds.all_closed(records)
+    withins = [record.within for record in records if record.within is not None]
+    within = max(withins) if withins else None  # a finished round proved within the gap: what the rounds prove is proved only to that gap
+    exact = closed and not withins
+    # the winner's own word on how its search ended holds over the whole only when every round closed exactly; otherwise the rounds say it (OR-13)
+    own = (*limits, *(limit for limit in plan.limits if limit not in limits and (exact or limit.kind != _limits.SOLVE)))
+    info = plan.search
+    if info is not None:
+        last = records[-1]
+        upper = certified_upper(info)
+        lower = min(last.lower if last.lower is not None else 0.0, upper) if closed else 0.0  # the last round held every offer when all closed
+        plan.packed.info["envelope"] = replace(
+            info, exact=exact, within=within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records
+        )  # fmt: skip
+    plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within)))
+    if foresee:
+        offered = merge_twins(data, target.start_item, plan.offers)[0] if PRUNE_BOUND and len(plan.offers) >= MIN_OFFERS else plan.offers
+        foresight, with_lock = lock_foresight(
+            data, target, prices, plan.abstraction, plan.start, plan.solution, plan.offers, tuple(offered), kwargs["price_source"], clock
+        )  # fmt: skip
+        plan = replace(plan, foresight=foresight) if with_lock is None else replace(plan, foresight=foresight, solution=with_lock, packed=None)
+    return add_risk(plan) if with_risk else plan
 
 
 def price_cut_applies(data: GameData, target: Target, priced: Sequence[PricedOffer], start: StartPrice, *, solve_it: bool, judged: bool) -> bool:

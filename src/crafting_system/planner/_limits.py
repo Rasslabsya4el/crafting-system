@@ -59,6 +59,7 @@ CONSUMES = "consumes-items"
 MODEL_GAP = "model-gap"
 PROVED = "proved-unneeded"
 UNTRIED = "kinds-not-tried"
+ROUNDS = "rounds"
 START = "start-item"
 SOLVE = "how-solved"
 BUDGET = "time-and-memory"
@@ -87,6 +88,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (MODEL_GAP, "Actions the model has no rule for in some states"),
     (PROVED, "Actions proved not needed"),
     (UNTRIED, "Actions not tried before a time or memory limit"),
+    (ROUNDS, "Methods searched in rounds"),
     (START, "The start item"),
     (FINISH, "The sockets"),
     (SOLVE, "How the answer was found"),

@@ -453,6 +453,31 @@ class Abstraction:
         """Whether a state holds the unveil offer: an enabled action reads, draws or uses it."""
         return self._tracks_offer
 
+    def features(self) -> frozenset[str]:
+        """The detail a state of this model keeps beyond the mods the goal names, each by name: what the enabled actions (and the goal) make the
+        model tell apart. Two abstractions of one target with the same features keep the same kind of state; one with more keeps finer ones.
+        The planner's widening in rounds (`planner._rounds`, #1069) groups offers by the features they add, without reading any action."""
+        kinds = self._kinds
+        named = {
+            "junk": kinds.tracked,
+            "pool weights": kinds.by_weight,
+            "fractures": kinds.fractures,
+            "rolled values": kinds.rerolls,
+            "influence mods": kinds.influenced,
+            "family places": kinds.classed,
+            "every family": kinds._everything,
+            "draw tags": bool(kinds._tagged),
+            "draw levels": bool(kinds._levels),
+            "families by mod": bool(kinds._declared_by_mod),
+            "metamods": self._metamods,
+            "implicits": self._tracks_implicits,
+            "quality": self._tracks_quality,
+            "unveil offer": self._tracks_offer,
+            "imprints": self._tracks_imprints,
+            "veiled mods": self._veiled_aware,
+        }
+        return frozenset(name for name, on in named.items() if on)
+
     @property
     def tracks_imprints(self) -> bool:
         """Whether a state holds the imprints of the item: an enabled action makes or uses one (ADR-0060)."""

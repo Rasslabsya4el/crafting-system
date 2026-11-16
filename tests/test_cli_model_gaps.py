@@ -114,6 +114,12 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
     ("planner/_plan.py", "_make_plan", ("FinishRefused", "OutOfScopeError", "ArithmeticError"), GAP, "the socket finish cannot be planned (#231): its start sockets are not stated, the goal is corrupted, a mod action changes sockets, no offered action completes it, the base has no colour weights, or it did not settle; the text becomes the `PlanError`"),
     ("planner/_plan.py", "_make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
+    ("planner/_plan.py", "offer_groups.added", ("ValueError", "OutOfScopeError"), EITHER, "a model of one offer alone is refused (an unveil offer needs a junk reader): the offer is a group of its own and its round says what the full model makes of it (#1069)"),
+    ("planner/_rounds.py", "widen", ("ValueError",), EITHER, "a round's `PlanError` (a model gap or a game refusal raised as one) is that round's refusal: it is recorded with its text and the round is not counted as closed, so the answer proves nothing over its methods (#1069)"),
+    ("planner/_plan.py", "widened_plan.run", ("PlanError",), EITHER, "a round's plan was refused, whichever family or error it was: a net that stopped the search becomes the round's stop, a search that proved no plan of its offers becomes the round's `NoPlan`, and any other refusal goes on as the round's refusal, recorded with its text (#1069)"),
+    ("planner/_plan.py", "plan_without", ("PlanError",), EITHER, "the plan of the cheap offers alone (the price cut's premise) was refused, whichever family or error it was: nothing is cut and the full search answers, saying any refusal it meets itself (#1069)"),
+    ("planner/_starts.py", "plain_candidate", ("PlanError",), EITHER, "the start item's price could not be resolved: the row of the start option says the error's text as its source and has no price"),
+    ("planner/_starts.py", "_plan_candidate", ("PlanError",), EITHER, "a start option's plan was refused, whichever family or error it was: its row has no plan and shows the error's text"),
     ("planner/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
     ("planner/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
@@ -208,8 +214,14 @@ def handlers_in(path: pathlib.Path) -> list[tuple[str, tuple[str, ...], ast.Exce
     return [(function, constants.get(caught[0], caught) if len(caught) == 1 else caught, node) for function, caught, node in finder.found]
 
 
+# `ValueError` (the families' parent) and `PlanError`, which `_make_plan` raises a refusal as (its text, the refusal its cause): a clause that catches
+# one catches a refusal of either family (#1069). The other errors of `src` that come from `ValueError` are not read yet (#1078).
+VALUE_ERRORS = {"ValueError", "PlanError"}
+
+
 def clauses_found() -> list[tuple[str, str, tuple[str, ...], ast.ExceptHandler]]:
-    """Every `except` clause of `src` that names a refusal family, or `ValueError` (their parent) in the packages that walk, solve and plan.
+    """Every `except` clause of `src` that names a refusal family, or `ValueError` (their parent) or `PlanError` (a refusal raised as one), in the
+    packages that walk, solve and plan.
 
     A clause that names a tuple constant (`except ROUTE_ERRORS`) is read through it.
     """
@@ -217,7 +229,7 @@ def clauses_found() -> list[tuple[str, str, tuple[str, ...], ast.ExceptHandler]]
     for path in sorted(SRC.rglob("*.py")):
         relative = path.relative_to(SRC).as_posix()
         for function, caught, node in handlers_in(path):
-            if FAMILY & set(caught) or ("ValueError" in caught and relative.split("/")[0] in SCOPE):
+            if FAMILY & set(caught) or (VALUE_ERRORS & set(caught) and relative.split("/")[0] in SCOPE):
                 found.append((relative, function, caught, node))
     return found
 

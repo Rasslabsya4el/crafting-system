@@ -236,3 +236,38 @@ def test_a_key_that_lies_is_caught_by_the_full_check_and_never_sampled_in_a_run(
     except (ValueError, ArithmeticError):  # a lying key gives a wrong graph: whatever the run does with it, it checked nothing
         pass
     assert unchecked.stats.verified == 0
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_a_plan_in_hand_at_or_below_the_optimum_ends_the_search_with_a_lower_figure_that_reaches_it(seed):
+    # #1069: `beaten_at` is the certified upper figure of a plan the caller holds; the search ends once no plan of its offers costs less (`Beaten`)
+    graph, value, _, result = run(seed, 0.7)
+    with pytest.raises(envelope.Beaten) as beaten:
+        run(seed, 0.7, beaten_at=value[0])
+    assert value[0] <= beaten.value.lower * (1 + 2e-6) and beaten.value.lower <= value[0] * (1 + 1e-9)
+    above = run(seed, 0.7, beaten_at=value[0] * 1.01)[3]  # a plan in hand 1% dearer than the optimum: the search finds the optimum as before
+    check_exact(graph, value, above)
+
+
+def test_the_memory_net_is_asked_before_the_kernel_arrays_grow_and_the_search_stops_before_they_do(monkeypatch):
+    # #839: the arrays grow by half again; the net is asked with that growth before it is taken. A process said to hold 1,000 MB under a limit
+    # of 1,000.0001 MB passes every check of the net until the first growth (any growth takes more than 0.0001 MB): the search stops there
+    monkeypatch.setattr(envelope, "resident_mb", lambda: 1_000.0)
+    value, _ = dense_optimum(random_graph(SEEDS[0], SIZE))
+    first = envelope.Kernels.__init__
+
+    def small(self, room=None):  # arrays of 4 slots, so this small graph makes them grow
+        first(self, room)
+        self.ptr, self.succ, self.wt, self.prob = self.ptr[:4], self.succ[:4], self.wt[:4], self.prob[:4]
+
+    monkeypatch.setattr(envelope.Kernels, "__init__", small)
+    assert run(SEEDS[0], 0.7)[3].exact  # with no memory net the arrays grow as they need
+    grown = []
+    real = envelope.Kernels._room
+    monkeypatch.setattr(envelope.Kernels, "_room", lambda self, k, e: grown.append((k, e, len(self.ptr), len(self.succ))) or real(self, k, e))
+    with pytest.raises(envelope.NoPolicy) as refusal:  # refused at the first growth, before any plan: the search says it stopped, with its lower figure
+        run(SEEDS[0], 0.7, net=envelope.Net(memory_mb=1_000.0001))
+    assert "were to grow" in refusal.value.stopped and refusal.value.lower <= value[0] * (1 + 1e-6)
+    k, e, ptr, succ = grown[-1]
+    assert k + 2 > ptr or e + 2 > succ  # the last call wanted a growth, and the net refused it before it was taken
+    assert len({(p, q) for *_, p, q in grown}) == 1  # no array grew

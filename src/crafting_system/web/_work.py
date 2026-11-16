@@ -50,7 +50,10 @@ def _search_document(plan) -> dict | None:
     if search is None:
         return None
     gap = None if not search.lower > 0 or not math.isfinite(search.upper) else max(search.upper / search.lower - 1.0, 0.0)
-    return {"exact": search.exact, "within": search.within, "stopped": search.stopped, "gap": gap}
+    document = {"exact": search.exact, "within": search.within, "stopped": search.stopped, "gap": gap}
+    if search.widening:  # the offers were searched in rounds (#1069): each round, how it ended and its figures (OR-13)
+        document["rounds"] = [record.document() for record in search.widening]
+    return document
 
 
 def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
