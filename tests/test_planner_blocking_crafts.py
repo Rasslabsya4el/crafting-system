@@ -197,7 +197,8 @@ def test_the_lock_is_a_round_of_its_own_that_ends_once_its_lower_figure_reaches_
     plan = _plan_at(data, target, monkeypatch, divine=divine)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     *closed, last = _rounds_of(plan)
-    assert [record.status for record in closed] == ["closed"] and last.status == "beaten" and last.lower >= closed[-1].upper * (1 - 1e-6)
+    # it ends at once (beaten) when its lower figure reaches the plan's certified upper figure, else by closing at the same cost: never below it
+    assert [record.status for record in closed] == ["closed"] and last.status in ("beaten", "closed") and last.lower >= closed[-1].upper * (1 - 1e-6)
     assert LOCK not in {entry.label for entry in plan.offers} and not plan.abstraction.models_metamods  # the plan is round 1's
     assert plan.search.exact  # every round closed, the last with every method: the plan is the cheapest over them all (OR-13)
     assert any(limit.kind == "rounds" and limit.guarantee.startswith("The plan is the cheapest among every method offered") for limit in plan.limits)
@@ -227,11 +228,43 @@ def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_
     assert plan.risk is not None
 
 
+def test_a_round_whose_search_a_net_stops_before_any_plan_is_stopped_not_refused(data, target, monkeypatch):
+    # the search of the lock's round meets its share of the net before a plan closes (`NoPolicy` with the net's words): the round is stopped,
+    # with the figure it reached, and the plan of round 1 is the answer
+    from crafting_system.planner._envelope import NoPolicy
+
+    real = planner_plan._make_plan
+
+    def later_stopped(*args, round_call=None, **kwargs):
+        if round_call is not None and not round_call.watched:
+            cause = NoPolicy("the search stopped", stopped="the time limit of 30 seconds was reached", lower=120.0)
+            outer = NoPolicy("the bound was cut short")  # `envelope_result` adds the note of a bound cut short over the search's own refusal
+            outer.__cause__ = cause
+            raise planner_plan.PlanError("no policy of the offered actions reaches the goal") from outer
+        return real(*args, round_call=round_call, **kwargs)
+
+    monkeypatch.setattr(planner_plan, "_make_plan", later_stopped)
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    first, last = _rounds_of(plan)
+    assert first.status == "closed" and last.status == "stopped" and last.reason == "the time limit of 30 seconds was reached" and last.lower == 120.0
+    assert not plan.search.exact
+
+
 def test_a_later_round_that_finds_a_cheaper_plan_replaces_the_plan_in_hand(data, target, monkeypatch):
-    # with no feature allowed in round 1 the fillers are a round of their own: round 1 exalts (16e/3 + 2S), round 2 fills first (3(c + e) + 2S)
+    # with the target's named offers alone in round 1 the fillers are a round of their own: round 1 exalts (16e/3 + 2S), round 2 fills first
+    # (3(c + e) + 2S)
     from crafting_system.planner import _rounds
 
-    monkeypatch.setattr(_rounds, "FIRST_ROUND", frozenset())
+    real = _rounds.round_groups
+
+    def named_alone(offers, named, added):
+        head, *rest = real(offers, named, added)
+        asked = tuple(i for i in head.positions if offers[i].blocks is None)
+        fillers = tuple(i for i in head.positions if i not in asked)
+        return (_rounds.Group(asked, (), frozenset()), _rounds.Group(fillers, ("bench-craft",), head.features), *rest)
+
+    monkeypatch.setattr(_rounds, "round_groups", named_alone)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     plan = plan_target(data, target, dataclasses.replace(_prices(), chaos_per_divine=92.0), PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
     records = _rounds_of(plan)

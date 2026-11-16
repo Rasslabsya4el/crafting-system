@@ -298,7 +298,8 @@ class Kernels:
     the solver slices (the extra kernel it is given is written past the end and not kept).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, room: Callable[[float], None] | None = None) -> None:
+        self.room = room  # asked with the MB a growth is about to take, before it takes them (the search's memory net, #839): it may raise `MemoryNet`
         self.count = 0
         self.edges = 0
         self.ptr = np.zeros(1025, dtype=np.int64)
@@ -309,9 +310,13 @@ class Kernels:
 
     def _room(self, kernels: int, edges: int) -> None:
         if kernels + 2 > len(self.ptr):
+            if self.room is not None:  # the new array is built while the old one is held: both count
+                self.room((2 * len(self.ptr) + len(self.ptr) // 2 + kernels) * 8 / 2**20)
             self.ptr = np.concatenate((self.ptr, np.zeros(len(self.ptr) // 2 + kernels, dtype=np.int64)))
         if edges + 2 > len(self.succ):
             grow = max(edges + 2 - len(self.succ), len(self.succ) // 2)
+            if self.room is not None:  # succ, wt and prob (4 + 8 + 8 bytes an edge): the new arrays are built while the old ones are held
+                self.room((len(self.succ) + grow) * 20 / 2**20)
             self.succ = np.concatenate((self.succ, np.zeros(grow, dtype=np.int32)))
             self.wt = np.concatenate((self.wt, np.zeros(grow, dtype=np.int64)))
             self.prob = np.concatenate((self.prob, np.zeros(grow)))
@@ -384,8 +389,9 @@ class Search[S]:
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
         self.refuse_above = figure_error(gap, gap_after)  # the certified error above which a solve is refused (#867)
         self.watch = watch
-        # the mean of a plan the caller already holds (a round of the planner's widening, `_rounds`): the search ends with `Beaten` once no plan of
-        # its offers can cost less than that one, to the solver's certified 1e-6 (and within the gap, once the gap applies): it cannot improve on it
+        # the certified upper figure of a plan the caller already holds (a round of the planner's widening, `_rounds`): the search ends with
+        # `Beaten` once no plan of its offers can cost less than that one, to the solver's certified 1e-6 (and within the gap, once the gap
+        # applies): it cannot improve on it
         self.beaten_at = beaten_at
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
         self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
@@ -403,7 +409,7 @@ class Search[S]:
         self.lb = np.zeros(1024)
         self.rows: dict[int, list[tuple[int, float, int, float]]] = {}  # expanded node -> realized (position, cost, kernel, chance of the node itself in it)
         self.cands: dict[int, list[tuple[float, int]]] = {}  # expanded node -> offers not realized yet, the least `la` last
-        self.kernels = Kernels()
+        self.kernels = Kernels(self._room_check if self.net.memory_mb is not None else None)
         self.shared: dict[Hashable, int] = {}
         self.hits = 0
         self.values: np.ndarray | None = None  # the solved lower graph (node n_solved is the goal node)
@@ -807,9 +813,18 @@ class Search[S]:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None
 
+    def _room_check(self, growth_mb: float) -> None:
+        """Raise `MemoryNet` when the kernel arrays' next growth of `growth_mb` would take the process past the memory net (#839): the net is
+        asked before the arrays grow, not after, so a search stops under its memory setting and not past it."""
+        used = resident_mb()
+        if used is not None and used + growth_mb >= self.net.memory_mb:
+            raise MemoryNet(
+                f"the process held {used:,.0f} MB and the search's arrays were to grow by {growth_mb:,.0f} MB, past the limit of {self.net.memory_mb:,.0f} MB"
+            )
+
     def _beaten(self, lower: float, began: float) -> None:
-        """Raise `Beaten` when `lower` (a certified lower figure of every plan of the offers) reaches the mean of the plan the caller holds
-        (`beaten_at`): to the solver's certified 1e-6, the precision an exact answer is given to (OR-32), or within the gap once the stop at the gap
+        """Raise `Beaten` when `lower` (a certified lower figure of every plan of the offers) reaches the certified upper figure of the plan the
+        caller holds (`beaten_at`): to the solver's certified 1e-6, the precision an exact answer is given to (OR-32), or within the gap once the stop at the gap
         applies, since a plan of these offers can then save nothing the run asks for."""
         if self.beaten_at is None or not math.isfinite(lower):
             return
@@ -829,7 +844,11 @@ class Search[S]:
             if math.isfinite(self.lb[0]):
                 self._last_root = float(self.lb[0])  # the lower graph before the first plan is the start alone, a tip, and its value the start's bound: the first round must not fall below it (the guard)
             mark = time.perf_counter()
-            stopped = self._seed(began)
+            try:
+                stopped = self._seed(began)
+            except MemoryNet as stop:
+                stopped = str(stop)
+                self.kernels.room = None  # the stop's own plan is solved over what the search holds
             self.stats.expand_seconds += time.perf_counter() - mark
             try:
                 upper = self._upper()[2]
@@ -962,16 +981,20 @@ class Search[S]:
                 break
             mark = time.perf_counter()
             polled = mark
-            for i in fake.tolist():
-                if not self.expanded[i]:
-                    self.expand(i)
-                self.realize(i, force=True)
-                self.p.release()
-                if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
-                    polled = time.perf_counter()
-                    stopped = self._net(began)
-                    if stopped is not None:
-                        break
+            try:
+                for i in fake.tolist():
+                    if not self.expanded[i]:
+                        self.expand(i)
+                    self.realize(i, force=True)
+                    self.p.release()
+                    if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
+                        polled = time.perf_counter()
+                        stopped = self._net(began)
+                        if stopped is not None:
+                            break
+            except MemoryNet as stop:
+                stopped = str(stop)
+                self.kernels.room = None  # the stop's own plan is solved over what the search holds
             self.stats.expand_seconds += time.perf_counter() - mark
             if stopped is not None:
                 break
@@ -990,17 +1013,20 @@ class Search[S]:
                 return SearchResult(self.states[:known], index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None, True)
             raise NoPolicy(
                 f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
-                f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+                f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)",
+                stopped=stopped, lower=lower,
             ) from error
         if not math.isfinite(upper):
             if self.p.restart is None:
                 raise NoPolicy(
                     f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
-                    f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}"
+                    f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}",
+                    stopped=stopped, lower=lower,
                 )
             raise NoPolicy(
                 f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} of {len(self.states):,} states "
-                f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)"
+                f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)",
+                stopped=stopped, lower=lower,
             )
         self._stand(lower, began)
         return SearchResult(self.states, self.index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None)
@@ -1020,7 +1046,17 @@ def figure_error(gap: float, gap_after: float | None) -> float:
 
 
 class NoPolicy(ValueError):
-    """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it)."""
+    """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it). `stopped` is the
+    net's words when a net stopped it (it found none yet, it did not prove there is none), with `lower`, the figure no plan costs less than."""
+
+    def __init__(self, message: str, *, stopped: str | None = None, lower: float | None = None) -> None:
+        super().__init__(message)
+        self.stopped = stopped
+        self.lower = lower
+
+
+class MemoryNet(Exception):
+    """The kernel arrays' next growth would pass the memory net (`Search._room_check`, #839): the search stops as at any net, with its words."""
 
 
 class Beaten(Exception):
@@ -1034,6 +1070,6 @@ class Beaten(Exception):
 
 
 __all__ = [
-    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
+    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "MemoryNet", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
     "resident_mb",
 ]  # fmt: skip

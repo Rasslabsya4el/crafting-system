@@ -859,7 +859,7 @@ def _make_plan(
                         abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
                         net=search_net(clock, round_call.searches if round_call is not None else 1), item=target.start_item if many else None, gap=gap,
                         gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
-                        beaten_at=round_call.mean if round_call is not None else None,
+                        beaten_at=round_call.upper if round_call is not None else None,
                     )  # fmt: skip
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 raise PlanError(envelope_refusal(solver, error)) from error
@@ -1000,10 +1000,23 @@ def widened_plan(
     of the offers said; `kwargs` go to each round's `_make_plan`."""
 
     def run(chosen: tuple[Offer, ...], call: RoundCall) -> Plan:
-        return _make_plan(
-            data, target, prices, start_price=None, offers=chosen, solve_it=True, start_price_of=price_of_start, with_risk=False, incumbent=None,
-            clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, **kwargs,
-        )  # fmt: skip
+        try:
+            return _make_plan(
+                data, target, prices, start_price=None, offers=chosen, solve_it=True, start_price_of=price_of_start, with_risk=False,
+                incumbent=None, clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, **kwargs,
+            )  # fmt: skip
+        except PlanError as error:  # the search's `NoPolicy`: a net stopped it before a plan closed (a stop), or no plan of the offers exists
+            cause = error.__cause__
+            while cause is not None and not isinstance(cause, NoPolicy):
+                cause = cause.__cause__
+            stopped = cause
+            while stopped is not None and getattr(stopped, "stopped", None) is None:
+                stopped = stopped.__cause__ if isinstance(stopped.__cause__, NoPolicy) else None
+            if stopped is not None:
+                raise _rounds.Stopped(stopped.stopped, stopped.lower) from error
+            if cause is not None and cause.__cause__ is None:  # the search's own proof, its bound whole: no plan of these offers reaches the target
+                raise _rounds.NoPlan(str(error)) from error
+            raise
 
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
