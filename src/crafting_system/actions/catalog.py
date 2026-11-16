@@ -17,9 +17,10 @@ catalog and under the contract tests, and a planner that asks for `planner_only`
 text; `player_why`, when a kind has one, is the same reason in a player's words, and the answer states it beside the kind
 instead of the general "methods the planner cannot use yet" (`planner/_offers.py`, OR-13; #943).
 
-A kind is `opt_in` when the planner can use it but offers it only when a target names it in `actions:` (the fossil
-sets: 12,696 of them on boots, which a target that is not about fossils must not pay for). `catalog(..., names=None)`
-leaves an opt-in kind out; `names` that include it list it.
+A kind is `opt_in` when the planner can use it but offers it only when it is named (`catalog(..., names=None)` leaves an opt-in kind
+out; `names` that include it list it). Since #886 (OR-41) no kind of the beta's scope is opt-in: every one is offered by default, and
+the flag is left only to a kind outside it (the recombinator, the Foulborn Exalted Orb; `prices/spends.py`, `DEFERRED_KINDS`) and as the
+mechanism behind a user's switch that turns a method off (#323). `tests/test_actions_opt_in.py` fails on an in-scope opt-in kind.
 
 A kind is `needs_strands` when its actions exist only in a plan that considers Memory Strands (the Foulborn orbs, the Orb of Remembrance,
 the Orb of Unravelling; ADR-0040, "Strands are off unless the query has them"). `catalog(..., strands=False)` leaves such a kind out;
@@ -27,7 +28,7 @@ the Orb of Unravelling; ADR-0040, "Strands are off unless the query has them"). 
 itself. `kinds()` and the contract suites still see it, so a kind of this sort is checked like every other.
 
 A kind is `burns` when some of its actions declare `burn` (ticket #295, ADR-0056): a currency that changes no mod and may give a Hinekora's Lock up.
-`burn.py` asks the kinds with this flag, and only them, for the burns of a state (the fossil sets and the other opt-in kinds are never searched for one).
+`burn.py` asks the kinds with this flag, and only them, for the burns of a state (the other kinds are never searched for one).
 The flag does not offer the kind: a burn is never a plain action, and the kind stays a `planner=False` kind or is offered by its own rules.
 
 A kind is `corrupting` when every action it lists corrupts (`Adds.corrupts`: the Vaal Orb, the Locus of Corruption). A planner
