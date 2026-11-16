@@ -16,7 +16,10 @@ Nothing here depends on what `a` is, so every offer is judged, not only the bloc
 
 **Where the premise fails, nothing is cut.** A given start (`StartPrice.given`, OR-6) has no restart: an item it cannot buy again may be worth an
 offer dearer than any plan from the start, so no offer is dropped. A plan made once per reading of a rule axis has a different `U` per reading, so the
-planner does not cut there either (`_plan`). `U` must be the mean of a plan of the same game: the planner takes it from a plan of a subset of the
+planner does not cut there either. An Awakener's Orb's donor and an offer that takes donors search a second item whose restart is not this
+start item's, and a route judged against the plan is a fixed policy that may name the offer: no cut there either (`_plan.price_cut_applies`).
+Hinekora's Lock: `U` is the mean of a plan without the Lock, so `U >= V*` without it `>= V*` with it, and an offer used under the Lock costs at least
+its own price at a state where the restart is offered: the argument holds for the Lock's solve too. `U` must be the mean of a plan of the same game: the planner takes it from a plan of a subset of the
 offers, which is a plan of the whole set too: today the offers without the metamod crafts that the rule of blocking crafts offers unasked (#886),
 which make the model track every mod's protected tags on every state (`_plan.known_upper`).
 """

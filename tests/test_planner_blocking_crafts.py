@@ -211,7 +211,7 @@ def test_a_given_start_has_no_restart_so_nothing_is_cut(tmp_path, data, monkeypa
     given = load_target(path, data)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     asked = []
-    monkeypatch.setattr(planner_plan, "known_upper", lambda *args, **kwargs: asked.append(1))
+    monkeypatch.setattr(planner_plan, "plan_without", lambda *args, **kwargs: asked.append(1))
     with pytest.raises(planner_plan.PlanError, match="no policy"):  # a Life 1 or 2 takes the family for good, and a held belt cannot be bought again
         plan_target(data, given, _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
     assert not asked  # no plan is made to cut against: with no restart an offer dearer than any plan may still be the only way on
@@ -226,3 +226,27 @@ def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_fini
     kept, cut = restart_dominated((cheap, tie, dear, restart), 50.0, 133.0)
     assert kept == (cheap, restart) and cut == (tie, dear)
     assert restart_dominated((cheap, dear), 50.0, float("inf")) == ((cheap, dear), ())
+
+
+def test_a_judged_route_is_judged_against_every_offer_so_nothing_is_cut(data, target, monkeypatch):
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", judges_route=True))
+    assert LOCK in {entry.label for entry in plan.offers} and not _cut_labels(plan)  # a route may name the lock: it is a fixed policy, not the cheapest
+
+
+def test_when_the_net_stops_the_plan_without_the_metamods_that_plan_is_the_answer_and_says_what_it_did_not_try(data, target, monkeypatch):
+    real = planner_plan.plan_without
+
+    def stopped(*args, **kwargs):  # the plan without the lock, as a net would leave it
+        plan = real(*args, **kwargs)
+        info = plan.packed.info["envelope"]
+        plan.packed.info["envelope"] = dataclasses.replace(info, exact=False, stopped="the time limit of 600 seconds was reached")
+        return plan
+
+    monkeypatch.setattr(planner_plan, "plan_without", stopped)
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)  # a lock at 182 would be kept: it is not tried at all
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert LOCK not in {entry.label for entry in plan.offers}
+    assert any(limit.what == "Not tried" and LOCK in limit.labels for limit in plan.limits)
+    assert plan.risk is not None
