@@ -90,11 +90,11 @@ def space(*actions: Action, goal: Goal = GOAL) -> Abstraction:
 # --- the contract suite -----------------------------------------------------------------------------
 
 
-def test_the_two_kinds_are_opt_in_planner_kinds_and_listed_for_a_magic_item():
+def test_the_two_kinds_are_planner_kinds_offered_by_default_and_listed_for_a_magic_item():
     # #223: the planner offers them, but only to a target that names them, because the first imprint multiplies the states by about 200 (ADR-0060 point 5)
     registered = {entry.name: entry for entry in kinds()}
     for name in ("imprint", "restore"):
-        assert registered[name].planner and registered[name].opt_in and registered[name].reads_item_state_while_not_planner == "any"
+        assert registered[name].planner and not registered[name].opt_in and registered[name].reads_item_state_while_not_planner == "any"
     assert not [a for a in catalog(CONTRACT_DATA, magic(LIFE_1), planner_only=True) if isinstance(a, (Imprint, Restore))]
     listed = catalog(CONTRACT_DATA, magic(LIFE_1))
     assert [a for a in listed if isinstance(a, (Imprint, Restore))] == [
