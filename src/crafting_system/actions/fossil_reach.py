@@ -27,11 +27,15 @@ largest, over the splits, of X / (X + that sum) over the open sides (0 when X is
 and changes neither sum. This is the c_j of `_bound.py` without Dinkelbach's choice of the drawn families: never below it.
 
 Weights. A mod's weight in the pool of a set is its spawn weight on the item times the set's factor (`FossilWeights.factor`: the tag factor of
-its tag set, times the Sanctified level factor). A Tangled Fossil makes the pool a mixture over its 420 outcome records; the chance of the
-mixture is at most the largest chance of a member, and the bound above grows with every x_f and falls with every j_f (X / (X + sum of the
-smallest junk weights)), so taking each mod in X at its largest weight over the records and each other mod at its smallest gives a number
-above every member's bound. The factor of a tag set reads only the records' entries for the tags of the set, so the records are grouped by
-those entries and each group is worked out once. The added mods of a set (a Faceted Fossil's) are candidates of its pool like any other.
+its tag set, times the Sanctified level factor). A Tangled Fossil makes the use a mixture over its 420 outcome records, each with the same
+chance: the chance of the mixture is the mean of the members' chances, so the mean of their bounds is a bound. The factor of a tag set reads
+only the records' entries for the tags of the set, so the records are grouped into classes by their entries for every tag of the pool (each
+class weighted by its count) and each factor is worked out once per class of entries for its own tags. The added mods of a set (a Faceted
+Fossil's) are candidates of its pool like any other.
+
+Every leaf at once. Its chance is at most the least of the leaves' chances and, when some leaves have pairwise disjoint X's and no forced mod
+passes any leaf, at most the joint bound of `abstraction/_bound.py` (`_joint_hits`: each of them needs a draw of its own), per total. When a
+forced mod may pass a leaf, no bound on every leaf at once is declared (`together` None: the least of the leaves' bounds holds).
 
 Floats. Every x_f, j_f and sum is a sum of nonnegative products of a few factors, each rounded once (relative error under 1e-13 for a few
 hundred terms); no step subtracts two sums (the junk left is summed from the smallest up); 1 - prod(1 - c_j) is `-expm1(sum log1p(-c_j))`,
@@ -205,8 +209,8 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
         forced = members[position][2]
         hits = [any(leaf_flags(mod)[leaf] for mod in forced) for leaf in range(leaves)]
         values = tuple(1.0 if hits[leaf] else _raised(per_set[position, leaf]) for leaf in range(leaves))
-        # the joint bound counts the leaves of `joint` as hit by draws only: not when a forced mod may pass one of them
-        both = None if any(hits[leaf] for leaf in joint) else _raised(per_set_all[position])
+        # the bound on every leaf at once counts hits by draws only: none when a forced mod may pass a leaf (the least of `values` then holds)
+        both = None if any(hits) else _raised(per_set_all[position])
         results[position] = (values, both)
     return results  # type: ignore[return-value]
 
