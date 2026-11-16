@@ -147,15 +147,15 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
 | `cache` | [paths] | `local/cache` | read | cli/_route_view.py: _trade_stats (compared; on the planning path); cli/_route_view.py: _trade_stats (used in an operation; on the planning path); and 4 more |
 | `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path); and 1 more |
-| `memory_strands` | [planner] | `false` | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
+| `memory_strands` | [planner] | `false` | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_plan.py: widened_plan (read from `**kwargs`; on the planning path); and 2 more; turned on, it makes `make_plan` refuse every plan (section 3) |
 | `recipe_starts` | [planner] | `true` | read | planner/_starts.py: _with_starts (used in an operation; on the planning path) |
 | `recombinator_junk_craft` | [planner] | `false` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path) |
 | `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_benchmark.py: render_summary (used as an index or container; on the planning path); and 2 more |
 | `price_source` | [planner] | `both` | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
-| `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 11 more |
+| `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 12 more |
 | `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 5 more |
 | `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
-| `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 4 more |
+| `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 5 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--gap` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
@@ -173,9 +173,9 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 2 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
-| `--solver` | command `plan` |  | read | planner/_packed.py: packed_result (compared; on the planning path); planner/_packed.py: packed_result (formatted into text; on the planning path); and 5 more |
+| `--solver` | command `plan` |  | read | planner/_packed.py: packed_result (compared; on the planning path); planner/_packed.py: packed_result (formatted into text; on the planning path); and 7 more |
 | `--start-price` | command `plan` |  | read | planner/_plan.py: _override (compared; on the planning path); planner/_plan.py: _override (formatted into text; on the planning path); and 2 more |
-| `--strands` | command `plan` |  | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_starts.py: _with_starts (read from `**kwargs`; on the planning path); and 1 more; turned on, it makes `make_plan` refuse every plan (section 3) |
+| `--strands` | command `plan` |  | read | planner/_plan.py: strand_setting (decides a branch; on the planning path); planner/_plan.py: widened_plan (read from `**kwargs`; on the planning path); and 2 more; turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--time-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 6 more |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 
