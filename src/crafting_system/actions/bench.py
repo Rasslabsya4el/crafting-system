@@ -10,9 +10,11 @@ crafted mod, listed by `bench_crafts(data)`) and `RemoveCraftedMods()`. Each has
 item) -> BenchOutcomes`, with the same `chance_all`, `distribution` and `sample` and one outcome of
 probability 1, and `cost(data)`, the price as `CurrencyCost(currency name, count)`. A bench craft
 is refused (`NotApplicableError`) on a corrupted item, for an item class the option is not offered for,
-below the mod's required item level, with a family already on the item, on a full side, and on an
-item that already holds as many crafted mods as it may (one, two with the extra crafted slot enchant, three with the multimod); a normal item
-is `OutOfScopeError`. Remove Crafted Mods removes every crafted mod that is not fractured, metamods included.
+with a family already on the item, on a full side, and on an item that already holds as many crafted
+mods as it may (one, two with the extra crafted slot enchant, three with the multimod); a normal item
+is `OutOfScopeError`. The bench does not look at the item level (bench_craft.no_item_level_gate): a
+crafted mod's `required_level` raises the finished item's equip level requirement to 80% of it, and
+is never an item-level condition. Remove Crafted Mods removes every crafted mod that is not fractured, metamods included.
 """
 
 import random
@@ -50,6 +52,7 @@ FOLLOW_AFFIX_RULES = get_rule("bench_craft.crafts_follow_affix_rules")
 METAMODS_ARE_CRAFTED_MODS = get_rule("bench_craft.metamods_are_crafted_mods")
 REFUSED_ON_CORRUPTED = get_rule("bench_craft.refused_on_corrupted")
 EVERY_CRAFT_UNLOCKED = get_rule("bench_craft.every_craft_unlocked")
+NO_ITEM_LEVEL_GATE = get_rule("bench_craft.no_item_level_gate")
 REROLLS_NOT_B1 = get_rule("bench_craft.rerolls_not_b1_actions")
 OTHER_OPTIONS_NOT_MOD_CRAFTS = get_rule("bench_craft.other_options_not_mod_crafts")
 REMOVES_ALL_CRAFTED_MODS = get_rule("bench_craft.remove_crafted_mods_removes_all")
@@ -214,7 +217,8 @@ class BenchCraft(Action):
         that already holds as many crafted mods as it may (one, or three with the multimod `Can have
         up to 3 Crafted Modifiers`, which counts as one of them; a metamod is a crafted mod);
         `OutOfScopeError` for a normal item or an item with no mod (no admitted rule says what a craft
-        does there). An item that fails `Item.validate` raises its `ItemError`.
+        does there). An item that fails `Item.validate` raises its `ItemError`. The item level is not
+        checked (`NO_ITEM_LEVEL_GATE`).
         """
         option = self.option(data)
         mod = data.mods.get(self.mod_id)

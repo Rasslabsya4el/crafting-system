@@ -34,6 +34,14 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
 
+  - id: bench_craft.no_item_level_gate
+    statement: A bench craft is not refused because the item's level is below the crafted mod's `required_level`; the bench does not look at the item level. The mod's level raises the item's own level requirement (the character level needed to equip it) to 80% of the mod level instead. Whether the item level itself changes is not known and not modelled (nothing suggests it does). Agreed in issue #76 with the owner, corroborated there by the wiki pages Modifier and Crafting Bench and by Craft of Exile's code (a bench craft skips the item-level cut), and re-checked in issue #1022 with the Craft of Exile emulator (levels 80 and 81 crafts applied on a bow of item level 78 and 60) and poedb's bench list (no level column).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/76#issuecomment-6543013106
+    quote: "a bench craft of a higher level can be crafted on a low item level item, but the item's level requirement goes up; he does not remember whether the item level itself changes (owner, 2026-10-31, in chat, his own knowledge, he may be wrong)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-16
+
   - id: bench_craft.one_crafted_mod_by_default
     statement: An item holds one crafted mod by default (`value`), metamods included. A craft on an item that already holds a crafted mod is refused here, although the game offers to replace it for an extra Orb of Scouring (not modelled). The multimod `Can have up to 3 Crafted Modifiers` lifts the limit to three (metamods.multimod_raises_crafted_limit).
     source_kind: wiki

@@ -19,6 +19,7 @@ from crafting_system.actions import (
     bench_crafts,
 )
 from crafting_system.items import Item, Rarity
+from crafting_system.rules import SourceKind, get_rule
 
 BELT = "Metadata/Items/Belts/Belt3"
 AMULET = "Metadata/Items/Amulets/Amulet1"
@@ -104,6 +105,9 @@ def test_a_craft_works_on_a_magic_item_with_a_free_side():
 
 
 def test_a_craft_does_not_look_at_the_item_level():
+    """bench_craft.no_item_level_gate: a level-72 craft goes onto an item of item level 1."""
+    assert get_rule("bench_craft.no_item_level_gate").source_kind is SourceKind.OWNER
+    assert DATA.mods[DAMAGE_1].required_level == 72
     assert BenchCraft(DAMAGE_1).outcomes(DATA, belt(roll(LIFE), item_level=1)).chance_all([DAMAGE_1]) == 1
 
 
