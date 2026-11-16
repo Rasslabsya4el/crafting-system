@@ -89,6 +89,12 @@ def _version_name(text: str) -> str:
     raise argparse.ArgumentTypeError(f"{text!r} is not a game version name: use dot-separated numbers like 3.29.3.3")
 
 
+def _league_name(text: str) -> str:
+    if text.strip() and text == text.strip():
+        return text
+    raise argparse.ArgumentTypeError(f"{text!r} is not a league name: use poe.ninja's league id, like Allflame")
+
+
 @dataclass(frozen=True)
 class _Side:
     """One side of a diff: `PINNED` or a commit, and the version name the user gave for it (if they did)."""
@@ -149,8 +155,11 @@ def _diff(old: _Side, new: _Side, pin: RepoePin, open_url: OpenUrl | None, *, im
             print(f"\nTo move the pin to this export: {PIN_COMMAND} {learned.commit} {side.name or '<version>'}")
 
 
-def _pin(target: str, version: str | None, pin: RepoePin, pin_file: Path, open_url: OpenUrl | None) -> None:
-    """Move the pin to `target` (a commit or a version name): the files in place and checked, then `pin_file`."""
+def _pin(
+    target: str, version: str | None, pin: RepoePin, pin_file: Path, open_url: OpenUrl | None, league: str | None = None
+) -> None:
+    """Move the pin to `target` (a commit or a version name): the files in place and checked, then `pin_file`. The new pin names
+    `league`, or the current pin's league when it is None."""
     if is_commit(target):
         commit = target
     else:
@@ -168,7 +177,11 @@ def _pin(target: str, version: str | None, pin: RepoePin, pin_file: Path, open_u
             )
         version = named.version
 
-    new_pin = dataclasses.replace(candidate_pin(commit, pin, open_url=open_url), version=version)
+    new_pin = dataclasses.replace(
+        candidate_pin(commit, pin, open_url=open_url), version=version, league=league if league is not None else pin.league
+    )
+    if new_pin.league is None:
+        raise DataError(f"the pin names no league: pass the league the export is played in, {PIN_COMMAND} {target} --league <league>")
     moved = _file_under_version(commit, version)
     try:
         for result in fetch(new_pin, open_url=open_url):
@@ -178,7 +191,7 @@ def _pin(target: str, version: str | None, pin: RepoePin, pin_file: Path, open_u
         _put_back(moved, commit, version)  # the commit stays learned, so a rerun downloads nothing
         raise
     _drop_learned(commit)
-    print(f"{pin_file} was written: the pin is now version {version}, commit {commit}")
+    print(f"{pin_file} was written: the pin is now version {version}, commit {commit}, league {new_pin.league}")
 
 
 def _file_under_version(commit: str, version: str) -> list[str]:
@@ -290,13 +303,15 @@ def main(
             "under the version's cache folder and checked, and a commit never seen is downloaded once. "
             "PIN.json is written last, after the files are checked. For a commit, VERSION names the game "
             "version; without it the version is read from the commit's message (`Export <version>`) on "
-            "GitHub."
+            "GitHub. --league names the league the new export is played in (poe.ninja's league id, the "
+            "league whose prices go with it); without it the pin keeps its league."
         ),
     )
     move.add_argument("target", type=_target, metavar="TARGET", help="a repoe-fork commit or a game version name")
     move.add_argument(
         "version", type=_version_name, nargs="?", metavar="VERSION", help="the game version of a commit (3.29.4.1)"
     )
+    move.add_argument("--league", type=_league_name, help="the league the new export is played in (default: the pin's league)")
     elevated = commands.add_parser(
         "elevated",
         help="rebuild elevated.json (top-tier influence mod -> Elevated mod) from Craft of Exile's data",
@@ -329,7 +344,7 @@ def main(
             for pinned in pin.files:
                 print(_line(pinned.name, "ok", pinned.size, pinned.sha256))
         elif args.command == "pin":
-            _pin(args.target, args.version, pin, pin_file, open_url)
+            _pin(args.target, args.version, pin, pin_file, open_url, args.league)
         elif args.command == "elevated":
             _elevated(args.coe_folder, args.output, pin)
         else:
