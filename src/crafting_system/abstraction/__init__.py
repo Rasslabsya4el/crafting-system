@@ -46,6 +46,8 @@ is imported or tested for here.
 * `reach_bound(abstraction, state, action, leaves, exact=False)`: an upper bound, from the pool alone, on the
   chance that one use of an erasing reroll makes every leaf of `leaves` PASSING (the exact chance with
   `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
+* `add_bound(abstraction, state, action, leaves)`: an upper bound, from the pool alone, on the chance that one use of an action that
+  adds one drawn mod (an Exalted Orb) makes a leaf of `leaves` PASSING, from any state of the shape of the bare item `state` (#1072).
 * `keeps_shape(abstraction, state, action)`: whether every outcome of the action keeps the flags and the
   fractured mods of the state (what a bound read at one state needs to hold at the next; #118).
 * `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Junk families that no requirement
@@ -215,7 +217,7 @@ No mechanic is decided here: this module only recombines the results of `actions
 claim of the rules registry.
 """
 
-from ._bound import keeps_shape, reach_bound
+from ._bound import add_bound, keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._finish import Finish, FinishModel, FinishStep, FinishValues, SocketWanted, solve_finish
@@ -264,6 +266,7 @@ __all__ = [
     "Status",
     "Wanted",
     "integer_weights",
+    "add_bound",
     "keeps_shape",
     "reach_bound",
     "solve_finish",
