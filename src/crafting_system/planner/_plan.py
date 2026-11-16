@@ -1020,7 +1020,7 @@ def widened_plan(
 
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
-        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter,
+        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed,
     )  # fmt: skip
     if widened.plan is None:
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")

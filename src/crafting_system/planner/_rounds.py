@@ -18,9 +18,11 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   lower figure reaches that figure (`_envelope.Beaten`). A round that closes (exact, within the gap, beaten, or shown to reach no plan) joins
   the base of the next rounds, and so does one a refusal ended (a solve that failed proves nothing against its offers and took no time from the
   others: a wider round may solve them); one that its share of the time or the memory net stopped is set aside, and its plan is kept if it is
-  cheaper. Until a round has made a plan, a round may take all the time left: the answer must hold a plan (OR-33), and a later round cannot
+  cheaper. Until a plan is in hand, a round may take all the time left: the answer must hold a plan (OR-33), and a later round cannot
   give one sooner than the rounds before it. Once a plan is in hand, the share of a round is the run's time left over the rounds left
-  (`_plan.search_net`), so time a round does not use goes to the rounds after it.
+  (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
+  share too once its own search holds a plan: it gives way there, with its plan (`Share`, #1080), so every group is tried once a plan exists.
+  Two refusals in a row set the first refused group aside (it would refuse every round after it).
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
   figure no plan of its offers costs less than (OR-13). A main tree whose every benchmark route has one group never enters the rounds.
@@ -31,7 +33,7 @@ from __future__ import annotations
 import gc
 import math
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from crafting_system.budget import BudgetExceeded
 
@@ -42,6 +44,7 @@ from ._limits import Limit, WITHIN_GAP
 FIRST_ROUND = frozenset({"junk"})  # the features an offer of the first round may add: counting the junk per side is what every reroll needs
 
 CLOSED, WITHIN, BEATEN, NONE, STOPPED, REFUSED, UNTRIED = "closed", "within", "beaten", "no plan", "stopped", "refused", "not tried"
+GAVE_WAY = "gave way"  # a round that began with no plan in hand, made one, and had used its share: it gives the rest of the time back (#1080)
 
 
 @dataclass(frozen=True)
@@ -141,6 +144,28 @@ class Stopped(Exception):
         self.lower = lower if lower is not None and math.isfinite(lower) else None
 
 
+class Share:
+    """The time rule of a round that begins with no plan in hand (#1080, OR-33, OR-40): it may take all the time left until its search holds a
+    plan (the answer must hold one), and from then on it is a round like the others, whose share is the time left at its start over the rounds
+    left, this one included (`_plan.search_net`). Its search asks this after each of its own rounds (`_envelope.Net.give_way`): once it holds a
+    plan and the round has used that share, the search stops there with its plan, and what is left goes to the rounds after it. Without it one
+    slow round took every second left after its first plan and the rounds after it were never tried (R10: a first plan at 147 s, then 440 s with
+    no cheaper plan, and 19 rounds not tried; R13 and R09 the same with 2 rounds). No figure here is a count or a cut: the share is the one every
+    round with a plan in hand gets, and the clock is the run's (`left`, `clock_now`)."""
+
+    def __init__(self, left: float, rounds: int, began: float, clock_now: Callable[[], float]) -> None:
+        self.share, self.began, self.clock_now = left / max(rounds, 1), began, clock_now
+        self.said = (
+            f"its search made a plan and it had used its share of the time ({self.share:,.0f} seconds, the time left over the rounds left): "
+            "the rest went to the rounds after it"
+        )
+
+    def __call__(self, standing) -> str | None:
+        """The reason to stop at this standing of the search (`_envelope.Standing`), or None to go on."""
+        holds = standing.upper is not None and math.isfinite(standing.upper)
+        return self.said if holds and self.clock_now() - self.began >= self.share else None
+
+
 @dataclass(frozen=True)
 class Widened:
     """The rounds' outcome: the cheapest plan (None when no round made one), the record of every round, and the first error a round raised
@@ -168,6 +193,7 @@ def widen(
     best, best_upper, best_mean, error = None, None, None, None
     base: list[int] = []
     records: list[RoundRecord] = []
+    refused_last: tuple[int, tuple[int, ...]] | None = None  # the last round, when a refusal ended it: its record's place and its group's offers
     for k, group in enumerate(groups):
         rest = len(groups) - k
         out_of_time = (time_left := left()) is not None and time_left <= 0.0
@@ -178,8 +204,9 @@ def widen(
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
         plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
-        try:
-            plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0))  # no plan in hand: all the time left
+        give_way = None if best is not None or time_left is None else Share(time_left, rest, began, clock_now)
+        try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
+            plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0, give_way))
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
             reason = (
@@ -200,6 +227,8 @@ def widen(
             error = error or refusal
         if plan is not None:
             status, reason = ended(plan)
+            if give_way is not None and status == STOPPED and reason == give_way.said:
+                status = GAVE_WAY
             search = getattr(plan, "search", None)
             lower, upper = getattr(search, "lower", None), mean_of(plan)
             within = getattr(search, "within", None) if status == WITHIN else None
@@ -210,6 +239,14 @@ def widen(
         if lower is not None and not math.isfinite(lower):
             lower = None  # a round with no plan states no figure (the JSON holds no infinity)
         records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features))))
+        if status == REFUSED and k > 0 and refused_last is not None:
+            # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
+            # this one widens what the base held before it (#1080): a group whose offers make every solve refuse would refuse every round after
+            place, earlier = refused_last
+            base = sorted(set(base) - set(earlier))
+            positions = sorted({*base, *group.positions})
+            records[place] = replace(records[place], reason=records[place].reason + "; set aside, since the round after it was refused too")
+        refused_last = (len(records) - 1, group.positions) if status == REFUSED and k > 0 else None
         if k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED):
             base = positions  # the first round is the base whatever its end, a refused one too: every later round widens it
         plan = None
@@ -247,6 +284,9 @@ def round_line(n: int, record: RoundRecord) -> str:
         plan = f", its plan so far costs {_figure(record.upper)}" if record.upper is not None else ", with no plan"
         low = f"; no plan with them costs less than {_figure(record.lower)}" if record.lower is not None else ""
         return f"{head}: stopped ({record.reason}){plan}{low}"
+    if record.status == GAVE_WAY:
+        low = f"; no plan with them costs less than {_figure(record.lower)}" if record.lower is not None else ""
+        return f"{head}: gave way ({record.reason}), its plan costs {_figure(record.upper)}{low}"
     if record.status == REFUSED:
         return f"{head}: no plan ({record.reason})"
     return f"{head}: not tried, {record.reason}"
@@ -289,6 +329,6 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
 
 
 __all__ = [
-    "BEATEN", "CLOSED", "FIRST_ROUND", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
+    "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
     "round_groups", "round_line", "rounds_limits", "widen",
 ]  # fmt: skip

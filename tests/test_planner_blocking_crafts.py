@@ -24,7 +24,7 @@ from test_cli_offers import BELT, PRICED_DATA
 
 from crafting_system.abstraction import Goal
 from crafting_system.data.model import BenchActions, BenchOption, CostEntry, Mod, StatRange
-from crafting_system.planner import PlanSettings, _envelope, _offers, plan_target
+from crafting_system.planner import PlanSettings, _envelope, _envelope_plan, _offers, plan_target
 from crafting_system.planner import _plan as planner_plan
 from crafting_system.planner._offers import offers_for
 from crafting_system.prices import PriceFile
@@ -193,6 +193,70 @@ def test_a_refused_round_joins_the_next_and_a_round_with_no_plan_in_hand_has_all
         left=lambda: 600.0, clock_now=lambda: 0.0,
     )  # fmt: skip
     assert shares == [1, 2, 1]  # round 1 has no plan in hand; then the plan is, and the two rounds left share the time
+
+
+def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share_and_a_later_round_finds_the_saving():
+    # #1080: round 1 begins with no plan in hand, so it may take all the time left; its search makes a plan of 10 at once and then only raises its
+    # lower figure (R10's bench crafts: a first plan at 147 s, then 440 s with nothing cheaper). The run has 600 s and three rounds: round 1's share
+    # is 200 s. Its search asks after each of its own rounds (one per 50 s here); with a plan in hand and 200 s used it stops with its plan, and
+    # rounds 2 and 3 are tried. Round 2 holds the saving: a plan of 7. The answer names what each round did.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abc"))
+    now = [0.0]  # the run's clock, moved by hand: nothing reads the time
+    asked = []
+
+    def search(chosen, call):
+        if call.give_way is None:  # a plan is in hand: the round has its share, and here closes at once
+            return SimpleNamespace(search=SimpleNamespace(lower=7.0), mean_remaining=7.0 if "b" in chosen else 10.0, stopped=None)
+        for step in range(100):  # each of the search's rounds takes 50 s; the plan of 10 is in hand from the first
+            now[0] += 50.0
+            standing = SimpleNamespace(lower=1.0 + step / 100, upper=10.0, rounds=step, seconds=now[0])
+            if (said := call.give_way(standing)) is not None:
+                asked.append((step, now[0]))
+                return SimpleNamespace(search=SimpleNamespace(lower=standing.lower), mean_remaining=10.0, stopped=said)
+        raise AssertionError("the round never gave way")
+
+    widened = _rounds.widen(
+        groups, tuple("abc"), search, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+        ended=lambda plan: (_rounds.STOPPED, plan.stopped) if plan.stopped else (_rounds.CLOSED, ""), left=lambda: 600.0 - now[0], clock_now=lambda: now[0],
+    )  # fmt: skip
+    assert asked == [(3, 200.0)]  # 200 s used, a plan in hand: it gives way there, not at the net
+    assert [record.status for record in widened.records] == ["gave way", "closed", "closed"]
+    assert widened.plan.mean_remaining == 7.0  # the later round held the saving and found it
+    first = _rounds.round_line(1, widened.records[0])
+    assert "gave way" in first and "200 seconds" in first and "its plan costs 10.00 Chaos" in first
+    assert not _rounds.all_closed(widened.records)  # the round that gave way did not finish: no text calls the plan the cheapest of every method
+    # with no plan in its search the round goes on to the net (OR-33): the rule asks for a plan in hand
+    share = _rounds.Share(600.0, 3, 0.0, lambda: 500.0)
+    assert share(SimpleNamespace(upper=None)) is None and share(SimpleNamespace(upper=float("inf"))) is None and share(SimpleNamespace(upper=10.0)) is not None
+
+
+def test_a_refused_group_is_set_aside_when_the_round_after_it_is_refused_too():
+    # #1080 point 2: a refused round's group stays in the base (a wider round may solve it, R10's essences); when the next round is refused too, the
+    # group is set aside, so a group whose offers make every solve refuse does not refuse every round after it
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abcd"))
+    seen = []
+
+    def run(chosen, call):
+        seen.append(chosen)
+        if "b" in chosen:
+            raise ValueError("the policy is improper")
+        return SimpleNamespace(search=SimpleNamespace(lower=5.0), mean_remaining=5.0)
+
+    widened = _rounds.widen(
+        groups, tuple("abcd"), run, upper_of=lambda plan: 5.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: None, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert seen == [("a",), ("a", "b"), ("a", "b", "c"), ("a", "c", "d")]  # b refused twice: set aside, c stays
+    assert [record.status for record in widened.records] == ["closed", "refused", "refused", "closed"]
+    assert widened.records[1].reason.endswith("set aside, since the round after it was refused too")
 
 
 def test_with_the_rule_the_plan_fills_the_suffix_with_the_cheaper_craft_then_exalts_at_3_c_plus_e_plus_2s(data, target, monkeypatch):
@@ -415,3 +479,43 @@ def test_a_given_start_has_no_restart_so_no_round_cuts_and_with_no_plan_in_any_r
     with pytest.raises(planner_plan.PlanError, match="no policy"):  # a Life 1 or 2 takes the family for good, and a held belt cannot be bought again
         plan_target(data, given, _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
     assert not cut  # with no restart an offer dearer than any plan may still be the only way on
+
+
+class _HandClock:
+    """The run's clock, moved only by the test: nothing here reads the time (`tests/test_no_timing.py`)."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def perf_counter(self) -> float:
+        return self.now
+
+
+def test_through_the_entry_a_first_round_that_used_its_share_gives_way_with_its_plan_and_the_next_round_is_tried(data, target, monkeypatch):
+    # #1080 through `plan_target`: a run of 600 s and two rounds. Round 1 begins with no plan in hand; its first plan (133) is in hand when 400 s
+    # of the run have passed (the watch moves the run's clock), past its share of 300 s, so it gives way with that plan instead of keeping the
+    # rest; round 2 (the lock) is tried in the 200 s left and saves nothing. The answer keeps the plan and names what each round did.
+    from crafting_system import budget as budget_module
+    from crafting_system.budget import Budget
+
+    clock = _HandClock()
+    for module in (budget_module, _envelope, _envelope_plan):
+        monkeypatch.setattr(module, "time", clock)
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    moved = []
+
+    def watch(_standing):
+        if not moved:
+            moved.append(True)
+            clock.now += 400.0
+
+    prices = dataclasses.replace(_prices(), chaos_per_divine=91.0)
+    budget = Budget(aim_seconds=None, seconds=600.0, gap=0.0)
+    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", watch=watch, budget=budget))
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # the plan of the round that gave way is kept (OR-33)
+    first, last = _rounds_of(plan)
+    assert first.status == "gave way" and "300 seconds" in first.reason and first.upper == pytest.approx(133.0, rel=1e-9)
+    assert last.status in ("beaten", "closed")  # tried in the time left
+    assert not plan.search.exact and not any("cheapest among every method" in limit.guarantee for limit in plan.limits)  # round 1 did not finish
+    untried = next(limit for limit in plan.limits if limit.what == "Not finished")
+    assert "gave way" in untried.names[0] and "its plan costs 133.00 Chaos" in untried.names[0]

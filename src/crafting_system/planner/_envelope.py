@@ -818,6 +818,10 @@ class Search[S]:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None
 
+    def _give_way(self) -> str | None:
+        """The caller's reason to stop where the search stands now (`Net.give_way`), or None."""
+        return self.net.give_way(self.standing) if self.net.give_way is not None and self.standing is not None else None
+
     def _room_check(self, growth_mb: float) -> None:
         """Raise `MemoryNet` when the kernel arrays' next growth of `growth_mb` would take the process past the memory net (#839): the net is
         asked before the arrays grow, not after, so a search stops under its memory setting and not past it."""
@@ -871,6 +875,7 @@ class Search[S]:
                 + (f"; its chain was cut short: {stopped}" if stopped is not None else "")
             )
             self._stand(float(self.lb[0]), began)  # the bound of the start is a lower figure before any round
+            stopped = stopped or self._give_way()  # the caller's rule is asked from the first plan on
         lower = 0.0
         while stopped is None:
             mark = time.perf_counter()
@@ -981,7 +986,7 @@ class Search[S]:
                     self.say(f"stop: the plan costs at most {upper!r}, no plan costs less than {lower!r}: proved within {self.gap:.3%}")
                     return SearchResult(self.states, self.index, plan, lower, False, None, self.p.restart is not None, self.stats, upper, self.gap)
             self._stand(lower, began)
-            stopped = self._net(began) or (self.net.give_way(self.standing) if self.net.give_way is not None else None)
+            stopped = self._net(began) or self._give_way()
             if stopped is not None:
                 break
             mark = time.perf_counter()
