@@ -698,7 +698,8 @@ def _make_plan(
         if known is not None and known.search is not None and known.search.stopped is not None:
             # the run's net stopped the plan without them: no time is left to try them, and that plan is the answer (OR-33, OR-13)
             untried = tuple(sorted({p.label for p in priced if speculative(p.offer)}))
-            plan = replace(known, limits=(*known.limits, untried_limit(untried)))
+            own = (*limits, *(limit for limit in known.limits if limit not in limits))  # what the offers' choice said is said of this plan too
+            plan = replace(known, limits=(*own, untried_limit(untried)))
             return add_risk(plan) if with_risk else plan
         upper = None if known is None else known_upper(known)
         if upper is not None:
@@ -857,7 +858,8 @@ def _make_plan(
         status = LockStatus.WITH_SECOND_ITEMS if wanted else LockStatus.SWITCHED_OFF
         foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
     elif not foresee:  # a plan made only for its mean without the Lock (`plan_without`, #1069)
-        foresight, with_lock = Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
+        status = LockStatus.STOPPED if lock_wanted(target.actions) else LockStatus.SWITCHED_OFF
+        foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
     else:
         try:
             with stage(LOCK_STAGE, LOCK_KEPT):
@@ -939,7 +941,7 @@ def known_upper(plan: Plan) -> float | None:
 def untried_limit(labels: tuple[str, ...]) -> Limit:
     """The limit of the metamod crafts a plan never tried because the run's net stopped the plan made without them first (#1069, OR-13)."""
     return Limit(
-        _limits.CRAFTS,
+        _limits.UNTRIED,
         "Not tried",
         "the run's time or memory limit was reached by the plan made without them first, to price them against",
         "The plan is the one without these crafts; one of them might make it cheaper.",

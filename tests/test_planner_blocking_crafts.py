@@ -249,4 +249,6 @@ def test_when_the_net_stops_the_plan_without_the_metamods_that_plan_is_the_answe
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     assert LOCK not in {entry.label for entry in plan.offers}
     assert any(limit.what == "Not tried" and LOCK in limit.labels for limit in plan.limits)
+    assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
+    assert plan.foresight.status == "switched off by the target"  # the target names no Lock
     assert plan.risk is not None
