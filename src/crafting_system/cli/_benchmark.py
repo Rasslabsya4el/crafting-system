@@ -251,7 +251,7 @@ BENCHMARKS = (
         "examples/targets/r17-lightning-talisman.yaml",
         "examples/routes/r17-lightning-talisman.yaml",
         (),
-        heavy="the exact walk of the imprint loop passed 2.76 million states and 28 million transitions in an hour and did not end (heavy run 43308613718, #223): it waits for a bound or a value-carrying form of the held imprint (ADR-0060, #817)",
+        heavy="with no net the one search's count of the cheapest cost did not end in 55 minutes at the week-one prices (heavy run 43828591390: 54,703 keys, 23,230 expanded; #1057); at the 10-minute net it plans with a gap (#1031)",
     ),
     # The guide publishes no odds; the start boots are hand-set in the route's own price file (#901). Unveil is through the one search since #828.
     BenchmarkRoute(

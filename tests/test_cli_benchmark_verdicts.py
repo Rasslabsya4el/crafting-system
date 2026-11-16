@@ -423,6 +423,8 @@ def test_the_benchmark_json_and_text_carry_the_numbers_at_the_first_divergence(t
 # --- the start boots of R08 and R09, on the real game data (#617, from #591 and #592) ----------------------
 # At the week-one prices of OR-44 and with the tiers named by #901 (tier 1 or 2 of the Energy Shield and of the Life): the Prismatic Fossil is
 # about 3 times cheaper per use than the guide's pair, not 25 times as at the prices of 2026-10-31 (Prismatic 0.2 Chaos then, 6.77 now).
+# The Prismatic Fossil is the planner's old choice (the verdicts of #591, #592), kept here as a pinned per-use case; at the week-one prices the
+# planner chooses another fossil (R09: the Pristine Fossil alone, its verdict of #901; R08: see #901's PR).
 
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 PRISMATIC = "Fossils Prismatic Fossil"
@@ -453,7 +455,7 @@ def the_boots_after_the_draw(plan):
 
 
 def test_one_use_on_the_start_boots_has_near_odds_and_a_cost_about_3_times_apart(boots):
-    """#591, #592, #901: the Prismatic Fossil and the guide's pair reach the target about as often, the pair at 3.2 and 2.6 times the cost per use."""
+    """#591, #592, #901: the Prismatic Fossil (the planner's old choice) and the guide's pair reach the target about as often, the pair at 3.2 and 2.6 times the cost per use."""
     route, plan = boots
     _, pair, (cheap_cost, dear_cost), (cheap_odds, dear_odds), pair_parts = START_BOOTS[route]
 
