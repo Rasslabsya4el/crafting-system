@@ -62,7 +62,7 @@ def plan():
 def test_k1_a_target_without_actions_lists_the_kinds_it_would_have_to_name(plan):
     withheld = only(plan.limits, "kinds-opt-in")
 
-    assert {"Exalted Orb", "Annulment Orb", "Fracturing Orb", "Fossil sets"} <= set(withheld.labels)
+    assert withheld.labels == ("Recombinators",)  # every kind of the beta is offered by default since #886 (OR-41); the recombinator waits
     assert withheld.why == "kinds that are offered only when a target names them"
     assert "cheapest among the kinds offered" in withheld.guarantee
     assert not of_kind(plan.limits, "kinds-not-named")  # the target has no `actions:` key
@@ -446,7 +446,7 @@ def test_a_guarantee_that_claims_the_cheapest_plan_must_have_its_form_for_an_app
 
 
 def test_the_text_and_the_json_name_every_withheld_kind_and_the_page_holds_the_rest_in_a_closed_details(plan):
-    opt_in = only(plan.limits, "kinds-opt-in")
+    opt_in = only(plan.limits, "kinds-not-built")  # a limit with more labels than the page shows
     assert len(opt_in.labels) > SHOWN_LABELS
     report = build_report(plan, DATA)
     text = render_text(report)
@@ -454,7 +454,7 @@ def test_the_text_and_the_json_name_every_withheld_kind_and_the_page_holds_the_r
     page = render_page(Page("x", (build_section(route_input(plan), DATA),)))
 
     assert ", ".join(opt_in.labels) in text  # every one, in order
-    assert next(entry for entry in document["limits"] if entry["kind"] == "kinds-opt-in")["labels"] == list(opt_in.labels)
+    assert next(entry for entry in document["limits"] if entry["kind"] == "kinds-not-built")["labels"] == list(opt_in.labels)
     first = ", ".join(opt_in.labels[:SHOWN_LABELS])
     assert f"{first} and {len(opt_in.labels) - SHOWN_LABELS} more" in page  # the page names the first three ...
     rest = escape(", ".join(opt_in.labels[SHOWN_LABELS:]))

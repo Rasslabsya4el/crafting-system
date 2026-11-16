@@ -105,7 +105,6 @@ class AnnulmentOrb(Action):
 @kind(
     "annulment-orb",
     order=81,
-    opt_in=True,
 )
 def _annulment_orb(data: GameData, item: Item):
     # a normal item gets mods on the way (an essence, an Orb of Transmutation), so the kind is listed for it too
