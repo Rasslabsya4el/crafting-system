@@ -662,8 +662,16 @@ def refusal_today(data: GameData, target: Target, actions: Sequence[str]) -> str
             reasons.append(f"{name}: planner=False")
         elif entry.needs_strands and not strands:
             reasons.append(f"{name}: needs Memory Strands")
-    if any(wish.corrupted or not all(eldritch_side(data.mods[m]) for m in wish.mod_ids) for wish in target.implicits):
+    if any(wish.corrupted or not any(eldritch_side(data.mods[m]) for m in wish.mod_ids) for wish in target.implicits):
         reasons.append("target asks for implicits other than Eldritch ones")  # the Eldritch implicits are planned since #835
+    else:
+        from crafting_system.abstraction import Goal
+        from crafting_system.planner._offers import ELDRITCH_KINDS, eldritch_unreachable
+
+        named = {a for a in labels_or_kinds if a in ELDRITCH_KINDS} if labels_or_kinds else set(ELDRITCH_KINDS)
+        offered = [(action, name) for name in named for action in catalog(data, target.start_item, planner_only=True, names={name})]
+        if eldritch_unreachable(data, Goal.from_target(target), target.start_item, offered):
+            reasons.append("no offered action reaches the Eldritch implicits asked")  # one per side, grades 5 and 6 by a Conflict only (#835)
     for key in ("sockets", "enchantment"):
         if getattr(target, key):
             reasons.append(f"target asks for {key}")

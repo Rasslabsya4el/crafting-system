@@ -44,7 +44,7 @@ from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, spli
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
@@ -636,7 +636,7 @@ def _make_plan(
         )
     if target.quality is not None:
         raise PlanError("the target asks for quality, which the planner cannot plan yet")
-    if any(wish.corrupted or not all(eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
+    if any(wish.corrupted or not any(eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
         raise PlanError(
             "the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet;"
             " it plans the Searing Exarch and Eater of Worlds implicits"
@@ -668,6 +668,9 @@ def _make_plan(
     if removed:
         limits += unusable_limits(data, ((p.label, p.offer.action) for p in priced if p.offer.action not in kept))
     priced = tuple(p for p in priced if p.offer.action in kept)
+    unreachable = eldritch_unreachable(data, goal, target.start_item, ((p.offer.action, p.offer.kind) for p in priced))
+    if unreachable:
+        raise PlanError(unreachable)  # an exact refusal: the search would only run to its net (#835)
     limits += start_limits(price_of_start)
     if price_of_start.bought:
         bought = price_of_start.name or "start item"

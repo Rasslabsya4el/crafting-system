@@ -23,7 +23,7 @@ from crafting_system.cli import Offer
 from crafting_system.items import EldritchSide
 from crafting_system.planner._envelope_plan import envelope_result
 from crafting_system.planner import _limits
-from crafting_system.planner._offers import ELDRITCH_KINDS, RESTART, BuyStartItem, PricedOffer, offers_for
+from crafting_system.planner._offers import ELDRITCH_KINDS, RESTART, BuyStartItem, PricedOffer, eldritch_unreachable, offers_for
 from crafting_system.planner._pattern_bound import pack_pattern_model
 from crafting_system.solver import solve_packed
 
@@ -149,3 +149,31 @@ def test_the_eldritch_currencies_are_offered_only_to_a_target_that_asks_for_an_e
     assert not {offer.kind for offer in plain.offers} & ELDRITCH_KINDS
     (limit,) = [limit for limit in plain.limits if limit.kind == _limits.ELDRITCH_ASKED]
     assert limit.labels
+
+
+def test_an_addition_that_reads_the_implicits_takes_every_member_where_a_family_has_mods_on_both_sides():
+    """The guard of `Pattern.mode_of` (#835): a held family of the other side takes its partner's weight out of a draw of the dominant side,
+    so the Eldritch Exalted Orb's corners do not hold there. No armour pool of 3.29.3.3 has such a family; the guard is set by hand."""
+    ab = abstraction()
+    pattern = Pattern(ab, None, [action for action, _ in OFFERED.values()])
+    key = pattern.key(ab.compress(START))
+    assert pattern.mode_of(ORBS["Eldritch Exalted"][0], key) is Mode.EXTREMES
+    pattern._partners[key.flags.influences] = True
+    assert pattern.mode_of(ORBS["Eldritch Exalted"][0], key) is Mode.ALL
+
+
+def _wish(family: str, first: int = 1, min_grade: int | None = None) -> ImplicitWanted:
+    return ImplicitWanted(frozenset(eldritch_id(family, grade) for grade in range(first, 7)), min_grade)
+
+
+def test_a_target_no_offered_action_can_meet_is_told_before_the_search():
+    """`eldritch_unreachable` (#835): one implicit per side, an Ember gives its own grade, and a Conflict with both sides held reaches the rest."""
+    leaves = GOAL.leaves
+    embers = [(action, "eldritch-implicit-currency") for action, _ in EMBERS.values()]
+    conflict = [(ORBS["Conflict"][0], "orb-of-conflict")]
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"),)), START, embers) is None
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"), _wish("ChanceToShock"))), START, embers) is None
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"), _wish("FireMax"))), START, embers)  # two on one side
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), START, embers)  # grade 3: no Ember of it
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), START, embers + conflict) is None
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), boots(roll(FIRE), implicits=(exarch(1),)), []) is None  # held

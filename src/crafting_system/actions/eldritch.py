@@ -25,7 +25,8 @@ side), each with a grade 1 Lesser to 6 Perfect. **Dominance** is derived from th
   a lowered Lesser implicit is removed. Every answer that reads it carries the approximate marks of its claims.
 
 Every one of them refuses a corrupted item, an influenced item (Eldritch implicits and influence exclude each other) and
-an item class other than the four above. Nothing here is block-invariant (ADR-0023): the coarse state refuses them.
+an item class other than the four above. The Embers, the Ichors, the Orb of Conflict and the Eldritch Annulment declare
+block invariance and the Eldritch Exalted Orb variants (ADR-0023): the member policies of the crafted-pattern bound stand on them (#835).
 
 A raised or lowered implicit is the mod of the same family and variant one grade away (the id ends in the grade); a
 mod the data does not have there is `OutOfScopeError`. A lowered "Unique Enemy" or "Pinnacle Boss" variant may land on a
@@ -36,8 +37,8 @@ The Eldritch currency (`eldritch.py`, ticket #151, ADR-0025): `EldritchImplicitC
 4: an implicit drawn by the spawn weight of the item class, replacing every implicit but the other side's), `EldritchChaosOrb()`,
 `EldritchExaltedOrb()` and `EldritchAnnulmentOrb()` (they act on the dominant side, derived from the two grades: `item_dominant_side`) and
 `OrbOfConflict()` (raises one implicit by a grade and lowers the other, odds `conflict_raise_chance(difference)`). They work on a body
-armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet (the compressed state holds the pair
-and their kernels are exact, ticket #152).
+armour, boots, gloves or helmet that is not corrupted and not influenced, and they are planner kinds since #835, offered to a target that asks
+for an Eldritch implicit (the compressed state holds the pair and their kernels are exact, ticket #152).
 
 Memory Strands (ADR-0041, ticket #285, B5-11b; `strand_use.py`). Three of the five declare what they do with strands, and two stay
 undeclared. `EldritchChaosOrb` cuts and spends: its draw sees the tier cut of the count before the craft, and it uses up a uniform

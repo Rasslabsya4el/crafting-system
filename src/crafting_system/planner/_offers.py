@@ -11,13 +11,13 @@ import random
 from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
-from itertools import combinations
+from itertools import combinations, permutations
 
 from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, eldritch_side, spawn_weight
+from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, eldritch_grade, eldritch_side, spawn_weight
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
@@ -175,6 +175,46 @@ ELDRITCH_KINDS = frozenset({"eldritch-implicit-currency", "eldritch-chaos-orb", 
 def asks_eldritch(data: GameData, goal: Goal) -> bool:
     """Whether the goal wants an Eldritch implicit: an implicit wish that selects a Searing Exarch or an Eater of Worlds mod (ADR-0025)."""
     return any(eldritch_side(data.mods[mod_id]) is not None for wish in goal.implicits for mod_id in wish.mod_ids if mod_id in data.mods)
+
+
+EMBER_KIND, CONFLICT_KIND = "eldritch-implicit-currency", "orb-of-conflict"
+TOP_GRADE = 6  # Perfect: a Conflict raises up to it
+
+
+def eldritch_unreachable(data: GameData, goal: Goal, start_item: Item, offered: Iterable[tuple[Action, str]]) -> str | None:
+    """Why no item the offered actions make can hold the Eldritch implicits the goal wants, or None (#835).
+
+    An item holds one implicit per side; an Ember or an Ichor of grade `g` gives its side grade `g`, and an Orb of Conflict moves a grade up to
+    Perfect or down to Lesser where both sides hold one. So each wish needs a side of its own on which one of its mods has a grade the offers
+    reach. A start item that holds an Eldritch implicit already is not judged here (the search reads it). `offered` are (action, catalog kind).
+    """
+    held = {entry.mod_id for entry in start_item.implicits}
+    if not goal.implicits or start_item.eldritch_implicits(data) or any(held & wish.mod_ids for wish in goal.implicits):
+        return None  # the start item holds an implicit already: the search reads it
+    reach: dict[object, set[int]] = defaultdict(set)
+    conflict = False
+    for action, kind in offered:
+        if kind == EMBER_KIND:
+            reach[getattr(action, "side")].add(getattr(action, "grade"))
+        conflict = conflict or kind == CONFLICT_KIND
+    if conflict and len(reach) == 2:
+        reach = defaultdict(set, {side: set(range(1, TOP_GRADE + 1)) for side in reach})
+    sides = sorted(reach, key=str)
+
+    def fits(wish, side) -> bool:
+        return any(
+            eldritch_side(data.mods[m]) is side and eldritch_grade(data.mods[m]) in reach[side] and eldritch_grade(data.mods[m]) >= (wish.min_grade or 0)
+            for m in wish.mod_ids
+            if m in data.mods
+        )
+
+    wishes = goal.implicits
+    if len(wishes) <= len(sides) and any(all(fits(w, s) for w, s in zip(wishes, order)) for order in permutations(sides, len(wishes))):
+        return None
+    return (
+        "no item the offered actions make can hold the Eldritch implicits the target asks for: an item holds one implicit on each of the two"
+        " sides, an Ember or an Ichor gives the grade it names, and only an Orb of Conflict, with both sides held, reaches the grades above"
+    )
 
 
 def donor_wants(data: GameData, action: Action) -> tuple[Need, frozenset[str]] | None:
