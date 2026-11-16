@@ -1,7 +1,7 @@
 """R08 and R09 end to end on the real 3.29.3.3 dump, at the committed prices (ticket #63).
 
 R08 and R09 are the fossil boots of the reference routes: rare Sorcerer Boots (Energy Shield) and rare Two-Toned Boots
-(Life) of item level 86, Fossils in a resonator until the boots hold the top tier of Energy Shield or Life and a
+(Life) of item level 86, Fossils in a resonator until the boots hold tier 1 or 2 of Energy Shield or Life (#901) and a
 Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`:
 the other real routes' prices plus the poe.ninja fossil and resonator lines of 2026-11-01 (no Tangled Fossil line, so
 the sets with a Tangled Fossil are unpriced and left out) and the trade price of the start boots (a normal base of
@@ -11,7 +11,8 @@ tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_
 
 The file stays the snapshot of 2026-10-31 on purpose (#616): at the prices of 2026-11-07 (the Prismatic Fossil at 5.9 Chaos, not 0.2; 20.15 in the snapshot of 2026-11-10, not measured there) the pruned search of R08 did not
 finish in 40 minutes on a runner, so these tests could not plan it. The prices of the newer snapshot do not change what the tests check; the plan at them waits for the
-search to scale (#702: R08 and R09 are not planned at the new prices; #703: their benchmark verdicts are measured at the old ones).
+search to scale (#702: R08 and R09 are not planned at the new prices; #703: their benchmark verdicts are measured at the old ones). Since
+#901 the benchmark measures R08 and R09 at the week-one prices of OR-44; this test keeps the old file to stay a CI shard's size.
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees; at the same prices the
 solver's mean is no more than the given route's, within the gap the search proved (OR-32, OR-39: since #829 the plan is the envelope

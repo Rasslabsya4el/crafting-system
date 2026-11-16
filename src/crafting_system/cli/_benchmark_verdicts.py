@@ -127,13 +127,12 @@ class Reviewing:
 # and every odds row), with the issue that did it.
 
 VERDICTS: tuple[Verdict, ...] = (
-    # #591: one Prismatic Fossil reaches the target as often as the guide's Dense + Shuddering pair, at 1/25 of the cost per use (2.27% and 2.24% in our
-    # model; 2.31% and 2.40% in the emulator, #617). All 43 divergent states are this one choice. Ratio 0.0574 (heavy run 42395491917).
-    # Re-reviewed by the main chat on 2026-11-08 from run 42433997611 (#698): the target text changed only in its comments on the start (the bought boots are
-    # drawn, ADR-0064; a fossil erases the drawn mods); per-use numbers unchanged, ratio 0.0578, the same first divergent action.
-    Verdict("R08", GUIDE, REAL_FIND, (591,), 0.058, "2026-11-08", "1048b7aaec966a09", "56dcd89a66b4e5a2", "Fossils Prismatic Fossil"),
-    # #592: the same on the Life boots, Prismatic against Pristine + Shuddering, 1/22 of the cost per use. Ratio 0.0580. Re-reviewed on 2026-11-08 like R08 (#698): 0.0582, the same choice.
-    Verdict("R09", GUIDE, REAL_FIND, (592,), 0.058, "2026-11-08", "e0e7d131fed16796", "7273002665b5cd82", "Fossils Prismatic Fossil"),
+    # R08 and R09 (#591, #592, ratio 0.058 at the prices of 2026-10-31) were dropped by #901: their targets now name the tiers of their
+    # Energy Shield and Life (OR-45) and they are measured again at the week-one prices of OR-44.
+    # #901: R09 at the week-one prices, Life tier 1 or 2. The planner rerolls with a Pristine Fossil alone and bench-crafts the Movement Speed, where the guide
+    # pays a Shuddering Fossil beside it for a Movement Speed roll; the 10 divergent states shown of 42 are all this one choice. The `crafter` read the page (run 43829874615)
+    # and called it what a player would do. Ratio 0.1677 (heavy run 43828591390).
+    Verdict("R09", GUIDE, REAL_FIND, (901,), 0.168, "2026-11-16", "1442776a0b2f6cca", "803d20f76ca29180", "Fossils Pristine Fossil"),
     # #599, #628: the completed route keeps to what the guide and the game force; what is left of the gap is the planner's own moves (the Annulment under
     # the craft, Rage to Exalted, Annulment to Exalted). The guide's own route has gaps, so its ratio is not known and it has no row. Ratio 0.3310.
     Verdict("R04", COMPLETED, REAL_FIND, (599, 628), 0.331, "2026-11-07", "724ef091ef9f78b5", "4f6c0229e2688042", "Exalted Orb"),

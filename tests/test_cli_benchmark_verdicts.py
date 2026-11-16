@@ -14,7 +14,7 @@ from test_cli_benchmark_divergence import REFORGE, CHAOS, landing, run_with_conf
 
 import crafting_system.cli._benchmark_verdicts as verdicts
 from crafting_system.cli import main
-from crafting_system.cli._benchmark import BENCHMARKS
+from crafting_system.cli._benchmark import BENCHMARKS, REFERENCES
 from crafting_system.cli._benchmark_divergence import per_use_lines, review_lines, review_of
 from crafting_system.cli._benchmark_use import per_use_of, use_numbers
 from crafting_system.cli._benchmark_verdicts import COMPLETED, GUIDE, REAL_FIND, Reviewing, Verdict, text_hash
@@ -240,28 +240,34 @@ def test_the_project_config_states_the_tolerance():
 # --- the verdicts of the repository -------------------------------------------------------------------------
 
 
-def test_r08_r09_and_r04_carry_their_verdicts_as_real_finds():
+def test_r04_and_r09_carry_their_verdicts_as_real_finds():
     found = {(each.id, each.side): each for each in verdicts.VERDICTS}
 
-    assert found[("R08", GUIDE)].issues == (591,) and found[("R09", GUIDE)].issues == (592,)
-    assert found[("R04", COMPLETED)].issues == (599, 628)
+    assert found[("R04", COMPLETED)].issues == (599, 628) and found[("R09", GUIDE)].issues == (901,)
     assert {each.kind for each in found.values()} == {REAL_FIND}
-    assert found[("R08", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3) and found[("R09", GUIDE)].ratio == pytest.approx(0.058, abs=1e-3)
     assert found[("R04", COMPLETED)].ratio == pytest.approx(0.331, abs=1e-3)
+    assert found[("R09", GUIDE)].ratio == pytest.approx(0.168, abs=1e-3)
 
 
-# What the heavy runs 42395491917 (R04) and 42433997611 (R08, R09: the bought boots are drawn, #640) measured at the committed price snapshot: the ratio planner mean / guide mean and the
-# planner's first divergent action. The verdicts were written from it.
+def test_only_a_reference_route_carries_a_verdict():
+    """A smoke test (V01) and a dropped route (R07, R03) carry none (OR-45, #901)."""
+    references = {bench.id for bench in REFERENCES}
+    assert {each.id for each in verdicts.VERDICTS} <= references
+    assert "V01" not in references
+
+
+# What the heavy runs 42395491917 (R04, at the committed price snapshot) and 43828591390 (R09, at the week-one prices, #901) measured: the ratio
+# planner mean / guide mean and the planner's first divergent action. The verdicts were written from them. R08's and R09's old ones (run
+# 42433997611, Prismatic Fossil) left with their old targets (#901).
 MEASURED = {
-    ("R08", GUIDE): (0.05781596927097446, "Fossils Prismatic Fossil"),
-    ("R09", GUIDE): (0.058222611236752486, "Fossils Prismatic Fossil"),
     ("R04", COMPLETED): (0.33095397065170684, "Exalted Orb"),
+    ("R09", GUIDE): (0.16765561098943751, "Fossils Pristine Fossil"),
 }
 
 
 @pytest.mark.parametrize("key", sorted(MEASURED))
 def test_the_verdicts_of_the_real_routes_stand_at_the_measured_ratios_and_flag_again_when_prices_move_them(key):
-    """The benchmark prints R08, R09 and R04 reviewed at the numbers of the heavy run, and "NEEDS A HUMAN AGAIN" if a price moved a ratio by a quarter."""
+    """The benchmark prints R04 and R09 reviewed at the numbers of the heavy run, and "NEEDS A HUMAN AGAIN" if a price moved a ratio by a quarter."""
     ratio, action = MEASURED[key]
     found = next(each for each in verdicts.VERDICTS if (each.id, each.side) == key)
     bench = next(each for each in BENCHMARKS if each.id == key[0])
@@ -415,13 +421,17 @@ def test_the_benchmark_json_and_text_carry_the_numbers_at_the_first_divergence(t
 
 
 # --- the start boots of R08 and R09, on the real game data (#617, from #591 and #592) ----------------------
+# At the week-one prices of OR-44 and with the tiers named by #901 (tier 1 or 2 of the Energy Shield and of the Life): the Prismatic Fossil is
+# about 3 times cheaper per use than the guide's pair, not 25 times as at the prices of 2026-10-31 (Prismatic 0.2 Chaos then, 6.77 now).
+# The Prismatic Fossil is the planner's old choice (the verdicts of #591, #592), kept here as a pinned per-use case; at the week-one prices the
+# planner chooses another fossil (R09: the Pristine Fossil alone, its verdict of #901; R08: see #901's PR).
 
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 PRISMATIC = "Fossils Prismatic Fossil"
 # route -> (target, the guide's pair, [cost of Prismatic, cost of the pair], [chance of reaching the target for each], resources of the pair)
 START_BOOTS = {
-    "R08": ("r08-energy-shield-boots", "Fossils Dense Fossil + Shuddering Fossil", (1.59, 39.76), (0.022706, 0.022393), ("Dense Fossil", "Shuddering Fossil")),
-    "R09": ("r09-life-boots", "Fossils Pristine Fossil + Shuddering Fossil", (1.59, 34.77), (0.024021, 0.026979), ("Pristine Fossil", "Shuddering Fossil")),
+    "R08": ("r08-energy-shield-boots", "Fossils Dense Fossil + Shuddering Fossil", (7.6292, 24.1013), (0.045412, 0.044787), ("Dense Fossil", "Shuddering Fossil")),
+    "R09": ("r09-life-boots", "Fossils Pristine Fossil + Shuddering Fossil", (7.6292, 19.5213), (0.048041, 0.053958), ("Pristine Fossil", "Shuddering Fossil")),
 }
 
 
@@ -444,8 +454,8 @@ def the_boots_after_the_draw(plan):
     return plan.abstraction.compress(plan.target.start_item) if plan.start.flags.unopened else plan.start
 
 
-def test_one_use_on_the_start_boots_has_equal_odds_and_a_cost_25_times_apart(boots):
-    """#591, #592: the Prismatic Fossil and the guide's pair reach the target about as often, at 25 and 22 times the cost per use: the whole of the ratio."""
+def test_one_use_on_the_start_boots_has_near_odds_and_a_cost_about_3_times_apart(boots):
+    """#591, #592, #901: the Prismatic Fossil (the planner's old choice) and the guide's pair reach the target about as often, the pair at 3.2 and 2.6 times the cost per use."""
     route, plan = boots
     _, pair, (cheap_cost, dear_cost), (cheap_odds, dear_odds), pair_parts = START_BOOTS[route]
 
@@ -459,7 +469,7 @@ def test_one_use_on_the_start_boots_has_equal_odds_and_a_cost_25_times_apart(boo
     # reaching the target: the item is it, or one sure bench craft (the Movement Speed) short of it
     assert cheap["chance"] + cheap["short"] == pytest.approx(cheap_odds, abs=2e-4)
     assert dear["chance"] + dear["short"] == pytest.approx(dear_odds, abs=2e-4)
-    assert dear["cost"] / cheap["cost"] > 20
+    assert dear["cost"] / cheap["cost"] > 2.5
     assert 0.85 < (cheap["chance"] + cheap["short"]) / (dear["chance"] + dear["short"]) < 1.15
     assert cheap["chance"] < 0.002 < cheap["short"]  # the cheap set almost never rolls the Movement Speed itself: its odds are the bench craft
 
@@ -478,9 +488,9 @@ def test_the_row_of_the_start_boots_tells_both_numbers(boots):
     lines = per_use_lines(first, "guide")
 
     assert lines[1].startswith(
-        "      the planner's Fossils Prismatic Fossil: one use costs 1.59 Chaos (1.39 for 1 Primitive Chaotic Resonator + 0.20 for 1 Prismatic Fossil), "
-        "reaches the target with chance 2."
+        "      the planner's Fossils Prismatic Fossil: one use costs 7.63 Chaos (0.86 for 1 Primitive Chaotic Resonator + 6.77 for 1 Prismatic Fossil), "
+        "reaches the target with chance 4."
     )
-    assert "reaches the target with chance 2." in lines[1] and "or is one certain bench craft away from it (0." in lines[1]
-    assert "reaches the target with chance 2." in lines[2] and "certain bench craft" in lines[2]
+    assert "reaches the target with chance 4." in lines[1] and "or is one certain bench craft away from it (0." in lines[1]
+    assert ("reaches the target with chance 4." in lines[2] or "reaches the target with chance 5." in lines[2]) and "certain bench craft" in lines[2]
     assert f"the guide's {pair}: one use costs " in lines[2] and "Shuddering Fossil" in lines[2]
