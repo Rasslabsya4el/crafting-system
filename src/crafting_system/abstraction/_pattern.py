@@ -123,10 +123,14 @@ one snapshot of each key held (`Pattern.held_of`: the first met of that key). Fo
 * `a` is a restore of `h in H`. Its result is `(h, H - {h})`, of key `K(h)` holding `K(H) - {K(h)}`: the same for every `h` of the key
   `K(h)`. The restores of a member and those of the key are matched by the snapshot, not by the index (a member's j-th snapshot need not be
   the key's j-th): all cost the same (`RESTORE_COST`), and together they reach every key held. The rule that refuses a restore onto the state
-  the item is in (`h = s`) reads the member, and the restore it refuses is never needed: then `K(h)` is the key's own `k`, and
-  `V(k, X + {k}) <= V(k, X) <= c + V(k, X)` for the values of the model, because the key with one snapshot more offers every action of the
-  key without it, to the same successors holding that snapshot too (or both forgetting it), and an imprint to the same key (a full set
-  replaces the extra snapshot); induction on the values of value iteration.
+  the item is in (`h = s`) reads the member, and the restore it refuses is never needed: then `K(h)` is the key's own `k`, and the
+  restore's backup `c + V(k, X)` is at least `V(k, X + {k})`, by this claim on the values `V` of the model (its fixed point): for every key
+  `k'`, every set `X` and every snapshot key `x`, `V(k', X + {x}) <= V(k', X)`. Play at `(k', X + {x})` the optimal policy of `(k', X)`,
+  carrying `x`: an ordinary action leads to the same successor key with `x` held too, or with both forgetting their imprints; a restore of a
+  snapshot of `X` to the same key with `x` held too; a restart to the start key; an imprint that adds to the same key with `x` held too, or,
+  where the set with `x` is full, the imprint that replaces `x` to the very successor of `(k', X)`. Each action is one the model offers at
+  `(k', X + {x})` (the refusals of the key read `|H|`, and a full set has the replacing imprints), and the cost of the coupled run is the
+  cost of the run from `(k', X)` until `x` is replaced or forgotten, after which both are in one key. So the policy costs at most `V(k', X)`.
 
 Every concrete action is so matched by an offered one with the same pushed kernel, and the induction of the first paragraph gives
 `V_key(key(s, H)) <= V*(s, H)`. The key loses nothing by holding `K(h)` rather than `h`: what `h` gives a plan is the restore, which leads to
@@ -402,8 +406,8 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
 
     The one place that decides it: `Pattern.__init__` raises `OutOfScopeError` with this text, and `make_plan` asks it before any solve, so
     `solver="auto"` knows whether the envelope search is possible without starting it. Since #833 it has members for every abstraction: the
-    imprints, the last cause, are held by the key as the keys of the snapshots (module docstring, "The imprints"). A roll limit and a reroll of values have members since #830: the key's status holds what each wanted mod gives its leaf
-    as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`). The unveil offer has since #828: the key holds the veiled slots
+    imprints, the last cause, are held by the key as the keys of the snapshots (module docstring, "The imprints"). A roll limit and a reroll
+    of values have members since #830: the key's status holds what each wanted mod gives its leaf as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`). The unveil offer has since #828: the key holds the veiled slots
     and the offer, and the veiled actions have member policies.
     """
     causes = refusal_causes(abstraction)
@@ -413,7 +417,8 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
 
 
 # what the bound has no members for: the abstraction's attribute, the cause in the refusal's text, and in a player's words where those differ
-_CAUSES: tuple[tuple[str, str, str | None], ...] = ()  # none since #833: the imprints were the last (the key holds the key of each snapshot)
+# none since #833: the imprints were the last (the key holds the key of each snapshot)
+_CAUSES: tuple[tuple[str, str, str | None], ...] = ()
 
 
 def refusal_causes(abstraction: Abstraction, player: bool = False) -> tuple[str, ...]:
@@ -1201,7 +1206,8 @@ class PatternBuilder:
         asked of another member of the key, unless it would replace that very snapshot (its successor is then the key itself).
         """
         pattern, ab, stats = self.pattern, self.ab, self.stats
-        member = pattern.members(key, Mode.ANY)[0]  # the caller checked that the key has a member
+        firsts = pattern.members(key, Mode.ANY)  # the caller checked that the key has a member
+        member = firsts[0]
         stats.pairs += 1
         try:
             exact = ab.kernel(member, offer.action)
@@ -1213,7 +1219,7 @@ class PatternBuilder:
             if move.index is not None and (move.index >= len(member.imprints) or member.imprints[move.index] == bare):
                 return None  # the game's refusal (no such imprint to give up), or a replacement that leads back to the key
             exact = None
-            for other in pattern.members(key, Mode.ALL):
+            for other in _then_all(pattern, key, firsts[1:], stats):  # the members already made first: every member only if none of them will do
                 if replace(other, imprints=()) in other.imprints:
                     continue
                 stats.pairs += 1
@@ -1233,6 +1239,14 @@ class PatternBuilder:
             pattern.note(successor)
             pushed[self._intern(successor)] += chance
         return _kernel_id(self.kernel_ids, self.kernels, pushed)
+
+
+def _then_all(pattern: Pattern, key: PatternKey, firsts: Sequence[CompressedState], stats: PatternStats) -> Iterator[CompressedState]:
+    """`firsts`, then every member of `key` (`Mode.ALL`, made only if the caller goes on past `firsts`)."""
+    yield from firsts
+    every = pattern.members(key, Mode.ALL)
+    stats.members += len(every)
+    yield from every
 
 
 def _refused_by_key(pattern: Pattern, action: Action, key: PatternKey) -> bool:

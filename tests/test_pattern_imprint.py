@@ -208,7 +208,7 @@ def test_with_two_imprints_every_move_is_offered_at_its_key():
     rng = random.Random(833)
     actions = [action for action, _ in offered(cap).values()]
     states = {}
-    for _ in range(80):
+    for _ in range(400):
         state = first
         for _ in range(10):
             states[state] = None
@@ -219,12 +219,13 @@ def test_with_two_imprints_every_move_is_offered_at_its_key():
             except ActionError:
                 continue
             state = rng.choices(list(kernel), weights=[float(chance) for chance in kernel.values()])[0]
-    two = matched = 0
+    two = same = matched = 0
     for state in states:
         if ab.is_goal(state):
             continue
         key = pattern.key(state)
         two += len(key.held[IMPRINTS]) == 2
+        same += len(key.held[IMPRINTS]) == 2 and key.held[IMPRINTS][0] == key.held[IMPRINTS][1]  # two snapshots of one key
         for member in pattern.members(key, Mode.ANY):
             assert pattern.key(member) == key
         offered_here = set()
@@ -241,4 +242,28 @@ def test_with_two_imprints_every_move_is_offered_at_its_key():
                 continue
             assert frozenset(kernel.items()) in offered_here, (state, label)
             matched += 1
-    assert two and matched
+    assert two and same and matched
+
+
+def test_the_keys_after_a_fracture_hold_no_imprint_and_after_a_reroll_the_same():
+    """What the forgetting rules of `Abstraction._carried` give the key: at the members of a rare Talisman's key that holds its imprint, the
+    Fracturing Orb leads only to keys with no imprint (none can be used on a fractured item), a Chaos Orb and an Annulment to keys that hold
+    the key's (`test_actions_imprint.py` checks the states themselves)."""
+    from abstraction_pool import DAMAGE_1, LIFE_1, MANA_1, RESIST_2
+    from test_actions_imprint import ARACHNID, rare, space
+
+    from crafting_system.actions import ChaosOrb, FracturingOrb
+
+    actions = (Imprint(ARACHNID), Restore(0), ChaosOrb(), FracturingOrb(), AnnulmentOrb())
+    ab = space(*actions)
+    pattern = Pattern(ab, None, actions)
+    (held,) = ab.kernel(ab.compress(rare(RESIST_2, LIFE_1, MANA_1, DAMAGE_1)), Imprint(ARACHNID))
+    key = pattern.key(held)
+    assert len(key.held[IMPRINTS]) == 1
+    members = pattern.members(key, Mode.ALL)
+    assert members and all(pattern.key(member) == key for member in members)
+    fractured = [successor for member in members for successor in pushed(pattern, ab, member, FracturingOrb()) or ()]
+    assert fractured and all(successor.fractured and successor.held[IMPRINTS] == () for successor in fractured)
+    for action in (ChaosOrb(), AnnulmentOrb()):
+        kept = [successor for member in members for successor in pushed(pattern, ab, member, action) or ()]
+        assert kept and all(successor.held[IMPRINTS] == key.held[IMPRINTS] for successor in kept)
