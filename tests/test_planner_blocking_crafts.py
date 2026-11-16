@@ -390,6 +390,11 @@ def test_the_cut_and_the_craft_classes_split_the_offers_by_identity_never_by_com
     kept, others = cheapest_per_class((*offers, *crafts))
     assert [each.label for each in kept] == [f"set {n}" for n in range(300)] + ["craft 2"]
     assert others == ("craft 0", "craft 1")
+    # Two equal offers of one class, two objects: the second is left out and named. Compared by value it was left out unnamed, as the first was kept.
+    twin, again = (PricedOffer(Offer("craft", None, {}, blocks=("prefix",)), 1.0, ()) for _ in range(2))
+    assert twin == again and twin is not again
+    kept, others = cheapest_per_class((twin, again))
+    assert kept == (twin,) and kept[0] is twin and others == ("craft",)
 
 
 def test_a_judged_route_is_judged_against_every_offer_in_one_search(data, target, monkeypatch):
