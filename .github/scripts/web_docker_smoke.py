@@ -55,6 +55,9 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--prices", type=Path, help="a price file put into the volume first (default: the container fetches its own)")
     parser.add_argument("--league", help="the league the container's refresh fetches (CRAFTING_PRICE_LEAGUE; default poe.ninja's current)")
+    parser.add_argument(
+        "--start-price", type=float, default=1.0, help="the start item's price sent with the request when the container fetched its own prices (R12's: 1 Chaos, as the 2026-11-10 snapshot priced it)"
+    )
     parser.add_argument("--target", type=Path, default=Path("examples/targets/r12-lightning-amulet.yaml"))
     parser.add_argument("--start-minutes", type=float, default=25.0, help="how long the container may take to fetch the data and the prices, and serve")
     parser.add_argument("--plan-minutes", type=float, default=20.0, help="how long the plan may take")
@@ -113,7 +116,10 @@ def smoke(args: argparse.Namespace, out: Path) -> int:
 
     target = yaml.safe_load(args.target.read_text(encoding="utf-8"))
     target.pop("price_file", None)
-    status, text = call("POST", f"{BASE}/jobs", {"target": target})
+    request = {"target": target}
+    if args.prices is None:  # the refresh reads poe.ninja, which has no price for a bought start item: the request gives it, as a user may
+        request["settings"] = {"start_price": args.start_price}
+    status, text = call("POST", f"{BASE}/jobs", request)
     print("posted:", status, text[:500], flush=True)
     if status not in (200, 202):
         return 1
@@ -142,7 +148,7 @@ def smoke(args: argparse.Namespace, out: Path) -> int:
         print("the route page was not served:", status, flush=True)
         return 1
 
-    status, text = call("POST", f"{BASE}/jobs", {"target": target})
+    status, text = call("POST", f"{BASE}/jobs", request)
     again = json.loads(text)
     print("again:", status, again["state"], again["from_store"], flush=True)
     if status != 200 or not again["from_store"] or again["route"]["id"] != route["id"]:
