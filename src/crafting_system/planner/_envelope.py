@@ -374,6 +374,7 @@ class Search[S]:
         gap: float = 0.0,
         gap_after: float | None = None,
         watch: Callable[[Standing], None] | None = None,
+        beaten_at: float | None = None,
     ) -> None:
         if not (gap >= 0.0 and math.isfinite(gap)):
             raise ValueError(f"the gap of the stop is a share, zero or more (0.01 is 1%); got {gap!r}")
@@ -383,6 +384,9 @@ class Search[S]:
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
         self.refuse_above = figure_error(gap, gap_after)  # the certified error above which a solve is refused (#867)
         self.watch = watch
+        # the mean of a plan the caller already holds (a round of the planner's widening, `_rounds`): the search ends with `Beaten` once no plan of
+        # its offers can cost less than that one, to the solver's certified 1e-6 (and within the gap, once the gap applies): it cannot improve on it
+        self.beaten_at = beaten_at
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
         self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
         self.standing: Standing | None = None
@@ -803,12 +807,25 @@ class Search[S]:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None
 
+    def _beaten(self, lower: float, began: float) -> None:
+        """Raise `Beaten` when `lower` (a certified lower figure of every plan of the offers) reaches the mean of the plan the caller holds
+        (`beaten_at`): to the solver's certified 1e-6, the precision an exact answer is given to (OR-32), or within the gap once the stop at the gap
+        applies, since a plan of these offers can then save nothing the run asks for."""
+        if self.beaten_at is None or not math.isfinite(lower):
+            return
+        applies = self.gap > 0.0 and self.gap_after is not None and time.perf_counter() - began >= self.gap_after
+        within = self.gap if applies else 0.0
+        if self.beaten_at <= (1.0 + within) * (1.0 + ACCEPT_BOUND) * lower:
+            self.say(f"stop: no plan of these offers costs less than {lower!r}, and the plan in hand costs at most {self.beaten_at!r}")
+            raise Beaten(lower, within if within > 0.0 and self.beaten_at > lower else None)
+
     def run(self) -> SearchResult[S]:
         began = time.perf_counter()
         if self.p.restart is not None:
             self.restart_kernel = self._store([0], [1])
         stopped = None
         if not self.goal[0]:
+            self._beaten(float(self.lb[0]), began)  # the start's own bound already reaches the plan in hand: nothing is expanded
             if math.isfinite(self.lb[0]):
                 self._last_root = float(self.lb[0])  # the lower graph before the first plan is the start alone, a tip, and its value the start's bound: the first round must not fall below it (the guard)
             mark = time.perf_counter()
@@ -895,6 +912,7 @@ class Search[S]:
             self.stats.lower_history.append(lower)
             if not math.isfinite(root):
                 raise NoPolicy("no policy of the offers reaches the goal from the start")
+            self._beaten(lower, began)
             reach = policy_reach(graph, core.action, 0)
             acting = reach[core.action[reach] >= 0]
             fake = acting[graph.act_tag[core.action[acting]] == FAKE]
@@ -1005,7 +1023,17 @@ class NoPolicy(ValueError):
     """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it)."""
 
 
+class Beaten(Exception):
+    """The search ended because no plan of its offers can cost less than the plan its caller holds (`Search(beaten_at=...)`): `lower` is the
+    certified figure no plan of them costs less than; `within` is the gap setting when that figure reached the held plan only within it, else None."""
+
+    def __init__(self, lower: float, within: float | None = None) -> None:
+        super().__init__(f"no plan costs less than {lower!r}")
+        self.lower = lower
+        self.within = within
+
+
 __all__ = [
-    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
+    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
     "resident_mb",
 ]  # fmt: skip

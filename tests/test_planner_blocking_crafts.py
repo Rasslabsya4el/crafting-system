@@ -171,11 +171,13 @@ def test_r12_with_every_shared_kernel_checked_gives_the_plan_it_gives_unchecked(
     assert checked.mean_remaining == unchecked.mean_remaining
 
 
-# ---- the exact price cut (#1069, `planner/_price_cut.py`) ---------------------------------------------------------------------------------------
-# With the rule on, the belt is offered Prefixes Cannot Be Changed at two Divine Orbs. A plan without the metamods is made first: it is the filler
-# plan above, `U = 3(c + e) + 2S = 133`. Buying the belt again and following that plan costs `S + U = 183`, so a craft priced at 183 or more is never
-# better than that restart at any state but the start, and at the start it costs more than the whole plan: it is left out before the model is built,
-# and the model then tracks no metamod. A Divine Orb at 92 Chaos prices the lock at 184 (cut), at 91 at 182 (kept); the plan is 133 either way.
+# ---- the exact price cut and the rounds (#1069, `planner/_price_cut.py`, `planner/_rounds.py`) ------------------------------------------------
+# With the rule on, the belt is offered Prefixes Cannot Be Changed at two Divine Orbs. The lock makes the model keep every mod's tags, so it is a
+# group of its own (`Abstraction.features`): round 1 is the target's kinds and the fillers, whose plan is the filler plan above, `U = 3(c + e) + 2S
+# = 133`; round 2 adds the lock. Buying the belt again and following that plan costs `S + U = 183`, so a craft priced at 183 or more is never better
+# than that restart at any state but the start, and at the start it costs more than the whole plan: round 2 leaves it out before its model is built.
+# A Divine Orb at 92 Chaos prices the lock at 184 (cut), at 91 at 182 (kept); either way no plan of round 2 costs less than 133, so round 2 ends as
+# soon as its lower figure reaches it (`_envelope.Beaten`), and the plan is round 1's, proved the cheapest over every method.
 
 LOCK = "Bench craft Prefixes Cannot Be Changed"
 
@@ -186,35 +188,57 @@ def _plan_at(data, target, monkeypatch, divine: float):
     return plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
 
 
-def _cut_labels(plan) -> set[str]:
-    return {label for limit in plan.limits if limit.kind == "proved-unneeded" and limit.what == "Not searched" for label in limit.labels}
+def _rounds_of(plan):
+    return plan.search.widening
 
 
-def test_a_lock_priced_above_a_restart_and_the_known_plan_is_cut_and_the_model_tracks_no_metamod(data, target, monkeypatch):
-    plan = _plan_at(data, target, monkeypatch, divine=92.0)
+@pytest.mark.parametrize("divine", [92.0, 91.0])
+def test_the_lock_is_a_round_of_its_own_that_ends_once_its_lower_figure_reaches_the_plan_in_hand(data, target, monkeypatch, divine):
+    plan = _plan_at(data, target, monkeypatch, divine=divine)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    assert LOCK not in {entry.label for entry in plan.offers}
-    assert LOCK in _cut_labels(plan)  # ... and the answer says why (OR-13)
-    assert not plan.abstraction.models_metamods
+    *closed, last = _rounds_of(plan)
+    assert [record.status for record in closed] == ["closed"] and last.status == "beaten" and last.lower >= closed[-1].upper * (1 - 1e-6)
+    assert LOCK not in {entry.label for entry in plan.offers} and not plan.abstraction.models_metamods  # the plan is round 1's
+    assert plan.search.exact  # every round closed, the last with every method: the plan is the cheapest over them all (OR-13)
+    assert any(limit.kind == "rounds" and limit.guarantee.startswith("The plan is the cheapest among every method offered") for limit in plan.limits)
 
 
-def test_a_lock_priced_just_below_is_kept_and_the_plan_is_the_same(data, target, monkeypatch):
-    plan = _plan_at(data, target, monkeypatch, divine=91.0)
+def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_finish(data, target, monkeypatch):
+    # #1070: round 1 closes and the next round meets the run's net before any plan of its own: the plan of round 1 is the answer, and it says so
+    from crafting_system.budget import Binding, BudgetExceeded
+
+    real = planner_plan._make_plan
+
+    def later_stopped(*args, round_call=None, **kwargs):
+        if round_call is not None and not round_call.watched and round_call.searches == 1:  # the last round, the lock's
+            raise BudgetExceeded(Binding("the search", "time", 600.0, 600.0, "no plan found yet"))
+        return real(*args, round_call=round_call, **kwargs)
+
+    monkeypatch.setattr(planner_plan, "_make_plan", later_stopped)
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)  # a lock at 182 would be kept: its round is stopped
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    assert LOCK in {entry.label for entry in plan.offers} and not _cut_labels(plan)
-    assert plan.abstraction.models_metamods
+    assert [record.status for record in _rounds_of(plan)] == ["closed", "stopped"]
+    assert not plan.search.exact and plan.search.stopped  # no text calls it the cheapest of every method
+    assert not any("cheapest among every method" in limit.guarantee for limit in plan.limits)
+    untried = next(limit for limit in plan.limits if limit.what == "Not finished")
+    assert untried.labels == ("bench-craft",) and "stopped" in untried.names[0]
+    assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
+    assert plan.foresight.status == "switched off by the target"  # the target names no Lock
+    assert plan.risk is not None
 
 
-def test_a_given_start_has_no_restart_so_nothing_is_cut(tmp_path, data, monkeypatch):
-    path = tmp_path / "given.yaml"
-    path.write_text(TARGET.replace("start: bought", "start: given"), encoding="utf-8")
-    given = load_target(path, data)
+def test_a_later_round_that_finds_a_cheaper_plan_replaces_the_plan_in_hand(data, target, monkeypatch):
+    # with no feature allowed in round 1 the fillers are a round of their own: round 1 exalts (16e/3 + 2S), round 2 fills first (3(c + e) + 2S)
+    from crafting_system.planner import _rounds
+
+    monkeypatch.setattr(_rounds, "FIRST_ROUND", frozenset())
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
-    asked = []
-    monkeypatch.setattr(planner_plan, "plan_without", lambda *args, **kwargs: asked.append(1))
-    with pytest.raises(planner_plan.PlanError, match="no policy"):  # a Life 1 or 2 takes the family for good, and a held belt cannot be bought again
-        plan_target(data, given, _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
-    assert not asked  # no plan is made to cut against: with no restart an offer dearer than any plan may still be the only way on
+    plan = plan_target(data, target, dataclasses.replace(_prices(), chaos_per_divine=92.0), PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
+    records = _rounds_of(plan)
+    assert records[0].upper == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert _fills(plan.solution.policy[plan.start].label)
+    assert all(record.closed for record in records) and plan.search.exact
 
 
 def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_finite_figure():
@@ -228,27 +252,8 @@ def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_fini
     assert restart_dominated((cheap, dear), 50.0, float("inf")) == ((cheap, dear), ())
 
 
-def test_a_judged_route_is_judged_against_every_offer_so_nothing_is_cut(data, target, monkeypatch):
+def test_a_judged_route_is_judged_against_every_offer_in_one_search(data, target, monkeypatch):
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
     plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", judges_route=True))
-    assert LOCK in {entry.label for entry in plan.offers} and not _cut_labels(plan)  # a route may name the lock: it is a fixed policy, not the cheapest
-
-
-def test_when_the_net_stops_the_plan_without_the_metamods_that_plan_is_the_answer_and_says_what_it_did_not_try(data, target, monkeypatch):
-    real = planner_plan.plan_without
-
-    def stopped(*args, **kwargs):  # the plan without the lock, as a net would leave it
-        plan = real(*args, **kwargs)
-        info = plan.packed.info["envelope"]
-        plan.packed.info["envelope"] = dataclasses.replace(info, exact=False, stopped="the time limit of 600 seconds was reached")
-        return plan
-
-    monkeypatch.setattr(planner_plan, "plan_without", stopped)
-    plan = _plan_at(data, target, monkeypatch, divine=91.0)  # a lock at 182 would be kept: it is not tried at all
-    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    assert LOCK not in {entry.label for entry in plan.offers}
-    assert any(limit.what == "Not tried" and LOCK in limit.labels for limit in plan.limits)
-    assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
-    assert plan.foresight.status == "switched off by the target"  # the target names no Lock
-    assert plan.risk is not None
+    assert LOCK in {entry.label for entry in plan.offers} and not plan.search.widening  # a route may name the lock: it is a fixed policy
