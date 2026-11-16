@@ -10,6 +10,10 @@
     GET  /api/v1/<game>/routes/<id>/page     its route page (HTML), as the command writes it
     GET  /api/v1/<game>                      what the service plans with: the game data version, the price snapshot, the workers
 
+Every job, every route and the game's own document carry `price_age`: how old the price snapshot behind it is on the server's day, with a
+warning past the limit the command warns at (`snapshot_age`, #976). A job's is its route's once it has one, else the snapshot it is planned
+with while it owes an answer, else null; a route stored before routes named their snapshot has null.
+
 An error is `{"error": "<what is wrong>"}` with 400 (a request that cannot be planned as written) or 404 (no such job, route, page or game).
 """
 
@@ -25,6 +29,7 @@ from starlette.routing import Route
 from ._request import RequestError
 from ._service import WAIT_LIMIT_SECONDS, Service
 from ._store import DONE, STATES, JobRecord, RouteRecord
+from ._world import snapshot_age
 
 API = "/api/v1"
 ROUTES_PAGE_LIMIT = 100
@@ -35,7 +40,7 @@ def _error(status: int, text: str) -> JSONResponse:
     return JSONResponse({"error": text}, status_code=status)
 
 
-def job_document(job: JobRecord, game: str) -> dict:
+def job_document(job: JobRecord, game: str, price_age: dict | None = None) -> dict:
     return {
         "id": job.id,
         "state": job.state,
@@ -47,10 +52,11 @@ def job_document(job: JobRecord, game: str) -> dict:
         "route": None if job.route_id is None else {"id": job.route_id, "url": f"{API}/{game}/routes/{job.route_id}"},
         "error": job.error,
         "key": job.key,
+        "price_age": price_age,
     }
 
 
-def route_document(route: RouteRecord, game: str) -> dict:
+def route_document(route: RouteRecord, game: str, price_age: dict | None = None) -> dict:
     base = f"{API}/{game}/routes/{route.id}"
     return {
         "id": route.id,
@@ -60,6 +66,7 @@ def route_document(route: RouteRecord, game: str) -> dict:
         "key": route.key,
         "policy_url": f"{base}/policy",
         "page_url": None if route.page is None else f"{base}/page",
+        "price_age": price_age,
     }
 
 
@@ -81,14 +88,23 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
     def service_of(request: Request) -> Service | None:
         return services.get(request.path_params["game"])
 
+    async def job_response(service: Service, job: JobRecord, status: int = 200) -> JSONResponse:
+        # in a thread: the snapshot's age may load a refreshed world (`Service.world`), which never runs on the event loop
+        price_age = await run_in_threadpool(service.job_price_age, job)
+        return JSONResponse(job_document(job, service.game, price_age), status_code=status)
+
+    def route_json(service: Service, route: RouteRecord) -> dict:
+        return route_document(route, service.game, service.route_price_age(route))
+
     async def info(request: Request) -> JSONResponse:
         service = service_of(request)
         if service is None:
             return _error(404, f"no game {request.path_params['game']!r}; the site plans {sorted(services)}")
-        world = service.world
+        world = await run_in_threadpool(lambda: service.world)  # may load a refreshed world (#968): never on the event loop
+        price_age = snapshot_age(world.prices.league, world.prices.fetched_at, service.today())  # of the very world shown
         return JSONResponse(
             {"game": service.game, "data_version": world.data.version, "price_snapshot": world.price_snapshot, "planner": world.planner_version,
-             "workers": service.workers, "machine": world.machine}
+             "workers": service.workers, "machine": world.machine, "price_age": price_age}
         )  # fmt: skip
 
     async def submit(request: Request) -> JSONResponse:
@@ -105,7 +121,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
             return _error(400, str(problem))
         except RecursionError:
             return _error(400, "the request is nested too deep to be a target")
-        return JSONResponse(job_document(job, service.game), status_code=200 if job.state == DONE else 202)
+        return await job_response(service, job, 200 if job.state == DONE else 202)
 
     async def job(request: Request) -> JSONResponse:
         service = service_of(request)
@@ -128,7 +144,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
             found = service.job(job_id)
         if found is None:
             return _error(404, f"no job {job_id!r}")
-        return JSONResponse(job_document(found, service.game))
+        return await job_response(service, found)
 
     async def stop(request: Request) -> JSONResponse:
         service = service_of(request)
@@ -137,7 +153,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
         found = await run_in_threadpool(service.stop, request.path_params["job_id"])
         if found is None:
             return _error(404, f"no job {request.path_params['job_id']!r}")
-        return JSONResponse(job_document(found, service.game))
+        return await job_response(service, found)
 
     async def routes(request: Request) -> JSONResponse:
         service = service_of(request)
@@ -149,7 +165,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
         except RequestError as problem:
             return _error(400, str(problem))
         found = service.store.routes(limit, offset)
-        return JSONResponse({"routes": [route_document(route, service.game) for route in found], "limit": limit, "offset": offset})
+        return JSONResponse({"routes": [route_json(service, route) for route in found], "limit": limit, "offset": offset})
 
     def one_route(request: Request) -> tuple[Service | None, RouteRecord | None]:
         service = service_of(request)
@@ -159,7 +175,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
         service, found = one_route(request)
         if service is None or found is None:
             return _error(404, f"no route {request.path_params['route_id']!r}")
-        return JSONResponse(route_document(found, service.game))
+        return JSONResponse(route_json(service, found))
 
     async def policy(request: Request) -> JSONResponse:
         service, found = one_route(request)

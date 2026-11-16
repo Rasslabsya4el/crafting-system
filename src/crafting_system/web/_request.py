@@ -10,21 +10,24 @@ A missing switch or setting is the machine's planner setting (`crafting.toml`, `
 (the economy modes of #323, more method switches) never changes what an older request meant. The prices are the site's snapshot, so a
 target may not name a `price_file`.
 
-The **key** of a request is the SHA-256 of one canonical JSON text: the game, the target object, the method switches and settings with
-their defaults filled in, the planner settings of the machine that change an answer (the proof gap, the time and memory nets, the imprint
+The **key** of a request is the SHA-256 of one canonical JSON text: the game, the target's canonical form (`target_form`: the parsed
+target, so two spellings of one item are one key, #966), the method switches and settings with their defaults filled in, the planner settings of the machine that change an answer (the proof gap, the time and memory nets, the imprint
 cap, the recombinator variant), the price snapshot, the game data version and the planner version. Two requests with the same key get the
 same plan, so the second is answered from the store (OR-36). The calendar day is not in it: the site judges a price's age on the day its
 snapshot was fetched (`World.price_day`), which the snapshot's identity already holds, so a route is reused for as long as its snapshot
 stands, on any day.
 """
 
+import dataclasses
+import enum
 import hashlib
 import json
 import math
 from dataclasses import dataclass
+from pathlib import Path
 
 from crafting_system.config import PRICE_SOURCES
-from crafting_system.targets import Target, TargetError, parse_target
+from crafting_system.targets import EnchantmentRequirement, ImplicitRequirement, KOfN, Requirement, Target, TargetError, parse_target
 
 from ._world import World
 
@@ -49,6 +52,47 @@ class Request:
 
 def _canonical(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
+
+
+# the fields that only say how the owner wrote a selector: what it counts is in `mod_ids`, which the planner reads (`targets.model`)
+_SPELLING_FIELDS = {Requirement: ("family", "stat"), ImplicitRequirement: ("family", "stat"), EnchantmentRequirement: ("entries",)}
+# the lists whose order says nothing: every entry is required at once (`Target`), or `at_least` of the members (`KOfN`)
+_UNORDERED_FIELDS = {Target: ("requirements", "implicits"), KOfN: ("of",)}
+
+
+def _form(value: object) -> object:
+    """The JSON form of a parsed value: a dataclass as its type and fields (less the spelling ones), a set sorted, an enum by its value."""
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        kind = type(value)
+        dropped = _SPELLING_FIELDS.get(kind, ())
+        unordered = _UNORDERED_FIELDS.get(kind, ())
+        form: dict[str, object] = {"type": kind.__name__}
+        for field in dataclasses.fields(value):
+            if field.name in dropped:
+                continue
+            entry = _form(getattr(value, field.name))
+            form[field.name] = sorted(entry, key=_canonical) if field.name in unordered and isinstance(entry, list) else entry
+        return form
+    if isinstance(value, enum.Enum):
+        return value.value
+    if isinstance(value, (frozenset, set)):
+        return sorted((_form(entry) for entry in value), key=_canonical)
+    if isinstance(value, (tuple, list)):
+        return [_form(entry) for entry in value]
+    if isinstance(value, dict):
+        return {str(name): _form(entry) for name, entry in value.items()}
+    if isinstance(value, Path):
+        return value.as_posix()
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    raise TypeError(f"a target holds a {type(value).__name__}, which its canonical form does not know")  # a new field type is said, never keyed by repr
+
+
+def target_form(target: Target) -> dict:
+    """The canonical form of a parsed target, as it goes into a request's key (#966): what the planner reads, not how it was written. A stat
+    text and the family id it stands for, a key spelled out at its default or left out, and the order of the required entries give one
+    form; the item asked and the start item are all in it."""
+    return _form(target)  # type: ignore[return-value]
 
 
 def _object(value: object, where: str, allowed: tuple[str, ...]) -> dict:
@@ -109,5 +153,5 @@ def parse_request(body: object, game: str, world: World) -> Request:
         },
         "settings": {"start_price": start_price, "price_source": price_source},
     }
-    keyed = {"game": game, **document, "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version}
+    keyed = {"game": game, "target": target_form(target), "methods": document["methods"], "settings": document["settings"], "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version}
     return Request(game, target, document, hashlib.sha256(_canonical(keyed).encode("utf-8")).hexdigest())
