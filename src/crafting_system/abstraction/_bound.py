@@ -409,7 +409,8 @@ def declared_bounds(abstraction: Abstraction, state: CompressedState, actions: S
         if answer is None or not answer.keeps_shape or answer.chances is None:
             found.append(None)
         else:
-            found.append(min(ONE, Fraction(min(answer.chances))))
+            least = min(answer.chances) if answer.together is None else min(*answer.chances, answer.together)
+            found.append(min(ONE, Fraction(least)))
     return found
 
 

@@ -114,8 +114,8 @@ def declared(data: GameData, item: Item, actions: Sequence, passes: Callable[[Mo
                 continue
         except OutOfScopeError:
             continue
-        for (index, _records, _forced_mods), chances in zip(members, _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, totals)):
-            found[index] = ReachDeclared(True, chances)
+        for (index, _records, _forced_mods), (chances, together) in zip(members, _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, totals)):
+            found[index] = ReachDeclared(True, chances, together)
     return tuple(found)
 
 
@@ -154,14 +154,14 @@ def _forced(data: GameData, item: Item, item_class: str, records: list, tangled:
     return listed
 
 
-def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, totals) -> list[tuple[float, ...]]:
-    """The bound of each member set per leaf, for sets that share one list of candidates (see the module text)."""
+def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, totals) -> list[tuple[tuple[float, ...], float | None]]:
+    """The bound of each member set per leaf and on every leaf at once, for sets that share one list of candidates (see the module text)."""
     from . import fossil as F
 
     mods = [candidate.mod for candidate in candidates]
     leaves = len(leaf_flags(mods[0])) if mods else 0
     if not mods:
-        return [tuple(1.0 if any(leaf_flags(mod)[leaf] for mod in forced) else 0.0 for leaf in range(leaves)) for _i, _r, forced in members]
+        return [_nothing_drawn(forced, leaves, leaf_flags) for _i, _r, forced in members]
     passing = np.array([leaf_flags(mod) for mod in mods], dtype=bool).T  # leaves x mods
     spawn = np.array([float(candidate.weight) for candidate in candidates])
     any_x = (passing & (spawn > 0)).any(axis=1)  # per leaf: some candidate of X has a spawn weight
@@ -171,7 +171,7 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
         forced_hits = [any(leaf_flags(mod)[leaf] for mod in forced) for leaf in range(leaves)]
         zero = [leaf for leaf in range(leaves) if not any_x[leaf] and not forced_hits[leaf]]
         if zero:  # a leaf no use can reach: 0 there is exact, and 1 is an upper bound for the others
-            results[position] = tuple(0.0 if leaf in zero else 1.0 for leaf in range(leaves))
+            results[position] = (tuple(0.0 if leaf in zero else 1.0 for leaf in range(leaves)), 0.0)
         else:
             todo.append(position)
     if not todo:
@@ -193,21 +193,42 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
         share.append(shares)
         lucky.append(np.full(len(table), any(record.rolls_lucky for record in records)))
         forced_rows.append(np.full(len(table), 1 if forced else 0))
-    bounds = pool.bounds(np.concatenate(rows), np.concatenate(lucky), np.concatenate(forced_rows), leaves) * np.concatenate(share)[:, None]
+    shares = np.concatenate(share)[:, None]
+    joint = _disjoint(passing, leaves)
+    singles, together = pool.bounds(np.concatenate(rows), np.concatenate(lucky), np.concatenate(forced_rows), leaves, joint)
+    owners = np.concatenate(owner)
     per_set = np.zeros((len(members), leaves))
-    np.add.at(per_set, np.concatenate(owner), bounds)  # a Tangled set: the mean over its outcome records, by their shares
+    np.add.at(per_set, owners, singles * shares)  # a Tangled set: the mean over its outcome records, by their shares
+    per_set_all = np.zeros(len(members))
+    np.add.at(per_set_all, owners, together * shares[:, 0])
     for position in todo:
         forced = members[position][2]
-        values = []
-        for leaf in range(leaves):
-            if any(leaf_flags(mod)[leaf] for mod in forced):
-                values.append(1.0)
-            elif per_set[position, leaf] <= 0.0:
-                values.append(0.0)
-            else:
-                values.append(min(1.0, float(per_set[position, leaf]) * (1 + MARGIN)))
-        results[position] = tuple(values)
+        hits = [any(leaf_flags(mod)[leaf] for mod in forced) for leaf in range(leaves)]
+        values = tuple(1.0 if hits[leaf] else _raised(per_set[position, leaf]) for leaf in range(leaves))
+        # the joint bound counts the leaves of `joint` as hit by draws only: not when a forced mod may pass one of them
+        both = None if any(hits[leaf] for leaf in joint) else _raised(per_set_all[position])
+        results[position] = (values, both)
     return results  # type: ignore[return-value]
+
+
+def _nothing_drawn(forced, leaves: int, leaf_flags) -> tuple[tuple[float, ...], float]:
+    """The bounds of a set with no candidate to draw: a leaf is reached only by a forced mod that passes it."""
+    values = tuple(1.0 if any(leaf_flags(mod)[leaf] for mod in forced) else 0.0 for leaf in range(leaves))
+    return values, min(values, default=1.0)
+
+
+def _raised(value: float) -> float:
+    """A bound worked in floats, raised by `MARGIN` of itself (see the module text, Floats); 0 stays 0, and no bound is above 1."""
+    return 0.0 if value <= 0.0 else min(1.0, float(value) * (1 + MARGIN))
+
+
+def _disjoint(passing: np.ndarray, leaves: int) -> list[int]:
+    """Leaves whose X share no candidate, chosen greedily in order: each needs a draw of its own (`_bound._joint_hits`)."""
+    chosen: list[int] = []
+    for leaf in range(leaves):
+        if all(not (passing[leaf] & passing[other]).any() for other in chosen):
+            chosen.append(leaf)
+    return chosen if len(chosen) > 1 else []
 
 
 class _Pool:
@@ -230,19 +251,42 @@ class _Pool:
         # the Sanctified factor of each mod; a mod it would give a weight below 0 leaves the pool (`group_pool` drops a weight <= 0)
         self.level = np.maximum(np.array([1.0 + (mod.required_level - SANCTIFIED_LEVEL_FACTOR.value) / PERCENT for mod in mods]), 0.0)
 
-    def bounds(self, table, lucky, forced, leaves) -> np.ndarray:
-        """The bound per row and leaf. Row r is a pool whose mods weigh their spawn weight times `table[r]` of their tag set (times the
-        Sanctified level factor where `lucky[r]`), drawn after `forced[r]` forced mods."""
-        out = np.zeros((len(table), leaves))
+
+    def bounds(self, table, lucky, forced, leaves, joint) -> tuple[np.ndarray, np.ndarray]:
+        """The bound per row and leaf, and per row the bound on every leaf at once. Row r is a pool whose mods weigh their spawn weight times
+        `table[r]` of their tag set (times the Sanctified level factor where `lucky[r]`), drawn after `forced[r]` forced mods that pass no leaf.
+
+        For each total: one leaf's bound is 1 - prod(1 - c_j) over its draws; every leaf at once is at most the least of them and, when the
+        leaves of `joint` have pairwise disjoint X's, at most the sum over the ways to give each of them a draw of its own of the product of
+        their c's (`_bound._joint_hits`, its argument). Each is averaged over the totals.
+        """
+        singles = np.zeros((len(table), leaves))
+        together = np.zeros(len(table))
         for start in range(0, len(table), self.CHUNK):
             part = slice(start, start + self.CHUNK)
             weights = self.spawn[None, :] * table[part][:, self.tag_of]
             weights = np.where(lucky[part][:, None], weights * self.level[None, :], weights)
-            for leaf in range(leaves):
-                out[part, leaf] = self._leaf(weights, forced[part], self.passing[leaf])
-        return out
+            chances = [self._chance(weights, self.passing[leaf]) for leaf in range(leaves)]
+            with np.errstate(divide="ignore"):
+                logs = [np.log1p(-np.minimum(chance, 1.0)) for chance in chances]  # -inf where c is 1: that total's bound is 1
+            rows = forced[part]
+            for total, share in self.totals:
+                for count in (0, 1):
+                    chosen = rows == count
+                    if not chosen.any():
+                        continue
+                    draws = max(0, total - self.kept - count)
+                    alone = [-np.expm1(log[chosen][:, count : count + draws].sum(axis=1)) for log in logs]
+                    for leaf in range(leaves):
+                        singles[part][chosen, leaf] += share * alone[leaf]
+                    least = np.minimum.reduce(alone)
+                    if joint:
+                        least = np.minimum(least, _joint([chances[leaf][chosen][:, count : count + draws] for leaf in joint]))
+                    together[part][chosen] += share * least
+        return singles, together
 
-    def _leaf(self, weights, forced, passing) -> np.ndarray:
+    def _chance(self, weights, passing) -> np.ndarray:
+        """Per row and number `prior` of earlier draws without a hit, c: at least the chance that the next draw hits X (module text)."""
         rows = len(weights)
         hit = (weights * passing) @ self.one_hot  # rows x families: x_f
         junk = (weights * ~passing) @ self.one_hot  # j_f
@@ -251,9 +295,9 @@ class _Pool:
             ascending = np.sort(junk[:, mask], axis=1)
             smallest = np.concatenate([np.zeros((rows, 1)), np.cumsum(ascending, axis=1)], axis=1)  # [:, i]: the sum of the i smallest
             sides.append((hit[:, mask].sum(axis=1), smallest, int(mask.sum())))
-        most = max(total for total, _ in self.totals) - self.kept
-        chance = np.zeros((rows, max(most, 0) + 1))  # [:, prior]: c of a draw after `prior` earlier draws without a hit
-        for prior in range(max(most, 0) + 1):
+        most = max(0, max(total for total, _ in self.totals) - self.kept)
+        chance = np.zeros((rows, most + 1))
+        for prior in range(most + 1):
             for a in range(min(prior, self.room[0]) + 1):
                 b = prior - a
                 if b > self.room[1]:
@@ -266,17 +310,21 @@ class _Pool:
                         j = j + smallest[:, max(width - drawn, 0)]
                 ratio = np.divide(x, x + j, out=np.zeros(rows), where=x > 0)
                 chance[:, prior] = np.maximum(chance[:, prior], ratio)
-        with np.errstate(divide="ignore"):
-            logs = np.log1p(-np.minimum(chance, 1.0))  # -inf where c is 1: that total's bound is 1
-        bound = np.zeros(rows)
-        for total, share in self.totals:
-            for count in (0, 1):
-                chosen = forced == count
-                if chosen.any():
-                    draws = max(0, total - self.kept - count)
-                    bound[chosen] += share * -np.expm1(logs[chosen][:, count : count + draws].sum(axis=1))
-        return bound
+        return chance
 
+
+def _joint(chances: list[np.ndarray]) -> np.ndarray:
+    """Per row, the sum over the ways to give each X its own draw of the product of their c's (`_bound._joint_hits`, per row)."""
+    count = len(chances)
+    rows, draws = chances[0].shape
+    ways = [np.zeros(rows) for _ in range(1 << count)]
+    ways[0] = np.ones(rows)
+    for draw in range(draws):
+        for mask in range(len(ways) - 1, -1, -1):  # descending: a mask grows only into larger ones
+            for k in range(count):
+                if not mask >> k & 1:
+                    ways[mask | 1 << k] = ways[mask | 1 << k] + ways[mask] * chances[k][:, draw]
+    return ways[-1]
 
 class _Factors:
     """The fossil factor of each tag set of a pool for a set, read per tag set from the records' entries for its tags (see the module text)."""

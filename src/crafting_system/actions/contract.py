@@ -697,10 +697,13 @@ class ReachDeclared:
     * `chances`: for each leaf asked about (in the order of `passes`), a number never below the chance that one use puts on the item a mod
       that `passes` says can make that leaf PASSING; exactly 0 only when no such mod can be put on at all. None when the action keeps the shape
       but gives no bound.
+    * `together`: a number never below the chance that one use makes every leaf asked about PASSING at once (None: no more than the least of
+      `chances` is known). Exactly 0 only when that cannot happen.
     """
 
     keeps_shape: bool
     chances: tuple[float, ...] | None = None
+    together: float | None = None
 
 
 class Action(ABC):
