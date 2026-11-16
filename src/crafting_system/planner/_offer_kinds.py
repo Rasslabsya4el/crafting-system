@@ -30,8 +30,10 @@ mods of the start, lands in E with chance at most pbar(x):
     mod, so it makes a leaf of U PASSING only if the mod is one of that leaf's: pbar = 1 if its named
     mods meet the mods of a leaf of U, else 0. It stays in the model.
   * an addition (#1072): it keeps the mods and adds one mod drawn from the pool less the families on the item
-    (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Orb of Augmentation, a Harvest
-    add/remove; it draws, names no mod, fractures nothing, reads no implicit, roll, input or influence). Its
+    (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Eldritch Exalted Orb, an Orb of Augmentation;
+    it draws, names no mod, fractures nothing, reads no roll, input or influence). A Regal Orb (it changes the rarity, so it
+    leaves the shape) and a Harvest add/remove (it also removes a mod: not one drawn mod added to the mods kept) are of this
+    kind but get no bound, so they stay TERMINAL (#1084). Its
     chance depends on the families the item holds, so it cannot be read at one state: pbar is the largest chance,
     over every state of the start's shape at which a leaf of U is not PASSING, that the one added mod passes that
     leaf (`add_bound`: the most favourable weight share of the free families, every set of families held and

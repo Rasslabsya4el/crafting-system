@@ -382,8 +382,8 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
     is not PASSING, on the chance that one use of the adding action `action` puts on the item a mod that makes that leaf PASSING (#1072).
 
     `state` is the bare item of the shape (its fractured mods and nothing else). The action is one that keeps the junk and draws ONE mod from the
-    pool of the item less the families it holds, on a side with room (`Reads.pool_weight`; an Exalted Orb, an Orb of Augmentation, the addition of
-    a Harvest add/remove craft; see "One added mod" in the module text for the argument and what it takes on the contract). Returns None when the
+    pool of the item less the families it holds, on a side with room (`Reads.pool_weight`; an Exalted Orb, an Orb of Augmentation; not a Harvest
+    add/remove craft, which also removes a mod, so its result is not one drawn mod: None; see "One added mod" in the module text for the argument and what it takes on the contract). Returns None when the
     action at `state` is not one such draw: a part that is not a pool draw, a draw count other than one, or a fracture; and when the item holds
     Memory Strands and the action's draw is cut by them (the count, and so the cut, differs between the states of the shape). Raises what the action
     raises at `state` (`NotApplicableError`, `OutOfScopeError`): a refusal at the bare item says nothing of the states that hold more mods.
