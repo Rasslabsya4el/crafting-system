@@ -104,8 +104,8 @@
         "start_price_chaos": 2.0,
         "given": false,
         "goods": [],
-        "mean_cost_without_start": 1346.9387888465485,
-        "total_chaos": 1348.9387888465485,
+        "mean_cost_without_start": 1346.9387888465487,
+        "total_chaos": 1348.9387888465487,
         "approximate": false,
         "rule_axis": null,
         "rule_axis_values": [],
@@ -134,8 +134,8 @@
             "price_source": "hand"
           }
         ],
-        "mean_cost_without_start": 858.3982957764918,
-        "total_chaos": 866.3982957764918,
+        "mean_cost_without_start": 858.3982957764853,
+        "total_chaos": 866.3982957764853,
         "approximate": false,
         "rule_axis": null,
         "rule_axis_values": [],
@@ -148,12 +148,12 @@
       {
         "reading": {},
         "chosen": "vendor:minion_helmet:1",
-        "total_chaos": 866.3982957764918
+        "total_chaos": 866.3982957764853
       }
     ],
     "total_range_chaos": {
-      "low": 866.3982957764918,
-      "high": 866.3982957764918
+      "low": 866.3982957764853,
+      "high": 866.3982957764853
     },
     "reading_matters": false,
     "approximate_claims": [
@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds this target does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 26,
+      "count": 27,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -193,6 +193,7 @@
         "Beast side swap",
         "Wild Bristle Matron",
         "Divine Orb",
+        "Awakener's Orb",
         "Recombinators",
         "Imprint",
         "Restore"
@@ -204,13 +205,12 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 23,
+      "count": 22,
       "labels": [
         "Harvest reforges that favour a mod",
         "Harvest quality enchants",
         "Influenced Exalted Orb",
         "Orb of Dominance",
-        "Awakener's Orb",
         "Beast influence recipe",
         "Blessed Orb",
         "Catalysts",
@@ -304,9 +304,9 @@
       "high": 1.0
     },
     "mean_cost": {
-      "value": 866.398295776484,
-      "low": 866.3982956642806,
-      "high": 866.3982958886875
+      "value": 866.3982957764916,
+      "low": 866.3982956582041,
+      "high": 866.3982958947792
     },
     "p50": {
       "value": 598.1019,
@@ -321,14 +321,14 @@
     "quantiles_resolved": true,
     "cvar_level": 0.9,
     "cvar": {
-      "value": 2852.961474212161,
-      "low": 2830.5291285303892,
-      "high": 2875.3938198939336
+      "value": 2852.961474288285,
+      "low": 2830.5291286826505,
+      "high": 2875.39381989392
     },
-    "mean_cost_divine": 2.3277761842463303,
+    "mean_cost_divine": 2.3277761842463507,
     "p90_divine": 5.341896990865127,
-    "mean_cost_without_start": 858.3982957764918,
-    "solver_error_bound": 1.107780978060191e-09
+    "mean_cost_without_start": 858.3982957764853,
+    "solver_error_bound": 1.1103820085622829e-09
   },
   "states": [
     {
@@ -344,7 +344,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.3982957764918,
+      "expected_remaining_cost": 858.3982957764853,
       "reach_probability": 1.0,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -395,7 +395,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.2418380936027,
+      "expected_remaining_cost": 858.2418380935964,
       "reach_probability": 0.9837146794974958,
       "goal_chance_per_use": 0.009487666034155597,
       "transitions": [
@@ -474,7 +474,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.6141251263423,
+      "expected_remaining_cost": 858.6141251263359,
       "reach_probability": 0.9269251460429463,
       "goal_chance_per_use": 0.009057971014492754,
       "transitions": [
@@ -553,7 +553,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.5712409151392,
+      "expected_remaining_cost": 858.571240915133,
       "reach_probability": 0.8743160187323316,
       "goal_chance_per_use": 0.009107468123861567,
       "transitions": [
@@ -628,7 +628,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.3190946507727,
+      "expected_remaining_cost": 858.3190946507664,
       "reach_probability": 0.9804888444889478,
       "goal_chance_per_use": 0.009398496240601503,
       "transitions": [
@@ -707,7 +707,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.7879030415361,
+      "expected_remaining_cost": 858.7879030415297,
       "reach_probability": 0.6849741057930184,
       "goal_chance_per_use": 0.008857395925597875,
       "transitions": [
@@ -782,7 +782,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.4693315719115,
+      "expected_remaining_cost": 858.4693315719052,
       "reach_probability": 0.9025543176669456,
       "goal_chance_per_use": 0.00922509225092251,
       "transitions": [
@@ -857,7 +857,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.8014733911999,
+      "expected_remaining_cost": 858.8014733911936,
       "reach_probability": 0.6527232778228719,
       "goal_chance_per_use": 0.008841732979664015,
       "transitions": [
@@ -932,7 +932,7 @@
           "price_source": "poe.ninja"
         }
       ],
-      "expected_remaining_cost": 858.684572259647,
+      "expected_remaining_cost": 858.6845722596406,
       "reach_probability": 0.816055641341837,
       "goal_chance_per_use": 0.008976660682226212,
       "transitions": [
@@ -1007,7 +1007,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.8676836075444835,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1030,7 +1030,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7662907764347063,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1053,7 +1053,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7183252784105215,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1076,7 +1076,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6861150666796328,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1099,7 +1099,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.744540042042333,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1122,7 +1122,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6861150666796328,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1145,7 +1145,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.850679809568118,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1168,7 +1168,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7666020729004959,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1191,7 +1191,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.94566655714072,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1214,7 +1214,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.5137695964961029,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1237,7 +1237,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.8117210022613444,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1260,7 +1260,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.42150618508228316,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1283,7 +1283,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.4777989353573037,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1306,7 +1306,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6802062156836743,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1329,7 +1329,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.48119416810424587,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1352,7 +1352,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.4190746353053835,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1375,7 +1375,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.38208119261188145,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1398,7 +1398,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.45188884695794257,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1421,7 +1421,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.38208119261188145,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1444,7 +1444,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.48736483869285024,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1467,7 +1467,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.8344279726540411,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1490,7 +1490,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.23415354739841546,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1513,7 +1513,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.5551758918817257,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1536,7 +1536,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.17088950918741944,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1559,7 +1559,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.20932811687017372,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1582,7 +1582,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3810196992028519,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1605,7 +1605,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.29189690034205595,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1628,7 +1628,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3490552699196262,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1651,7 +1651,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.2943169625616857,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1674,7 +1674,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.2633440569008341,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1697,7 +1697,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3227904288473085,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1720,7 +1720,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.2633440569008342,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1743,7 +1743,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7439561010224626,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1766,7 +1766,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.14986875124472498,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1789,7 +1789,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.41846556428653275,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1812,7 +1812,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.10647426164502598,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1835,7 +1835,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.13243437496357857,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1858,7 +1858,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.26194828287289235,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1881,7 +1881,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7427398495306194,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1904,7 +1904,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6918843437105131,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1927,7 +1927,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6580897194115376,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1950,7 +1950,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7195993208361241,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1973,7 +1973,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6580897194115376,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -1996,7 +1996,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.8369383636255823,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2019,7 +2019,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.48311560524905045,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2042,7 +2042,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.7922714974771593,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2065,7 +2065,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.39083126467558904,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2088,7 +2088,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.4473156743595942,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2111,7 +2111,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.6529644836489414,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2134,7 +2134,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.1453400377612448,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2157,7 +2157,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.11681512140452788,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2180,7 +2180,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.1018265150202076,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2203,7 +2203,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.1313116830062873,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2226,7 +2226,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.10182651502020756,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2249,7 +2249,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.18794761825708045,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2272,7 +2272,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.036414120319868314,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2295,7 +2295,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.04678734341811028,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2318,7 +2318,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.10244183292986205,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2341,7 +2341,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.4146782308583951,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2364,7 +2364,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3552654821383486,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2387,7 +2387,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3207942901405881,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2410,7 +2410,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3864066992562879,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2433,7 +2433,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.32079429014058813,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2456,7 +2456,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.13602134362919346,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2479,7 +2479,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.16695421895124474,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2502,7 +2502,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.3178477387435832,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2525,7 +2525,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.1282525542545845,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2548,7 +2548,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.10267837871739362,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2571,7 +2571,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.08932021821389251,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2594,7 +2594,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.11565032033556377,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2617,7 +2617,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.08932021821389254,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2640,7 +2640,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.031658573181222366,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2663,7 +2663,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.08994044900410987,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2686,7 +2686,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.2563350393119805,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2709,7 +2709,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.21141457817783876,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2732,7 +2732,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.1868559339313064,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2755,7 +2755,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.23453326765330232,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2778,7 +2778,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.1868559339313064,
       "goal_chance_per_use": 0.0,
       "transitions": [
@@ -2801,7 +2801,7 @@
           "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
         }
       ],
-      "expected_remaining_cost": 866.3982957764918,
+      "expected_remaining_cost": 866.3982957764853,
       "reach_probability": 0.07114829924591518,
       "goal_chance_per_use": 0.0,
       "transitions": [

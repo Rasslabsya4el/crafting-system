@@ -56,9 +56,19 @@ class CraftingProblem:
     """The crafting plan as a `_envelope.Problem` (see the module text)."""
 
     def __init__(
-        self, abstraction: Abstraction, start: CompressedState, offers: Sequence[PricedOffer], bound: PatternBound, *, prune_corrupting: bool = True
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        offers: Sequence[PricedOffer],
+        bound: PatternBound,
+        *,
+        prune_corrupting: bool = True,
+        goal: Callable[[CompressedState], bool] | None = None,
     ) -> None:
         self.ab = abstraction
+        # `goal`: the states that end the search, when they are fewer than the abstraction's goal states (a donor's want, `_awakener`, #832). The
+        # bound stays a lower bound (fewer goal states never cost less), and a key the model calls a goal is a tip: its offers keep their floors
+        self.goal = goal
         self.start = start
         self.offers = tuple(offers)
         self.prune_corrupting = prune_corrupting
@@ -68,6 +78,8 @@ class CraftingProblem:
         self.floors = bound.floors
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
         self.tip = [not built for built in model.expanded] if model.expanded else [False] * len(model.keys)  # keys the build did not reach
+        if goal is not None:
+            self.tip = [tip or is_goal for tip, is_goal in zip(self.tip, model.goal)]
         raw = np.asarray(bound.value, dtype=np.float64)
         factor = lowering(bound.error_bound)  # lowered by what the solver cannot certify (to 0 where it certifies nothing, #830)
         values = raw * factor if factor > 0.0 else np.where(np.isinf(raw), raw, 0.0)
@@ -138,7 +150,7 @@ class CraftingProblem:
         return [position for _, position in ranked]
 
     def is_goal(self, state: CompressedState) -> bool:
-        return self.ab.is_goal(state)
+        return self.ab.is_goal(state) if self.goal is None else self.goal(state)
 
     def _key(self, state: CompressedState) -> int | None:
         last = self._last_key
@@ -344,6 +356,7 @@ def envelope_result(
     gap: float = 0.0,
     gap_after: float | None = None,
     watch: Callable[[Standing], None] | None = None,
+    goal: Callable[[CompressedState], bool] | None = None,
 ) -> PackedResult:
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
 
@@ -351,7 +364,8 @@ def envelope_result(
     counts; the planner passes what is left of the plan's aim, `_plan.search_gap`, #925), the search ends when its plan is proved to cost at most `gap` more than the
     cheapest; `gap` 0 or `gap_after` None is the exact search.
     `watch` is told where the search stands after the first plan and after each round (`_envelope.Standing`: the best plan's cost so far and the
-    figure no plan can cost less than).
+    figure no plan can cost less than). `goal`, when given, is the set of states that end the search in place of the abstraction's goal, a subset of
+    it (a donor's want, `_awakener`, #832).
 
     Raises `OutOfScopeError` when the bound cannot be built for this abstraction (imprints: #507; a roll limit and a
     Divine Orb are built since #830, an unveil offer since #828), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
@@ -364,13 +378,13 @@ def envelope_result(
     say = progress or _packed.PROGRESS or (lambda _text: None)
     try:
         with parallel.memory_net(net.memory_mb if net is not None else None):  # the pool's workers are watched by the memory net too (#626, OR-12)
-            return _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch)
+            return _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal)
     finally:  # said on a refusal too
         if (reason := getattr(abstraction, "prime_stopped", None)) is not None:
             say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
 
 
-def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch) -> PackedResult:
+def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal=None) -> PackedResult:
     """The body of `envelope_result`, under the run's memory net."""
     began = time.perf_counter()
     if bound is None:
@@ -383,7 +397,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
         f"bound built: {bound.model.stats.keys:,} keys ({expanded:,} expanded), {len(bound.positions):,} of {len(offers):,} offers in the model, start value "
         f"{bound.start_value!r} ({built - began:.0f} s)" + ("" if bound.complete else f"; STOPPED in the {bound.phase} phase: {bound.stopped}")
     )
-    problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting)
+    problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting, goal=goal)
     ready = time.perf_counter()
     if problem.closed_start is not None:
         say(f"first plan's order: the count solved on what it finished, the start at {problem.closed_start!r} ({ready - built:.1f} s)")

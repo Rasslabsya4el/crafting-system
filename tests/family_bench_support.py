@@ -71,6 +71,9 @@ SNAPSHOTS = (
     "tests/fixtures/prices/routes-allflame-2026-11-10.json",
     "tests/fixtures/prices/veiled-r24-r07-2026-11-12.json",
 )
+# Names that no snapshot above holds, taken from an older committed snapshot only to fill that gap (#832). It is never a case's primary, and it
+# fills only the names listed, so no other case's prices change.
+FILL_ONLY = {"tests/fixtures/prices/routes-allflame-2026-07-31.json": ("Awakener's Orb",)}
 PRICE_FACTOR = (0.3, 3.0)  # each currency's price is scaled by a factor drawn log-uniform in this range (ticket #824)
 UNIT = "Chaos Orb"  # the unit: never scaled
 START_PRICE = {"normal": 1.0, "magic": 2.0, "rare": 5.0}  # Chaos, times a seeded factor: a stand-in for a generated base's market price
@@ -128,6 +131,9 @@ class Method:
     roll_limit: bool = False  # one wanted family carries a `min_roll`
     veiled: bool = False  # one wanted mod is a veiled (unveiled-domain) mod
     vendor_starts: bool = False  # planned with the vendor-recipe start options (`plan_with_starts`)
+    # with `influenced`: one more wanted mod is an influence mod of another influence, of a family apart from the others, so only an Awakener's
+    # Orb's second item (its donor) brings it (#832)
+    donor: bool = False
     note: str = ""
 
 
@@ -430,6 +436,9 @@ METHODS: tuple[Method, ...] = (
                veiled=index >= 4, start_item=growing_strands_item if index >= 7 else (lambda draw: {}))
         for index, (name, _) in enumerate(GROWING)
     ),
+    # B3, last so no earlier case moves: one wanted mod of the start item's influence and one of another, brought by an Awakener's Orb's
+    # donor, which the basic orbs make (#832)
+    Method("awakener-donor", "B3", "rare", ("awakeners-orb", *BASIC), influenced=True, donor=True),
 )
 
 
@@ -481,6 +490,8 @@ def draw_case(data: GameData, seed: int, method: Method, size: Size, item_class:
     except Exception as error:  # noqa: BLE001 - a base the model refuses (OutOfScopeError)
         raise Unsuitable(f"no pool: {error}") from None
     wanted_count = rng.randint(*size.wanted)
+    if method.donor:
+        wanted_count = max(wanted_count, 2)  # the receiver's influence mod and the donor's
     prefixes = rng.randint(max(0, wanted_count - 3), min(3, wanted_count))
     by_side = {side: [f for f, ids in pool.items() if side_of(data, ids) == side] for side in ("prefix", "suffix")}
     if method.influenced:  # one wanted mod is an influence mod: in the influenced pool, not in the plain one
@@ -500,8 +511,9 @@ def draw_case(data: GameData, seed: int, method: Method, size: Size, item_class:
             sides.remove(side)
         else:
             raise Unsuitable("the influence mod's side is full")
-    for side in sides[: wanted_count - len(chosen)]:
-        options = sorted(set(by_side[side]) - {f for f, _ in chosen})
+    donor_entry = donor_requirement(data, rng, size, base_id, item_level, influences, chosen, plain, sides) if method.donor else None
+    for side in sides[: wanted_count - len(chosen) - (donor_entry is not None)]:
+        options = sorted(set(by_side[side]) - {f for f, _ in chosen} - ({donor_entry["family"]} if donor_entry else set()))
         if not options:
             raise Unsuitable(f"too few {side} families")
         f = rng.choice(options)
@@ -515,6 +527,9 @@ def draw_case(data: GameData, seed: int, method: Method, size: Size, item_class:
         entry = {"family": f, "min_tier": max(best, min(rng.randint(*size.tiers), worst)), "not_crafted": True}
         requirements.append(entry)
     wanted_mods = tuple(top_mod(data, item, ids) for _, ids in chosen)
+    if donor_entry is not None:
+        requirements.append(donor_entry)
+        wanted_mods = (*wanted_mods, donor_entry["mod"])
     if method.roll_limit:
         candidates = [i for i, (f, ids) in enumerate(chosen) if len({len(data.mods[m].stats) for m in ids}) == 1 and len(data.mods[wanted_mods[i]].stats) == 1]
         if not candidates:
@@ -558,6 +573,36 @@ def draw_case(data: GameData, seed: int, method: Method, size: Size, item_class:
     )  # fmt: skip
 
 
+def donor_requirement(
+    data: GameData, rng: random.Random, size: Size, base_id: str, item_level: int, influences: Sequence[str], chosen, plain, sides: list[str]
+) -> dict:
+    """The wanted mod an Awakener's Orb's donor brings (#832): an influence mod of an influence other than the start item's, of a family none of
+    `chosen` holds, at a tier of the size's range; its side is taken from `sides`. Raises `Unsuitable` when the base has none."""
+    from crafting_system.actions.awakener import influence_mods
+
+    other = Influence(rng.choice(sorted(i.value for i in Influence if i.value not in influences)))
+    item = Item(base_id, item_level, Rarity.RARE, influences=frozenset({other}))
+    try:
+        pool = single_family_mods(data, item)
+        theirs = set(influence_mods(data, base_id, item_level, other))
+    except Exception as error:  # noqa: BLE001 - a base the model refuses (OutOfScopeError)
+        raise Unsuitable(f"no {other.value} pool: {error}") from None
+    taken = {f for f, _ in chosen}
+    families = sorted(
+        f for f, ids in pool.items() if f not in taken and (f not in plain or set(ids) - set(plain[f])) and set(ids) & theirs and side_of(data, ids) in sides
+    )
+    if not families:
+        raise Unsuitable(f"no {other.value} mod for a donor")
+    family = rng.choice(families)
+    ids = sorted(set(pool[family]) & theirs)
+    tiers = tiers_of(data, item)
+    best, worst = min(tiers.get(m, 1) for m in ids), max(tiers.get(m, 1) for m in ids)
+    tier = max(best, min(rng.randint(*size.tiers), worst))
+    mod_id = min((abs(tiers.get(m, 1) - tier), m) for m in ids)[1]
+    sides.remove(side_of(data, [mod_id]))
+    return {"family": family, "mod": mod_id}
+
+
 def refusal_today(data: GameData, target: Target, actions: Sequence[str]) -> str | None:
     """Why `make_plan` refuses this case today, read from the code (the kind catalog and the target keys it refuses); None when it plans."""
     import crafting_system.actions  # noqa: F401 - registers every kind
@@ -593,7 +638,7 @@ _SNAPSHOT_CACHE: dict[str, PriceFile] = {}
 
 def merged_snapshots() -> dict[str, PriceFile]:
     if not _SNAPSHOT_CACHE:
-        for name in SNAPSHOTS:
+        for name in (*SNAPSHOTS, *FILL_ONLY):
             _SNAPSHOT_CACHE[name] = load_price_file(ROOT / name)
     return dict(_SNAPSHOT_CACHE)
 
@@ -613,6 +658,20 @@ def merge(snapshots: Mapping[str, PriceFile], primary: str) -> PriceFile:
     return dataclasses.replace(base, prices=merged("prices"), ninja=merged("ninja"), deep=merged("deep"), markets=merged("markets"))
 
 
+def filled(merged: PriceFile) -> PriceFile:
+    """`merged` with the `FILL_ONLY` names it lacks. It is applied after a case's `keep` is drawn, so a case that keeps its names keeps the same."""
+    snapshots = merged_snapshots()
+
+    def table(field_name: str) -> dict:
+        found = dict(getattr(merged, field_name))
+        for name, names in FILL_ONLY.items():
+            entries = getattr(snapshots[name], field_name)
+            found.update({entry: entries[entry] for entry in names if entry in entries and entry not in found})
+        return dict(sorted(found.items()))
+
+    return dataclasses.replace(merged, prices=table("prices"), ninja=table("ninja"), deep=table("deep"), markets=table("markets"))
+
+
 def factor(price_seed: str, name: str) -> float:
     low, high = PRICE_FACTOR
     u = random.Random(f"{price_seed}:{name}").random()
@@ -621,7 +680,7 @@ def factor(price_seed: str, name: str) -> float:
 
 def prices_for(case: Case) -> PriceFile:
     """The case's prices: the merged snapshots, every currency but the unit scaled by its seeded factor, only `keep` when it is set."""
-    merged = merge(merged_snapshots(), case.primary_snapshot)
+    merged = filled(merge(merged_snapshots(), case.primary_snapshot))
     kept = None if case.keep is None else set(case.keep)
 
     def scale(name: str, record):

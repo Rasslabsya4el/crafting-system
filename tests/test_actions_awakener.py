@@ -37,6 +37,7 @@ from crafting_system.actions import (
     kinds,
     model_readings,
 )
+from crafting_system.actions.awakener import GROUP_CONFLICT_AXIS
 from crafting_system.items import Influence, Item, Rarity
 from crafting_system.rules import rule_by_id
 
@@ -317,10 +318,11 @@ def test_the_donor_is_a_need_that_holds_its_influence_and_the_mod_to_carry_over_
     assert dict(action.resources()) == {"Awakener's Orb": 1}
 
 
-def test_the_kind_lists_an_orb_for_each_donor_mod_of_every_other_influence_and_is_not_a_planner_kind():
+def test_the_kind_lists_an_orb_for_each_donor_mod_of_every_other_influence_and_is_a_planner_kind():
     entry = {entry.name: entry for entry in kinds()}["awakeners-orb"]
-    assert not entry.planner and "#212" in entry.why_not
-    assert entry not in kinds(planner_only=True)
+    assert entry.planner  # since #832: the planner searches each donor with its own search (`planner._awakener`)
+    assert entry in kinds(planner_only=True)
+    assert GROUP_CONFLICT_AXIS.planned  # the plan answers at the receiver's reading (ADR-0032 as built #832)
     listed = [action for action in catalog(CONTRACT_DATA, fixture_items()["rare_awakener"]) if isinstance(action, AwakenersOrb)]
     assert {(action.donor_influence, action.donor_mod) for action in listed} == {
         (Influence.CRUSADER, CRUSADER_SUFFIX),

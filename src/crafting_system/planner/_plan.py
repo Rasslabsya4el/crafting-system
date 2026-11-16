@@ -36,6 +36,7 @@ from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
+from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_info
 from ._axes import axis_what
 from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
@@ -490,14 +491,16 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None) -> Net | None:
-    """The envelope search's net from the run's clock: the time left, and the memory and state nets as they are; None when the run has no net."""
+def search_net(clock: Clock | None, searches: int = 1) -> Net | None:
+    """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
+    Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net."""
     if clock is None:
         return None
     given: Budget = clock.budget
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
-    return Net(seconds=clock.left(), states=given.states, memory_mb=given.memory_mb)
+    left = clock.left()
+    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb)
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
@@ -670,7 +673,10 @@ def _make_plan(
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
-    donated = tuple(p for p in priced if not isinstance(p.offer.action, BuyStartItem) and takes_inputs(p.offer.action))  # offers that take donors (#225)
+    awakened = awakener_offers(priced)  # the Awakener's Orbs: each donor is searched on its own and priced into its orb (#832, `_awakener`)
+    donated = tuple(
+        p for p in priced if not isinstance(p.offer.action, BuyStartItem) and takes_inputs(p.offer.action) and p not in awakened
+    )  # offers that take donors (#225)
     finish = None
     if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
         try:
@@ -702,7 +708,7 @@ def _make_plan(
             enabled,
             metamods=holds_metamod,
             enchantment=target.start_item.enchantment,
-            allow_inputs=bool(donated),
+            allow_inputs=bool(donated) or bool(awakened),
             reading=reading,
         )
 
@@ -714,6 +720,14 @@ def _make_plan(
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0, finish=finish)
     if donated and solver not in ("auto", "object"):
         raise PlanError(f"an offered action takes donors, so the plan is made by the search that holds every item it reaches; `--solver {solver}` does not do that")
+    donors: tuple[Donor, ...] = ()
+    unfolded = priced
+    if awakened:  # each donor first, by the same search (#832): the orb is then an ordinary offer whatever solver takes the target
+        # a donor stops as the target does (past the aim, at a proved gap) on its share of the net; its [lower, upper] goes into `whole_lower`
+        donors, left_out = solve_donors(abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), stop=lambda: search_gap(clock))
+        kept_orbs = {d.action for d in donors}
+        priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
+        limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
     # "auto" is the envelope search wherever its bound can be built (#535), a plan a given route is judged against included: the route is evaluated on
     # its own reach (#829), unless the walk below finds the graph too big for that reach to be held as objects. The number of offers decides nothing
@@ -804,6 +818,7 @@ def _make_plan(
                     )  # fmt: skip
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 raise PlanError(envelope_refusal(solver, error)) from error
+            packed.info["envelope"] = whole_info(packed.info["envelope"], unfolded, donors)  # the target and its donors together (`_awakener`)
             limits += envelope_limits(packed.info["envelope"])
             bind_search(clock, packed.info["envelope"])
         else:

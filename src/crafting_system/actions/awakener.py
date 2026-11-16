@@ -29,8 +29,8 @@ Limit: a kept mod's value is rerolled, but the compressed state keeps the contri
 limit the kernel raises `OutOfScopeError` (`abstraction._kernel._split`). The donor's own mod is a new mod to the kernel, so a
 roll limit on it is refused there as for any forced mod.
 
-The catalog lists the kind only for a receiver with one influence; it is not a planner kind until the planner prices donors (ADR-0062
-'As built'). Its rule axis needs nothing more: the planner solves a plan that reads one at every reading (#589).
+The catalog lists the kind only for a receiver with one influence. It is a planner kind since #832: the planner searches each donor with its
+own search and prices the orb with it (`planner._awakener`); its rule axis is `planned` (the plan answers at the receiver's reading).
 
 Memory Strands (ADR-0041, ticket #289, B5-11f). The orb cuts and spends: the draw of the rerolled mods takes `self.cut_of(data, item)` and
 the count after the craft is `max(0, s - x)` for `x` uniform on 0 to 100, the wiki's "Awakener's Orb - 0-100"
@@ -76,12 +76,13 @@ REFUSED_WITHOUT_INFLUENCED_MODS = get_rule("awakener.refused_without_influenced_
 INFLUENCED_MOD_IS_INFLUENCE_SPAWN = get_rule("awakener.influenced_mod_is_influence_spawn")
 
 RECEIVER, DONOR = "receiver", "donor"
-GROUP_CONFLICT_AXIS = Axis("awakener.group_conflict", (RECEIVER, DONOR), RECEIVER)
-"""Which of two kept mods of one mod group survives: the receiver's (the plan, Craft of Exile) or the donor's."""
+GROUP_CONFLICT_AXIS = Axis("awakener.group_conflict", (RECEIVER, DONOR), RECEIVER, planned=True)
+"""Which of two kept mods of one mod group survives: the receiver's (the plan, Craft of Exile) or the donor's.
+
+The plan answers at the receiver's reading and the claim is an approximate input (`planned`, #832, OR-32: the answer is a point, never an
+interval), so a plan with the orb is one search and not one solve per reading; the donor's reading stays a reading a test can ask for."""
 
 __all__ = ["AwakenersOrb", "influence_mods"]
-
-WHY_NOT_PLANNER = "the planner entry takes no donors yet (#211, #212): it refuses an action with inputs (ADR-0062 'As built')"
 
 _DONORS_LIMIT = 64
 # (id(data), base, item level, donor influence, donor mod) -> (data, the donor as bought, the donor as wanted, its mod as kept).
@@ -264,7 +265,7 @@ class AwakenersOrb(Action):
             )
 
 
-@kind("awakeners-orb", order=88, planner=False, why_not=WHY_NOT_PLANNER)
+@kind("awakeners-orb", order=88)
 def _awakeners_orb(data: GameData, item: Item):
     """One orb for each influence mod of each other influence that a donor on the item's base could hold."""
     if item.corrupted or len(item.influences) != 1 or item.item_level < MINIMUM_ITEM_LEVEL.value:

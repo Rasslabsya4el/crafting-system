@@ -20,6 +20,7 @@ Equal-kernel merging (`chosen_offers`) applies to the actions that take no input
 different amounts to get, so neither may be dropped for the other. The planner (`make_plan`) does not use the loop yet; it
 takes the donors the target names (its isolated feeders, ticket #225) and solves their product per reading of the rule axes with
 `risk.solve_readings` (`_plan.solve_each_reading`): with a handful of donors the whole product is small, and the loop here is for many.
+The Awakener's Orb does not come here: its donors are searched by the one envelope search and priced into the orb (`_awakener`, #832).
 """
 
 import dataclasses
