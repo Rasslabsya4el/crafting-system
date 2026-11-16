@@ -741,12 +741,14 @@ def check_no_dropped_for_price(page: Page) -> list[Fault]:
 # --- OR-31: a step that can add a wanted mod shows the chance of each tier -----------------------------------
 
 _TIER_PART = re.compile(r"^T(?P<a>\d+)(?:\s+(?P<join>and|to)\s+T(?P<b>\d+))?\s+(?P<chance>[<>≈\s\d.,]*%)(?P<each>\s+each)?(?P<mark>\s+\(target\))?$")
+_TIERLESS_PART = re.compile(r"^[<>≈\s\d.,]*%$")  # the chance of a mod of a base with no tiers (a base jewel, #963): no tier, it is the target
 
 
 def parse_tier_line(text: str) -> tuple[str, list[dict], dict | None, bool] | None:
     """`family: T1 ≈0.93% (target) · T2 to T10 ≈0.93% each · none ≈91%` -> (family, parts, none, every); None when it is not one.
 
-    Each part is {"first", "last", "chance" (value, slack), "each", "target"}; none is {"chance"}; every says "every tier is the target"."""
+    Each part is {"first", "last", "chance" (value, slack), "each", "target"}; none is {"chance"}; every says "every tier is the target".
+    A line of a base with no tiers, `(5-7)% increased maximum Life: ≈3.3% · none ≈97%` (#963), has one part of tier 0, the target."""
     if ":" not in text:
         return None
     family, rest = text.split(":", 1)
@@ -762,10 +764,15 @@ def parse_tier_line(text: str) -> tuple[str, list[dict], dict | None, bool] | No
             if value is None:
                 return None
             none = {"chance": value}
+        elif _TIERLESS_PART.match(piece):
+            value = percent_value(piece)
+            if value is None or parts or "#" in family:  # alone, and the mod with its ranges (the one mod format)
+                return None
+            parts.append({"first": 0, "last": 0, "join": None, "chance": value, "each": False, "target": True})
         else:
             match = _TIER_PART.match(piece)
             value = percent_value(piece)
-            if not match or value is None:
+            if not match or value is None or any(part["first"] == 0 for part in parts):
                 return None
             parts.append({"first": int(match["a"]), "last": int(match["b"] or match["a"]), "join": match["join"], "chance": value, "each": bool(match["each"]), "target": bool(match["mark"])})
     return family.strip(), parts, none, every
@@ -840,7 +847,7 @@ def _target_family_names(route: Route) -> set[str] | None:
             continue
         if "at least" in slot.note:
             return None
-        if asked_tiers(slot.note) is not None or _ESSENCE_SAID.match(slot.note):
+        if asked_tiers(slot.note) is not None or _ESSENCE_SAID.match(slot.note) or not slot.note:  # no note: a mod of a base with no tiers (#963)
             names.add(family_key(slot.text))
     return names
 

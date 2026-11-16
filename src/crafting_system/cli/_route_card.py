@@ -84,9 +84,9 @@ from crafting_system.items import (
     capacity,
     eldritch_side,
     memory_strands_line,
+    natural_tiers,
     tier_table,
 )
-from crafting_system.items.tiers import natural_tiers
 from crafting_system.items.model import MAX_ITEM_LEVEL
 from crafting_system.items.words import mod_text as mod_text_of
 from crafting_system.targets import ImplicitRequirement, KOfN, Target
@@ -308,7 +308,8 @@ class TierTable(dict):
 
     `tierless` says the base has no tiers at all: every mod it can roll by nature is alone on its ladder (a base jewel, "(5-7)% increased
     maximum Life"), so the page writes no tier for any of its mods and no tier ladder (#963). A base with ladders keeps `T1` on a mod that
-    is alone on its own (`+1 to Level of Socketed Gems · T1`), as the game's advanced description does.
+    is alone on its own (`+1 to Level of Socketed Gems · T1`, and its tier chance `T1 ≈0.85% · none ≈99%`), as the game's advanced
+    description does: the mod line and the tier line of one mod say the same tier (OR-15, OR-31).
     """
 
     def __init__(self, table: Mapping[str, int] = (), tierless: bool = False) -> None:
@@ -414,7 +415,8 @@ def _leaf_slot(
     side = Side(data.mods[candidates[0]].generation_type)
     if len(candidates) == 1:
         return side, mod_text_of(data.mods[candidates[0]]), (forced or {}).get(candidates[0]) or _tier_note(tiers, candidates)
-    texts = list(dict.fromkeys(_hashes(mod_text_of(data.mods[mod_id])) for mod_id in candidates))
+    shown = mod_text_of if getattr(tiers, "tierless", False) else (lambda mod: _hashes(mod_text_of(mod)))  # no tiers: each mod with its ranges (#963)
+    texts = list(dict.fromkeys(shown(data.mods[mod_id]) for mod_id in candidates))
     limited = tier_ok is not None and any(mod_id not in tier_ok for mod_id in spawning)  # the leaf's tier limit left some spawning mod out
     return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier, limited)
 

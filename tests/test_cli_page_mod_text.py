@@ -21,11 +21,11 @@ from crafting_system.actions.bench import bench_crafts
 from crafting_system.cli import make_plan
 from crafting_system.cli._benchmark import DOT_TIERS, GEMS, MULTIMOD, NO_ATTACK, SPEED
 from crafting_system.cli._benchmark_outcomes import rolled
-from crafting_system.cli._route_card import Slot, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
+from crafting_system.cli._route_card import Slot, _leaf_slot, _StateReader, card_of_item, card_of_states, card_of_target, mod_text, page_tiers
 from crafting_system.cli._route_html import _more
 from crafting_system.cli._route_tiers import tier_lines
 from crafting_system.cli._route_view import BENCH_LABEL, _View, limit_line
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Item, Rarity, natural_tiers
 from crafting_system.items.words import ranges_low_first
 from crafting_system.planner import Limit
 from crafting_system.prices import load_price_file
@@ -210,3 +210,43 @@ def test_a_magic_state_after_a_step_draws_one_prefix_and_one_suffix(data):
 
     assert (len(card.prefixes), len(card.suffixes)) == (1, 1)
     assert card.properties[0] == "Magic"
+
+
+def test_a_step_of_several_magic_states_draws_one_prefix_and_one_suffix(data):
+    plan = plan_of(data, "v01-minion-helmet.yaml", VENDOR)
+    ab, target = plan.abstraction, plan.target
+    tiers = page_tiers(data, target.base_id)
+    life = next(mod_id for mod_id in sorted(natural_tiers(data, target.base_id, tiers)) if "to maximum Life" in mod_text(data.mods[mod_id]) and tiers[mod_id] == 3)
+    bare = Item.build(data, base_id=target.base_id, item_level=target.item_level, rarity=Rarity.MAGIC)
+    held = Item.build(data, base_id=target.base_id, item_level=target.item_level, rarity=Rarity.MAGIC, mods=(rolled(data, life),))
+
+    card = card_of_states(ab, [ab.compress(bare), ab.compress(held)])
+
+    assert (len(card.prefixes), len(card.suffixes)) == (1, 1)
+
+
+# -- one rung on a base with ladders, and several tierless candidates -----------------------------------------------------------------
+
+
+def test_a_mod_alone_on_its_ladder_on_a_bow_keeps_its_tier_on_the_card_and_in_the_tier_chances(data, r14):
+    ab = r14.abstraction
+    exalted = next(priced for priced in r14.offers if priced.label == "Exalted Orb")
+    state = ab.compress(bow(data, r14, [SPEED], [MULTIMOD, NO_ATTACK]))  # the first forced Exalted Orb: +1 gems or the Chaos Damage over Time
+
+    lines = {line.text: line for line in tier_lines(ab, exalted.offer.action, [state], [1.0])}
+
+    gems = lines["+1 to Level of Socketed Gems"]
+    assert gems.tiered and _View.tier_text(gems).startswith("+1 to Level of Socketed Gems: T1 ")  # the same tier as its mod line
+    assert lines["#% increased Chaos Damage over Time"].tiered
+    assert card_of_target(data, r14.target).prefixes[0] == Slot("+1 to Level of Socketed Gems", "wanted", (), "T1")  # the mod line keeps its tier
+
+
+def test_a_leaf_of_several_mods_on_a_base_with_no_tiers_writes_each_with_its_ranges(data, j01):
+    base = j01.target.base_id
+    tiers = page_tiers(data, base)
+    two = sorted(mod_id for mod_id in natural_tiers(data, base, tiers) if data.mods[mod_id].generation_type == "suffix")[:2]
+
+    _, text, note = _leaf_slot(data, base, tiers, frozenset(two), None)
+
+    assert tiers.tierless and note == ""
+    assert text == " or ".join(mod_text(data.mods[mod_id]) for mod_id in two) and "#" not in text

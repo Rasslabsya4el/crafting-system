@@ -15,7 +15,7 @@ tiers of the base with the item's influences (`_route_card.page_tiers`, 1 is the
 family the target names can hold several mods of other types (the Hunter's Chaos Damage over Time shares its family with spell damage),
 and a line is only for a ladder that holds a mod the leaf accepts (#980). The tiers the target accepts are marked (`Abstraction.passes`).
 A base with no tiers (a base jewel, `TierTable.tierless`) has no ladder: its line gives the chance of the mod in the page's one mod format,
-its ranges written out (#963).
+its ranges written out (#963). A mod alone on its ladder on a base with ladders keeps `T1`, as its mod line does.
 
 Two states with the same draw (the same pool on the same free slots) share one distribution, so a step of thousands of states asks
 for as many distributions as it has pools.
@@ -89,7 +89,7 @@ def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozense
         if not accepted[key]:
             continue  # no tier of this ladder meets a leaf: it is another mod of the family, not a wanted one
         best = min(ladder, key=lambda mod_id: (ladder[mod_id], mod_id))
-        tiered = not tiers.tierless
+        tiered = not tiers.tierless  # a base jewel has no tiers (#963)
         text = mod_text(data.mods[best])
         families.append(_Family(_hashes(text) if tiered else text, ladder, frozenset(accepted[key]), tiered))
     return families

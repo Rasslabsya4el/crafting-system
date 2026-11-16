@@ -398,9 +398,20 @@ R05_ESSENCE = step(
     ("Tier chances", R05_LIFE_LINE, R05_FIRE_LINE),
 )
 
+J01_TARGET = item(
+    "Cobalt Jewel",
+    prefixes=(slot("(5-7)% increased maximum Life", "w", ""), ANY),
+    suffixes=(slot("(3-5)% increased Attack Speed", "w", ""), ANY),
+    target=True,
+)  # a base jewel has no tiers: its mods carry no tier note and their tier lines no ladder (#963)
+J01_LINES = ("(5-7)% increased maximum Life: ≈3.3% · none ≈97%", "(3-5)% increased Attack Speed: ≈4.1% · none ≈96%")
+
 fixtures(
     pl.check_tier_lines,
     counter={
+        "#963: a jewel's line with a tier and a bare chance": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", "(5-7)% increased maximum Life: T1 ≈1% · ≈2.3% · none ≈97%")))),
+        "#963: a jewel's line with its ranges as #": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", "#% increased maximum Life: ≈3.3% · none ≈97%")))),
+        "#963: a jewel's line whose chances do not sum to 1": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", "(5-7)% increased maximum Life: ≈3.3% · none ≈90%")))),
         "the chances do not sum to 1": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈20% (target) · T2 to T4 ≈10% each · none ≈40%")))),
         "equal chances not joined": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% (target) · T2 ≈10% · T3 ≈10% · none ≈70%")))),
         "the target's tier is not marked": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% · T2 to T3 ≈10% each · none ≈70%")))),
@@ -419,6 +430,7 @@ fixtures(
     },
     example={
         "V01: the target's tier apart, the rest joined": page(route(goal(), *TWO_ACTIONS)),
+        "#963: a jewel's lines give the chance of each mod with its ranges and no tier": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", *J01_LINES)))),
         "R10: every tier is the target": page(route(goal(target=R10_TARGET), step(1, "Shrieking Essence of Spite", ("Note", "reforges a rare, no Scouring first"), ("Tier chances", "+# to Intelligence: T2 100% · none 0% · every tier is the target")))),
         "R10: Life asked at any tier and every shown tier marked, beside Intelligence at T2": page(route(goal(target=R10_TARGET), R10_ESSENCE)),
         "R05: the Goal asks T1 of Life and T2 of a resistance, and the line marks those tiers": page(route(goal(target=R05_TARGET), R05_ESSENCE)),
