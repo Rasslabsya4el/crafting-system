@@ -203,6 +203,8 @@ def widen(
                 best, best_upper, best_mean = plan, upper_of(plan), upper
         if lower is not None and best_upper is not None and k > 0:
             lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
+        if lower is not None and not math.isfinite(lower):
+            lower = None  # a round with no plan states no figure (the JSON holds no infinity)
         records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features))))
         if k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE):
             base = positions  # the first round is the base whatever its end: every later round widens it

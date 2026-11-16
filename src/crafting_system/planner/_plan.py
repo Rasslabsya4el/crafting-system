@@ -1027,7 +1027,7 @@ def widened_plan(
     plan, records = widened.plan, widened.records
     closed = _rounds.all_closed(records)
     withins = [record.within for record in records if record.within is not None]
-    within = max(withins) if closed and withins else None
+    within = max(withins) if withins else None  # a finished round proved within the gap: what the rounds prove is proved only to that gap
     exact = closed and not withins
     # the winner's own word on how its search ended holds over the whole only when every round closed exactly; otherwise the rounds say it (OR-13)
     own = (*limits, *(limit for limit in plan.limits if limit not in limits and (exact or limit.kind != _limits.SOLVE)))

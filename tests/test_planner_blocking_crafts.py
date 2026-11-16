@@ -110,6 +110,51 @@ def test_without_the_rule_the_plan_exalts_until_a_prefix_at_16e_over_3_plus_2s(d
     assert target.base_id == BELT
     assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
     assert not any(_fills(entry.label) for entry in plan.offers)
+    assert plan.search is not None and not plan.search.widening  # no offer adds more than the junk count: one search, as before the rounds
+
+
+def test_the_groups_grow_from_the_least_refining_and_fewest_offers_and_one_kind_of_thousands_comes_after_them():
+    # no number decides a group: offers that add nothing beyond the junk count are one group; once one adds more, each kind and what it adds is a
+    # group, ordered by the features, then the number of offers; the target's named offers lead the first group
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    def offer(kind, label=None, blocks=None):
+        return SimpleNamespace(kind=kind, label=label or kind, blocks=blocks)
+
+    adds = {"essence": frozenset(), "fossil": frozenset(), "annul": frozenset({"junk"}), "lock": frozenset({"junk", "metamods"}), "exalt": frozenset({"junk"})}
+    plain = [offer("essence")] * 3 + [offer("annul")]
+    (only,) = _rounds.round_groups(plain, (), lambda o: adds[o.kind])
+    assert only.positions == (0, 1, 2, 3)  # main's defaults: one search
+    offers = [offer("fossil")] * 9 + [offer("essence")] * 3 + [offer("lock", blocks=("prefix",)), offer("annul"), offer("exalt")]
+    groups = _rounds.round_groups(offers, ("exalt",), lambda o: adds[o.kind])
+    assert [(g.kinds, len(g.positions)) for g in groups] == [(("essence", "exalt"), 4), (("fossil",), 9), (("annul",), 1), (("lock",), 1)]
+    assert sorted(i for g in groups for i in g.positions) == list(range(len(offers)))  # every offer has its round
+
+
+def test_a_first_round_with_no_plan_closes_joins_the_next_and_its_record_holds_no_infinity():
+    import json
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = (_rounds.Group((0,), ("a",), frozenset()), _rounds.Group((1,), ("b",), frozenset({"junk", "x"})))
+    seen = []
+
+    def run(chosen, call):
+        seen.append(chosen)
+        if len(chosen) == 1:
+            raise _rounds.NoPlan("no plan of a alone")
+        return SimpleNamespace(search=SimpleNamespace(lower=5.0), mean_remaining=5.0)
+
+    widened = _rounds.widen(
+        groups, ("a", "b"), run, upper_of=lambda plan: 5.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: None, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert seen == [("a",), ("a", "b")] and widened.plan.mean_remaining == 5.0  # the round with no plan is the base of the next
+    assert [record.status for record in widened.records] == ["no plan", "closed"] and _rounds.all_closed(widened.records)
+    json.dumps([record.document() for record in widened.records], allow_nan=False)
 
 
 def test_with_the_rule_the_plan_fills_the_suffix_with_the_cheaper_craft_then_exalts_at_3_c_plus_e_plus_2s(data, target, monkeypatch):

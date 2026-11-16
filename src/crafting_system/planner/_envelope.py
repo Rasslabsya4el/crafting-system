@@ -310,13 +310,13 @@ class Kernels:
 
     def _room(self, kernels: int, edges: int) -> None:
         if kernels + 2 > len(self.ptr):
-            if self.room is not None:  # the new array is built while the old one is held: both count
-                self.room((2 * len(self.ptr) + len(self.ptr) // 2 + kernels) * 8 / 2**20)
+            if self.room is not None:  # the joined array, and the block of zeros it is joined from (the old one is held already)
+                self.room((len(self.ptr) + 2 * (len(self.ptr) // 2 + kernels)) * 8 / 2**20)
             self.ptr = np.concatenate((self.ptr, np.zeros(len(self.ptr) // 2 + kernels, dtype=np.int64)))
         if edges + 2 > len(self.succ):
             grow = max(edges + 2 - len(self.succ), len(self.succ) // 2)
-            if self.room is not None:  # succ, wt and prob (4 + 8 + 8 bytes an edge): the new arrays are built while the old ones are held
-                self.room((len(self.succ) + grow) * 20 / 2**20)
+            if self.room is not None:  # succ, wt and prob (4 + 8 + 8 bytes an edge): the joined arrays and the blocks of zeros they are joined from
+                self.room((len(self.succ) + 2 * grow) * 20 / 2**20)
             self.succ = np.concatenate((self.succ, np.zeros(grow, dtype=np.int32)))
             self.wt = np.concatenate((self.wt, np.zeros(grow, dtype=np.int64)))
             self.prob = np.concatenate((self.prob, np.zeros(grow)))
@@ -353,7 +353,9 @@ class Kernels:
         """The packed graph of these kernels. `tail` = (successor, weight) adds a last kernel of one edge (the fake action's to the goal node)."""
         count, edges = self.count, self.edges
         if tail is not None:
+            room, self.room = self.room, None  # one kernel of one edge for the graph of a round: never a stop (the net is asked between rounds)
             self._room(count + 1, edges + 1)
+            self.room = room
             self.succ[edges], self.wt[edges], self.prob[edges] = tail[0], tail[1], 1.0
             self.ptr[count + 1] = edges + 1
             count, edges = count + 1, edges + 1
