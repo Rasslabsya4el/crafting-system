@@ -18,6 +18,7 @@ from coarse_support import DATA as COARSE
 from test_cli_limit_words import read  # the rule of player words (#481)
 
 from crafting_system import budget
+from crafting_system.abstraction import _pattern as pattern_module
 from crafting_system.abstraction import refusal_causes
 from crafting_system.budget import MEMORY, STATES, TIME, Binding, Budget, BudgetExceeded
 from crafting_system.cli import _main, make_plan
@@ -268,8 +269,10 @@ def test_a_walk_the_net_stops_says_what_the_search_has_no_bound_for(coarse, monk
     refused = make_plan(COARSE, coarse[0], coarse[1], start_price=5.0, solve_it=False).abstraction
     for name in ("tracks_offer", "tracks_imprints"):
         monkeypatch.setattr(type(refused), name, property(lambda self: True), raising=False)
+    assert refusal_causes(refused, player=True) == refusal_causes(refused) == ()  # the unveil offer is no cause since #828, the imprints since #833
+    monkeypatch.setattr(pattern_module, "_CAUSES", (("tracks_imprints", "a planted cause", "a cause in a player's words"),))
     every = refusal_causes(refused, player=True)
-    assert len(every) == len(refusal_causes(refused)) == 1  # every cause the bound has, in the words an answer may show (#481); the unveil offer is none since #828
+    assert every == ("a cause in a player's words",) and refusal_causes(refused) == ("a planted cause",)  # in the words an answer may show (#481)
     read(budget_limit([Binding(WALK_STAGE, TIME, 0.0, 1.0, _plan.walk_stop(_plan.walk_cause(every)))]))
 
 

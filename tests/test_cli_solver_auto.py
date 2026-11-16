@@ -18,6 +18,7 @@ from cli_support import R12, TODAY, price_file, run
 from targets_support import DATA
 
 from crafting_system.abstraction import Pattern, pattern_refusal
+from crafting_system.abstraction import _pattern as pattern_module
 from crafting_system.actions import OutOfScopeError
 from crafting_system.cli import evaluate_route, load_route, main
 from crafting_system.planner import _pattern_bound, _plan, _starts
@@ -42,24 +43,23 @@ def test_the_bound_can_be_built_for_r12_and_the_refusal_names_each_cause(monkeyp
     assert pattern_refusal(abstraction) is None
     Pattern(abstraction)  # builds
 
+    monkeypatch.setattr(pattern_module, "_CAUSES", (("tracks_imprints", "a cause planted for the test", None),))
     monkeypatch.setattr(type(abstraction), "tracks_imprints", property(lambda self: True))
     text = pattern_refusal(abstraction)
-    assert text is not None and "imprints" in text
+    assert text is not None and "planted" in text
     with pytest.raises(OutOfScopeError) as raised:
         Pattern(abstraction)
     assert str(raised.value) == text  # one check, one text: `Pattern` and `make_plan` read the same
 
 
-def test_the_unveil_offer_is_no_refusal_of_the_bound_and_the_imprints_still_are(monkeypatch):
-    """#828: the key holds the veiled slots and the offer, and the veiled actions have members (`tests/test_pattern_veiled.py`)."""
+def test_the_unveil_offer_and_the_imprints_are_no_refusal_of_the_bound(monkeypatch):
+    """#828: the key holds the veiled slots and the offer, and the veiled actions have members (`tests/test_pattern_veiled.py`); #833: the key
+    holds the key of each snapshot, and an imprint and a restore are actions of the model (`tests/test_pattern_imprint.py`)."""
     abstraction = unsolved().abstraction
     monkeypatch.setattr(type(abstraction), "tracks_offer", property(lambda self: True), raising=False)
-    assert pattern_refusal(abstraction) is None
-
     monkeypatch.setattr(type(abstraction), "tracks_imprints", property(lambda self: True), raising=False)
-    text = pattern_refusal(abstraction)
 
-    assert "imprints" in text and "unveil" not in text
+    assert pattern_refusal(abstraction) is None
 
 
 def test_a_roll_limit_and_a_reroll_of_values_are_no_refusal_of_the_bound(monkeypatch):
