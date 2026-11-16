@@ -222,7 +222,7 @@ def test_the_gates_of_make_plan_are_read_from_its_code_in_order():
     index = report.SourceIndex(ROOT / "src" / "crafting_system")
     gates = report.entry_gates(index)
     conditions = [condition for condition, _ in gates]
-    assert "target.implicits or target.quality is not None" in conditions
+    assert "target.quality is not None" in conditions  # the Eldritch implicits are planned since #835: only other implicits are a gate
     assert not any("solution" in condition for condition in conditions)  # the refusal after the solve is not a gate of the entry
     assert "target.sockets is not None" not in dict(gates)  # the socket finish is attached to the goal states since #231: no longer a gate
 

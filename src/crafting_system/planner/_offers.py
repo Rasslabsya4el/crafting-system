@@ -473,6 +473,10 @@ def offers_for(
         label = action.label(data)
         return label if label_count[label] == 1 or not action.variant else f"{label} [{action.variant}]"
 
+    left_out_eldritch: list[str] = []  # the target asks for no Eldritch implicit (#835): left out before anything asks them of the base
+    if not asks_eldritch(data, goal):
+        left_out_eldritch = [told_apart(action) for action in listed if kind_of.get(action) in ELDRITCH_KINDS]
+        listed = [action for action in listed if kind_of.get(action) not in ELDRITCH_KINDS]
     refused = base_refused(data, start_item, listed)  # the kind-level relevance test (#848): no item of this base can take these
     listing_gaps.extend(refusal_gaps(refused, kind_of, listed, told_apart))
     listed = [action for action in listed if action not in refused]
@@ -481,12 +485,7 @@ def offers_for(
     left_out_rolls: list[str] = []
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
     left_out_asked: list[str] = []  # the target allows a corrupted item but asks for no corrupted implicit, and the set is offered only to one that does (ADR-0038)
-    left_out_eldritch: list[str] = []  # the target asks for no Eldritch implicit (#835)
-    eldritch_asked = asks_eldritch(data, goal)
     for action in listed:
-        if kind_of.get(action) in ELDRITCH_KINDS and not eldritch_asked:
-            left_out_eldritch.append(told_apart(action))
-            continue
         adds = action.adds(data, start_item)
         if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
             (left_out_asked if goal.takes_corrupted else left_out_corrupting).append(told_apart(action))  # an item never arrives corrupted unasked
