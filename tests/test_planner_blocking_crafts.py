@@ -25,6 +25,7 @@ from test_cli_offers import BELT, PRICED_DATA
 from crafting_system.abstraction import Goal
 from crafting_system.data.model import BenchActions, BenchOption, CostEntry, Mod, StatRange
 from crafting_system.planner import PlanSettings, _envelope, _offers, plan_target
+from crafting_system.planner import _plan as planner_plan
 from crafting_system.planner._offers import offers_for
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_file import PriceEntry
@@ -168,3 +169,86 @@ def test_r12_with_every_shared_kernel_checked_gives_the_plan_it_gives_unchecked(
     monkeypatch.setattr(_envelope, "CHECK_SHARED", False)
     unchecked = plan_target(DATA, load_target(R12, DATA), price_file(), settings)
     assert checked.mean_remaining == unchecked.mean_remaining
+
+
+# ---- the exact price cut (#1069, `planner/_price_cut.py`) ---------------------------------------------------------------------------------------
+# With the rule on, the belt is offered Prefixes Cannot Be Changed at two Divine Orbs. A plan without the metamods is made first: it is the filler
+# plan above, `U = 3(c + e) + 2S = 133`. Buying the belt again and following that plan costs `S + U = 183`, so a craft priced at 183 or more is never
+# better than that restart at any state but the start, and at the start it costs more than the whole plan: it is left out before the model is built,
+# and the model then tracks no metamod. A Divine Orb at 92 Chaos prices the lock at 184 (cut), at 91 at 182 (kept); the plan is 133 either way.
+
+LOCK = "Bench craft Prefixes Cannot Be Changed"
+
+
+def _plan_at(data, target, monkeypatch, divine: float):
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=divine)
+    return plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
+
+
+def _cut_labels(plan) -> set[str]:
+    return {label for limit in plan.limits if limit.kind == "proved-unneeded" and limit.what == "Not searched" for label in limit.labels}
+
+
+def test_a_lock_priced_above_a_restart_and_the_known_plan_is_cut_and_the_model_tracks_no_metamod(data, target, monkeypatch):
+    plan = _plan_at(data, target, monkeypatch, divine=92.0)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert LOCK not in {entry.label for entry in plan.offers}
+    assert LOCK in _cut_labels(plan)  # ... and the answer says why (OR-13)
+    assert not plan.abstraction.models_metamods
+
+
+def test_a_lock_priced_just_below_is_kept_and_the_plan_is_the_same(data, target, monkeypatch):
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert LOCK in {entry.label for entry in plan.offers} and not _cut_labels(plan)
+    assert plan.abstraction.models_metamods
+
+
+def test_a_given_start_has_no_restart_so_nothing_is_cut(tmp_path, data, monkeypatch):
+    path = tmp_path / "given.yaml"
+    path.write_text(TARGET.replace("start: bought", "start: given"), encoding="utf-8")
+    given = load_target(path, data)
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    asked = []
+    monkeypatch.setattr(planner_plan, "plan_without", lambda *args, **kwargs: asked.append(1))
+    with pytest.raises(planner_plan.PlanError, match="no policy"):  # a Life 1 or 2 takes the family for good, and a held belt cannot be bought again
+        plan_target(data, given, _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
+    assert not asked  # no plan is made to cut against: with no restart an offer dearer than any plan may still be the only way on
+
+
+def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_finite_figure():
+    from crafting_system.planner._offers import RESTART, BuyStartItem, Offer, PricedOffer
+    from crafting_system.planner._price_cut import restart_dominated
+
+    restart = PricedOffer(Offer(RESTART, BuyStartItem(None), {"belt": 1}, shares=False), 500.0, ())
+    cheap, tie, dear = (PricedOffer(Offer(label, None, {}), cost, ()) for label, cost in (("cheap", 182.9), ("tie", 183.0), ("dear", 600.0)))
+    kept, cut = restart_dominated((cheap, tie, dear, restart), 50.0, 133.0)
+    assert kept == (cheap, restart) and cut == (tie, dear)
+    assert restart_dominated((cheap, dear), 50.0, float("inf")) == ((cheap, dear), ())
+
+
+def test_a_judged_route_is_judged_against_every_offer_so_nothing_is_cut(data, target, monkeypatch):
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", judges_route=True))
+    assert LOCK in {entry.label for entry in plan.offers} and not _cut_labels(plan)  # a route may name the lock: it is a fixed policy, not the cheapest
+
+
+def test_when_the_net_stops_the_plan_without_the_metamods_that_plan_is_the_answer_and_says_what_it_did_not_try(data, target, monkeypatch):
+    real = planner_plan.plan_without
+
+    def stopped(*args, **kwargs):  # the plan without the lock, as a net would leave it
+        plan = real(*args, **kwargs)
+        info = plan.packed.info["envelope"]
+        plan.packed.info["envelope"] = dataclasses.replace(info, exact=False, stopped="the time limit of 600 seconds was reached")
+        return plan
+
+    monkeypatch.setattr(planner_plan, "plan_without", stopped)
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)  # a lock at 182 would be kept: it is not tried at all
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert LOCK not in {entry.label for entry in plan.offers}
+    assert any(limit.what == "Not tried" and LOCK in limit.labels for limit in plan.limits)
+    assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
+    assert plan.foresight.status == "switched off by the target"  # the target names no Lock
+    assert plan.risk is not None

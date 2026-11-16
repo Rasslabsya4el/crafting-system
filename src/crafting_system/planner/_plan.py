@@ -16,6 +16,7 @@ still reaches them, until #928 deletes them.
 """
 
 import itertools
+import math
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -24,7 +25,7 @@ from fractions import Fraction
 from crafting_system import parallel
 from crafting_system.budget import NO_PLAN, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
-from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal, refusal_causes
+from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item, eldritch_side
@@ -47,10 +48,11 @@ from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit,
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
-from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
+from ._envelope_plan import BoundError, EnvelopeInfo, certified_upper, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._pattern_bound import MIN_OFFERS
 from ._presenter import presenter_limits
+from ._price_cut import price_cut_limit, restart_dominated
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
@@ -447,7 +449,7 @@ def make_plan(
             plan = _make_plan(
                 data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
                 strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
-                incumbent=incumbent, clock=clock, watch=watch,
+                incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route,
             )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
             if clock is not None:
@@ -565,6 +567,8 @@ def _make_plan(
     incumbent: Callable[[CompressedState], Sequence[str]] | None,
     clock: Clock | None,
     watch: Callable[[Standing], None] | None = None,
+    judges_route: bool = False,
+    foresee: bool = True,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -654,6 +658,7 @@ def _make_plan(
         except ValueError as error:
             raise PlanError(str(error)) from error
         offers, limits = chosen.offers, (*chosen.limits, *limits)
+    offers = tuple(offers)  # read twice when a plan without the metamods is made first (`known_upper`)
     priced, dropped = price_offers(offers, prices, price_source)
     priced, same = cheapest_per_class(priced)  # one craft of each class `blocking_crafts` offered (#886): the others are never cheaper
     if same:
@@ -680,6 +685,27 @@ def _make_plan(
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
         marks = ((bought, price_of_start.mark),) if price_of_start.mark else ()
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
+    # a metamod craft the target did not ask for, offered by the rule of blocking crafts (#886), makes the model track every mod's protected tags on
+    # every state (#1069): a plan without those crafts is made first, and each offer that a restart and that plan beat is left out (`_price_cut`)
+    speculative = lambda offer: offer.blocks is not None and adds_metamod(data, offer.action)  # noqa: E731
+    if price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=incumbent is not None or judges_route) and any(
+        speculative(p.offer) for p in priced
+    ):
+        known = plan_without(
+            data, target, prices, offers=tuple(o for o in offers if not speculative(o)), aim=aim, rates=rates, strands=strands,
+            start_price_of=price_of_start, price_source=price_source, solver=solver, clock=clock,
+        )  # fmt: skip
+        if known is not None and known.search is not None and known.search.stopped is not None:
+            # the run's net stopped the plan without them: no time is left to try them, and that plan is the answer (OR-33, OR-13)
+            untried = tuple(sorted({p.label for p in priced if speculative(p.offer)}))
+            own = (*limits, *(limit for limit in known.limits if limit not in limits))  # what the offers' choice said is said of this plan too
+            plan = replace(known, limits=(*own, untried_limit(untried)))
+            return add_risk(plan) if with_risk else plan
+        upper = None if known is None else known_upper(known)
+        if upper is not None:
+            priced, cut = restart_dominated(priced, price_of_start.chaos, upper)
+            if cut:
+                limits += (price_cut_limit(cut, price_of_start.chaos, upper),)
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     awakened = awakener_offers(priced)  # the Awakener's Orbs: each donor is searched on its own and priced into its orb (#832, `_awakener`)
@@ -831,6 +857,9 @@ def _make_plan(
             limits += (_limits.lock_with_donors_limit(),)
         status = LockStatus.WITH_SECOND_ITEMS if wanted else LockStatus.SWITCHED_OFF
         foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
+    elif not foresee:  # a plan made only for its mean without the Lock (`plan_without`, #1069)
+        status = LockStatus.STOPPED if lock_wanted(target.actions) else LockStatus.SWITCHED_OFF
+        foresight, with_lock = Foresight(status, lock_price(prices, price_source)), None
     else:
         try:
             with stage(LOCK_STAGE, LOCK_KEPT):
@@ -873,6 +902,51 @@ def _make_plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
         solution, risk, solve_seconds, risk_seconds, None, packed=packed, readings=readings, foresight=foresight, finish=finish, donors=donor_plan,
     ))
+
+
+def price_cut_applies(data: GameData, target: Target, priced: Sequence[PricedOffer], start: StartPrice, *, solve_it: bool, judged: bool) -> bool:
+    """Whether the premise of the price cut holds for this plan (`_price_cut`, #1069): a bought start item (a restart at every state but the
+    start), one plan for the target (no rule axis read at several readings), no offer that searches a second item with a restart of its own (an
+    Awakener's Orb's donor, an offer that takes donors: there the restart is not the start item's), no route judged against the plan (a route is a
+    fixed policy and may name the offer), and a start item that holds no metamod (its model tracks the protected tags anyway)."""
+    if not (solve_it and start.bought and not judged) or target.start_item.metamods(data) & BLOCKING:
+        return False
+    if interval_axes(data, priced) or awakener_offers(priced):
+        return False
+    return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem))
+
+
+def plan_without(data: GameData, target: Target, prices: PriceFile, *, offers: tuple[Offer, ...], **kwargs) -> Plan | None:
+    """The plan of `offers` alone, without Hinekora's Lock and without its risk (#1069, `_price_cut`); None when it cannot be made (a refusal):
+    then nothing is cut. It shares the run's clock (OR-33): the time it takes is the run's, and a net that stops it leaves the run no time."""
+    try:
+        return _make_plan(
+            data, target, prices, start_price=None, offers=offers, solve_it=True, with_risk=False, incumbent=None, watch=None, foresee=False, **kwargs
+        )  # fmt: skip
+    except PlanError:
+        return None
+
+
+def known_upper(plan: Plan) -> float | None:
+    """A certified upper figure of the cheapest cost from the start (after the start item) of every set of offers that holds the plan's own: the
+    mean of `plan` (a plan without the Lock) with its certified error added. None for a plan whose mean is not a certified figure (an approximate
+    answer of the retired ladder) or is not finite."""
+    mean = float(plan.mean_remaining)
+    if plan.approximation is not None or not math.isfinite(mean):
+        return None
+    search = plan.search
+    return certified_upper(search) if search is not None and not search.exact else mean * (1.0 + ACCEPT_BOUND)
+
+
+def untried_limit(labels: tuple[str, ...]) -> Limit:
+    """The limit of the metamod crafts a plan never tried because the run's net stopped the plan made without them first (#1069, OR-13)."""
+    return Limit(
+        _limits.UNTRIED,
+        "Not tried",
+        "the run's time or memory limit was reached by the plan made without them first, to price them against",
+        "The plan is the one without these crafts; one of them might make it cheaper.",
+        labels,
+    )
 
 
 def interval_axes(data: GameData, priced: Iterable[PricedOffer]) -> tuple[Axis, ...]:

@@ -191,6 +191,18 @@ class _Context:
         self.laws: dict[tuple[str, bool, bool], Cells] = {}  # (mod id, lucky, crafted) -> the roll law
 
 
+def adds_metamod(data: GameData, action: Action) -> bool:
+    """Whether `action` adds a lock or an Attack/Caster metamod: by name (a bench craft of one), or as a crafted mod it picks among the families it
+    reads (the Wild Bristle Matron). An `Abstraction` with such an action tracks the protected tags of every mod and family (`metamods`), on every
+    state; the planner's price cut (#1069) asks it to know which offers make the model that fine."""
+    blocking = {metamod.value for metamod in BLOCKING}
+    adds = action.adds(data)
+    if adds.named is None:
+        families = action.reads(data).families
+        return bool(adds.crafted and families and blocking & set(families))
+    return any(blocking & set(data.mods[mod_id].families) for mod_id in adds.named if mod_id in data.mods)
+
+
 class Abstraction:
     """Design D for one base and item level: compress items, and get the exact kernel of an action.
 
@@ -250,7 +262,7 @@ class Abstraction:
         if enchantment is not None:  # a mod id that does not fit the base is the caller's error, raised here and not at the first kernel
             Item.build(data, base_id=base_id, item_level=item_level, rarity=Rarity.RARE, enchantment=enchantment)
         actions = tuple(actions)
-        self._metamods = metamods or any(self._adds_metamod(action) for action in actions)
+        self._metamods = metamods or any(adds_metamod(data, action) for action in actions)
         self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
         self._has_laws = bool(self._roll_leaves)
         self._roll_ids = frozenset().union(*(leaf.mod_ids for leaf in self._roll_leaves))
@@ -470,15 +482,6 @@ class Abstraction:
         return self._slot_of(ExplicitMod(mod_id, _low_values(self.data.mods[mod_id]), crafted=True), frozenset())
 
     # --- what depends on the influences ----------------------------------------------------------------
-
-    def _adds_metamod(self, action: Action) -> bool:
-        """Whether `action` adds a lock or an Attack/Caster metamod: by name (a bench craft of one), or as a crafted mod it picks among the families it reads (the Wild Bristle Matron)."""
-        blocking = {metamod.value for metamod in BLOCKING}
-        adds = action.adds(self.data)
-        if adds.named is None:
-            families = action.reads(self.data).families
-            return bool(adds.crafted and families and blocking & set(families))
-        return any(blocking & set(self.data.mods[mod_id].families) for mod_id in adds.named if mod_id in self.data.mods)
 
     def _new_context(self, influences: frozenset[Influence]) -> _Context:
         kinds = Kinds(
