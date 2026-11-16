@@ -973,7 +973,7 @@ def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Of
         try:
             found = model((offer.action,)).features() - own
         except (ValueError, OutOfScopeError) as error:  # a model of this offer alone is refused (an unveil offer needs a junk reader): a group of its own
-            found = frozenset({f"alone: {type(error).__name__}"})
+            found = frozenset({f"refused alone: {error}"[:120]})
         if key is not None:
             known[key] = found
         return found
@@ -1016,8 +1016,8 @@ def widened_plan(
     withins = [record.within for record in records if record.within is not None]
     within = max(withins) if closed and withins else None
     exact = closed and not withins
-    # the winner's own word on how its search ended holds over the whole only when every round closed; otherwise the rounds say it (OR-13)
-    own = (*limits, *(limit for limit in plan.limits if limit not in limits and (closed or limit.kind != _limits.SOLVE)))
+    # the winner's own word on how its search ended holds over the whole only when every round closed exactly; otherwise the rounds say it (OR-13)
+    own = (*limits, *(limit for limit in plan.limits if limit not in limits and (exact or limit.kind != _limits.SOLVE)))
     info = plan.search
     if info is not None:
         last = records[-1]

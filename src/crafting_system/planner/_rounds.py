@@ -76,6 +76,7 @@ class RoundRecord:
     upper: float | None
     seconds: float
     within: float | None = None  # the gap it closed within, when it closed only within one (the run's gap, OR-32)
+    features: tuple[str, ...] = ()  # what its group's offers add to the model (`Abstraction.features`): with the kinds, what names the group
 
     @property
     def closed(self) -> bool:
@@ -85,7 +86,7 @@ class RoundRecord:
         """The record as the JSON says it."""
         return {
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
-            "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within,
+            "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
         }  # fmt: skip
 
 
@@ -176,7 +177,9 @@ def widen(
             within = getattr(search, "within", None) if status == WITHIN else None
             if best is None or upper < best_mean:
                 best, best_upper, best_mean = plan, upper_of(plan), upper
-        records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within))
+        if lower is not None and best_upper is not None and k > 0:
+            lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
+        records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features))))
         if k == 0 or status in (CLOSED, WITHIN, BEATEN):
             base = positions  # the first round is the base whatever its end: every later round widens it
         plan = None
@@ -192,10 +195,16 @@ def _figure(value: float | None) -> str:
     return "none" if value is None or not math.isfinite(value) else f"{value:,.2f} Chaos"
 
 
+def group_name(record: RoundRecord) -> str:
+    """A group as the answer names it: its kinds, and what its offers add to the model (one kind can be in two groups, e.g. the bench crafts
+    that add a metamod and those that do not)."""
+    kinds = ", ".join(record.kinds) if record.kinds else "no method"
+    return f"{kinds} that add {', '.join(record.features)} to the model" if record.features else kinds
+
+
 def round_line(n: int, record: RoundRecord) -> str:
     """One round as the answer says it."""
-    kinds = ", ".join(record.kinds) if record.kinds else "no method"
-    head = f"round {n} ({kinds}; {record.offers:,} actions offered, {record.seconds:,.0f} s)"
+    head = f"round {n} ({group_name(record)}; {record.offers:,} actions offered, {record.seconds:,.0f} s)"
     if record.status == CLOSED:
         return f"{head}: finished, its best plan costs {_figure(record.upper)}"
     if record.status == WITHIN:
@@ -215,7 +224,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     """What the answer says of its rounds (OR-13): one limit listing every round and what the plan is proved against, and, when a round did not
     close, one limit of the methods set aside or not tried, each with its reason and its lower figure."""
     lines = tuple(round_line(n, record) for n, record in enumerate(records, start=1))
-    closed = sorted({kind for record in records if record.closed for kind in record.kinds})
+    closed = [group_name(record) for record in records if record.closed]
     if all_closed(records):
         among = "every method offered, searched in rounds"
         guarantee = (
@@ -225,7 +234,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
         )
         return (Limit(_limits.ROUNDS, "The methods were searched in rounds", "the search widened its methods round by round: {names}", **guarantee, names=lines),)
     open_rounds = [(n, record) for n, record in enumerate(records, start=1) if not record.closed]
-    proved = ", ".join(closed) if closed else "no method"
+    proved = "; ".join(closed) if closed else "no method"
     return (
         Limit(
             _limits.ROUNDS,

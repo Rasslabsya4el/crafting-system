@@ -257,3 +257,16 @@ def test_a_judged_route_is_judged_against_every_offer_in_one_search(data, target
     prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
     plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", judges_route=True))
     assert LOCK in {entry.label for entry in plan.offers} and not plan.search.widening  # a route may name the lock: it is a fixed policy
+
+
+def test_a_given_start_has_no_restart_so_no_round_cuts_and_with_no_plan_in_any_round_the_refusal_stands(tmp_path, data, monkeypatch):
+    path = tmp_path / "given.yaml"
+    path.write_text(TARGET.replace("start: bought", "start: given"), encoding="utf-8")
+    given = load_target(path, data)
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    cut = []
+    real = planner_plan.restart_dominated
+    monkeypatch.setattr(planner_plan, "restart_dominated", lambda *args: cut.append(1) or real(*args))
+    with pytest.raises(planner_plan.PlanError, match="no policy"):  # a Life 1 or 2 takes the family for good, and a held belt cannot be bought again
+        plan_target(data, given, _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
+    assert not cut  # with no restart an offer dearer than any plan may still be the only way on
