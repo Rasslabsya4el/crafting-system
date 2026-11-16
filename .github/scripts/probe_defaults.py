@@ -91,7 +91,12 @@ def jobs(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
     every = [(route, ref) for route in ROUTES for ref in ("branch", "main")]
-    if os.environ.get("PROBE_V3"):
+    if os.environ.get("PROBE_V4"):
+        groups = ["", "eldritch", "exalted-orb", "annulment-orb", "fracturing-orb+talisman-fracture", "fossil-set",
+                  "veiled-chaos-orb+veiled-exalted-orb+unveil+pick", "harvest-add-remove+harvest-resistance-swap+harvest-damage-swap",
+                  "corrupted-essence", "aspect-beast+beast-side-swap+wild-bristle-matron", "imprint+restore"]
+        every = [(r, ref) for r in os.environ["PROBE_V4"].split(",") for ref in ["main", *("only:" + g for g in groups)]]
+    elif os.environ.get("PROBE_V3"):
         groups = ["", "eldritch", "exalted-orb", "annulment-orb", "harvest-add-remove+harvest-resistance-swap+harvest-damage-swap",
                   "veiled-chaos-orb+veiled-exalted-orb+unveil+pick", "fracturing-orb+talisman-fracture",
                   "aspect-beast+beast-side-swap+wild-bristle-matron+imprint+restore", "corrupted-essence", "fossil-set"]
