@@ -14,12 +14,12 @@ first; then `n_T = T - kept - forced` draws, each picking one mod of an undrawn 
 family leaving the pool and its side losing a slot. When the set can force a mod of X (any of its possible forced mods passes L), the bound is
 1. Otherwise L becomes PASSING only if a draw picks a mod of X, and the argument of `abstraction/_bound.py` ("One draw") applies: with c_j a
 number at least the chance that draw j hits X given any history of earlier draws without a hit, P(hit) <= 1 - prod_j (1 - c_j). The forced mod
-is counted as an earlier draw without a hit (it took one slot of its side and, if its family is in the pool, that family): so draw j of the
-ordinary draws has `prior = j + forced` earlier draws, split as `a` on the prefix side and `prior - a` on the suffix side in every way the free
-slots allow. That holds only when the forced mod takes out of the pool at most one family, and on its own side, as a draw does; a forced mod
-that takes a family of the other side (a Glyphic suffix whose family is a prefix family on a shield) takes junk from a side no split charges,
-so such a set declares nothing (`_forced_takes_one_own_family`). A side is open when its count is below its free slots. For a family f of the pool, x_f is the weight of its mods in X and j_f the
-weight of the rest. After the earlier draws took a set R of families (|R| of each side as the split says), the chance of a hit is
+passes no leaf here; it took one slot of its own side and took out of the pool every family it conflicts with, on either side (`_offset`: a
+Glyphic suffix whose family is a prefix family of a shield's pool takes a prefix family). Draw j of the ordinary draws comes after j earlier
+ordinary draws, split as `a` on the prefix side and `j - a` on the suffix side in every way the slots left beside the forced mod allow; a side
+is open when its draws and the forced mod's slot are below its free slots, and the families gone from a side are its draws plus the forced
+mod's families there. A set that may force one of several mods (Glyphic) is bounded for each and takes the largest. For a family f of the pool, x_f is the weight of its mods in X and j_f the
+weight of the rest. After the earlier draws and the forced mod took a set R of families (|R| of each side as above), the chance of a hit is
 (X - X_R) / (W - W_R) over the open sides, and
 
     (X - X_R) / (W - W_R) <= X / (X + J - J_R)          (cross-multiply: it is X - X_R <= W - W_R, the X weight left is part of the weight left)
@@ -121,22 +121,23 @@ def declared(data: GameData, item: Item, actions: Sequence, passes: Callable[[Mo
                 continue
         except OutOfScopeError:
             continue
-        members = [member for member in members if _forced_takes_one_own_family(candidates, member[2])]
         for (index, _records, _forced_mods), (chances, together) in zip(members, _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, totals)):
             found[index] = ReachDeclared(True, chances, together)
     return tuple(found)
 
 
-def _forced_takes_one_own_family(candidates, forced: Sequence[Mod]) -> bool:
-    """Whether every mod the set may force takes out of the pool at most one family, on its own side: what counting it as an earlier draw on
-    its side assumes (module text). A Glyphic suffix whose family is a prefix family of the pool (`SpellBlockOnLowLifeEssence1` on a shield)
-    takes a family from the other side, which no split of the earlier draws charges: such a set declares nothing (#1073, checker round 1)."""
-    for mod in forced:
-        taken = {(candidate.family, candidate.side) for candidate in candidates if conflicts(mod, candidate.mod)}
-        if len(taken) > 1 or any(side != Side(mod.generation_type) for _family, side in taken):
-            return False
-    return True
+NO_FORCED = (0, 0, 0, 0)
 
+
+def _offset(candidates, mod: Mod) -> tuple[int, int, int, int]:
+    """What a forced mod does to the draws after it: the slots it takes on (prefix, suffix) and the families of the pool it takes out of each.
+
+    Its families are read from the candidates it conflicts with, on either side: a Glyphic suffix whose family is a prefix family of the pool
+    (`SpellBlockOnLowLifeEssence1` on a shield) takes a prefix family and a suffix slot (#1073, checker round 1).
+    """
+    taken = {(candidate.family, candidate.side) for candidate in candidates if conflicts(mod, candidate.mod)}
+    side = Side(mod.generation_type)
+    return (int(side is Side.PREFIX), int(side is Side.SUFFIX), sum(s is Side.PREFIX for _f, s in taken), sum(s is Side.SUFFIX for _f, s in taken))
 
 def _forced(data: GameData, item: Item, item_class: str, records: list, tangled: bool) -> list[Mod]:
     """Every mod the set may force (empty when it forces none), with the refusals of `fossil._forced_choices`.
@@ -199,28 +200,35 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
     pool = _Pool(candidates, passing, spawn, free, kept, totals)
     factors = _Factors(pool.tag_sets, pairs)
     joint = _disjoint(passing, leaves)
-    per_set = np.zeros((len(members), leaves))
-    per_set_all = np.zeros(len(members))
-    for start in range(0, len(todo), BATCH):  # a batch of sets at a time: a Tangled set is up to 420 rows of factors
+    # a unit is a set with one mod it may force (or none): the set's bound is the largest over its units, since which one it forces is not read
+    units = [(position, offset) for position in todo for offset in sorted({_offset(candidates, mod) for mod in members[position][2]} or {NO_FORCED})]
+    per_unit = np.zeros((len(units), leaves))
+    per_unit_all = np.zeros(len(units))
+    for start in range(0, len(units), BATCH):  # a batch of units at a time: a Tangled set is up to 420 rows of factors
         rows: list[np.ndarray] = []  # each: rows x tag sets, the factor of each tag set for one member of a set's mixture
         owner: list[np.ndarray] = []
         share: list[np.ndarray] = []
         lucky: list[np.ndarray] = []
-        forced_rows: list[np.ndarray] = []
-        for position in todo[start : start + BATCH]:
-            records, forced = members[position][1], members[position][2]
+        offsets: list[tuple[int, int, int, int]] = []
+        for unit, (position, offset) in enumerate(units[start : start + BATCH], start):
+            records = members[position][1]
             opulent = any(F._special(record, "opulent") for record in records)
             table, shares = factors.table(records, opulent, any(F._special(record, "tangled") for record in records))
             rows.append(table)
-            owner.append(np.full(len(table), position))
+            owner.append(np.full(len(table), unit))
             share.append(shares)
             lucky.append(np.full(len(table), any(record.rolls_lucky for record in records)))
-            forced_rows.append(np.full(len(table), 1 if forced else 0))
+            offsets.extend([offset] * len(table))
         shares = np.concatenate(share)[:, None]
-        singles, together = pool.bounds(np.concatenate(rows), np.concatenate(lucky), np.concatenate(forced_rows), leaves, joint)
+        singles, together = pool.bounds(np.concatenate(rows), np.concatenate(lucky), offsets, leaves, joint)
         owners = np.concatenate(owner)
-        np.add.at(per_set, owners, singles * shares)  # a Tangled set: the mean over its outcome records, by their shares
-        np.add.at(per_set_all, owners, together * shares[:, 0])
+        np.add.at(per_unit, owners, singles * shares)  # a Tangled set: the mean over its outcome records, by their shares
+        np.add.at(per_unit_all, owners, together * shares[:, 0])
+    per_set = np.zeros((len(members), leaves))
+    per_set_all = np.zeros(len(members))
+    for unit, (position, _forced_mod) in enumerate(units):
+        per_set[position] = np.maximum(per_set[position], per_unit[unit])
+        per_set_all[position] = max(per_set_all[position], per_unit_all[unit])
     for position in todo:
         forced = members[position][2]
         hits = [any(leaf_flags(mod)[leaf] for mod in forced) for leaf in range(leaves)]
@@ -272,9 +280,10 @@ class _Pool:
         self.level = np.maximum(np.array([1.0 + (mod.required_level - SANCTIFIED_LEVEL_FACTOR.value) / PERCENT for mod in mods]), 0.0)
 
 
-    def bounds(self, table, lucky, forced, leaves, joint) -> tuple[np.ndarray, np.ndarray]:
+    def bounds(self, table, lucky, offsets, leaves, joint) -> tuple[np.ndarray, np.ndarray]:
         """The bound per row and leaf, and per row the bound on every leaf at once. Row r is a pool whose mods weigh their spawn weight times
-        `table[r]` of their tag set (times the Sanctified level factor where `lucky[r]`), drawn after `forced[r]` forced mods that pass no leaf.
+        `table[r]` of their tag set (times the Sanctified level factor where `lucky[r]`), drawn after the forced mod `offsets[r]` describes
+        (`_offset`; one that passes no leaf).
 
         For each total: one leaf's bound is 1 - prod(1 - c_j) over its draws; every leaf at once is at most the least of them and, when the
         leaves of `joint` have pairwise disjoint X's, at most the sum over the ways to give each of them a draw of its own of the product of
@@ -282,31 +291,33 @@ class _Pool:
         """
         singles = np.zeros((len(table), leaves))
         together = np.zeros(len(table))
+        offsets = np.array(offsets, dtype=int).reshape(len(table), 4)
         for start in range(0, len(table), self.CHUNK):
             part = slice(start, start + self.CHUNK)
             weights = self.spawn[None, :] * table[part][:, self.tag_of]
             weights = np.where(lucky[part][:, None], weights * self.level[None, :], weights)
-            chances = [self._chance(weights, self.passing[leaf]) for leaf in range(leaves)]
-            with np.errstate(divide="ignore"):
-                logs = [np.log1p(-np.minimum(chance, 1.0)) for chance in chances]  # -inf where c is 1: that total's bound is 1
-            rows = forced[part]
-            for total, share in self.totals:
-                for count in (0, 1):
-                    chosen = rows == count
-                    if not chosen.any():
-                        continue
-                    draws = max(0, total - self.kept - count)
-                    alone = [-np.expm1(log[chosen][:, count : count + draws].sum(axis=1)) for log in logs]
+            for offset in {tuple(row) for row in offsets[part].tolist()}:
+                chosen = (offsets[part] == offset).all(axis=1)
+                chances = [self._chance(weights[chosen], self.passing[leaf], offset) for leaf in range(leaves)]
+                with np.errstate(divide="ignore"):
+                    logs = [np.log1p(-np.minimum(chance, 1.0)) for chance in chances]  # -inf where c is 1: that total's bound is 1
+                for total, share in self.totals:
+                    draws = max(0, total - self.kept - offset[0] - offset[1])
+                    alone = [-np.expm1(log[:, :draws].sum(axis=1)) for log in logs]
                     for leaf in range(leaves):
                         singles[part][chosen, leaf] += share * alone[leaf]
                     least = np.minimum.reduce(alone)
                     if joint:
-                        least = np.minimum(least, _joint([chances[leaf][chosen][:, count : count + draws] for leaf in joint]))
+                        least = np.minimum(least, _joint([chances[leaf][:, :draws] for leaf in joint]))
                     together[part][chosen] += share * least
         return singles, together
 
-    def _chance(self, weights, passing) -> np.ndarray:
-        """Per row and number `prior` of earlier draws without a hit, c: at least the chance that the next draw hits X (module text)."""
+    def _chance(self, weights, passing, offset) -> np.ndarray:
+        """Per row and number j of earlier ordinary draws without a hit, c: at least the chance that the next draw hits X (module text).
+
+        `offset` is the forced mod's (`_offset`): the slots it takes on each side and the families of the pool it takes out of each side.
+        """
+        slots, taken = offset[:2], offset[2:]
         rows = len(weights)
         hit = (weights * passing) @ self.one_hot  # rows x families: x_f
         junk = (weights * ~passing) @ self.one_hot  # j_f
@@ -318,20 +329,20 @@ class _Pool:
         most = max(0, max(total for total, _ in self.totals) - self.kept)
         chance = np.zeros((rows, most + 1))
         for prior in range(most + 1):
-            for a in range(min(prior, self.room[0]) + 1):
-                b = prior - a
-                if b > self.room[1]:
+            for a in range(prior + 1):
+                drawn = (a, prior - a)
+                if any(drawn[side] + slots[side] > self.room[side] for side in (0, 1)):
                     continue  # that split of the earlier draws cannot have happened
                 x = np.zeros(rows)
                 j = np.zeros(rows)
-                for (x_side, smallest, width), drawn, room in ((sides[0], a, self.room[0]), (sides[1], b, self.room[1])):
-                    if drawn < room:  # the side is open
+                for side in (0, 1):
+                    x_side, smallest, width = sides[side]
+                    if drawn[side] + slots[side] < self.room[side]:  # the side is open
                         x = x + x_side
-                        j = j + smallest[:, max(width - drawn, 0)]
+                        j = j + smallest[:, max(width - drawn[side] - taken[side], 0)]
                 ratio = np.divide(x, x + j, out=np.zeros(rows), where=x > 0)
                 chance[:, prior] = np.maximum(chance[:, prior], ratio)
         return chance
-
 
 def _joint(chances: list[np.ndarray]) -> np.ndarray:
     """Per row, the sum over the ways to give each X its own draw of the product of their c's (`_bound._joint_hits`, per row)."""

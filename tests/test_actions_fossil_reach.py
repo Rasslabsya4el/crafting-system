@@ -162,22 +162,33 @@ def test_bloodstained_and_fractured_sets_declare_that_they_leave_the_shape():
     assert all(answer.chances is None for answer in found)
 
 
-def test_a_forced_mod_whose_family_is_a_pool_family_of_the_other_side_declares_nothing():
-    """GlyA is a suffix; given the family of the prefix `LifeA`, forcing it takes a prefix family out of the pool, which the argument does not
-    charge (checker round 1): the Glyphic sets declare nothing, the others keep their bound."""
+def test_a_forced_mod_whose_family_is_a_pool_family_of_the_other_side_is_charged_on_that_side():
+    """GlyA is a suffix; given the family of the prefix `LifeA`, forcing it takes a prefix family out of the pool and a suffix slot (checker
+    round 1: a bound that charged the forced mod to one side only was below the exact chance). Every Glyphic set, on bare boots and on boots
+    with one free slot per side, against the exact chance."""
     import dataclasses
 
     mods = dict(DATA.mods)
     mods["GlyA"] = dataclasses.replace(DATA.mods["GlyA"], families=DATA.mods["LifeA"].families)
     data = dataclasses.replace(DATA, mods=mods)
-    found = ApplyFossils.reach_batch(data, boots(), (ApplyFossils(("Glyphic Fossil",)), ApplyFossils(("Scorched Fossil",))), passes_of(({"FireA"},)))
-    assert found[0] is None and found[1].keeps_shape and found[1].chances[0] > 0
+    leaves = ({"RarityA"}, {"BleedAtkA", "CasterA"})  # each with a candidate on both items (a leaf with none would make the others 1)
+    tight = boots(*(roll(mod_id, fractured=True) for mod_id in ("FireA", "BareA", "ColdResA", "MinionA")))
+    checked = 0
+    for item in (boots(), tight):
+        actions = tuple(action for action in fossil_actions(data, item) if "Glyphic Fossil" in action.fossils and len(action.fossils) <= 2)
+        for action, declared in zip(actions, ApplyFossils.reach_batch(data, item, actions, passes_of(leaves))):
+            if declared is None or not declared.keeps_shape:
+                continue
+            single, together = exact(action.outcomes(data, item), leaves, data)
+            assert all(bound >= chance for bound, chance in zip(declared.chances, single)), (action.fossils, declared.chances, [float(c) for c in single])
+            assert declared.together is None or declared.together >= together
+            checked += 1
+    assert checked > 10
 
-
-def test_on_a_shield_with_four_fractured_mods_the_glyphic_set_declares_no_bound_below_the_exact_chance():
+def test_on_a_shield_with_four_fractured_mods_the_glyphic_set_declares_a_bound_at_or_above_the_exact_chance():
     """The checker's counterexample on the real data: SpellBlockOnLowLifeEssence1, a suffix a Glyphic Fossil may force, has the family of the
     prefix pool family SpellBlockPercentage; with one prefix slot left, the bound read without that family was 0.031684 against an exact
-    0.032397 for the caster damage prefixes. Now the set declares nothing, or a bound at or above the exact chance on every family."""
+    0.032397 for the caster damage prefixes; the forced mod is now charged on the side of the family it takes."""
     from abstraction_support import real_game_data
 
     from crafting_system.items import ExplicitMod, Item, Rarity
@@ -192,7 +203,7 @@ def test_on_a_shield_with_four_fractured_mods_the_glyphic_set_declares_no_bound_
     leaves = ({mod.id for mod in data.mods.values() if "WeaponCasterDamagePrefix" in mod.families},)
     declared = ApplyFossils.reach_batch(data, item, (action,), passes_of(leaves))[0]
     single, _together = exact(action.outcomes(data, item), leaves, data)
-    assert declared is None and single[0] > Fraction(31684, 1000000)
+    assert single[0] > Fraction(31684, 1000000) and declared.chances[0] >= single[0]
     # a set that forces nothing still declares its bound there
     plain = ApplyFossils(("Pristine Fossil",))
     bound = ApplyFossils.reach_batch(data, item, (plain,), passes_of(leaves))[0]
