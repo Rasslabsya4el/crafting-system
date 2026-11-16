@@ -170,16 +170,29 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
 AWAKENER_KIND = "awakeners-orb"
 
 
+def donor_wants(data: GameData, action: Action) -> tuple[Need, frozenset[str]] | None:
+    """The one second item an Awakener's Orb consumes (its `inputs`, ADR-0022) and the mods its `want` holds (the donor's influence mod), or
+    None when the action names no such donor (`OutOfScopeError` is then said where its donor is searched, `_awakener.solve_donors`)."""
+    try:
+        needs = action.inputs(data)
+    except (OutOfScopeError, NotApplicableError):
+        return None
+    if len(needs) != 1:
+        return None
+    return needs[0], frozenset(mod.mod_id for mod in needs[0].want.mods)
+
+
 def _with_wanted_donors(
     data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str], named: set[str], kind_of: dict[Action, str]
 ) -> dict[Action, str]:
     """The Awakener's Orbs whose donor holds a mod the target names (ticket #832, `_limits` via `_awakener.donor_limits`), and the actions that work on
-    a donor: it starts as a normal base of its own influence (`AwakenersOrb.inputs`), so what applies to such a base is offered too (a Transmutation
-    Orb on a target whose start item is rare). Every other orb is left out: its donor gives the item a mod nobody asks for."""
-    from crafting_system.actions.awakener import AwakenersOrb
-
-    kept = {action: kind for action, kind in kind_of.items() if not isinstance(action, AwakenersOrb) or action.donor_mod in named}
-    for influence in sorted({a.donor_influence for a in kept if isinstance(a, AwakenersOrb)}, key=lambda i: i.value):
+    a donor: it starts as a normal base of its own influence (the orb's `inputs`), so what applies to such a base is offered too (a Transmutation
+    Orb on a target whose start item is rare). Every other orb is left out: its donor gives the item a mod nobody asks for. An orb whose donor
+    cannot be read is kept, so that its donor's search says why it is not offered."""
+    wants = {action: donor_wants(data, action) for action, kind in kind_of.items() if kind == AWAKENER_KIND}
+    kept = {action: kind for action, kind in kind_of.items() if kind != AWAKENER_KIND or wants[action] is None or wants[action][1] & named}
+    influences = {influence for action, want in wants.items() if action in kept and want is not None for influence in want[0].start.influences}
+    for influence in sorted(influences, key=lambda i: i.value):
         bare = Item.build(data, base_id=start_item.base_id, item_level=start_item.item_level, rarity=Rarity.NORMAL, influences=frozenset({influence}))
         for action, kind in _listed(data, bare, kind_names, label_names).items():  # its gaps are the start item's to say, once
             if kind != AWAKENER_KIND:

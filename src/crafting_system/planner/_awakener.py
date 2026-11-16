@@ -40,10 +40,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
-from crafting_system.actions.awakener import AwakenersOrb
+from crafting_system.actions import Action
 
 from ._limits import CONSUMES, DISPLAY, Limit, claim
-from ._offers import DRAW_COST_SHARE, RESTART, BuyStartItem, Offer, PricedOffer
+from ._offers import AWAKENER_KIND, DRAW_COST_SHARE, RESTART, BuyStartItem, Offer, PricedOffer, donor_wants, takes_inputs
 
 DONOR_PART = "second item"  # the part of a folded offer that is its donor's run
 
@@ -52,13 +52,14 @@ DONOR_PART = "second item"  # the part of a folded offer that is its donor's run
 class Donor:
     """One donor's search: the orb it serves, the bound and the exact mean of its plan, and how the search ended."""
 
-    action: AwakenersOrb
+    action: Action
     lower: float  # no plan of this donor costs less (its bound with its error taken off)
     upper: float  # the exact mean of the donor plan the target's plan uses
     exact: bool
     stopped: str | None
     states: int  # the states of the donor plan's reach
     seconds: float
+    mod: str = ""  # the donor's mod, as the plan names it
 
     @property
     def share(self) -> float:
@@ -67,7 +68,7 @@ class Donor:
 
 
 def awakener_offers(priced: Sequence[PricedOffer]) -> tuple[PricedOffer, ...]:
-    return tuple(p for p in priced if isinstance(p.offer.action, AwakenersOrb))
+    return tuple(p for p in priced if p.offer.kind == AWAKENER_KIND)
 
 
 def donor_base_cost(priced: Sequence[PricedOffer]) -> float:
@@ -77,10 +78,15 @@ def donor_base_cost(priced: Sequence[PricedOffer]) -> float:
     return DRAW_COST_SHARE * min(paid) if paid else 1.0
 
 
-def donor_abstraction(target_abstraction: Abstraction, action: AwakenersOrb) -> Abstraction:
-    """The abstraction a donor of `action` is searched on: the target's base, item level and enabled actions, the goal "holds `donor_mod`"."""
+def donor_abstraction(target_abstraction: Abstraction, action: Action) -> Abstraction:
+    """The abstraction a donor of `action` is searched on: the target's base, item level and enabled actions, the goal "holds `donor_mod`" (the
+    mods of the `want` of the orb's one input)."""
     ab = target_abstraction
-    goal = Goal((Wanted(frozenset({action.donor_mod})),))
+    found = donor_wants(ab.data, action)
+    if found is None:
+        action.inputs(ab.data)  # raises what the action says of its donor
+        raise ValueError(f"{action.label(ab.data)} names no one donor")
+    goal = Goal((Wanted(found[1]),))
     return Abstraction(
         ab.data, goal, ab.base_id, ab.item_level, ab._actions, metamods=ab.models_metamods, enchantment=ab.enchantment, allow_inputs=False,
         weights=ab._weights,
@@ -89,7 +95,7 @@ def donor_abstraction(target_abstraction: Abstraction, action: AwakenersOrb) -> 
 
 def solve_donor(
     target_abstraction: Abstraction,
-    action: AwakenersOrb,
+    action: Action,
     priced: Sequence[PricedOffer],
     *,
     net=None,
@@ -111,7 +117,7 @@ def solve_donor(
     start = ab.compress(need.start)
     want = ab.donor_key(ab.compress(need.want), action)
     restart = PricedOffer(Offer(RESTART, BuyStartItem(need.start), {}, shares=False), donor_base_cost(priced), ())
-    offers = (*(p for p in priced if not isinstance(p.offer.action, (AwakenersOrb, BuyStartItem)) and _applies_to_donors(p)), restart)
+    offers = (*(p for p in priced if _applies_to_donors(p)), restart)
     packed = envelope_result(
         ab, start, offers, net=net, tolerance=tolerance, progress=progress, gap=gap, gap_after=gap_after,
         goal=lambda state: ab.donor_key(state, action) == want,
@@ -119,7 +125,8 @@ def solve_donor(
     info = packed.info["envelope"]
     upper = float(packed.solution.values[start])
     lower = upper if info.exact else min(float(info.lower), upper)  # the search's certified bound, as the target's is read (`_plan`)
-    donor = Donor(action, lower, upper, bool(info.exact), info.stopped, len(packed.solution.policy), time.perf_counter() - began)
+    mod = ", ".join(sorted(m.mod_id for m in need.want.mods))
+    donor = Donor(action, lower, upper, bool(info.exact), info.stopped, len(packed.solution.policy), time.perf_counter() - began, mod)
     return donor, packed
 
 
@@ -158,8 +165,10 @@ def solve_donors(
 
 
 def _applies_to_donors(priced: PricedOffer) -> bool:
-    """An offer that opens the target's bought listing is the target's alone (ADR-0064); every other offer may work on a donor."""
-    return type(priced.offer.action).__name__ != "OpenListing"
+    """Whether a target's offer is offered to a donor: not the target's restart (the donor buys its own base), not an offer that opens the
+    target's bought listing (ADR-0064), and no action that consumes a second item (an Awakener's Orb: a donor never takes one)."""
+    action = priced.offer.action
+    return not isinstance(action, BuyStartItem) and not action.opens_listing and not takes_inputs(action)
 
 
 def fold(priced: Sequence[PricedOffer], donors: Sequence[Donor]) -> tuple[PricedOffer, ...]:
@@ -199,7 +208,7 @@ def whole_info(info, priced: Sequence[PricedOffer], donors: Sequence[Donor]):
     stopped = [d for d in donors if not d.exact]
     found = dataclasses.replace(info, lower=whole_lower(info.lower, priced, donors), exact=info.exact and not stopped)
     if info.exact and stopped:
-        said = "; ".join(f"the search of the second item for {d.action.donor_mod} stopped ({d.stopped})" for d in stopped)
+        said = "; ".join(f"the search of the second item for {d.mod} stopped ({d.stopped})" for d in stopped)
         found = dataclasses.replace(found, stopped=f"the plan's own search closed, but {said}")
     return found
 
@@ -248,7 +257,7 @@ def donor_limits(donors: Sequence[Donor], stand_in: float) -> tuple[Limit, ...]:
             Limit(
                 CONSUMES,
                 "A second item's plan is not proved the cheapest",
-                "; ".join(f"the second item for {d.action.donor_mod} stopped ({d.stopped}) at {d.upper:,.2f} Chaos, at least {d.lower:,.2f}" for d in stopped),
+                "; ".join(f"the second item for {d.mod} stopped ({d.stopped}) at {d.upper:,.2f} Chaos, at least {d.lower:,.2f}" for d in stopped),
                 "The lower figure of the plan allows for it.",
             )
         )
