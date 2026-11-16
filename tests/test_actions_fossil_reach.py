@@ -9,6 +9,7 @@ leaf and one that only takes a slot, the mods only a Faceted Fossil adds, an ess
 it), the Tangled sets (a mixture of outcome records), a Sanctified set (the level factor), a fractured item and a lower item level.
 """
 
+import os
 import random
 from collections import defaultdict
 from fractions import Fraction
@@ -236,6 +237,62 @@ def test_on_a_shield_with_four_fractured_mods_the_glyphic_set_declares_a_bound_a
     plain = ApplyFossils(("Pristine Fossil",))
     bound = ApplyFossils.reach_batch(data, item, (plain,), passes_of(leaves))[0]
     assert bound.chances[0] >= exact(plain.outcomes(data, item), leaves, data)[0][0]
+
+
+HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
+ROUTE_TARGETS = ("r05-strength-ring", "r08-energy-shield-boots", "r09-life-boots", "r10-fractured-boots", "r11-reservation-helmet", "r12-lightning-amulet")
+REAL_SAMPLE = 150  # twin classes per item
+REAL_FORCING = 80  # and sets that force a mod (Hollow, Glyphic), sampled apart since a class sample holds few of them
+
+
+@HEAVY
+@pytest.mark.parametrize("target_name", ROUTE_TARGETS)
+def test_on_the_start_item_of_each_route_every_sampled_set_declares_no_chance_below_the_exact_one(target_name):
+    """The real data, on the start item of a benchmark route (fractured mods on R10, R11, R12): a seeded sample of the twin classes of the
+    fossil listing plus a seeded sample of the sets that force a mod (Hollow, Glyphic, alone and in a Tangled set), with leaves of pool families picked
+    at random on each side, against the exact chance (heavy run: `CRAFTING_HEAVY=1 pytest tests/test_actions_fossil_reach.py -k route`)."""
+    from pathlib import Path
+
+    from abstraction_support import real_game_data
+
+    from crafting_system.actions.outcomes import retained_item
+    from crafting_system.actions.pool import pool_candidates
+    from crafting_system.targets import load_target
+
+    data = real_game_data()
+    item = load_target(Path("examples/targets") / f"{target_name}.yaml", data).start_item
+    families = sorted({candidate.family for candidate in pool_candidates(data, retained_item(data, item), None, [])})
+    rng = random.Random(target_name)
+    leaves = tuple({mod.id for mod in data.mods.values() if family in mod.families} for family in rng.sample(families, min(5, len(families))))
+    leaves += (set().union(*leaves),)  # one leaf overlapping the others
+    actions = fossil_actions(data, item)
+    classes = defaultdict(list)
+    for position, action in enumerate(actions):
+        key = action.twin_key(data, item)
+        classes[("set", position) if key is None else key].append(position)
+    found = list(classes.values())
+    chosen = rng.sample(found, min(REAL_SAMPLE, len(found)))
+    forcing = [[position] for position, action in enumerate(actions) if {"Hollow Fossil", "Glyphic Fossil"} & set(action.fossils)]
+    chosen += rng.sample(forcing, min(REAL_FORCING, len(forcing)))
+    declared_all = ApplyFossils.reach_batch(data, item, tuple(actions), passes_of(leaves))
+    checked = 0
+    for members in chosen:
+        declared = [declared_all[position] for position in members]
+        if all(answer is None or not answer.keeps_shape for answer in declared):
+            continue
+        try:
+            single, together = exact(actions[members[0]].outcomes(data, item), leaves, data)
+        except ActionError:
+            assert all(answer is None for answer in declared), actions[members[0]].fossils
+            continue
+        for position, answer in zip(members, declared):
+            if answer is None or not answer.keeps_shape:
+                continue
+            label = (target_name, actions[position].fossils)
+            assert all(bound >= chance for bound, chance in zip(answer.chances, single)), (label, answer.chances, [float(c) for c in single])
+            assert answer.together is None or answer.together >= together, (label, answer.together, float(together))
+            checked += 1
+    assert checked > REAL_SAMPLE // 2, checked
 
 
 def test_a_pool_with_no_candidate_still_declares_one_chance_per_leaf(monkeypatch):
