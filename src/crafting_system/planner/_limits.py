@@ -216,6 +216,32 @@ def rough_mean_limits(limits: Iterable[Limit], mean_error: float) -> tuple[Limit
     return tuple(replace(limit, guarantee=rough) if limit.guarantee in EXACT_MEAN_SENTENCES else limit for limit in limits)
 
 
+USED_ON_THE_ITEM = " used on the item"
+
+
+def _orb_names(text: str) -> frozenset[str]:
+    """The two ways the game and the catalog write one orb: "Scouring Orb" and "Orb of Scouring" are the same currency."""
+    names = {text}
+    if text.endswith(" Orb") and " " not in text[: -len(" Orb")]:
+        names.add(f"Orb of {text[: -len(' Orb')]}")
+    if text.startswith("Orb of ") and " " not in text[len("Orb of ") :]:
+        names.add(f"{text[len('Orb of ') :]} Orb")
+    return frozenset(names)
+
+
+def spent_kinds_named(limits: Iterable[Limit], spent: Iterable[str]) -> tuple[Limit, ...]:
+    """The limits with each kind that is named by a currency the plan spends (a bench craft's Divine or Chaos Orb, the Orb of Scouring of
+    Remove Crafted Mods) named by its use, "Divine Orb used on the item": a kind left out is the currency used as a craft on the item, and no
+    note may call a currency that a step pays with not offered (#983, OR-7). `spent` are the names of the price list (`cli._price_marks`)."""
+    paid = frozenset(name for each in spent for name in _orb_names(each))
+    if not paid:
+        return tuple(limits)
+    return tuple(
+        replace(limit, labels=tuple(label + USED_ON_THE_ITEM if label in paid else label for label in limit.labels)) if paid.intersection(limit.labels) else limit
+        for limit in limits
+    )
+
+
 def kind_title(name: str) -> str:
     """An action kind of the catalog as a player writes it: `exalted-orb` is "Exalted Orb"."""
     if name in _NAMES:

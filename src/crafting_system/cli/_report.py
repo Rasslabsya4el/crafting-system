@@ -31,6 +31,7 @@ from crafting_system.planner import (
     free_action_cost,
     limit_document,
     limit_text,
+    spent_kinds_named,
     not_shown,
     ordered,
     unresolved,
@@ -528,11 +529,13 @@ def money_small(chaos: float) -> str:
     return f"{chaos:.2g}"
 
 
-def limit_lines(plan: Plan) -> list[str]:
-    """What the answer leaves out, one line to a limit in the order of the groups of `_limits`, each with what the answer still guarantees (OR-13)."""
+def limit_lines(plan: Plan, spent: Iterable[str] = ()) -> list[str]:
+    """What the answer leaves out, one line to a limit in the order of the groups of `_limits`, each with what the answer still guarantees (OR-13).
+
+    `spent` are the currencies the policy pays with (the price list): a kind named by one of them is named by its use (#983)."""
     if not plan.limits:
         return []
-    return [f"{HEADING}:", *(f"  {limit_text(limit)}" for limit in ordered(plan.limits))]
+    return [f"{HEADING}:", *(f"  {limit_text(limit)}" for limit in ordered(spent_kinds_named(plan.limits, spent)))]
 
 
 def render_text(report: Report, verification: Verification | None = None, *, target_name: str = "") -> str:
@@ -573,7 +576,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines.extend(listing_lines(plan, report.data))
     if plan.starts is not None:
         lines.extend(start_lines(plan.starts))
-    lines.extend(limit_lines(plan))
+    lines.extend(limit_lines(plan, (use.name for use in report.prices_used)))
     lines.append(f"Blocks solved: {plan.approximation.blocks:,}" if plan.approximation else f"States solved: {len(plan.solution.values)}")
     lines.append("")
     lines.append(POLICY_HEADING)
