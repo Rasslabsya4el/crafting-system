@@ -15,6 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 ROUTES = ["R14", "R13", "R09", "R11", "R05", "R10", "R12"]
+FLIPPED = ("harvest-add-remove", "harvest-resistance-swap", "harvest-damage-swap", "corrupted-essence", "fossil-set", "exalted-orb", "veiled-chaos-orb",
+    "veiled-exalted-orb", "unveil", "pick", "annulment-orb", "fracturing-orb", "talisman-fracture", "aspect-beast", "beast-side-swap", "wild-bristle-matron", "imprint", "restore")
 CAP = int(os.environ.get("PROBE_CAP", "900"))
 
 
@@ -39,7 +41,7 @@ def one(route: str) -> None:
     if variant:
         from crafting_system.planner import _offers, _plan
 
-        _offers.BLOCKING_CRAFTS = variant != "nb"
+        _offers.BLOCKING_CRAFTS = variant not in ("nb",) and not variant.startswith("only:")
         metamod = ("Cannot Be Changed", "Cannot roll", "Crafted Modifiers")
         original = _plan.cheapest_per_class
 
@@ -48,6 +50,17 @@ def one(route: str) -> None:
             drop = (lambda p: any(m in p.label for m in metamod)) if variant == "nometa" else (lambda p: not any(m in p.label for m in metamod))
             return tuple(p for p in kept if p.offer.blocks is None or not drop(p)), same
 
+        if variant.startswith("only:"):
+            import dataclasses
+
+            import importlib
+
+            cat = importlib.import_module("crafting_system.actions.catalog")
+            keep = set(variant[5:].split("+")) - {""}
+            flipped = {*FLIPPED, *_offers.ELDRITCH_KINDS} if "eldritch" not in keep else set(FLIPPED)
+            for name, entry in list(cat._KINDS.items()):
+                if name in flipped and name not in keep:
+                    cat._KINDS[name] = dataclasses.replace(entry, opt_in=True)
         if variant in ("nometa", "nofill"):
             _plan.cheapest_per_class = filtered
     bench = next(b for b in _benchmark.BENCHMARKS if b.id == route)
@@ -78,7 +91,12 @@ def jobs(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
     every = [(route, ref) for route in ROUTES for ref in ("branch", "main")]
-    if os.environ.get("PROBE_V2"):
+    if os.environ.get("PROBE_V3"):
+        groups = ["", "eldritch", "exalted-orb", "annulment-orb", "harvest-add-remove+harvest-resistance-swap+harvest-damage-swap",
+                  "veiled-chaos-orb+veiled-exalted-orb+unveil+pick", "fracturing-orb+talisman-fracture",
+                  "aspect-beast+beast-side-swap+wild-bristle-matron+imprint+restore", "corrupted-essence", "fossil-set"]
+        every = [("R05", "only:" + g) for g in groups] + [("R12", "only:eldritch"), ("R12", "only:exalted-orb")]
+    elif os.environ.get("PROBE_V2"):
         every = [(r, "nb") for r in ("R09", "R11", "R13", "R05", "R10", "R12")] + [(r, "nometa") for r in ("R05", "R10", "R12")] + [(r, "nofill") for r in ("R05", "R10", "R12")]
     mine = every[index - 1 :: count]
     main_src = Path("/tmp/probe-main/src")
