@@ -117,7 +117,7 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
             found.append(PriceUse(name, 1.0, UNIT_WORDS, None, uses, ()))
             continue
         if name not in prices.prices:  # a Divine Orb the file lists no row for is priced at the file's rate (price_offers)
-            found.append(PriceUse(name, prices.chaos_per_divine, RATE_WORDS, None, uses, ()))
+            found.append(PriceUse(name, prices.chaos_per_divine, f"{RATE_WORDS}, {prices.league}, {prices.fetched_at:%Y-%m-%d}", None, uses, ()))
             continue
         entry = prices.prices[name]
         provenance = provenance_of(entry, prices)

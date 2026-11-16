@@ -126,3 +126,13 @@ def test_an_edge_that_crafts_the_wanted_mod_names_it_once():
         named = line.split(", then ")[0]
         assert named.count(DATA.mods[DAMAGE].text) == 1, line
         assert " and " not in named, line
+
+
+def test_the_uses_of_a_sure_step_never_read_as_a_fraction_of_a_use():
+    from crafting_system.cli._route_view import _View
+
+    assert _View.uses_text(0.3, None, True) == "1"  # no reach solved: each use is still one sure use
+    assert _View.uses_text(0.92, 0.92, True) == "1"  # once in each run that reaches it ("reached in 92% of runs" follows)
+    assert _View.uses_text(1.0004, 1.0, True) == "1"  # never "≈1 times"
+    assert _View.uses_text(2.4, 0.8, True) == "1 each time, 3 times in a run that reaches it"
+    assert _View.uses_text(2.4, 0.8, False) == "2.4"

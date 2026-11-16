@@ -458,13 +458,12 @@ class _View:
         items go on to differs only by the item it was used on, not by chance (#984)."""
         return sum(1 for outcome in action.outcomes if outcome.weight > 0) <= 1
 
-    def chance_lines(self, step: Step, action: Action, shown: list[Edge], below: int) -> list[Line]:
+    def chance_lines(self, step: Step, action: Action, shown: list[Edge], below: int, sure: bool) -> list[Line]:
         """One line per place the outcomes that lose no wanted mod lead to, with the exact mixture of their chances.
 
         For a sure action (`sure`) the lines are the shares of its uses that go on to each step, by the item it was used on (`step_row`
-        titles them so): a chance of a sure use would read as a miss (#984)."""
-        sure = self.sure(action)
-        if len(shown) == 1 and sure:
+        titles them so): a chance of a sure use would read as a miss (#984). A restart is never sure here: what it buys is a new random item."""
+        if len(shown) == 1 and self.sure(action):  # one place and one outcome says nothing
             return []
         if len(shown) == 1:
             return [Line(chance_text(shown[0].chance))]
@@ -701,7 +700,7 @@ class _View:
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [self.uses_text(step.uses, step.reached, sure)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
-        chances = self.chance_lines(step, action, shown, number + 1)
+        chances = self.chance_lines(step, action, shown, number + 1, sure)
         if restart:
             after = self.start_card()
         else:
@@ -728,8 +727,8 @@ class _View:
         times a run that reaches the step is there when that is more than once: never as a use that may miss (#984)."""
         if not sure:
             return count(uses)
-        times = count(uses / reached) if reached else count(uses)
-        return "1" if times == "1" else f"1 each time, {times.replace('≈ ', '≈')} times in a run that reaches it"
+        times = count(uses / reached) if reached else "1"  # with no reach solved, each use is still one sure use
+        return "1" if times in ("1", "≈ 1") else f"1 each time, {times.replace('≈ ', '≈')} times in a run that reaches it"
 
     def start_field(self) -> Field | None:
         """When the start item is made at a vendor: the start options with their totals, so the choice can be read off the page."""
