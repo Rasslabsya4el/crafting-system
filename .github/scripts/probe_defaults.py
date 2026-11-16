@@ -87,11 +87,19 @@ def one(route: str) -> None:
     print(json.dumps(result, default=str), flush=True)
 
 
+def _cap_memory() -> None:
+    """Cap the child's address space (PROBE_MEM_GB, default 14) so a blow-up reports MemoryError instead of killing the runner."""
+    limit = int(float(os.environ.get("PROBE_MEM_GB", "14")) * 2**30)
+    resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+
+
 def jobs(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
     every = [(route, ref) for route in ROUTES for ref in ("branch", "main")]
-    if os.environ.get("PROBE_V4"):
+    if os.environ.get("PROBE_JOBS"):  # "R05|exalted-orb;R11|main;R11|" : route|group (main = the main checkout)
+        every = [(r, g if g == "main" else "only:" + g) for r, g in (item.split("|") for item in os.environ["PROBE_JOBS"].split(";"))]
+    elif os.environ.get("PROBE_V4"):
         groups = ["", "eldritch", "exalted-orb", "annulment-orb", "fracturing-orb+talisman-fracture", "fossil-set",
                   "veiled-chaos-orb+veiled-exalted-orb+unveil+pick", "harvest-add-remove+harvest-resistance-swap+harvest-damage-swap",
                   "corrupted-essence", "aspect-beast+beast-side-swap+wild-bristle-matron", "imprint+restore"]
@@ -117,7 +125,7 @@ def jobs(out: Path) -> None:
             env["PROBE_VARIANT"] = ref
         began = time.perf_counter()
         try:
-            done = subprocess.run([sys.executable, __file__, "one", route], env=env, capture_output=True, text=True, timeout=CAP)
+            done = subprocess.run([sys.executable, __file__, "one", route], env=env, capture_output=True, text=True, timeout=CAP, preexec_fn=_cap_memory)
             line = (done.stdout.strip().splitlines() or ["{}"])[-1]
             row = json.loads(line) if line.startswith("{") else {"route": route, "planned": False, "error": f"exit {done.returncode}: {done.stderr[-400:]}"}
             row["stderr_tail"] = done.stderr.strip().splitlines()[-3:]
