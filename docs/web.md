@@ -23,17 +23,32 @@ docker run -p 8000:8000 -v crafting-site:/site crafting-site
 ```
 
 The volume `/site` holds the game data cache, the price file (`/site/data/prices.json`) and the store (`/site/output/web/site.sqlite3`).
-The container fetches the pinned game data into the volume itself on its first start. The price file it does not fetch yet: until the
-scheduled refresh runs beside the service (OR-9, #1008), the operator puts it into the volume, once, with a one-off container that copies a
-file from the host:
+The container fetches the pinned game data into the volume itself on its first start, and its prices too: nobody copies a price file in
+(OR-9). On an empty volume the server first fetches a price file, and serves once it has one.
 
-```
-docker run --rm -v crafting-site:/site -v "$PWD/prices:/in:ro" --entrypoint sh crafting-site -c "mkdir -p /site/data && cp /in/prices.json /site/data/prices.json"
-```
+**The scheduled price refresh** (OR-9, #1008). While the server runs, a thread of it runs the price command,
+`python -m crafting_system.prices fetch`, every `CRAFTING_PRICE_REFRESH_HOURS` (the image sets 6; off when unset or 0, so a server started
+by hand on a developer's machine never replaces his price file). It is the command's own fetch, with its pacing of poe.ninja and the trade
+site's rate limiter, and the names it prices beyond poe.ninja's overviews are everything the methods in scope spend
+(`prices.spends.spent_names`, #885). The fetch runs in a folder of its own beside the live file, with a copy of the old file and the
+overrides, so it keeps and merges the old prices as at the command line; its new file replaces the live one in one step only when it loads
+with the overrides, is of the league the site serves and prices the Chaos and the Divine Orb. A fetch that fails or writes a broken file
+leaves the old file in use and goes to the server's log with the command's output; it is tried again after 15 minutes. One fetch runs at a
+time. The running server loads the new file at once (see "A price refresh" below); no restart.
 
-A file replaced there later (a refresh writes a new file and moves it over the old one in one step) is picked up by the running server at
-its next request; no restart (see "A price refresh" below). `.github/scripts/web_docker_smoke.py` does all of this on a Linux runner and
-plans one request through the container (#969).
+| Setting | Flag | Environment | Default |
+|---|---|---|---|
+| hours between two fetches (0: never; at least 0.25) | `--price-refresh-hours` | `CRAFTING_PRICE_REFRESH_HOURS` | `0` (the image: `6`) |
+| the league whose prices are fetched | `--price-league` | `CRAFTING_PRICE_LEAGUE` | the league of the price file in place, else poe.ninja's current one |
+| the trade site's offers read for names priced on fewer units than this | `--price-trade-below` | `CRAFTING_PRICE_TRADE_BELOW` | off |
+| more names to price, one per line | `--price-wanted-file` | `CRAFTING_PRICE_WANTED_FILE` | none |
+| the time one fetch may take, minutes | `--price-fetch-minutes` | `CRAFTING_PRICE_FETCH_MINUTES` | `60` |
+
+The league is the site's setting: a site on the 3.29 game data fetches the 3.29 league's prices; a new league is set with a new game data
+pin (OR-52). The tests and the benchmark do not read this file: they read their own snapshots (OR-44).
+
+`.github/scripts/web_docker_smoke.py` does all of this on a Linux runner: an empty volume, the container fetches its data and its prices,
+and plans one request through the API (#969, #1008).
 
 | Setting | Flag | Environment | Default |
 |---|---|---|---|

@@ -1,4 +1,5 @@
-"""Build the website's image, start it and plan one request through it on the real data (#969). Linux only, on a runner: a heavy run,
+"""Build the website's image, start it and plan one request through it on the real data (#969, #1008). Linux only, on a runner: a heavy
+run,
 
     python .github/scripts/heavy_dispatch.py run --ref <branch> --runners 1 --timeout-minutes 45 \
         --command 'uv run --no-sync python .github/scripts/web_docker_smoke.py --out $OUT_DIR'
@@ -6,13 +7,14 @@
 never on the owner's PC. What it does, as `docs/web.md` tells an operator to:
 
 1. `docker build -t crafting-site .`
-2. puts a price file into the volume `/site` (`/site/data/prices.json`) with a one-off container;
-3. `docker run -d -p 8000:8000 -v <volume>:/site crafting-site`: the container fetches the pinned game data into the volume, then serves;
-4. waits for `GET /api/v1/poe1`, posts the target (YAML read and sent as JSON, without its `price_file`), follows the job to its end with
+2. `docker run -d -p 8000:8000 -v <volume>:/site crafting-site` on an empty volume: the container fetches the pinned game data into the
+   volume, then its scheduled price refresh (OR-9) fetches a price file from poe.ninja before the server starts, then it serves. With
+   `--prices FILE` a price file is put into the volume first instead (a one-off container), and no fetch is needed to start;
+3. waits for `GET /api/v1/poe1`, posts the target (YAML read and sent as JSON, without its `price_file`), follows the job to its end with
    the API's own wait, reads the route, its policy and its page, and posts the same request again, which must come from the store.
 
 Everything it read goes to `--out` (the info, the job, the route, the page, the container's log). Exit 0 only when the job is done, the
-page is served and the second request is answered from the store.
+page is served and the second request is answered from the store (and, without `--prices`, the snapshot served is one fetched by this run).
 """
 
 import argparse
@@ -22,6 +24,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -50,23 +53,28 @@ def call(method: str, url: str, body: dict | None = None, timeout: float = 90.0)
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--prices", type=Path, default=Path("tests/fixtures/prices/routes-allflame-2026-11-10.json"))
+    parser.add_argument("--prices", type=Path, help="a price file put into the volume first (default: the container fetches its own)")
+    parser.add_argument("--league", help="the league the container's refresh fetches (CRAFTING_PRICE_LEAGUE; default poe.ninja's current)")
     parser.add_argument("--target", type=Path, default=Path("examples/targets/r12-lightning-amulet.yaml"))
-    parser.add_argument("--start-minutes", type=float, default=15.0, help="how long the container may take to fetch the data and serve")
+    parser.add_argument("--start-minutes", type=float, default=25.0, help="how long the container may take to fetch the data and the prices, and serve")
     parser.add_argument("--plan-minutes", type=float, default=20.0, help="how long the plan may take")
     args = parser.parse_args()
     out: Path = args.out
     out.mkdir(parents=True, exist_ok=True)
 
     docker("build", "-t", IMAGE, ".")
-    docker("volume", "create", VOLUME)
-    prices = args.prices.resolve()
-    docker(
-        "run", "--rm", "-v", f"{VOLUME}:/site", "-v", f"{prices.parent}:/in:ro", "--entrypoint", "sh", IMAGE,
-        "-c", f"mkdir -p /site/data && cp '/in/{prices.name}' /site/data/prices.json",
-    )  # fmt: skip
     docker("rm", "-f", NAME, check=False)  # a container left by an earlier run on the same machine
-    docker("run", "-d", "--name", NAME, "-p", "8000:8000", "-v", f"{VOLUME}:/site", IMAGE)
+    docker("volume", "rm", "-f", VOLUME, check=False)  # an empty volume: the container starts with no price file
+    docker("volume", "create", VOLUME)
+    if args.prices is not None:
+        prices = args.prices.resolve()
+        docker(
+            "run", "--rm", "-v", f"{VOLUME}:/site", "-v", f"{prices.parent}:/in:ro", "--entrypoint", "sh", IMAGE,
+            "-c", f"mkdir -p /site/data && cp '/in/{prices.name}' /site/data/prices.json",
+        )  # fmt: skip
+    league = [] if args.league is None else ["-e", f"CRAFTING_PRICE_LEAGUE={args.league}"]
+    args.started = datetime.now(UTC)
+    docker("run", "-d", "--name", NAME, "-p", "8000:8000", "-v", f"{VOLUME}:/site", *league, IMAGE)
     try:
         return smoke(args, out)
     finally:
@@ -76,7 +84,8 @@ def main() -> int:
 
 
 def smoke(args: argparse.Namespace, out: Path) -> int:
-    deadline = time.monotonic() + args.start_minutes * 60
+    started = time.monotonic()
+    deadline = started + args.start_minutes * 60
     while True:
         try:
             status, text = call("GET", BASE, timeout=10)
@@ -94,6 +103,13 @@ def smoke(args: argparse.Namespace, out: Path) -> int:
         time.sleep(5)
     (out / "info.json").write_text(text, encoding="utf-8")
     print("info:", text, flush=True)
+    print(f"served after {time.monotonic() - started:.0f} s", flush=True)
+    if args.prices is None:
+        snapshot = json.loads(text)["price_age"]
+        fetched = datetime.strptime(snapshot["fetched_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+        if fetched < args.started.replace(microsecond=0):
+            print(f"the snapshot served was fetched at {snapshot['fetched_at']}, before the container started: not this run's fetch", flush=True)
+            return 1
 
     target = yaml.safe_load(args.target.read_text(encoding="utf-8"))
     target.pop("price_file", None)
