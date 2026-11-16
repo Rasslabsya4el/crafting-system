@@ -138,9 +138,10 @@ def fixed_clock() -> datetime.datetime:
 
 
 @contextlib.contextmanager
-def client(db: Path | str = ":memory:", *, workers: int = 2, work=None):
-    """A test client of the app over one service of the fixture world, started and closed with it."""
-    kwargs = {} if work is None else {"work": work}
+def client(db: Path | str = ":memory:", *, workers: int = 2, work=None, data_league: str | None = None):
+    """A test client of the app over one service of the fixture world (its prices are of the league "Test"), started and closed with it;
+    `data_league` is the league the service holds the game data to be played in (none: no league is compared)."""
+    kwargs: dict = {"data_league": data_league} if work is None else {"work": work, "data_league": data_league}
     service = Service(SqliteStore(db), fixture_world, workers=workers, clock=fixed_clock, **kwargs)
     with TestClient(create_app({"poe1": service})) as http:
         yield http, service

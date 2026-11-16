@@ -74,12 +74,14 @@ class Service:
         workers: int = 1,
         clock: Clock = _utc_now,
         work: Work = plan_request,
+        data_league: str | None = None,
     ) -> None:
         if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
             raise ValueError(f"a service runs at least one worker, not {workers!r}")
         self.store = store
         self.game = game
         self.workers = workers
+        self.data_league = data_league  # the league the game data is played in (the pin's): a snapshot of another is said (#1026)
         self._world_source = world_source
         self._work = work
         self._clock = clock
@@ -146,10 +148,14 @@ class Service:
         """The day a snapshot's age is counted to: the clock's, in UTC."""
         return self._clock().astimezone(UTC).date()
 
+    def snapshot_age(self, league: str, fetched_at: datetime) -> dict:
+        """How old the snapshot of `league` fetched at `fetched_at` is today, and whether it is of another league than the game data's."""
+        return snapshot_age(league, fetched_at, self.today(), data_league=self.data_league)
+
     def price_age(self) -> dict:
         """How old the snapshot new requests are keyed and planned with is today (`snapshot_age`)."""
         prices = self.world.prices
-        return snapshot_age(prices.league, prices.fetched_at, self.today())
+        return self.snapshot_age(prices.league, prices.fetched_at)
 
     def route_price_age(self, route: RouteRecord) -> dict | None:
         """How old the snapshot a route was planned on is today, or None for a route stored before routes named it (or naming it in a
@@ -157,7 +163,7 @@ class Service:
         snapshot = route.summary.get("snapshot") if isinstance(route.summary, dict) else None
         try:
             fetched_at = datetime.strptime(snapshot["fetched_at"], SNAPSHOT_TIME_FORMAT).replace(tzinfo=UTC)  # type: ignore[index]
-            return snapshot_age(str(snapshot["league"]), fetched_at, self.today())  # type: ignore[index]
+            return self.snapshot_age(str(snapshot["league"]), fetched_at)  # type: ignore[index]
         except (TypeError, KeyError, ValueError):
             return None
 

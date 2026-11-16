@@ -200,9 +200,10 @@ class PriceRefresh:
     # --- the schedule -------------------------------------------------------------------------------------------------------------
 
     def due(self) -> datetime:
-        """When the next refresh is due: the live file's fetch time plus the interval, or now when there is no readable file."""
+        """When the next refresh is due: the live file's fetch time plus the interval, or now when there is no readable file or it is of
+        another league than the one configured (a site whose league changed, #1026)."""
         old = _readable(self.price_path)
-        if old is None:
+        if old is None or (self._league is not None and old.league != self._league):
             return self._clock()
         return old.fetched_at + self.interval
 

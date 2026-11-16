@@ -31,6 +31,7 @@ FILE_NAMES = (
 )
 
 TEST_VERSION = "0.0-test"
+TEST_LEAGUE = "Test League"  # the league a test pin is played in
 TEST_COMMIT = "a" * 40
 TEST_BASE_URL = "https://example.test/repoe"
 
@@ -88,14 +89,14 @@ def raw_to_bytes(raw: Mapping[str, object]) -> dict[str, bytes]:
 
 
 def make_pin(
-    payloads: Mapping[str, bytes], *, version: str = TEST_VERSION, commit: str = TEST_COMMIT
+    payloads: Mapping[str, bytes], *, version: str = TEST_VERSION, commit: str = TEST_COMMIT, league: str | None = TEST_LEAGUE
 ) -> RepoePin:
-    """A pin whose sizes and hashes are computed from `payloads` (file name -> bytes)."""
+    """A pin whose sizes and hashes are computed from `payloads` (file name -> bytes), played in `league`."""
     files = tuple(
         PinnedFile(name=name, sha256=hashlib.sha256(data).hexdigest(), size=len(data))
         for name, data in payloads.items()
     )
-    return RepoePin(version=version, commit=commit, base_url=TEST_BASE_URL, files=files)
+    return RepoePin(version=version, commit=commit, base_url=TEST_BASE_URL, files=files, league=league)
 
 
 class FakeOpener:

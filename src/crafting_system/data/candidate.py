@@ -170,6 +170,7 @@ def _read_manifest(path: Path, commit: str, template: RepoePin) -> RepoePin:
             commit=commit,
             base_url=document["base_url"],
             files=tuple(PinnedFile(name, by_name[name]["sha256"], by_name[name]["size"]) for name in wanted),
+            league=template.league,  # as a candidate learned now has it: the league is the pin's, not the export's
         )
     except (ValueError, TypeError, AttributeError) as error:
         raise bad(str(error)) from error

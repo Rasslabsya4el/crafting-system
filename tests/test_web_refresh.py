@@ -94,6 +94,15 @@ def test_the_league_is_the_configured_one_else_the_one_of_the_file_in_place(tmp_
     assert [league for _, league, _ in calls] == ["Allflame", "Allflame"]
 
 
+def test_a_file_of_another_league_than_the_configured_one_is_due_at_once(tmp_path):
+    """#1026: a volume holding another league's prices (the site's league changed) is refreshed at once, not one interval later."""
+    old_file(tmp_path)  # the fixture's league, Allflame, fetched at T0
+    clock = Clock(T0 + timedelta(hours=1))
+
+    assert refresher(tmp_path, writing_fetch(clock, []), clock, league="Allflame").due() == T0 + SIX_HOURS
+    assert refresher(tmp_path, writing_fetch(clock, []), clock, league="Keepers").due() == T0 + timedelta(hours=1)
+
+
 def test_a_failed_fetch_keeps_the_old_file_says_why_and_is_tried_again_after_the_retry(tmp_path, caplog):
     old_file(tmp_path, T0 - timedelta(days=1))
     before = (tmp_path / PRICE_FILE_NAME).read_bytes()
@@ -235,6 +244,15 @@ def test_the_server_refuses_a_refresh_interval_it_cannot_keep(hours):
     with pytest.raises(argparse.ArgumentTypeError, match="0 \\(never\\) or 0.25 to 8760 hours"):
         _refresh_hours(hours)
     assert _refresh_hours("0") == 0 and _refresh_hours("6") == 6
+
+
+def test_unset_the_site_fetches_the_league_the_game_data_pin_names():
+    """#1026: a fresh deploy prices the pinned game data with its own league's market, never poe.ninja's current one."""
+    from crafting_system.data import PIN
+    from crafting_system.web.__main__ import price_league
+
+    assert price_league(None) == PIN.league and PIN.league
+    assert price_league("Covens") == "Covens"
 
 
 def test_the_interval_is_at_least_a_quarter_of_an_hour(tmp_path):

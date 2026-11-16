@@ -6,8 +6,9 @@ Each flag has an environment variable for a container: `CRAFTING_WEB_HOST` (defa
 file, default `<output folder>/web/site.sqlite3`). The game data, the prices and the planner's limits are the command's (`crafting.toml`).
 
 The scheduled price refresh (OR-9, #1008; `_refresh`) is on when `CRAFTING_PRICE_REFRESH_HOURS` is above 0 (off by default; the image turns
-it on): the price command runs every that many hours and its new file replaces the configured one. `CRAFTING_PRICE_LEAGUE` names the league
-(default: the league of the price file in place, else poe.ninja's current one), `CRAFTING_PRICE_TRADE_BELOW` the command's `--trade-below`
+it on): the price command runs every that many hours and its new file replaces the configured one. It fetches the league the game data is
+played in, the one the data pin names (`data.PIN.league`, #1026); `CRAFTING_PRICE_LEAGUE` names another, and the info document and every
+route then say the prices are of another league than the game data. `CRAFTING_PRICE_TRADE_BELOW` the command's `--trade-below`
 (off by default), `CRAFTING_PRICE_WANTED_FILE` names to price beside what the methods in scope spend, `CRAFTING_PRICE_FETCH_MINUTES` the
 time one fetch may take (60). With no price file in place the server first fetches one, and serves once it has it.
 """
@@ -21,7 +22,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from crafting_system.config import load_config
-from crafting_system.data import load_game_data
+from crafting_system.data import PIN, load_game_data
 from crafting_system.prices import default_overrides_path, default_price_file_path
 from crafting_system.prices.price_names import canonical_price_name
 from crafting_system.prices.spends import spent_names
@@ -39,6 +40,14 @@ def _refresh_hours(text: str) -> float:
     if not (hours == 0 or (math.isfinite(hours) and MIN_INTERVAL.total_seconds() / 3600 <= hours <= 24 * 365)):
         raise argparse.ArgumentTypeError(f"0 (never) or {MIN_INTERVAL.total_seconds() / 3600:g} to {24 * 365} hours, not {text}")
     return hours
+
+
+def price_league(configured: str | None) -> str:
+    """The league the refresh fetches: the configured one (`CRAFTING_PRICE_LEAGUE`), else the one the game data pin names (#1026)."""
+    league = configured if configured is not None else PIN.league
+    if league is None:  # every pin file names one (`data.load_pin`)
+        raise ValueError("the game data pin names no league; set CRAFTING_PRICE_LEAGUE")
+    return league
 
 
 def _optional_float(text: str | None) -> float | None:
@@ -62,12 +71,13 @@ def main(argv: list[str] | None = None) -> int:
         default=env.get("CRAFTING_PRICE_REFRESH_HOURS") or "0",
         help="fetch the prices every that many hours (0: never; at least a quarter of an hour)",
     )
-    parser.add_argument("--price-league", default=env.get("CRAFTING_PRICE_LEAGUE") or None, help="the league whose prices are fetched")
+    parser.add_argument("--price-league", default=env.get("CRAFTING_PRICE_LEAGUE") or None, help="the league whose prices are fetched (default: the data pin's)")
     parser.add_argument("--price-trade-below", type=float, default=_optional_float(env.get("CRAFTING_PRICE_TRADE_BELOW")), help="the fetch's --trade-below")
     parser.add_argument("--price-wanted-file", default=env.get("CRAFTING_PRICE_WANTED_FILE") or None, help="more names to price, one per line")
     parser.add_argument("--price-fetch-minutes", type=float, default=float(env.get("CRAFTING_PRICE_FETCH_MINUTES") or 60), help="the time one fetch may take")
     args = parser.parse_args(argv)
-    service = Service(SqliteStore(args.db), load_world, game="poe1", workers=args.workers)
+    data_league = PIN.league  # the league the pinned game data is played in: the prices fetched by default, and the one a snapshot is held to
+    service = Service(SqliteStore(args.db), load_world, game="poe1", workers=args.workers, data_league=data_league)
 
     refresh = None
     if args.price_refresh_hours > 0:
@@ -80,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
             default_overrides_path(config),
             fetch_command(wanted=sorted(set(wanted)), trade_below=args.price_trade_below, timeout_seconds=args.price_fetch_minutes * 60),
             interval=timedelta(hours=args.price_refresh_hours),
-            league=args.price_league,
+            league=price_league(args.price_league),
             on_new_file=lambda: _load_now(service),
         )
         while not refresh.price_path.exists():  # nothing to plan with yet: the first fetch comes before the server
