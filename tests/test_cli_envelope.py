@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 from envelope_support import ExplicitProblem, dense_optimum, q_value, random_graph
 
+from crafting_system.planner import _envelope as envelope
 from crafting_system.planner._envelope import FALL_LIMIT, Net, NoPolicy, Search, resident_mb
 from crafting_system.solver import policy_reach, solve_packed
 
@@ -196,3 +197,42 @@ def test_a_goal_at_the_start_is_solved_at_once():
     problem = ExplicitProblem(graph, np.zeros_like(value), 1.0)
     result = Search(problem).run()
     assert result.exact and result.stats.expanded == 0 and answer(result)[0] == 0.0
+
+
+class _KeyedProblem(ExplicitProblem):
+    """The explicit problem whose kernels are shared by a key: the true one (the kernel itself), or one that lies (the offer alone)."""
+
+    lies: bool = False
+
+    def kernel_key(self, state: int, position: int):
+        if self.lies:
+            return position  # two states with one offer then share a kernel they do not have
+        return (position, frozenset(self.graph.actions[state][position].items())) if position in self.graph.actions[state] else None
+
+
+@pytest.mark.parametrize("seed", SEEDS[:3])
+def test_every_shared_kernel_is_checked_when_asked_and_a_true_key_changes_no_answer(seed, monkeypatch):
+    monkeypatch.setattr(envelope, "CHECK_SHARED", True)
+    graph = random_graph(seed, SIZE)
+    value, _ = dense_optimum(graph)
+    search = Search(_KeyedProblem(graph, value, 0.7), guard=True)
+    result = search.run()
+    check_exact(graph, value, result)
+    assert search.stats.verified == search.hits  # every kernel shared by its key was built again and compared (#886)
+
+
+def test_a_key_that_lies_is_caught_by_the_full_check_and_never_sampled_in_a_run(monkeypatch):
+    graph = random_graph(SEEDS[0], SIZE)
+    value, _ = dense_optimum(graph)
+    lying = _KeyedProblem(graph, value, 0.0)
+    lying.lies = True
+    monkeypatch.setattr(envelope, "CHECK_SHARED", True)
+    with pytest.raises(ValueError, match="share the kernel key"):
+        Search(lying, guard=False).run()
+    monkeypatch.setattr(envelope, "CHECK_SHARED", False)
+    unchecked = Search(lying, guard=False)
+    try:
+        unchecked.run()
+    except (ValueError, ArithmeticError):  # a lying key gives a wrong graph: whatever the run does with it, it checked nothing
+        pass
+    assert unchecked.stats.verified == 0

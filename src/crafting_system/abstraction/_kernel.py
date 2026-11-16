@@ -768,10 +768,14 @@ class Abstraction:
            every field is in the key but `new_ids`, which no step of the kernel reads (it names the new mods).
         3. A distribution is a function of its pool signature (`_pool_signature`: the head of the draw and the family types of the pool;
            `test_abstraction_cache_exactness.py` and the oracles test it). The signature names each family type by a number of this
-           abstraction (`_pool_types`), one number for each distinct type, so signatures are equal exactly when the types are.
+           abstraction (`_pool_types`), one number for each distinct type, so signatures are equal exactly when the types are. The kernel
+           reads a part's draws only through caches keyed by that signature (`_expanded_distribution`, `_fracture_entries`): within one
+           state two actions of one signature already share one distribution, so this is the lemma every kernel rests on, and sharing a
+           kernel across states adds no assumption to it.
 
         So the key is built from the same pair the kernel is built from and holds every part of it the kernel reads; a key says
-        nothing about another `Abstraction`, whose numbers are its own.
+        nothing about another `Abstraction`, whose numbers are its own. The envelope search therefore shares a kernel by its key with no
+        sampled check (#886; `planner._envelope.CHECK_SHARED` builds every shared kernel again, for the tests).
         """
         if len(state.status) != len(self.goal.leaves):
             raise ValueError(

@@ -9,15 +9,15 @@ missing price is dropped and reported (ADR-0007), never guessed.
 
 import random
 from collections import Counter, defaultdict
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from itertools import combinations, product
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
+from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, crafted_limit_of, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, eldritch_grade, eldritch_side, spawn_weight
+from crafting_system.items import ExplicitMod, Influence, Item, ItemError, Metamod, Rarity, eldritch_grade, eldritch_side, spawn_weight
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
@@ -34,6 +34,11 @@ FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a sha
 # solvers accept. At 0.1 it is about 1.3e-7, and a plan's mean moves by 0.1 of the cheapest orb per draw (R13: 0.0016 Chaos of 6,568, 2.4e-7 of
 # it), which is inside the tolerance the solvers accept. The start price is the listing's price and is not changed.
 DRAW_COST_SHARE = 0.1
+# Whether a bench craft whose mod counts toward no requirement is offered by the rule of `blocking_crafts` (#886, OR-41): on, a craft is offered
+# wherever it can change the outcome of another offered action, one craft for each class of crafts no offered action tells apart; off, as
+# before #886 (offered only for a requirement, a block of an unveil offer, or by label). #886 turns it on with every beta method.
+BLOCKING_CRAFTS = False
+METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,7 @@ class Offer:
     inputs: tuple[Need, ...] = ()
     axes: tuple[Axis, ...] = ()
     kind: str = ""  # the name of the catalog kind that lists the action ("" for an offer made by hand); the unpriced limit groups by it (#487)
+    blocks: Hashable | None = None  # a craft offered by `blocking_crafts`: its class, of which only the cheapest is kept once priced (`cheapest_per_class`)
 
 
 @dataclass(frozen=True)
@@ -395,7 +401,7 @@ def _allowing(data: GameData, start_item: Item, action: Action) -> Action:
 
 
 def offers_for(
-    data: GameData, goal: Goal, base_id: str, start_item: Item, kinds_named: Collection[str] | None = None
+    data: GameData, goal: Goal, base_id: str, start_item: Item, kinds_named: Collection[str] | None = None, *, blocking: bool | None = None
 ) -> OfferSet:
     """The actions the model offers for a target on `base_id`: the planner kinds of the catalog, then the filters below.
 
@@ -420,6 +426,10 @@ def offers_for(
       the model is 100 offers and the states grow past what a plan can hold; the plan is then the cheapest
       among the offered crafts, not a proof against the rest (the report says so). REVISIT with the
       Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
+    * With `blocking` (default `BLOCKING_CRAFTS`) the rule of the item above is `blocking_crafts`' instead (#886, OR-41): a craft that counts
+      toward no requirement is offered wherever it can change the outcome of another offered action, one for each class of crafts that no
+      offered action tells apart (the cheapest, once priced: `cheapest_per_class`), and left out only where it can change nothing. The unveil
+      block below is one case of that rule.
     * An UNVEIL BLOCK is the exception (ADR-0026, ticket #146): when the unveil kind is offered, a craft whose mod's family is in the
       unveiled pool of the base (`unveil_pool_families`, either side, weight above 0 on the base) is offered even though it counts toward
       no requirement, because explicit mods, crafts included, take their families out of the next offer. Crafts of one family give one
@@ -519,6 +529,7 @@ def offers_for(
         action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
     )
     blocks = _unveil_blocks(data, base_id, candidates, kind_of)
+    ruled = blocking_crafts(data, goal, start_item, candidates) if (BLOCKING_CRAFTS if blocking is None else blocking) else None
     chosen: list[Action] = []
     left_out_crafts: list[str] = []
     for action in candidates:
@@ -526,11 +537,12 @@ def offers_for(
             _only_crafts(data, start_item, action)
             and not action.adds(data, start_item).named & counting
             and action.label(data) not in label_names
-            and not _families_of(data, action.adds(data, start_item).named) & blocks
+            and (action not in ruled if ruled is not None else not _families_of(data, action.adds(data, start_item).named) & blocks)
         ):
             left_out_crafts.append(told_apart(action))
             continue
         chosen.append(action)
+    classes = {action: ruled[action] for action in chosen if ruled is not None and action in ruled and not action.adds(data, start_item).named & counting and action.label(data) not in label_names}
     chosen, unusable = split_usable(data, start_item, chosen)
 
     groups: dict[str, list[Action]] = defaultdict(list)
@@ -542,7 +554,8 @@ def offers_for(
         if len(set(variants)) != len(variants) or "" in variants:
             variants = [str(number) for number in range(1, len(actions) + 1)]
         for action, variant in zip(actions, variants):
-            offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, "")))
+            offer = offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, ""))
+            offers.append(replace(offer, blocks=classes[action]) if action in classes else offer)
 
     limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps)
     unlisted = (
@@ -584,7 +597,17 @@ def offers_for(
                 ),  # lifted by #886 with every default-off (#919)
             ),
         )
-    if left_out_crafts:
+    if left_out_crafts and ruled is not None:  # `blocking_crafts` left them out: no offered action's outcome depends on them
+        limits += (
+            Limit(
+                _limits.CRAFTS,
+                "Not offered",
+                "its mod counts toward no requirement, and no offered action's outcome depends on a crafted mod that counts for nothing",
+                "The plan is unaffected: such a craft only takes a slot and costs currency.",
+                tuple(left_out_crafts),
+            ),
+        )
+    elif left_out_crafts:
         why = (
             "its mod counts toward no requirement, so the craft only takes a slot and costs currency"
             if erased_by_all
@@ -893,6 +916,108 @@ def _only_crafts(data: GameData, item: Item, action: Action) -> bool:
     """Whether the action only adds mods it names, as crafted mods (a bench craft)."""
     adds = action.adds(data, item)
     return adds.crafted and not adds.draws and adds.named is not None
+
+
+def blocking_crafts(data: GameData, goal: Goal, start_item: Item, candidates: Iterable[Action]) -> dict[Action, Hashable]:
+    """The bench crafts of `candidates` that can change the outcome of another offered action, each with its class (#886, OR-41).
+
+    A crafted mod changes what another action does to the item in one of two ways, and the rule reads both from what the actions declare
+    (`Action.adds`, `Action.reads`), never from a list of tricks:
+
+    * A *reader*: an action that keeps the crafted mods (`Adds.keeps_crafted`) and whose result depends on the item's other mods (`Reads.junk`)
+      or on the unveil offer (`Reads.offer`). The craft takes a slot of its side (an Exalted Orb then adds on the other side only), takes its
+      family out of the pool the reader draws from (a Harvest add, an unveil), or is one more mod a removal may hit (an Annulment). So while
+      one reader is offered, every craft can change an outcome and is offered; with none, a craft that counts for nothing only takes a slot
+      and costs currency (every other action erases it or ignores the mods), and it is left out: that cut is exact.
+    * A *metamod* (a craft of a family of `Metamod`): a lock keeps its side through a reroll that erases the rest, an Attack or Caster metamod
+      takes its tag out of a draw, the multimod lets a second craft on. It changes the outcome of the actions that erase too, so it is offered
+      whatever the readers are; the abstraction models it once an enabled action adds one.
+
+    The class of a craft is what an offered action can tell of it: the sides of its mods, and those of its families that some action tells
+    apart (`_told_families`: the families a draw on this base can give, those an action reads by name, the metamods), with the mods themselves
+    when a family is one a requirement names (their values are then read). Two crafts of one class give every offered action the same
+    outcome on the same item, up to the name of a family nobody tells apart, so the states that follow have the same value, and the cheaper
+    craft is never worse: `cheapest_per_class` keeps one of each class once the offers are priced, an exact cut. What is offered is still
+    searched lazily: the envelope search builds a craft's kernel at a state only where the floor of the offer (its cost plus what any state
+    outside the goal costs, `_offer_floor`) is under that state's bound, so an offered craft that cannot pay off costs a floor, not states.
+    """
+    candidates = list(candidates)
+    crafts = [action for action in candidates if _only_crafts(data, start_item, action)]
+    readers = [
+        action for action in candidates
+        if action not in crafts and action.adds(data, start_item).keeps_crafted and ((reads := action.reads(data)).junk or reads.offer)
+    ]  # fmt: skip
+    told = _told_families(data, start_item, candidates, crafts)
+    asked = _families_of(data, (mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids))
+    found: dict[Action, Hashable] = {}
+    for action in crafts:
+        named = action.adds(data, start_item).named or frozenset()
+        families = _families_of(data, named)
+        if not (readers or families & METAMOD_FAMILIES):
+            continue
+        sides = tuple(sorted(str(data.mods[mod_id].generation_type) for mod_id in named if mod_id in data.mods))
+        seen = families if told is None else families & told
+        found[action] = (sides, seen, frozenset(named) if families & asked else frozenset())
+    return found
+
+
+def _told_families(data: GameData, start_item: Item, candidates: Iterable[Action], crafts: Collection[Action]) -> frozenset[str] | None:
+    """The families of a crafted mod that some offered action can tell apart (`blocking_crafts`), or None for every family.
+
+    A draw on this base (`drawable_mod_ids`, for the start item, for it with each influence an action may give it, and at each item level an
+    action draws at, `Reads.draw_levels`), an unveil offer of the base, a family an action reads by name (`Reads.families`, `Reads.by_mod`; None
+    there is every family), the families of the start item's own mods (a craft of one is refused while it stays) and the metamods. A craft
+    reads its own families because a second craft of one is refused; while an item holds one crafted mod at most (`crafted_limit_of`: no
+    multimod among the crafts or on the start item, and no enchantment that grants a slot) any second craft is refused whatever its family,
+    so those reads tell nothing apart and are not counted.
+    """
+    held = [entry.mod_id for entry in start_item.mods]
+    named = [mod_id for action in crafts for mod_id in action.adds(data, start_item).named or ()]
+    multimod = Metamod.MULTIPLE_CRAFTED_MODS.value in _families_of(data, (*held, *named))
+    several = crafted_limit_of(data, multimod=multimod, enchantment=start_item.enchantment) > 1
+    found: set[str] = set(METAMOD_FAMILIES) | _families_of(data, held)
+    levels: set[int] = {start_item.item_level}
+    for action in candidates:
+        reads = action.reads(data)
+        levels |= set(reads.draw_levels or ())
+        if action in crafts and not several:
+            continue
+        if reads.junk and reads.families is None:
+            return None
+        found |= reads.families or frozenset()
+        found |= frozenset(reads.by_mod or ())
+    found |= unveil_pool_families(data, start_item.base_id)
+    for level, influences in product(sorted(levels), (start_item.influences, *(frozenset({influence}) for influence in Influence))):
+        try:
+            probe = start_item if (level, influences) == (start_item.item_level, start_item.influences) else Item.build(
+                data, base_id=start_item.base_id, item_level=level, rarity=Rarity.RARE, influences=influences
+            )
+            found |= _families_of(data, drawable_mod_ids(data, probe))
+        except (ItemError, NotApplicableError, OutOfScopeError):  # a base that takes no such influence, or whose pool the model cannot build: no draw there to tell apart
+            continue
+    return frozenset(found)
+
+
+def cheapest_per_class(priced: Iterable[PricedOffer]) -> tuple[tuple[PricedOffer, ...], tuple[str, ...]]:
+    """(`priced` with one craft kept of each class of `blocking_crafts`, the cheapest; the labels of the others). Exact (`blocking_crafts`)."""
+    priced = tuple(priced)
+    best: dict[Hashable, PricedOffer] = {}
+    for entry in priced:
+        if entry.offer.blocks is not None and (entry.offer.blocks not in best or entry.cost < best[entry.offer.blocks].cost):
+            best[entry.offer.blocks] = entry
+    kept = tuple(entry for entry in priced if entry.offer.blocks is None or best[entry.offer.blocks] is entry)
+    return kept, tuple(entry.label for entry in priced if entry not in kept)
+
+
+def same_craft_limit(labels: tuple[str, ...]) -> Limit:
+    """The limit of the crafts `cheapest_per_class` left out: a cheaper craft of their class does the same to every offered action."""
+    return Limit(
+        _limits.CRAFTS,
+        "Not offered",
+        "a cheaper craft on the same side does the same to every offered action: no offered action tells their mods apart",
+        "The plan is unaffected: the cheaper craft is offered in its place.",
+        labels,
+    )
 
 
 def split_usable(data: GameData, start_item: Item, actions: Iterable[Action]) -> tuple[list[Action], list[Action]]:

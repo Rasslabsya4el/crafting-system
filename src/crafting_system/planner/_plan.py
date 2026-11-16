@@ -44,7 +44,7 @@ from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, spli
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
@@ -655,6 +655,9 @@ def _make_plan(
             raise PlanError(str(error)) from error
         offers, limits = chosen.offers, (*chosen.limits, *limits)
     priced, dropped = price_offers(offers, prices, price_source)
+    priced, same = cheapest_per_class(priced)  # one craft of each class `blocking_crafts` offered (#886): the others are never cheaper
+    if same:
+        limits += (same_craft_limit(same),)
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")

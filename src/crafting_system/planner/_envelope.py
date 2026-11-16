@@ -147,8 +147,11 @@ CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers b
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
-VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
-VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
+# Whether every kernel the search shares by its key is built again and compared (`Search._kernel`). Off in a run: equal keys give equal kernels at
+# any two states by construction (`Abstraction.kernel_key`, its three steps, #886), so no check is owed; the tests turn it on over small
+# worlds (`tests/test_planner_blocking_crafts.py`: an Exalted Orb with bench crafts; R12 with its essences and Harvest reforges), where it compares
+# every shared kernel instead of a sample (it replaced the first 20 and 1 in 4,096 of #374).
+CHECK_SHARED = False
 
 
 class Refused(Exception):
@@ -227,7 +230,7 @@ class SearchStats:
     solve_seconds: float = 0.0
     build_seconds: float = 0.0
     expand_seconds: float = 0.0
-    verified: int = 0
+    verified: int = 0  # shared kernels built again and compared (`CHECK_SHARED`): 0 in a run
     peak_mb: float | None = None
     solve_info: dict = field(default_factory=dict)  # the solver's counts and seconds, summed over the rounds
 
@@ -452,7 +455,7 @@ class Search[S]:
         kid = self.shared.get(key) if key is not None else None
         if kid is not None:
             self.hits += 1
-            if self.hits <= VERIFY_FIRST or self.hits % VERIFY_EVERY == 0:
+            if CHECK_SHARED:
                 self.stats.verified += 1
                 if not self._fresh_equal(state, position, kid):
                     raise ValueError(f"two states share the kernel key {key!r} but not its kernel (checked at {state!r})")
