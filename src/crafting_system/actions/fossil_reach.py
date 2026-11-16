@@ -18,7 +18,9 @@ passes no leaf here; it took one slot of its own side and took out of the pool e
 Glyphic suffix whose family is a prefix family of a shield's pool takes a prefix family). Draw j of the ordinary draws comes after j earlier
 ordinary draws, split as `a` on the prefix side and `j - a` on the suffix side in every way the slots left beside the forced mod allow; a side
 is open when its draws and the forced mod's slot are below its free slots, and the families gone from a side are its draws plus the forced
-mod's families there. A set that may force one of several mods (Glyphic) is bounded for each and takes the largest. For a family f of the pool, x_f is the weight of its mods in X and j_f the
+mod's families there. A set that may force one of several mods (Glyphic) is bounded for each and takes the largest; in a Tangled set,
+whose forced mod's law follows the outcome record, the largest is taken per record before the mean over records (the mean of the maxima
+bounds the mixture, the maximum of the means need not). For a family f of the pool, x_f is the weight of its mods in X and j_f the
 weight of the rest. After the earlier draws and the forced mod took a set R of families (|R| of each side as above), the chance of a hit is
 (X - X_R) / (W - W_R) over the open sides, and
 
@@ -200,35 +202,32 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
     pool = _Pool(candidates, passing, spawn, free, kept, totals)
     factors = _Factors(pool.tag_sets, pairs)
     joint = _disjoint(passing, leaves)
-    # a unit is a set with one mod it may force (or none): the set's bound is the largest over its units, since which one it forces is not read
-    units = [(position, offset) for position in todo for offset in sorted({_offset(candidates, mod) for mod in members[position][2]} or {NO_FORCED})]
-    per_unit = np.zeros((len(units), leaves))
-    per_unit_all = np.zeros(len(units))
-    for start in range(0, len(units), BATCH):  # a batch of units at a time: a Tangled set is up to 420 rows of factors
+    # a unit is a set with one mod it may force (or none). Which one it forces is not read, so each row of the set's mixture (one outcome
+    # record class of a Tangled set, whose forced mod's law follows the record) takes the largest bound over the units, and the set the mean
+    # of those maxima over its rows: a mean of maxima, never the maximum of the means, which may be below the exact chance
+    per_set = np.zeros((len(members), leaves))
+    per_set_all = np.zeros(len(members))
+    for start in range(0, len(todo), BATCH):  # a batch of sets at a time: a Tangled set is up to 420 rows of factors per unit
         rows: list[np.ndarray] = []  # each: rows x tag sets, the factor of each tag set for one member of a set's mixture
-        owner: list[np.ndarray] = []
-        share: list[np.ndarray] = []
         lucky: list[np.ndarray] = []
         offsets: list[tuple[int, int, int, int]] = []
-        for unit, (position, offset) in enumerate(units[start : start + BATCH], start):
+        spans: list[tuple[int, int, int, np.ndarray]] = []  # per set: its position, first row, units, shares of its rows
+        for position in todo[start : start + BATCH]:
             records = members[position][1]
             opulent = any(F._special(record, "opulent") for record in records)
             table, shares = factors.table(records, opulent, any(F._special(record, "tangled") for record in records))
-            rows.append(table)
-            owner.append(np.full(len(table), unit))
-            share.append(shares)
-            lucky.append(np.full(len(table), any(record.rolls_lucky for record in records)))
-            offsets.extend([offset] * len(table))
-        shares = np.concatenate(share)[:, None]
+            units = sorted({_offset(candidates, mod) for mod in members[position][2]} or {NO_FORCED})
+            spans.append((position, sum(len(row) for row in rows), len(units), shares))
+            for offset in units:
+                rows.append(table)
+                lucky.append(np.full(len(table), any(record.rolls_lucky for record in records)))
+                offsets.extend([offset] * len(table))
         singles, together = pool.bounds(np.concatenate(rows), np.concatenate(lucky), offsets, leaves, joint)
-        owners = np.concatenate(owner)
-        np.add.at(per_unit, owners, singles * shares)  # a Tangled set: the mean over its outcome records, by their shares
-        np.add.at(per_unit_all, owners, together * shares[:, 0])
-    per_set = np.zeros((len(members), leaves))
-    per_set_all = np.zeros(len(members))
-    for unit, (position, _forced_mod) in enumerate(units):
-        per_set[position] = np.maximum(per_set[position], per_unit[unit])
-        per_set_all[position] = max(per_set_all[position], per_unit_all[unit])
+        for position, first, count, shares in spans:
+            width = len(shares)
+            block = singles[first : first + count * width].reshape(count, width, leaves).max(axis=0)
+            per_set[position] = shares @ block
+            per_set_all[position] = shares @ together[first : first + count * width].reshape(count, width).max(axis=0)
     for position in todo:
         forced = members[position][2]
         hits = [any(leaf_flags(mod)[leaf] for mod in forced) for leaf in range(leaves)]

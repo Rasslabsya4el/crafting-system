@@ -185,6 +185,34 @@ def test_a_forced_mod_whose_family_is_a_pool_family_of_the_other_side_is_charged
             checked += 1
     assert checked > 10
 
+
+def test_a_tangled_glyphic_set_takes_the_largest_bound_over_its_forced_mods_per_outcome_record():
+    """In a Tangled set the Glyphic Fossil's forced mod follows the outcome record, so the bound takes the largest over the forced mods for each
+    record and then the mean over records (the largest of the means over records may be below the exact chance). Every Tangled set with a
+    Glyphic Fossil, with GlyA given a prefix family (its forced use then takes a prefix family as well as a suffix slot, unlike GlyB's), on
+    bare boots and on boots with one free slot per side, against the exact chance."""
+    import dataclasses
+
+    mods = dict(DATA.mods)
+    mods["GlyA"] = dataclasses.replace(DATA.mods["GlyA"], families=DATA.mods["LifeA"].families)
+    data = dataclasses.replace(DATA, mods=mods)
+    leaves = ({"RarityA"}, {"BleedAtkA", "CasterA"}, {"LifeB", "FireResA"})
+    tight = boots(*(roll(mod_id, fractured=True) for mod_id in ("FireA", "BareA", "ColdResA", "MinionA")))
+    checked = 0
+    for item in (boots(), tight):
+        actions = tuple(
+            action for action in fossil_actions(data, item) if {"Glyphic Fossil", "Tangled Fossil"} <= set(action.fossils) and len(action.fossils) <= 3
+        )
+        for action, declared in zip(actions, ApplyFossils.reach_batch(data, item, actions, passes_of(leaves))):
+            if declared is None or not declared.keeps_shape:
+                continue
+            single, together = exact(action.outcomes(data, item), leaves, data)
+            assert all(bound >= chance for bound, chance in zip(declared.chances, single)), (action.fossils, declared.chances, [float(c) for c in single])
+            assert declared.together is None or declared.together >= together
+            checked += 1
+    assert checked > 5
+
+
 def test_on_a_shield_with_four_fractured_mods_the_glyphic_set_declares_a_bound_at_or_above_the_exact_chance():
     """The checker's counterexample on the real data: SpellBlockOnLowLifeEssence1, a suffix a Glyphic Fossil may force, has the family of the
     prefix pool family SpellBlockPercentage; with one prefix slot left, the bound read without that family was 0.031684 against an exact
