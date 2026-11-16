@@ -103,6 +103,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_main.py", "main", ("TargetError", "DataError", "PriceFileNotFound", "PlanError", "NotApplicableError", "OutOfScopeError", "ConvergenceError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the run"),
     ("web/_work.py", "run_job", ("TargetError", "DataError", "PriceFileNotFound", "PlanError", "NotApplicableError", "OutOfScopeError", "ConvergenceError", "ValueError", "OSError"), EITHER, "the website's job fails with the text of whichever error stopped the plan, as the command's `Error:` line (#961)"),
     ("planner/_offers.py", "_roll_limit_can_matter", ("NotApplicableError", "OutOfScopeError"), EITHER, "a pool that cannot be built is no proof the mod is out of reach, so the orb stays and nothing is left out"),
+    ("planner/_offers.py", "_implicits_made", ("NotApplicableError", "OutOfScopeError"), EITHER, "an Ember or an Ichor the start item cannot take reaches no grade: what refuses it (the base, its class, influence, corruption) holds for every later item too"),
     ("planner/_offers.py", "donor_wants", ("OutOfScopeError", "NotApplicableError"), EITHER, "an Awakener's Orb whose donor cannot be read (#832) is kept, so that its donor's search (`_awakener.solve_donors`) leaves it out and says why"),
     ("planner/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_packed.py", "walk", ("OutOfScopeError",), RECORDS, "a model gap: written"),

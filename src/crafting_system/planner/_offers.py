@@ -178,6 +178,15 @@ def asks_eldritch(data: GameData, goal: Goal) -> bool:
 
 
 EMBER_KIND, CONFLICT_KIND = "eldritch-implicit-currency", "orb-of-conflict"
+
+
+def _implicits_made(data: GameData, action: Action, item: Item) -> frozenset[str]:
+    """The Eldritch implicits an Ember or an Ichor can put on `item`, read from its outcomes (the contract, not its fields)."""
+    try:
+        results = action.outcomes(data, item).results
+    except (NotApplicableError, OutOfScopeError):  # what refuses it is the base, its class, influence or corruption: no later item takes it either
+        return frozenset()
+    return frozenset(entry.mod_id for _, made in results for entry in made.eldritch_implicits(data).values())
 TOP_GRADE = 6  # Perfect: a Conflict raises up to it
 
 
@@ -198,7 +207,8 @@ def eldritch_unreachable(data: GameData, goal: Goal, start_item: Item, offered: 
     conflict = False
     for action, kind in offered:
         if kind == EMBER_KIND:
-            reach[getattr(action, "side")].add(getattr(action, "grade"))
+            for mod_id in _implicits_made(data, action, start_item):
+                reach[eldritch_side(data.mods[mod_id])].add(eldritch_grade(data.mods[mod_id]))
         conflict = conflict or kind == CONFLICT_KIND
     if conflict and len(reach) == 2:
         reach = defaultdict(set, {side: set(range(1, TOP_GRADE + 1)) for side in reach})
