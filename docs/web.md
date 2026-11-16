@@ -47,7 +47,8 @@ time. The running server loads the new file at once (see "A price refresh" below
 The league goes with the game data (#1026): unset, the site fetches the league its data pin names, so a site on the 3.29 game data
 fetches the 3.29 league's prices, and a new league comes with a new pin (`python -m crafting_system.data pin ... --league`, OR-52).
 `CRAFTING_PRICE_LEAGUE` names another league; the site then says so in `price_age` (below) on the info document, every job and every
-route. The tests and the benchmark do not read this file: they read their own snapshots (OR-44).
+route. A price file of another league than the one fetched (a site whose league changed) is refreshed at once, not one interval
+later. The tests and the benchmark do not read this file: they read their own snapshots (OR-44).
 
 `.github/scripts/web_docker_smoke.py` does all of this on a Linux runner: an empty volume, the container fetches its data and its prices,
 and plans one request through the API (#969, #1008).

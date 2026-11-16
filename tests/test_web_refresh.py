@@ -94,6 +94,15 @@ def test_the_league_is_the_configured_one_else_the_one_of_the_file_in_place(tmp_
     assert [league for _, league, _ in calls] == ["Allflame", "Allflame"]
 
 
+def test_a_file_of_another_league_than_the_configured_one_is_due_at_once(tmp_path):
+    """#1026: a volume holding another league's prices (the site's league changed) is refreshed at once, not one interval later."""
+    old_file(tmp_path)  # the fixture's league, Allflame, fetched at T0
+    clock = Clock(T0 + timedelta(hours=1))
+
+    assert refresher(tmp_path, writing_fetch(clock, []), clock, league="Allflame").due() == T0 + SIX_HOURS
+    assert refresher(tmp_path, writing_fetch(clock, []), clock, league="Keepers").due() == T0 + timedelta(hours=1)
+
+
 def test_a_failed_fetch_keeps_the_old_file_says_why_and_is_tried_again_after_the_retry(tmp_path, caplog):
     old_file(tmp_path, T0 - timedelta(days=1))
     before = (tmp_path / PRICE_FILE_NAME).read_bytes()
