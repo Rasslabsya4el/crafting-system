@@ -178,7 +178,7 @@ def widen(
         began = clock_now()
         plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
         try:
-            plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0))  # no plan in hand: all the time left
+            plan = run(chosen, RoundCall(rest if (best is not None or __import__('os').environ.get('PROBE_EQUAL')) else 1, best_upper, k == 0))  # no plan in hand: all the time left
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
             reason = (

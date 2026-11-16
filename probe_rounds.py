@@ -39,6 +39,12 @@ def traced(*a, round_call=None, **k):
         print(f"[{time.perf_counter()-T0:6.1f} s]   {type(e).__name__}: {str(e)[:200]}", flush=True)
         raise
 pp._make_plan = traced
+from crafting_system.planner import _envelope as ev
+_st = ev.Search._stand
+def stand(self, lower, began):
+    _st(self, lower, began)
+    print(f"[{time.perf_counter()-T0:6.1f} s]     std step {self.stats.rounds} states {len(self.states)} L {lower:.4f} U {self.upper if self.upper is None else round(self.upper,4)}", flush=True)
+ev.Search._stand = stand
 plan = plan_target(data, load_target(TREE / bench.target, data), prices, PlanSettings(recipe_starts=False, budget=Budget.default()))
 print(f"[{time.perf_counter()-T0:6.1f} s] ANSWER {sys.argv[2]} {plan.mean_remaining + plan.start_price.chaos:.2f} c, peak {PEAK[0]:.0f} MB, memory setting {Budget.default().memory_mb}, exact {plan.search and plan.search.exact}", flush=True)
 for l in plan.limits:
