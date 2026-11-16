@@ -29,7 +29,6 @@ from starlette.routing import Route
 from ._request import RequestError
 from ._service import WAIT_LIMIT_SECONDS, Service
 from ._store import DONE, STATES, JobRecord, RouteRecord
-from ._world import snapshot_age
 
 API = "/api/v1"
 ROUTES_PAGE_LIMIT = 100
@@ -101,7 +100,7 @@ def create_app(services: dict[str, Service], *, manage: bool = True) -> Starlett
         if service is None:
             return _error(404, f"no game {request.path_params['game']!r}; the site plans {sorted(services)}")
         world = await run_in_threadpool(lambda: service.world)  # may load a refreshed world (#968): never on the event loop
-        price_age = snapshot_age(world.prices.league, world.prices.fetched_at, service.today())  # of the very world shown
+        price_age = service.snapshot_age(world.prices.league, world.prices.fetched_at)  # of the very world shown
         return JSONResponse(
             {"game": service.game, "data_version": world.data.version, "price_snapshot": world.price_snapshot, "planner": world.planner_version,
              "workers": service.workers, "machine": world.machine, "price_age": price_age}

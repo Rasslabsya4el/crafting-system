@@ -9,6 +9,10 @@ after the cache holds the new files); nobody edits Python or pastes lines.
 
 Only the five files the normalizer reads are pinned; the derived `mods_by_base`, `mod_types`
 and `tags` dumps are not needed.
+
+The pin also names the league its patch is played in (`league`, poe.ninja's league id: Allflame
+for 3.29): the prices that go with this game data are that league's, and the website fetches
+them by default (#1026). It moves with the pin (`data pin ... --league`).
 """
 
 import json
@@ -70,12 +74,14 @@ class PinnedFile:
 
 @dataclass(frozen=True)
 class RepoePin:
-    """A repoe-fork patch: the folder name (`version`), the commit the files are read at, and the files."""
+    """A repoe-fork patch: the folder name (`version`), the commit the files are read at, the files, and the league the patch is
+    played in (`league`; every pin file names one, a pin built in memory may not)."""
 
     version: str
     commit: str
     base_url: str
     files: tuple[PinnedFile, ...]
+    league: str | None = None
 
     def __post_init__(self):
         if not _is_plain_name(self.version):
@@ -89,6 +95,8 @@ class RepoePin:
         names = [file.name for file in self.files]
         if len(set(names)) != len(names):
             raise ValueError(f"pin lists a file twice: {sorted({n for n in names if names.count(n) > 1})}")
+        if self.league is not None and (not isinstance(self.league, str) or not self.league.strip() or self.league != self.league.strip()):
+            raise ValueError(f"pin league must be a league name without surrounding spaces, got {self.league!r}")
 
     def url_for(self, name: str) -> str:
         """Where a pinned file is downloaded from (the site's `data` folder at the pinned commit)."""
@@ -105,28 +113,34 @@ def load_pin(path: Path = PIN_FILE) -> RepoePin:
         document: Any = json.loads(Path(path).read_bytes())
     except (OSError, ValueError, RecursionError) as error:  # ValueError: bad JSON or bad UTF-8
         raise bad(f"it cannot be read as JSON ({error})") from error
-    if not isinstance(document, dict) or set(document) != {"version", "commit", "base_url", "files"}:
-        raise bad("it must be an object with version, commit, base_url and files")
+    if not isinstance(document, dict) or set(document) != {"version", "league", "commit", "base_url", "files"}:
+        raise bad("it must be an object with version, league, commit, base_url and files")
     entries = document["files"]
     if not isinstance(entries, list) or not all(
         isinstance(entry, dict) and set(entry) == {"name", "sha256", "size"} for entry in entries
     ):
         raise bad("files must be a list of objects with name, sha256 and size")
+    if not isinstance(document["league"], str):
+        raise bad("league must be the name of the league the patch is played in")
     try:
         return RepoePin(
             version=document["version"],
             commit=document["commit"],
             base_url=document["base_url"],
             files=tuple(PinnedFile(entry["name"], entry["sha256"], entry["size"]) for entry in entries),
+            league=document["league"],
         )
     except (ValueError, TypeError, AttributeError) as error:
         raise bad(str(error)) from error
 
 
 def write_pin(pin: RepoePin, path: Path = PIN_FILE) -> None:
-    """Write `pin` as the pin file: all of it or none of it (a temp file next to `path`, then `os.replace`)."""
+    """Write `pin` as the pin file: all of it or none of it (a temp file next to `path`, then `os.replace`). A pin file names its league."""
+    if pin.league is None:
+        raise PinFileError(f"the pin of version {pin.version} names no league; a pin file must name the league its patch is played in")
     document = {
         "version": pin.version,
+        "league": pin.league,
         "commit": pin.commit,
         "base_url": pin.base_url,
         "files": [{"name": file.name, "sha256": file.sha256, "size": file.size} for file in pin.files],

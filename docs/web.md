@@ -39,13 +39,15 @@ time. The running server loads the new file at once (see "A price refresh" below
 | Setting | Flag | Environment | Default |
 |---|---|---|---|
 | hours between two fetches (0: never; at least 0.25) | `--price-refresh-hours` | `CRAFTING_PRICE_REFRESH_HOURS` | `0` (the image: `6`) |
-| the league whose prices are fetched | `--price-league` | `CRAFTING_PRICE_LEAGUE` | the league of the price file in place, else poe.ninja's current one |
+| the league whose prices are fetched | `--price-league` | `CRAFTING_PRICE_LEAGUE` | the league the game data pin names (`league` in `src/crafting_system/data/PIN.json`: Allflame for 3.29) |
 | the trade site's offers read for names priced on fewer units than this | `--price-trade-below` | `CRAFTING_PRICE_TRADE_BELOW` | off |
 | more names to price, one per line | `--price-wanted-file` | `CRAFTING_PRICE_WANTED_FILE` | none |
 | the time one fetch may take, minutes | `--price-fetch-minutes` | `CRAFTING_PRICE_FETCH_MINUTES` | `60` |
 
-The league is the site's setting: a site on the 3.29 game data fetches the 3.29 league's prices; a new league is set with a new game data
-pin (OR-52). The tests and the benchmark do not read this file: they read their own snapshots (OR-44).
+The league goes with the game data (#1026): unset, the site fetches the league its data pin names, so a site on the 3.29 game data
+fetches the 3.29 league's prices, and a new league comes with a new pin (`python -m crafting_system.data pin ... --league`, OR-52).
+`CRAFTING_PRICE_LEAGUE` names another league; the site then says so in `price_age` (below) on the info document, every job and every
+route. The tests and the benchmark do not read this file: they read their own snapshots (OR-44).
 
 `.github/scripts/web_docker_smoke.py` does all of this on a Linux runner: an empty volume, the container fetches its data and its prices,
 and plans one request through the API (#969, #1008).
@@ -118,8 +120,13 @@ on the server's day, with a warning once it is past the age the command warns at
 
 ```
 "price_age": {"league": "Mirage", "fetched_at": "2026-11-02T06:00:00Z", "age_days": 9, "max_age_days": 7, "stale": true,
-              "warning": "The prices are 9 days old (the Mirage price snapshot of 2026-11-02); prices older than 7 days may be out of date."}
+              "warning": "The prices are 9 days old (the Mirage price snapshot of 2026-11-02); prices older than 7 days may be out of date.",
+              "data_league": "Allflame", "other_league": true,
+              "league_warning": "The prices are of the Mirage league, but the game data is of the Allflame league: the costs follow the Mirage market."}
 ```
+
+`data_league` is the league the game data pin names; `other_league` and `league_warning` say when the snapshot is of another league
+(a site whose `CRAFTING_PRICE_LEAGUE` names one, or a route planned before the league changed), otherwise `false` and `null` (#1026).
 
 A job's is its route's once it has one, else that of the snapshot it is planned with while it owes an answer, else `null` (a failed or
 stopped job). A route names the snapshot it was planned on in `summary.snapshot`; a route stored before that has `null`.

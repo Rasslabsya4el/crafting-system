@@ -10,7 +10,9 @@ that stamp with the files as they stand now (`World.outdated`) and loads a new w
 snapshot without a restart (#968).
 
 **The age of a snapshot** (#976): `snapshot_age` says how many days old a snapshot is on a given day and whether that is past the limit the
-command warns at (`prices.MAX_AGE_DAYS`, `prices.stale_warning`). The day is the caller's: nothing here reads the clock.
+command warns at (`prices.MAX_AGE_DAYS`, `prices.stale_warning`). The day is the caller's: nothing here reads the clock. It also says when the
+snapshot is of another league than the one the game data is played in (the pin's league, `data.PIN.league`; #1026): a site told to price
+another league says so next to the age.
 """
 
 import hashlib
@@ -60,10 +62,13 @@ def stamp_of(paths: tuple[Path, ...]) -> Stamp:
     return tuple(stamp)
 
 
-def snapshot_age(league: str, fetched_at: datetime, today: date, max_age_days: int = MAX_AGE_DAYS) -> dict:
+def snapshot_age(
+    league: str, fetched_at: datetime, today: date, max_age_days: int = MAX_AGE_DAYS, *, data_league: str | None = None
+) -> dict:
     """The age of the price snapshot of `league` fetched at `fetched_at` on the day `today`, as the API says it: the day it was fetched,
     its age in whole days (from the UTC date of the fetch, as `prices.stale_warning` counts), the limit, whether it is past the limit
-    (judged by `stale_warning` itself) and, when it is, a warning in the site's words (#976)."""
+    (judged by `stale_warning` itself) and, when it is, a warning in the site's words (#976). With `data_league`, the league the game data
+    is played in, it also says whether the snapshot is of another league and, when it is, a warning in the site's words (#1026)."""
     fetched_on = fetched_at.astimezone(UTC).date()
     age = (today - fetched_on).days
     stale = stale_warning(PriceFile(league, fetched_at, 1.0), today, max_age_days) is not None
@@ -73,6 +78,12 @@ def snapshot_age(league: str, fetched_at: datetime, today: date, max_age_days: i
         if stale
         else None
     )
+    other_league = data_league is not None and league != data_league
+    league_warning = (
+        f"The prices are of the {league} league, but the game data is of the {data_league} league: the costs follow the {league} market."
+        if other_league
+        else None
+    )
     return {
         "league": league,
         "fetched_at": fetched_at.astimezone(UTC).strftime(SNAPSHOT_TIME_FORMAT),
@@ -80,6 +91,9 @@ def snapshot_age(league: str, fetched_at: datetime, today: date, max_age_days: i
         "max_age_days": max_age_days,
         "stale": stale,
         "warning": warning,
+        "data_league": data_league,
+        "other_league": other_league,
+        "league_warning": league_warning,
     }
 
 

@@ -43,15 +43,17 @@ Done when each unclear row carries an issue number.
 ## 5. Move the pin
 
 ```bash
-uv run python -m crafting_system.data pin <commit> <version>
+uv run python -m crafting_system.data pin <commit> <version> [--league <league>]
 uv run python -m crafting_system.data verify
 ```
 
 Run the line that step 2's output ended with (`To move the pin to this export: ...`): it names the commit you analysed, so a newer export that appears in between is not pinned by mistake (`pin <version>` alone asks GitHub again and takes the newest). `pin` takes the files `diff` already downloaded (nothing is downloaded twice), files them under the version's cache folder, checks the five files, and only then rewrites `src/crafting_system/data/PIN.json`; if a step fails the files go back to the commit's folder and a rerun downloads nothing. A commit alone reads its version from the commit message. Nobody edits `PIN.json` or any Python.
 
+The pin also names the league its patch is played in (`league` in `PIN.json`, poe.ninja's league id: Allflame for 3.29). The website fetches that league's prices by default and says so when it prices another (#1026). When the new export starts a new league, pass `--league <league>` (the id step 7 fetches); without it the pin keeps its league, which is right only for a patch inside the same league.
+
 The Elevated mods follow the pin: `src/crafting_system/data/elevated.json` links each top-tier influence mod to its Elevated mod by the ids of one export, and a test fails until it is rebuilt for the new one. Rebuild it from Craft of Exile's local copy (`sources/raw/coe/` of the main checkout, git-ignored): `uv run python -m crafting_system.data elevated <folder of poec_data.json>`; the line it prints says how many mods it linked and how many table entries it could not (the `unresolved` list of the file names them and the reason). A mod that Craft of Exile's older table cannot link is unknown to the Orb of Dominance (out of scope), never guessed.
 
-Done when `pin` and `verify` print the five files and `PIN.json` names the new version. The printed hashes come from the first download of the commit, and the commit id names its content, so a later download that disagrees with them is the alarm; nothing else needs checking.
+Done when `pin` and `verify` print the five files and `PIN.json` names the new version and the league it is played in. The printed hashes come from the first download of the commit, and the commit id names its content, so a later download that disagrees with them is the alarm; nothing else needs checking.
 
 ## 6. Update the claims
 
@@ -88,7 +90,7 @@ uv run python -m crafting_system.prices fetch
 uv run python -m crafting_system.prices check
 ```
 
-`fetch` takes the league poe.ninja lists as current; pass `--league <id>` otherwise. The benchmark needs the start-item price of each benchmark target (the key is computed from the target, `Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance` for R12) in `price_overrides.toml` beside `prices.json` (`[prices]` table, Chaos), or from `python -m crafting_system.cli trade TARGET.yaml`. A route whose start item has no price is not run; `benchmark` prints the exact line (`"<key>" = 0`, put the price in place of the 0), the file it goes in, and the `python -m crafting_system.cli trade examples/targets/...` command.
+`fetch` takes the league poe.ninja lists as current; pass `--league <id>` otherwise. It must be the league the pin names (step 5), the one the website fetches. The benchmark needs the start-item price of each benchmark target (the key is computed from the target, `Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance` for R12) in `price_overrides.toml` beside `prices.json` (`[prices]` table, Chaos), or from `python -m crafting_system.cli trade TARGET.yaml`. A route whose start item has no price is not run; `benchmark` prints the exact line (`"<key>" = 0`, put the price in place of the 0), the file it goes in, and the `python -m crafting_system.cli trade examples/targets/...` command.
 
 Done when `check` reports no stale file and the start items are priced.
 

@@ -54,7 +54,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--prices", type=Path, help="a price file put into the volume first (default: the container fetches its own)")
-    parser.add_argument("--league", help="the league the container's refresh fetches (CRAFTING_PRICE_LEAGUE; default poe.ninja's current)")
+    parser.add_argument("--league", help="the league the container's refresh fetches (CRAFTING_PRICE_LEAGUE; default the game data pin's)")
     parser.add_argument(
         "--start-price", type=float, default=1.0, help="the start item's price sent with the request when the container fetched its own prices (R12's: 1 Chaos, as the 2026-11-10 snapshot priced it)"
     )
@@ -113,6 +113,11 @@ def smoke(args: argparse.Namespace, out: Path) -> int:
         if fetched < args.started.replace(microsecond=0):
             print(f"the snapshot served was fetched at {snapshot['fetched_at']}, before the container started: not this run's fetch", flush=True)
             return 1
+        wanted = args.league if args.league is not None else snapshot["data_league"]  # unset: the league of the game data pin (#1026)
+        if snapshot["league"] != wanted or snapshot["other_league"] is not (snapshot["league"] != snapshot["data_league"]):
+            print(f"the site serves the {snapshot['league']} league's prices, {wanted} was wanted (game data of {snapshot['data_league']})", flush=True)
+            return 1
+        print(f"prices of the {snapshot['league']} league, game data of the {snapshot['data_league']} league", flush=True)
 
     target = yaml.safe_load(args.target.read_text(encoding="utf-8"))
     target.pop("price_file", None)

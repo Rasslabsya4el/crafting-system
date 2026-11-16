@@ -476,6 +476,38 @@ def test_the_api_says_how_old_the_snapshot_behind_each_job_and_route_is(tmp_path
         assert http.get(f"{API}/jobs/{job['id']}").json()["price_age"]["age_days"] == 11
 
 
+# --- the league of the price snapshot against the game data's (#1026) -------------------------------------------------------------
+
+
+def test_a_snapshot_of_another_league_than_the_game_data_is_said_in_the_sites_words():
+    fetched = datetime.datetime(2026, 11, 16, 6, 0, tzinfo=datetime.UTC)
+    today = datetime.date(2026, 11, 16)
+
+    same = snapshot_age("Allflame", fetched, today, data_league="Allflame")
+    other = snapshot_age("Covens", fetched, today, data_league="Allflame")
+    unknown = snapshot_age("Covens", fetched, today)
+
+    assert (same["data_league"], same["other_league"], same["league_warning"]) == ("Allflame", False, None)
+    assert (unknown["data_league"], unknown["other_league"], unknown["league_warning"]) == (None, False, None)
+    assert other["data_league"] == "Allflame" and other["other_league"] is True
+    assert "Covens" in other["league_warning"] and "Allflame" in other["league_warning"]
+    assert "python" not in other["league_warning"] and "crafting_system" not in other["league_warning"]  # OR-9: no command for a visitor
+    assert other["warning"] is None  # a fresh snapshot: its age is not what is wrong
+
+
+@pytest.mark.parametrize(("data_league", "other"), [("Allflame", True), ("Test", False)])
+def test_the_info_document_every_job_and_every_route_say_when_the_prices_are_of_another_league(tmp_path, data_league, other):
+    with client(tmp_path / "site.sqlite3", work=at_once, data_league=data_league) as (http, _service):
+        info = http.get(API).json()
+        job = wait_until_done(http, http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"])
+        route = http.get(job["route"]["url"]).json()
+        listed = http.get(f"{API}/routes").json()["routes"][0]
+
+    for age in (info["price_age"], job["price_age"], route["price_age"], listed["price_age"]):
+        assert age["league"] == "Test" and age["data_league"] == data_league and age["other_league"] is other
+        assert (age["league_warning"] is not None) is other
+
+
 def test_every_example_target_has_a_canonical_form_on_the_real_data():
     """Every field a target can hold (sockets, quality, an enchantment, implicits, k-of-n entries, actions) has a JSON form, so no
     request of the site fails on keying it; the form is JSON and the same for the same file read twice."""

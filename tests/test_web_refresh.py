@@ -237,6 +237,15 @@ def test_the_server_refuses_a_refresh_interval_it_cannot_keep(hours):
     assert _refresh_hours("0") == 0 and _refresh_hours("6") == 6
 
 
+def test_unset_the_site_fetches_the_league_the_game_data_pin_names():
+    """#1026: a fresh deploy prices the pinned game data with its own league's market, never poe.ninja's current one."""
+    from crafting_system.data import PIN
+    from crafting_system.web.__main__ import price_league
+
+    assert price_league(None) == PIN.league and PIN.league
+    assert price_league("Covens") == "Covens"
+
+
 def test_the_interval_is_at_least_a_quarter_of_an_hour(tmp_path):
     clock = Clock(T0)
     assert MIN_INTERVAL == timedelta(minutes=15)

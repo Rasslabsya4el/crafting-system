@@ -1,5 +1,6 @@
 """`python -m crafting_system.data pin`, and the pin file `PIN.json`: moving the pin without a second download."""
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from github_support import FakeGitHub, commit_entry, files_world, routed, sha_of
 from repoe_support import (
     FILE_NAMES,
     TEST_COMMIT,
+    TEST_LEAGUE,
     game_data_from_raw,
     make_pin,
     no_network,  # noqa: F401
@@ -90,7 +92,7 @@ def test_pin_after_a_diff_moves_the_pin_and_verify_passes_with_no_download(cache
     assert lines[:5] == [
         f"{pinned.name}: cached, {pinned.size} bytes, sha256 {pinned.sha256[:12]}" for pinned in moved.files
     ]
-    assert lines[5] == f"{pin_file} was written: the pin is now version {NEW_VERSION}, commit {COMMIT}"
+    assert lines[5] == f"{pin_file} was written: the pin is now version {NEW_VERSION}, commit {COMMIT}, league {TEST_LEAGUE}"
     assert len(lines) == 6
     assert main(["verify"], pin=moved) == 0
     capsys.readouterr()
@@ -106,8 +108,34 @@ def test_the_new_pin_file_has_the_layout_of_the_committed_one(cache, tmp_path, c
     text = pin_file.read_bytes().decode("utf-8")
     assert text == json.dumps(json.loads(text), indent=2) + "\n"
     assert "\r" not in text
-    assert list(json.loads(text)) == ["version", "commit", "base_url", "files"]
+    assert list(json.loads(text)) == ["version", "league", "commit", "base_url", "files"]
     assert [file["name"] for file in json.loads(text)["files"]] == list(FILE_NAMES)
+
+
+def test_the_new_pin_keeps_the_league_of_the_old_one_or_names_the_one_given(cache, tmp_path, capsys):
+    """#1026: the pin names the league its patch is played in; a patch inside the league keeps it, a new league is passed."""
+    pin, files = files_world({COMMIT: new_files()})
+    kept, given = tmp_path / "kept.json", tmp_path / "given.json"
+
+    assert run(capsys, ["pin", COMMIT, NEW_VERSION], pin, files, kept)[0] == 0
+    assert load_pin(kept).league == pin.league == TEST_LEAGUE
+    assert run(capsys, ["pin", COMMIT, NEW_VERSION, "--league", "Keepers"], pin, files, given)[0] == 0
+    assert load_pin(given).league == "Keepers"
+
+
+def test_a_pin_with_no_league_is_never_written(cache, tmp_path, capsys):
+    pin, files = files_world({COMMIT: new_files()})
+    pin_file = tmp_path / "PIN.json"
+    leagueless = make_pin(new_files(), version=PIN_VERSION, commit=TEST_COMMIT, league=None)
+
+    with pytest.raises(PinFileError, match="names no league"):
+        write_pin(leagueless, pin_file)
+    code, _, err = run(capsys, ["pin", COMMIT, NEW_VERSION], dataclasses.replace(pin, league=None), files, pin_file)
+    assert code != 0 and "--league" in err and not pin_file.exists()
+
+
+def test_the_committed_pin_names_its_league():
+    assert PIN.league == json.loads(PIN_FILE.read_text(encoding="utf-8"))["league"] and PIN.league.strip()
 
 
 def test_a_commit_never_seen_is_downloaded_once_and_the_cache_is_usable(cache, tmp_path, capsys):
@@ -447,7 +475,12 @@ def duplicate_file(document):
     "tamper",
     [
         without("version"),
+        without("league"),
         without("files"),
+        edit("league", None),
+        edit("league", ""),
+        edit("league", " Allflame"),
+        edit("league", 3),
         edit("extra", 1),
         edit("version", "../escape"),
         edit("version", 3),

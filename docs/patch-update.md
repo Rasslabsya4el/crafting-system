@@ -8,7 +8,7 @@ Targets (owner, [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81
 
 | Piece | What it does | Where |
 |---|---|---|
-| Pin | The repoe-fork commit, with the sha256 and size of the five files the normalizer reads. Moving it is `data pin <version>`; nobody edits the file. | `src/crafting_system/data/PIN.json` (read by `pin.py`) |
+| Pin | The repoe-fork commit, with the sha256 and size of the five files the normalizer reads, and the league the patch is played in (the website fetches its prices, #1026). Moving it is `data pin <version> [--league <league>]`; nobody edits the file. | `src/crafting_system/data/PIN.json` (read by `pin.py`) |
 | `data diff OLD NEW` | OLD and NEW are `pinned`, a game version (`3.29.4.1`, resolved to the newest `Export <version>` commit of repoe-fork through the GitHub API, printed) or a commit. Downloads a commit it has not seen (hashes learned once), prints what changed in mods, weights, families, tags, bench options, essences and fossils, then the impact report, then the command that moves the pin. `--no-impact` leaves the report out. | `python -m crafting_system.data diff pinned <version>` |
 | `data pin TARGET [VERSION]` | Moves the pin to a version or commit: reuses the files `diff` downloaded (no second download), files them under the version's cache folder, checks them, then writes `PIN.json`. Refuses the version or commit that is already the pin. | `python -m crafting_system.data pin <version>` |
 | Impact report | Which files of this checkout name something that changed (below). | `src/crafting_system/data/impact.py` |
