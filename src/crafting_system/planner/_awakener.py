@@ -23,8 +23,9 @@ target's search (and, for a check, the full walk) sees an ordinary action with a
   L_d)`, and `sum_d n_d (o_d + L_d) <= V(L)`. Hence `V(L) >= V(U) / (1 + r)`: the target's search, run at the upper prices, proves a bound `LB`
   of `V(U)`, and `LB / (1 + r)` is a lower bound of the true cost (`whole_lower`). With every donor exact, `r` is 0 and the target's bound is
   the bound of the whole. `tests/test_awakener_search.py` checks it against the exact product of ADR-0022 (`solver.Acquisition`) on a small pool.
-* **The least fixed point.** A donor never takes an Awakener's Orb: the orb's result holds two influences and the want holds one, and no offered
-  action removes an influence, so no donor's plan reads a donor's value and the system of ADR-0022 is solved in one pass, donors first.
+* **The least fixed point.** A donor never takes an Awakener's Orb: `solve_donor` leaves the orbs out of the donor's offers, and none could
+  serve (the orb's result holds two influences, the want one, and no offered action removes an influence), so no donor's plan reads a donor's
+  value and the system of ADR-0022 is solved in one pass, donors first.
 * **Where the effort goes.** A donor's search stops as the target's does (`_plan.search_gap`): exact under the plan's aim, at a proved gap past
   it, and each donor gets an equal share of the time left with the target (`_plan.search_net`), so the donors never leave the target nothing
   (OR-33). A donor stopped at a gap or a net leaves its `[lower, upper]`, and `r` carries it into the bound of the whole. Effort is not yet
@@ -117,7 +118,7 @@ def solve_donor(
     )  # fmt: skip
     info = packed.info["envelope"]
     upper = float(packed.solution.values[start])
-    lower = upper if info.exact else min(float(info.lower) * (1.0 - _error(info)), upper)
+    lower = upper if info.exact else min(float(info.lower), upper)  # the search's certified bound, as the target's is read (`_plan`)
     donor = Donor(action, lower, upper, bool(info.exact), info.stopped, len(packed.solution.policy), time.perf_counter() - began)
     return donor, packed
 
@@ -128,13 +129,13 @@ def solve_donors(
     priced: Sequence[PricedOffer],
     *,
     net: Callable[[int], object] | None = None,
-    gap: float = 0.0,
-    gap_after: float | None = None,
+    stop: Callable[[], tuple[float, float | None]] | None = None,
 ) -> tuple[tuple[Donor, ...], tuple[Limit, ...]]:
     """Each orb's donor by `solve_donor`; an orb whose donor no plan makes is left out and the plan says why (`no_donor_limit`, OR-13).
 
     `net(searches)` is the net of a donor's search when `searches` searches are still to run, the target's included (`_plan.search_net`: an
-    equal share of the time left, so the donors never leave the target nothing, OR-33); `gap` and `gap_after` are the target's stop (`search_gap`)."""
+    equal share of the time left, so the donors never leave the target nothing, OR-33); `stop()` is the target's stop at the moment each donor's
+    search starts (`_plan.search_gap`: the aim the run has not yet spent), exact when None."""
     from crafting_system.actions import NotApplicableError, OutOfScopeError
     from crafting_system.solver import ConvergenceError
 
@@ -144,6 +145,7 @@ def solve_donors(
     donors, left_out = [], []
     for done, orb in enumerate(awakened):
         searches = len(awakened) - done + 1
+        gap, gap_after = (0.0, None) if stop is None else stop()
         try:
             donor, _ = solve_donor(
                 target_abstraction, orb.offer.action, priced, net=None if net is None else net(searches), gap=gap, gap_after=gap_after
@@ -153,10 +155,6 @@ def solve_donors(
             continue
         donors.append(donor)
     return tuple(donors), tuple(left_out)
-
-
-def _error(info) -> float:
-    return max(float(getattr(info, "mean_error", 0.0)), 0.0)
 
 
 def _applies_to_donors(priced: PricedOffer) -> bool:
@@ -179,14 +177,31 @@ def fold(priced: Sequence[PricedOffer], donors: Sequence[Donor]) -> tuple[Priced
 
 
 def whole_lower(lower: float, priced: Sequence[PricedOffer], donors: Sequence[Donor]) -> float:
-    """The lower bound of the target and its donors from the target's bound `lower` at the upper donor prices (see the module text)."""
+    """The lower bound of the target and its donors from the target's bound `lower` at the upper donor prices (see the module text). A donor
+    whose use is proved to cost nothing (`o_d + L_d` 0) proves nothing of the whole: the bound is 0."""
     orb = {p.offer.action: p.cost for p in priced}
     r = 0.0
     for donor in donors:
         if donor.exact:
             continue
-        r = max(r, max(donor.upper - donor.lower, 0.0) / (orb.get(donor.action, 0.0) + donor.lower))
-    return lower / (1.0 + r) if math.isfinite(lower) else lower
+        floor = orb.get(donor.action, 0.0) + donor.lower
+        r = max(r, max(donor.upper - donor.lower, 0.0) / floor if floor > 0.0 else math.inf)
+    if not math.isfinite(lower):
+        return lower
+    return 0.0 if math.isinf(r) else lower / (1.0 + r)
+
+
+def whole_info(info, priced: Sequence[PricedOffer], donors: Sequence[Donor]):
+    """The target search's `EnvelopeInfo` as the answer of the target and its donors: its bound `whole_lower`, exact only when every donor is,
+    and, for a target that closed exactly beside a donor that did not, the stop said as the donor's (OR-13)."""
+    if not donors:
+        return info
+    stopped = [d for d in donors if not d.exact]
+    found = dataclasses.replace(info, lower=whole_lower(info.lower, priced, donors), exact=info.exact and not stopped)
+    if info.exact and stopped:
+        said = "; ".join(f"the search of the second item for {d.action.donor_mod} stopped ({d.stopped})" for d in stopped)
+        found = dataclasses.replace(found, stopped=f"the plan's own search closed, but {said}")
+    return found
 
 
 def no_donor_limit(label: str, why: str) -> Limit:

@@ -36,7 +36,7 @@ from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
-from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_lower
+from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_info
 from ._axes import axis_what
 from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
@@ -723,8 +723,8 @@ def _make_plan(
     donors: tuple[Donor, ...] = ()
     unfolded = priced
     if awakened:  # each donor first, by the same search (#832): the orb is then an ordinary offer whatever solver takes the target
-        gap, gap_after = search_gap(clock)  # a donor stops as the target does: past the aim, at a proved gap; its [lower, upper] goes into `whole_lower`
-        donors, left_out = solve_donors(abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), gap=gap, gap_after=gap_after)
+        # a donor stops as the target does (past the aim, at a proved gap) on its share of the net; its [lower, upper] goes into `whole_lower`
+        donors, left_out = solve_donors(abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), stop=lambda: search_gap(clock))
         kept_orbs = {d.action for d in donors}
         priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
         limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
@@ -818,11 +818,7 @@ def _make_plan(
                     )  # fmt: skip
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 raise PlanError(envelope_refusal(solver, error)) from error
-            if donors:  # the bound of the target and its donors together (`_awakener.whole_lower`)
-                info = packed.info["envelope"]
-                packed.info["envelope"] = replace(
-                    info, lower=whole_lower(info.lower, unfolded, donors), exact=info.exact and all(d.exact for d in donors)
-                )
+            packed.info["envelope"] = whole_info(packed.info["envelope"], unfolded, donors)  # the target and its donors together (`_awakener`)
             limits += envelope_limits(packed.info["envelope"])
             bind_search(clock, packed.info["envelope"])
         else:

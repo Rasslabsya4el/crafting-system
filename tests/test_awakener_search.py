@@ -18,12 +18,12 @@ from test_abstraction_awakener import CRUS_CURSE, CRUS_P1, CRUS_P2, DATA, LEVEL,
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.abstraction._pattern import Pattern, PatternOffer, build_pattern_model
-from crafting_system.actions import AlchemyOrb, AwakenersOrb, ChaosOrb, Reading
+from crafting_system.actions import AlchemyOrb, AwakenersOrb, ChaosOrb, Reading, RegalOrb, TransmutationOrb
 from crafting_system.cli import Offer
 from crafting_system.items import Influence
-from crafting_system.planner._awakener import Donor, donor_abstraction, donor_base_cost, donor_limits, fold, solve_donor, whole_lower
+from crafting_system.planner._awakener import Donor, donor_abstraction, donor_base_cost, donor_limits, fold, solve_donor, whole_info, whole_lower
 from crafting_system.planner._donors import solve_with_donors
-from crafting_system.planner._envelope_plan import envelope_result
+from crafting_system.planner._envelope_plan import envelope_limits, envelope_result
 from crafting_system.planner._limits import limit_text
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
 from crafting_system.planner._pattern_bound import pack_pattern_model
@@ -35,16 +35,21 @@ ORB = AwakenersOrb(RING, LEVEL, SHAPER, SHAP_S1)
 RECEIVER = Reading.of({"awakener.group_conflict": "receiver"})  # the reading the plan answers at (`planned`, ADR-0032 as built #832)
 GOAL = Goal((Wanted(frozenset({CRUS_P1, CRUS_P2})), Wanted(frozenset({SHAP_S1}))))
 START = ring(CRUS_CURSE, PLAIN_P1, influences={CRUSADER})  # no Crusader prefix yet: Chaos Orbs first, and an orb keeps one of two
+# the Orb of Alchemy makes a rare donor as a Chaos Orb rerolls one at the same price, so the donor's restart (`donor_base_cost`, which ADR-0022's
+# product has not: its acquisition starts from the base once) never pays and the two answers can be compared exactly
 PRICES = {"Chaos Orb": (ChaosOrb(), 1.0), "Orb of Alchemy": (AlchemyOrb(), 1.0), "Awakener's Orb": (ORB, 3.0)}
+# the planner's kinds (the Orb of Alchemy is not one): a magic donor that missed is cheaper bought again, so the planner's own answer is checked
+# against the exact graphs of the donor and of the target with the orb at its folded price
+PLANNER_PRICES = {"Chaos Orb": (ChaosOrb(), 1.0), "Orb of Transmutation": (TransmutationOrb(), 0.5), "Regal Orb": (RegalOrb(), 1.0), "Awakener's Orb": (ORB, 3.0)}
 RESTART_PRICE = 5.0
 
 
-def abstraction() -> Abstraction:
-    return Abstraction(DATA, GOAL, RING, LEVEL, tuple(action for action, _ in PRICES.values()), reading=RECEIVER, allow_inputs=True)
+def abstraction(prices=PRICES) -> Abstraction:
+    return Abstraction(DATA, GOAL, RING, LEVEL, tuple(action for action, _ in prices.values()), reading=RECEIVER, allow_inputs=True)
 
 
-def priced() -> list[PricedOffer]:
-    offers = [PricedOffer(Offer(label, action, {label: 1}), cost, ()) for label, (action, cost) in PRICES.items()]
+def priced(prices=PRICES) -> list[PricedOffer]:
+    offers = [PricedOffer(Offer(label, action, {label: 1}), cost, ()) for label, (action, cost) in prices.items()]
     return [*offers, PricedOffer(Offer(RESTART, BuyStartItem(START), {}), RESTART_PRICE, ())]
 
 
@@ -162,3 +167,79 @@ def test_an_orb_whose_donor_cannot_be_planned_is_left_out_and_the_plan_says_why(
     assert donors == ()
     (limit,) = left_out
     assert limit.what == "An Awakener's Orb is not offered" and "planted" in limit.why and "Awakener's Orb" in limit.why
+
+
+def _exact_donor(offers, prices=PRICES) -> float:
+    dab = donor_abstraction(abstraction(prices), ORB)
+    (need,) = ORB.inputs(DATA)
+    start = dab.compress(need.start)
+    want = dab.donor_key(dab.compress(need.want), ORB)
+    graph = [PatternOffer(label, action, cost) for label, (action, cost) in prices.items() if action is not ORB]
+    graph.append(PatternOffer(RESTART, None, donor_base_cost(offers)))
+    return exact_values(_DonorGoal(dab, want), start, graph)[start]
+
+
+def test_a_donor_search_stopped_at_a_gap_keeps_a_bound_below_and_a_plan_above_the_exact_mean():
+    offers = priced()
+    exact = _exact_donor(offers)
+    donor, _ = solve_donor(abstraction(), ORB, offers, gap=0.5, gap_after=0.0)  # stop at the first plan proved within 50%
+    assert donor.lower <= exact * (1 + TOLERANCE)
+    assert donor.upper >= exact * (1 - TOLERANCE)
+    assert donor.upper <= donor.lower * 1.5 * (1 + TOLERANCE) or donor.exact
+
+
+def test_an_exact_target_beside_a_stopped_donor_is_not_exact_and_says_the_donors_stop(solved):
+    ab, offers, donor, _ = solved
+    start = ab.compress(START)
+    info = envelope_result(ab, start, fold(offers, [donor])).info["envelope"]
+    loose = dataclasses.replace(donor, lower=donor.upper / 2, exact=False, stopped="the time limit of 3 seconds was reached")
+    found = whole_info(info, offers, [loose])
+    assert info.exact and not found.exact
+    assert found.lower == pytest.approx(whole_lower(info.lower, offers, [loose])) and found.lower < info.lower
+    assert "second item" in found.stopped and "3 seconds" in found.stopped and "None" not in limit_text(envelope_limits(found)[0])
+    assert whole_info(info, offers, [donor]) == dataclasses.replace(info, lower=whole_lower(info.lower, offers, [donor]))
+    free = dataclasses.replace(loose, lower=0.0)
+    assert whole_lower(10.0, [dataclasses.replace(p, cost=0.0) for p in offers], [free]) == 0.0  # a use proved to cost nothing proves nothing
+
+
+def _ring_target(data) -> str:
+    def entry(mod_id):
+        return f"    - mod: {mod_id}\n      values: {[min(stat.min, stat.max) for stat in data.mods[mod_id].stats]}\n"
+
+    return (
+        f"base: {RING}\nitem_level: {LEVEL}\ninfluence: [crusader]\nactions: [awakeners-orb, chaos-orb, transmutation-orb, regal-orb]\n"
+        "requirements:\n- family: ContractRingCrusP\n  min_tier: any\n- family: ContractRingShapS\n  mod: ContractRingShapS1\n"
+        f"start_item:\n  rarity: rare\n  mods:\n{entry(CRUS_CURSE)}{entry(PLAIN_P1)}start: bought\n"
+    )
+
+
+def test_the_planners_entry_plans_the_orb_through_the_one_search_at_the_exact_value():
+    """`make_plan` on the ring target: the orb is offered (its donor mod is named), the plan is the envelope search's (no reading solve, no
+    product), its mean is the exact value of the target's graph with the orb at its cost and the exact mean of the donor's graph, and the page's
+    limits say the donor's base and steps."""
+    import datetime
+
+    from crafting_system.cli import make_plan
+    from crafting_system.prices.price_file import PriceEntry, PriceFile, Provenance
+    from crafting_system.targets import parse_target
+
+    from influence_support import INFLUENCE_DATA
+
+    # the bench's crafts that `offers_for` names by their mods (the metamods), which none of the orbs draws
+    data = dataclasses.replace(DATA, mods={**DATA.mods, **{k: m for k, m in INFLUENCE_DATA.mods.items() if m.domain == "crafted"}})
+    target = parse_target(_ring_target(data), data, source="<ring>")
+    entries = {
+        name: PriceEntry(cost, "poe.ninja", None, None, Provenance("ninja-exchange", "Test", "2026-11-16", 1.0)) for name, (_, cost) in PLANNER_PRICES.items()
+    }
+    prices = PriceFile("Test", datetime.datetime(2026, 11, 16, tzinfo=datetime.UTC), 300.0, entries)
+    plan = make_plan(data, target, prices, start_price=RESTART_PRICE, with_risk=False)
+    ab, offers = abstraction(PLANNER_PRICES), priced(PLANNER_PRICES)
+    donor = _exact_donor(offers, PLANNER_PRICES)
+    graph = [PatternOffer(label, action, cost + (donor if action is ORB else 0.0)) for label, (action, cost) in PLANNER_PRICES.items()]
+    exact = exact_values(ab, ab.compress(START), [*graph, PatternOffer(RESTART, None, RESTART_PRICE)])[ab.compress(START)]
+    assert plan.readings is None and plan.donors is None and plan.packed is not None
+    assert plan.packed.info["envelope"].exact
+    assert plan.solution.values[plan.start] == pytest.approx(exact, rel=TOLERANCE)
+    assert any(action.label.startswith("Awakener's Orb with a shaper donor") for action in plan.solution.policy.values())
+    said = {limit.what for limit in plan.limits}
+    assert {"A second item's base is a stand-in price", "How each second item is made is not shown"} <= said
