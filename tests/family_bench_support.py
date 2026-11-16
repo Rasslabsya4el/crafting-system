@@ -47,6 +47,7 @@ import yaml
 from crafting_system.actions.catalog import catalog, kinds
 from crafting_system.actions.pool import pool_candidates, tiers_of
 from crafting_system.data.model import GameData
+from crafting_system.items import eldritch_grade, eldritch_side
 from crafting_system.items.model import Influence, Item, Metamod, Rarity
 from crafting_system.items.enchantments import POOL_FAMILIES, enchant_class, is_removed_enchant
 from crafting_system.items.sockets import class_maximum
@@ -71,11 +72,15 @@ SNAPSHOTS = (
     "tests/fixtures/prices/routes-allflame-2026-11-10.json",
     "tests/fixtures/prices/veiled-r24-r07-2026-11-12.json",
 )
+ELDRITCH_CURRENCIES = tuple(
+    f"{grade} Eldritch {kind}" for kind in ("Ember", "Ichor") for grade in ("Lesser", "Greater", "Grand", "Exceptional")
+) + ("Eldritch Chaos Orb", "Eldritch Exalted Orb", "Eldritch Orb of Annulment", "Orb of Conflict")
 # Names that no snapshot above holds, taken from an older committed snapshot only to fill that gap (#832). It is never a case's primary, and it
 # fills only the names listed, so no other case's prices change.
 # The imprints' beasts are priced only in R17's own snapshot: without them no case was offered an imprint (#833).
 FILL_ONLY = {
-    "tests/fixtures/prices/routes-allflame-2026-07-31.json": ("Awakener's Orb",),
+    # the Eldritch currencies too: no 3.29 snapshot above prices them, so no case was ever offered one (#835)
+    "tests/fixtures/prices/routes-allflame-2026-07-31.json": ("Awakener's Orb", *ELDRITCH_CURRENCIES),
     "tests/fixtures/prices/r17-allflame-2026-11-10.json": ("Craicic Croaker", "Fenumal Plagued Arachnid"),
 }
 PRICE_FACTOR = (0.3, 3.0)  # each currency's price is scaled by a factor drawn log-uniform in this range (ticket #824)
@@ -326,6 +331,28 @@ def implicit_keys(generation_type: str, corrupted: bool = False):
     return hook
 
 
+ELDRITCH_SIDES = ("searing_exarch_implicit", "eater_of_worlds_implicit")
+ELDRITCH_GRADES = ((1,), (2, 1), (4, 2))  # the least grade each side's wish asks, by size: the Exarch alone, then both sides (#835)
+
+
+def eldritch_keys(draw: Draw) -> dict:
+    """An Eldritch implicit wish on each side the size names (`ELDRITCH_GRADES`): a line of the base's pool of that side, at least that grade.
+
+    The start item is a rare with no implicit, so every wish needs an Ember or an Ichor first; from medium on both sides are wanted, so the
+    Eldritch orbs act on a side the pair makes dominant. A line is one family of grade-1 mods with no Presence variant (the selector `family`
+    picks no variant), so grades 1 to 4 come from the currencies and the rest from an Orb of Conflict.
+    """
+    wishes = []
+    for side, grade in zip(ELDRITCH_SIDES, ELDRITCH_GRADES[draw.size.scale]):
+        lines = sorted(
+            {draw.data.mods[m].families[0] for m in generated_mods(draw.data, draw.base_id, side, draw.item_level) if eldritch_grade(draw.data.mods[m]) == 1}
+        )
+        if not lines:
+            raise Unsuitable(f"no {side} line on this base")
+        wishes.append({"family": draw.rng.choice(lines), "min_grade": grade})
+    return {"implicits": wishes}
+
+
 def enchant_keys(draw: Draw) -> dict:
     """An enchantment of the base's pool (`items.enchantments`: the heist groups of weapons and body armour), by mod id."""
     held = enchant_class(draw.data.base_items[draw.base_id])
@@ -375,6 +402,7 @@ def given_item(draw: Draw) -> dict:
 
 BASIC = ("transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "chaos-orb", "exalted-orb", "annulment-orb")
 REROLL = ("chaos-orb", "exalted-orb", "annulment-orb")
+ELDRITCH_KINDS = ("eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict")
 GROWING = (  # (name, the actions this step adds)
     ("basic", BASIC),
     ("essences", ("essence",)),
@@ -447,6 +475,10 @@ METHODS: tuple[Method, ...] = (
     # an exalt that misses can be undone only by restoring an imprint, so the plan must take one (the `imprints` cases buy a new base instead, #833)
     Method("imprints-given", "B3", "magic", ("imprint", "restore", "alteration-orb", "augmentation-orb", "regal-orb", "exalted-orb"), start="given",
            start_item=given_item),
+    # B2, last so no earlier case moves: an Eldritch implicit on each side the size names, with every Eldritch currency (#835; the `eldritch`
+    # cases name the Embers alone and wish for one exact mod, a grade 5 or two Searing Exarch implicits among them)
+    Method("eldritch-pair", "B2", "rare", (*ELDRITCH_KINDS, *REROLL), keys=eldritch_keys,
+           classes=lambda d, c: class_has("searing_exarch_implicit")(d, c) and class_has("eater_of_worlds_implicit")(d, c)),
 )
 
 
@@ -630,7 +662,9 @@ def refusal_today(data: GameData, target: Target, actions: Sequence[str]) -> str
             reasons.append(f"{name}: planner=False")
         elif entry.needs_strands and not strands:
             reasons.append(f"{name}: needs Memory Strands")
-    for key in ("implicits", "sockets", "enchantment"):
+    if any(wish.corrupted or not all(eldritch_side(data.mods[m]) for m in wish.mod_ids) for wish in target.implicits):
+        reasons.append("target asks for implicits other than Eldritch ones")  # the Eldritch implicits are planned since #835
+    for key in ("sockets", "enchantment"):
         if getattr(target, key):
             reasons.append(f"target asks for {key}")
     if target.quality is not None:

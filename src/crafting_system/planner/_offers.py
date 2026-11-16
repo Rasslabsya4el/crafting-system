@@ -17,7 +17,7 @@ from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, spawn_weight
+from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, eldritch_side, spawn_weight
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
@@ -168,6 +168,13 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
 
 
 AWAKENER_KIND = "awakeners-orb"
+# The Embers and Ichors, the three Eldritch orbs and the Orb of Conflict (ADR-0025): offered only to a target that asks for an Eldritch implicit (#835)
+ELDRITCH_KINDS = frozenset({"eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict"})
+
+
+def asks_eldritch(data: GameData, goal: Goal) -> bool:
+    """Whether the goal wants an Eldritch implicit: an implicit wish that selects a Searing Exarch or an Eater of Worlds mod (ADR-0025)."""
+    return any(eldritch_side(data.mods[mod_id]) is not None for wish in goal.implicits for mod_id in wish.mod_ids if mod_id in data.mods)
 
 
 def donor_wants(data: GameData, action: Action) -> tuple[Need, frozenset[str]] | None:
@@ -384,6 +391,11 @@ def offers_for(
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
+    * An Eldritch currency (a kind of `ELDRITCH_KINDS`: an Ember, an Ichor, an Eldritch Chaos, Exalted or Annulment Orb, an Orb of Conflict) is
+      offered only when the goal asks for an Eldritch implicit (`asks_eldritch`, #835). For any other target it is left out, and the answer
+      carries a `Limit` that names it: the Eldritch orbs act on the dominant side only, which an Ember or an Ichor must make first, and with
+      them every state of the target would keep the pair (`Abstraction.tracks_implicits`). That is not a proof that they cannot pay off
+      for such a target (an Eldritch Annulment keeps the other side as a lock would); the limit says so, and #919 is the offer to every target.
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
@@ -429,7 +441,12 @@ def offers_for(
     left_out_rolls: list[str] = []
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
     left_out_asked: list[str] = []  # the target allows a corrupted item but asks for no corrupted implicit, and the set is offered only to one that does (ADR-0038)
+    left_out_eldritch: list[str] = []  # the target asks for no Eldritch implicit (#835)
+    eldritch_asked = asks_eldritch(data, goal)
     for action in listed:
+        if kind_of.get(action) in ELDRITCH_KINDS and not eldritch_asked:
+            left_out_eldritch.append(told_apart(action))
+            continue
         adds = action.adds(data, start_item)
         if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
             (left_out_asked if goal.takes_corrupted else left_out_corrupting).append(told_apart(action))  # an item never arrives corrupted unasked
@@ -494,6 +511,16 @@ def offers_for(
                 "each of these corrupts the item, and it is offered only to a target that asks for a corrupted implicit; this target allows a corrupted item but asks for none",
                 labels=tuple(left_out_asked),
                 **claim("the kinds offered"),
+            ),
+        )
+    if left_out_eldritch:
+        limits += (
+            Limit(
+                _limits.ELDRITCH_ASKED,
+                "Not offered",
+                "an Eldritch currency is offered only to a target that asks for an Eldritch implicit; this target asks for none",
+                labels=tuple(left_out_eldritch),
+                **claim("the kinds offered", "An Eldritch orb could still pay off on the dominant side, and that is not checked.")  # #919,
             ),
         )
     if left_out_crafts:

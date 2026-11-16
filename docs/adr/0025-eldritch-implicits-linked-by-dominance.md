@@ -53,3 +53,18 @@ The pair was in the state since [#142](https://github.com/Rasslabsya4el/crafting
 - **The link by dominance.** The explicit mods are changed by the orbs through the dominance only, and the pair is changed by Embers, Ichors and Conflict without looking at a mod; the test `tests/test_abstraction_eldritch.py` solves the full product of the two and, separately, the same model assembled from an explicit kernel that is run on the smallest pair of the dominance and an implicit kernel run on one fixed explicit state: the two agree on every state and on every value.
 - **Layer 1** passes for the Embers and Ichors (grades 1 to 3), the three orbs and Conflict on every item they reach from starts that hold both implicits, one, equal grades, a fractured mod, a lock, an Attack block and a magic item, for goals that want a line of one side, of both, or no implicit; the three orbs also on a body armour.
 - **Not here.** The five kinds stay `planner=False`: a goal built from a target reads no `Target.implicits` ([#158](https://github.com/Rasslabsya4el/crafting-system/issues/158)). The coarse state refuses them, as before (none is block-invariant). Eldritch Exalted and Eldritch Annulment declare no strand use ([#285](https://github.com/Rasslabsya4el/crafting-system/issues/285)'s table leaves them out).
+
+## Amendment: planned through the one search ([#835](https://github.com/Rasslabsya4el/crafting-system/issues/835))
+
+The five kinds are planner kinds. A target that asks for an Eldritch implicit is planned by the envelope search; one that asks for a base or a
+corrupted implicit, or for quality, is still refused. What the build decided, none of it a change of the rules above:
+
+- **The bound.** The key of the crafted-pattern bound holds the item state beyond the mods exactly, so it holds the pair (the grade, what it
+  gives the goal and, where a requirement names it, the line of each side): every member of a key has the key's dominance. The member
+  policies of the currencies, with their proof, are in `abstraction/_pattern.py` ("The Eldritch implicits"): the Embers, the Ichors and the
+  Orb of Conflict change no explicit slot, and the Eldritch Annulment is the Annulment on the dominant side, so the three declare
+  `block_invariant`; the Eldritch Exalted Orb is the Exalted Orb on the dominant side and declares `variants` (a family with mods on both sides
+  makes it every member); the Eldritch Chaos Orb is every member. This replaces "none of these actions is block-invariant" above.
+- **The offer.** The currencies are offered only to a target that asks for an Eldritch implicit (`planner/_offers.py`, `ELDRITCH_KINDS`), and
+  the answer says so to any other target; whether an Eldritch orb pays off for a target with no implicit wish is
+  [#919](https://github.com/Rasslabsya4el/crafting-system/issues/919).

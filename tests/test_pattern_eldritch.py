@@ -1,0 +1,151 @@
+"""The crafted-pattern bound with the Eldritch currencies (#835, ADR-0025): the member policies of `abstraction/_pattern.py`, "The Eldritch
+implicits", checked by brute force on the hand-made boots of `eldritch_support`.
+
+The world: rare boots with two suffixes and no implicit, a goal that wants the Life prefix and a Searing Exarch Avoid Shock implicit of grade 2
+or more, and the the Lesser Ember and Ichor, the three Eldritch orbs, the Orb of Conflict and a restart. Its exact graph is walked
+(`pattern_support.exact_values`); on it:
+
+* at 500 keys of the exact graph drawn at random, each Eldritch currency's offered members are at least as good as every member of the key, for random values
+  of the successor keys (`check_dominates`: the brute force over all members);
+* the model of the key is a lower bound of the exact value at every state, and the envelope search's mean is the exact graph's.
+"""
+
+import random
+
+import pytest
+from eldritch_support import BOOTS, COLD, DATA, FIRE, LEVEL, LIFE, LOCK_SUFFIXES, boots, eldritch_id, exarch, roll
+from pattern_support import check_dominates, exact_values
+
+from crafting_system.abstraction import Abstraction, Goal, ImplicitWanted, Wanted, pattern_refusal
+from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
+from crafting_system.actions import EldritchAnnulmentOrb, EldritchChaosOrb, EldritchExaltedOrb, EldritchImplicitCurrency, OrbOfConflict
+from crafting_system.cli import Offer
+from crafting_system.items import EldritchSide
+from crafting_system.planner._envelope_plan import envelope_result
+from crafting_system.planner import _limits
+from crafting_system.planner._offers import ELDRITCH_KINDS, RESTART, BuyStartItem, PricedOffer, offers_for
+from crafting_system.planner._pattern_bound import pack_pattern_model
+from crafting_system.solver import solve_packed
+
+TOLERANCE = 1e-9
+SAMPLED = 500  # keys of the exact graph the brute force compares at (of about 1,600; all of them take half a minute more)
+RESTART_PRICE = 1.0
+GOAL = Goal(
+    (Wanted(frozenset({LIFE})),),
+    (ImplicitWanted(frozenset(eldritch_id("AvoidShock", grade) for grade in range(2, 7))),),
+)
+START = boots(roll(FIRE), roll(COLD))
+EMBERS = {  # the Lesser Ember and Ichor: grade 2 comes from the Conflict alone (a small exact graph)
+    "Lesser Ember": (EldritchImplicitCurrency(EldritchSide.EXARCH, 1), 0.2),
+    "Lesser Ichor": (EldritchImplicitCurrency(EldritchSide.EATER, 1), 0.1),
+}
+# the Eldritch Chaos Orb is `ALL` (exact by construction) and tells every junk family apart: with it the exact graph is ten times larger, so its
+# policy is checked alone (`test_the_bound_is_built_for_the_eldritch_currencies`)
+CHAOS = {"Eldritch Chaos": (EldritchChaosOrb(), 0.3)}
+ORBS = {"Eldritch Exalted": (EldritchExaltedOrb(), 0.8), "Eldritch Annulment": (EldritchAnnulmentOrb(), 0.4), "Conflict": (OrbOfConflict(), 0.25)}  # fmt: skip
+OFFERED = {**EMBERS, **ORBS}
+POLICY = {  # the member policy each currency is shown to have (module docstring), without a lock
+    "Eldritch Chaos": Mode.ALL,
+    "Eldritch Exalted": Mode.EXTREMES,
+    "Eldritch Annulment": Mode.ONE,
+    "Conflict": Mode.ONE,
+    **{label: Mode.ONE for label in EMBERS},
+}
+
+
+def abstraction() -> Abstraction:
+    return Abstraction(DATA, GOAL, BOOTS, LEVEL, tuple(action for action, _ in OFFERED.values()))
+
+
+def pattern_offers() -> list[PatternOffer]:
+    return [PatternOffer(label, action, cost) for label, (action, cost) in OFFERED.items()] + [PatternOffer(RESTART, None, RESTART_PRICE)]
+
+
+def priced_offers() -> list[PricedOffer]:
+    offers = [PricedOffer(Offer(label, action, {label: 1}), cost, ()) for label, (action, cost) in OFFERED.items()]
+    return [*offers, PricedOffer(Offer(RESTART, BuyStartItem(START), {}), RESTART_PRICE, ())]
+
+
+@pytest.fixture(scope="module")
+def world():
+    """The abstraction, the start state, the exact values, the model of the key and its values, built once."""
+    ab = abstraction()
+    first = ab.compress(START)
+    offers = pattern_offers()
+    exact = exact_values(ab, first, offers)
+    model = build_pattern_model(ab, first, offers)
+    solved = solve_packed(pack_pattern_model(model, offers))
+    return ab, first, exact, model, [float(value) for value in solved.value]
+
+
+def test_the_bound_is_built_for_the_eldritch_currencies():
+    ab = abstraction()
+    assert ab.tracks_implicits and pattern_refusal(ab) is None
+    pattern = Pattern(ab, None, [action for action, _ in OFFERED.values()])
+    key = pattern.key(ab.compress(START))
+    for label, (action, _) in {**OFFERED, **CHAOS}.items():
+        assert pattern.mode_of(action, key) is POLICY[label], label
+
+
+def test_under_a_lock_the_policies_take_every_member():
+    ab = Abstraction(DATA, GOAL, BOOTS, LEVEL, tuple(action for action, _ in OFFERED.values()), metamods=True)
+    pattern = Pattern(ab, None, [action for action, _ in OFFERED.values()])
+    key = pattern.key(ab.compress(boots(roll(LIFE), roll(LOCK_SUFFIXES, crafted=True), implicits=(exarch(2),))))
+    assert pattern.holds_lock(key)
+    for label in ("Eldritch Annulment", "Conflict", next(iter(EMBERS)), "Eldritch Chaos"):
+        assert pattern.mode_of({**OFFERED, **CHAOS}[label][0], key) is Mode.ALL, label
+
+
+def test_every_member_of_every_key_is_matched_by_an_offered_one(world):
+    """The brute force: at keys of the exact graph, for each Eldritch currency, the least backup over the members its policy offers is no
+    higher than the backup of any member of the key, for random values of the successor keys; and it is offered wherever a member can take it."""
+    ab, _first, exact, _model, _values = world
+    pattern = Pattern(ab, None, [action for action, _ in OFFERED.values()])
+    rng = random.Random(835)
+    keys = sorted({pattern.key(state) for state in exact if not ab.is_goal(state)}, key=repr)
+    compared = taken = 0
+    by_policy = {Mode.ONE: 0, Mode.EXTREMES: 0, Mode.ALL: 0}
+    for key in rng.sample(keys, min(SAMPLED, len(keys))):
+        for label, (action, _) in OFFERED.items():
+            mode, named = pattern.policy(action, key)
+            members, legal = check_dominates(pattern, ab, key, action, mode, rng, trials=8, named=named)
+            compared += members
+            taken += legal
+            by_policy[mode] += bool(legal)
+    assert compared and taken
+    assert by_policy[Mode.ONE] and by_policy[Mode.EXTREMES], by_policy
+
+
+def test_the_model_is_a_lower_bound_at_every_state_of_the_exact_graph(world):
+    ab, first, exact, model, values = world
+    pattern = Pattern(ab, None, [action for action, _ in OFFERED.values()])
+    assert model.stopped is None
+    implicit_states = 0
+    for state, value in exact.items():
+        key = pattern.key(state)
+        assert key in model.index, "a state of the exact graph has a key the model never reached"
+        assert values[model.index[key]] <= value * (1 + TOLERANCE) + TOLERANCE, (state, value)
+        implicit_states += bool(state.implicits and any(side.grade for side in state.implicits))
+    assert implicit_states, "no state of the exact graph holds an Eldritch implicit"
+    assert values[0] <= exact[first] * (1 + TOLERANCE) and exact[first] < float("inf")
+
+
+def test_the_envelope_search_gives_the_exact_graphs_mean(world):
+    ab, first, exact, _model, _values = world
+    result = envelope_result(ab, first, priced_offers())
+    info = result.info["envelope"]
+    assert info.exact and info.bound_stopped is None
+    assert result.solution.values[first] == pytest.approx(exact[first], rel=TOLERANCE)
+    assert info.lower <= exact[first] * (1 + TOLERANCE)
+
+
+def test_the_eldritch_currencies_are_offered_only_to_a_target_that_asks_for_an_eldritch_implicit():
+    """`offers_for` (#835): with the wish, every Eldritch kind the boots take is offered; without it none is, and the answer says so."""
+    asked = offers_for(DATA, GOAL, BOOTS, START)
+    kinds = {offer.kind for offer in asked.offers}
+    assert ELDRITCH_KINDS <= kinds, ELDRITCH_KINDS - kinds
+    assert not any(limit.kind == _limits.ELDRITCH_ASKED for limit in asked.limits)
+    plain = offers_for(DATA, Goal(GOAL.leaves), BOOTS, START)
+    assert not {offer.kind for offer in plain.offers} & ELDRITCH_KINDS
+    (limit,) = [limit for limit in plain.limits if limit.kind == _limits.ELDRITCH_ASKED]
+    assert limit.labels

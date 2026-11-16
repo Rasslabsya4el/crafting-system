@@ -243,8 +243,9 @@ class EldritchImplicitCurrency(Action):
         return {self.label(): 1}
 
     def reads(self, data: GameData) -> Reads:
-        # The mods of the item are kept and never looked at; the result depends on the other side's implicit, which stays.
-        return Reads(junk=True, families=frozenset(), implicits=True)
+        # The mods of the item are kept and never looked at; the result depends on the other side's implicit, which stays. Block-invariant
+        # (ADR-0023, #835): no explicit slot changes, so the kernel pushed through any map of the junk is the same for every member.
+        return Reads(junk=True, families=frozenset(), implicits=True, block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, implicits=True)
@@ -295,9 +296,7 @@ class EldritchImplicitCurrency(Action):
 @kind(
     "eldritch-implicit-currency",
     order=90,
-    planner=False,
     applies_only_to="armour",
-    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _implicit_currency(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences:
@@ -373,7 +372,9 @@ class EldritchExaltedOrb(Action):
         return {self.label(): 1}
 
     def reads(self, data: GameData) -> Reads:
-        return Reads(junk=True, families=frozenset(), pool_weight=True, implicits=True)
+        # The ordinary add restricted to the dominant side: one mod drawn, the others kept, so its chances are linear-fractional in the weight
+        # the held families take out of that side's draw (`variants`, ADR-0023; the bound's argument is in `abstraction/_pattern.py`, #835).
+        return Reads(junk=True, families=frozenset(), pool_weight=True, implicits=True, variants=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
@@ -417,7 +418,8 @@ class EldritchAnnulmentOrb(Action):
         return {self.label(): 1}
 
     def reads(self, data: GameData) -> Reads:
-        return Reads(junk=True, families=frozenset(), implicits=True)
+        # Uniform among the removable mods of the dominant side, as the Annulment is among those of the item: block-invariant (ADR-0023, #835).
+        return Reads(junk=True, families=frozenset(), implicits=True, block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds.removal()
@@ -463,9 +465,7 @@ class EldritchAnnulmentOrb(Action):
 @kind(
     "eldritch-chaos-orb",
     order=91,
-    planner=False,
     applies_only_to="armour",
-    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _eldritch_chaos(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is Rarity.RARE:
@@ -475,9 +475,7 @@ def _eldritch_chaos(data: GameData, item: Item):
 @kind(
     "eldritch-exalted-orb",
     order=92,
-    planner=False,
     applies_only_to="armour",
-    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _eldritch_exalted(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is Rarity.RARE:
@@ -487,9 +485,7 @@ def _eldritch_exalted(data: GameData, item: Item):
 @kind(
     "eldritch-annulment-orb",
     order=93,
-    planner=False,
     applies_only_to="armour",
-    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _eldritch_annulment(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is not Rarity.NORMAL:
@@ -548,7 +544,8 @@ class OrbOfConflict(Action):
 
     def reads(self, data: GameData) -> Reads:
         # It raises one implicit and lowers the other inside their own families, so the state keeps a line a requirement names (#152).
-        return Reads(junk=True, families=frozenset(), implicits=True, implicit_lines=True)
+        # Block-invariant (ADR-0023, #835): no explicit slot changes.
+        return Reads(junk=True, families=frozenset(), implicits=True, implicit_lines=True, block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, implicits=True)
@@ -602,9 +599,7 @@ class OrbOfConflict(Action):
 @kind(
     "orb-of-conflict",
     order=94,
-    planner=False,
     applies_only_to="armour",
-    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _orb_of_conflict(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences:

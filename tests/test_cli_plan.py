@@ -249,15 +249,16 @@ def test_a_start_item_that_already_meets_the_target_is_planned_the_same_by_the_p
 def test_a_target_with_quality_is_refused_because_the_planner_would_ignore_it(target):
     asked = dataclasses.replace(target, quality=QualityRequirement(CatalystType.INTRINSIC, 20))
 
-    with pytest.raises(PlanError, match=r"asks for implicits or quality.*cannot plan yet"):
+    with pytest.raises(PlanError, match=r"asks for quality.*cannot plan yet"):
         make_plan(DATA, asked, price_file())
 
 
-def test_a_target_with_an_implicit_requirement_is_refused_for_the_same_reason(target):
-    wanted = ImplicitRequirement(None, "#% chance to Avoid being Shocked", frozenset({"AvoidShockEldritchImplicit1"}))
+def test_a_target_with_a_corrupted_implicit_requirement_is_refused_for_the_same_reason(target):
+    """The Eldritch implicits are planned since #835; a base or a corrupted implicit is still refused."""
+    wanted = ImplicitRequirement(None, "#% chance to Avoid being Shocked", frozenset({"AvoidShockEldritchImplicit1"}), corrupted=True)
     asked = dataclasses.replace(target, implicits=(wanted,))
 
-    with pytest.raises(PlanError, match="cannot plan yet"):
+    with pytest.raises(PlanError, match="not an Eldritch one.*cannot plan yet"):
         make_plan(DATA, asked, price_file())
 
 
