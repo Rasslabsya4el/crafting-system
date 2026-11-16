@@ -182,3 +182,16 @@ def test_a_target_no_offered_action_can_meet_is_told_before_the_search():
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), START, embers)  # grade 3: no Ember of it
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), START, embers + conflict) is None
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), boots(roll(FIRE), implicits=(exarch(1),)), []) is None  # held
+
+
+def test_a_start_item_that_takes_no_ember_is_told_before_the_search():
+    """The refusals of `_implicits_made` (checker round 3): an Ember refused at the start item (influenced, corrupted, a class it does not take)
+    gives nothing, and no later item takes it either, so a wish with Embers offered is refused before the search."""
+    from eldritch_support import SHAPER, amulet
+
+    embers = [(action, "eldritch-implicit-currency") for action, _ in EMBERS.values()]
+    goal = Goal(GOAL.leaves, (_wish("AvoidShock"),))
+    assert eldritch_unreachable(DATA, goal, START, embers) is None  # the same wish on plain boots
+    assert eldritch_unreachable(DATA, goal, boots(roll(FIRE), influences=SHAPER), embers)
+    assert eldritch_unreachable(DATA, goal, boots(roll(FIRE), corrupted=True), embers)
+    assert eldritch_unreachable(DATA, goal, amulet(), embers)
