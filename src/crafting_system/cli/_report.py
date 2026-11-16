@@ -766,7 +766,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "given": plan.start_price.given,
         },
         **({"start_options": start_document(plan.starts, report.first_step)} if plan.starts is not None else {}),
-        "limits": [limit_document(limit) for limit in ordered(plan.limits)],
+        "limits": [limit_document(limit) for limit in ordered(spent_kinds_named(plan.limits, (use.name for use in report.prices_used)))],  # as the page and the text name them (#983)
         "offered_actions": [priced.label for priced in plan.offers],
         "states_solved": len(plan.solution.values),
         "totals": _totals(plan, shift, divine),

@@ -727,7 +727,9 @@ class _View:
         times a run that reaches the step is there when that is more than once: never as a use that may miss (#984)."""
         if not sure:
             return count(uses)
-        times = count(uses / reached) if reached else "1"  # with no reach solved, each use is still one sure use
+        if not reached:  # no reach solved: the times a run is at the step are not known, each of them is still one sure use
+            return "1 each time"
+        times = count(uses / reached)
         return "1" if times in ("1", "≈ 1") else f"1 each time, {times.replace('≈ ', '≈')} times in a run that reaches it"
 
     def start_field(self) -> Field | None:

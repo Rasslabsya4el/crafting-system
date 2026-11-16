@@ -8,6 +8,7 @@ Small hand-made policies on a belt, drawn through the page's entry (`build_secti
 """
 
 import dataclasses
+import json
 
 from items_support import DATA, roll
 from route_view_support import COLD_REQ, DAMAGE, FRACTURED_COLD, LIFE, belt, hand_input
@@ -105,6 +106,32 @@ def test_a_kind_named_by_a_currency_the_plan_spends_is_named_by_its_use_in_what_
     assert f"Scouring Orb{USED_ON_THE_ITEM}" not in text  # this plan buys no Orb of Scouring
 
 
+def test_the_json_policy_names_a_spent_kind_as_the_page_does():
+    from crafting_system.cli._report import build_report, policy_document
+
+    inp = hand_input(START, (COLD_REQ, LIFE), bench_then_by_the_item)
+    left_out = Limit(NOT_NAMED, "Not offered", "kinds this target does not name", labels=("Divine Orb", "Fracturing Orb"), **claim("the kinds offered"))
+    policy = inp.plan.solution.policy
+    values = {state: 0.0 for action in policy.values() for state, _ in action.outcomes} | dict.fromkeys(policy, 0.0)  # no solve: a hand-made policy
+    solution = dataclasses.replace(inp.plan.solution, values=values)
+    plan = dataclasses.replace(inp.plan, limits=(*inp.plan.limits, left_out), solution=solution)
+    text = json.dumps(policy_document(build_report(plan, DATA))["limits"])
+
+    assert f"Divine Orb{USED_ON_THE_ITEM}" in text  # the JSON never calls a spent currency not offered either (#983)
+    assert f"Fracturing Orb{USED_ON_THE_ITEM}" not in text
+
+
+def test_two_lost_leaves_that_read_alike_are_one_mod():
+    from types import SimpleNamespace
+
+    from crafting_system.cli._route_view import _View
+
+    view = SimpleNamespace(leaf_text={0: "+80 to maximum Life", 1: "+80 to maximum Life", 2: "+40% to Cold Resistance"}.get)
+
+    assert _View.lost(view, SimpleNamespace(lost=(0, 1))) == ["+80 to maximum Life lost"]
+    assert _View.lost(view, SimpleNamespace(lost=(0, 1, 2))) == ["one of these lost: +80 to maximum Life; +40% to Cold Resistance"]
+
+
 def test_the_two_spellings_of_an_orb_are_one_currency():
     left_out = Limit(NOT_NAMED, "Not offered", "kinds this target does not name", labels=("Scouring Orb", "Chaos Orb", "Regal Orb"), **claim("the kinds offered"))
 
@@ -131,7 +158,8 @@ def test_an_edge_that_crafts_the_wanted_mod_names_it_once():
 def test_the_uses_of_a_sure_step_never_read_as_a_fraction_of_a_use():
     from crafting_system.cli._route_view import _View
 
-    assert _View.uses_text(0.3, None, True) == "1"  # no reach solved: each use is still one sure use
+    assert _View.uses_text(0.3, None, True) == "1 each time"  # no reach solved: one sure use each time, the times not known
+    assert _View.uses_text(5.0, None, True) == "1 each time"  # never "1" for a step a run may be at five times
     assert _View.uses_text(0.92, 0.92, True) == "1"  # once in each run that reaches it ("reached in 92% of runs" follows)
     assert _View.uses_text(1.0004, 1.0, True) == "1"  # never "≈1 times"
     assert _View.uses_text(2.4, 0.8, True) == "1 each time, 3 times in a run that reaches it"
