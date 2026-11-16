@@ -196,6 +196,47 @@ def test_two_fetches_never_run_at_once(tmp_path, caplog):
     assert len(calls) == 1 and "already running" in caplog.text
 
 
+def test_a_refresh_that_raises_past_the_fetch_keeps_the_schedule_alive(tmp_path, caplog, monkeypatch):
+    old_file(tmp_path, T0 - timedelta(days=1))
+    before = (tmp_path / PRICE_FILE_NAME).read_bytes()
+    clock, calls = Clock(T0, waits=1), []
+
+    def full_volume(source, target):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr("crafting_system.web._refresh.os.replace", full_volume)
+    with caplog.at_level(logging.ERROR, logger="crafting_system.web._refresh"):
+        refresher(tmp_path, writing_fetch(clock, calls), clock).run()
+
+    assert [moment for moment, _, _ in calls] == [T0, T0 + timedelta(minutes=15)]  # tried again after the retry, not ended
+    assert (tmp_path / PRICE_FILE_NAME).read_bytes() == before
+    assert "No space left on device" in caplog.text
+    assert [path.name for path in tmp_path.iterdir()] == [PRICE_FILE_NAME]
+
+
+def test_a_fetch_folder_left_by_a_killed_server_is_swept_and_a_file_stamped_ahead_waits_one_interval(tmp_path):
+    old_file(tmp_path, T0 + timedelta(days=30))  # a clock that was wrong when it was fetched
+    (tmp_path / ".price-refresh-left").mkdir()
+    (tmp_path / ".price-refresh-left" / PRICE_FILE_NAME).write_text("{}", encoding="utf-8")
+    clock, calls = Clock(T0, waits=1), []
+
+    refresher(tmp_path, writing_fetch(clock, calls), clock).run()
+
+    assert [moment for moment, _, _ in calls] == [T0 + SIX_HOURS]
+    assert [path.name for path in tmp_path.iterdir()] == [PRICE_FILE_NAME]
+
+
+@pytest.mark.parametrize("hours", ["0.1", "-1", "nan", "inf", "1e300"])
+def test_the_server_refuses_a_refresh_interval_it_cannot_keep(hours):
+    import argparse
+
+    from crafting_system.web.__main__ import _refresh_hours
+
+    with pytest.raises(argparse.ArgumentTypeError, match="0 \\(never\\) or 0.25 to 8760 hours"):
+        _refresh_hours(hours)
+    assert _refresh_hours("0") == 0 and _refresh_hours("6") == 6
+
+
 def test_the_interval_is_at_least_a_quarter_of_an_hour(tmp_path):
     clock = Clock(T0)
     assert MIN_INTERVAL == timedelta(minutes=15)

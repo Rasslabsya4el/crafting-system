@@ -14,6 +14,7 @@ time one fetch may take (60). With no price file in place the server first fetch
 
 import argparse
 import logging
+import math
 import os
 import sys
 from datetime import timedelta
@@ -26,10 +27,18 @@ from crafting_system.prices.price_names import canonical_price_name
 from crafting_system.prices.spends import spent_names
 
 from ._app import create_app
-from ._refresh import PriceRefresh, fetch_command
+from ._refresh import MIN_INTERVAL, PriceRefresh, fetch_command
 from ._service import Service
 from ._store import SqliteStore
 from ._world import load_world
+
+
+def _refresh_hours(text: str) -> float:
+    """Hours between two price fetches: 0 (never) or at least `MIN_INTERVAL`, a finite number."""
+    hours = float(text)
+    if not (hours == 0 or (math.isfinite(hours) and MIN_INTERVAL.total_seconds() / 3600 <= hours <= 24 * 365)):
+        raise argparse.ArgumentTypeError(f"0 (never) or {MIN_INTERVAL.total_seconds() / 3600:g} to {24 * 365} hours, not {text}")
+    return hours
 
 
 def _optional_float(text: str | None) -> float | None:
@@ -49,8 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", default=env.get("CRAFTING_WEB_DB") or str(config.output_dir / "web" / "site.sqlite3"), help="the SQLite file of the store")
     parser.add_argument(
         "--price-refresh-hours",
-        type=float,
-        default=float(env.get("CRAFTING_PRICE_REFRESH_HOURS") or 0),
+        type=_refresh_hours,
+        default=env.get("CRAFTING_PRICE_REFRESH_HOURS") or "0",
         help="fetch the prices every that many hours (0: never; at least a quarter of an hour)",
     )
     parser.add_argument("--price-league", default=env.get("CRAFTING_PRICE_LEAGUE") or None, help="the league whose prices are fetched")

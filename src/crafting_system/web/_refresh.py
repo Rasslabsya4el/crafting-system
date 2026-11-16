@@ -11,8 +11,9 @@ the server's log with the command's own output. The server's world is reloaded o
 `on_new_file` lets the caller load it at once.
 
 **When.** One refresh at a time (`refresh` never runs two fetches at once: a second call while one runs is skipped and logged). `run`
-refreshes when the live file is older than `interval` (at once when it is missing or unreadable), then every `interval`; a failed refresh
-is tried again after `retry`. The interval is a setting of the machine (`CRAFTING_PRICE_REFRESH_HOURS`, off by default), at least
+refreshes when the live file is older than `interval` (at once when it is missing or unreadable), then every `interval` (never waiting longer than that, even for a file
+stamped ahead of the clock); a refresh that failed at any step is logged and tried again after `retry`, and the schedule lives on. A fetch's
+folder left by a server killed during it is removed by the next refresh. The interval is a setting of the machine (`CRAFTING_PRICE_REFRESH_HOURS`, off by default), at least
 `MIN_INTERVAL`, so the site never asks the sources more often than their own rows change.
 
 **Time.** `clock` (the wall clock, timezone-aware) and `wait(seconds) -> stopped` are the caller's, so a test gives its own: nothing waits
@@ -115,7 +116,7 @@ class PriceRefresh:
         wait: Wait | None = None,
         on_new_file: Callable[[], object] | None = None,
     ) -> None:
-        if interval < MIN_INTERVAL:
+        if not interval >= MIN_INTERVAL:
             raise ValueError(f"the price refresh runs at most every {MIN_INTERVAL}, not every {interval}")
         if league is not None and not league.strip():
             raise ValueError("the league of the price refresh must not be blank")
@@ -141,6 +142,9 @@ class PriceRefresh:
             return False
         try:
             return self._refresh()
+        except Exception:  # noqa: BLE001  (a full or read-only volume, an unreadable overrides file: the schedule lives on and tries again)
+            _log.exception("the price refresh failed; the old price file stays")
+            return False
         finally:
             self._busy.release()
 
@@ -148,6 +152,8 @@ class PriceRefresh:
         old = _readable(self.price_path)
         league = self._league if self._league is not None else (old.league if old is not None else None)
         self.price_path.parent.mkdir(parents=True, exist_ok=True)
+        for left in self.price_path.parent.glob(STAGING_PREFIX + "*"):  # a fetch's folder left by a server killed during it
+            shutil.rmtree(left, ignore_errors=True)
         staging = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX, dir=self.price_path.parent))
         try:
             staged = staging / self.price_path.name
@@ -204,7 +210,7 @@ class PriceRefresh:
         """Refresh on the schedule until `stop` (or the injected `wait` says the refresh is being stopped)."""
         due = self.due()
         while not self._stopping.is_set():
-            delay = (due - self._clock()).total_seconds()
+            delay = min((due - self._clock()).total_seconds(), self.interval.total_seconds())  # a file stamped ahead of the clock
             if delay > 0 and self._wait(delay):
                 return
             if self._stopping.is_set():
