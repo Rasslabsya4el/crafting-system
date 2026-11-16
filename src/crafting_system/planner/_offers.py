@@ -11,7 +11,7 @@ import random
 from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
-from itertools import combinations, permutations
+from itertools import combinations, product
 
 from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
@@ -185,8 +185,11 @@ def eldritch_unreachable(data: GameData, goal: Goal, start_item: Item, offered: 
     """Why no item the offered actions make can hold the Eldritch implicits the goal wants, or None (#835).
 
     An item holds one implicit per side; an Ember or an Ichor of grade `g` gives its side grade `g`, and an Orb of Conflict moves a grade up to
-    Perfect or down to Lesser where both sides hold one. So each wish needs a side of its own on which one of its mods has a grade the offers
-    reach. A start item that holds an Eldritch implicit already is not judged here (the search reads it). `offered` are (action, catalog kind).
+    Perfect or down to Lesser where both sides hold one. So one implicit is chosen per side among the mods of a grade the offers
+    reach, and every wish must be passed by a chosen one; one implicit may pass several wishes, as the goal reads them. The check is sound, not tight: with a Conflict both sides
+    count as reaching every grade, though a Conflict keeps the sum of the two grades below the caps, so a pair such as two Perfect implicits
+    is not refused here and runs to the search. A start item that holds an Eldritch implicit already is not judged here (the search reads it).
+    `offered` are (action, catalog kind).
     """
     held = {entry.mod_id for entry in start_item.implicits}
     if not goal.implicits or start_item.eldritch_implicits(data) or any(held & wish.mod_ids for wish in goal.implicits):
@@ -201,15 +204,19 @@ def eldritch_unreachable(data: GameData, goal: Goal, start_item: Item, offered: 
         reach = defaultdict(set, {side: set(range(1, TOP_GRADE + 1)) for side in reach})
     sides = sorted(reach, key=str)
 
-    def fits(wish, side) -> bool:
-        return any(
-            eldritch_side(data.mods[m]) is side and eldritch_grade(data.mods[m]) in reach[side] and eldritch_grade(data.mods[m]) >= (wish.min_grade or 0)
-            for m in wish.mod_ids
-            if m in data.mods
-        )
-
     wishes = goal.implicits
-    if len(wishes) <= len(sides) and any(all(fits(w, s) for w, s in zip(wishes, order)) for order in permutations(sides, len(wishes))):
+
+    def passes(wish, mod_id) -> bool:
+        return mod_id in wish.mod_ids and eldritch_grade(data.mods[mod_id]) >= (wish.min_grade or 0)
+
+    # the implicits each side can hold that some wish names: one per side is chosen, and every wish must be passed by a chosen one
+    holdable = [
+        [None] + sorted(
+            {m for wish in wishes for m in wish.mod_ids if m in data.mods and eldritch_side(data.mods[m]) is side and eldritch_grade(data.mods[m]) in reach[side]}
+        )
+        for side in sides
+    ]
+    if any(all(any(m is not None and passes(wish, m) for m in pick) for wish in wishes) for pick in product(*holdable)):
         return None
     return (
         "no item the offered actions make can hold the Eldritch implicits the target asks for: an item holds one implicit on each of the two"

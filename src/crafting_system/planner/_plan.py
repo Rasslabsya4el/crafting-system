@@ -635,7 +635,7 @@ def _make_plan(
         )
     if target.quality is not None:
         raise PlanError("the target asks for quality, which the planner cannot plan yet")
-    if any(wish.corrupted or not any(eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
+    if any(wish.corrupted or not any(mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
         raise PlanError(
             "the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet;"
             " it plans the Searing Exarch and Eater of Worlds implicits"

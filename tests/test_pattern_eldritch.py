@@ -174,6 +174,11 @@ def test_a_target_no_offered_action_can_meet_is_told_before_the_search():
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"),)), START, embers) is None
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"), _wish("ChanceToShock"))), START, embers) is None
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"), _wish("FireMax"))), START, embers)  # two on one side
+    # one implicit passes several wishes that overlap (checker round 2): two wishes on one family, and a third on the other side
+    overlapping = (_wish("AvoidShock"), _wish("AvoidShock", 1, 1), _wish("ChanceToShock"))
+    assert eldritch_unreachable(DATA, Goal(leaves, overlapping), START, embers) is None
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"), _wish("AvoidShock", 1, 2))), START, embers)  # grade 2: no Ember
+    assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock"), _wish("AvoidShock", 1, 2))), START, embers + conflict) is None
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), START, embers)  # grade 3: no Ember of it
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), START, embers + conflict) is None
     assert eldritch_unreachable(DATA, Goal(leaves, (_wish("AvoidShock", 3),)), boots(roll(FIRE), implicits=(exarch(1),)), []) is None  # held
