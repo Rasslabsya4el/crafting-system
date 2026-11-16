@@ -45,7 +45,7 @@ def one(route: str) -> None:
         values = getattr(plan.solution, "values", None)
         result.update(
             planned=True,
-            mean=None if plan.risk is None else round(plan.risk.mean + plan.start_price.chaos, 2),
+            mean=None if plan.risk is None else round(plan.risk.mean.value + plan.start_price.chaos, 2),
             start_value=None if values is None else values.get(plan.start),
             states=None if values is None else len(values),
             offers=len(plan.offers),
