@@ -45,10 +45,10 @@ from crafting_system.planner import (
     progress,
 )
 
+from ._route_chain import chain_of_route
+
 VERIFY_FIRST = 20  # the first this many shared kernels of a route's reach are checked against a fresh one ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (the counts the planner's walk uses, `planner._packed`)
-
-from ._route_chain import chain_of_route
 
 
 class _Reading:
