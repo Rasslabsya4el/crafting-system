@@ -208,7 +208,7 @@ class Net:
     seconds: float | None = None
     states: int | None = None  # states known (touched)
     memory_mb: float | None = None
-    # the caller's word on where the search stands, asked after each round (a round of the planner's widening, `_rounds.Progress`): the reason it
+    # the caller's word on where the search stands, asked after each round (a round of the planner's widening, `_rounds.Share`): the reason it
     # gives the rest of its time back, or None to go on. The search stops there as at any net: it keeps its plan in hand, or says it had none
     give_way: "Callable[[Standing], str | None] | None" = None
 

@@ -204,7 +204,7 @@ def widen(
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
         plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
-        give_way = None if best is not None or time_left is None else Share(time_left, rest, began, clock_now)
+        give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, began, clock_now)  # the last round has all the time left
         try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
             plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0, give_way))
         except Beaten as beaten:

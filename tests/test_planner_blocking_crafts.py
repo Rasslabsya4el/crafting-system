@@ -232,6 +232,12 @@ def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share
     # with no plan in its search the round goes on to the net (OR-33): the rule asks for a plan in hand
     share = _rounds.Share(600.0, 3, 0.0, lambda: 500.0)
     assert share(SimpleNamespace(upper=None)) is None and share(SimpleNamespace(upper=float("inf"))) is None and share(SimpleNamespace(upper=10.0)) is not None
+    calls = []
+    _rounds.widen(
+        groups[:1], tuple("abc"), lambda chosen, call: calls.append(call) or SimpleNamespace(search=SimpleNamespace(lower=7.0), mean_remaining=7.0),
+        upper_of=lambda plan: 7.0, mean_of=lambda plan: 7.0, ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: 600.0, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert calls[0].give_way is None  # the last round has no rounds after it to give way to: it has all the time left
 
 
 def test_a_refused_group_is_set_aside_when_the_round_after_it_is_refused_too():
