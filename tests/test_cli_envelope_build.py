@@ -695,3 +695,54 @@ def test_the_net_ends_the_offers_floors_and_the_bound_is_the_cheapest_offer_at_e
     with pytest.raises(NoPolicy, match="while working out the cheapest possible cost of each action"):
         fresh = abstraction()
         envelope_result(fresh, fresh.compress(START_ITEM), build_world_offers(offers), net=Net(states=12), bound=bound)
+
+
+def new_names_gain(monkeypatch):
+    """`_seed_named` counts every action new to a universe as a slot gained, as an essence's forced mod is (R11: four of its essences joined the model
+    of the bound with a mod the pool does not list, each beginning the build again, #1086); the slots themselves are seeded as they are."""
+    real = _pattern._Universe._seed_named
+    seen: dict[int, set] = {}
+
+    def gaining(self, pattern, actions):
+        real(self, pattern, actions)
+        known = seen.setdefault(id(self), set())
+        new = [action for action in actions if action not in known]
+        known.update(new)
+        return len(new)
+
+    monkeypatch.setattr(_pattern._Universe, "_seed_named", gaining)
+
+
+def test_offers_that_join_later_are_in_the_universe_from_the_start_and_the_build_never_begins_again(world, monkeypatch):
+    """#1086: an offer that joins the model adds its forced mod to the universe, and a universe that grows begins the whole build again (R11: four
+    times, 27.6 s for a model that takes 7.7 s built at once). Seeded from the start with the offers that may join (`joining`), the builder makes one
+    pass for each `extend` and the same model as one build on every offer; without them, each offer that brings a name begins it again."""
+    _, start, offers, _, _, _ = world
+    all_offers = pattern_offers(offers)
+    new_names_gain(monkeypatch)
+    whole = build_pattern_model(abstraction(), start, all_offers)
+    joining = [offer.action for offer in all_offers if offer.action is not None]
+    seeded = PatternBuilder(abstraction(), start, joining=joining)
+    seeded.extend(all_offers[:2])
+    seeded.extend(all_offers[2:5])
+    grown = seeded.extend(all_offers[5:])
+    assert seeded.restarts == 0 and grown.stats.universe_growth == 0
+    assert canonical(grown) == canonical(whole)
+    assert grown.stats.kernels == whole.stats.kernels
+    unseeded = PatternBuilder(abstraction(), start)
+    unseeded.extend(all_offers[:2])
+    unseeded.extend(all_offers[2:5])
+    assert unseeded.restarts > 0  # the control: the names of the offers that join begin the build again
+    assert canonical(unseeded.extend(all_offers[5:])) == canonical(whole)
+
+
+def test_the_bound_grown_on_a_universe_seeded_with_every_offer_is_the_model_of_every_offer_and_a_lower_bound(world, floors_on, monkeypatch):
+    """#1086: the bound with the offers' floors seeds the universe with every offer, those that never join included; its rounds begin no build again,
+    its start value is the model of every offer's, and every key stays at most the exact value of each state that has it (the full walk)."""
+    ab, _, offers, _, exact, whole = world
+    new_names_gain(monkeypatch)
+    fresh = abstraction()
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
+    assert bound.complete and bound.rounds > 1 and bound.model.stats.universe_growth == 0
+    assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)
+    assert_lower_bound(bound, ab, exact)

@@ -997,6 +997,12 @@ class PatternBuilder:
     each distinct kernel once) and at the keys it finds. `extend` returns a snapshot of the model, so a model returned stays what it was when the builder
     goes on. A build that stops (`stop`) leaves the builder unusable: the keys it had expanded do not all hold the offers being added, so the caller keeps
     the model of the round before. A universe that grows (a slot no member held) begins the whole build again, as `build_pattern_model` always has.
+
+    `joining` are the actions of the offers that may be added later: what they add by name is in the universe from the first pass, so an offer that
+    joins never grows it by name (#1086: on R11 four essences joined the bound's model with a forced mod the pool does not list, each beginning
+    the build again, 27.6 s for a model built in 7.7 s at once). A universe larger than the offers in the model need is still a universe: its
+    members stand for every state of their key all the same (the slots no offer of the model produces are only more members to choose from), as
+    on a universe a kernel's slot grew (`keep_universes`), and the model it ends on is the one built at once on every offer, seeded the same.
     """
 
     def __init__(
@@ -1010,8 +1016,10 @@ class PatternBuilder:
         stop=None,
         grow: bool = False,
         approximate: bool = False,
+        joining: Sequence[Action] = (),
     ) -> None:
         self.approximate = approximate  # the kernels are made in floats, shrunk and completed with the sink (see `_lowered`): a lower bound of the exact model
+        self.joining = tuple(joining)  # the actions of the offers that may join later: what they add by name is in the universe from the start (#1086)
         self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
         self.ab = abstraction
         self.start = start
@@ -1027,7 +1035,7 @@ class PatternBuilder:
 
     def _reset(self) -> None:
         before = getattr(self, "pattern", None)
-        self.pattern = Pattern(self.ab, self.tags, [offer.action for offer in self.offers if offer.action is not None])
+        self.pattern = Pattern(self.ab, self.tags, [*(offer.action for offer in self.offers if offer.action is not None), *self.joining])
         if before is not None:
             # the build begins again because the universe grew: it begins on the grown universe. Made afresh, the universe would lose the slots the
             # kernels found (a fossil's added mods, which the pool does not list), find them again in the same pass, and begin again forever (#829:
@@ -1134,7 +1142,7 @@ class PatternBuilder:
             if not self.goal[i]:
                 first = self.done if self.expanded[i] else 0
                 if first < len(offers):
-                    if not pattern.members(self.keys[i], Mode.ANY):
+                    if not self.expanded[i] and not pattern.members(self.keys[i], Mode.ANY):  # a key expanded before had a member: the universe only grows
                         raise _no_member(self.keys[i])
                     try:
                         self._offers_of_key(i, first, tick)

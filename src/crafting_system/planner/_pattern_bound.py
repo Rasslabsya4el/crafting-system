@@ -22,6 +22,12 @@ value of growing-4-harvest/small was 0.0095 (an Orb of Augmentation) where the o
 search can raise those floors, and the search, its bounds that low at every tip, ran out of time where the grown model ended exact (#829 had
 dropped the growth: R08 at the prices of 2026-11-10 spent its whole run on rounds).
 
+*What a round costs (#1086).* The builder keeps every key it expanded and builds at them only the offers that join (`PatternBuilder.extend`), and the
+universe of slots is seeded from the start with what every offer adds by name, those outside `S` included (`joining`): an essence's forced mod is
+not in the pool, and seeded only when the essence joined it grew the universe and began the whole build again (R11 with the Exalted Orb: four times,
+the bound 27.6 s where the same model takes 7.7 s built at once; seeded, 11.1 s and the same value). The rounds then cost the offers' own kernels,
+a solve and a pass over the offers outside, whatever their number.
+
 **The net (OR-12, OR-13).** The build is asked for its `stop` between two offers, so a key of thousands of offers is no longer one step. A build that
 stops leaves the keys it did not expand as tips, each with a floor action of the least floor of *all* the offers at that key, and the model is
 solved as it is: its value is still a lower bound, weaker where the build did not reach. `PatternBound.stopped` says why and `PatternBound.phase` says
@@ -168,7 +174,9 @@ def pattern_lower_bound(
                 f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
                 f"({phases['floors']:.1f} s)"
             )
-    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate)
+    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate,
+        joining=[offer.action for offer in all_offers if offer.action is not None] if floors is not None else (),
+    )  # fmt: skip
     kept = None  # the last round that ran to its end: (model, value, error bound, order)
     adding = list(order)
     rounds = 0
