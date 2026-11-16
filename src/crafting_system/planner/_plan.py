@@ -27,7 +27,7 @@ from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
 from crafting_system.data import GameData
-from crafting_system.items import Item
+from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, has_inputs, is_free_cost, solve_readings
@@ -44,7 +44,7 @@ from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, spli
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
@@ -569,8 +569,9 @@ def _make_plan(
     """Solve the target and measure the risk of the policy.
 
     `start_price` is the cost of the start item for this run (it wins over the price file);
-    `offers` default to `offers_for` the target. Raises `PlanError` when the target has `implicits` or
-    `quality` (the planner ignores them until B2), when no offer has a price or no policy reaches the
+    `offers` default to `offers_for` the target. Raises `PlanError` when the target asks for `quality` or for an implicit that is not an
+    Eldritch one (a base or a corrupted implicit; the Eldritch implicits are planned since #835: the bound's key holds the pair, and the
+    Eldritch currencies are offered to a target that asks for one), when no offer has a price or no policy reaches the
     goal, and what the layers below raise for a bad input.
 
     A target that names sockets (ADR-0045, ticket #231) is planned in two parts: the mods as for the same target without sockets, and the socket
@@ -632,9 +633,12 @@ def _make_plan(
             f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
             ": the cut and the spend of strands are not built, so an answer would silently ignore them"
         )
-    if target.implicits or target.quality is not None:
+    if target.quality is not None:
+        raise PlanError("the target asks for quality, which the planner cannot plan yet")
+    if any(wish.corrupted or not any(mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
         raise PlanError(
-            "the target asks for implicits or quality, which the planner cannot plan yet"
+            "the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet;"
+            " it plans the Searing Exarch and Eater of Worlds implicits"
         )
     if target.enchantment is not None:
         raise PlanError(
@@ -663,6 +667,9 @@ def _make_plan(
     if removed:
         limits += unusable_limits(data, ((p.label, p.offer.action) for p in priced if p.offer.action not in kept))
     priced = tuple(p for p in priced if p.offer.action in kept)
+    unreachable = eldritch_unreachable(data, goal, target.start_item, ((p.offer.action, p.offer.kind) for p in priced))
+    if unreachable:
+        raise PlanError(unreachable)  # an exact refusal: the search would only run to its net (#835)
     limits += start_limits(price_of_start)
     if price_of_start.bought:
         bought = price_of_start.name or "start item"

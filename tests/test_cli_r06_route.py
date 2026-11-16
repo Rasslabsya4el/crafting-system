@@ -37,7 +37,8 @@ def target(data):
 
 def test_r06_is_not_planned_while_the_planner_refuses_its_implicit_and_quality(data, target):
     assert target.implicits and target.quality is not None
-    with pytest.raises(PlanError, match="implicits or quality"):
+    # quality is refused first; its base implicit is refused after it, as an implicit that is not an Eldritch one (#835)
+    with pytest.raises(PlanError, match="asks for quality"):
         make_plan(data, target, load_price_file(PRICES), solve_it=False)
 
 

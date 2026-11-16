@@ -690,7 +690,10 @@ def test_layer_1_holds_for_a_goal_that_names_no_implicit(name):
 def test_the_declarations_say_what_the_actions_read_and_change():
     for action in ALL_ACTIONS:
         reads, adds = action.reads(DATA), action.adds(DATA, None)
-        assert reads.implicits and not reads.quality and not reads.offer and not reads.block_invariant and not reads.variants
+        assert reads.implicits and not reads.quality and not reads.offer
+        # what the bound's member policies stand on (#835): no explicit slot changed, the Annulment on one side, the Exalted on one side
+        assert reads.block_invariant is isinstance(action, (EldritchImplicitCurrency, OrbOfConflict, EldritchAnnulmentOrb))
+        assert reads.variants is isinstance(action, EldritchExaltedOrb)
         assert adds.implicits is isinstance(action, (EldritchImplicitCurrency, OrbOfConflict))
     assert EldritchAnnulmentOrb().adds().draws is False and EldritchChaosOrb().adds().draws and EldritchExaltedOrb().adds().draws
     assert EldritchChaosOrb().reads(DATA).families is None and EldritchExaltedOrb().reads(DATA).pool_weight
@@ -711,7 +714,7 @@ KIND_NAMES = {
 def test_the_catalog_lists_the_eldritch_actions_for_a_boots_item_and_none_for_an_amulet():
     registered = {entry.name: entry for entry in kinds()}
     assert KIND_NAMES <= registered.keys()
-    assert not any(registered[name].planner for name in KIND_NAMES) and all(registered[name].why_not for name in KIND_NAMES)
+    assert all(registered[name].planner for name in KIND_NAMES)  # planner kinds since #835
     rare = catalog(DATA, boots(roll(LIFE)), names=KIND_NAMES)
     assert {type(action) for action in rare} == {EldritchImplicitCurrency, EldritchChaosOrb, EldritchExaltedOrb, EldritchAnnulmentOrb, OrbOfConflict}
     assert sum(isinstance(action, EldritchImplicitCurrency) for action in rare) == 8

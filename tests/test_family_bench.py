@@ -129,12 +129,12 @@ def test_prices_are_the_snapshots_scaled_by_a_seeded_factor_between_03_and_3(dat
 def test_refused_marks_agree_with_the_planner_before_any_solve(data):
     """A case marked refused is refused by `make_plan` itself; one not marked passes the checks before the solve (`solve_it=False`)."""
     found = {c.id: c for c in F.cases(data, 824, methods=subset(("eldritch", "remembrance", "start-given", "basic-orbs")))}
-    for key in ("eldritch/small", "remembrance/small"):
+    for key in ("remembrance/small",):
         case = found[key]
         assert case.refused
         with pytest.raises(PlanError):
             make_plan(data, F.target_of(case, data), F.prices_for(case), start_price=case.start_price, solve_it=False)
-    for key in ("start-given/small", "basic-orbs/small"):
+    for key in ("start-given/small", "basic-orbs/small", "eldritch/small"):  # the Eldritch implicits are planned since #835
         case = found[key]
         assert case.refused is None
         make_plan(data, F.target_of(case, data), F.prices_for(case), start_price=case.start_price, solve_it=False)

@@ -138,6 +138,35 @@ Every concrete action is so matched by an offered one with the same pushed kerne
 its imprints, `min(LB(s), c + LB(h))`, is not one: an item at its own snapshot holds the beast's price more than its value (the toy loop of
 ADR-0060: `V(h, {h}) = V(h, {}) - beast`), and a gamble from `h` is worth less with `h` held than without it.
 
+**The Eldritch implicits (#835, ADR-0025).** The key holds the item state beyond the mods exactly (`held`), and with it the pair of a state that
+keeps the implicits (`CompressedState.implicits`): the grade of each side, what its implicit gives each implicit wanted (its roll included),
+and its line where a requirement names one (`ImplicitSide`). Every member of a key holds the key's pair, so the dominant side, a function of
+the two grades, is the key's. The Eldritch currencies then have these member policies, each from what it declares (`Reads`):
+
+* An Ember or an Ichor, and an Orb of Conflict (`Reads.block_invariant`, no draw: `ONE`, and `ALL` under a lock by the rule of `ONE`). Neither
+  changes an explicit slot: the result holds the member's slots and a new pair, drawn from a pool that the base, the side and the grade fix
+  (an Ember's), or moved inside the lines the pair holds (a Conflict's), the other side's implicit kept. Their refusals read the class, the
+  corruption, the influences and, for a Conflict, whether both implicits are there: the key's. So the kernel pushed through the key is the
+  same at every member (`ANY` would do too). **Proved** so.
+* An Eldritch Orb of Annulment (`Reads.block_invariant`: `ONE`, `ALL` under a lock). It is the Annulment on the dominant side: it removes one
+  of that side's removable slots uniformly (not fractured, not on a locked side, not of a tag an Attack or Caster metamod protects), so the
+  chance of a successor key is `(removable slots of that class on that side) / (removable slots on that side)`, counted by class as the
+  Annulment's are (the side is the key's). It is refused where nothing is dominant or nothing is removable: the key's. **Proved** so.
+* An Eldritch Exalted Orb (`Reads.variants`: `EXTREMES`). It is the Exalted Orb restricted to the dominant side `d`: one mod drawn from that
+  side's pool less the families held, the others kept. The chance of a successor key is `(a + sum_c b_c H_c) / (W_d - H_rel,d - sum_c e_c H_c)`
+  with `e_c` 1 for a class of side `d` and 0 for one of the other side: a pure junk family of the other side takes nothing out of a draw of
+  side `d` when no family has mods on both sides. That is a linear-fractional function of the `H_c` with a positive denominator, so the
+  argument of `EXTREMES` holds as it is: the least backup over the box is at a corner, and the corners are offered. A pool with a family on
+  both sides (`partners`) breaks `e_c` (a held family of the other side takes its partner's weight out of the draw, which is not its `H_c`):
+  there the orb is `ALL` (`Pattern.mode_of`). **Proved for a single draw.**
+* An Eldritch Chaos Orb (`ALL`). It erases the dominant side's unfractured mods and draws several, keeping the other side, whose families the
+  draws exclude: an erasing reroll under a lock, whose chances are products of ratios. **Exact by construction.**
+
+Every other action keeps the pair or reads it as the key holds it (the kernel carries the implicits; a goal reads what each gives), and a
+restart leads to the start key. So every concrete move is matched as above and the induction of the first paragraph gives `V_key <= V*`.
+Checked against the exact graph of a small Eldritch pool (`tests/test_pattern_eldritch.py`): every Eldritch move of every state is offered at
+its key, and the model is a lower bound at every state.
+
 **Refusals.** An action that the game forbids at a member (`NotApplicableError`) is not an action of that member and is left out
 of it. An action that raises a model gap at a member (`OutOfScopeError`: no admitted rule covers the item) is left out only when
 no member of the key can take it (each is a game refusal or a gap: the exact model has no action at any state of the key, as the walk and the
@@ -454,6 +483,7 @@ class Pattern:
         self._snapshot_keys: dict[CompressedState, PatternKey] = {}  # an imprint's snapshot -> its key (#833)
         self._snapshot_reps: dict[PatternKey, CompressedState] = {}  # a snapshot's key -> the first snapshot of it seen: the one the members hold
         self._snapshot_orders: dict[PatternKey, tuple] = {}
+        self._partners: dict[frozenset, bool] = {}
         self.grew = 0
         self.fallbacks = 0
 
@@ -648,7 +678,11 @@ class Pattern:
         reads = self.reads(action)
         kinds = self.ab._context(key.flags.influences).kinds
         if reads.variants and reads.junk and reads.pool_weight and not reads.fractures:
-            return Mode.ALL if kinds._tagged or kinds._levels else Mode.EXTREMES
+            if kinds._tagged or kinds._levels:
+                return Mode.ALL
+            # an addition that reads the implicits draws from the dominant side alone (an Eldritch Exalted Orb): a family on both sides breaks
+            # the corners (module docstring, "The Eldritch implicits", #835)
+            return Mode.ALL if reads.implicits and self._has_partners(key.flags.influences) else Mode.EXTREMES
         others = reads.variants or reads.pool_weight or reads.fractures or reads.input_classes
         if reads.block_invariant and not (others or reads.rerolls_values):
             if self.holds_lock(key):
@@ -672,6 +706,13 @@ class Pattern:
         """The member policy of `action` at `key`: its mode, and the folded families its members must tell apart (`named_of`, with `ONE`)."""
         mode = self.mode_of(action, key)
         return mode, self.named_of(action, key) if mode is Mode.ONE else frozenset()
+
+    def _has_partners(self, influences: frozenset) -> bool:
+        """Whether the pool of an item with `influences` holds a family with mods on both sides (`partners`, #835)."""
+        found = self._partners.get(influences)
+        if found is None:
+            found = self._partners[influences] = bool(partners(self.ab._context(influences).kinds._pool()))
+        return found
 
     def _erases(self, action: Action, key: PatternKey) -> bool:
         """Whether the abstraction makes the kernel of `action` at the members of `key` from a view without their ordinary slots (`Abstraction._erases`):

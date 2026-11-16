@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 24 |
-| - with `planner=True` | 38 |
+| - with `planner=False` (no plan can use them) | 19 |
+| - with `planner=True` | 43 |
 | - `planner=True` and offered by at least one target (reachable) | 23 |
-| - `planner=True` and offered by no target | 15 |
+| - `planner=True` and offered by no target | 20 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 39 of 62 (24 closed by `planner=False`, 15 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 39 of 62 (19 closed by `planner=False`, 20 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -71,11 +71,11 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158) |  |
 | `recombinator` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 19 entries); not named in the target's `actions:` (12 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
 | `catalyst` | **no** | reads: any | none | `planner=False`: the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158) |  |
-| `eldritch-implicit-currency` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
-| `eldritch-chaos-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
-| `eldritch-exalted-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
-| `eldritch-annulment-orb` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
-| `orb-of-conflict` | **no** | only: armour | none | `planner=False`: the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158) |  |
+| `eldritch-implicit-currency` | yes | only: armour | none | not named in the target's `actions:` (12 of 19 entries); not offered (removed by `usable_actions`, which needs a crafted mod) (r10-fractured-boots, r10-fractured-boots-70-life, r11); the kind lists no action for this start item (r05, r12); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `eldritch-chaos-orb` | yes | only: armour | none | not named in the target's `actions:` (12 of 19 entries); not offered (removed by `usable_actions`, which needs a crafted mod) (r10-fractured-boots, r10-fractured-boots-70-life, r11); the kind lists no action for this start item (r05, r12); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `eldritch-exalted-orb` | yes | only: armour | none | not named in the target's `actions:` (12 of 19 entries); not offered (removed by `usable_actions`, which needs a crafted mod) (r10-fractured-boots, r10-fractured-boots-70-life, r11); the kind lists no action for this start item (r05, r12); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `eldritch-annulment-orb` | yes | only: armour | none | not named in the target's `actions:` (12 of 19 entries); not offered (removed by `usable_actions`, which needs a crafted mod) (r10-fractured-boots, r10-fractured-boots-70-life, r11); the kind lists no action for this start item (r05, r12); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `orb-of-conflict` | yes | only: armour | none | not named in the target's `actions:` (12 of 19 entries); not offered (removed by `usable_actions`, which needs a crafted mod) (r10-fractured-boots, r10-fractured-boots-70-life, r11); the kind lists no action for this start item (r05, r12); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `tempering` | **no** | only: weapon | none | `planner=False`: the planner prices the orb through the finish cost of a target that names an enchantment (ADR-0050), it does not search over its clicks |  |
 | `tailoring` | **no** | only: body armour | none | `planner=False`: the planner prices the orb through the finish cost of a target that names an enchantment (ADR-0050), it does not search over its clicks; the kind lists no action for any benchmark start item |  |
 | `imprint` | yes | opt-in, reads: any | r17 |  |  |
@@ -101,10 +101,10 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | Target | Entry | `actions:` | Offers | Dropped (no price) | Offers with donor items | Kinds | Kinds offered |
 |---|---|---|---|---|---|---|---|
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
-| r03 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
+| r03 | refused: no price for the start item 'Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage'. |  |  |  |  |  |  |
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 77 | 0 | 0 | 3 | chaos-orb, essence, harvest-reforge |
-| r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet |  |  |  |  |  |  |
+| r06 | refused: the target asks for quality, which the planner cannot plan yet |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12698 | 0 | 0 | 2 | bench-craft, fossil-set |
@@ -127,8 +127,10 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | Condition | Message | Benchmark targets it refuses |
 |---|---|---|
 | `setting.on` | Memory Strands are on ({setting.why}), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them | no benchmark target |
-| `target.implicits or target.quality is not None` | the target asks for implicits or quality, which the planner cannot plan yet | r03, r06 |
+| `target.quality is not None` | the target asks for quality, which the planner cannot plan yet | r06 |
+| `any((wish.corrupted or not any((mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids)) for wish in target.implicits))` | the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet; it plans the Searing Exarch and Eater of Worlds implicits | no benchmark target |
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
+| `unreachable` | {unreachable} | no benchmark target |
 | `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
 
 - `Abstraction(..., allow_inputs=bool(donated) or bool(awakened)) in make_plan`: an action that consumes other items is planned only when it reads a rule axis, with the second items the planner offers (the recombinator: the target's isolated feeders); one without an axis is refused by the kernel.

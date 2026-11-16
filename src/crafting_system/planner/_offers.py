@@ -11,13 +11,13 @@ import random
 from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
-from itertools import combinations
+from itertools import combinations, product
 
 from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, spawn_weight
+from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, eldritch_grade, eldritch_side, spawn_weight
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile, planned_price, standing_defaults
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 
@@ -168,6 +168,70 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
 
 
 AWAKENER_KIND = "awakeners-orb"
+# The Embers and Ichors, the three Eldritch orbs and the Orb of Conflict (ADR-0025): offered only to a target that asks for an Eldritch implicit (#835)
+ELDRITCH_KINDS = frozenset({"eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict"})
+
+
+def asks_eldritch(data: GameData, goal: Goal) -> bool:
+    """Whether the goal wants an Eldritch implicit: an implicit wish that selects a Searing Exarch or an Eater of Worlds mod (ADR-0025)."""
+    return any(eldritch_side(data.mods[mod_id]) is not None for wish in goal.implicits for mod_id in wish.mod_ids if mod_id in data.mods)
+
+
+EMBER_KIND, CONFLICT_KIND = "eldritch-implicit-currency", "orb-of-conflict"
+
+
+def _implicits_made(data: GameData, action: Action, item: Item) -> frozenset[str]:
+    """The Eldritch implicits an Ember or an Ichor can put on `item`, read from its outcomes (the contract, not its fields)."""
+    try:
+        results = action.outcomes(data, item).results
+    except (NotApplicableError, OutOfScopeError):  # what refuses it is the base, its class, influence or corruption: no later item takes it either
+        return frozenset()
+    return frozenset(entry.mod_id for _, made in results for entry in made.eldritch_implicits(data).values())
+TOP_GRADE = 6  # Perfect: a Conflict raises up to it
+
+
+def eldritch_unreachable(data: GameData, goal: Goal, start_item: Item, offered: Iterable[tuple[Action, str]]) -> str | None:
+    """Why no item the offered actions make can hold the Eldritch implicits the goal wants, or None (#835).
+
+    An item holds one implicit per side; an Ember or an Ichor of grade `g` gives its side grade `g`, and an Orb of Conflict moves a grade up to
+    Perfect or down to Lesser where both sides hold one. So one implicit is chosen per side among the mods of a grade the offers
+    reach, and every wish must be passed by a chosen one; one implicit may pass several wishes, as the goal reads them. The check is sound, not tight: with a Conflict both sides
+    count as reaching every grade, though a Conflict keeps the sum of the two grades below the caps, so a pair such as two Perfect implicits
+    is not refused here and runs to the search. A start item that holds an Eldritch implicit already is not judged here (the search reads it).
+    `offered` are (action, catalog kind).
+    """
+    held = {entry.mod_id for entry in start_item.implicits}
+    if not goal.implicits or start_item.eldritch_implicits(data) or any(held & wish.mod_ids for wish in goal.implicits):
+        return None  # the start item holds an implicit already: the search reads it
+    reach: dict[object, set[int]] = defaultdict(set)
+    conflict = False
+    for action, kind in offered:
+        if kind == EMBER_KIND:
+            for mod_id in _implicits_made(data, action, start_item):
+                reach[eldritch_side(data.mods[mod_id])].add(eldritch_grade(data.mods[mod_id]))
+        conflict = conflict or kind == CONFLICT_KIND
+    if conflict and len(reach) == 2:
+        reach = defaultdict(set, {side: set(range(1, TOP_GRADE + 1)) for side in reach})
+    sides = sorted(reach, key=str)
+
+    wishes = goal.implicits
+
+    def passes(wish, mod_id) -> bool:
+        return mod_id in wish.mod_ids and eldritch_grade(data.mods[mod_id]) >= (wish.min_grade or 0)
+
+    # the implicits each side can hold that some wish names: one per side is chosen, and every wish must be passed by a chosen one
+    holdable = [
+        [None] + sorted(
+            {m for wish in wishes for m in wish.mod_ids if m in data.mods and eldritch_side(data.mods[m]) is side and eldritch_grade(data.mods[m]) in reach[side]}
+        )
+        for side in sides
+    ]
+    if any(all(any(m is not None and passes(wish, m) for m in pick) for wish in wishes) for pick in product(*holdable)):
+        return None
+    return (
+        "no item the offered actions make can hold the Eldritch implicits the target asks for: an item holds one implicit on each of the two"
+        " sides, an Ember or an Ichor gives the grade it names, and only an Orb of Conflict, with both sides held, reaches the grades above"
+    )
 
 
 def donor_wants(data: GameData, action: Action) -> tuple[Need, frozenset[str]] | None:
@@ -384,6 +448,12 @@ def offers_for(
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
+    * An Eldritch currency (a kind of `ELDRITCH_KINDS`: an Ember, an Ichor, an Eldritch Chaos, Exalted or Annulment Orb, an Orb of Conflict) is
+      offered only when the goal asks for an Eldritch implicit (`asks_eldritch`, #835). For any other target it is left out, and the answer
+      carries a `Limit` that names it: the Eldritch orbs act on the dominant side only, which an Ember or an Ichor must make first, and with
+      them every state of the target would keep the pair (`Abstraction.tracks_implicits`). Such a target can gain from them (an Ember, then
+      an Eldritch Chaos Orb that rerolls the prefixes alone; an Eldritch Annulment or Exalted Orb on one side), so this is a cut that may
+      cost: the limit says so, and #886 lifts it with every other default-off (#919).
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
@@ -421,6 +491,10 @@ def offers_for(
         label = action.label(data)
         return label if label_count[label] == 1 or not action.variant else f"{label} [{action.variant}]"
 
+    left_out_eldritch: list[str] = []  # the target asks for no Eldritch implicit (#835): left out before anything asks them of the base
+    if not asks_eldritch(data, goal):
+        left_out_eldritch = [told_apart(action) for action in listed if kind_of.get(action) in ELDRITCH_KINDS]
+        listed = [action for action in listed if kind_of.get(action) not in ELDRITCH_KINDS]
     refused = base_refused(data, start_item, listed)  # the kind-level relevance test (#848): no item of this base can take these
     listing_gaps.extend(refusal_gaps(refused, kind_of, listed, told_apart))
     listed = [action for action in listed if action not in refused]
@@ -494,6 +568,20 @@ def offers_for(
                 "each of these corrupts the item, and it is offered only to a target that asks for a corrupted implicit; this target allows a corrupted item but asks for none",
                 labels=tuple(left_out_asked),
                 **claim("the kinds offered"),
+            ),
+        )
+    if left_out_eldritch:
+        limits += (
+            Limit(
+                _limits.ELDRITCH_ASKED,
+                "Not offered",
+                "the Eldritch currencies are not tried as tools on a target that names no Eldritch implicit, and this one names none",
+                labels=tuple(left_out_eldritch),
+                **claim(
+                    "the kinds offered",
+                    "The route may cost more because of it: a player can put an Ember or an Ichor on the item and then reroll, remove or add"
+                    " on one side alone with an Eldritch orb.",
+                ),  # lifted by #886 with every default-off (#919)
             ),
         )
     if left_out_crafts:
