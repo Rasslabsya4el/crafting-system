@@ -47,6 +47,7 @@ from ._offer_kinds import (
     _kind_of,
     _raised,
     best_first_rho,
+    declared_pbars,
     raisable,
     goal_set,
     through_listing,
@@ -105,6 +106,8 @@ class OfferFloors:
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
+        if self.chosen:
+            declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
 
     def ask(self) -> None:

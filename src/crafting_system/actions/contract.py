@@ -105,6 +105,7 @@ __all__ = [
     "ImprintMove",
     "Need",
     "Previewable",
+    "ReachDeclared",
     "Reading",
     "Reads",
     "Rerolled",
@@ -686,6 +687,22 @@ class BurnKeeps:
     sockets: bool = False
 
 
+@dataclass(frozen=True)
+class ReachDeclared:
+    """What an action declares, without building its outcomes, of one use on an item (`Action.reach_batch`, ticket #1073).
+
+    * `keeps_shape`: every outcome keeps the rarity, the corruption, the influences and the fractured mods of the item (what `keeps_shape` of
+      `abstraction` finds by building the outcomes); False when the action may change any of them. The contract suite checks it against the
+      built outcomes.
+    * `chances`: for each leaf asked about (in the order of `passes`), a number never below the chance that one use puts on the item a mod
+      that `passes` says can make that leaf PASSING; exactly 0 only when no such mod can be put on at all. None when the action keeps the shape
+      but gives no bound.
+    """
+
+    keeps_shape: bool
+    chances: tuple[float, ...] | None = None
+
+
 class Action(ABC):
     """Base of every action; subclass it as a frozen dataclass and fill in the five questions.
 
@@ -876,6 +893,19 @@ class Action(ABC):
         declares `cuts`, None otherwise (a fossil on a stranded item draws from the ordinary pool). It is the `cut` of `build_pool`."""
         use = self.strand_use(data)
         return Cut.of(item) if use is not None and use.cuts else None
+
+    @classmethod
+    def reach_batch(
+        cls, data: GameData, item: Item, actions: "tuple[Action, ...]", passes: Callable[[Mod], tuple[bool, ...]]
+    ) -> "tuple[ReachDeclared | None, ...] | None":
+        """For `actions` (all of this class) used once on `item`, what each declares of its shape and its chances (`ReachDeclared`),
+        found for all of them at once and without building their outcomes (ticket #1073); None (the default) says the class declares nothing.
+
+        `passes(mod)` says, for each leaf asked about, whether some roll of `mod` makes that leaf PASSING. An entry is None for an action the
+        class gives no declaration for (refused on `item`, a model gap, a pool it has no argument for). `item` is the bare item of a shape: its
+        fractured mods and nothing else. A planner groups its offers by class and asks each class once.
+        """
+        return None
 
     def twin_key(self, data: GameData, item: Item) -> Hashable | None:
         """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`
