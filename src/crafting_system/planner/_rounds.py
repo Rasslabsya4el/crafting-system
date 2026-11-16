@@ -6,8 +6,12 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
 
 * **Groups.** An offer belongs to the group of the features it adds to the model beyond the target's own (`Abstraction.features` of a model of
   that offer alone, less those of a model with none). The first round holds every offer the target names, and every offer that adds no feature
-  or only the junk count (`FIRST_ROUND`). The other groups are ordered by the number of features they add, then by their number of offers, then
-  by their kinds' names: the round that refines the model least, and then the smallest, comes first. No kind is named here.
+  or only the junk count (`FIRST_ROUND`), less any kind the target does not name whose offers number more than `SIZE_RATIO` times the rest of
+  the first round (an action-side size: the search builds every offer at each state it expands, so such a kind alone would make the first round
+  that many times slower; the fossil sets, about 9,000 offers against about 150 on R05, R10, R11 and R12 with every method on, where the 60
+  essences against about 18 offers of main's defaults stay in it); such a kind is a group of its own. The other groups are ordered by the
+  number of features they add, then by their number of offers, then by their kinds' names: the round that refines the model least, and then the
+  smallest, comes first. No kind is named here.
 * **Rounds.** Round 1 is the first round's offers, with the whole of the run's time. Each later round is the offers of every round that
   closed before it, plus its own group. It is cut against the best plan so far: the exact price cut (`_price_cut`) with that plan's certified
   upper figure, and the search ends at once when its lower figure reaches that plan's cost (`_envelope.Beaten`). A round that closes (exact,
@@ -23,6 +27,7 @@ from __future__ import annotations
 
 import gc
 import math
+from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
@@ -33,6 +38,7 @@ from ._envelope import Beaten
 from ._limits import Limit, WITHIN_GAP
 
 FIRST_ROUND = frozenset({"junk"})  # the features an offer of the first round may add: counting the junk per side is what every reroll needs
+SIZE_RATIO = 10  # a kind with more than this many times the offers of the rest of the first round is a round of its own (see the module text)
 
 CLOSED, WITHIN, BEATEN, STOPPED, REFUSED, UNTRIED = "closed", "within", "beaten", "stopped", "refused", "not tried"
 
@@ -94,11 +100,15 @@ def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object
     features = [added(offer) for offer in offers]
     asked = [offer.label in names or (offer.kind in names and offer.blocks is None) for offer in offers]
     first = [i for i, offer in enumerate(offers) if asked[i] or features[i] <= FIRST_ROUND]
+    sizes = Counter(kind_of(offers[i]) for i in first if not asked[i])
+    big = {kind for kind, count in sizes.items() if count > SIZE_RATIO * (len(first) - count)}
+    first = [i for i in first if asked[i] or kind_of(offers[i]) not in big]
     taken = set(first)
-    by_key: dict[frozenset[str], list[int]] = {}
-    for i in range(len(offers)):
+    by_key: dict[tuple, list[int]] = {}
+    for i, offer in enumerate(offers):
         if i not in taken:
-            by_key.setdefault(features[i], []).append(i)
+            kind = kind_of(offer)
+            by_key.setdefault(("size", kind) if kind in big and features[i] <= FIRST_ROUND else ("features", features[i]), []).append(i)
     later = [
         Group(tuple(positions), tuple(sorted({kind_of(offers[i]) for i in positions})), frozenset().union(*(features[i] for i in positions)))
         for positions in by_key.values()
