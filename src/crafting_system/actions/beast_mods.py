@@ -151,7 +151,7 @@ class WildBristleMatron(Action):
         )
 
 
-@kind("wild-bristle-matron", order=86, opt_in=True)
+@kind("wild-bristle-matron", order=86)
 def _wild_bristle_matron(data: GameData, item: Item):
     if item.rarity is Rarity.RARE and _allowed_classes(data, item):
         yield WildBristleMatron()
@@ -247,7 +247,7 @@ class BeastSideSwap(Action):
         return Finite(data, item, tuple(results))
 
 
-@kind("beast-side-swap", order=85, opt_in=True)
+@kind("beast-side-swap", order=85)
 def _beast_side_swaps(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
         yield BeastSideSwap(Side.PREFIX)

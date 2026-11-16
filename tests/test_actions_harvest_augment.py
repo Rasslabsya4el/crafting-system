@@ -594,9 +594,9 @@ def test_the_catalog_lists_none_for_an_influenced_item():
     assert kind_members(amulet(roll(LIFE_1), influences=frozenset({Influence.SHAPER}))) == []
 
 
-def test_the_kind_is_an_opt_in_planner_kind():
+def test_the_kind_is_a_planner_kind_offered_by_default():
     (entry,) = (entry for entry in kinds() if entry.name == "harvest-add-remove")
-    assert entry.planner and entry.opt_in
+    assert entry.planner and not entry.opt_in  # offered by default since #886 (OR-41)
     assert not entry.why_not
     assert entry in kinds() and entry in kinds(planner_only=True)
 
