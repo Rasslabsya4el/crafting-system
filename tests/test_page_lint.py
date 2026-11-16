@@ -411,6 +411,12 @@ fixtures(
     counter={
         "#963: a jewel's line with a tier and a bare chance": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", "(5-7)% increased maximum Life: T1 ≈1% · ≈2.3% · none ≈97%")))),
         "#963: a jewel's line with its ranges as #": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", "#% increased maximum Life: ≈3.3% · none ≈97%")))),
+        "#963: a line with no tier for a mod the target card gives a tier": page(
+            route(
+                goal(target=item("Thicket Bow", prefixes=(slot("+1 to Level of Socketed Gems", "w", "T1"), ANY, ANY), target=True)),
+                step(1, "Exalted Orb", ("Tier chances", "+1 to Level of Socketed Gems: ≈0.85% · none ≈99.15%")),
+            )
+        ),
         "#963: a jewel's line whose chances do not sum to 1": page(route(goal(target=J01_TARGET), step(1, "Chaos Orb", ("Tier chances", "(5-7)% increased maximum Life: ≈3.3% · none ≈90%")))),
         "the chances do not sum to 1": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈20% (target) · T2 to T4 ≈10% each · none ≈40%")))),
         "equal chances not joined": page(route(goal(), step(1, "Regal Orb", ("Tier chances", "+# to maximum Life: T1 ≈10% (target) · T2 ≈10% · T3 ≈10% · none ≈70%")))),

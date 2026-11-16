@@ -852,6 +852,13 @@ def _target_family_names(route: Route) -> set[str] | None:
     return names
 
 
+def _tierless_names(route: Route) -> set[str]:
+    """The mods of the target card that carry no tier at all (a base jewel's, #963): the wanted lines with no note."""
+    if route.target is None:
+        return set()
+    return {family_key(slot.text) for slot in route.target.slots if slot.tone == "wanted" and not slot.note}
+
+
 def check_tier_lines(page: Page) -> list[Fault]:
     """OR-31: each line of "Tier chances" lists the tiers of one family in order and with no gap, joins runs of equal chances
     ("T2 to T10 1.4% each") and never a target tier with one that is not, marks the target tier "(target)" (or says "every tier is the
@@ -863,6 +870,7 @@ def check_tier_lines(page: Page) -> list[Fault]:
     faults = []
     for route in page.routes:
         wanted = _target_family_names(route)
+        bare = _tierless_names(route)
         for step in route.steps:
             for line in step.lines("Tier chances"):
                 where = f"step {step.number} ({step.title})"
@@ -877,6 +885,8 @@ def check_tier_lines(page: Page) -> list[Fault]:
                 if not parts:
                     faults.append(_fault("OR-31", check_tier_lines, where, f"{family}: no tier"))
                     continue
+                if parts[0]["first"] == 0 and family_key(family) not in bare:
+                    faults.append(_fault("OR-31", check_tier_lines, where, f"{family}: a line with no tier for a mod the target card gives a tier"))
                 expected = parts[0]["first"]
                 total, slack = none["chance"]
                 for part in parts:
