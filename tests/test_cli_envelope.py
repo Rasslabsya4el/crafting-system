@@ -236,3 +236,14 @@ def test_a_key_that_lies_is_caught_by_the_full_check_and_never_sampled_in_a_run(
     except (ValueError, ArithmeticError):  # a lying key gives a wrong graph: whatever the run does with it, it checked nothing
         pass
     assert unchecked.stats.verified == 0
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_a_plan_in_hand_at_or_below_the_optimum_ends_the_search_with_a_lower_figure_that_reaches_it(seed):
+    # #1069: `beaten_at` is the mean of a plan the caller holds; the search ends once no plan of its offers costs less (`Beaten`)
+    graph, value, _, result = run(seed, 0.7)
+    with pytest.raises(envelope.Beaten) as beaten:
+        run(seed, 0.7, beaten_at=value[0])
+    assert value[0] <= beaten.value.lower * (1 + 2e-6) and beaten.value.lower <= value[0] * (1 + 1e-9)
+    above = run(seed, 0.7, beaten_at=value[0] * 1.01)[3]  # a plan in hand 1% dearer than the optimum: the search finds the optimum as before
+    check_exact(graph, value, above)
