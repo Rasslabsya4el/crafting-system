@@ -178,7 +178,7 @@ class HarvestAddRemove(Action):
         return RolledFinite(data, item, tuple(results))
 
 
-@kind("harvest-add-remove", order=23, opt_in=True)
+@kind("harvest-add-remove", order=23)
 def _harvest_add_remove(data: GameData, item: Item):
     if not item.influences:
         for craft in ADD_REMOVE_CRAFTS_EXIST.value:
@@ -358,14 +358,14 @@ class HarvestDamageSwap(Action):
         return _swap_outcomes(data, item, self.source, self.target, DAMAGE_SOURCE_STATS, "Harvest damage swap")
 
 
-@kind("harvest-resistance-swap", order=24, opt_in=True)
+@kind("harvest-resistance-swap", order=24)
 def _harvest_resistance_swaps(data: GameData, item: Item):
     for source, targets in RESISTANCE_SWAPS_EXIST.value.items():
         for target in targets:
             yield HarvestResistanceSwap(source, target)
 
 
-@kind("harvest-damage-swap", order=25, opt_in=True)
+@kind("harvest-damage-swap", order=25)
 def _harvest_damage_swaps(data: GameData, item: Item):
     for source, targets in DAMAGE_SWAPS_EXIST.value.items():
         for target in targets:

@@ -553,6 +553,6 @@ def _check_forced(data: GameData, item: Item, forced: Mod, name: str) -> None:
         )
 
 
-@kind("fossil-set", order=60, opt_in=True)
+@kind("fossil-set", order=60)
 def _fossil_sets(data: GameData, item: Item):
     yield from fossil_actions(data, item)

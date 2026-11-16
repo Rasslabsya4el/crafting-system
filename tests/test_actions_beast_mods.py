@@ -516,7 +516,7 @@ def test_the_declarations():
     assert adds.draws and adds.named is None and adds.keeps_crafted
 
 
-def test_the_kinds_are_offered_for_a_rare_item_only_and_are_opt_in_planner_kinds():
+def test_the_kinds_are_offered_for_a_rare_item_only_and_are_planner_kinds_offered_by_default():
     item = item_of(ES1, FIRE)
     offered = catalog(SMALL, item)
 
@@ -529,7 +529,7 @@ def test_the_kinds_are_offered_for_a_rare_item_only_and_are_opt_in_planner_kinds
     assert [a for a in catalog(SMALL, item, planner_only=True, names=named) if isinstance(a, (BeastSideSwap, WildBristleMatron))]
     registered = {entry.name: entry for entry in kinds()}
     for name in named:
-        assert registered[name].planner and registered[name].opt_in and not registered[name].why_not
+        assert registered[name].planner and not registered[name].opt_in and not registered[name].why_not
     assert (registered["beast-side-swap"].order, registered["wild-bristle-matron"].order) == (85, 86)
 
 

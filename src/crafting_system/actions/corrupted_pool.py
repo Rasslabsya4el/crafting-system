@@ -51,8 +51,8 @@ POOL_DOMAINS = CORRUPTED_POOL_DOMAINS  # the same set `items` uses to accept a c
 # (ADR-0036, ADR-0038): the Vaal Orb and a fossil set holding the Bloodstained Fossil give one, the Locus of Corruption
 # two. A target's `actions:` list names kinds, so a target is checked against these names.
 CORRUPTING_KINDS: Mapping[str, int] = MappingProxyType({"vaal": 1, "fossil-set": 1, "locus": 2})
-# the corrupting kinds a target that leaves out `actions:` may use: `fossil-set` is opt-in (see `catalog`)
-DEFAULT_CORRUPTING_KINDS: Mapping[str, int] = MappingProxyType({"vaal": 1, "locus": 2})
+# the corrupting kinds a target that leaves out `actions:` may use: all of them, since #886 offers the fossil sets by default (OR-41)
+DEFAULT_CORRUPTING_KINDS: Mapping[str, int] = CORRUPTING_KINDS
 
 
 @dataclass(frozen=True, slots=True)
