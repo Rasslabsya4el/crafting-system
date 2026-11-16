@@ -59,7 +59,8 @@ def _more(line) -> str:
     """The entries a line does not name, in a "details" element that is closed by default; every one is in the page."""
     if not line.more:
         return ""
-    return f"<details><summary>the other {len(line.more):,}</summary>{escape(', '.join(line.more))}</details>"
+    title = line.more_title or f"the other {len(line.more):,}"
+    return f"<details><summary>{escape(title)}</summary>{escape(', '.join(line.more))}</details>"
 
 
 def _line(line) -> str:

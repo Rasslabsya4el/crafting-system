@@ -20,8 +20,9 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 * `tracks_junk(abstraction)`: whether the abstraction keeps the mods that are not fractured.
 
 One format for every mod line: the game's text with its ranges, then the tier as the note, `+(100-114) to
-maximum Life · T1`. The tier is the mod's place among the mods that can spawn on the base
-(`items.tier_table`, 1 is the best); a crafted mod has none and says `crafted` when a leaf can only be met by it. A mod that comes from an essence says the
+maximum Life · T1`. The tier is the mod's place among the mods that can spawn on the base with the item's
+influences (`page_tiers`, 1 is the best: a Hunter bow's Chaos Damage over Time is tier 1 of its own ladder, #980); a base with no tiers
+(a base jewel) writes none (#963); a crafted mod has none and says `crafted` when a leaf can only be met by it. A mod that comes from an essence says the
 essence's tier, `Shrieking essence`, `Deafening essence` (OR-47, #895), because the essence's level, not a tier of the ladder, is what the player
 chooses. Where a mod comes from is a fact of the route, not of the target file: the caller passes `forced`, the mods the essences of the
 route force on this item with the note of each (`essence_notes`), and a leaf that one mod meets says that note when the mod is among
@@ -70,7 +71,7 @@ from typing import Literal
 
 from crafting_system.abstraction import CompressedState, Status, Wanted, status_of
 from crafting_system.abstraction import Slot as StateSlot
-from crafting_system.actions import forced_mod_id
+from crafting_system.actions import OutOfScopeError, forced_mod_id, tiers_of
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -85,6 +86,8 @@ from crafting_system.items import (
     memory_strands_line,
     tier_table,
 )
+from crafting_system.items.tiers import natural_tiers
+from crafting_system.items.model import MAX_ITEM_LEVEL
 from crafting_system.items.words import mod_text as mod_text_of
 from crafting_system.targets import ImplicitRequirement, KOfN, Target
 
@@ -233,8 +236,12 @@ def _kind(quality) -> str | None:  # noqa: ANN001
     return None if quality.type is None else quality.type.value
 
 
-def _capacity(data: GameData, base_id: str, side: Side) -> int:
-    return capacity(data, base_id, Rarity.RARE).of(side)
+def _capacity(data: GameData, base_id: str, side: Side, rarity: Rarity = Rarity.RARE) -> int:
+    """The slots a card draws on `side`: those of a Magic item for a Magic one (one prefix, one suffix, #962), else those of a rare.
+
+    A Normal item holds no mod, and its card draws the slots of a rare as `empty` (what crafting can fill), never a Magic item's.
+    """
+    return capacity(data, base_id, Rarity.MAGIC if rarity is Rarity.MAGIC else Rarity.RARE).of(side)
 
 
 def _implicits(data: GameData, base_id: str) -> tuple[Slot, ...]:
@@ -296,13 +303,60 @@ def fractured_meeting(leaf, held: Sequence[ExplicitMod]) -> ExplicitMod | None:
     return None
 
 
+class TierTable(dict):
+    """The tier of every mod that can spawn on an item of one base, level and set of influences, by mod id (1 is the best), as the page reads it.
+
+    `tierless` says the base has no tiers at all: every mod it can roll by nature is alone on its ladder (a base jewel, "(5-7)% increased
+    maximum Life"), so the page writes no tier for any of its mods and no tier ladder (#963). A base with ladders keeps `T1` on a mod that
+    is alone on its own (`+1 to Level of Socketed Gems · T1`), as the game's advanced description does.
+    """
+
+    def __init__(self, table: Mapping[str, int] = (), tierless: bool = False) -> None:
+        super().__init__(table)
+        self.tierless = tierless
+
+
+_PAGE_TIERS: dict[tuple[int, str, frozenset[Influence]], tuple[GameData, TierTable]] = {}
+_PAGE_TIERS_LIMIT = 32
+
+
+def page_tiers(data: GameData, base_id: str, influences: Iterable[Influence] = ()) -> TierTable:
+    """The tiers of the mods that can spawn on the base with `influences`, as the planner judges a target's tier (#980).
+
+    An influence adds its own mods and their ladders (the Hunter's "(90-94)% increased Chaos Damage over Time" is tier 1 of four on a Hunter
+    bow): the table is `actions.tiers_of` of a rare of the base with those influences, the one `targets` reads a target's tiers from, and
+    `items.tier_table` with no influence. Cached per game data, base and influences.
+    """
+    held = frozenset(influences)
+    key = (id(data), base_id, held)
+    hit = _PAGE_TIERS.get(key)
+    if hit is not None and hit[0] is data:
+        return hit[1]
+    table: Mapping[str, int] = tier_table(data, base_id)
+    if held:
+        probe = Item.build(data, base_id=base_id, item_level=MAX_ITEM_LEVEL, rarity=Rarity.RARE, influences=held)
+        try:
+            table = tiers_of(data, probe)
+        except OutOfScopeError:  # an item class with no influence pool: its tiers are the base's (as `targets` reads them)
+            pass
+    natural = natural_tiers(data, base_id, table)
+    found = TierTable(table, tierless=bool(natural) and max(natural.values()) == 1)
+    if key not in _PAGE_TIERS and len(_PAGE_TIERS) >= _PAGE_TIERS_LIMIT:
+        del _PAGE_TIERS[next(iter(_PAGE_TIERS))]
+    _PAGE_TIERS[key] = (data, found)
+    return found
+
+
 def _tier_note(tiers, mod_ids, min_tier: int | None = None, asked: bool = False) -> str:
     """The tier note of a line that stands for `mod_ids`: `T2`, `T2 or better`, `any tier`; "" for a mod with no tier.
 
-    `asked` says the leaf's tier limit (`tier_ok`) left a spawning mod out without a written `min_tier` (OR-1, the top tier): the note then names the tiers
-    its candidates have, `T1 to T3`. A leaf that leaves none out (`min_tier: any`, or no tier asked) is `any tier`.
+    A mod of a base with no tiers (`TierTable.tierless`, a base jewel) has no tier either (#963). `asked` says the leaf's tier limit
+    (`tier_ok`) left a spawning mod out without a written `min_tier` (OR-1, the top tier): the note then names the tiers its candidates have,
+    `T1 to T3`. A leaf that leaves none out (`min_tier: any`, or no tier asked) is `any tier`.
     """
     ids = list(mod_ids)
+    if getattr(tiers, "tierless", False) or not ids:
+        return ""
     if len(ids) == 1:
         return f"T{tiers[ids[0]]}" if ids[0] in tiers else ""
     if min_tier is not None:
@@ -347,7 +401,8 @@ def _leaf_slot(
         known = [mod_id for mod_id in mod_ids if mod_id in data.mods and data.mods[mod_id].generation_type in sides]
         if not known:
             raise ValueError(f"no mod of the requirement {sorted(mod_ids)[:3]} is a prefix or a suffix")
-        known.sort(key=lambda mod_id: (data.mods[mod_id].domain not in {base_domain, CRAFTED_DOMAIN}, mod_id))
+        # the mods the leaf's tier judgement accepts first: a leaf is never drawn as another mod of its family (OR-15, #980)
+        known.sort(key=lambda mod_id: (tier_ok is not None and mod_id not in tier_ok, data.mods[mod_id].domain not in {base_domain, CRAFTED_DOMAIN}, mod_id))
         mod = data.mods[known[0]]
         if mod.domain == CRAFTED_DOMAIN:
             note = "crafted"
@@ -376,11 +431,11 @@ def card_of_item(
 ) -> ItemCard:
     """The card of a concrete item: its mods with their rolled values, the empty slots of a rare's capacity.
 
-    Within a side the fractured mods come first, then the other mods, then the crafted ones. A magic or
-    normal item shows the capacity of a rare, the slots it cannot fill as `filler`. With `tiers` a mod carries
+    Within a side the fractured mods come first, then the other mods, then the crafted ones. A Magic item shows
+    one prefix and one suffix slot (#962), a normal or rare one the capacity of a rare, the slots it cannot fill as `filler`. With `tiers` a mod carries
     its tier as the note; with `rolled` False it shows the range of its tier, not the roll.
     """
-    table = tier_table(data, item.base_id) if tiers else {}
+    table = page_tiers(data, item.base_id, item.influences) if tiers else TierTable()
     base_implicits = data.base_items[item.base_id].implicits
     shown_implicits = tuple(  # the base's implicit first, then the Eldritch ones by grade
         # an item carries every implicit of its base (#484), at a roll the state does not hold: without `rolled` the base's own shows its range
@@ -404,7 +459,7 @@ def card_of_item(
             marks = (*(("fractured",) * entry.fractured), *(("crafted",) * entry.crafted), *_marks(mod))
             tone: Tone = "crafted" if entry.crafted else "mod"
             rows.append(Slot(mod_text(mod, entry.values if rolled else None), tone, marks, _tier_note(table, [mod.id])))
-        sides[side] = _fill(rows, _capacity(data, item.base_id, side), filler)
+        sides[side] = _fill(rows, _capacity(data, item.base_id, side, item.rarity), filler)
     influences = tuple(influence.value.title() for influence in sorted(item.influences))
     quality = _quality(_kind(item.quality), item.quality.percent) if item.quality is not None else ""
     properties = _properties(
@@ -435,10 +490,11 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
     tier, marked `fractured`: the finished item holds it, since a fracture never leaves the item (#895). `forced`
     are the mods the route's essences force (`essence_notes`): a leaf one of them meets says the essence's tier.
     """
-    tiers = tier_table(data, target.base_id)
+    begin = target.start_item if start is None else start
+    tiers = page_tiers(data, target.base_id, target.influences | begin.influences)
     wanted: dict[Side, list[Slot]] = {side: [] for side in SIDES}
     groups: list[Group] = []
-    held = (target.start_item if start is None else start).fractured_mods
+    held = begin.fractured_mods
 
     def leaf(node, member: bool = False) -> tuple[Side, Slot]:
         """The slot of a leaf; a `member` of a group says its side in words (which of the open slots it would take)."""
@@ -505,12 +561,15 @@ class _Rows:
 class _StateReader:
     """Reads compressed states of one abstraction into rows; keeps what it looked up."""
 
-    def __init__(self, abstraction, start: Item | None = None, forced: Mapping[str, str] | None = None) -> None:
+    def __init__(
+        self, abstraction, start: Item | None = None, forced: Mapping[str, str] | None = None, influences: Iterable[Influence] = ()
+    ) -> None:
         """`start` is the item the route starts from: its fractured mods are the ones a state's fractured entries of their class are (#895).
-        `forced` are the mods the route's essences force, each with its essence's note (`essence_notes`): a leaf line says it."""
+        `forced` are the mods the route's essences force, each with its essence's note (`essence_notes`): a leaf line says it. The tiers
+        are those of the item with `influences` and the start item's (`page_tiers`): the target's, so a leaf reads as on the target card."""
         self.ab = abstraction
         self.data: GameData = abstraction.data
-        self.tiers = tier_table(self.data, abstraction.base_id)
+        self.tiers = page_tiers(self.data, abstraction.base_id, {*influences, *(start.influences if start is not None else ())})
         self.tracked = tracks_junk(abstraction)
         self._held = tuple(self.data.mods[entry.mod_id] for entry in start.fractured_mods) if start is not None else ()
         self._forced = dict(forced or {})
@@ -686,10 +745,11 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
     data, base_id = reader.data, abstraction.base_id
     read = [reader.read(state) for state in states]
     only_normal = all(state.flags.rarity is Rarity.NORMAL for state in states)
+    only_magic = all(state.flags.rarity is Rarity.MAGIC for state in states)  # a Magic item draws its own one prefix and one suffix (#962)
     sides: dict[Side, tuple[Slot, ...]] = {}
     for side in SIDES:
         rows = _join_rows([entry.rows[side] for entry in read])
-        limit = _capacity(data, base_id, side)
+        limit = _capacity(data, base_id, side, Rarity.MAGIC if only_magic else Rarity.RARE)
         if reader.tracked:
             counts = [entry.junk[side] for entry in read]
             rows += [ANY_MOD] * min(counts)
@@ -710,7 +770,7 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
 
 def leaf_sides(data: GameData, target: Target) -> list[Side]:
     """The side of each requirement leaf of `target`, in the order of `Goal.leaves` (the text report says it of a group's members, as the card does)."""
-    tiers = tier_table(data, target.base_id)
+    tiers = page_tiers(data, target.base_id, target.influences | target.start_item.influences)
     found: list[Side] = []
 
     def walk(node) -> None:
