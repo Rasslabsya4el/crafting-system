@@ -24,7 +24,7 @@ docker run -p 8000:8000 -v crafting-site:/site crafting-site
 
 The volume `/site` holds the game data cache, the price file (`/site/data/prices.json`) and the store (`/site/output/web/site.sqlite3`).
 The container fetches the pinned game data into the volume itself on its first start. The price file it does not fetch yet: until the
-scheduled refresh runs beside the service (OR-9, #337), the operator puts it into the volume, once, with a one-off container that copies a
+scheduled refresh runs beside the service (OR-9, #1008), the operator puts it into the volume, once, with a one-off container that copies a
 file from the host:
 
 ```
