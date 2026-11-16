@@ -67,6 +67,9 @@ from crafting_system.planner import UNPRICED, PackedPolicy, Plan, evaluate_risk,
 from ._reach import policy_states
 
 RESTART = "restart"
+# A route's reach is walked as objects up to this many transitions, the size the object solver held (`planner._decide.EXACT_TRANSITIONS`); past it
+# the reach is walked on packed arrays (`_route_packed.evaluate_route_reach`, #986). A test lowers it to read a small route both ways.
+OBJECT_ROUTE_EDGES = 2_000_000
 TOP_KEYS = ("name", "skip_refused", "rules")
 RULE_KEYS = ("when", "do")
 WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "imprints", "veil", "offer", "requirements", "making")
@@ -619,11 +622,11 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
 
     A plan of the envelope search holds only the states it could not prove irrelevant (#535), so the route is never read on its graph: it is
-    walked here on its own reach as objects (#829). That reach is about the size of the graph `make_plan` checked (a route may also take an offer the walk
-    prunes, as on main): a judged plan comes from the search only when the walk found at most `OBJECT_SOLVER_EDGES` transitions, or with `MIN_OFFERS` offers or more, where main's bound pruning read the route
-    as objects too. A bigger reach (R04's guide route is about 177,000 states of about 1,500 outcomes each, #70) does not fit as objects: its plan
-    keeps the walk and the route is read on the walked graph (below; a packed walk of the route's own reach is #986). The divergences are read
-    where the plan has a choice: on the states of its own policy.
+    walked here on its own reach as objects (#829), up to `OBJECT_ROUTE_EDGES` transitions. A bigger reach (R04's guide route is about 177,000
+    states of about 1,500 outcomes each, #70) does not fit as objects: the object walk is dropped there and the route walks its own reach again on
+    packed arrays (`_route_packed.evaluate_route_reach`, #986), the same numbers in a fraction of the memory. Nothing walks the planner's whole
+    graph for a route. A plan of the walk holds its graph, and the route is read there (`_route_packed.evaluate_route_packed`). The divergences
+    are read where the plan has a choice: on the states of its own policy.
     """
     if plan.donors is not None:  # the route makes second items too: it is read on the product of the target and its donors (#225)
         return _evaluate_route_with_donors(plan, route, data)
@@ -638,6 +641,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     gaps: list[Gap] = []
     order = [plan.start]
     seen = {plan.start}
+    held = 0  # transitions held as objects
     for state in order:  # the list grows while it is walked
         if plan.is_goal(state):
             continue
@@ -646,6 +650,12 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             gaps.append(Gap(state, choice))
             continue
         policy[state] = choice
+        held += len(choice.outcomes)
+        if held > OBJECT_ROUTE_EDGES:  # the reach does not fit as objects: it is walked on packed arrays instead (#986)
+            from ._route_packed import evaluate_route_reach
+
+            del choices, policy, order, seen
+            return evaluate_route_reach(plan, route, data)
         for successor, weight in choice.outcomes:
             if weight > 0 and successor not in seen:
                 seen.add(successor)

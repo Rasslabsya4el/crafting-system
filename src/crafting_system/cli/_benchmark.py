@@ -408,7 +408,7 @@ def run_route(
         entry["missing_price"] = missing
         if missing is not None:
             raise ValueError(_missing_message(missing))
-        judged = bench.route is not None  # the guide's route is judged against the plan: `auto` walks (#535, #732)
+        judged = bench.route is not None  # the guide's route is judged against the plan, on the route's own reach (#829, #986): `auto` searches
         plan = plan_target(data, target, loaded, PlanSettings(recipe_starts=bench.start is not None, judges_route=judged))  # a route with no start entry plans from the target's own item
         entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos
