@@ -62,7 +62,9 @@ families of each count, the families of X included. The pool of `s0`, its free s
 at `s0` (one part, one draw); the blocked tags are every set the two metamods make when the abstraction models them. Nothing here tracks
 which families a state holds: it is the most favourable weight share of the free families, the same at every state of the shape. What is
 taken on the contract of `Reads.pool_weight` and not checked: that the action draws the same way at every state of the shape (from the pool
-of `s0` less the held families and the blocked tags, one mod, on a side with room) as it does at `s0`. The tests compare the bound with the
+of `s0` less the held families and the blocked tags, one mod, on a side with room) as it does at `s0`. Where it is known not to hold, no
+bound is given (None): a draw cut by Memory Strands on an item that holds some (each use spends a number that follows the mods held, so the
+states of the shape hold other counts and draw from other cuts). The tests compare the bound with the
 exact chance at every member state of hand-worked pools (`tests/test_add_bound.py`), including the members whose chance is above the
 chance at `s0`, the one a bound read at `s0` alone would give.
 
@@ -382,7 +384,8 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
     `state` is the bare item of the shape (its fractured mods and nothing else). The action is one that keeps the junk and draws ONE mod from the
     pool of the item less the families it holds, on a side with room (`Reads.pool_weight`; an Exalted Orb, an Orb of Augmentation, the addition of
     a Harvest add/remove craft; see "One added mod" in the module text for the argument and what it takes on the contract). Returns None when the
-    action at `state` is not one such draw: a part that is not a pool draw, a draw count other than one, or a fracture. Raises what the action
+    action at `state` is not one such draw: a part that is not a pool draw, a draw count other than one, or a fracture; and when the item holds
+    Memory Strands and the action's draw is cut by them (the count, and so the cut, differs between the states of the shape). Raises what the action
     raises at `state` (`NotApplicableError`, `OutOfScopeError`): a refusal at the bare item says nothing of the states that hold more mods.
     """
     checkpoint()
@@ -391,6 +394,9 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
         raise ValueError("leaves must not be empty")
     if len(state.status) != len(abstraction.goal.leaves):
         raise ValueError("the state comes from another abstraction")
+    use = action.strand_use(abstraction.data)
+    if state.strands and use is not None and use.cuts:
+        return None  # the cut follows the Memory Strand count, which the uses before it spend: not the same draw at every state of the shape
     prepared = abstraction._prepared(state, action)
     outcomes = prepared.outcomes
     components = getattr(outcomes, "components", None)
