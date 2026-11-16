@@ -60,7 +60,7 @@ def solved(request, data):
     """(route id, target, plan) for one benchmark route."""
     stem = ROUTES[request.param]
     target = load_target(ROOT / "examples" / "targets" / f"{stem}.yaml", data)
-    plan = make_plan(data, target, load_price_file(PRICES), judges_route=True)  # the given route is judged against it (#535: `auto` walks)
+    plan = make_plan(data, target, load_price_file(PRICES), judges_route=True)  # the given route is judged against it (on the route's own reach, #986)
     return request.param, stem, target, plan
 
 

@@ -196,15 +196,43 @@ def test_the_restart_route_on_two_leaves_costs_its_closed_form_walked_packed(mon
     assert result.risk.mean.value == pytest.approx(expected, rel=1e-9)
 
 
-def test_a_gap_on_the_packed_reach_says_why_as_the_object_walk_does(monkeypatch, worlds):
-    target, prices = worlds["r12"]
+@pytest.mark.parametrize("skip", [False, True])
+def test_a_rule_the_game_refuses_on_the_packed_reach_is_a_gap_or_falls_through_as_on_the_object_walk(monkeypatch, worlds, skip):
+    """The game refuses the Chaos Orb on every item after the first (planted after the plan is made): a strict route acts at the start and stops
+    at each item after it, a gap that says why; under `skip_refused` the next rule (`restart`) takes those items over."""
+    target, prices = worlds["two leaves"]
     plan = judged(target, prices)
-    route = read(f"rules:\n  - when:\n      rarity: magic\n    do: {REFORGE}\n", plan)
+    route = read(("skip_refused: true\n" if skip else "") + f"rules:\n  - do: {CHAOS}\n  - do: restart\n", plan)
+    chaos = next(priced for priced in plan.offers if priced.label == CHAOS).offer.action
+    kind = type(plan.abstraction)
+    for name in ("kernel_key", "kernel"):
+        real = getattr(kind, name)
+
+        def refusing(self, state, action, real=real):
+            if action is chaos and state != plan.start:
+                raise NotApplicableError("the game refuses it here")
+            return real(self, state, action)
+
+        monkeypatch.setattr(kind, name, refusing)
+
+    as_objects = evaluate_route(plan, route, DATA)
     monkeypatch.setattr(_route, "OBJECT_ROUTE_EDGES", 0)
+    packed = evaluate_route(plan, route, DATA)
 
-    result = evaluate_route(plan, route, DATA)
-
-    assert [gap.state for gap in result.gaps] == [plan.start]
-    assert "no rule" in result.gaps[0].reason
-    assert result.risk.success_probability.value < 1.0 and math.isinf(result.risk.mean.value)
-    assert result.divergence is None  # a gap is not a divergence
+    assert packed.chain is not None
+    assert plan.start in as_objects.policy  # the route acts at the start (its Chaos Orb opens the listing)
+    assert packed.gaps == as_objects.gaps
+    chance, mean, gaps = brute_force(plan, route)
+    assert len(packed.gaps) == gaps
+    assert packed.risk.success_probability.value == pytest.approx(chance, rel=1e-9, abs=1e-12)
+    if skip:
+        assert packed.gaps == () and "restart" in {action.label for action in as_objects.policy.values()}
+        assert packed.risk.mean.value == pytest.approx(mean, rel=1e-9)
+        assert packed.risk.mean.value == pytest.approx(as_objects.risk.mean.value, rel=1e-9)
+    else:
+        assert packed.gaps and plan.start not in [gap.state for gap in packed.gaps]
+        assert all("cannot be used here" in gap.reason for gap in packed.gaps)
+        assert packed.risk.success_probability.value < 1.0 and math.isinf(packed.risk.mean.value) and math.isinf(mean)
+    assert [(d.state, d.solver_action, d.route_action) for d in packed.divergences] == [
+        (d.state, d.solver_action, d.route_action) for d in as_objects.divergences
+    ]

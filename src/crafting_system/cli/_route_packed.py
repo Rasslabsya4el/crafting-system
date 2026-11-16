@@ -44,6 +44,7 @@ from crafting_system.planner import (
     packed_risk,
     progress,
 )
+from crafting_system.planner._packed import VERIFY_EVERY, VERIFY_FIRST
 
 from ._route_chain import chain_of_route
 
@@ -279,6 +280,7 @@ def walk_route(plan: Plan, route, data: GameData) -> RouteReach:
     cost: list[float] = []
     gaps: list[tuple[int, str]] = []
     restart: list[int] = []  # the one kernel of `restart`, the start for certain, once it is used
+    hits = [0]  # kernels found shared by their key
     acted = 0
     began = time.perf_counter()
 
@@ -304,6 +306,16 @@ def walk_route(plan: Plan, route, data: GameData) -> RouteReach:
             if kernel is None:
                 weights = integer_weights(abstraction.kernel(state, action))
                 kernel = shared[key] = builder.kernel([intern(s) for s in weights], list(weights.values()))
+            else:
+                hits[0] += 1
+                if hits[0] <= VERIFY_FIRST or hits[0] % VERIFY_EVERY == 0:  # as `_packed.walk` checks the kernels it shares
+                    fresh = dict(integer_weights(abstraction.kernel(state, action)))
+                    succ, kept = builder.kernel_edges(kernel)
+                    if {states[s]: w for s, w in zip(succ, kept)} != fresh:
+                        raise ValueError(
+                            f"two states share the kernel key of {rule.do!r} but not its kernel (checked at {state!r}): "
+                            "the key the model gives to tell its states apart does not say enough for the route's packed walk"
+                        )
         except (NotApplicableError, OutOfScopeError) as problem:  # either: the route's rule cannot be used here, and the line says why
             return f"{rule.do} cannot be used here (rule at line {rule.line}): {problem}"
         return kernel, priced.cost

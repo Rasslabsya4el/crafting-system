@@ -225,13 +225,11 @@ def test_a_route_is_judged_against_a_plan_of_the_search_on_its_own_reach(packed)
 
 
 def test_a_route_too_big_for_objects_is_judged_against_the_search_on_a_packed_walk_of_its_own_reach(monkeypatch, packed):
-    """#986: a judged plan is the search's whatever the size of the graph (no walk first, whatever the walk's switch), and a route whose reach is
-    above `OBJECT_ROUTE_EDGES` transitions (R04's guide route, about 177,000 states, does not fit as objects) walks its own reach on packed arrays,
-    with the numbers of the walked plan's reading. Both limits are lowered here to R12's size."""
+    """#986: a judged plan is the search's whatever the size of the graph (no walk first), and a route whose reach is above `OBJECT_ROUTE_EDGES`
+    transitions (R04's guide route, about 177,000 states, does not fit as objects) walks its own reach on packed arrays, with the numbers of the
+    walked plan's reading. The limit is lowered here to R12's size."""
     from crafting_system.cli import _route
-    from crafting_system.planner import _packed
 
-    monkeypatch.setattr(_packed, "OBJECT_SOLVER_EDGES", 0)
     monkeypatch.setattr(_route, "OBJECT_ROUTE_EDGES", 0)
     judged = make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)
     assert judged.search is not None and judged.search.exact
