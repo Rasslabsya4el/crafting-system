@@ -106,6 +106,38 @@ Every member of a key is then matched, for each action, by an offered member wit
 higher, and the induction of the first paragraph gives `V_key(key(s)) <= V*(s)`: the bound stays a lower bound. Checked against every member of
 the walked keys and against the exact graph's values, with and without a lock, on the fixture of `tests/test_pattern_veiled.py`.
 
+**The imprints (#833, ADR-0034, ADR-0060).** A state that keeps the imprints is `(s, H)`: the item `s` and the set `H` of the snapshots it was
+imprinted at (each a state with no imprint of its own). The key holds, in place of each snapshot `h`, its key `K(h)` (`CompressedState.held`
+at `IMPRINTS`, sorted by an order of the keys alone, `Pattern._snapshot_order`); a member is `(m, R)`, `m` a member of the mods as above and `R`
+one snapshot of each key held (`Pattern.held_of`: the first met of that key). For a member `(s, H)` of the key and an action `a`:
+
+* `a` moves no imprint. No such action reads `H`: its kernel acts on `s`, and its result keeps `H` or forgets it where the result is fractured,
+  corrupted or a new item (`Abstraction._carried`), which the result and the action say. So the kernel of `(s, H)` pushed through the key is
+  that of `(s, R)`, and the member policies above hold as they are.
+* `a` is an imprint (adding one, or replacing the j-th). Its result is `(s, H')` with `H'` = `H` less the snapshot replaced, plus `s`: its
+  key holds `K(H')`, which is `K(H)` less the key replaced plus `key(s)`, the key's own: one certain successor, the same for every member
+  that takes it. The game's refusals read the rarity, the base, a fracture, a corruption and `|H|`: the key's. The rule that refuses an
+  imprint of a state already held (`s in H`) reads the member; where it refuses the member asked (the one that is its own key's snapshot in
+  `R`), another member of the key is asked (`PatternBuilder._move`), and an imprint that would replace that very snapshot leads back to the
+  key and is left out (a positive cost to the same key).
+* `a` is a restore of `h in H`. Its result is `(h, H - {h})`, of key `K(h)` holding `K(H) - {K(h)}`: the same for every `h` of the key
+  `K(h)`. The restores of a member and those of the key are matched by the snapshot, not by the index (a member's j-th snapshot need not be
+  the key's j-th): all cost the same (`RESTORE_COST`), and together they reach every key held. The rule that refuses a restore onto the state
+  the item is in (`h = s`) reads the member, and the restore it refuses is never needed: then `K(h)` is the key's own `k`, and the
+  restore's backup `c + V(k, X)` is at least `V(k, X + {k})`, by this claim on the values `V` of the model (its fixed point): for every key
+  `k'`, every set `X` and every snapshot key `x`, `V(k', X + {x}) <= V(k', X)`. Play at `(k', X + {x})` the optimal policy of `(k', X)`,
+  carrying `x`: an ordinary action leads to the same successor key with `x` held too, or with both forgetting their imprints; a restore of a
+  snapshot of `X` to the same key with `x` held too; a restart to the start key; an imprint that adds to the same key with `x` held too, or,
+  where the set with `x` is full, the imprint that replaces `x` to the very successor of `(k', X)`. Each action is one the model offers at
+  `(k', X + {x})` (the refusals of the key read `|H|`, and a full set has the replacing imprints), and the cost of the coupled run is the
+  cost of the run from `(k', X)` until `x` is replaced or forgotten, after which both are in one key. So the policy costs at most `V(k', X)`.
+
+Every concrete action is so matched by an offered one with the same pushed kernel, and the induction of the first paragraph gives
+`V_key(key(s, H)) <= V*(s, H)`. The key loses nothing by holding `K(h)` rather than `h`: what `h` gives a plan is the restore, which leads to
+`K(h)` whichever `h` it is. Checked against the exact graph (`tests/test_pattern_imprint.py`). A bound made of the bound of the item without
+its imprints, `min(LB(s), c + LB(h))`, is not one: an item at its own snapshot holds the beast's price more than its value (the toy loop of
+ADR-0060: `V(h, {h}) = V(h, {}) - beast`), and a gamble from `h` is worth less with `h` held than without it.
+
 **Refusals.** An action that the game forbids at a member (`NotApplicableError`) is not an action of that member and is left out
 of it. An action that raises a model gap at a member (`OutOfScopeError`: no admitted rule covers the item) is left out only when
 no member of the key can take it (each is a game refusal or a gap: the exact model has no action at any state of the key, as the walk and the
@@ -158,6 +190,7 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
 
 
@@ -372,9 +405,9 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
     """Why the crafted-pattern bound cannot be built for `abstraction`, or None when it can (#497, #507).
 
     The one place that decides it: `Pattern.__init__` raises `OutOfScopeError` with this text, and `make_plan` asks it before any solve, so
-    `solver="auto"` knows whether the envelope search is possible without starting it. The bound has no members for an enabled action that
-    reads the imprints. A roll limit and a reroll of values have members since #830: the key's status holds what each wanted mod gives its leaf
-    as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`). The unveil offer has since #828: the key holds the veiled slots
+    `solver="auto"` knows whether the envelope search is possible without starting it. Since #833 it has members for every abstraction: the
+    imprints, the last cause, are held by the key as the keys of the snapshots (module docstring, "The imprints"). A roll limit and a reroll
+    of values have members since #830: the key's status holds what each wanted mod gives its leaf as it rolled, and a Divine Orb is an action of the model (`Pattern.mode_of`). The unveil offer has since #828: the key holds the veiled slots
     and the offer, and the veiled actions have member policies.
     """
     causes = refusal_causes(abstraction)
@@ -384,9 +417,8 @@ def pattern_refusal(abstraction: Abstraction) -> str | None:
 
 
 # what the bound has no members for: the abstraction's attribute, the cause in the refusal's text, and in a player's words where those differ
-_CAUSES = (
-    ("tracks_imprints", "an offered action reads the imprints", None),
-)
+# none since #833: the imprints were the last (the key holds the key of each snapshot)
+_CAUSES: tuple[tuple[str, str, str | None], ...] = ()
 
 
 def refusal_causes(abstraction: Abstraction, player: bool = False) -> tuple[str, ...]:
@@ -399,7 +431,7 @@ class Pattern:
     """The key of a state and the members of a key, for one `Abstraction`.
 
     `tags` says whether the key carries the protected tags of the ordinary mods; it defaults to whether the abstraction models the metamods.
-    Raises `OutOfScopeError` for an abstraction whose slots the key cannot yet enumerate: an enabled action that reads the imprints.
+    Raises `OutOfScopeError` for an abstraction `pattern_refusal` refuses (none since #833).
     """
 
     def __init__(self, abstraction: Abstraction, tags: bool | None = None, actions: Sequence[Action] = ()):
@@ -419,6 +451,9 @@ class Pattern:
         self._veiled_kind: dict[str, bool] = {}
         self._pure_reads: dict[tuple, bool] = {}
         self._placeholder_families = _placeholder_families(abstraction.data)
+        self._snapshot_keys: dict[CompressedState, PatternKey] = {}  # an imprint's snapshot -> its key (#833)
+        self._snapshot_reps: dict[PatternKey, CompressedState] = {}  # a snapshot's key -> the first snapshot of it seen: the one the members hold
+        self._snapshot_orders: dict[PatternKey, tuple] = {}
         self.grew = 0
         self.fallbacks = 0
 
@@ -455,10 +490,41 @@ class Pattern:
                 if tagset is None:
                     tagset = self._tag_kind[slot.kind] = _tagset(slot.kind)
                 tags[(side, tagset)] += 1
+        held = state.held
+        if state.imprints:
+            held = (*held[:IMPRINTS], self._snapshots_key(state.imprints), *held[IMPRINTS + 1 :])
         return PatternKey(
-            state.flags, state.fractured, state.status, state.held, tuple(crafted), (counts[0], counts[1]),
+            state.flags, state.fractured, state.status, held, tuple(crafted), (counts[0], counts[1]),
             tuple(sorted(tags.items())) if tags is not None else None, tuple(veiled),
         )
+
+    def _snapshots_key(self, imprints: tuple[CompressedState, ...]) -> tuple[PatternKey, ...]:
+        """The imprints of a state as the key holds them: the key of each snapshot, in an order of the keys alone (#833, "The imprints")."""
+        keys = []
+        for snapshot in imprints:
+            found = self._snapshot_keys.get(snapshot)
+            if found is None:
+                found = self._snapshot_keys[snapshot] = self.key(snapshot)  # a snapshot holds no imprint of its own (ADR-0060)
+                self._snapshot_reps.setdefault(found, snapshot)
+            keys.append(found)
+        return tuple(sorted(keys, key=self._snapshot_order))
+
+    def _snapshot_order(self, key: PatternKey) -> tuple:
+        """A total order on the keys of snapshots made of plain values, the same for every `Pattern` (not the order the snapshots were met in)."""
+        found = self._snapshot_orders.get(key)
+        if found is None:
+            probe = CompressedState(key.flags, key.fractured, key.status, tuple(sorted((*key.crafted, *key.veiled), key=_slot_key)), *key.held)
+            found = self._snapshot_orders[key] = (probe.order_key, key.counts, key.tags or ())
+        return found
+
+    def held_of(self, key: PatternKey) -> tuple:
+        """The item state beyond the mods that the members of `key` hold: the key's own, with each imprint's key replaced by the one snapshot of
+        it the members hold (the first met, `_snapshot_reps`; see "The imprints" in the module docstring)."""
+        held = key.held
+        if not held[IMPRINTS]:
+            return held
+        snapshots = tuple(sorted((self._snapshot_reps[found] for found in held[IMPRINTS]), key=lambda snapshot: snapshot.order_key))
+        return (*held[:IMPRINTS], snapshots, *held[IMPRINTS + 1 :])
 
     def is_veiled(self, slot: Slot) -> bool:
         """Whether an ordinary slot is the veiled placeholder or a mod unveiled from the pool (ADR-0026): a slot the key holds exactly (#828)."""
@@ -540,7 +606,7 @@ class Pattern:
         folded = self.universe(key.flags.influences).folded
         if not folded:
             return frozenset()
-        offer = CompressedState(key.flags, key.fractured, key.status, (), *key.held).offer
+        offer = CompressedState(key.flags, key.fractured, key.status, (), *self.held_of(key)).offer
         if offer:
             return frozenset(family for entry in offer for family in self.data.mods[entry.mod_id].families) & folded
         return frozenset(reads.families) & folded
@@ -610,7 +676,7 @@ class Pattern:
     def _erases(self, action: Action, key: PatternKey) -> bool:
         """Whether the abstraction makes the kernel of `action` at the members of `key` from a view without their ordinary slots (`Abstraction._erases`):
         it reads the lock from the crafted and the fractured mods alone, which the key holds."""
-        probe = CompressedState(key.flags, key.fractured, key.status, tuple(key.crafted), *key.held)
+        probe = CompressedState(key.flags, key.fractured, key.status, tuple(key.crafted), *self.held_of(key))
         return self.ab._erases(probe, action)
 
     # ---- the members of a key ---------------------------------------------------------------------------------
@@ -623,7 +689,7 @@ class Pattern:
         if not self.ab._context(key.flags.influences).kinds.tracked:
             # no enabled action reads the junk, so a state keeps none of it: its status is a fact about mods that are not stored, and the one
             # state the key stands for is the key itself (no ordinary slot to choose, nothing to check the status against)
-            only = CompressedState(key.flags, key.fractured, key.status, tuple(sorted((*key.crafted, *key.veiled), key=_slot_key)), *key.held)
+            only = CompressedState(key.flags, key.fractured, key.status, tuple(sorted((*key.crafted, *key.veiled), key=_slot_key)), *self.held_of(key))
             return [only] if self._ok(only) else []
         universe = self.universe(key.flags.influences)
         blocked = self.blocked_tags(key)
@@ -730,7 +796,7 @@ class Pattern:
             for part in pick:
                 slots.extend(part)
             slots.sort(key=_slot_key)
-            out.append(CompressedState(key.flags, key.fractured, key.status, tuple(slots), *key.held))
+            out.append(CompressedState(key.flags, key.fractured, key.status, tuple(slots), *self.held_of(key)))
         return out
 
     def _ok(self, state: CompressedState) -> bool:
@@ -1053,7 +1119,7 @@ class PatternBuilder:
         """
         requests = []
         for offer in self.offers[lo:hi]:
-            if offer.action is None or _refused_by_key(self.pattern, offer.action, key):
+            if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
             policy = self.pattern.policy(offer.action, key)
             members = by_mode.get(policy)
@@ -1079,6 +1145,13 @@ class PatternBuilder:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
                 continue
             if _refused_by_key(pattern, offer.action, key):
+                continue
+            move = offer.action.imprint_move()
+            if move is not None:  # an imprint or a restore: one certain successor key, the same at every member that takes it (#833)
+                stats.modes[("move", offer.label)] += 1
+                kid = self._move(key, offer, move)
+                if kid is not None:
+                    added.append((oi, kid))
                 continue
             policy = pattern.policy(offer.action, key)
             members = by_mode.get(policy)
@@ -1123,6 +1196,57 @@ class PatternBuilder:
                     seen.add(kid)
                     added.append((oi, kid))
         self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
+
+    def _move(self, key: PatternKey, offer: PatternOffer, move) -> int | None:
+        """The kernel id of the imprint or restore `offer` at `key`, or None where no member needs it (#833, "The imprints" in the module docstring).
+
+        Its kernel is asked of one member (`Mode.ANY`): the game's refusals (rarity, a Talisman, a fracture, a corruption, the cap, the index) read
+        the key alone. The rule that refuses an imprint of a state already held, and a restore onto the state the item is in, reads the member: it
+        fires at the member that is the snapshot the members hold of its own key. A restore refused so is dominated and left out; an imprint is
+        asked of another member of the key, unless it would replace that very snapshot (its successor is then the key itself).
+        """
+        pattern, ab, stats = self.pattern, self.ab, self.stats
+        firsts = pattern.members(key, Mode.ANY)  # the caller checked that the key has a member
+        member = firsts[0]
+        stats.pairs += 1
+        try:
+            exact = ab.kernel(member, offer.action)
+        except NotApplicableError:
+            stats.refused_pairs += 1
+            bare = replace(member, imprints=())
+            if move.restore or bare not in member.imprints:
+                return None
+            if move.index is not None and (move.index >= len(member.imprints) or member.imprints[move.index] == bare):
+                return None  # the game's refusal (no such imprint to give up), or a replacement that leads back to the key
+            exact = None
+            for other in _then_all(pattern, key, firsts[1:], stats):  # the members already made first: every member only if none of them will do
+                if replace(other, imprints=()) in other.imprints:
+                    continue
+                stats.pairs += 1
+                try:
+                    exact = ab.kernel(other, offer.action)
+                except NotApplicableError:
+                    stats.refused_pairs += 1
+                    return None
+                break
+            if exact is None:
+                return None
+        except OutOfScopeError as gap:  # model gaps: none for a move of the imprints, which reads nothing of the mods
+            raise _gap(offer, key, gap) from gap
+        stats.kernels += 1
+        pushed: dict[int, Fraction] = defaultdict(Fraction)
+        for successor, chance in exact.items():
+            pattern.note(successor)
+            pushed[self._intern(successor)] += chance
+        return _kernel_id(self.kernel_ids, self.kernels, pushed)
+
+
+def _then_all(pattern: Pattern, key: PatternKey, firsts: Sequence[CompressedState], stats: PatternStats) -> Iterator[CompressedState]:
+    """`firsts`, then every member of `key` (`Mode.ALL`, made only if the caller goes on past `firsts`)."""
+    yield from firsts
+    every = pattern.members(key, Mode.ALL)
+    stats.members += len(every)
+    yield from every
 
 
 def _refused_by_key(pattern: Pattern, action: Action, key: PatternKey) -> bool:

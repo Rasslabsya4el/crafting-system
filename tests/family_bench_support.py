@@ -73,7 +73,11 @@ SNAPSHOTS = (
 )
 # Names that no snapshot above holds, taken from an older committed snapshot only to fill that gap (#832). It is never a case's primary, and it
 # fills only the names listed, so no other case's prices change.
-FILL_ONLY = {"tests/fixtures/prices/routes-allflame-2026-07-31.json": ("Awakener's Orb",)}
+# The imprints' beasts are priced only in R17's own snapshot: without them no case was offered an imprint (#833).
+FILL_ONLY = {
+    "tests/fixtures/prices/routes-allflame-2026-07-31.json": ("Awakener's Orb",),
+    "tests/fixtures/prices/r17-allflame-2026-11-10.json": ("Craicic Croaker", "Fenumal Plagued Arachnid"),
+}
 PRICE_FACTOR = (0.3, 3.0)  # each currency's price is scaled by a factor drawn log-uniform in this range (ticket #824)
 UNIT = "Chaos Orb"  # the unit: never scaled
 START_PRICE = {"normal": 1.0, "magic": 2.0, "rare": 5.0}  # Chaos, times a seeded factor: a stand-in for a generated base's market price
@@ -439,6 +443,10 @@ METHODS: tuple[Method, ...] = (
     # B3, last so no earlier case moves: one wanted mod of the start item's influence and one of another, brought by an Awakener's Orb's
     # donor, which the basic orbs make (#832)
     Method("awakener-donor", "B3", "rare", ("awakeners-orb", *BASIC), influenced=True, donor=True),
+    # B3, last so no earlier case moves: the imprint route on a given magic item that holds one wanted mod. With no new base to buy, a regal or
+    # an exalt that misses can be undone only by restoring an imprint, so the plan must take one (the `imprints` cases buy a new base instead, #833)
+    Method("imprints-given", "B3", "magic", ("imprint", "restore", "alteration-orb", "augmentation-orb", "regal-orb", "exalted-orb"), start="given",
+           start_item=given_item),
 )
 
 

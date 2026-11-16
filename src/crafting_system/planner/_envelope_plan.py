@@ -367,8 +367,8 @@ def envelope_result(
     figure no plan can cost less than). `goal`, when given, is the set of states that end the search in place of the abstraction's goal, a subset of
     it (a donor's want, `_awakener`, #832).
 
-    Raises `OutOfScopeError` when the bound cannot be built for this abstraction (imprints: #507; a roll limit and a
-    Divine Orb are built since #830, an unveil offer since #828), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
+    Raises `OutOfScopeError` when the bound cannot be built for this abstraction (`pattern_refusal`: none since #833, which
+    gave the imprints members; a roll limit and a Divine Orb since #830, an unveil offer since #828), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
     `BoundError` when the bound is shown not to be a consistent lower bound as the search looks further (a state's bound above its offers', or the bound
     of the root falling from one round to the next: `_envelope`, "A guard for the bound"; `guard=False` turns that refusal off, for the tests that plant a
     wrong bound and check that the comparison with the full walk catches what the guard would have refused).

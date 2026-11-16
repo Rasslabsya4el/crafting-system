@@ -596,8 +596,8 @@ def _make_plan(
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the price the target's computed key has in the file.
 
     `solver` picks the exact solve (ticket #374, #377, #535, ADR-0063): "auto" (the default) is the envelope search wherever its bound can be
-    built (`abstraction.pattern_refusal` says before any solve: imprints refuse it, #507; a roll limit and a Divine Orb do
-    not since #830, an unveil offer not since #828), whatever the size of the graph and whatever the `budget`, because that search is exact, ends in seconds on the small
+    built (`abstraction.pattern_refusal` says before any solve; none refuses it since #833: imprints are held by the key since #833, a roll
+    limit and a Divine Orb since #830, an unveil offer since #828), whatever the size of the graph and whatever the `budget`, because that search is exact, ends in seconds on the small
     graphs and expands far less than the walk on the big ones. Where the bound cannot be built, "auto" is the path it was before the envelope search,
     with or without a `budget` (#926: no forecast and no approximate answer; the run's net ends a walk that is too long, and the stop says what the
     search has no bound for, `walk_cause`): the graph is walked on packed arrays (the dearer twins left out with `MIN_OFFERS` offers or more) and
