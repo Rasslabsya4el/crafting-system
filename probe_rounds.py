@@ -32,6 +32,8 @@ def traced(*a, round_call=None, **k):
         plan = real(*a, round_call=round_call, **k)
         s = plan.search
         print(f"[{time.perf_counter()-T0:6.1f} s]   plan {plan.mean_remaining:.4f} exact {s and s.exact} within {s and s.within} stopped {s and s.stopped}", flush=True)
+        if s is not None:
+            print(f"[{time.perf_counter()-T0:6.1f} s]   bound_seconds {getattr(s,'bound_seconds',None)} bound_stopped {getattr(s,'bound_stopped',None)} bound_keys {getattr(s,'bound_keys',None)} bound_expanded {getattr(s,'bound_expanded',None)} lower {getattr(s,'lower',None)} seconds {getattr(s,'seconds',None)} rounds {getattr(s,'rounds',None)}", flush=True)
         return plan
     except BaseException as e:
         print(f"[{time.perf_counter()-T0:6.1f} s]   {type(e).__name__}: {str(e)[:200]}", flush=True)
