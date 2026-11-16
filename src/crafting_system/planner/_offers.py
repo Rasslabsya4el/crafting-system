@@ -441,8 +441,9 @@ def offers_for(
     * An Eldritch currency (a kind of `ELDRITCH_KINDS`: an Ember, an Ichor, an Eldritch Chaos, Exalted or Annulment Orb, an Orb of Conflict) is
       offered only when the goal asks for an Eldritch implicit (`asks_eldritch`, #835). For any other target it is left out, and the answer
       carries a `Limit` that names it: the Eldritch orbs act on the dominant side only, which an Ember or an Ichor must make first, and with
-      them every state of the target would keep the pair (`Abstraction.tracks_implicits`). That is not a proof that they cannot pay off
-      for such a target (an Eldritch Annulment keeps the other side as a lock would); the limit says so, and #919 is the offer to every target.
+      them every state of the target would keep the pair (`Abstraction.tracks_implicits`). Such a target can gain from them (an Ember, then
+      an Eldritch Chaos Orb that rerolls the prefixes alone; an Eldritch Annulment or Exalted Orb on one side), so this is a cut that may
+      cost: the limit says so, and #886 lifts it with every other default-off (#919).
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
@@ -564,9 +565,13 @@ def offers_for(
             Limit(
                 _limits.ELDRITCH_ASKED,
                 "Not offered",
-                "an Eldritch currency is offered only to a target that asks for an Eldritch implicit; this target asks for none",
+                "the Eldritch currencies are not tried as tools on a target that names no Eldritch implicit, and this one names none",
                 labels=tuple(left_out_eldritch),
-                **claim("the kinds offered", "An Eldritch orb could still pay off on the dominant side, and that is not checked.")  # #919,
+                **claim(
+                    "the kinds offered",
+                    "The route may cost more because of it: a player can put an Ember or an Ichor on the item and then reroll, remove or add"
+                    " on one side alone with an Eldritch orb.",
+                ),  # lifted by #886 with every default-off (#919)
             ),
         )
     if left_out_crafts:

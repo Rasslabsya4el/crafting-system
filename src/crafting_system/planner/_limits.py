@@ -74,7 +74,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (LISTING_GAP, "Methods the model cannot list for this item"),
     (CORRUPTING, "Corrupting methods the target does not ask for"),
     (CORRUPT_ASKED, "Corrupting sets offered only to a target that asks for a corrupted implicit"),
-    (ELDRITCH_ASKED, "Eldritch currencies offered only to a target that asks for an Eldritch implicit"),
+    (ELDRITCH_ASKED, "Eldritch currencies not tried as tools on a target that names no Eldritch implicit"),
     (STRANDS, "Memory Strands"),
     (CRAFTS, "Bench crafts that count for nothing"),
     (FIXED_MOD, "Actions that add one fixed mod nobody wants"),

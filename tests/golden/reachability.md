@@ -127,7 +127,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 |---|---|---|
 | `setting.on` | Memory Strands are on ({setting.why}), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them | no benchmark target |
 | `target.quality is not None` | the target asks for quality, which the planner cannot plan yet | r06 |
-| `any((wish.corrupted or not any((eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids)) for wish in target.implicits))` | the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet; it plans the Searing Exarch and Eater of Worlds implicits | no benchmark target |
+| `any((wish.corrupted or not any((mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids)) for wish in target.implicits))` | the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet; it plans the Searing Exarch and Eater of Worlds implicits | no benchmark target |
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `unreachable` | {unreachable} | no benchmark target |
 | `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |

@@ -66,5 +66,6 @@ corrupted implicit, or for quality, is still refused. What the build decided, no
   `block_invariant`; the Eldritch Exalted Orb is the Exalted Orb on the dominant side and declares `variants` (a family with mods on both sides
   makes it every member); the Eldritch Chaos Orb is every member. This replaces "none of these actions is block-invariant" above.
 - **The offer.** The currencies are offered only to a target that asks for an Eldritch implicit (`planner/_offers.py`, `ELDRITCH_KINDS`), and
-  the answer says so to any other target; whether an Eldritch orb pays off for a target with no implicit wish is
-  [#919](https://github.com/Rasslabsya4el/crafting-system/issues/919).
+  the answer says so to any other target. Such a target can gain from them (an Ember, then an Eldritch Chaos Orb that rerolls the
+  prefixes alone; an Eldritch Annulment or Exalted Orb on one side), so the cut may cost; it is lifted with every other default-off by
+  [#886](https://github.com/Rasslabsya4el/crafting-system/issues/886) ([#919](https://github.com/Rasslabsya4el/crafting-system/issues/919)).
