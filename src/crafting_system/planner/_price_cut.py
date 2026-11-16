@@ -42,7 +42,8 @@ def restart_dominated(priced: Sequence[PricedOffer], start_price: float, upper: 
         return tuple(priced), ()
     ceiling = start_price + upper
     kept = tuple(each for each in priced if isinstance(each.offer.action, BuyStartItem) or each.cost < ceiling)
-    cut = tuple(each for each in priced if each not in kept)
+    held = {id(each) for each in kept}  # by identity: a test of membership in `kept` compared every pair (9,000 fossil sets: 12 s, #1073)
+    cut = tuple(each for each in priced if id(each) not in held)
     return kept, cut
 
 

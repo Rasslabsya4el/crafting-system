@@ -368,6 +368,35 @@ def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_fini
     assert restart_dominated((cheap, dear), 50.0, float("inf")) == ((cheap, dear), ())
 
 
+def test_the_cut_and_the_craft_classes_split_the_offers_by_identity_never_by_comparing_two_offers():
+    # #1073: with 9,000 fossil sets, a test of membership in the kept offers compared every pair (cheapest_per_class 32 s, the cut 12 s, before the
+    # fossil round's search began). Each is a split of the offers it was given, told apart by identity: no two offers are ever compared.
+    from crafting_system.planner._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class
+    from crafting_system.planner._price_cut import restart_dominated
+
+    @dataclasses.dataclass(frozen=True)
+    class Uncomparable(PricedOffer):
+        def __eq__(self, other):
+            raise AssertionError("two offers were compared")
+
+        __hash__ = object.__hash__
+
+    restart = Uncomparable(Offer(RESTART, BuyStartItem(None), {"belt": 1}, shares=False), 500.0, ())
+    offers = [Uncomparable(Offer(f"set {n}", None, {}), float(n), ()) for n in range(300)]
+    crafts = [Uncomparable(Offer(f"craft {n}", None, {}, blocks=("prefix",)), 10.0 - n, ()) for n in range(3)]
+    kept, cut = restart_dominated((*offers, restart), 50.0, 133.0)
+    assert [each.label for each in kept] == [f"set {n}" for n in range(183)] + [RESTART]
+    assert [each.label for each in cut] == [f"set {n}" for n in range(183, 300)]
+    kept, others = cheapest_per_class((*offers, *crafts))
+    assert [each.label for each in kept] == [f"set {n}" for n in range(300)] + ["craft 2"]
+    assert others == ("craft 0", "craft 1")
+    # Two equal offers of one class, two objects: the second is left out and named. Compared by value it was left out unnamed, as the first was kept.
+    twin, again = (PricedOffer(Offer("craft", None, {}, blocks=("prefix",)), 1.0, ()) for _ in range(2))
+    assert twin == again and twin is not again
+    kept, others = cheapest_per_class((twin, again))
+    assert kept == (twin,) and kept[0] is twin and others == ("craft",)
+
+
 def test_a_judged_route_is_judged_against_every_offer_in_one_search(data, target, monkeypatch):
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)

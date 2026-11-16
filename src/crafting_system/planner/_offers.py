@@ -1006,7 +1006,8 @@ def cheapest_per_class(priced: Iterable[PricedOffer]) -> tuple[tuple[PricedOffer
         if entry.offer.blocks is not None and (entry.offer.blocks not in best or entry.cost < best[entry.offer.blocks].cost):
             best[entry.offer.blocks] = entry
     kept = tuple(entry for entry in priced if entry.offer.blocks is None or best[entry.offer.blocks] is entry)
-    return kept, tuple(entry.label for entry in priced if entry not in kept)
+    held = {id(entry) for entry in kept}  # by identity: a test of membership in `kept` compared every pair (9,000 fossil sets: 30 s, #1073)
+    return kept, tuple(entry.label for entry in priced if id(entry) not in held)
 
 
 def same_craft_limit(labels: tuple[str, ...]) -> Limit:
