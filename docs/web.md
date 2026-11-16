@@ -103,7 +103,7 @@ on the server's day, with a warning once it is past the age the command warns at
 
 ```
 "price_age": {"league": "Mirage", "fetched_at": "2026-11-02T06:00:00Z", "age_days": 9, "max_age_days": 7, "stale": true,
-              "warning": "The prices behind this route are 9 days old (the Mirage snapshot of 2026-11-02); prices older than 7 days may be out of date."}
+              "warning": "The prices are 9 days old (the Mirage price snapshot of 2026-11-02); prices older than 7 days may be out of date."}
 ```
 
 A job's is its route's once it has one, else that of the snapshot it is planned with while it owes an answer, else `null` (a failed or

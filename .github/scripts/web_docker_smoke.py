@@ -65,6 +65,7 @@ def main() -> int:
         "run", "--rm", "-v", f"{VOLUME}:/site", "-v", f"{prices.parent}:/in:ro", "--entrypoint", "sh", IMAGE,
         "-c", f"mkdir -p /site/data && cp '/in/{prices.name}' /site/data/prices.json",
     )  # fmt: skip
+    docker("rm", "-f", NAME, check=False)  # a container left by an earlier run on the same machine
     docker("run", "-d", "--name", NAME, "-p", "8000:8000", "-v", f"{VOLUME}:/site", IMAGE)
     try:
         return smoke(args, out)
@@ -83,6 +84,10 @@ def smoke(args: argparse.Namespace, out: Path) -> int:
                 break
         except (urllib.error.URLError, ConnectionError, TimeoutError):
             pass
+        running = subprocess.run(["docker", "inspect", "-f", "{{.State.Running}}", NAME], capture_output=True, text=True, check=False)
+        if running.stdout.strip() != "true":
+            print("the container has stopped before it served", flush=True)
+            return 1
         if time.monotonic() > deadline:
             print(f"the server did not answer within {args.start_minutes} minutes", flush=True)
             return 1

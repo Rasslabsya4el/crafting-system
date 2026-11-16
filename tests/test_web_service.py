@@ -4,10 +4,13 @@ spellings of one item share a key (#966), a refreshed price file keys new reques
 
 import dataclasses
 import datetime
+import json
 import multiprocessing
 import os
+from pathlib import Path
 
 import pytest
+from abstraction_support import real_game_data
 from cli_support import price_file
 from starlette.testclient import TestClient
 from targets_support import DATA
@@ -31,6 +34,7 @@ from web_support import (
 )
 
 from crafting_system.prices import stale_warning, write_price_file
+from crafting_system.targets import load_target
 from crafting_system.prices.price_file import MAX_AGE_DAYS
 from crafting_system.web import (
     ACTIVE,
@@ -470,3 +474,13 @@ def test_the_api_says_how_old_the_snapshot_behind_each_job_and_route_is(tmp_path
         assert again["from_store"] is True and again["price_age"]["stale"] is True and "11 days old" in again["price_age"]["warning"]
         assert listed["price_age"] == again["price_age"] == http.get(again["route"]["url"]).json()["price_age"]
         assert http.get(f"{API}/jobs/{job['id']}").json()["price_age"]["age_days"] == 11
+
+
+def test_every_example_target_has_a_canonical_form_on_the_real_data():
+    """Every field a target can hold (sockets, quality, an enchantment, implicits, k-of-n entries, actions) has a JSON form, so no
+    request of the site fails on keying it; the form is JSON and the same for the same file read twice."""
+    data = real_game_data()
+    for path in sorted((Path(__file__).parents[1] / "examples" / "targets").glob("*.yaml")):
+        form = target_form(load_target(path, data))
+        assert json.loads(json.dumps(form)) == form, path.name
+        assert target_form(load_target(path, data)) == form, path.name

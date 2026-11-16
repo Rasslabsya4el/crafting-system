@@ -42,19 +42,21 @@ PLANNER_VERSION = _own_version()
 
 SNAPSHOT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"  # a snapshot's fetch time as the API and a route's summary write it
 
-Stamp = tuple[tuple[str, int, int] | tuple[str], ...]
+Stamp = tuple[tuple[str, ...] | tuple[str, int, int, int], ...]
 
 
 def stamp_of(paths: tuple[Path, ...]) -> Stamp:
-    """How each file stands: its path, the time it was last written (nanoseconds) and its size, or the path alone when it is missing."""
-    stamp = []
+    """How each file stands: its path, its file number, the time it was last written (nanoseconds) and its size; or the path and why it
+    cannot be read when it is missing or unreadable. A file moved over the old one in one step has a new file number even when its time
+    and size are the old ones."""
+    stamp: list = []
     for path in paths:
         try:
             status = os.stat(path)
-        except FileNotFoundError:
-            stamp.append((str(path),))
+        except OSError as error:
+            stamp.append((str(path), type(error).__name__))
         else:
-            stamp.append((str(path), status.st_mtime_ns, status.st_size))
+            stamp.append((str(path), status.st_ino, status.st_mtime_ns, status.st_size))
     return tuple(stamp)
 
 
@@ -66,8 +68,8 @@ def snapshot_age(league: str, fetched_at: datetime, today: date, max_age_days: i
     age = (today - fetched_on).days
     stale = stale_warning(PriceFile(league, fetched_at, 1.0), today, max_age_days) is not None
     warning = (
-        f"The prices behind this route are {age} days old (the {league} snapshot of {fetched_on.isoformat()}); prices older than "
-        f"{max_age_days} days may be out of date."
+        f"The prices are {age} days old (the {league} price snapshot of {fetched_on.isoformat()}); prices older than {max_age_days} days "
+        "may be out of date."
         if stale
         else None
     )

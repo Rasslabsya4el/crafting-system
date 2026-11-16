@@ -152,12 +152,14 @@ class Service:
         return snapshot_age(prices.league, prices.fetched_at, self.today())
 
     def route_price_age(self, route: RouteRecord) -> dict | None:
-        """How old the snapshot a route was planned on is today, or None for a route stored before routes named it."""
+        """How old the snapshot a route was planned on is today, or None for a route stored before routes named it (or naming it in a
+        form this code cannot read: one bad row never fails a list of routes)."""
         snapshot = route.summary.get("snapshot") if isinstance(route.summary, dict) else None
-        if not isinstance(snapshot, dict):
+        try:
+            fetched_at = datetime.strptime(snapshot["fetched_at"], SNAPSHOT_TIME_FORMAT).replace(tzinfo=UTC)  # type: ignore[index]
+            return snapshot_age(str(snapshot["league"]), fetched_at, self.today())  # type: ignore[index]
+        except (TypeError, KeyError, ValueError):
             return None
-        fetched_at = datetime.strptime(snapshot["fetched_at"], SNAPSHOT_TIME_FORMAT).replace(tzinfo=UTC)
-        return snapshot_age(snapshot["league"], fetched_at, self.today())
 
     def job_price_age(self, job: JobRecord) -> dict | None:
         """How old a job's snapshot is today: its route's, once it has one; the snapshot it is keyed and planned with while it owes an
