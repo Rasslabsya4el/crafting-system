@@ -18,14 +18,14 @@ from test_abstraction_awakener import CRUS_CURSE, CRUS_P1, CRUS_P2, DATA, LEVEL,
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.abstraction._pattern import Pattern, PatternOffer, build_pattern_model
-from crafting_system.actions import AlchemyOrb, AwakenersOrb, ChaosOrb, Reading, RegalOrb, TransmutationOrb
+from crafting_system.actions import AlchemyOrb, AwakenersOrb, ChaosOrb, Reading, RegalOrb, TransmutationOrb, open_listing
 from crafting_system.cli import Offer
-from crafting_system.items import Influence
+from crafting_system.items import Influence, Rarity
 from crafting_system.planner._awakener import Donor, donor_abstraction, donor_base_cost, donor_limits, fold, solve_donor, whole_info, whole_lower
 from crafting_system.planner._donors import solve_with_donors
 from crafting_system.planner._envelope_plan import envelope_limits, envelope_result
 from crafting_system.planner._limits import limit_text
-from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
+from crafting_system.planner._offers import AWAKENER_KIND, RESTART, BuyStartItem, PricedOffer, _with_wanted_donors, donor_wants
 from crafting_system.planner._pattern_bound import pack_pattern_model
 from crafting_system.solver import solve_packed
 
@@ -243,3 +243,36 @@ def test_the_planners_entry_plans_the_orb_through_the_one_search_at_the_exact_va
     assert any(action.label.startswith("Awakener's Orb with a shaper donor") for action in plan.solution.policy.values())
     said = {limit.what for limit in plan.limits}
     assert {"A second item's base is a stand-in price", "How each second item is made is not shown"} <= said
+
+
+def test_an_orb_whose_donor_cannot_be_read_is_kept_and_its_search_leaves_it_out_and_says_why():
+    """`donor_wants`' clause (`test_cli_model_gaps.CLAUSES`): an orb whose donor mod is no influence mod of its influence names no donor; the
+    offers keep it, and its donor's search leaves it out with the limit that says why (OR-13), never an error of the whole plan."""
+    from crafting_system.planner import _awakener
+
+    bad = AwakenersOrb(RING, LEVEL, SHAPER, PLAIN_P1)  # a plain mod: no Shaper donor holds it as its influence mod
+    assert donor_wants(DATA, bad) is None
+    assert donor_wants(DATA, ORB)[1] == frozenset({SHAP_S1})
+    kept = _with_wanted_donors(DATA, START, None, frozenset(), {CRUS_P1, CRUS_P2, SHAP_S1}, {bad: AWAKENER_KIND, ORB: AWAKENER_KIND})
+    assert bad in kept and ORB in kept
+    offers = [*priced(), PricedOffer(Offer("Awakener's Orb [plain]", bad, {"Awakener's Orb": 1}, kind=AWAKENER_KIND), 3.0, ())]
+    donors, left_out = _awakener.solve_donors(abstraction(), offers[-1:], offers)
+    assert donors == ()
+    (limit,) = left_out
+    assert limit.what == "An Awakener's Orb is not offered"
+
+
+def test_a_donor_is_offered_the_target_s_actions_but_not_its_restart_its_listing_draw_or_an_orb():
+    """`_applies_to_donors`: the donor buys its own base, a bought listing is the target's alone (ADR-0064), and a donor never takes an orb."""
+    from crafting_system.planner._awakener import _applies_to_donors
+
+    listing = open_listing(Rarity.RARE)
+    offers = {
+        "Orb of Transmutation": (TransmutationOrb(), True),
+        "Chaos Orb": (ChaosOrb(), True),
+        "Awakener's Orb": (ORB, False),
+        RESTART: (BuyStartItem(START), False),
+        "the listing": (listing, False),
+    }
+    for label, (action, applies) in offers.items():
+        assert _applies_to_donors(PricedOffer(Offer(label, action, {}), 1.0, ())) is applies, label

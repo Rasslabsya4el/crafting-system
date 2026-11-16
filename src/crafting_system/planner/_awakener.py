@@ -40,7 +40,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
-from crafting_system.actions import Action
+from crafting_system.actions import Action, OutOfScopeError
 
 from ._limits import CONSUMES, DISPLAY, Limit, claim
 from ._offers import AWAKENER_KIND, DRAW_COST_SHARE, RESTART, BuyStartItem, Offer, PricedOffer, donor_wants, takes_inputs
@@ -85,7 +85,7 @@ def donor_abstraction(target_abstraction: Abstraction, action: Action) -> Abstra
     found = donor_wants(ab.data, action)
     if found is None:
         action.inputs(ab.data)  # raises what the action says of its donor
-        raise ValueError(f"{action.label(ab.data)} names no one donor")
+        raise OutOfScopeError(f"{action.label(ab.data)} names no one second item")  # left out with its limit (`solve_donors`)
     goal = Goal((Wanted(found[1]),))
     return Abstraction(
         ab.data, goal, ab.base_id, ab.item_level, ab._actions, metamods=ab.models_metamods, enchantment=ab.enchantment, allow_inputs=False,
