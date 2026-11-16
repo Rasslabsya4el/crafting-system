@@ -10,8 +10,14 @@ A user may stop a job: a queued one is never started, a running one's process is
 **Restarts.** The store keeps every job. A service started on a store that holds jobs still owing an answer (the server stopped while they
 were queued or running) queues them again, oldest first.
 
-**Time.** The service reads the time only through `clock` (when a job was made and changed), so a test gives its own. A plan judges its
-prices on the day of its snapshot (`World.price_day`), never on the calendar.
+**Time.** The service reads the time only through `clock` (when a job was made and changed, and the day a snapshot's age is counted to),
+so a test gives its own. A plan judges its prices on the day of its snapshot (`World.price_day`), never on the calendar; the API says how
+old that snapshot is on the clock's day (`price_age`, #976).
+
+**A price refresh** (#968). Each request is checked and keyed on the world as it stands: when a file the world was read from has changed
+(`World.outdated`, a price file replaced by the scheduled refresh of OR-9), the service loads a new world first, so new requests are keyed on
+the new snapshot without a restart. A new world that cannot be loaded (a broken file) leaves the old one in use, and is not tried again
+until the files change once more; the fault goes to the log.
 
 **Faults of the store.** A store that fails never leaves a job running for ever nor a thread dead: a job whose end cannot be stored is
 failed with the error (when even that write fails, the job stays as it was until a restart queues it again), its place is freed in any
@@ -26,13 +32,13 @@ import secrets
 import signal
 import threading
 from collections.abc import Callable, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from multiprocessing.connection import wait
 
 from ._request import Request, parse_request
 from ._store import ACTIVE, DONE, FAILED, QUEUED, RUNNING, STANDING, STOPPED, JobRecord, RouteRecord, Store
 from ._work import Work, plan_request, run_job
-from ._world import World, WorldSource
+from ._world import SNAPSHOT_TIME_FORMAT, Stamp, World, WorldSource, snapshot_age, stamp_of
 
 Clock = Callable[[], datetime]
 
@@ -78,6 +84,8 @@ class Service:
         self._work = work
         self._clock = clock
         self._world: World | None = None
+        self._reload = threading.Lock()  # one reload of the world at a time
+        self._refused: Stamp | None = None  # the files as they stood when a new world could not be loaded from them
         self._changed = threading.Condition()  # held for every change of a job's state; waiters are woken by it
         self._running: dict[str, _Running] = {}
         self._closing = False
@@ -89,9 +97,23 @@ class Service:
 
     @property
     def world(self) -> World:
-        if self._world is None:
+        """The world requests are checked and keyed with: loaded again first when a file it was read from has changed (#968)."""
+        world = self._world
+        if world is None:
             raise RuntimeError("the service is not started")
-        return self._world
+        if not world.outdated():
+            return world
+        with self._reload:
+            world = self._world
+            stamp = stamp_of(world.sources)
+            if stamp == world.stamp or stamp == self._refused:  # loaded by another request meanwhile, or known to fail
+                return world
+            try:
+                self._world = self._world_source()
+            except Exception:  # noqa: BLE001  (a broken refresh never takes the site down: the old snapshot stays in use)
+                _log.exception("the world of %s could not be loaded again after its files changed; the old one stays in use", self.game)
+                self._refused = stamp
+            return self._world
 
     def start(self) -> None:
         self._world = self._world_source()
@@ -117,6 +139,33 @@ class Service:
 
     def _now(self) -> str:
         return _stamp(self._clock())
+
+    # --- the age of a price snapshot (#976) ---------------------------------------------------------------------------------------
+
+    def today(self) -> date:
+        """The day a snapshot's age is counted to: the clock's, in UTC."""
+        return self._clock().astimezone(UTC).date()
+
+    def price_age(self) -> dict:
+        """How old the snapshot new requests are keyed and planned with is today (`snapshot_age`)."""
+        prices = self.world.prices
+        return snapshot_age(prices.league, prices.fetched_at, self.today())
+
+    def route_price_age(self, route: RouteRecord) -> dict | None:
+        """How old the snapshot a route was planned on is today, or None for a route stored before routes named it."""
+        snapshot = route.summary.get("snapshot") if isinstance(route.summary, dict) else None
+        if not isinstance(snapshot, dict):
+            return None
+        fetched_at = datetime.strptime(snapshot["fetched_at"], SNAPSHOT_TIME_FORMAT).replace(tzinfo=UTC)
+        return snapshot_age(snapshot["league"], fetched_at, self.today())
+
+    def job_price_age(self, job: JobRecord) -> dict | None:
+        """How old a job's snapshot is today: its route's, once it has one; the snapshot it is keyed and planned with while it owes an
+        answer; None for a job that ended with no route (failed or stopped)."""
+        if job.route_id is not None:
+            route = self.store.route(job.route_id)
+            return None if route is None else self.route_price_age(route)
+        return self.price_age() if job.state in ACTIVE else None
 
     # --- requests -----------------------------------------------------------------------------------------------------------------
 

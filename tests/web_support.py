@@ -6,6 +6,7 @@ The world sources and works here are module-level so a worker process (spawned, 
 import contextlib
 import datetime
 import multiprocessing
+import os
 import threading
 from pathlib import Path
 
@@ -18,7 +19,8 @@ from crafting_system.budget import Budget
 from crafting_system.config import load_config
 from crafting_system.parallel import WorkerPool
 from crafting_system.planner import Standing
-from crafting_system.web import STANDING, Service, SqliteStore, World, create_app, standing_document
+from crafting_system.prices import load_price_file
+from crafting_system.web import STANDING, Service, SqliteStore, World, create_app, stamp_of, standing_document
 
 API = "/api/v1/poe1"
 MOMENT = datetime.datetime(2026, 10, 31, 12, 0, tzinfo=datetime.UTC)  # the fixture price file is of 2026-10-30
@@ -43,6 +45,17 @@ def r12_target(**changes: object) -> dict:
     target.pop("price_file", None)
     target.update(changes)
     return target
+
+
+PRICE_FILE_VARIABLE = "CRAFTING_TEST_WEB_PRICE_FILE"  # the price file `world_from_price_file` reads; set by a test, inherited by its workers
+
+
+def world_from_price_file() -> World:
+    """The fixture game data with the price file a test names in `PRICE_FILE_VARIABLE`, as the site's world reads its own: the file is its
+    source and its stamp is taken before the read, so a refresh of the file is seen (#968)."""
+    path = Path(os.environ[PRICE_FILE_VARIABLE])
+    stamp = stamp_of((path,))
+    return FixtureWorld(DATA, load_price_file(path), load_config({}), sources=(path,), stamp=stamp)
 
 
 def world_with_newer_prices_in_workers() -> World:

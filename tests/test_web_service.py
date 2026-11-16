@@ -1,17 +1,24 @@
 """The website's service through HTTP on the fixture world (#961): submit, poll to done, the store answers the same request, a stopped job,
-a failed job in the planner's own words, two identical requests at once plan once, and a restart that plans again what was cut off."""
+a failed job in the planner's own words, two identical requests at once plan once, and a restart that plans again what was cut off; two
+spellings of one item share a key (#966), a refreshed price file keys new requests (#968), and the API says how old a snapshot is (#976)."""
 
+import dataclasses
 import datetime
 import multiprocessing
+import os
 
 import pytest
+from cli_support import price_file
+from starlette.testclient import TestClient
 from targets_support import DATA
 from web_support import (
     API,
     FailingStore,
     MOMENT,
+    PRICE_FILE_VARIABLE,
     at_once,
     client,
+    fixed_clock,
     fixture_world,
     r12_target,
     stand_still,
@@ -19,10 +26,26 @@ from web_support import (
     wait_until,
     wait_until_done,
     with_a_pool,
+    world_from_price_file,
     world_with_newer_prices_in_workers,
 )
 
-from crafting_system.web import ACTIVE, QUEUED, RUNNING, STOPPED_WORDS, JobRecord, RequestError, Service, SqliteStore, parse_request
+from crafting_system.prices import stale_warning, write_price_file
+from crafting_system.prices.price_file import MAX_AGE_DAYS
+from crafting_system.web import (
+    ACTIVE,
+    QUEUED,
+    RUNNING,
+    STOPPED_WORDS,
+    JobRecord,
+    RequestError,
+    Service,
+    SqliteStore,
+    create_app,
+    parse_request,
+    snapshot_age,
+    target_form,
+)
 
 
 def test_a_request_is_planned_as_a_job_and_its_route_is_stored_with_its_page():
@@ -216,7 +239,7 @@ def test_a_plan_that_starts_the_planners_own_pool_runs_in_a_worker():
         job = wait_until_done(http, http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"])
 
         assert job["state"] == "done", job["error"]
-        assert http.get(job["route"]["url"]).json()["summary"] == {"doubled": [2, 4, 6]}
+        assert http.get(job["route"]["url"]).json()["summary"]["doubled"] == [2, 4, 6]
 
 
 def test_a_stopped_job_frees_its_worker_even_while_its_pool_runs():
@@ -343,3 +366,107 @@ def test_a_job_the_store_can_neither_start_nor_fail_waits_queued_and_runs_later(
         assert job.state == "done" and store.times == 0 and service.started == 1
     finally:
         service.close()
+
+
+# --- the target's canonical form (#966) ------------------------------------------------------------------------------------------------
+
+
+def test_two_spellings_of_one_item_share_a_key():
+    """The key is built on the parsed target, not the JSON sent: an influence list left out, a stat text in place of its family id and
+    the required entries in another order are one item, so one key; a looser tier is another item."""
+    world = fixture_world()
+    written = parse_request({"target": r12_target()}, "poe1", world)
+    other = r12_target(requirements=[{"min_tier": "any", "stat": "+#% to Lightning Resistance"}, {"stat": "+1 to Level of all Lightning Skill Gems"}])
+    del other["influence"]
+
+    respelled = parse_request({"target": other}, "poe1", world)
+
+    assert respelled.key == written.key
+    assert respelled.document["target"] == other  # the store keeps what the user wrote; only the key is canonical
+    assert target_form(respelled.target) == target_form(written.target)
+    tier_two = r12_target(requirements=[{"stat": "+1 to Level of all Lightning Skill Gems"}, {"family": "LightningResistance", "min_tier": 2}])
+    assert parse_request({"target": tier_two}, "poe1", world).key != written.key
+
+
+def test_a_respelled_request_is_answered_from_the_store():
+    with client(work=at_once) as (http, service):
+        first = wait_until_done(http, http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"])
+        other = r12_target(requirements=[{"stat": "+#% to Lightning Resistance", "min_tier": "any"}, {"stat": "+1 to Level of all Lightning Skill Gems"}])
+
+        again = http.post(f"{API}/jobs", json={"target": other})
+
+        assert again.status_code == 200 and again.json()["from_store"] is True
+        assert again.json()["route"]["id"] == first["route"]["id"] and service.started == 1
+
+
+# --- a refreshed price file (#968) -----------------------------------------------------------------------------------------------------
+
+
+def _write_prices(path, prices, seconds: int) -> None:
+    """Replace the price file in one step, as the refresh does, and give it its own write time (no clock is read)."""
+    write_price_file(path, prices)
+    os.utime(path, ns=(seconds * 10**9, seconds * 10**9))
+
+
+def test_a_refreshed_price_file_keys_new_requests_without_a_restart(tmp_path, monkeypatch):
+    path = tmp_path / "prices.json"
+    _write_prices(path, price_file(), 1_000_000)
+    monkeypatch.setenv(PRICE_FILE_VARIABLE, str(path))
+    service = Service(SqliteStore(":memory:"), world_from_price_file, workers=1, clock=fixed_clock, work=at_once)
+    with TestClient(create_app({"poe1": service})) as http:
+        first = wait_until_done(http, http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"])
+        old_snapshot = http.get(API).json()["price_snapshot"]
+
+        newer = dataclasses.replace(price_file(start=4.5), fetched_at=datetime.datetime(2026, 10, 31, tzinfo=datetime.UTC))
+        _write_prices(path, newer, 2_000_000)
+        refreshed = http.get(API).json()
+        posted = http.post(f"{API}/jobs", json={"target": r12_target()})
+
+        assert refreshed["price_snapshot"] != old_snapshot and refreshed["price_age"]["fetched_at"] == "2026-10-31T00:00:00Z"
+        assert posted.status_code == 202 and posted.json()["key"] != first["key"]  # keyed on the new snapshot, so planned again
+        second = wait_until_done(http, posted.json()["id"])
+        assert http.get(second["route"]["url"]).json()["key"] == posted.json()["key"]  # the worker read the same new file
+
+        path.write_text("{ half a file", encoding="utf-8")  # a broken refresh: the site keeps the snapshot it has
+        os.utime(path, ns=(3_000_000 * 10**9, 3_000_000 * 10**9))
+        assert http.get(API).json()["price_snapshot"] == refreshed["price_snapshot"]
+        kept = http.post(f"{API}/jobs", json={"target": r12_target()})
+        assert kept.status_code == 200 and kept.json()["from_store"] is True and service.started == 2
+
+
+# --- the age of the price snapshot (#976) ----------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("days", "stale"), [(7, False), (8, True)])
+def test_a_snapshot_is_stale_past_the_limit_the_command_warns_at(days, stale):
+    fetched = datetime.datetime(2026, 10, 30, 23, 0, tzinfo=datetime.UTC)
+    today = datetime.date(2026, 10, 30) + datetime.timedelta(days=days)
+
+    age = snapshot_age("Test", fetched, today)
+
+    assert age["age_days"] == days and age["max_age_days"] == MAX_AGE_DAYS and age["stale"] is stale
+    assert (stale_warning(price_file(), today) is not None) is stale  # the command's own judgement on the same snapshot day
+    assert (age["warning"] is not None) is stale
+    if stale:
+        assert f"{days} days old" in age["warning"] and "2026-10-30" in age["warning"]
+
+
+def test_the_api_says_how_old_the_snapshot_behind_each_job_and_route_is(tmp_path):
+    db = tmp_path / "site.sqlite3"
+    with client(db, work=at_once) as (http, service):
+        job = wait_until_done(http, http.post(f"{API}/jobs", json={"target": r12_target()}).json()["id"])
+        route = http.get(job["route"]["url"]).json()
+        assert http.get(API).json()["price_age"]["stale"] is False  # the fixture snapshot is of 2026-10-30, the clock says 10-31
+        assert job["price_age"]["age_days"] == 1 and route["price_age"]["warning"] is None
+        assert route["summary"]["snapshot"] == {"league": "Test", "fetched_at": "2026-10-30T00:00:00Z"}
+
+    ten_days_later = Service(SqliteStore(db), fixture_world, clock=lambda: MOMENT + datetime.timedelta(days=10), work=at_once)
+    with TestClient(create_app({"poe1": ten_days_later})) as http:
+        info = http.get(API).json()
+        again = http.post(f"{API}/jobs", json={"target": r12_target()}).json()  # the same snapshot: answered from the store
+        listed = http.get(f"{API}/routes").json()["routes"][0]
+
+        assert info["price_age"]["stale"] is True and info["price_age"]["age_days"] == 11
+        assert again["from_store"] is True and again["price_age"]["stale"] is True and "11 days old" in again["price_age"]["warning"]
+        assert listed["price_age"] == again["price_age"] == http.get(again["route"]["url"]).json()["price_age"]
+        assert http.get(f"{API}/jobs/{job['id']}").json()["price_age"]["age_days"] == 11

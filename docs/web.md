@@ -22,7 +22,18 @@ docker build -t crafting-site .
 docker run -p 8000:8000 -v crafting-site:/site crafting-site
 ```
 
-The volume `/site` holds the game data cache, the price file (`/site/data`) and the store (`/site/output/web/site.sqlite3`).
+The volume `/site` holds the game data cache, the price file (`/site/data/prices.json`) and the store (`/site/output/web/site.sqlite3`).
+The container fetches the pinned game data into the volume itself on its first start. The price file it does not fetch yet: until the
+scheduled refresh runs beside the service (OR-9, #337), the operator puts it into the volume, once, with a one-off container that copies a
+file from the host:
+
+```
+docker run --rm -v crafting-site:/site -v "$PWD/prices:/in:ro" --entrypoint sh crafting-site -c "mkdir -p /site/data && cp /in/prices.json /site/data/prices.json"
+```
+
+A file replaced there later (a refresh writes a new file and moves it over the old one in one step) is picked up by the running server at
+its next request; no restart (see "A price refresh" below). `.github/scripts/web_docker_smoke.py` does all of this on a Linux runner and
+plans one request through the container (#969).
 
 | Setting | Flag | Environment | Default |
 |---|---|---|---|
@@ -86,6 +97,18 @@ GET /api/v1/poe1/routes/<id>/page              the route page (HTML), as the com
 GET /api/v1/poe1                               the game data version, the price snapshot and the machine settings in use
 ```
 
+**How old the prices are.** Every job, every route and `GET /api/v1/poe1` carry `price_age`: the price snapshot behind it and how old it is
+on the server's day, with a warning once it is past the age the command warns at (`prices.MAX_AGE_DAYS`, 7 days; judged by
+`prices.stale_warning`), so a page can say so when the scheduled refresh has stalled (#976):
+
+```
+"price_age": {"league": "Mirage", "fetched_at": "2026-11-02T06:00:00Z", "age_days": 9, "max_age_days": 7, "stale": true,
+              "warning": "The prices behind this route are 9 days old (the Mirage snapshot of 2026-11-02); prices older than 7 days may be out of date."}
+```
+
+A job's is its route's once it has one, else that of the snapshot it is planned with while it owes an answer, else `null` (a failed or
+stopped job). A route names the snapshot it was planned on in `summary.snapshot`; a route stored before that has `null`.
+
 ## The store and its key
 
 Jobs and routes live behind a small repository interface (`web.Store`); the beta's is one SQLite file (`web.SqliteStore`). A server
@@ -94,8 +117,8 @@ were running queues them again.
 
 A request's key is the SHA-256 of one canonical JSON text (sorted keys) of:
 
-- the game, the target object, the method switches and the settings, each with its default filled in (so a request that spells out a
-  default and one that leaves it out are the same request);
+- the game, the target's canonical form, the method switches and the settings, each with its default filled in (so a request that
+  spells out a default and one that leaves it out are the same request);
 - the machine's planner settings that change an answer: the proof gap, the time and memory limits, the imprint cap, the recombinator
   variant, the price-gap flag;
 - the price snapshot: its league, the time it was fetched and a digest of every price in it (a hand override changes it);
@@ -104,8 +127,16 @@ A request's key is the SHA-256 of one canonical JSON text (sorted keys) of:
 Why these: a route is reused only where it is the answer the planner would give now. A new price snapshot, a patch or a new planner makes
 the old route stale, so each of them is in the key. The calendar day is not in it: a plan judges a price's age on the day its
 snapshot was fetched (`World.price_day`), so a route stays the answer for as long as its snapshot stands (OR-36). A worker keys its route on the inputs it read itself, so a route planned after a price refresh is stored under the
-new snapshot, never under the one the request was keyed with. The target is keyed as the object sent, so two different spellings of the same item (a stat text against its
-family) are two keys until the site sends one canonical form.
+new snapshot, never under the one the request was keyed with.
+
+The target's canonical form (`web.target_form`, #966) is the parsed target, not the JSON sent: every selector is the set of mods it counts
+and the tiers it accepts, so a stat text and the family id it stands for, a key written at its default (`influence: []`) or left out, and the
+required entries in another order give one key. The store keeps the request as it was written.
+
+**A price refresh** (#968). The world names the files it was read from that a refresh replaces (the price file and its overrides) and how
+they stood before the read. Each request first compares them with the files as they stand: when they changed, the service loads a new
+world, and new requests are keyed and planned on the new snapshot without a restart. A new file that cannot be read (broken) leaves the old
+snapshot in use and is not tried again until the files change once more; the fault goes to the server's log.
 
 ## Not built yet
 

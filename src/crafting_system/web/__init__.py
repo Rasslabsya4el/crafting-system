@@ -13,11 +13,11 @@ are the command's own (`cli.build_report`, `cli.policy_document`, `cli.route_pag
 """
 
 from ._app import create_app, job_document, route_document
-from ._request import Request, RequestError, parse_request
+from ._request import Request, RequestError, parse_request, target_form
 from ._service import STOPPED_WORDS, Service
 from ._store import ACTIVE, DONE, FAILED, QUEUED, RUNNING, STANDING, STATES, STOPPED, JobRecord, RouteRecord, SqliteStore, Store
 from ._work import plan_request, standing_document
-from ._world import PLANNER_VERSION, World, WorldSource, load_world
+from ._world import PLANNER_VERSION, World, WorldSource, load_world, snapshot_age, stamp_of
 
 __all__ = [
     "ACTIVE",
@@ -45,5 +45,8 @@ __all__ = [
     "parse_request",
     "plan_request",
     "route_document",
+    "snapshot_age",
+    "stamp_of",
     "standing_document",
+    "target_form",
 ]
