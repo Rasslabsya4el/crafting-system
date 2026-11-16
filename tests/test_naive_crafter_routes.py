@@ -32,7 +32,7 @@ bracket `(low, high)` from a cost grid whose horizon is 64 of the smallest costs
 own uses say about 10% of plays reach the last two crafts (issue #683). The tests: the share of naive plays that finish lies inside the recorded bracket (widened by K standard
 errors), the share of the recorded heavy run too, and a strict xfail tied to #683 says that the planner's printed value equals the heavy share (it flips when the fix is recorded).
 
-The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24 and R07, #775); a test makes it refuse each with a message that names the
+The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24, R07, R17 and R20, #775), and R06's target, which it cannot read, in `UNREAD_TARGET`; a test makes it refuse each with a message that names the
 mechanic, and another makes the lists together hold every route file of `examples/routes/`.
 
 R13 plays about 100,000 orb uses per finish (its mean is 12,000 Chaos), so the run of this file plays only `CI_RUNS` of it and its standard
@@ -98,7 +98,10 @@ NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {
     "R24": ("r24-avoid-shock-boots", ("Veiled Chaos Orb", "Unveil", "lock a side", "Harvest Add Remove Fire")),  # #775
     "R07": ("r07-minion-wand", ("Veiled Chaos Orb", "Unveil", "lock a side", "Corroded Fossil", "no bench option")),  # #775
     "R17": ("r17-lightning-talisman", ("Imprint with the Fenumal Plagued Arachnid", "Restore imprint 1", "lock a side", "Harvest Add Remove Lightning")),  # #823, #775
+    "R20": ("r20-rf-helmet", ("Harvest Reforge Influence", "Wild Bristle Matron", "lock a side")),  # #775
 }
+# the routes whose target this player cannot read (an implicit or quality wish; the planner refuses them too, #516): R06 (#901)
+UNREAD_TARGET = {"R06": ("r06-strength-heavy-belt", "implicits, quality")}
 RECORDED = ROOT / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
 HEAVY = bool(os.environ.get("NAIVE_HEAVY"))
 RUNS_OVERRIDE = int(os.environ["NAIVE_RUNS"]) if os.environ.get("NAIVE_RUNS") else None
@@ -428,9 +431,17 @@ def test_each_law_of_the_metamod_routes_turned_off_moves_the_route_past_the_line
 
 def test_the_covered_and_the_listed_routes_are_every_route_file():
     stems = {path.stem for path in ROUTES.glob("*.yaml")}
-    listed = {stem for group in (COVERED, BENCHMARKED, GAPPED, NOT_COVERED) for stem, *_ in group.values()}
+    listed = {stem for group in (COVERED, BENCHMARKED, GAPPED, NOT_COVERED, UNREAD_TARGET) for stem, *_ in group.values()}
 
     assert stems == listed
+
+
+@pytest.mark.parametrize("route", list(UNREAD_TARGET))
+def test_a_route_whose_target_the_naive_crafter_cannot_read_is_refused_naming_why(route):
+    stem, why = UNREAD_TARGET[route]
+    real_game_data()  # skips without the game data
+    with pytest.raises(Unsupported, match=why):
+        load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS)
 
 
 @pytest.mark.parametrize("route", list(NOT_COVERED))

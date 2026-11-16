@@ -77,7 +77,7 @@ def planner_tiers(data, base_id, influences):
 def test_the_independent_ladder_and_the_planner_tiers_are_the_same_on_every_benchmark_base(planner, raw):
     subjects = benchmark_subjects(raw.bases)
     assert len({base_id for base_id, _ in subjects}) >= 11  # the bases of the 14 targets and of their computed buy specs
-    assert sum(1 for _, influences in subjects if influences) == 2  # the Hunter belt and the Hunter bow
+    assert sum(1 for _, influences in subjects if influences) == 3  # the Hunter belt, the Hunter bow and the Shaper/Elder helmet (R20)
     compared, differences = 0, []
     for base_id, influences in subjects:
         base = raw.bases[base_id]
