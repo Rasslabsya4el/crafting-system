@@ -35,6 +35,21 @@ def one(route: str) -> None:
         print(stamp, file=sys.stderr, flush=True)
 
     _packed.PROGRESS = progress
+    variant = os.environ.get("PROBE_VARIANT", "")
+    if variant:
+        from crafting_system.planner import _offers, _plan
+
+        _offers.BLOCKING_CRAFTS = variant != "nb"
+        metamod = ("Cannot Be Changed", "Cannot roll", "Crafted Modifiers")
+        original = _plan.cheapest_per_class
+
+        def filtered(priced):
+            kept, same = original(priced)
+            drop = (lambda p: any(m in p.label for m in metamod)) if variant == "nometa" else (lambda p: not any(m in p.label for m in metamod))
+            return tuple(p for p in kept if p.offer.blocks is None or not drop(p)), same
+
+        if variant in ("nometa", "nofill"):
+            _plan.cheapest_per_class = filtered
     bench = next(b for b in _benchmark.BENCHMARKS if b.id == route)
     data = load_game_data()
     target = load_target(ROOT / bench.target, data)
@@ -63,6 +78,8 @@ def jobs(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = int(os.environ.get("RUNNER_INDEX", "1")), int(os.environ.get("RUNNER_COUNT", "1"))
     every = [(route, ref) for route in ROUTES for ref in ("branch", "main")]
+    if os.environ.get("PROBE_V2"):
+        every = [(r, "nb") for r in ("R09", "R11", "R13", "R05", "R10", "R12")] + [(r, "nometa") for r in ("R05", "R10", "R12")] + [(r, "nofill") for r in ("R05", "R10", "R12")]
     mine = every[index - 1 :: count]
     main_src = Path("/tmp/probe-main/src")
     if any(ref == "main" for _, ref in mine) and not main_src.exists():
@@ -73,6 +90,8 @@ def jobs(out: Path) -> None:
         env = dict(os.environ)
         if ref == "main":
             env["PYTHONPATH"] = str(main_src)
+        elif ref != "branch":
+            env["PROBE_VARIANT"] = ref
         began = time.perf_counter()
         try:
             done = subprocess.run([sys.executable, __file__, "one", route], env=env, capture_output=True, text=True, timeout=CAP)
