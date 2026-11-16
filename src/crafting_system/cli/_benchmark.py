@@ -88,6 +88,9 @@ class BenchmarkRoute:
 
     `route` is None for a route that has no guide to compare with (V01: no guide writes a route for a recipe-made start item); the
     entry then has no given-route half. `start` is the expected start of a route that begins from a vendor recipe.
+
+    `reference` is False for a smoke test: a target the project made up itself (V01, OR-45), run so that its machinery stays exercised,
+    never a reference craft, never a verdict against a guide and never on the checkpoint list of OR-46 (`REFERENCES`, #901).
     """
 
     id: str
@@ -99,6 +102,7 @@ class BenchmarkRoute:
     heavy: str | None = None  # why the planner needs minutes of a big machine here: `benchmark` then checks the published odds only, unless asked with --heavy
     start: ExpectedStart | None = None
     completed: str | None = None  # the given route with a last rule that restarts, so that its mean is finite (the guide's own route has gaps): evaluated beside it
+    reference: bool = True
 
 
 GEM = "+1 to Level of all Lightning Skill Gems"
@@ -249,7 +253,17 @@ BENCHMARKS = (
         (),
         heavy="the exact walk of the imprint loop passed 2.76 million states and 28 million transitions in an hour and did not end (heavy run 43308613718, #223): it waits for a bound or a value-carrying form of the held imprint (ADR-0060, #817)",
     ),
+    # The guide publishes no odds; the start boots are hand-set in the route's own price file (#901). Unveil is through the one search since #828.
+    BenchmarkRoute(
+        "R24",
+        "Fractured Mana Avoid Shock / Spell Suppression boots with an unveiled Movement Speed + Onslaught (Reddit, 2026)",
+        "examples/targets/r24-avoid-shock-boots.yaml",
+        "examples/routes/r24-avoid-shock-boots.yaml",
+        (),
+        heavy="the veiled kinds make the walk minutes long (#146, #828): a heavy run, not a CI shard",
+    ),
     # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
+    # A target the project made up: a smoke test of the vendor-recipe start, not a reference craft (OR-45, #901).
     BenchmarkRoute(
         "V01",
         "Minion helmet with +1 to Level of all Minion Skill Gems and top Life, started from the vendor recipe (research note on vendor recipes)",
@@ -263,8 +277,12 @@ BENCHMARKS = (
             "with 40% quality in all; the rest of the craft only has to add the top Life. At the prices of tests/fixtures/prices/vendor-v01-2026-11-01.json the recipe start costs "
             "8 Chaos and the plan from it about 866 Chaos in all, against about 1,349 Chaos from the plain Normal helmet.",
         ),
+        reference=False,
     ),
 )
+
+# The reference crafts: the routes judged against their guides and read by the `crafter` at each checkpoint (OR-45, OR-46, #901).
+REFERENCES = tuple(bench for bench in BENCHMARKS if bench.reference)
 
 def reads_own_prices(bench: BenchmarkRoute, root: Path) -> bool:
     """Whether a heavy script must let the route read the price file its target names instead of the committed snapshot of the routes.
@@ -377,6 +395,7 @@ def run_route(
     entry: dict = {
         "id": bench.id,
         "title": bench.title,
+        "reference": bench.reference,
         "target": bench.target,
         "route": bench.route,
         "error": None,
@@ -649,7 +668,7 @@ def render_summary(document: dict) -> str:
         f"Benchmark on {machine['os']}, {machine['cpu_count']} CPUs, {machine['python']}, commit {machine['commit'][:12]}"
     ]
     for entry in document["routes"]:
-        lines.append(f"{entry['id']}: {entry['title']}")
+        lines.append(f"{entry['id']}: {entry['title']}" + ("" if entry.get("reference", True) else " (smoke test, not a reference craft: no verdict)"))
         if entry["solver"] is not None:
             lines.append("  solver       " + _summary_line(entry["solver"]))
         if entry["start"] is not None:

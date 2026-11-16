@@ -67,6 +67,13 @@ from crafting_system.targets import load_target
 from crafting_system.targets.model import KOfN
 
 TARGETS = Path(__file__).resolve().parents[1] / "examples" / "targets"
+FIXED_TARGETS = Path(__file__).resolve().parent / "real_targets"  # R08 and R09 as they were recorded, before #901 named their tiers
+
+
+def target_path(name: str) -> Path:
+    """The target file of a recorded case: a frozen copy under `tests/real_targets/` when there is one, else the example."""
+    fixed = FIXED_TARGETS / f"{name}.yaml"
+    return fixed if fixed.is_file() else TARGETS / f"{name}.yaml"
 RECORDED = load_recorded()
 CASES = RECORDED["cases"]
 # the route's target file whose mod lines the case is judged by
@@ -79,15 +86,15 @@ TARGET_OF = {
     "alteration-r13-belt": "r13-life-resist-belt",
     "augmentation-r13-belt": "r13-life-resist-belt",
     "regal-r13-belt": "r13-life-resist-belt",
-    "fossil-r08-boots": "r08-energy-shield-boots",
-    "fossil-r09-boots": "r09-life-boots",
+    "fossil-r08-boots": "r08-energy-shield-boots-top-tier",
+    "fossil-r09-boots": "r09-life-boots-top-tier",
     "essence-c02-helmet": None,  # the prototype's case C02 has no route: its two targets are the joint cells
-    "start-r08-prismatic": "r08-energy-shield-boots",  # #617: the first action of the planner and of the guide on the start boots, with the target-met count
-    "start-r08-pair": "r08-energy-shield-boots",
-    "start-r09-prismatic": "r09-life-boots",
-    "start-r09-pair": "r09-life-boots",
-    "essence-r08-fear": "r08-energy-shield-boots",  # #627: the essences the actions: key hides
-    "essence-r09-spite": "r09-life-boots",
+    "start-r08-prismatic": "r08-energy-shield-boots-top-tier",  # #617: the first action of the planner and of the guide on the start boots, with the target-met count
+    "start-r08-pair": "r08-energy-shield-boots-top-tier",
+    "start-r09-prismatic": "r09-life-boots-top-tier",
+    "start-r09-pair": "r09-life-boots-top-tier",
+    "essence-r08-fear": "r08-energy-shield-boots-top-tier",  # #627: the essences the actions: key hides
+    "essence-r09-spite": "r09-life-boots-top-tier",
     "essence-r13-hatred": "r13-life-resist-belt",
     "exalt-j01-wants-attack-speed": "j01-cobalt-life-attack-speed",  # #637: the Exalted Orb the keys hide, on later items of the craft
     "exalt-j01-wants-wand-speed": "j01-cobalt-life-attack-speed",
@@ -160,7 +167,7 @@ def uses(data, targets):
 
 @pytest.fixture(scope="module")
 def targets(data):
-    return {name: load_target(TARGETS / f"{name}.yaml", data) for name in {*TARGET_OF.values(), *ROLL_TARGET_OF.values()} if name}
+    return {name: load_target(target_path(name), data) for name in {*TARGET_OF.values(), *ROLL_TARGET_OF.values()} if name}
 
 
 def leaves(node):
