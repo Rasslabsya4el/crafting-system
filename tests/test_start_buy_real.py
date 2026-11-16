@@ -384,11 +384,11 @@ def test_j01_plans_from_its_example_file_as_a_given_start_item_with_no_restart(d
     [
         pytest.param(
             "r03-avoid-shock-boots",
-            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price, and #516 the planner refuses its implicits first"),
+            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price (its Eldritch implicit is planned since #835)"),
         ),
         pytest.param(
             "r06-strength-heavy-belt",
-            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price, and #516 the planner refuses its implicits and quality first"),
+            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price, and the planner refuses its quality (#901) and its base implicit (#516) first"),
         ),
     ],
 )
