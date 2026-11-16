@@ -238,6 +238,18 @@ def test_on_a_shield_with_four_fractured_mods_the_glyphic_set_declares_a_bound_a
     assert bound.chances[0] >= exact(plain.outcomes(data, item), leaves, data)[0][0]
 
 
+def test_a_pool_with_no_candidate_still_declares_one_chance_per_leaf(monkeypatch):
+    """With nothing to draw, a leaf is reached only by a forced mod that passes it; the answer still has one chance per leaf (checker round 2:
+    it had none, and the planner's least of the chances failed on an empty list)."""
+    from crafting_system.actions import fossil_reach
+
+    monkeypatch.setattr(fossil_reach, "pool_candidates", lambda *args, **kwargs: ())
+    actions = (ApplyFossils(("Scorched Fossil",)), ApplyFossils(("Glyphic Fossil",)))
+    scorched, glyphic = ApplyFossils.reach_batch(DATA, boots(), actions, passes_of(({"LifeA"}, set(DATA.mods) - {"LifeA"})))
+    assert scorched.chances == (0.0, 0.0)
+    assert glyphic.chances == (0.0, 1.0)  # every mod it may force passes the second leaf
+
+
 def test_a_set_the_item_refuses_declares_nothing():
     """The Hollow Fossil works on boots only, and the Gloveless Fossil on no gloves: no declaration on gloves."""
     item = boots(base=GLOVES)

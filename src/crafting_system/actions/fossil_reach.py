@@ -181,7 +181,7 @@ def _group_bounds(data, candidates, members, pairs, leaf_flags, free, kept, tota
     from . import fossil as F
 
     mods = [candidate.mod for candidate in candidates]
-    leaves = len(leaf_flags(mods[0])) if mods else 0
+    leaves = len(leaf_flags(mods[0] if mods else next(iter(data.mods.values()))))  # an empty pool still answers once per leaf (checker round 2)
     if not mods:
         return [_nothing_drawn(forced, leaves, leaf_flags) for _i, _r, forced in members]
     passing = np.array([leaf_flags(mod) for mod in mods], dtype=bool).T  # leaves x mods
