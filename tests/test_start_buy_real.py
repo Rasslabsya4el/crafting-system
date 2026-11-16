@@ -1,4 +1,4 @@
-"""The bought start items of the 17 benchmark targets, on the real 3.29.3.3 export (#474, OR-3, OR-6, OR-7).
+"""The bought start items of the 18 benchmark targets, on the real 3.29.3.3 export (#474, OR-3, OR-6, OR-7).
 
 The buy spec, the trade query and the price key are computed from the target (`targets/start_buy.py`). These tests pin, for every benchmark
 target: whether it buys, the key and the item level window; that the committed price files hold an entry under that key; and (row 2 of the
@@ -51,6 +51,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
     "r13-life-resist-belt": (86, 100),
     "r14-hunter-bow": (78, 79),
     "r17-lightning-talisman": (85, 85),
+    "r20-rf-helmet": (86, 100),
     "r24-avoid-shock-boots": (86, 100),
     "v01-minion-helmet": (84, 84),
 }
@@ -70,6 +71,7 @@ OTHER_ITEM = {
     "r17-lightning-talisman": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
     "r07-minion-wand": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
+    "r20-rf-helmet": "#1046 the stored price is hand-set at the week-one prices (the Awakener's Orb and two helmets): it has no body",
     "r24-avoid-shock-boots": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
 }
 
@@ -188,11 +190,13 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
 
     # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries; the veiled file is R07's own
     # (`price_file:`) and holds a copy of the 2026-11-10 file (#146); the references file is R17's and R24's own since #901: the
-    # week-one file plus their hand-set start items
+    # week-one file plus their hand-set start items, and R20's since #901 part 2
     if stem == "v01-minion-helmet":
         assert committed == ["vendor-v01-2026-11-01.json"]
     elif stem == "r07-minion-wand":
         assert committed == ["veiled-r24-r07-2026-11-12.json"]
+    elif stem == "r20-rf-helmet":  # R20's hand-set start helmet is in the references file only (#901)
+        assert committed == ["references-allflame-2026-07-31.json"]
     elif stem == "r24-avoid-shock-boots":
         assert committed == ["references-allflame-2026-07-31.json", "veiled-r24-r07-2026-11-12.json"]
     elif stem == "r17-lightning-talisman":  # R17's file of 2026-11-10 (#223) and the references file (#901)

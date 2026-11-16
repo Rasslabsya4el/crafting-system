@@ -52,6 +52,15 @@ item_level: 75
 # The guide allows Hunter or Elder; this file takes Hunter.
 influence: [hunter]
 
+# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action: the guide's steps 2 and 3,
+# the essence, the Orb of Annulment and the Exalted Orb (#901; its route file, examples/routes/r06-strength-heavy-belt.yaml). Step 4's
+# catalysts, Divine and Blessed Orbs and bench craft join when the planner plans quality and implicits (#516). OR-5 is not met here:
+# every beta method on by default is #886.
+actions:
+  - Deafening Essence of Rage
+  - annulment-orb
+  - exalted-orb
+
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   # The prefix or suffix the guide leaves to the crafter: at least 1 of these 5. Guide (poe-vault.com/guides/shrapnel-ballista-
