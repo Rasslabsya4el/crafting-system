@@ -95,17 +95,19 @@ into one named failing test:
   sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run); it is set once per
   process, module fixtures included. A test that passes no budget still runs its exact proof; a test that passes its own budget keeps it.
 - **A watchdog per phase** (Linux only, `SIGALRM` every second): during a test's setup (its module fixtures included), call or teardown,
-  past `CRAFTING_TEST_SECONDS` (300) of wake-ups, or with the process's resident memory past `CRAFTING_TEST_DATA_MB` (3,500 MB), the
-  phase fails by name. It is a hang and memory guard, not a timing assertion (ADR-0014): it reads no clock, it fails only a test that would
+  past `CRAFTING_TEST_SECONDS` (300) of wake-ups, or when the machine has less than `CRAFTING_TEST_FREE_MB` (1,000 MB, Linux
+  `MemAvailable`) left and the process holds more than its share (physical memory over `CRAFTING_TEST_SLOTS`), the phase fails by name.
+  A fixed figure per process (3,500 MB, PR CI 44021960386) failed hundreds of passing real-data tests, whose processes hold 3.5 to 4.3 GB
+  while the runner still has room; the net fires only when the runner itself is about to run out. It is a hang and memory guard, not a timing assertion (ADR-0014): it reads no clock, it fails only a test that would
   otherwise hang the job until `timeout-minutes` or have the runner shut down (exit 143) and lose the whole shard, and it puts no cap on
   the process, so no allocation fails and the solver's own fallbacks on a MemoryError (`solver/_packed_linear.py`, `cli/_route_flow.py`)
   are never taken because of it. Its failure is `pytest.fail`, a `BaseException`, which no `except Exception` of the planner catches.
   Both figures are caps of the CI suite, not planner limits. What it does not cover: it wakes once a second, so a spike of several GB
   inside one second can still take the runner down; it reads the whole process's resident memory, so memory an earlier test of the
-  process left counts against the next one (once past 3,500 MB, every later phase over a second fails too); a native call (a HiGHS
+  process left counts against the next one (while the machine stays short, every later phase over a second fails too); a native call (a HiGHS
   solve) is not interrupted until it returns. It is not run on Windows (no `SIGALRM`).
 
-0 turns the time or data net off.
+0 turns the time or memory net off.
 
 ## Heavy runs on GitHub: the runner budget (#249)
 
