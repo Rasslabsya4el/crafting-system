@@ -204,6 +204,14 @@ class Reads:
       `by_mod` by family cannot say it); an Elevated mod is one of them (spawn weight 0 on the influence tag). Nothing changes for an item
       with no influence, and an action that only puts influence mods on the item (an influenced Exalted Orb, a beast recipe) need not
       declare it: the state tells apart what a reader in the same model needs (ticket #155).
+    * `refusal_by_families`: with `junk` and `families` a set, whether the game refuses the action reads, of the junk, only how many
+      ordinary mods (not fractured, not crafted, not veiled) there are per side and which of them share a family with `families`: a bench
+      craft (its family on the item, a full side) or Remove Crafted Mods (no crafted mod). The rest of the item (its flags, fractured and
+      crafted mods, a veiled mod, the implicits, the quality, the sockets, the strands) it may read as it likes. Two items alike in all that
+      are then refused alike, so a planner asks one of them and takes its refusal for the other (ticket #1178: the bound's build asked a
+      bench craft at every member of a key, 789,000 refusals on R05). The default is False; an action whose refusal reads more of the junk
+      must not declare it (an Annulment under metamods reads the protected tags of the junk, a Divine Orb its rolls). The contract suite
+      swaps a junk mod outside `families` on the fixture items and compares the refusals.
     * `draw_tags`, `draw_levels`: with `pool_weight`, the draw of the action looks at more than the weight of each mod of the
       pool of the item: `draw_tags` are mod tags it restricts a draw to (the tag of a Harvest add), `draw_levels` item levels
       other than the item's at which it draws (the level of a beast). The family types of the state then carry which of those
@@ -276,6 +284,7 @@ class Reads:
     by_mod: frozenset[str] = frozenset()
     draw_tags: frozenset[str] = frozenset()
     draw_levels: frozenset[int] = frozenset()
+    refusal_by_families: bool = False
 
     @property
     def item_state(self) -> bool:
