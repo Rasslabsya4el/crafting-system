@@ -507,6 +507,30 @@ def test_through_the_entry_the_lock_gains_of_a_plan_of_rounds_build_only_the_pla
     assert plan.foresight.status == full.status and 0.0 < plan.foresight.n <= full.n and full.n_exact and not plan.foresight.n_exact
 
 
+def test_the_plan_s_own_crafts_are_read_from_a_packed_policy_without_building_an_action_and_cheaper_needs_both_errors():
+    # a packed policy builds an action (its kernel) at a state when it is read (`PackedPolicy.__getitem__`); the plan's own crafts are named from
+    # its offers, so no action is built at its thousands of states. And a round's plan is cheaper than the plan in hand only beyond the error of
+    # both figures; with no certified figure (None) the means decide.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    class Packed:
+        def offers(self):
+            return iter([("s1", SimpleNamespace(label="b")), ("s2", SimpleNamespace(label="b")), ("s3", SimpleNamespace(label="d"))])
+
+        def values(self):
+            raise AssertionError("an action was built")
+
+    offered = tuple(SimpleNamespace(label=label) for label in "abcd")
+    fallback = planner_plan.plan_fallback(SimpleNamespace(policy=Packed()), offered)
+    assert [priced.label for priced in fallback] == ["b", "d"]
+    plain = {"s1": SimpleNamespace(label="c")}  # a policy of actions (a walk's) is read as it is
+    assert [priced.label for priced in planner_plan.plan_fallback(SimpleNamespace(policy=plain), offered)] == ["c"]
+    assert not _rounds._cheaper(9.99999, 10.0, 10.0, 10.00001) and _rounds._cheaper(9.9, 9.90001, 10.0, 10.00001)
+    assert _rounds._cheaper(9.99999, None, 10.0, 10.00001) and _rounds._cheaper(9.99999, 10.0, 10.0, None)  # the means decide
+
+
 def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_finish(data, target, monkeypatch):
     # #1070: round 1 closes and the next round meets the run's net before any plan of its own: the plan of round 1 is the answer, and it says so
     from crafting_system.budget import Binding, BudgetExceeded
