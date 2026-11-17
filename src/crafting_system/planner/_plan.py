@@ -1115,10 +1115,7 @@ def widened_plan(
             while stopped is not None and getattr(stopped, "stopped", None) is None:
                 stopped = stopped.__cause__ if isinstance(stopped.__cause__, NoPolicy) else None
             if stopped is not None:
-                built = error.__cause__
-                while built is not None and getattr(built, "build", None) is None:
-                    built = built.__cause__
-                raise _rounds.Stopped(stopped.stopped, stopped.lower, None if built is None else built.build) from error
+                raise _rounds.Stopped(stopped.stopped, stopped.lower) from error
             if cause is not None and cause.__cause__ is None:  # the search's own proof, its bound whole: no plan of these offers reaches the target
                 raise _rounds.NoPlan(str(error)) from error
             raise

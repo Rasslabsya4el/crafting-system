@@ -23,18 +23,13 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   give one sooner than the rounds before it. Once a plan is in hand, the share of a round is the run's time left over the rounds left
   (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
   share too once its own search holds a plan: it gives way there, with its plan, unless its last search round still lowered that plan by more
-  than the run's gap (`Share`, #1080, #1094), so every group is tried once a plan exists. The rounds left are the groups not yet tried, the
-  second tries waiting (below) and, once a group is set aside and every round so far closed, the last round that holds the set-aside groups
-  again (#1095): that round, owed for the whole proof, keeps its share, where counting only the groups left it no time when the others used theirs.
+  than the run's gap (`Share`, #1080, #1094), so every group is tried once a plan exists. The rounds left are the groups not yet tried and,
+  once a group is set aside and every round so far closed, the last round that holds the set-aside groups again (#1095): that round, owed for the whole proof, keeps its share, where counting only the groups left it no time when the others used theirs.
   Two refusals in a row set the first refused group aside (it would refuse every round after it). A round that begins with a plan in hand
   needs no room kept in its share for its search to make one, so its bound's build may take the whole share, not the quarter a search
   with no plan keeps it to (`RoundCall.held`, `_plan.search_net`, #1099): a short share otherwise cut the build before it was complete,
   and the round stopped on a weak lower figure (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s, where the
-  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged. A build that does not complete in
-  that whole share leaves the search no time (R11's Exalted round on 2 runners of 3: a build of about 24 s in a share of 27 s): such a round,
-  with no cheaper plan, is tried once more after the other rounds, with the time they leave, most of which end at once on the plan in hand
-  (#1135); its line names the count it cut with and says it was tried again. Its second try is one more round the rounds after it share
-  the time with.
+  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged, so the rounds after it lose nothing.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
   less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
@@ -173,14 +168,12 @@ class NoPlan(Exception):
 class Stopped(Exception):
     """A round's search that a net stopped before any plan of its offers closed (`run` raises it from the search's `NoPolicy`): `reason` is the
     net's words, `lower` the figure no plan of its offers costs less than (None when unknown). The round is stopped, not refused: its offers
-    were not shown to reach no plan. `build` is why the bound's build its search cut with ended before it was complete (`_envelope.NoPolicy.build`),
-    None for a complete bound: a round with a plan in hand that ends so is tried again after the other rounds (`widen`, #1135)."""
+    were not shown to reach no plan."""
 
-    def __init__(self, reason: str, lower: float | None, build: str | None = None) -> None:
+    def __init__(self, reason: str, lower: float | None) -> None:
         super().__init__(reason)
         self.reason = reason
         self.lower = lower if lower is not None and math.isfinite(lower) else None
-        self.build = build
 
 
 class Share:
@@ -291,30 +284,23 @@ def widen(
     refused_last: tuple[int, tuple[int, ...]] | None = None  # the last round, when a refusal ended it: its record's place and its group's offers
     queue = list(groups)
     set_aside: list[tuple[int, Group]] = []  # the groups not carried (could not beat the plan in hand): their record's place and the group
-    again: dict[int, int] = {}  # a round tried again after the others (#1135): its place in the queue, and its first try's record's place
     closing: int | None = None  # the place in the queue of the last round that holds the set-aside groups again, once it is added
-    tried: set[int] = set()  # the places in the queue of the second tries: a round is tried again once only
     for k, group in _growing(queue):
         ahead = len(queue) - k  # the rounds of the queue from this one on
         # the last round that holds the set-aside groups again is owed while every round so far closed: it is counted among the rounds left,
-        # so the rounds before it keep it its share (#1095); a round waiting to be tried again is in the queue, and counted so, already
-        owed = closing is None and bool(set_aside) and _all_ended(records, again.values())
+        # so the rounds before it keep it its share (#1095)
+        owed = closing is None and bool(set_aside) and _all_ended(records)
         rest = ahead + (1 if owed else 0)
         out_of_time = (time_left := left()) is not None and time_left <= 0.0
         if out_of_time:
             used = "the run's time was used up" if meter is None else "the run's states net was used up"
-            for j in range(k, len(queue)):
-                if j in again:  # a round waiting to be tried again keeps its first try's line, which says it was not
-                    place = again[j]
-                    records[place] = replace(records[place], reason=records[place].reason + f"; it was not tried again: {used}")
-                else:
-                    records.append(RoundRecord(queue[j].kinds, len(queue[j].positions), UNTRIED, f"{used} before this round", None, None, 0.0, states=None if meter is None else 0))
+            records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, f"{used} before this round", None, None, 0.0, states=None if meter is None else 0) for g in queue[k:])
             break
         positions = sorted({*base, *group.positions})
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
         counted = began if meter is None else measure()
-        plan, status, reason, lower, upper, within, touched, unbuilt = None, REFUSED, "", None, None, None, None, None
+        plan, status, reason, lower, upper, within, touched = None, REFUSED, "", None, None, None, None
         held, improved = best is not None, False  # a plan in hand when the round began; the round's own plan became it
         unit = "seconds" if meter is None else meter.unit
         give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, counted, measure, unit, gap)  # the last round has all the time left
@@ -336,7 +322,7 @@ def widen(
             status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
             error = error or none.__cause__ or none  # what the run says when no round made a plan
         except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
-            status, reason, lower, touched, unbuilt = STOPPED, stop.reason, stop.lower, states_of(stop), stop.build
+            status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
             error = error or stop.__cause__ or stop
         except ValueError as refusal:  # a `PlanError`: the round's offers reach no plan, or the search refused them
             status, reason, touched = REFUSED, str(refusal), states_of(refusal)
@@ -348,7 +334,6 @@ def widen(
             search = getattr(plan, "search", None)
             lower, upper = getattr(search, "lower", None), mean_of(plan)
             within = getattr(search, "within", None) if status == WITHIN else None
-            unbuilt = getattr(search, "bound_stopped", None) if status == STOPPED else None
             if best is None or _cheaper(upper, upper_of(plan), best_mean, best_upper):
                 best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
         if lower is not None and best_upper is not None and k > 0:
@@ -357,29 +342,7 @@ def widen(
             lower = None  # a round with no plan states no figure (the JSON holds no infinity)
         touched = getattr(getattr(plan, "search", None), "touched", None) if plan is not None else touched
         known = None if meter is None else meter.ended(touched)  # a round that raised is counted at the states its search knew when it ended
-        record = RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known)
-        if unbuilt is not None and unbuilt not in record.reason:  # (a run counted in states names its build's count already, `_plan.round_end`)
-            record = replace(record, reason=f"{record.reason}; {UNBUILT} ({unbuilt})")
-        if k in again:
-            # the second try of a round (#1135): one line with both tries' work, both reasons and the second try's lower figure (searched with the
-            # wider base). It goes last, where it ran: the last line is the round that held the most offers, which `_plan.widened_plan` reads
-            # as the whole proof's figure when every round closed
-            gone = again.pop(k)
-            first = records.pop(gone)
-
-            def shift(at: int) -> int:  # the places after the first try's move up by one
-                return at - 1 if at > gone else at
-
-            set_aside = [(shift(aside), g) for aside, g in set_aside]
-            again = {j: shift(at) for j, at in again.items()}
-            refused_last = None if refused_last is None else (shift(refused_last[0]), refused_last[1])
-            record = replace(
-                record, reason=f"{record.reason}; {TRIED_AGAIN} (its first try: {first.reason.replace(LEFT, '')})",
-                seconds=first.seconds + record.seconds, states=None if known is None else known + (first.states or 0),
-            )  # fmt: skip
-            records.append(record)
-        else:
-            records.append(record)
+        records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known))
         place = len(records) - 1
         if status == REFUSED and k > 0 and refused_last is not None:
             # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
@@ -389,20 +352,7 @@ def widen(
             positions = sorted({*base, *group.positions})
             records[earlier_place] = replace(records[earlier_place], reason=records[earlier_place].reason + "; set aside, since the round after it was refused too")
         refused_last = (place, group.positions) if status == REFUSED and k > 0 else None
-        owed_after = closing is None and bool(set_aside) and _all_ended(records[:place], again.values())
-        if held and not improved and status == STOPPED and unbuilt is not None and (ahead > 1 or owed_after) and k not in tried:
-            # a round with a plan in hand whose bound's build its share ended before it was complete, and with no cheaper plan (#1135): its
-            # search had no time, or only a weak bound, to cut with (R11's Exalted round: a build of about 24 s in a share of 27 s, a search of
-            # 0 s). It is tried once more after the other rounds, with the time they leave: most rounds after it end at once on the plan in
-            # hand, and the time they do not use is its second share. Its first share is spent, and the cost to the rounds after it is that
-            # they share the time with one more round, its second try. The last group too, when the last round that restores the proof was
-            # owed: its share left room for that round, which cannot come once this one stopped. Its second try shares the time left with
-            # that round (half each when nothing else waits), and that round runs only when the second try ends closed
-            queue.append(group)
-            again[len(queue) - 1] = place
-            tried.add(len(queue) - 1)
-            records[place] = replace(records[place], reason=records[place].reason + LEFT)
-        elif held and not improved and status in (CLOSED, WITHIN, BEATEN, NONE) and ahead > 1:
+        if held and not improved and status in (CLOSED, WITHIN, BEATEN, NONE) and ahead > 1:
             # proved unable to beat the plan in hand (beaten, closed with no cheaper plan, or closed with no plan at all): its group is not carried
             # into the rounds after it (#1080, #1091, #1097). Its proof covers its offers with the base only, not with a later group's, so the
             # answer no longer counts it as closed (`RoundRecord.closed`) and names it with its lower figure. Carrying it kept R05's 1,192 fossil
@@ -412,7 +362,7 @@ def widen(
             set_aside.append((place, group))
         elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED):
             base = positions  # the first round is the base whatever its end, a refused one too: every later round widens it
-        if k == len(queue) - 1 and closing is None and set_aside and _all_ended(records, ()):
+        if k == len(queue) - 1 and closing is None and set_aside and _all_ended(records):
             # every round closed, some groups were set aside: one last round holds them with the base, which is then every offer, so
             # the last round again holds every offer and its proof is the whole one (a plan joining a set-aside group with a later one is in it)
             queue.append(Group(tuple(sorted({i for _, g in set_aside for i in g.positions})), tuple(sorted({kind for _, g in set_aside for kind in g.kinds})),
@@ -426,16 +376,10 @@ def widen(
     return Widened(best, tuple(records), error)
 
 
-UNBUILT = "the count of the cheapest possible cost it cut with was not finished in its share"  # a round whose bound's build its net ended (#1135)
-LEFT = "; it was left to be tried again after the other rounds, with the time they leave"
-TRIED_AGAIN = "tried again after the other rounds, with the time they left, since its first share ended before that count was finished"
-
-
-def _all_ended(records: Sequence[RoundRecord], waiting) -> bool:
-    """Every round so far closed (exactly, within the gap, beaten, or with no plan), the first tries of the rounds `waiting` to be tried again
-    aside: only then is the last round that holds the set-aside groups again due."""
-    skip = set(waiting)
-    return all(record.status in (CLOSED, WITHIN, BEATEN, NONE) for place, record in enumerate(records) if place not in skip)
+def _all_ended(records: Sequence[RoundRecord]) -> bool:
+    """Every round so far closed (exactly, within the gap, beaten, or with no plan): only then is the last round that holds the set-aside
+    groups again due."""
+    return all(record.status in (CLOSED, WITHIN, BEATEN, NONE) for record in records)
 
 
 def states_of(error: BaseException) -> int | None:
@@ -498,8 +442,6 @@ def group_name(record: RoundRecord) -> str:
 def round_line(n: int, record: RoundRecord) -> str:
     """One round as the answer says it."""
     line = _round_line(n, record)
-    if TRIED_AGAIN in record.reason and TRIED_AGAIN not in line:  # a line that does not say its reason still says it was tried twice (#1135)
-        line += f" ({TRIED_AGAIN})"
     return line if record.carried else line + " (with the methods of the rounds before it; the rounds after it did not hold them)"
 
 

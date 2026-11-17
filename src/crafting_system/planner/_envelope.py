@@ -1120,16 +1120,13 @@ def figure_error(gap: float, gap_after: float | None) -> float:
 class NoPolicy(ValueError):
     """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it). `stopped` is the
     net's words when a net stopped it (it found none yet, it did not prove there is none), with `lower`, the figure no plan costs less than.
-    `states` is the states the search knew when it ended, which a run counted in states counts (`_rounds.StatesMeter`, `Clock.spend`, #1101).
-    `build` is why the bound's build the search cut with ended before it was complete (`PatternBound.stopped`), None for a complete bound: a
-    round of the planner's widening that ends so is tried again after the other rounds (`_rounds.widen`, #1135)."""
+    `states` is the states the search knew when it ended, which a run counted in states counts (`_rounds.StatesMeter`, `Clock.spend`, #1101)."""
 
-    def __init__(self, message: str, *, stopped: str | None = None, lower: float | None = None, states: int = 0, build: str | None = None) -> None:
+    def __init__(self, message: str, *, stopped: str | None = None, lower: float | None = None, states: int = 0) -> None:
         super().__init__(message)
         self.stopped = stopped
         self.lower = lower
         self.states = states
-        self.build = build
 
 
 class MemoryNet(Exception):
