@@ -11,11 +11,11 @@ The toy game of `vendor_starts_support` has boots and a wand; every plan here so
 """
 
 import dataclasses
-import json
 from pathlib import Path
 
 import pytest
 from trade_support import R12_SPEC
+from two_runs_support import without_timings
 from vendor_starts_support import (
     AUGMENTATION,
     AUGMENTATION_PRICE,
@@ -52,9 +52,7 @@ def text_of(plan, data=TOY) -> str:
 
 
 def document_of(plan, data=TOY) -> dict:
-    document = policy_document(build_report(plan, data), None, target_name="toy.yaml")
-    document.pop("timings_seconds")
-    return json.loads(json.dumps(document))
+    return without_timings(policy_document(build_report(plan, data), None, target_name="toy.yaml"))
 
 
 # --- the text -------------------------------------------------------------------------------------------------------------------

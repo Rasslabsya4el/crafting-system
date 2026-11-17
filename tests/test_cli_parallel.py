@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 import pytest
 from coarse_support import CHAOS, CRAFTS, DATA, HYBRID_CRAFT, MANA, REMOVE
 from abstraction_pool import MANA_1
+from two_runs_support import without_timings
 
 from crafting_system.cli import Offer, build_report, make_plan, policy_document
 from crafting_system.planner._decide import Rates
@@ -43,8 +44,7 @@ PRICES = PriceFile("Test", datetime(2026, 10, 30, tzinfo=UTC), 300.0, {})
 
 def answer_of(plan) -> str:
     """The JSON policy document of a plan, as the CLI writes it, without the seconds it took."""
-    document = policy_document(build_report(plan, DATA), None, target_name="t.yaml")
-    document.pop("timings_seconds", None)
+    document = without_timings(policy_document(build_report(plan, DATA), None, target_name="t.yaml"))  # names no round's seconds (#1136)
     return json.dumps(document, sort_keys=True, indent=1)
 
 

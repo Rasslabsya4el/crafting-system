@@ -28,6 +28,7 @@ from cli_support import R12, TODAY, read_json
 from cli_support import price_file as r12_prices
 from cli_support import run as run_r12
 from targets_support import DATA
+from two_runs_support import STATES, in_states, masked, without_timings
 from start_support import with_start
 from vendor_starts_support import (
     AUGMENTATION,
@@ -45,6 +46,7 @@ from vendor_starts_support import (
     toy_target,
 )
 
+from crafting_system.budget import Budget
 from crafting_system.cli import (
     PlanError,
     StartCandidate,
@@ -106,15 +108,8 @@ def asking(**changes: str) -> str:
     return text
 
 
-def masked(text: str) -> str:
-    """A report without the lines that hold a measured time."""
-    return re.sub(r"^Run time:.*$", "Run time: <measured>", text, flags=re.MULTILINE)
-
-
 def document_of(plan, data=TOY) -> dict:
-    document = policy_document(build_report(plan, data), None, target_name="toy.yaml")
-    document.pop("timings_seconds")
-    return json.loads(json.dumps(document))
+    return without_timings(policy_document(build_report(plan, data), None, target_name="toy.yaml"))
 
 
 # --- the list of start options -------------------------------------------------------------------------------------------
@@ -463,6 +458,7 @@ def test_the_refused_recipes_are_in_the_explanation_with_their_reasons():
 
 
 def test_the_setting_off_returns_what_make_plan_returns(monkeypatch):
+    # two runs compared: both counted in states (tests/two_runs_support.py, #1136)
     calls = []
     real = starts_module.make_plan
 
@@ -473,11 +469,11 @@ def test_the_setting_off_returns_what_make_plan_returns(monkeypatch):
     monkeypatch.setattr(starts_module, "make_plan", spy)
     target = toy_target()
 
-    plan = plan_with_starts(TOY, target, prices(), recipe_starts=False)
+    plan = plan_with_starts(TOY, target, prices(), recipe_starts=False, budget=Budget.in_states(STATES))
 
     assert len(calls) == 1 and calls[0][0][1] is target and calls[0][1]["start_price"] is None  # one plan, of the target as it is
     assert plan.starts is None
-    direct = make_plan(TOY, target, prices())
+    direct = make_plan(TOY, target, prices(), budget=Budget.in_states(STATES))
     assert masked(render_text(build_report(plan, TOY), target_name="t")) == masked(render_text(build_report(direct, TOY), target_name="t"))
     assert document_of(plan) == document_of(direct) and "start_options" not in document_of(plan)
 
@@ -670,18 +666,12 @@ def test_the_setting_must_be_true_or_false(tmp_path, capsys):
 # --- B1 unchanged: R12 through the command -----------------------------------------------------------------------------
 
 
-def without_timings(document: dict) -> dict:
-    """A policy document without what was measured: its timings, and the seconds a round of the search spent (`_rounds.round_line`
-    names them in the answer's limits; two runs of one plan can round them to 0 s and 1 s)."""
-    kept = {key: value for key, value in document.items() if key != "timings_seconds"}
-    return json.loads(re.sub(r"actions offered, [\d,]+ s\)", "actions offered, <measured> s)", json.dumps(kept)))
-
-
-def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(tmp_path, capsys):
+def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(tmp_path, capsys, monkeypatch):
+    budget = in_states(monkeypatch)  # two runs compared: both counted in states (tests/two_runs_support.py, #1136)
     code, out = run_r12(tmp_path, "--no-recipe-starts", prices=r12_prices())
     printed = capsys.readouterr().out
 
-    plan = make_plan(DATA, load_target(R12, DATA), r12_prices())
+    plan = make_plan(DATA, load_target(R12, DATA), r12_prices(), budget=budget)
     report = build_report(plan, DATA)
     assert code == 0
     assert masked(printed).startswith(masked(render_text(report, target_name=R12.name)))  # the text, then where the files were written
@@ -689,7 +679,8 @@ def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(
     assert without_timings(read_json(out)) == without_timings(expected)
 
 
-def test_r12_with_recipe_starts_on_keeps_every_number_and_adds_only_the_explanation(tmp_path):
+def test_r12_with_recipe_starts_on_keeps_every_number_and_adds_only_the_explanation(tmp_path, monkeypatch):
+    in_states(monkeypatch)  # two runs compared: both counted in states (tests/two_runs_support.py, #1136)
     code_off, off = run_r12(tmp_path, "--no-recipe-starts", prices=r12_prices())
     document_off = read_json(off)
     code_on, on = run_r12(tmp_path, prices=r12_prices())  # the amulet takes the chaos resistance recipe; the target asks for none of it

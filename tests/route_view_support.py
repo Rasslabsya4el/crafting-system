@@ -17,6 +17,7 @@ import golden_diff
 from abstraction_oracle import crafted_item
 from items_support import DATA, item, roll
 from plan_support import planner_plan
+from two_runs_support import assert_counted_in_states
 
 from crafting_system.abstraction import Abstraction, CompressedState, Goal
 from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods
@@ -62,6 +63,7 @@ HYSTERIA_REQ = Requirement(None, "Elemental Penetration during Flask Effect", fr
 def assert_golden(name: str, html: str, extension: str = "html") -> None:
     """The page equals `tests/golden/<name>.<extension>` (`html`, or `txt` for a text report); `UPDATE_GOLDEN=1` writes it first, a missing file fails."""
     __tracebackhide__ = True
+    assert_counted_in_states(html, f"the golden page {name}")  # a golden is a second run compared with the first (tests/two_runs_support.py)
     path = GOLDEN / f"{name}.{extension}"
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN.mkdir(exist_ok=True)

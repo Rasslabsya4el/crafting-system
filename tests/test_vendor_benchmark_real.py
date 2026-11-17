@@ -21,7 +21,6 @@ CI fetches it. The route is planned once per process; it solves in a few seconds
 import json
 import math
 import os
-import re
 from fractions import Fraction
 from pathlib import Path
 
@@ -31,6 +30,7 @@ from abstraction_support import real_game_data
 from cli_support import TODAY
 from report_steps_support import assert_report_is_the_page, blocks_of
 from route_view_support import GOLDEN, assert_golden
+from two_runs_support import masked, without_timings
 
 from crafting_system.cli import (
     StartContext,
@@ -72,10 +72,6 @@ def plan(data):
 @pytest.fixture(scope="module")
 def report(plan, data):
     return build_report(plan, data)
-
-
-def masked(text: str) -> str:
-    return re.sub(r"^Run time:.*$", "Run time: <measured>", text, flags=re.MULTILINE)
 
 
 # --- the plan starts from the recipe ------------------------------------------------------------------------------------------
@@ -202,8 +198,7 @@ def error_bound_to_its_order(document: dict) -> dict:
 
 
 def test_the_json_policy_is_the_golden(report):
-    document = policy_document(report, None, target_name="v01-minion-helmet.yaml")
-    document.pop("timings_seconds")
+    document = without_timings(policy_document(report, None, target_name="v01-minion-helmet.yaml"))  # names no round's seconds (#1136)
     text = json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     path = GOLDEN / "v01_minion_helmet.json"
     if os.environ.get("UPDATE_GOLDEN"):

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from two_runs_support import without_timings
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, Goal
@@ -39,8 +40,7 @@ def data():
 def answer(data, name: str, workers: int, monkeypatch) -> str:
     monkeypatch.setenv("CRAFTING_WORKERS", str(workers))
     plan = make_plan(data, load_target(TARGETS / f"{name}.yaml", data), load_price_file(PRICES))
-    document = policy_document(build_report(plan, data), None, target_name=f"{name}.yaml")
-    document.pop("timings_seconds", None)
+    document = without_timings(policy_document(build_report(plan, data), None, target_name=f"{name}.yaml"))  # names no round's seconds (#1136)
     return json.dumps(document, sort_keys=True, indent=1)
 
 

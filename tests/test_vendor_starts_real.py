@@ -15,7 +15,6 @@ with every method on, a real route gives no plan within CI's time and memory, an
 """
 
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -24,6 +23,7 @@ from cli_support import price_file as r12_prices
 from cli_support import read_json
 from cli_support import run as run_r12
 from start_support import with_start
+from two_runs_support import masked, without_timings
 
 from crafting_system.cli import StartContext, build_report, make_plan, policy_document, render_text, vendor_recipe_starts
 from crafting_system.planner._start_options import gem_price_name
@@ -63,10 +63,6 @@ def listing(data, target, prices):
 
 def slug(item_class: str) -> str:
     return item_class.lower().replace(" ", "_")
-
-
-def masked(text: str) -> str:
-    return re.sub(r"^Run time:.*$", "Run time: <measured>", text, flags=re.MULTILINE)
 
 
 # --- the step tables and the tiers the goal check counts --------------------------------------------------------------------
@@ -156,9 +152,7 @@ def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(
     assert code == 0
     assert masked(printed).startswith(masked(render_text(report, target_name="r12-lightning-amulet.yaml")))
     assert "Start options" not in printed and "start_options" not in document
-    assert {key: value for key, value in document.items() if key != "timings_seconds"} == {
-        key: value for key, value in expected.items() if key != "timings_seconds"
-    }
+    assert without_timings(document) == without_timings(expected)
 
 
 def test_r12_with_recipe_starts_on_gives_the_same_plan_and_names_the_refused_recipe(tmp_path, data, capsys):
