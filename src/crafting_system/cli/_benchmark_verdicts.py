@@ -132,8 +132,10 @@ VERDICTS: tuple[Verdict, ...] = (
     # #901: R09 at the week-one prices, Life tier 1 or 2. The planner rerolls with a Pristine Fossil alone and bench-crafts the Movement Speed, where the guide
     # pays a Shuddering Fossil beside it for a Movement Speed roll; the 10 divergent states shown of 42 are all this one choice. The `crafter` read the page (run 43829874615)
     # and called it what a player would do. Ratio 0.1677 (heavy run 43828591390).
-    Verdict("R09", GUIDE, REAL_FIND, (901,), 0.168, "2026-11-16", "1442776a0b2f6cca", "803d20f76ca29180", "Fossils Pristine Fossil"),
+    # #405: the target hashes of R09 and R04 are of the files without their `actions:` key; the suite plans them with the key's former methods
+    # (tests/former_keys.py), so what was reviewed is unchanged until the re-record of #405's second PR measures them with every method.
+    Verdict("R09", GUIDE, REAL_FIND, (901,), 0.168, "2026-11-16", "9625b4f02218919d", "803d20f76ca29180", "Fossils Pristine Fossil"),
     # #599, #628: the completed route keeps to what the guide and the game force; what is left of the gap is the planner's own moves (the Annulment under
     # the craft, Rage to Exalted, Annulment to Exalted). The guide's own route has gaps, so its ratio is not known and it has no row. Ratio 0.3310.
-    Verdict("R04", COMPLETED, REAL_FIND, (599, 628), 0.331, "2026-11-07", "724ef091ef9f78b5", "4f6c0229e2688042", "Exalted Orb"),
+    Verdict("R04", COMPLETED, REAL_FIND, (599, 628), 0.331, "2026-11-07", "097b97a47e09192e", "4f6c0229e2688042", "Exalted Orb"),
 )

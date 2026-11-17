@@ -224,9 +224,11 @@ class Runs:
         if key not in self.made:
             self.count += 1
             start = None if case.start_price is None else case.start_price * start_factor
-            settings = PlanSettings(recipe_starts=case.generated.vendor_starts, start_price=start)
+            methods = doc.get("actions")
+            settings = PlanSettings(recipe_starts=case.generated.vendor_starts, start_price=start, methods=None if methods is None else tuple(methods))
             try:
-                target = parse_target(yaml.safe_dump(dict(doc), sort_keys=False, allow_unicode=True, width=1000), self.data, source=f"<{case.id}>")
+                written = {key: value for key, value in doc.items() if key != "actions"}  # the case's methods are the run's setting (#405)
+                target = parse_target(yaml.safe_dump(written, sort_keys=False, allow_unicode=True, width=1000), self.data, source=f"<{case.id}>")
                 plan = plan_target(self.data, target, prices, settings)
                 if cost_of(plan).gap > PROVED_GAP_LIMIT:  # every run a relation reads, not only a case's own: a run that proves little would make its comparisons empty
                     raise AssertionError(f"{case.id}: a plan states {cost_of(plan).stated!r} and proves {cost_of(plan).proved!r}, further apart than OR-32 allows")
@@ -422,7 +424,7 @@ def simulation_violations(runs: Runs, case: Case) -> list[str]:
     the exact mean of the plan it returns (OR-32), so this comparison takes no gap.
     """
     plan = runs.plan(case)
-    target = parse_target(case.generated.target_yaml, runs.data, source=f"<{case.id}>")
+    target = F.target_of(case.generated, runs.data)
     played = dataclasses.replace(plan, target=target)
     clicks = verify(runs.data, played, runs=PILOT, seed=886).report.mean_steps  # the pilot only sizes the run: its costs are not read
     plays = int(max(PLAYS[0], min(PLAYS[1], CLICKS // max(clicks, 1.0))))

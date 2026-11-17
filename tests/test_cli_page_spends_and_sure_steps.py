@@ -95,7 +95,7 @@ def test_the_price_list_holds_every_currency_a_step_pays_with_a_bench_crafts_inc
 
 def test_a_kind_named_by_a_currency_the_plan_spends_is_named_by_its_use_in_what_the_answer_leaves_out():
     inp = hand_input(START, (COLD_REQ, LIFE), bench_then_by_the_item)
-    left_out = Limit(NOT_NAMED, "Not offered", "kinds this target does not name", labels=("Divine Orb", "Scouring Orb", "Fracturing Orb"), **claim("the kinds offered"))
+    left_out = Limit(NOT_NAMED, "Not offered", "kinds the run's methods setting does not name", labels=("Divine Orb", "Scouring Orb", "Fracturing Orb"), **claim("the kinds offered"))
     plan = dataclasses.replace(inp.plan, limits=(*inp.plan.limits, left_out))
     section = build_section(dataclasses.replace(inp, plan=plan), DATA)
     text = " ".join(line.text for field in section.goal.leaves_out for line in field.lines)
@@ -110,7 +110,7 @@ def test_the_json_policy_names_a_spent_kind_as_the_page_does():
     from crafting_system.cli._report import build_report, policy_document
 
     inp = hand_input(START, (COLD_REQ, LIFE), bench_then_by_the_item)
-    left_out = Limit(NOT_NAMED, "Not offered", "kinds this target does not name", labels=("Divine Orb", "Fracturing Orb"), **claim("the kinds offered"))
+    left_out = Limit(NOT_NAMED, "Not offered", "kinds the run's methods setting does not name", labels=("Divine Orb", "Fracturing Orb"), **claim("the kinds offered"))
     policy = inp.plan.solution.policy
     values = {state: 0.0 for action in policy.values() for state, _ in action.outcomes} | dict.fromkeys(policy, 0.0)  # no solve: a hand-made policy
     solution = dataclasses.replace(inp.plan.solution, values=values)
@@ -133,7 +133,7 @@ def test_two_lost_leaves_that_read_alike_are_one_mod():
 
 
 def test_the_two_spellings_of_an_orb_are_one_currency():
-    left_out = Limit(NOT_NAMED, "Not offered", "kinds this target does not name", labels=("Scouring Orb", "Chaos Orb", "Regal Orb"), **claim("the kinds offered"))
+    left_out = Limit(NOT_NAMED, "Not offered", "kinds the run's methods setting does not name", labels=("Scouring Orb", "Chaos Orb", "Regal Orb"), **claim("the kinds offered"))
 
     (named,) = spent_kinds_named((left_out,), ("Orb of Scouring", "Chaos Orb"))
 

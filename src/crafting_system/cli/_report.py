@@ -366,7 +366,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
         raise PlanError(
             f"the cheapest plan takes Hinekora's Lock (one Lock costs {plan.foresight.price:,.2f} Chaos and saves "
             f"{plan.foresight.saving:,.2f} Chaos of the mean), and the report cannot show a Lock step yet. "
-            "To see the best plan without the Lock, name the kinds to use in the target's `actions:` without `hinekora-lock`"
+            "To see the best plan without the Lock, name the methods to use in the run's setting (`--methods`) without `hinekora-lock`"
         )
     order = policy_states(plan.start, plan.view_policy, plan.is_goal)
     ids = number_states(plan)

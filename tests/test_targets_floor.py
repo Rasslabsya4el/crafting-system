@@ -37,8 +37,8 @@ def requirements(*entries: str, tail: str = "") -> str:
     return "\n".join(lines) + "\n" + tail
 
 
-def floor(*entries: str, tail: str = ""):
-    return floor_of(DATA, parse(requirements(*entries, tail=tail)))
+def floor(*entries: str, tail: str = "", methods: tuple[str, ...] | None = None):
+    return floor_of(DATA, parse(requirements(*entries, tail=tail), methods=methods))
 
 
 # -- the floor comes from the tiers the requirements ask for -----------------------------------------------
@@ -101,7 +101,7 @@ def test_the_bench_gives_a_mod_at_its_own_level_unless_the_target_wants_it_rolle
 
     on_bench = floor(entry)
     rolled = floor(entry + "\n  not_crafted: true")
-    left_out = floor(entry, tail="actions: [alteration-orb]\n")
+    left_out = floor(entry, methods=('alteration-orb',))
 
     assert (on_bench.nodes[0].source, on_bench.nodes[0].level) == ("bench", 30)
     assert on_bench.level == 30
@@ -112,9 +112,9 @@ def test_an_essence_gives_its_mod_when_the_target_offers_it_and_no_other_does():
     entry = "family: ColdDamagePercentage\n  mod: ColdDamagePercentEssence1"  # only Whispering Essence of Hatred gives this mod to an amulet
 
     by_default = floor(entry)
-    by_kind = floor(entry, tail="actions: [essence]\n")
-    by_label = floor(entry, tail="actions: ['Whispering Essence of Hatred']\n")
-    left_out = floor(entry, tail="actions: [alteration-orb]\n")
+    by_kind = floor(entry, methods=('essence',))
+    by_label = floor(entry, methods=('Whispering Essence of Hatred',))
+    left_out = floor(entry, methods=('alteration-orb',))
 
     for found in (by_default, by_kind, by_label):
         assert (found.nodes[0].source, found.nodes[0].level) == ("forced mod", 1)
@@ -125,11 +125,11 @@ def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_by_
     hatred = "family: ColdDamagePercentage\n  mod: ColdDamagePercentEssence1"
     hysteria = "family: IncreasedLifeLeechRate\n  mod: IncreasedLifeLeechRateEssence1"  # the mod needs level 63 as a drawn mod
 
-    other_essence = floor(hatred, tail="actions: ['Essence of Hysteria']\n")
+    other_essence = floor(hatred, methods=('Essence of Hysteria',))
     unnamed = floor(hysteria)
-    plain_only = floor(hysteria, tail="actions: [essence]\n")
-    by_kind = floor(hysteria, tail="actions: [corrupted-essence]\n")
-    by_label = floor(hysteria, tail="actions: ['Essence of Hysteria']\n")
+    plain_only = floor(hysteria, methods=('essence',))
+    by_kind = floor(hysteria, methods=('corrupted-essence',))
+    by_label = floor(hysteria, methods=('Essence of Hysteria',))
 
     assert other_essence.nodes[0].level is None  # Hatred is not offered
     assert (unnamed.nodes[0].source, unnamed.nodes[0].level) == ("forced mod", 1)  # corrupted essences are on by default (#886, OR-41)
@@ -142,8 +142,8 @@ def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_by_
 def test_naming_one_bench_craft_offers_that_craft_only():
     entry = "family: IncreasedWeaponElementalDamagePercent\n  mod: EinharMasterWeaponElementalDamage1_"
 
-    by_label = floor(entry, tail="actions: ['Bench craft (15-23)% increased Elemental Damage with Attack Skills']\n")
-    other = floor(entry, tail="actions: ['Bench craft Prefixes Cannot Be Changed']\n")
+    by_label = floor(entry, methods=('Bench craft (15-23)% increased Elemental Damage with Attack Skills',))
+    other = floor(entry, methods=('Bench craft Prefixes Cannot Be Changed',))
 
     assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("bench", 30)
     assert other.nodes[0].level is None

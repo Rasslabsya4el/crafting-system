@@ -65,6 +65,7 @@ def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
             world.data, checked.target, world.prices,
             PlanSettings(
                 recipe_starts=methods["recipe_starts"], strands=methods["strands"], start_price=settings["start_price"],
+                methods=None if methods.get("allowed") is None else tuple(methods["allowed"]),
                 price_source=settings["price_source"], price_gap_percent=world.config.price_gap_percent, today=world.price_day, budget=world.budget,
                 watch=lambda standing: watch(standing_document(standing)),
             ),

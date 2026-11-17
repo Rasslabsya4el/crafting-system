@@ -24,7 +24,7 @@ Outcomes 2 to 4 share what the two-implicit outcome leaves, `(1 - s) / 3` each (
 equal outcomes and the share decision agree there).
 
 **The price** of a use is the price-file entry "Locus of Corruption (use)" (`locus.cost`), whose default is 0 Chaos Orbs
-(`prices.default_prices`, also standing in for a price file fetched before the entry existed). A target's `actions:` list that leaves out
+(`prices.default_prices`, also standing in for a price file fetched before the entry existed). A run whose methods setting (`PlanSettings.methods`, #405) leaves out
 `locus` leaves the Locus out of the plan (ADR-0024).
 
 **Refusals.** `NotApplicableError` for a corrupted item ("The Corruption Altar device cannot be used on an item that is already corrupted")

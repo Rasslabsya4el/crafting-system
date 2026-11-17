@@ -44,17 +44,6 @@ item_level: 84
 # Influences on the base. [] means none.
 influence: []
 
-# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action.
-actions:
-  - Fossils Corroded Fossil + Jagged Fossil + Metallic Fossil + Shuddering Fossil
-  - annulment-orb
-  - Bench craft Prefixes Cannot Be Changed
-  - "Bench craft Trigger a Socketed Spell when you Use a Skill, with a 8 second Cooldown / Spells Triggered this way have 150% more Cost"
-  - remove-crafted-mods
-  - veiled-chaos-orb
-  - unveil
-  - pick
-
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   - family: IncreaseSocketedGemLevel

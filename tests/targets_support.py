@@ -1,5 +1,6 @@
 """Shared helpers for the `targets` tests: the fixture game data, a small target text, items to check."""
 
+import dataclasses
 import textwrap
 from pathlib import Path
 
@@ -31,13 +32,20 @@ item_level: 84
 """
 
 
-def parse(text: str, *, header: bool = True, start: str | None = "given", **kwargs) -> Target:
+def parse(text: str, *, header: bool = True, start: str | None = "given", methods: tuple[str, ...] | None = None, **kwargs) -> Target:
     """Parse `text` against the fixture data. Unless `header` is false, `base` and `item_level` are lines 1 and 2, so the text starts on line 3.
 
     The text is closed with `start: given` unless it has a `start:` line or `start` is None (the file must say how its start item is had, OR-6).
+    `methods` are the run's methods setting the target is planned with (`with_methods`, #405): a target file names none.
     """
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(with_start(HEADER + body if header else body, start), DATA, source="t.yaml", **kwargs)
+    return with_methods(parse_target(with_start(HEADER + body if header else body, start), DATA, source="t.yaml", **kwargs), methods)
+
+
+def with_methods(target: Target, methods: tuple[str, ...] | None) -> Target:
+    """`target` planned with the run's methods setting `methods` (None: as it is), as the planner's entry plans it (`PlanSettings.methods`,
+    #405): the planner's inner parts read the run's methods from `Target.actions`."""
+    return target if methods is None else dataclasses.replace(target, actions=tuple(methods))
 
 
 def parse_error(text: str, *, header: bool = True, start: str | None = "given", **kwargs) -> str:

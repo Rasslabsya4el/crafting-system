@@ -307,48 +307,17 @@ def test_two_corrupted_implicits_of_different_groups_parse_by_default_the_locus_
     assert [wish.mod_ids for wish in target.implicits] == [{"ResistCorrupted"}, COLD_TIERS]
 
 
-def test_error_more_corrupted_implicits_than_actions_give_names_the_kinds_and_the_entry_too_many():
-    message = parse_error(TWO + "actions: [vaal, chaos-orb]\n")
-
-    assert_error(
-        message, 8, "implicits[1]", "asks for 2 corrupted implicits", "the corrupting kinds in `actions:` (`vaal`) give at most 1",
-        COLD_DAMAGE, "add `locus` to `actions:`",
-    )  # fmt: skip
-
-
-def test_error_a_target_that_names_no_corrupting_kind_gets_no_corrupted_implicit():
-    message = parse_error(f"implicits:\n  - stat: '{ALL_RES}'\n    corrupted: true\nactions: [chaos-orb]\n")
-
-    assert_error(message, 6, "implicits[0]", "asks for 1 corrupted implicit,", "`actions:` names no corrupting kind", "`vaal`", "`locus`")
-
-
-def test_two_corrupted_implicits_parse_when_actions_name_the_locus():
-    assert len(parse(TWO + "actions: [locus]\n").implicits) == 2
-
-
 def test_error_three_corrupted_implicits_are_more_than_any_action_gives():
     message = parse_error(TWO + f"  - stat: '{FIRE_DAMAGE}'\n    corrupted: true\n")
 
     assert_error(message, 10, "implicits[2]", "asks for 3 corrupted implicits", "the Vaal Orb gives one", "the Locus of Corruption two")
 
 
-def test_the_corrupting_fossil_set_gives_one():
-    assert len(parse(f"implicits:\n  - stat: '{ALL_RES}'\n    corrupted: true\nactions: [fossil-set]\n").implicits) == 1
-    message = parse_error(TWO + "actions: [fossil-set, vaal]\n")
-    assert_error(message, 8, "implicits[1]", "(`fossil-set`, `vaal`) give at most 1")
-
-
-@pytest.mark.parametrize("suffix", ["start: bought\nactions: [vaal]\n", "actions: [vaal]\nstart_item:\n  corrupted: true\n"])
+@pytest.mark.parametrize("suffix", ["start: bought\n", "start_item:\n  corrupted: true\n"])
 def test_it_is_not_an_error_when_the_target_buys_its_item(suffix):
-    target = parse(TWO + suffix)
+    target = parse(TWO + f"  - stat: '{FIRE_DAMAGE}'\n    corrupted: true\n" + suffix)  # three: more than any action gives
 
-    assert len(target.implicits) == 2
-
-
-def test_a_target_that_buys_its_item_may_leave_out_every_corrupting_kind():
-    target = parse(f"implicits:\n  - stat: '{ALL_RES}'\n    corrupted: true\nstart: bought\nactions: [chaos-orb]\n")
-
-    assert target.bought and target.actions == ("chaos-orb",)
+    assert len(target.implicits) == 3
 
 
 # -- two of one mod group --------------------------------------------------------------------------------
@@ -378,7 +347,7 @@ def test_two_family_entries_of_one_group_are_the_same_error():
 def test_two_entries_one_implicit_could_meet_are_not_two_implicits():
     both = f"implicits:\n  - stat: '{COLD_DAMAGE}'\n    corrupted: true\n  - family: AddedCold\n    corrupted: true\n    mod: ColdCorrupted2\n"
 
-    assert len(parse(both + "actions: [vaal]\n").implicits) == 2
+    assert len(parse(both + f"  - stat: '{FIRE_DAMAGE}'\n    corrupted: true\n").implicits) == 3  # two corrupted implicits, which the Locus gives
 
 
 def test_it_is_not_an_error_when_the_target_buys_its_item_and_two_groups_clash():
@@ -423,14 +392,6 @@ def test_one_eldritch_implicit_and_one_corrupted_one_fit_on_body_armour_where_tw
 
     message = parse_error(BODY_HEAD + "implicits:\n" + AVOID + SHOCK + RES_BODY, header=False)
     assert_error(message, 8, "implicits[2]", "asks for 3 implicits in all", "a Plate Vest can hold 2 implicits", "at most 1 of them stay")
-
-
-def test_the_locus_replaces_two_so_one_eldritch_implicit_and_one_corrupted_one_need_the_vaal_orb():
-    ok = parse(BODY_HEAD + "implicits:\n" + AVOID + RES_BODY + "actions: [vaal, locus]\n", header=False)
-    assert len(ok.implicits) == 2
-
-    message = parse_error(BODY_HEAD + "implicits:\n" + AVOID + RES_BODY + "actions: [locus]\n", header=False)
-    assert_error(message, 7, "implicits[1]", "asks for 2 implicits in all", "after `locus` (which adds 2) at most 0 of them stay")
 
 
 def test_a_target_file_without_the_keys_parses_as_before():

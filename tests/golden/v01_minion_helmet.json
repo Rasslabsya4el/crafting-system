@@ -166,7 +166,7 @@
     {
       "kind": "kinds-not-named",
       "what": "Not offered",
-      "why": "kinds this target does not name",
+      "why": "kinds the run's methods setting does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
       "count": 32,
       "labels": [

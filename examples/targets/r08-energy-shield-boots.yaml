@@ -51,10 +51,6 @@ start_item:
 # (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
 start: bought
 
-# The kinds of actions the planner may use: the guide's fossils (with their resonators) and the bench. The kinds not named are not offered, and the report says so: the
-# plan is the cheapest among the named kinds. `fossil-set` is offered only when named.
-actions: [fossil-set, bench-craft]
-
 # Everything below must be present on the finished item.
 requirements:
   # High Energy Shield, rolled: "#% increased Energy Shield", tier 1 or tier 2 (`min_tier: 2` is the worst tier that counts; OR-45, #901).

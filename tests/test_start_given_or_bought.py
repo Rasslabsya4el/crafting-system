@@ -223,19 +223,19 @@ def test_the_limit_of_a_given_start_item_is_in_the_text_and_the_json(given_plan)
 def test_the_corruption_check_refuses_a_given_start_item_that_cannot_reach_the_goal_and_lets_a_bought_one_through():
     from targets_corrupted_support import parse as parse_ring
     from targets_corrupted_support import parse_error as ring_error
-    from test_targets_corrupted import TWO
+    from test_targets_corrupted import FIRE_DAMAGE, TWO
 
-    asking = TWO + "actions: [vaal]" + chr(10)  # two corrupted implicits, and the only corrupting action gives one
+    asking = TWO + f"  - stat: '{FIRE_DAMAGE}'" + chr(10) + "    corrupted: true" + chr(10)  # three corrupted implicits: no action gives more than two
 
-    assert "asks for 2 corrupted implicits" in ring_error(asking, start="given")
-    assert len(parse_ring(asking, start="bought").implicits) == 2  # a bought item may come corrupted already: nothing is checked
+    assert "asks for 3 corrupted implicits" in ring_error(asking, start="given")
+    assert len(parse_ring(asking, start="bought").implicits) == 3  # a bought item may come corrupted already: nothing is checked
 
 
 def test_the_corruption_check_reads_the_key_and_not_a_price():
     from targets_corrupted_support import parse as parse_ring
-    from test_targets_corrupted import TWO
+    from test_targets_corrupted import FIRE_DAMAGE, TWO
 
-    assert parse_ring(TWO + "actions: [vaal]" + chr(10) + "start: bought" + chr(10)).bought  # the key alone decides: no price file exists at parse time
+    assert parse_ring(TWO + f"  - stat: '{FIRE_DAMAGE}'" + chr(10) + "    corrupted: true" + chr(10) + "start: bought" + chr(10)).bought  # the key alone decides: no price file exists at parse time
 
 
 # -- the benchmark ----------------------------------------------------------------------------------------------------------------------------

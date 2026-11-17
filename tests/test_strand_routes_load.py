@@ -26,7 +26,8 @@ from pathlib import Path
 import pytest
 import yaml
 from abstraction_support import real_game_data
-from test_strand_routes import STRAND_ACTIONS, without_strand_words
+from former_keys import former_methods
+from test_strand_routes import STRAND_ACTIONS, STRAND_KINDS, without_strand_words
 
 from crafting_system.cli import make_plan
 
@@ -99,7 +100,9 @@ def test_the_route_without_its_strand_rules_is_read_against_the_offers_of_its_ta
         data,
         source=stem,
     )
-    plan = make_plan(data, target, flat_price_file(), start_price=10.0, solver="object")  # `no_solve` stands in for the object solver's solves
+    # #405: the methods its former key named, as the suite plans the file, less the strand kinds (as `without_strand_words` drops them)
+    methods = tuple(name for name in former_methods(FILES / "targets" / f"{stem}.yaml") if name not in STRAND_KINDS)
+    plan = make_plan(data, target, flat_price_file(), start_price=10.0, solver="object", methods=methods)  # `no_solve` stands in for the object solver's solves
     assert plan.offers
     route_text = without_strand_words_in_rules((FILES / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
     assert parse_route(route_text, plan, data, source=stem).rules

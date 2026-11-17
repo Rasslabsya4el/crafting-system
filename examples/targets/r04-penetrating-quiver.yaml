@@ -35,21 +35,6 @@ item_level: 81
 
 influence: []
 
-# The actions the planner may use: the guide's. The kinds are Orb of Annulment, Fracturing Orb, Exalted Orb and
-# the bench; of the essences only the two the guide names (an essence is named by its label, because a quiver
-# takes about fifty and the plan with all of them is far beyond what a graph can hold); of the bench the crafts
-# the target counts, and the metamod "Cannot roll Attack Modifiers" of step 7 (it counts toward no requirement,
-# so it is named). The plan is the cheapest among these; the report lists what was left out.
-actions:
-  - Essence of Insanity
-  - Deafening Essence of Rage
-  - annulment-orb
-  - fracturing-orb
-  - exalted-orb
-  - bench-craft
-  - Bench craft Cannot roll Attack Modifiers
-  - remove-crafted-mods
-
 # Everything below must be present on the finished quiver.
 requirements:
   # The Pierce of the Essence of Insanity, fractured. The fractured mod counts, and no other mod of the

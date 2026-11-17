@@ -169,7 +169,7 @@ fixtures(
         "R13/R14: Cheapest policy of the planner, no word of the kinds left out": page(route(goal(leaves=()), *TWO_ACTIONS)),
         "a cut that names what is left out and not what still holds": page(route(goal(leaves=(("Corrupting methods", "Not offered: Vaal Orb (the target takes no corrupted item)."),)), *TWO_ACTIONS)),
     },
-    example={"a target with an actions: key prints the plan is the cheapest among the named ones": page(route(goal(leaves=(("Methods the target does not name", "Not offered, 23 in all: Chaos Orb and 22 more (kinds this target does not name). The plan is the cheapest among the kinds offered."),)), *TWO_ACTIONS))},
+    example={"a target with an actions: key prints the plan is the cheapest among the named ones": page(route(goal(leaves=(("Methods this run's setting leaves out", "Not offered, 23 in all: Chaos Orb and 22 more (kinds the run's methods setting does not name). The plan is the cheapest among the kinds offered."),)), *TWO_ACTIONS))},
 )
 
 fixtures(

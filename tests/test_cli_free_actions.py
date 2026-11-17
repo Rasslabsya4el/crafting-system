@@ -146,7 +146,6 @@ start_item:
   mods:
 {fractured}
     - mod: VeiledSuffix
-actions: [veiled-chaos-orb, unveil, pick]
 start: given
 """
 
@@ -160,7 +159,7 @@ def veil_target(tmp_path):
         lines.append(f"    - mod: {mod_id}\n      values: {list(entry.values)}\n      fractured: true")
     path = tmp_path / "veil.yaml"
     path.write_text(TARGET.format(fractured="\n".join(lines)), encoding="utf-8")
-    return load_target(path, DATA)
+    return dataclasses.replace(load_target(path, DATA), actions=("veiled-chaos-orb", "unveil", "pick"))  # the run's methods setting (#405)
 
 
 def test_a_target_that_names_the_veiled_kinds_is_planned_end_to_end_and_the_report_reads(tmp_path):

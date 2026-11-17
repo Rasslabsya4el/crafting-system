@@ -82,15 +82,20 @@ start_item:
     - mod: ColdResist1
       values: [6]
 start: bought
-actions: [exalted-orb, bench-craft]
 """
+METHODS = ("exalted-orb", "bench-craft")  # the run's methods setting the belt is planned with (#405: a target names none)
+
+
+def belt(path, data, methods=METHODS):
+    """The belt at `path`, planned with `methods` (`Target.actions`, as the planner's entry sets it from `PlanSettings.methods`)."""
+    return dataclasses.replace(load_target(path, data), actions=methods)
 
 
 @pytest.fixture
 def target(tmp_path, data):
     path = tmp_path / "belt.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    return load_target(path, data)
+    return belt(path, data)
 
 
 @pytest.fixture(autouse=True)
@@ -508,7 +513,7 @@ def test_on_an_item_that_takes_a_second_craft_two_fillers_are_told_apart_and_bot
     held = TARGET.replace("    - mod: ColdResist1\n      values: [6]\n", "    - mod: StrIntMasterItemGenerationCanHaveMultipleCraftedMods\n      values: [1]\n      crafted: true\n")
     path = tmp_path / "multimod.yaml"
     path.write_text(held, encoding="utf-8")
-    multimod = load_target(path, data)
+    multimod = belt(path, data)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     plan = plan_target(data, multimod, _prices(), PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
     assert {entry.label for entry in plan.offers if _fills(entry.label)} == {"Bench craft +1 to Filling [TestMasterFiller]", "Bench craft +1 to Filling [TestMasterFillerTwo]"}
@@ -582,8 +587,8 @@ def test_through_the_entry_the_lock_gains_of_a_plan_of_rounds_build_only_the_pla
     # peek and the second solve still read every offer, and N's line says the largest gain is not proved. The belt names the Lock here; the
     # price file has no Lock price, so the Lock is dropped and N is still found (ADR-0056).
     path = tmp_path / "belt-lock.yaml"
-    path.write_text(TARGET.replace("actions: [exalted-orb, bench-craft]", "actions: [exalted-orb, bench-craft, hinekora-lock]"), encoding="utf-8")
-    target = load_target(path, data)
+    path.write_text(TARGET, encoding="utf-8")
+    target = belt(path, data, (*METHODS, "hinekora-lock"))
     seen = []
     real = planner_plan.plan_foresight
 
@@ -646,7 +651,7 @@ def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_
     untried = next(limit for limit in plan.limits if limit.what == "Not finished")
     assert untried.labels == ("bench-craft",) and "stopped" in untried.names[0]
     assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
-    assert plan.foresight.status == "switched off by the target"  # the target names no Lock
+    assert plan.foresight.status == "switched off by the run's methods setting"  # the run names no Lock
     assert plan.risk is not None
 
 
@@ -1039,7 +1044,7 @@ def test_the_judged_route_limit_says_nothing_is_proved_against_the_route_when_th
 def test_a_given_start_has_no_restart_so_no_round_cuts_and_with_no_plan_in_any_round_the_refusal_stands(tmp_path, data, monkeypatch):
     path = tmp_path / "given.yaml"
     path.write_text(TARGET.replace("start: bought", "start: given"), encoding="utf-8")
-    given = load_target(path, data)
+    given = belt(path, data)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     cut = []
     real = planner_plan.restart_dominated
