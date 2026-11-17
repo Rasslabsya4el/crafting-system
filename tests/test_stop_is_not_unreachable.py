@@ -90,7 +90,7 @@ def test_through_the_entry_one_search_a_net_stops_says_no_plan_found_yet(tmp_pat
         said = str(raised.value)
         assert "reaches the goal" not in said
         assert said.startswith("stopped, no plan found yet: the search found no plan before it stopped, so this does not show that no plan exists (the search stopped (")
-        assert "no plan costs less than 145" in said and said.endswith("or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped")
+        assert "no plan costs less than 145" in said and "run again with a larger time, states or memory limit" in said and said.endswith("or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped")
 
 
 def test_through_the_entry_one_search_that_finishes_with_no_plan_is_the_proof(tmp_path, data, monkeypatch):
@@ -114,6 +114,7 @@ def test_the_words_name_the_net_a_run_on_the_clock_has_and_no_stop_leaves_the_pr
     assert "round 2 (alteration; 3 actions offered, 12 s): stopped (the search stopped at the time limit of 300 s (301 s spent)), with no plan" in said
     assert _rounds.no_plan_words([record(_rounds.NONE), record(_rounds.NONE)]) is None
     assert _rounds.no_plan_words([record(_rounds.NONE), record(_rounds.REFUSED, "a refusal")]) is None
+    assert _rounds.no_plan_words([record(_rounds.STOPPED, "a memory net"), record(_rounds.NONE)]) is None  # the last round held every offer
     # one search: the net's words may sit on the search's own refusal under the note of a bound cut short (`envelope_result`)
     inner = NoPolicy("the search stopped", stopped="the time limit of 30 seconds was reached", lower=120.0)
     outer = NoPolicy("the bound was cut short")
@@ -121,3 +122,10 @@ def test_the_words_name_the_net_a_run_on_the_clock_has_and_no_stop_leaves_the_pr
     for solver in ("auto", "envelope"):
         assert envelope_refusal(solver, outer).startswith("stopped, no plan found yet: the search found no plan before it stopped")
     assert envelope_refusal("auto", NoPolicy("no policy of the offers reaches the goal from the start")).startswith(UNREACHABLE)
+    # a stopped search whose plan could not be certified found a plan: neither "no route" nor "none found"
+    from crafting_system.solver import ConvergenceError
+
+    uncertified = NoPolicy("the search stopped and the plan it had found cannot be solved to a certified cost", stopped="the time limit", lower=1.0)
+    uncertified.__cause__ = ConvergenceError("not certified", 1e-3)
+    assert envelope_refusal("auto", uncertified).startswith("a plan was found, but its average cost could not be worked out")
+    assert envelope_refusal("envelope", uncertified).startswith("the envelope search cannot answer this target")

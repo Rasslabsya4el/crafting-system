@@ -1470,12 +1470,15 @@ def envelope_refusal(solver: str, error: Exception) -> str:
         while isinstance(cause, NoPolicy):  # (the note of a bound cut short is raised from the search's refusal)
             chain.append(cause)
             cause = cause.__cause__
-        if isinstance(cause, ConvergenceError) and solver != "envelope":  # a plan exists, but its cost could not be certified (#867): not "no route"
+        if isinstance(cause, ConvergenceError):  # a plan exists, but its cost could not be certified (#867): not "no route", nor "none found"
+            if solver == "envelope":
+                return f"the envelope search cannot answer this target: {error}"
             return f"a plan was found, but its average cost could not be worked out to a certified figure, so it is not shown ({error})"
         if any(each.stopped is not None for each in chain):  # a net stopped the search before a plan closed: it found none yet (#1168, OR-33)
             return (
                 f"stopped, {NO_PLAN}: the search found no plan before it stopped, so this does not show that no plan exists ({error}). To get a plan, "
-                "run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+                "run again with a larger time, states or memory limit, or with fewer methods: a search over fewer methods is smaller and may finish where "
+                "this one stopped"
             )
     if solver == "envelope":
         return f"the envelope search cannot answer this target: {error}"

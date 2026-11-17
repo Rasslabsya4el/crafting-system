@@ -526,9 +526,10 @@ def no_plan_words(records: Sequence[RoundRecord]) -> str | None:
     """What a run whose rounds made no plan says when a net stopped a round or left one untried (#1168, OR-13, OR-33, OR-40): it found no plan
     yet, which does not show that none exists; what the rounds that finished did show (no plan of their methods alone reaches the target);
     every round that did not finish, with the net that stopped it; and what the user can do. None when no round was stopped or left untried:
-    every round then showed no plan (the last held every offer: a proof over every method offered) or was refused (the refusal says itself)."""
-    if not any(record.status in (STOPPED, UNTRIED) for record in records):
-        return None
+    every round then showed no plan (the last held every offer: a proof over every method offered) or was refused (the refusal says itself),
+    and none either when the last round showed no plan, which is the same proof."""
+    if not any(record.status in (STOPPED, UNTRIED) for record in records) or (records and records[-1].status == NONE):
+        return None  # (a last round that showed no plan held every offer: the proof, whatever stopped a round before it)
     proved = [group_name(record) for record in records if record.status == NONE]
     shown = (
         f"The rounds that finished showed only that no plan made only of {'; '.join(proved)} reaches the target"
