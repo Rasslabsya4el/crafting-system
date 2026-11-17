@@ -7,6 +7,12 @@ within CI's time and memory (as with the classic offers, `cli_support.CLASSIC_KI
 methods its key named: `install` wraps the loader of target files (`crafting_system.targets.load_target`) for the whole session, and a
 file listed here comes back planned with its former methods (`Target.actions`, as the planner's entry sets it from the setting). A test of
 the default, every-method plan of one of these routes is the heavy benchmark's (#1109), or reads the file with `load_target_as_is`.
+
+An entry leaves the list when the tests that plan its file pass with every method. Checked in #405's second PR: the two research targets
+(research/218, research/312) left, since no test plans them (they are only parsed). The rest stay: the heavy benchmark's record of the
+site's plans (`tests/fixtures/heavy_benchmark/records.json`, #1156) gives R04, R13, R14 and R24 no plan within the 10-minute net and R20 a
+plan of 35 million Chaos, and the per-use cases of R08's and R09's top-tier boots (`test_coe_recorded_b1_core`) lose the sure bench step
+they pin when the boots are read with every method.
 """
 
 import dataclasses
@@ -31,8 +37,6 @@ FORMER_KEYS: dict[str, tuple[str, ...]] = {
     'examples/targets/r20-rf-helmet.yaml': ('Essence of Horror', 'annulment-orb', 'Bench craft Suffixes Cannot Be Changed', 'Harvest Reforge Fire', 'wild-bristle-matron', 'Harvest Reforge Influence'),
     'examples/targets/r24-avoid-shock-boots.yaml': ('Deafening Essence of Torment', 'annulment-orb', 'Harvest Add Remove Fire', 'Harvest Add Remove Cold', 'Harvest Add Remove Lightning', 'Bench craft Suffixes Cannot Be Changed', 'remove-crafted-mods', 'veiled-chaos-orb', 'unveil', 'pick'),
     'examples/targets/v01-minion-helmet.yaml': ('transmutation-orb', 'alteration-orb', 'augmentation-orb', 'regal-orb'),
-    'research/218/r14-attack-speed.yaml': ('transmutation-orb', 'alteration-orb', 'augmentation-orb', 'regal-orb', 'annulment-orb'),
-    'research/312/r08-alchemy-target.yaml': ('alchemy-orb', 'fossil-set', 'bench-craft'),
     'tests/real_targets/r08-energy-shield-boots-top-tier.yaml': ('fossil-set', 'bench-craft'),
     'tests/real_targets/r09-life-boots-top-tier.yaml': ('fossil-set', 'bench-craft'),
 }
