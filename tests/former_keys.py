@@ -9,10 +9,12 @@ file listed here comes back planned with its former methods (`Target.actions`, a
 the default, every-method plan of one of these routes is the heavy benchmark's (#1109), or reads the file with `load_target_as_is`.
 
 An entry leaves the list when the tests that plan its file pass with every method. Checked in #405's second PR: the two research targets
-(research/218, research/312) left, since no test plans them (they are only parsed). The rest stay: the heavy benchmark's record of the
-site's plans (`tests/fixtures/heavy_benchmark/records.json`, #1156) gives R04, R13, R14 and R24 no plan within the 10-minute net and R20 a
-plan of 35 million Chaos, and the per-use cases of R08's and R09's top-tier boots (`test_coe_recorded_b1_core`) lose the sure bench step
-they pin when the boots are read with every method.
+(research/218, research/312) left, since no test plans them (they are only parsed). The rest stay, because the tests that plan them are
+too slow or too big with every method: the heavy benchmark's record of the site's plans (`tests/fixtures/heavy_benchmark/records.json`,
+#1156) gives R04, R13, R14 and R24 no plan within the 10-minute net and R20 a plan of 35 million Chaos; the tests that plan J01, V01 and R07
+did not finish in 2 minutes with every method; R06 (#516), R17 (#1182), the plain R08 and R09 (#1167) and the strand targets were not
+re-checked; and the per-use cases of R08's and R09's top-tier boots (`test_coe_recorded_b1_core`) lose the sure bench step they pin.
+Retiring the list is #1189.
 """
 
 import dataclasses
