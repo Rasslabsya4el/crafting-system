@@ -41,7 +41,7 @@ def one(route: str, states: int) -> None:
     bench = next(b for b in _benchmark.BENCHMARKS if b.id == route)
     data = load_game_data()
     target = load_target(ROOT / bench.target, data)
-    prices = load_price_file(VENDOR if route == "V01" else PRICES)
+    prices = load_price_file(VENDOR if route == "V01" else PRICES.with_name("references-allflame-2026-07-31.json") if route == "R24" else PRICES)  # R24: its own file, with its start boots (#901)
     result: dict = {"route": route, "N": states}
     try:
         settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=bench.route is not None, budget=Budget.in_states(states))
