@@ -1011,7 +1011,8 @@ def build_pattern_model(
     return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop, approximate=approximate).extend(offers)
 
 
-LATE = 1.0  # a nearly done build may go past its net by at most this many times the net (`Growth`, #1135): one more share, no more
+LATE = 1.0  # a nearly done build may go past its net by at most this many times the net (`Growth`, #1135): one more share, no more (a
+# stop-and-say-so net under OR-12, hand-set; `_plan.search_net` lowers it so the rounds after keep half their time, and the last round has none)
 
 
 @dataclass
@@ -1028,18 +1029,21 @@ class Growth:
     the build is; what does is how many offers it holds. A build that has used `used` of its net `given` (seconds, or pieces of work) and
     holds `inside` of `total` offers is expected to need `used * total / inside` in all, at most: the offers still out cost on average what
     those in cost, and not every one of them joins (R11's Exalted round ends with 80 of 84). It may go on past its net while that figure is
-    within `1 + LATE` nets, and never past `1 + LATE` nets: the build that is nearly done finishes, a build far from done (R11's harvest
-    swap round, 19 of 89 offers at its share) stops at its share as before. The time it takes past its share comes off the rounds after it,
-    as any round's unused time goes to them; a build that is not nearly done takes nothing from them."""
+    within `1 + late` nets, and never past `1 + late` nets (`late` at most `LATE`): the build that is nearly done finishes, a build far
+    from done (R11's harvest swap round, 19 of 89 offers at its share) stops at its share as before. On the clock the time it takes past
+    its share comes off the rounds after it, so `late` is at most half of what they have (`_plan.search_net`: none for the last round, whose
+    share is all the time left, so the run never passes its net); a build that is not nearly done takes nothing from them. Counted in
+    states, pieces are not states: a late build takes no states from the rounds after it. The estimate counts every offer given as one that
+    may join, so it is the most the build can need only when the offers still out cost what those in cost: R11's is the evidence."""
 
     inside: int
     total: int
 
-    def nearly_done(self, used: float, given: float) -> bool:
-        """Whether a build that has used `used` of its net `given` goes on past it (see the class text)."""
-        if self.inside <= 0 or given <= 0 or used >= (1.0 + LATE) * given:
+    def nearly_done(self, used: float, given: float, late: float = LATE) -> bool:
+        """Whether a build that has used `used` of its net `given` goes on past it, to at most `1 + late` times it (see the class text)."""
+        if late <= 0 or self.inside <= 0 or given <= 0 or used >= (1.0 + late) * given:
             return False
-        return used * self.total / self.inside <= (1.0 + LATE) * given
+        return used * self.total / self.inside <= (1.0 + late) * given
 
 
 class Tally:
@@ -1047,20 +1051,21 @@ class Tally:
 
     A piece is a (member, offer) pair the builder looks at (`PatternBuilder`) or one offer's floor raised (`_offer_floor.OfferFloors`): what
     the build spends its time and memory on, the same on every machine. Called, it is the build's net: the reason once `done` reaches `cap`
-    (`words(done, cap)`), else what `then` (another net, or None) says. With `finish` (a round that began with a plan in hand, #1135) a build
-    that is nearly done (`growth`, `Growth.nearly_done`) goes on past `cap`, counted in its pieces as the clock's net counts its seconds."""
+    (`words(done, cap)`), else what `then` (another net, or None) says. With `finish` above 0 (a round that began with a plan in hand, #1135)
+    a build that is nearly done (`growth`, `Growth.nearly_done`) goes on past `cap`, to at most `1 + finish` times it, counted in its pieces as
+    the clock's net counts its seconds."""
 
-    def __init__(self, cap: int, words: Callable[[int, int], str], then: Callable[[], str | None] | None = None, finish: bool = False) -> None:
+    def __init__(self, cap: int, words: Callable[[int, int], str], then: Callable[[], str | None] | None = None, finish: float = 0.0) -> None:
         self.cap, self.words, self.then, self.done, self.finish = cap, words, then, 0, finish
         self.growth: Growth | None = None  # set by the build once its first model is solved (`_pattern_bound`)
         self.late = False  # it went past `cap`, nearly done
 
     def __call__(self) -> str | None:
         if self.done >= self.cap:
-            if self.finish and self.growth is not None and self.growth.nearly_done(self.done, self.cap):
+            if self.growth is not None and self.growth.nearly_done(self.done, self.cap, self.finish):
                 self.late = True
             else:
-                return self.words(self.done, self.cap)
+                return self.words(self.done, self.cap) + (", the build having gone on past it, nearly done" if self.late else "")
         return None if self.then is None else self.then()
 
 

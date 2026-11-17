@@ -143,7 +143,7 @@ def pattern_lower_bound(
     approximate: bool | None = None,
     refuse_above: float | None = None,
     pieces: int | None = None,
-    finish: bool = False,
+    finish: float = 0.0,
 ) -> PatternBound:
     """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`.
 
@@ -159,9 +159,9 @@ def pattern_lower_bound(
     `pieces` (a run counted in states, #1101) is the build's net in pieces of work (`abstraction._pattern.Tally`: a (member, offer) pair looked at,
     or an offer's floor raised, the binding step's included): it is asked at every offer and before every raise and solve, never on the clock, so
     where it stops is the same on every machine; `stop` is asked after it. The bound says how many it did (`PatternBound.pieces`).
-    `finish` (a round that began with a plan in hand, #1135): once the first model is solved, the build tells its nets how far it is
-    (`Growth`: the offers its model holds of those given), and a build that is nearly done goes on past the pieces net; the net on the
-    clock (`stop`, when it has a `growth`: `_envelope_plan.BuildStop`) decides the same of its seconds. `PatternBound.late` says it did.
+    `finish` (above 0: a round that began with a plan in hand, `Net.late`, #1135): once the first model is solved, the build tells its nets
+    how far it is (`Growth`: the offers its model holds of those given), and a build that is nearly done goes on past the pieces net, to at
+    most `1 + finish` times it; the net on the clock (`stop`, when it has a `growth`: `_envelope_plan.BuildStop`) decides the same of its seconds. `PatternBound.late` says it did.
     """
     say = progress or (lambda _text: None)
     all_offers = pattern_offers(priced)

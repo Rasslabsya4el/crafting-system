@@ -864,3 +864,30 @@ def test_a_search_given_its_first_plan_past_a_used_net_makes_it_and_stops_there(
     assert info.first_upper is not None and planned.solution.values[start] >= full.solution.values[start] - 1e-6
     with pytest.raises(NoPolicy, match="the time limit of 0 seconds"):
         envelope_result(ab, start, offers, net=Net(seconds=0.0), bound=bound)
+
+
+def test_a_bound_whose_build_went_past_the_round_s_share_leaves_its_search_the_rest_of_its_room_for_the_first_plan(world, monkeypatch):
+    """#1135, on a hand clock (no real clock is read): a round's search with a plan in hand, a share of 10 s and room for one more past it
+    (`Net.late` 1), whose bound (nearly done at 10 s) completed at 15 s. Its search has 0 s of its share left, and the first plan has the
+    rest of the room, 2 * 10 - 15 = 5 s (`Net.first`); the search stops after it, saying the build had gone past the share. With a bound
+    that did not go past, the search has no room past its share and makes no plan."""
+    ab, start, offers, full, exact, bound = world
+    readings = iter([0.0])  # the call's start; every later reading is 15 s
+    monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: next(readings, 15.0))
+    nets = []
+    real = _envelope_plan.Search
+
+    def watched(problem, *, net, **kwargs):
+        nets.append(net)
+        return real(problem, net=net, **kwargs)
+
+    monkeypatch.setattr(_envelope_plan, "Search", watched)
+    planned = envelope_result(ab, start, offers, net=Net(seconds=10.0, held=True, late=1.0), bound=dataclasses.replace(bound, late=True))
+    assert (nets[0].seconds, nets[0].first) == (0.0, 5.0)
+    info = planned.info["envelope"]
+    assert info.stopped.endswith("had gone on past it to finish") and math.isfinite(planned.solution.values[start])
+    readings = iter([0.0])
+    monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: next(readings, 15.0))
+    with pytest.raises(NoPolicy, match="the time limit of 0 seconds"):
+        envelope_result(ab, start, offers, net=Net(seconds=10.0, held=True, late=1.0), bound=bound)
+    assert nets[-1].first is None

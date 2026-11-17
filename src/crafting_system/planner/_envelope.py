@@ -231,6 +231,9 @@ class Net:
     # the seconds the first plan's chain may take when they are more than `seconds`: a round whose bound's build, nearly done, went past the
     # round's share (`_envelope_plan.BuildStop`, #1135) still makes its first plan, in what is left of twice the share; None: `seconds` holds
     first: float | None = None
+    # how many times its seconds (or its pieces) a nearly done bound's build of a search with a plan in hand may go past them
+    # (`abstraction._pattern.Growth`, #1135); set by `_plan.search_net`, 0 for none
+    late: float = 0.0
 
 
 @dataclass
@@ -866,6 +869,8 @@ class Search[S]:
         net = self.net
         limit = net.seconds if seconds is None else seconds
         if limit is not None and time.perf_counter() - began >= limit:
+            if seconds is None and net.first is not None:  # the search after a bound's build that went past the round's share (#1135)
+                return f"the time limit of {limit:g} seconds was reached: the bound's build, nearly done at the round's share, had gone on past it to finish"
             return f"the time limit of {limit:g} seconds was reached"
         if states and net.states is not None and len(self.states) >= net.states:
             return f"{len(self.states):,} states were known, the limit is {net.states:,}"

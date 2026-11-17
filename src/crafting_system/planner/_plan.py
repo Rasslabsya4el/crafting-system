@@ -23,6 +23,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
+from crafting_system.abstraction import _pattern
 from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
@@ -514,7 +515,10 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     (OR-33) and its bound's build keeps no room for the search to make one: on the clock it may take the search's whole net
     (`_envelope_plan.build_stop`), and counted in states it is given the pieces of that whole net, `1 + SEARCH_PER_BUILD` times the quarter
     `build_per_state` stands for. Without it a round's short share cut its build at a quarter: R11's Exalted round had about 20 s, its build
-    needs about 6 s, and the round stopped on a weak lower figure with no plan, where the complete bound's first plan costs 188.03 c (#1086)."""
+    needs about 6 s, and the round stopped on a weak lower figure with no plan, where the complete bound's first plan costs 188.03 c (#1086).
+    Such a build that its share ends nearly done may go past it by `Net.late` times it (#1135, `abstraction._pattern.Growth`): at most
+    `LATE`, and at most half of the time the `searches - 1` rounds after it have, so the last round (all the time left) goes past nothing
+    and the run keeps its net (OR-40)."""
     if clock is None:
         return None
     given: Budget = clock.budget
@@ -528,7 +532,7 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
         pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if held else 1.0) * states), 1)
     return Net(
         seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
-        give_way=give_way, pieces=pieces, held=held,
+        give_way=give_way, pieces=pieces, held=held, late=min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held else 0.0,
     )  # fmt: skip
 
 
