@@ -481,6 +481,32 @@ def test_through_the_entry_a_beaten_lock_round_is_not_carried_into_a_round_after
     assert lock.carried and plan.search.exact  # the last round held every offer and closed: the plan is the cheapest of every method
 
 
+def test_through_the_entry_the_lock_gains_of_a_plan_of_rounds_build_only_the_plan_s_own_crafts(data, tmp_path, monkeypatch):
+    # #1080 / #1091: the Lock is foreseen once the plan is chosen. Its gains for N fall back after a peek only to the crafts the plan's policy
+    # takes (R05's foresight built every offer of the plan's round at each of 200 states: about 100 s and 8 GB after the net). The options of a
+    # peek and the second solve still read every offer, and N's line says the largest gain is not proved. The belt names the Lock here; the
+    # price file has no Lock price, so the Lock is dropped and N is still found (ADR-0056).
+    path = tmp_path / "belt-lock.yaml"
+    path.write_text(TARGET.replace("actions: [exalted-orb, bench-craft]", "actions: [exalted-orb, bench-craft, hinekora-lock]"), encoding="utf-8")
+    target = load_target(path, data)
+    seen = []
+    real = planner_plan.plan_foresight
+
+    def spy(*args, fallback=None, **kwargs):
+        full = real(*args, **kwargs)[0]  # every offer of the plan as the fallback, as before (and as a plan of one search still does)
+        seen.append((args[7], args[6], fallback, full))
+        return real(*args, fallback=fallback, **kwargs)
+
+    monkeypatch.setattr(planner_plan, "plan_foresight", spy)
+    plan = _plan_at(data, target, monkeypatch, divine=92.0)
+    [(offered, priced, fallback, full)] = seen
+    used = {action.label for action in plan.solution.policy.values()}
+    assert [entry.label for entry in fallback] == [entry.label for entry in offered if entry.label in used]  # the plan's own crafts, in order
+    assert len(fallback) < len(offered) and len(priced) == len(plan.offers)  # the options still come from every offer of the plan
+    # N is a true gain, at most the gain over every craft (here the same), and its line no longer calls it the largest
+    assert plan.foresight.status == full.status and 0.0 < plan.foresight.n <= full.n and full.n_exact and not plan.foresight.n_exact
+
+
 def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_finish(data, target, monkeypatch):
     # #1070: round 1 closes and the next round meets the run's net before any plan of its own: the plan of round 1 is the answer, and it says so
     from crafting_system.budget import Binding, BudgetExceeded
