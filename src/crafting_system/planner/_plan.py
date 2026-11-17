@@ -969,8 +969,9 @@ def plan_fallback(solution: Solution, offered: Sequence[PricedOffer]) -> tuple[P
 
 def rounds_apply(data: GameData, target: Target, priced: Sequence[PricedOffer], *, solve_it: bool, judged: bool, solver: str) -> bool:
     """Whether the offers may be searched in rounds (`_rounds`, #1069): a plan the envelope search solves, of one reading (no rule axis), with no
-    offer that searches a second item (an Awakener's Orb's donor, an offer that takes donors), and no route judged against it (a route is a fixed
-    policy and may name any offer)."""
+    offer that searches a second item (an Awakener's Orb's donor, an offer that takes donors), and no route judged against it whose actions are
+    not known (`judged`: such a route, or an incumbent, is a fixed policy that may name any offer; a route whose actions are known leads the
+    first round instead, #1110)."""
     if not solve_it or judged or solver not in ("auto", "envelope"):
         return False
     if interval_axes(data, priced) or awakener_offers(priced):

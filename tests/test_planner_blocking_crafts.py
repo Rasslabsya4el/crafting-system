@@ -699,6 +699,8 @@ def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_fini
     kept, cut = restart_dominated((cheap, tie, dear, restart), 50.0, 133.0)
     assert kept == (cheap, restart) and cut == (tie, dear)
     assert restart_dominated((cheap, dear), 50.0, float("inf")) == ((cheap, dear), ())
+    # #1110: an offer a judged route names is kept whatever its price: the route is read on the plan's offers, and keeping it changes no cost
+    assert restart_dominated((cheap, tie, dear, restart), 50.0, 133.0, keep=frozenset({"dear"})) == ((cheap, dear, restart), (tie,))
 
 
 def test_the_cut_and_the_craft_classes_split_the_offers_by_identity_never_by_comparing_two_offers():

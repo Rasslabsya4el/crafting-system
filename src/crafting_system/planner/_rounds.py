@@ -467,7 +467,7 @@ def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
     has). When that round finished, no plan of its methods costs less than its own plan, and the plan shown costs no more than that one: the
     route costs no less than the plan shown (to within the gap the round closed within). When it did not finish, nothing is proved between
     the two: the route may cost less than the plan."""
-    why = "the given route's actions were offered from the first round on, and every round held them: {names}"
+    why = "the given route's actions were offered from the first round on, and every round held them"
     if first.status == CLOSED:
         guarantee = "The first round finished: no plan made only of its methods, the route's among them, costs less than the plan shown, so the route costs no less than it."
     elif first.status == WITHIN:
@@ -482,7 +482,7 @@ def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
             "The first round did not finish, so the plan shown is not proved to cost no more than the route: the route may cost less, and its "
             "cost is its own, read on its own actions."
         )
-    return Limit(_limits.ROUNDS, "The given route's methods were searched from the first round", why, guarantee, labels=tuple(labels), names=tuple(labels) or ("restart only",))
+    return Limit(_limits.ROUNDS, "The given route's methods were searched from the first round", why, guarantee, labels=tuple(labels))
 
 
 __all__ = [
