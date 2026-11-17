@@ -21,7 +21,7 @@ from crafting_system.rules import get_rule
 
 from .beasts import ANY_RARE_CREATURE_PRICE, DEFAULT_BEAST_LEVEL, recipe_resources
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, AddedDraw, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .metamods import crafted_limit, locked_sides
@@ -201,6 +201,15 @@ class BeastSideSwap(Action):
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods the removal may take, but it is not erased
         return Adds(named=None, draws=True)
+
+    def added_draw(self, data: GameData, item: Item) -> AddedDraw | None:
+        """One mod drawn from the pool of `add_side` at the beast level, less the families held, on that side when it has room; the removal takes a
+        mod that is not fractured (`Action.added_draw`, #1074). The bare item refuses it (nothing to remove), so the class declares it there."""
+        if item.rarity is not Rarity.RARE or item.corrupted:
+            return None
+        bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
+        pool = tuple(family for family in build_pool(data, bare.changed(data, item_level=self.beast_level)) if family.side is self.add_side)
+        return AddedDraw(pool, {self.add_side: bare.free_slots(data, self.add_side), self.remove_side: 0})
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         """The outcomes of the recipe on `item`: the added mod and the removed mod, one result per pair.

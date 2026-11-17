@@ -363,6 +363,7 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     check_item_state_declarations(action, reads, adds, items, item, data, reading)
     check_socket_declarations(action, reads, adds, items, item, data, reading)
     check_corruption_declarations(action, reads, adds, items, item, data, goal)
+    check_added_draw(action, item, items, data)
     if item.memory_strands:
         check_strand_declarations(action, item, outcomes, items, data, reading)
     elif adds.only_sockets:
@@ -495,6 +496,34 @@ def _held(items, mod_id: str, data=None) -> Fraction:
         (chance for chance, item in items if any(e.mod_id == mod_id for e in (*item.mods, *(item.implicits if corrupted else ())))),
         Fraction(0),
     )
+
+
+def check_added_draw(action, given: Item, items, data) -> None:
+    """An action that declares its one added mod for the shape (`Action.added_draw`, #1074) does at `given` what it declares: every result keeps the
+    rarity, the corruption, the influences and the fractured mods and adds one mod, and that mod is drawn by weight from the declared pool's mods of
+    one side with room whose family `given` does not hold (and whose tags its metamods let in), as the bound of one added mod takes it."""
+    from crafting_system.actions import allowed_by_tags, blocked_tags
+
+    draw = action.added_draw(data, given)
+    if draw is None:
+        return
+    fractured = sorted(entry.mod_id for entry in given.mods if entry.fractured)
+    held_ids = {entry.mod_id for entry in given.mods}
+    added: dict[str, Fraction] = defaultdict(Fraction)
+    for chance, result in items:
+        assert (result.rarity, result.corrupted, result.influences) == (given.rarity, given.corrupted, given.influences), "the declared draw keeps the flags"
+        assert sorted(entry.mod_id for entry in result.mods if entry.fractured) == fractured, "the declared draw keeps the fractured mods"
+        new = [entry.mod_id for entry in result.mods if entry.mod_id not in held_ids]
+        assert len(new) == 1, f"the declared draw adds one mod, not {new}"
+        added[new[0]] += chance
+    held, blocked = given.families(data), blocked_tags(data, given)
+    sides = {family.side for family in draw.pool for entry in family.mods if entry.mod.id in added}
+    assert len(sides) == 1, "the added mod is drawn on one side"
+    (side,) = sides
+    assert given.free_slots(data, side) > 0 and draw.free.get(side, 0) > 0, "on a side with room"
+    weights = {entry.mod.id: entry.weight for family in draw.pool if family.side is side and family.family not in held for entry in family.mods if allowed_by_tags(entry.mod, blocked)}
+    total = sum(weights.values(), Fraction(0))
+    assert dict(added) == {mod_id: weight / total for mod_id, weight in weights.items() if weight}, "the added mod follows the declared weights"
 
 
 def check_chances_agree(outcomes, items, data) -> None:

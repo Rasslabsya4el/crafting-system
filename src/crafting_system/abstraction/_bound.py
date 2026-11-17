@@ -455,6 +455,35 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
     return min(ONE, best)
 
 
+def declared_add_bound(abstraction: Abstraction, action: Action, item, leaves: Sequence[int]) -> Fraction | None:
+    """`add_bound` for an action whose one added mod its class declares (`Action.added_draw`, #1074): the same bound, read from the declared
+    draw of the shape of `item` instead of the action's result at the bare item, which refuses it (a Beastcraft side swap has nothing to remove
+    there, an Eldritch Exalted Orb no dominant side). None when the class declares no draw for `item`, or when the item holds Memory Strands and
+    the draw is cut by them (as in `add_bound`). The argument is the one of "One added mod": the declaration says the draw at every item of the
+    shape is one mod from the declared pool less the families held and the blocked tags, on one side with room, which `_added_chance` ranges over.
+    """
+    checkpoint()
+    leaves = tuple(leaves)
+    if not leaves:
+        raise ValueError("leaves must not be empty")
+    data = abstraction.data
+    use = action.strand_use(data)
+    if item.memory_strands and use is not None and use.cuts:
+        return None
+    draw = action.added_draw(data, item)
+    if draw is None:
+        return None
+    _guard(draw.pool)
+    tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
+    memo: dict = {}
+    best = ZERO
+    for leaf in leaves:
+        passing = _may_pass(abstraction, draw.pool, leaf, item.influences, memo)
+        for blocked in tag_sets:
+            best = max(best, _added_chance(draw.pool, draw.free, draw.tag, blocked, passing))
+    return min(ONE, best)
+
+
 def _blocked_sets() -> tuple[frozenset[str], ...]:
     """Every set of tags the Attack and Caster metamods can keep out of a draw (none, either, both)."""
     tags = sorted(set(BLOCKED_TAG.values()))

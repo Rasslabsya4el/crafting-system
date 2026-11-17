@@ -10,7 +10,9 @@ the unveiled pool of the base, in place of the placeholder, so it lands in E onl
 
 The world is the small amulet pool of `abstraction_veiled_support`: the ordinary Life of `abstraction_pool` (no unveiled mod passes it) and the
 unveiled `VeilTestSpeed1`. The numbers are worked by hand: with U the Life leaf, the Veiled Exalted Orb (it puts a placeholder by a removal: of no
-kind with a bound) is TERMINAL at 3, the Veiled Chaos Orb a reroll at 5 / pbar >= 5, the Unveil and the picks 0 / 0, the restart 0: rho is 3.
+kind with a bound) was TERMINAL at 3; since #1074 part 2 it is a veil (it adds no mod but a placeholder, which passes no leaf): 3 / 0. The Veiled
+Chaos Orb is a reroll at 5 over its exact chance of Life (`VEILED_CHAOS_LIFE`), the Unveil and the picks 0 / 0, the restart 0: rho is the Veiled
+Chaos Orb's 5 / VEILED_CHAOS_LIFE, about 15.22.
 
 A restore of an imprint was TERMINAL too (it reads the imprints) and free, so once the veiled choices no longer set rho on R05 it did (#1074's
 probe of the single search: rho 1.048e-08 at `Restore imprint 1`). An imprint is made only by a TERMINAL offer, so before the first terminal use no
@@ -39,7 +41,8 @@ from crafting_system.cli import Offer
 from crafting_system.planner import _pattern_bound
 from crafting_system.planner._envelope_plan import envelope_result
 from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
-from crafting_system.planner._offer_kinds import REFUSED, REROLL, RESTART_KIND, SLACK, TERMINAL, VEILED, _kind_of
+from crafting_system.actions import placeholder_mods
+from crafting_system.planner._offer_kinds import REFUSED, REROLL, RESTART_KIND, SLACK, TERMINAL, VEIL, VEILED, _kind_of
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
 
 FREE = 1e-6  # what `price_offers` gives an action that consumes nothing (ADR-0026, the epsilon)
@@ -52,6 +55,7 @@ LIFE, VEILED_SPEED = Wanted(frozenset({LIFE_1})), Wanted(frozenset({SPEED}))
 GOALS = {"life": Goal((LIFE,)), "speed": Goal((VEILED_SPEED,)), "life and speed": Goal((LIFE, VEILED_SPEED))}
 START = amulet(rolled(RESIST_2))
 TOLERANCE = 1e-9
+VEILED_CHAOS_LIFE = Fraction(53649054893, 163313504640)  # the Veiled Chaos Orb's exact chance of Life on the start's shape (`reach_bound`, exact)
 
 
 def priced_offers(start) -> list[PricedOffer]:
@@ -81,20 +85,22 @@ def test_the_unveil_and_the_picks_are_veiled_choices_with_the_mods_they_may_add(
     assert _kind_of(DATA, START, offers["Unveil"]) == (VEILED, frozenset())  # it draws the offer and puts no mod on the item
     assert _kind_of(DATA, START, offers["Pick 2"]) == (VEILED, pool)
     assert _kind_of(DATA, START, offers["Veiled Chaos Orb"]) == (REROLL, frozenset())
-    assert _kind_of(DATA, START, offers["Veiled Exalted Orb"]) == (TERMINAL, frozenset())
+    assert _kind_of(DATA, START, offers["Veiled Exalted Orb"]) == (VEIL, placeholder_mods())  # it adds no mod but a placeholder
     assert _kind_of(DATA, START, offers[RESTART]) == (RESTART_KIND, frozenset())
 
 
 def test_a_veiled_choice_cannot_land_on_a_leaf_no_unveiled_mod_passes_so_rho_is_no_longer_its_price():
-    """The hand-worked floor of the module text: rho 3, the Veiled Exalted Orb's price, where it was the free action's epsilon."""
+    """The floor of the module text: rho is the Veiled Chaos Orb's 5 / its exact chance, where it was the free action's epsilon (and, before #1074
+    part 2, the Veiled Exalted Orb's price 3)."""
     floors = floors_of("life")
     found = kinds(floors)
 
     assert floors.chosen == (0,)
     assert found["Unveil"] == (VEILED, 0)
     assert all(found[f"Pick {index}"] == (VEILED, 0) for index in (1, 2, 3))
-    assert found["Veiled Exalted Orb"] == (TERMINAL, 1)
-    assert floors.rho == pytest.approx(3.0 * (1 - SLACK), rel=1e-15)
+    assert found["Veiled Exalted Orb"] == (VEIL, 0)
+    assert found["Veiled Chaos Orb"] == (REROLL, VEILED_CHAOS_LIFE)  # raised to its exact chance by the best-first loop
+    assert floors.rho == pytest.approx(5.0 / float(VEILED_CHAOS_LIFE) * (1 - SLACK), rel=1e-12)
     pick = next(entry.index for entry in floors.entries if entry.priced.label == "Pick 1")
     assert floors.lower(pick, OUTSIDE) == pytest.approx(FREE + floors.rho, rel=1e-12)  # cost + (1 - 0) rho
 
@@ -113,7 +119,7 @@ def test_the_leaf_a_pick_can_pass_leaves_the_goal_set_when_another_remains():
 
     assert floors.chosen == (0,)  # the Life leaf; the veiled speed is the pick's
     assert kinds(floors)["Pick 1"] == (VEILED, 0)
-    assert floors.rho == pytest.approx(3.0 * (1 - SLACK), rel=1e-15)
+    assert floors.rho == pytest.approx(5.0 / float(VEILED_CHAOS_LIFE) * (1 - SLACK), rel=1e-12)
 
 
 def test_a_start_that_holds_a_placeholder_keeps_the_unveil_and_the_picks_terminal():
@@ -128,7 +134,7 @@ def test_a_start_that_holds_a_placeholder_keeps_the_unveil_and_the_picks_termina
 @pytest.mark.parametrize("goal", ["life"])  # "life and speed" ends exact too, but its search takes 150 s here (as long with the floors off)
 def test_the_envelope_search_with_the_floors_on_gives_the_exact_graphs_mean(goal, monkeypatch):
     """The floors are on (`MIN_OFFERS` lowered to this world's seven offers), so the bound's model starts on the offers `OfferFloors.initial`
-    gives and the search reads rho at every key outside it: with rho 3 the search still ends exact, at the mean of the whole graph."""
+    gives and the search reads rho at every key outside it: with rho about 15.22 the search still ends exact, at the mean of the whole graph."""
     monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 1)
     ab = abstraction(goal)
     first = ab.compress(START)
