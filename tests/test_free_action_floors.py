@@ -1,4 +1,4 @@
-"""The offers' floors of the veiled choices, the Unveil and the picks (ticket #1074, OR-12, OR-13).
+"""The offers' floors of the free actions: the veiled choices (the Unveil and the picks) and the restore of an imprint (ticket #1074, OR-12, OR-13).
 
 Until #1074 an Unveil and a Pick were TERMINAL offers of the Wald floor `rho` (`planner/_offer_kinds.py`): they read the offer
 (`Reads.item_state`), so their pbar was 1 and their floor their price, the free action's epsilon (ADR-0026). Every search that offered them
@@ -11,6 +11,15 @@ the unveiled pool of the base, in place of the placeholder, so it lands in E onl
 The world is the small amulet pool of `abstraction_veiled_support`: the ordinary Life of `abstraction_pool` (no unveiled mod passes it) and the
 unveiled `VeilTestSpeed1`. The numbers are worked by hand: with U the Life leaf, the Veiled Exalted Orb (it puts a placeholder by a removal: of no
 kind with a bound) is TERMINAL at 3, the Veiled Chaos Orb a reroll at 5 / pbar >= 5, the Unveil and the picks 0 / 0, the restart 0: rho is 3.
+
+A restore of an imprint was TERMINAL too (it reads the imprints) and free, so once the veiled choices no longer set rho on R05 it did (#1074's
+probe of the single search: rho 1.048e-08 at `Restore imprint 1`). An imprint is made only by a TERMINAL offer, so before the first terminal use no
+state holds one and a restore is never used there: it is set aside, and a state that holds an imprint is of another shape (`OfferFloors.klass`).
+The world is the magic amulet of `test_pattern_imprint` (Alteration 0.1, Augmentation 0.05, Regal 0.5, Annulment 5, the Croaker 2, the restore
+1e-6, the restart 1).
+
+Both worlds are checked state by state: at every state of the exact graph, every offer's floor in the state's class is at most its exact Q*, and
+V* >= rho outside E (the claim of `_offer_floor`).
 """
 
 import pytest
@@ -22,12 +31,15 @@ from veiled_support import SPEED
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.abstraction._pattern import PatternOffer
-from crafting_system.actions import Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb, unveil_pool_mods
+from fractions import Fraction
+
+import test_pattern_imprint as imprinted
+from crafting_system.actions import NotApplicableError, OutOfScopeError, Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb, unveil_pool_mods
 from crafting_system.cli import Offer
 from crafting_system.planner import _pattern_bound
 from crafting_system.planner._envelope_plan import envelope_result
-from crafting_system.planner._offer_floor import OUTSIDE, OfferFloors
-from crafting_system.planner._offer_kinds import REROLL, RESTART_KIND, SLACK, TERMINAL, VEILED, _kind_of
+from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
+from crafting_system.planner._offer_kinds import REFUSED, REROLL, RESTART_KIND, SLACK, TERMINAL, VEILED, _kind_of
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
 
 FREE = 1e-6  # what `price_offers` gives an action that consumes nothing (ADR-0026, the epsilon)
@@ -129,3 +141,92 @@ def test_the_envelope_search_with_the_floors_on_gives_the_exact_graphs_mean(goal
     assert info.exact and info.bound_stopped is None
     assert result.solution.values[first] == pytest.approx(exact, rel=TOLERANCE)
     assert info.lower <= exact * (1 + TOLERANCE)
+
+
+# --- every state of the exact graph -------------------------------------------------------------------------------
+
+
+def assert_floors_below_exact_q(ab, start_item, priced, pattern) -> set[int]:
+    """At every state of the exact graph: each offer's floor in the state's class is at most its exact Q*, and V* >= rho outside E. The classes met."""
+    first = ab.compress(start_item)
+    exact = exact_values(ab, first, pattern)
+    floors = OfferFloors(ab, first, priced, start_item)
+    for entry in floors.entries:
+        if entry.kind == REROLL:
+            floors._raise(entry, 2)  # the exact chance, the tightest floor
+    seen = set()
+    for state, value in exact.items():
+        klass = floors.klass(state.flags, state.fractured, state.status, state.imprints)
+        seen.add(klass)
+        if ab.is_goal(state):
+            continue
+        if klass == OUTSIDE:
+            assert value >= floors.rho * (1 - 1e-9), (state, value, floors.rho)
+        for position, offer in enumerate(priced):
+            action = offer.offer.action
+            if isinstance(action, BuyStartItem):
+                successors = {first: Fraction(1)}
+            else:
+                try:
+                    successors = ab.kernel(state, action)
+                except (NotApplicableError, OutOfScopeError):
+                    continue
+            q = offer.cost + float(sum(chance * exact[successor] for successor, chance in successors.items()))
+            assert floors.lower(position, klass) <= q * (1 + 1e-9), (offer.label, klass, state)
+    return seen
+
+
+@pytest.mark.parametrize("goal", ["life", "life and speed"])
+def test_the_veiled_choices_floors_are_below_the_exact_q_at_every_state(goal):
+    ab = abstraction(goal)
+    pattern = [PatternOffer(label, action, cost) for label, (action, cost) in ACTIONS.items()] + [PatternOffer(RESTART, None, RESTART_PRICE)]
+    seen = assert_floors_below_exact_q(ab, START, priced_offers(START), pattern)
+
+    assert {INSIDE, OUTSIDE} <= seen
+
+
+def test_a_restore_with_no_imprint_at_the_start_is_set_aside_and_rho_is_no_longer_its_price():
+    """By hand: U is the three wanted mods (none is PASSING on the magic amulet), the restore is set aside, the Croaker TERMINAL at 2 (it reads
+    the imprints), the Regal Orb at 0.5 / 1 or more, the Alteration 0 (a magic item holds two mods: it never lands all three), the restart 0, and
+    the Augmentation an addition whose one added mod completes the three at most 5/18 of the time (`add_bound`): rho is 0.05 / (5/18) = 0.18,
+    where it was the restore's 1e-6."""
+    ab = imprinted.abstraction(1)
+    floors = OfferFloors(ab, ab.compress(imprinted.START), imprinted.priced_offers(1), imprinted.START)
+    found = {entry.priced.label: (entry.kind, entry.pbar) for entry in floors.entries}
+
+    assert found["Restore 0"] == (REFUSED, 1)
+    assert found["Imprint None"] == (TERMINAL, 1)
+    assert found["Orb of Augmentation"] == ("add", Fraction(5, 18))
+    assert floors.chosen == (0, 1, 2)
+    assert floors.rho == pytest.approx(0.18 * (1 - SLACK), rel=1e-12)
+
+
+def test_a_state_that_holds_an_imprint_is_of_another_shape_when_the_restores_are_set_aside():
+    ab = imprinted.abstraction(1)
+    first = ab.compress(imprinted.START)
+    floors = OfferFloors(ab, first, imprinted.priced_offers(1), imprinted.START)
+    imprint = next(offer.offer.action for offer in imprinted.priced_offers(1) if offer.label == "Imprint None")
+    (held,) = ab.kernel(first, imprint)
+
+    assert held.imprints and (held.flags, held.fractured, held.status) == (first.flags, first.fractured, first.status)
+    assert floors.klass(first.flags, first.fractured, first.status, first.imprints) == OUTSIDE
+    assert floors.klass(held.flags, held.fractured, held.status, held.imprints) == OTHER
+
+
+def test_the_imprint_floors_are_below_the_exact_q_at_every_state():
+    seen = assert_floors_below_exact_q(imprinted.abstraction(1), imprinted.START, imprinted.priced_offers(1), imprinted.pattern_offers(1))
+
+    assert {OTHER, OUTSIDE} <= seen
+
+
+def test_the_envelope_search_with_the_floors_on_gives_the_exact_mean_with_an_imprint_offered(monkeypatch):
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 1)
+    ab = imprinted.abstraction(1)
+    first = ab.compress(imprinted.START)
+    exact = exact_values(ab, first, imprinted.pattern_offers(1))[first]
+
+    result = envelope_result(ab, first, imprinted.priced_offers(1), item=imprinted.START)
+
+    info = result.info["envelope"]
+    assert info.exact and info.bound_stopped is None
+    assert result.solution.values[first] == pytest.approx(exact, rel=TOLERANCE)

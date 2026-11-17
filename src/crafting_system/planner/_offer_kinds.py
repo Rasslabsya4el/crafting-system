@@ -63,6 +63,11 @@ mods of the start, lands in E with chance at most pbar(x):
     action removes passes no leaf), so the chance is at most pbar. Level 0 is pbar = 1, level 1 that bound. It is
     raised only where the bare item of the shape takes it, keeps the shape, and gives one draw; anywhere else
     (refused there, which proves nothing for a state holding more mods; another shape; not one draw) it is TERMINAL.
+  * a restore of an imprint (#1074: `Action.imprint_move()` restores), offered to a start item that holds no imprint: an imprint is made only by
+    an offer that reads and changes the imprints (`Reads.item_state`), a TERMINAL one, so no state before the first terminal use holds one, and
+    the restore is never used there: it is set aside as REFUSED (it is free, ADR-0026, so as a TERMINAL offer it set rho to its price, about
+    1e-8, in every search that offered it: #1112's single search over R05's offers, once the veiled choices no longer did). A state that holds an
+    imprint is then of another shape (`_offer_floor.OfferFloors.klass`): from there a restore may bring back a state in E for that price.
   * anything else (it fractures, changes the flags, draws and reads the junk otherwise, has no bound, is unknown):
     TERMINAL, pbar = 1, and the argument below is cut at its first use.
 
@@ -362,6 +367,9 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     action = offer.offer.action
     if isinstance(action, BuyStartItem) or getattr(action, "opens_listing", False):  # both are always in the solve: the draw is the one action of the unopened start (ADR-0064)
         return RESTART_KIND, frozenset()
+    move = action.imprint_move()
+    if move is not None and move.restore and not item.imprints:  # a restore with no imprint before the first terminal use (see THE NUMBER pbar)
+        return REFUSED, frozenset()
     reads = action.reads(data)
     if reads.needs_veiled and not holds_placeholder(data, item):  # a veiled choice (see THE NUMBER pbar, #1074)
         adds = action.adds(data, item)

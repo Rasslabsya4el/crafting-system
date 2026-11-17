@@ -41,6 +41,7 @@ from crafting_system.abstraction._pattern import Tally
 from ._offer_kinds import (
     NAMING,
     REROLL,
+    REFUSED,
     RESTART_KIND,
     SLACK,
     SMALL_START,
@@ -116,6 +117,7 @@ class OfferFloors:
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
+        self.unimprinted = any(kind == REFUSED for kind, _named in kinds)  # restores set aside: a state that holds an imprint is of another shape (#1074)
         if self.chosen:
             declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
@@ -135,11 +137,13 @@ class OfferFloors:
 
     # ---- the classes of states ------------------------------------------------------------------------------------------
 
-    def klass(self, flags, fractured, status: tuple) -> int:
-        """The class of a state with these flags, fractured mods and status: `UNOPENED` (a listing), `OUTSIDE` (outside `E`, the start's shape), `INSIDE` (in `E`, the start's shape) or `OTHER`."""
+    def klass(self, flags, fractured, status: tuple, imprints: tuple = ()) -> int:
+        """The class of a state with these flags, fractured mods, status and imprints: `UNOPENED` (a listing), `OUTSIDE` (outside `E`, the start's
+        shape), `INSIDE` (in `E`, the start's shape) or `OTHER`. When the restores are set aside (`_offer_kinds`, #1074), a state that holds an
+        imprint is not of the start's shape."""
         if getattr(flags, "unopened", False):
             return UNOPENED
-        if not self.chosen or (flags, fractured) != self.shape:
+        if not self.chosen or (flags, fractured) != self.shape or (imprints and self.unimprinted):
             return OTHER
         return INSIDE if all(status[index] is Status.PASSING for index in self.chosen) else OUTSIDE
 

@@ -484,7 +484,7 @@ def test_the_floor_of_an_offer_is_below_its_exact_q_at_every_state_of_the_world_
             floors._raise(entry, 2)  # the exact chance, the tightest floor
     seen = set()
     for state, value in exact.items():
-        klass = floors.klass(state.flags, state.fractured, state.status)
+        klass = floors.klass(state.flags, state.fractured, state.status, state.imprints)
         seen.add(klass)
         if ab.is_goal(state):
             continue
@@ -552,7 +552,7 @@ def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and
     for state, value in exact.items():
         if ab.is_goal(state):
             continue
-        klass = floors.klass(state.flags, state.fractured, state.status)
+        klass = floors.klass(state.flags, state.fractured, state.status, state.imprints)
         if klass == OUTSIDE:
             assert value >= floors.rho * (1 - 1e-9), (state, value, floors.rho)
         for position, priced in enumerate(offers):
