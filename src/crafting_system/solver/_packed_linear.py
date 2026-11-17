@@ -362,16 +362,23 @@ def stalled(it: int, marked_at: int, longest: int) -> bool:
 
 class _Flats:
     """The flats of one run's best residual, read step by step (`stalled`): the step it last halved at and the longest flat it came out of. A fall of
-    several halvings in one step ends one flat."""
+    several halvings in one step ends one flat.
+
+    A residual that is not a finite positive number counts no halvings (#1179): an infinite one (the norm of values near 1e300, the floors' stand-in
+    for an infinite cost, overflows) is no fall from an infinite mark, so such a run is flat and stagnates; a fall from an infinite mark, or to zero,
+    marks the new figure at once. Halving an infinite mark (or a mark down to zero) never ends: R24's first round sat in that loop for an hour."""
 
     def __init__(self, first: float) -> None:
         self.marked, self.marked_at, self.longest = first, 0, 0
 
     def stalled(self, it: int, best: float) -> bool:
-        if best <= 0.5 * self.marked:
+        if best < self.marked and best <= 0.5 * self.marked:
             self.longest = max(self.longest, it - self.marked_at)
-            while best <= 0.5 * self.marked:
-                self.marked *= 0.5
+            if best > 0.0 and math.isfinite(self.marked):
+                while best <= 0.5 * self.marked:
+                    self.marked *= 0.5
+            else:
+                self.marked = best
             self.marked_at = it
         return stalled(it, self.marked_at, self.longest)
 
@@ -387,6 +394,8 @@ def _bicgstab_run(matvec, b, x0, tol, max_iter):
     bnorm = max(float(np.linalg.norm(b)), 1e-300)
     rnorm = float(np.linalg.norm(r))
     first = rnorm
+    if not math.isfinite(rnorm):  # a start whose residual is not finite in floats (#1179): the recurrence has nothing to work on, a stagnation at once
+        return x, 0, first, math.inf, True
     best_x, best = x.copy(), rnorm
     r_hat = r.copy()
     rho = alpha = omega = 1.0
