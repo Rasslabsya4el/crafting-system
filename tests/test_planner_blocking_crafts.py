@@ -302,6 +302,41 @@ def test_counted_in_states_the_rounds_share_the_states_left_and_give_way_on_stat
     assert _rounds.round_line(2, spent.records[1]).endswith("0 states): not tried, the run's states net was used up before this round")
 
 
+def test_counted_in_states_a_round_that_raised_is_counted_at_the_states_its_search_knew_when_it_ended():
+    # #1101: a round whose search proved no plan (`NoPlan`) or was stopped before one (`Stopped`) last stood at 40 states, then expanded more
+    # before it raised: its search's `NoPolicy` carries the 70 it knew, and the round counts 70, not 40, as a round that made a plan counts its
+    # plan's states. A refusal with no count is counted where its search last stood.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+    from crafting_system.planner._envelope import NoPolicy
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abcd"))
+
+    def raised(error):
+        def search(chosen, call):
+            call.give_way(SimpleNamespace(lower=1.0, upper=None, rounds=1, seconds=0.0, states=40))
+            if "d" in chosen:
+                return SimpleNamespace(search=SimpleNamespace(lower=7.0, touched=5), mean_remaining=7.0)
+            try:
+                raise NoPolicy("none", states=70) if error is not ValueError else ValueError("refused")
+            except ValueError as cause:
+                if error is ValueError:
+                    raise
+                raise error(*(("none",) if error is _rounds.NoPlan else ("stopped", 1.0))) from cause
+
+        meter = _rounds.StatesMeter(1_000)
+        widened = _rounds.widen(
+            groups, tuple("abcd"), search, upper_of=lambda plan: 7.0, mean_of=lambda plan: 7.0, ended=lambda plan: (_rounds.CLOSED, ""),
+            left=lambda: None, clock_now=lambda: 0.0, meter=meter,
+        )  # fmt: skip
+        return [record.states for record in widened.records], meter.spent
+
+    assert raised(_rounds.NoPlan) == ([70, 70, 70, 40], 250)  # the last round makes its plan of 5 states, counted where it stood, at 40
+    assert raised(_rounds.Stopped) == ([70, 70, 70, 40], 250)
+    assert raised(ValueError) == ([40, 40, 40, 40], 160)
+
+
 def test_a_group_beaten_before_the_last_round_is_not_carried_and_the_answer_does_not_call_the_plan_the_cheapest():
     # #1080 / #1091: the plan in hand is 10. Round 2 (b) ends at once on its lower figure: it is not carried, so round 3 holds a and c only, and
     # the answer names b among the rounds that do not make the plan the cheapest of every method (b with c was not searched: the module text has
@@ -661,6 +696,71 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
     assert [record.status for record in slow.search.widening] == (["closed", "not tried"] if states == 3 else ["closed", "closed"])
     assert all(record.states is not None for record in slow.search.widening)
+
+
+@pytest.mark.parametrize("states, per_state", [(10, 0.2), (10, 2.0), (10, 100.0), (40, 100.0)])
+def test_through_the_entry_the_bound_s_build_and_its_binding_count_their_work_and_stop_on_it_whatever_the_clock_does(data, target, monkeypatch, states, per_state):
+    # #1101: the same run as above with the offers' floors on (`MIN_OFFERS` 3 here; 40 for a real target), so the bound's build works out
+    # floors, builds its model on part of the offers and examines the others (the binding step). Under `Budget.in_states` each build counts
+    # its pieces of work (`build_per_state` per state of its search's net) and asks its net at every offer and before every raise, never on
+    # the clock: the plan, every line of the answer and each build's count are the same whether every reading of the clock moves it by
+    # 1,000 s or by nothing. A small share stops the build, and the answer names that count.
+    from crafting_system import budget as budget_module
+    from crafting_system.budget import Budget
+    from crafting_system.planner import _pattern_bound
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
+    monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    builds, bindings = [], []
+    real, binding = _envelope_plan.pattern_lower_bound, _pattern_bound._binding
+
+    def counted(*args, **kwargs):
+        bound = real(*args, **kwargs)
+        builds.append((bound.pieces, bound.share, bound.phase, bound.stopped, bound.start_value))
+        return bound
+
+    def examined(*args, **kwargs):  # the binding step: whether the build's count stopped it
+        try:
+            found = binding(*args, **kwargs)
+        except _pattern_bound.FloorsStopped:
+            bindings.append("stopped")
+            raise
+        bindings.append("done")
+        return found
+
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", counted)
+    monkeypatch.setattr(_pattern_bound, "_binding", examined)
+    step, readings = [0.0], iter(range(10**9))
+    monkeypatch.setattr(budget_module.time, "perf_counter", lambda: step[0] * next(readings))
+
+    def planned(seconds_per_reading: float):
+        step[0] = seconds_per_reading
+        builds.clear()
+        bindings.clear()
+        budget = Budget.in_states(states, build_per_state=per_state)
+        plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=budget))
+        return plan, list(builds), list(bindings)
+
+    (slow, slow_builds, slow_bindings), (fast, fast_builds, fast_bindings) = planned(1000.0), planned(0.0)
+    assert slow_builds == fast_builds and slow_bindings == fast_bindings and slow_builds
+    assert slow.mean_remaining == fast.mean_remaining
+    assert slow.solution.policy == fast.solution.policy and slow.limits == fast.limits and slow.risk == fast.risk
+    assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
+    pieces, share, phase, stopped, _ = slow_builds[0]  # round 1's build, given `per_state` pieces per state of the round's net (the whole of it)
+    assert share == int(per_state * states)
+    if per_state == 0.2:  # 2 pieces: stopped while it counted the kinds of item
+        assert phase == "model" and pieces == share and slow_bindings == []
+    elif per_state == 2.0:  # 20 pieces: the first model is built and solved, the binding step names the offers to join, and their growth is stopped
+        assert phase == "growth" and slow_bindings[0] == "done"  # (the binding step stopped by its count: test_cli_envelope_build.py)
+    else:  # every build finishes, and both rounds close on the cheapest plan
+        assert all(build[2] == "complete" and build[3] is None for build in slow_builds) and "done" in slow_bindings
+        assert [record.status for record in slow.search.widening] == ["closed", "closed"]
+        assert slow.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    if stopped is not None:  # the answer names the build's count where round 1 stopped (OR-13)
+        assert stopped.startswith(f"it had done {pieces:,} pieces of work, its share of the run's states net being {share:,}")
+        assert f"was stopped too: {stopped}" in slow.search.widening[0].reason
 
 
 def replace_seconds(record):
