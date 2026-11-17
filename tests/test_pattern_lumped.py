@@ -177,3 +177,64 @@ def test_a_fine_erasing_kernel_teaches_the_seeded_universe_no_slot(world, tags, 
     model = build_pattern_model(ab, ab.compress(build(data, BOW, STARTS[start])), broad_offers(), tags=tags)
     assert model.stats.kernels > 0
     assert not grown, grown[:3]
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_an_approximate_build_and_then_an_exact_one_on_the_same_abstraction_keep_their_caches_apart(world, tags):
+    """The twin's distributions made in floats (`Abstraction.approximate`, entered for the twin by the builder) never reach an exact build."""
+    data, ab, _ = world
+    first = ab.compress(build(data, BOW, STARTS[0]))
+    offers = broad_offers()
+    build_pattern_model(ab, first, offers, tags=tags, approximate=True)
+    exact = build_pattern_model(ab, first, offers, tags=tags)
+    for kernel in exact.kernels:
+        assert all(isinstance(weight, int) for weight in kernel[1])
+
+
+# ---- real data: a fossil adds mods the pool does not list; a Fractured Fossil is never lumped ------------------------------------------------
+
+REAL_BOW = "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow1"
+
+
+def test_the_mods_a_fossil_adds_to_the_pool_join_the_universe_from_the_twin_and_the_model_is_the_fine_one(monkeypatch):
+    """The Faceted Fossil adds gem-level mods (domain delve) that neither the pool nor the offers' names list: a lumped kernel teaches the
+    universe nothing by its outcomes, so the build learns them from the mods the twin lumped (`Pattern.note_lumped`). The checker's world of
+    #1146: before that, the universe grew by noting the fine outcomes (1 restart) and not with the twin (0)."""
+    from abstraction_support import real_game_data
+
+    from crafting_system.abstraction import Goal, Wanted
+    from crafting_system.actions import ApplyFossils, ChaosOrb, ExaltedOrb
+    from crafting_system.items import Item, Rarity
+
+    data = real_game_data()
+    goal = Goal((Wanted(frozenset({"DelveStrengthGemLevel1"})),))
+    actions = (ApplyFossils(("Faceted Fossil",)), ChaosOrb(), ExaltedOrb())
+    offers = [PatternOffer("faceted", actions[0], 2.0), PatternOffer("exalt", actions[2], 1.0), PatternOffer("restart", None, 5.0)]
+    found = {}
+    for lump in (False, True):
+        monkeypatch.setattr(_pattern, "LUMP_ERASING", lump)
+        ab = Abstraction(data, goal, REAL_BOW, 86, actions)
+        start = ab.compress(Item.build(data, base_id=REAL_BOW, item_level=86, rarity=Rarity.RARE))
+        model = build_pattern_model(ab, start, offers, tags=False)
+        found[lump] = (model, solve_packed(pack_pattern_model(model, offers)).value)
+    (fine, by_fine), (lumped, by_lumped) = found[False], found[True]
+    assert fine.stats.universe_growth == lumped.stats.universe_growth == 1
+    assert set(lumped.index) == set(fine.index)
+    for key, k in fine.index.items():
+        assert float(by_lumped[lumped.index[key]]) == pytest.approx(float(by_fine[k]), rel=1e-12), key
+
+
+def test_a_fractured_fossil_is_never_lumped():
+    """The mod it fractures is in the key, and the twin's labels lump mods a fine label tells apart (`Abstraction.lumps`)."""
+    from abstraction_support import real_game_data
+
+    from crafting_system.abstraction import Goal, Wanted
+    from crafting_system.actions import ApplyFossils, ChaosOrb
+    from crafting_system.items import Item, Rarity
+
+    data = real_game_data()
+    goal = Goal((Wanted(frozenset({"DelveStrengthGemLevel1"})),))
+    ab = Abstraction(data, goal, REAL_BOW, 86, (ChaosOrb(),))
+    start = ab.compress(Item.build(data, base_id=REAL_BOW, item_level=86, rarity=Rarity.RARE))
+    assert ab.lumps(start, ChaosOrb())
+    assert not ab.lumps(start, ApplyFossils(("Fractured Fossil",)))

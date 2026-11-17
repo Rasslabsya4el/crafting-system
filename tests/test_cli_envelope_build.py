@@ -769,16 +769,24 @@ def new_names_gain(monkeypatch):
     monkeypatch.setattr(_pattern._Universe, "_seed_named", gaining)
 
 
-def count_kernels_made(monkeypatch, ab):
-    """Count the kernels the abstraction `ab` is asked to make."""
+def count_kernels_made(monkeypatch, ab, when=lambda: True):
+    """Count the kernels the abstraction `ab` and its alike twins (an erasing kernel of the bound's build, #1146) are asked to make."""
     made = []
-    real = ab.kernel
 
-    def counted(state, action):
-        made.append(1)
-        return real(state, action)
+    def counting(on):
+        real = on.kernel
 
-    monkeypatch.setattr(ab, "kernel", counted)
+        def counted(state, action):
+            if when():
+                made.append(1)
+            return real(state, action)
+
+        monkeypatch.setattr(on, "kernel", counted)
+        return on
+
+    real_twin = ab.alike_twin
+    counting(ab)
+    monkeypatch.setattr(ab, "alike_twin", lambda: counting(real_twin()))
     return made
 
 
@@ -842,9 +850,7 @@ def test_through_the_envelope_entry_a_bound_that_begins_again_gives_the_full_wal
             building.pop()
 
     monkeypatch.setattr(PatternBuilder, "_pass", passing)
-    made = []
-    real_kernel = fresh.kernel
-    monkeypatch.setattr(fresh, "kernel", lambda state, action: (made.append(1) if building else None, real_kernel(state, action))[1])
+    made = count_kernels_made(monkeypatch, fresh, when=lambda: bool(building))
     result = envelope_result(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
     info = result.info["envelope"]
     assert info.exact and info.bound_stopped is None and info.bound_rounds > 1

@@ -486,6 +486,8 @@ class Pattern:
         self._veiled_kind: dict[str, bool] = {}
         self._pure_reads: dict[tuple, bool] = {}
         self._placeholder_families = _placeholder_families(abstraction.data)
+        self._twin: Abstraction | None = None
+        self._lumped_read: dict[frozenset, int] = {}  # how many of the alike twin's lumped mods of each influence set were noted (`note_lumped`)
         self._snapshot_keys: dict[CompressedState, PatternKey] = {}  # an imprint's snapshot -> its key (#833)
         self._snapshot_reps: dict[PatternKey, CompressedState] = {}  # a snapshot's key -> the first snapshot of it seen: the one the members hold
         self._snapshot_orders: dict[PatternKey, tuple] = {}
@@ -661,6 +663,28 @@ class Pattern:
             if not slot.crafted and not self.is_veiled(slot) and universe.note(slot):  # a veiled slot is in the key, never a member's choice
                 self.grew += 1
                 self.grown.append((state.flags.influences, slot))
+
+    @property
+    def twin(self) -> Abstraction:
+        """The alike twin of this pattern's abstraction (`Abstraction.alike_twin`), made at its first use, one for each pattern (#1146)."""
+        if self._twin is None:
+            self._twin = self.ab.alike_twin()
+        return self._twin
+
+    def note_lumped(self) -> None:
+        """Learn the ordinary slots of the mods the alike twin lumped (`Abstraction.lumped_mods`, #1146): each mod at its own kind and at every
+        contribution its roll can give, as `_Universe` lists a pool mod. A lumped outcome is never noted (its kinds are the twin's), so this is
+        what keeps a mod the pool and the offers' names do not list (a mod a fossil adds to the pool) from being left out of the members."""
+        for influences, mod in self.twin.lumped_mods(self._lumped_read):
+            if mod.generation_type not in (side.value for side in SIDES):
+                continue
+            universe = self.universe(influences)
+            kind = self.ab.kind_of(mod, influences)
+            for contribution in _rolled_contributions(self.ab, mod, influences):
+                slot = Slot(Side(mod.generation_type), kind, contribution)
+                if not self.is_veiled(slot) and universe.note(slot):
+                    self.grew += 1
+                    self.grown.append((influences, slot))
 
     def may_hold(self, key: PatternKey, influences: frozenset, slot: Slot) -> bool:
         """Whether a member of `key` may hold the ordinary `slot` of the universe of `influences`: False only when none can (#1086).
@@ -1084,6 +1108,7 @@ class PatternBuilder:
             # kernels found (a fossil's added mods, which the pool does not list), find them again in the same pass, and begin again forever (#829:
             # a fossil world with bench crafts, the build ran past 25 minutes on CI, 109 restarts in a minute here)
             self.pattern.keep_universes(before)
+            self.pattern._twin, self.pattern._lumped_read = before._twin, before._lumped_read  # the twin and what its lumped mods taught the universes
         self.stats = PatternStats()
         self.index: dict[PatternKey, int] = {}
         self.keys: list[PatternKey] = []
@@ -1210,9 +1235,9 @@ class PatternBuilder:
                     try:
                         self._offers_of_key(i, first, tick)
                     except _Stopped as reached:
-                        self.ab.release_prepared(keep_erased=True)
+                        self._release()
                         return reached.reason
-                    self.ab.release_prepared(keep_erased=True)
+                    self._release()
             self.expanded[i] = True
             i += 1
             now = time.perf_counter()
@@ -1221,6 +1246,12 @@ class PatternBuilder:
                 progress(f"keys found {len(self.keys):,} expanded {i:,} kernels {stats.kernels:,} members {stats.members:,}")
         self.done = len(offers)
         return None
+
+    def _release(self) -> None:
+        """Drop the pairs prepared for one key, in the abstraction and in the pattern's twin (`Abstraction.release_prepared`)."""
+        self.ab.release_prepared(keep_erased=True)
+        if self.pattern._twin is not None:
+            self.pattern._twin.release_prepared(keep_erased=True)
 
     def _prime(self, key: PatternKey, lo: int, hi: int, by_mode: dict) -> None:
         """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
@@ -1238,7 +1269,7 @@ class PatternBuilder:
             if members is None:
                 members = by_mode[policy] = self.pattern.members(key, *policy)
                 self.stats.members += len(members)
-            requests.extend((member, offer.action) for member in members if not (LUMP_ERASING and self.ab._erases(member, offer.action)))
+            requests.extend((member, offer.action) for member in members if not (LUMP_ERASING and self.ab.lumps(member, offer.action)))
         self.ab.prime(requests)
 
     def _offers_of_key(self, i: int, first: int, tick) -> None:
@@ -1288,9 +1319,13 @@ class PatternBuilder:
                     raise _gap(offer, key, gap) from gap
                 kid = self.computed.get(ck)
                 if kid is None:
-                    lumped = LUMP_ERASING and ab._erases(member, offer.action)  # its outcomes from the twin, pushed onto the same keys (#1146)
+                    lumped = LUMP_ERASING and ab.lumps(member, offer.action)  # its outcomes from the twin, pushed onto the same keys (#1146)
                     try:
-                        exact = (ab.alike_twin() if lumped else ab).kernel(member, offer.action)
+                        if lumped:
+                            with pattern.twin.approximate() if self.approximate else nullcontext():
+                                exact = pattern.twin.kernel(member, offer.action)
+                        else:
+                            exact = ab.kernel(member, offer.action)
                     except NotApplicableError:
                         stats.refused_pairs += 1
                         continue
@@ -1300,6 +1335,8 @@ class PatternBuilder:
                             continue
                         raise _gap(offer, key, gap) from gap
                     stats.kernels += 1
+                    if lumped:
+                        pattern.note_lumped()
                     pushed: dict[int, Fraction] = defaultdict(Fraction)
                     for successor, chance in exact.items():
                         if not lumped:  # a lumped outcome holds no slot the universe lacks (`LUMP_ERASING`), and its kinds are the twin's

@@ -159,6 +159,8 @@ class Kinds:
         self.data = data
         self.profile = profile
         self.alike = alike  # the slots of the ordinary mods drawn or held are told apart by side and protected tags alone (`slot_kind`, #1146)
+        self.lumped: list[Mod] = []  # the mods `slot_kind` lumped, each once, in the order met (only appended to)
+        self._lumped_seen: set[str] = set()
         self.base_id = base_id
         self.item_level = item_level
         self.metamods = metamods
@@ -257,6 +259,9 @@ class Kinds:
         """
         if not self.alike or mod.domain in (UNVEILED_DOMAIN, VEILED_DOMAIN):
             return self.of(mod)
+        if mod.id not in self._lumped_seen:  # what the bound's build teaches the slot universe (`Pattern.note_lumped`)
+            self._lumped_seen.add(mod.id)
+            self.lumped.append(mod)
         kind = ALIKE
         if self.metamods:
             tags = protected_tags(mod)
