@@ -58,7 +58,11 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   makes a cheaper plan, which then needs them.
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
-  figure no plan of its offers costs less than (OR-13). A main tree whose every benchmark route has one group never enters the rounds.
+  figure no plan of its offers costs less than (OR-13). When no round made a plan, the answer says that no plan of the offered methods
+  reaches the target only when every round finished with none (the last then held every offer); when a net stopped a round or left one
+  untried, it says no plan was found yet, what the finished rounds showed and what stopped the others (`no_plan_words`, #1168: R13's round 1
+  showed no plan of its own methods, the rest were stopped, and the run said no plan of any method reaches the goal).
+  A main tree whose every benchmark route has one group never enters the rounds.
 """
 
 from __future__ import annotations
@@ -267,8 +271,9 @@ class StatesMeter:
 
 @dataclass(frozen=True)
 class Widened:
-    """The rounds' outcome: the cheapest plan (None when no round made one), the record of every round, and the first error a round raised
-    (re-raised by the caller when no round made a plan)."""
+    """The rounds' outcome: the cheapest plan (None when no round made one), the record of every round, and the error the caller raises when
+    no round made a plan and none was stopped (`no_plan_words` says a stop from the records): the first refusal or stop a round raised, else
+    the first round's proof that no plan of its offers reaches the target (#1168: a proof of round 1's offers is no proof of a later round's)."""
 
     plan: object | None
     records: tuple[RoundRecord, ...]
@@ -300,7 +305,7 @@ def widen(
         left, measure = meter.left, meter.now
     else:
         measure = clock_now
-    best, best_upper, best_mean, error = None, None, None, None
+    best, best_upper, best_mean, error, proof = None, None, None, None, None
     base: list[int] = []
     records: list[RoundRecord] = []
     refused_last: tuple[int, tuple[int, ...]] | None = None  # the last round, when a refusal ended it: its record's place and its group's offers
@@ -346,7 +351,7 @@ def widen(
             error = error or stop
         except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next round widens them
             status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
-            error = error or none.__cause__ or none  # what the run says when no round made a plan
+            proof = proof or none.__cause__ or none  # what the run says when every round showed no plan (the last held every offer)
         except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
             status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
             error = error or stop.__cause__ or stop
@@ -408,7 +413,7 @@ def widen(
                 records[aside] = replace(records[aside], carried=True, reason=records[aside].reason + "; the last round held them again, with every method")
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
-    return Widened(best, tuple(records), error)
+    return Widened(best, tuple(records), error or proof)
 
 
 def figure_of(floor: Callable[[tuple, RoundCall], float | None], chosen: tuple, call: RoundCall, left: Callable[[], float | None]) -> float | None:
@@ -572,6 +577,29 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     )
 
 
+def no_plan_words(records: Sequence[RoundRecord]) -> str | None:
+    """What a run whose rounds made no plan says when a net stopped a round or left one untried (#1168, OR-13, OR-33, OR-40): it found no plan
+    yet, which does not show that none exists; what the rounds that finished did show (no plan of their methods alone reaches the target);
+    every round that did not finish, with the net that stopped it; and what the user can do. None when no round was stopped or left untried:
+    every round then showed no plan (the last held every offer: a proof over every method offered) or was refused (the refusal says itself),
+    and none either when the last round showed no plan, which is the same proof."""
+    if not any(record.status in (STOPPED, UNTRIED) for record in records) or (records and records[-1].status == NONE):
+        return None  # (a last round that showed no plan held every offer: the proof, whatever stopped a round before it)
+    proved = [group_name(record) for record in records if record.status == NONE]
+    shown = (
+        f"The rounds that finished showed only that no plan made only of {'; '.join(proved)} reaches the target"
+        if proved
+        else "No round finished, so nothing is shown about any method"
+    )
+    unit = "states" if any(record.states is not None for record in records) else "time"  # a run counted in states (`StatesMeter`)
+    lines = "; ".join(round_line(n, record) for n, record in enumerate(records, start=1) if record.status != NONE)
+    return (
+        "no round of the methods made a plan before the search stopped, so this does not show that no plan exists. "
+        f"{shown}. Not finished: {lines}. To get a plan, run again with more {unit} or memory, or with fewer methods: "
+        "a search over fewer methods is smaller and may finish where this one stopped"
+    )
+
+
 def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
     """What the rounds prove against a route judged against their plan (#1110, OR-13). The route's actions (`labels`) lead the first round and
     every round holds them, so the route is a plan of the first round's methods (with the restart and the listing's draw, which every round
@@ -598,5 +626,5 @@ def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
 
 __all__ = [
     "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "StatesMeter", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
-    "judged_route_limit", "round_groups", "round_line", "rounds_limits", "widen",
+    "judged_route_limit", "no_plan_words", "round_groups", "round_line", "rounds_limits", "widen",
 ]  # fmt: skip
