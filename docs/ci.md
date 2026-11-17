@@ -500,14 +500,15 @@ setting chosen per record by measurement (each record says its figure and why it
 time net (OR-39, OR-40). Every stage counts its work and stops by it (#1101): every envelope search of the run (the rounds, the plan
 without the metamod crafts, an Awakener's Orb's donors, each start option) shares one account of N states; the bound's build of a search
 counts pieces of work (a member tried with an offer, or an offer's floor worked out) up to `Budget.build_per_state` per state of its
-search's net (four times that, `1 + SEARCH_PER_BUILD`, in a round that begins with a plan in hand, #1099); the Lock's check counts the states its walk meets, up to N. A stage that stops says so in its own unit. **Neither memory nor
-time follows N where a kernel is large** (#1104): each unit counts a kernel asked for,
-never the work inside it, and the kernel of an action that draws mods is made whole from its pool's distribution and cached for the run.
-Where an enabled action reads the junk (a bench craft, with every method on) that distribution lists the family types a draw adds, and one
-kernel can hold gigabytes whatever N is: R12 at N = 1,000 with every method on: the process held 2.6 GB after its 73-second build (7 distributions, 3.2
-million outcomes), met a first-plan kernel of 468,779 outcomes, and was killed at 16 GB inside one distribution of the Lock's gains. A record that
-runs out of memory or time inside one kernel is therefore not fixed by a smaller N; it waits for the count of a kernel's outcomes (#1105), and meanwhile runs where a
-plan's memory fits, with the run wrapped so that a runaway is killed alone (`systemd-run --scope -p MemoryMax=...` on the server).
+search's net (four times that, `1 + SEARCH_PER_BUILD`, in a round that begins with a plan in hand, #1099); the Lock's check counts the states its walk meets, up to N. A stage that stops says so in its own unit. **One kernel** (#1104, #1105): the kernel of an action that
+draws mods is made whole from its pool's distribution and cached for the run, and where an enabled action reads the junk (a bench craft,
+with every method on) one kernel can hold gigabytes whatever N is: R12 at N = 1,000 with every method on held 2.6 GB after its 73-second
+build (7 distributions, 3.2 million outcomes), met a first-plan kernel of 468,779 outcomes, and was killed at 16 GB inside one distribution of
+the Lock's gains. The search's kernels are counted inside their making (#1105): each stage of a kernel's making is held to the states the
+search has left, a kernel that would pass N is left unmade, and the search stops with its plan in hand, so it never knows more than N
+states. The bound's build (#1126) and the Lock's gains (#1125) still count only the kernels they ask for, not the work inside one: a record
+that runs out of memory or time there is not fixed by a smaller N, and runs with the run wrapped so that a runaway is killed alone
+(`systemd-run --scope -p MemoryMax=...` on the server).
 
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
 in the PR, and commit the file (a golden that needs the real game data is re-recorded on the server, where the data is, or on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the

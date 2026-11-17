@@ -703,7 +703,7 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     assert sum(record.states for record in slow.search.widening) <= states
 
 
-@pytest.mark.parametrize("states", [3, 1_000])
+@pytest.mark.parametrize("states", [4, 1_000])
 def test_through_the_entry_the_plan_without_the_lock_is_made_first_counted_in_states_and_the_lock_s_round_gets_what_is_left(data, target, monkeypatch, states):
     # #1108: the metamod craft the rule of blocking crafts offers unasked (the lock, Prefixes Cannot Be Changed) adds the feature `metamods` to
     # the model, so the planner's own offers that hold it always split into rounds (`offer_groups`): the plan without the lock is round 1 and
@@ -711,7 +711,8 @@ def test_through_the_entry_the_plan_without_the_lock_is_made_first_counted_in_st
     # `_plan.plan_without` and its "Not tried" limit, is reached from the entry only by a walk asked for by name, `solver` object or packed,
     # which is being retired: no test is written against it.) Under `Budget.in_states(N)` round 1 is given the whole
     # account, N; its search knows 4 states (the belt's chain: start, the filler, the exalt that hits, the restart) and round 2 is given N - 4.
-    # With N = 3 round 1's net stops it after its plan of 133 (counted at every state of its chain, #1101): that plan is the answer, and round 2,
+    # With N = 4 round 1's net stops it after its plan of 133 (counted at every state of its chain, #1101, and inside each kernel, #1105: with
+    # N = 3 the restart's kernel is left unmade before any plan closes, and the run knows no more than its net): that plan is the answer, and round 2,
     # the lock's, is not tried and the answer says so in states. Either way the plan and every line of the answer are the same whether every
     # reading of the clock moves it by 1,000 s or by nothing (the clock driven through `budget_module.time`).
     from crafting_system import budget as budget_module
@@ -749,9 +750,9 @@ def test_through_the_entry_the_plan_without_the_lock_is_made_first_counted_in_st
         assert [record.status for record in rounds] == ["closed", "closed"] and slow.search.exact
         assert not any(limit.kind == _limits.UNTRIED for limit in slow.limits)
     else:
-        assert slow_calls == [(False, 3)]  # the lock's round is never searched
+        assert slow_calls == [(False, 4)]  # the lock's round is never searched
         assert [(record.status, record.states) for record in rounds] == [("stopped", 4), ("not tried", 0)]
-        assert "4 states were known, the limit is 3" in rounds[0].reason
+        assert "4 states were known, the limit is 4" in rounds[0].reason
         untried = [limit for limit in slow.limits if limit.kind == _limits.UNTRIED]
         assert len(untried) == 1 and untried[0].what == "Not finished"
         line = untried[0].names[-1]  # (the round's name does not yet say its bench craft is the lock: #1121)

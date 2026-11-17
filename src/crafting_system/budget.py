@@ -112,8 +112,9 @@ class Budget:
         - every envelope search of the run (each round of offers, the plan without the metamod crafts, an Awakener's Orb's donors, each start
           option) counts the states it knows on one account of the run (`Clock.spend`): a search's net is the states left (a donor's, an equal
           share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`). A search knows at most its
-          net: each kernel is made on an allowance of the states it may still know, its outcomes counted as they are made (`Allowance`, #1105),
-          and a kernel that would pass it is left unmade and the search stops there with its plan in hand;
+          net: each kernel is made on an allowance of the states it may still know, what it makes counted as it is made, each stage of the
+          making (an end state of the draws, a group, a way, an outcome merged, a state added) on its own count held to that allowance
+          (`Allowance`, #1105), and a kernel that would pass it is left unmade and the search stops there with its plan in hand;
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
@@ -121,18 +122,16 @@ class Budget:
           times that (#1099);
         - the Lock's check after the plan counts every state its walks meet (one per `checkpoint` of its stage), up to `states` of its own: under the time net it takes what
           the search left, and a count has nothing left once the search used its net.
-        **What the count does not bound: one kernel** (#1104). Each unit above counts a kernel asked for (a piece of the build, a state known,
-        a state the Lock's walk meets), never the work inside it: the kernel of an action that draws mods is made whole from its pool's
-        distribution (`abstraction.Abstraction._distribution`, `actions.draw.exact_distributions`), cached for the run, and its size and the
-        memory it takes are set by the pool and by what the kinds keep of the junk, not by `states`. Where an enabled action reads the junk (a
-        bench craft, with every method on), a pool draw's outcomes are the family types it adds, and one kernel can take gigabytes. R12 at
-        `in_states(1000)` with every method on (#1104, on the owner's server): the build stopped at 101,511 of 100,000 pieces with one key
-        expanded, its 7 distributions holding 3,160,130 outcomes (the process held 2.6 GB); the first plan's chain met one kernel of 468,779 outcomes (468,781
-        states known, the limit 1,000); then the Lock's gains (`_foresight.PlanSites`, the kernel of every option at a state) grew one exact
-        distribution by about 12 GB in a single kernel, and the process was killed at 16 GB. So memory (and time) do not follow `states`, and a
-        smaller figure does not make such a run fit. A run under the time net has the same kernels, and its memory net is never read inside
-        the making of one, so it does not see them either. Bounding it means
-        counting the outcomes a kernel makes as it makes them (#1105).
+        **One kernel** (#1104, #1105). The kernel of an action that draws mods is made whole from its pool's distribution
+        (`abstraction.Abstraction._distribution`, `actions.draw.exact_distributions`), cached for the run, and its size is set by the pool and
+        by what the kinds keep of the junk, not by `states`: where an enabled action reads the junk (a bench craft, with every method on), one
+        kernel can take gigabytes. R12 at `in_states(1000)` with every method on (#1104, on the owner's server): the build stopped at 101,511 of
+        100,000 pieces with its 7 distributions holding 3,160,130 outcomes (2.6 GB), the first plan's chain met one kernel of 468,779 outcomes
+        (468,781 states known, the limit 1,000), and the Lock's gains grew one distribution by about 12 GB until the process was killed at 16 GB.
+        The search's kernels are now counted inside their making (above, #1105): a search knows at most `states`, and the work of one of its
+        kernels is bounded by about six times the states it has left (one allowance per stage). The kernels the bound's build makes (#1126) and
+        the Lock's gains (#1125) are not counted inside: each counts a kernel asked for, never the work inside it, so their memory and time do
+        not follow `states` yet. A run under the time net has the same kernels, and its memory net is never read inside the making of one.
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
         net, OR-39, OR-40). It is the setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose
         offers split into rounds."""
