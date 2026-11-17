@@ -10,6 +10,7 @@ from typing import NamedTuple
 from functools import reduce
 from operator import attrgetter
 
+from crafting_system import budget
 from crafting_system.actions import (
     BLOCKING,
     Action,
@@ -1684,8 +1685,11 @@ class Abstraction:
         independent of the mods drawn, so each state splits over `after`, the exact distribution of the count after the craft.
         """
         spread: dict[CompressedState, Fraction] = defaultdict(Fraction)
+        allowance = budget.allowed()  # a search counted in states counts each state added (#1105)
         for state, chance in result.items():
             for count, each in after.items():
+                if allowance is not None:
+                    allowance.add()
                 spread[replace(state, strands=count)] += chance * each
         return dict(spread)
 
@@ -1845,7 +1849,10 @@ class Abstraction:
         flags, fractured, stay_status = split.flags, split.fractured, split.status
         held = (split.implicits, split.quality, split.offer, split.imprints, split.strands, split.replaced)
         whole = share == 1
+        allowance = budget.allowed()  # a search counted in states counts each state added (#1105)
         for best, drawn, chance in self._expanded_distribution(signature, part):
+            if allowance is not None:
+                allowance.add()
             if not drawn:
                 slots = stays_tuple
             elif not stays:
@@ -1874,6 +1881,7 @@ class Abstraction:
         """
         influences = split.flags.influences
         self._refuse_rollable_fracture(part, signature)
+        allowance = budget.allowed()  # a search counted in states counts each state added (#1105)
         families: dict[FamilyType, list] = defaultdict(list)
         for family in part.pool:
             families[self._family_type(family, None, influences)].append(family)
@@ -1895,6 +1903,8 @@ class Abstraction:
                 ]
             slots.sort(key=lambda slot: slot.key)
             for mod, each in options:
+                if allowance is not None:
+                    allowance.add()
                 fractured, imprints = split.fractured, split.imprints
                 if mod is not None:
                     imprints = ()  # the result fractures a mod, and no imprint can be used on a fractured item (ADR-0034)
@@ -2152,9 +2162,12 @@ class Abstraction:
             return cached
         width = len(self.goal.leaves)
         tracked = self._kinds.tracked
+        allowance = budget.allowed()  # a search counted in states counts each outcome of concrete rolls as it is merged (#1105; the draws count in `exact_distributions`)
         merged: dict[Hashable, Fraction] = defaultdict(Fraction)
         for outcome, chance in part.distribution(self._labeller(part.retained.influences, part.rolls_lucky)).items():
             for concrete, each in self._concrete(outcome) if self._has_laws else ((outcome, ONE),):
+                if allowance is not None:
+                    allowance.add()
                 weight = chance if each == 1 else chance * each
                 if tracked:
                     merged[concrete] += weight

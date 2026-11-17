@@ -64,8 +64,8 @@ class Budget:
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: beside a time or memory net the search's first plan is built whole before the first round, so its reach can pass the figure. A
     run with a states net and no time net counts its work in states (`in_states`), and its plan then does not depend on the machine's speed:
-    there the net is asked at every state of the first plan's chain and of each round, so the search knows at most the figure plus the outcomes
-    of the state that crossed it.
+    there the net is asked at every state of the first plan's chain and of each round, and inside the making of each kernel (`Allowance`, #1105),
+    so the search knows at most the figure.
     `build_per_state` is read only by a run counted in states: the bound's build of each search may do that many pieces of work (`PIECES`) per
     state of the search's own states net, as under the time net it may take a quarter of the search's seconds (`_envelope_plan.build_stop`);
     a search that begins with a plan in hand (a round of offers after the first plan) may take the whole: `1 + SEARCH_PER_BUILD` times that (#1099).
@@ -111,7 +111,9 @@ class Budget:
         Every stage counts its work in a unit of its own and stops by it, saying so (OR-12, OR-13; #1101):
         - every envelope search of the run (each round of offers, the plan without the metamod crafts, an Awakener's Orb's donors, each start
           option) counts the states it knows on one account of the run (`Clock.spend`): a search's net is the states left (a donor's, an equal
-          share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`);
+          share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`). A search knows at most its
+          net: each kernel is made on an allowance of the states it may still know, its outcomes counted as they are made (`Allowance`, #1105),
+          and a kernel that would pass it is left unmade and the search stops there with its plan in hand;
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
@@ -300,6 +302,57 @@ def checkpoint() -> None:
             if clock.walked > clock.cap:
                 raise BudgetExceeded(clock.bind(Binding(clock.stage, STATES, clock.cap, clock.walked, clock.what)))
         clock.check(clock.stage, clock.what)
+
+
+class OutcomesCut(BaseException):
+    """The making of one kernel made more outcomes than its `Allowance` (a run counted in states, #1105): the kernel is left unmade.
+
+    A `BaseException`, like `BudgetExceeded`, so that no `except Exception` (or `except ValueError`, a refusal) inside the making swallows it; the
+    envelope search that opened the allowance catches it and ends there as at its states net, keeping the plan in hand (`_envelope.Search._kernel`).
+    """
+
+    def __init__(self, allowance: "Allowance") -> None:
+        super().__init__(f"the making of one kernel made {allowance.made:,} outcomes, {allowance.given:,} were allowed")
+        self.given = allowance.given
+        self.made = allowance.made
+
+
+@dataclass
+class Allowance:
+    """The outcomes the kernel being made may still make (#1105): the states its search may still know under a count.
+
+    One kernel of a drawing action is made whole from its pool's distribution (`actions.draw.exact_distributions`), hundreds of thousands of
+    outcomes for a pool whose junk is tracked, and the count between two kernels never sees them: one expansion took R05 at a net of 1,000
+    states to 303,950 (#1101). The engine and the kernel's assembly count here every outcome as they make it (a way of drawing grown, an end
+    state of the draws, a state of the kernel added; `made`), and the next one past `given` raises `OutcomesCut`. Only a search counted in states
+    opens one; elsewhere `allowed()` is None and the making counts nothing."""
+
+    given: int
+    made: int = 0
+
+    def add(self, count: int = 1) -> None:
+        self.made += count
+        if self.made > self.given:
+            raise OutcomesCut(self)
+
+
+_allowance: contextvars.ContextVar[Allowance | None] = contextvars.ContextVar("crafting_system_budget_allowance", default=None)
+
+
+def allowed() -> Allowance | None:
+    """The allowance of the kernel being made now (`counting`), or None: read once by a maker, which then counts on it as it makes."""
+    return _allowance.get()
+
+
+@contextlib.contextmanager
+def counting(given: int) -> Iterator[Allowance]:
+    """Count the outcomes made inside the block on a fresh allowance of `given` (`Allowance`); the block's maker raises `OutcomesCut` past it."""
+    allowance = Allowance(max(int(given), 0))
+    token = _allowance.set(allowance)
+    try:
+        yield allowance
+    finally:
+        _allowance.reset(token)
 
 
 @contextlib.contextmanager
