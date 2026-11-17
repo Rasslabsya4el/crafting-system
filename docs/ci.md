@@ -113,7 +113,8 @@ its root, in the test that plans too much (it names its offers, or runs counted 
 **The real routes plan with the classic offers in CI (#886).** With every beta method on, most real routes give no plan within CI's
 time and memory, so a test module that plans a real route sets `CLASSIC_OFFERS = True` and plans with the offers of before #886
 (`tests/cli_support.py`, `CLASSIC_KINDS`, pinned by `tests/test_classic_offers.py`); its records of before #886 hold byte for byte. No CI
-test plans a real route with the default offers: the heavy benchmark records those plans (#1109).
+test plans a real route with the default offers: the heavy benchmark records those plans (#1109; "The heavy benchmark: the record of the
+default-on plans", below).
 
 ## Heavy runs on the server (owner, 2026-11-17)
 
@@ -139,7 +140,8 @@ and writes the output under `.claude/scratch/`:
 - **Helpers.** `finder`, `checker` and `crafter` start no heavy run, on the server or on GitHub; they run quick, targeted tests
   only (under a minute, one process).
 
-GitHub keeps what the server does not give: a PR's own CI, the integration run that lands a PR, and a run that needs Windows.
+GitHub keeps what the server does not give: a PR's own CI, the integration run that lands a PR, a run that needs Windows, and the heavy
+benchmark's record of the default-on plans, which needs a quiet machine per route ("The heavy benchmark", below; #1109).
 The lines "never on a PC" further down mean the owner's PC: the server or a runner is where those scripts run.
 
 ## Heavy runs on GitHub: the runner budget (#249)
@@ -287,6 +289,53 @@ and with `--skip-refused` a rule whose action the game refuses is skipped (for t
 `benchmark` prints, for each route with a given route, the divergences of the guide from the planner, the ratio of the two means and a "needs a human" row below `[benchmark] review_ratio` of `crafting.toml` (default 0.5, a prompt for a person and not a cut of the search). A route a person has taken apart has a verdict in `src/crafting_system/cli/_benchmark_verdicts.py` (#634: real find / the guide is wrong / our completion, the issues, the ratio and the date at review, the hashes of the target file and of the route file, the planner's first divergent action) and prints `reviewed: real find (#591), ratio at review 0.057` instead; it prints "NEEDS A HUMAN AGAIN" with the reason when its ratio moves from the one at review by more than `[benchmark] review_tolerance` (default 0.2 of that ratio, either way), a hash changes, or the planner's first divergent action changes. Under every such row the chance one use ends in the target and the cost of one use (each price part) are told for the planner's action and the guide's at the first divergence (#617). The start-boots emulator checks of #617 are recorded on Windows runners with `tools/coe_emulator/record_runs.sh` (see `tools/coe_emulator/README.md`). The summary lines are the output of one heavy run; `.github/scripts/benchmark_routes.py IDS OUT_DIR` runs `benchmark --heavy` on the routes `IDS` (comma separated) with the committed price snapshot, and prints each phase of the packed solver and of the visit chances as it ends. Nine runners split the thirteen reference routes and the V01 smoke test (#901) by `$RUNNER_INDEX`, every route at the week-one prices of OR-44 (R17, R20 and R24 read their own file, the week-one prices plus their hand-set start items); R06 is not planned and its entry says why (#516). In run 43828591390 (2026-11-16) R08 and R17 did not end in 55 minutes, as the benchmark plans with no net (#1057); R24 took 16 minutes. On 2026-11-07 R14 alone took 25 minutes in run 42410659176 and 44 in run 42377921091, R04 alone 16; the time follows the walk of the day, so give each long route a runner of its own and a timeout of 60:
 
     $D --runners 9 --timeout-minutes 60 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; 3) R=R13;; 4) R=R08;; 5) R=R09;; 6) R=R17;; 7) R=R24;; 8) R=R12,R10,R11,R05,V01,R06;; 9) R=R20;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
+
+### The heavy benchmark: the record of the default-on plans (#1109)
+
+No CI test plans a real route with every beta method on (above, "The suite's machine net"); the heavy benchmark records those plans, the
+ones the site gives. `benchmark --net` plans every route as a user's run does: the default offers (a route judged against its guide has
+the guide's actions leading the first round, #1110), under the time and memory limits of the
+planner settings of the machine (OR-40; by default `Budget.default()`: an aim of a minute, the 10-minute net, 80% of the machine's memory).
+Each route's entry then carries its `record` (`src/crafting_system/benchmark_record.py`): the plan's mean cost and its lower bound (the
+start item included), the seconds of the plan, the peak memory the search read, and how the search ended (exact, proved within the gap, or
+stopped by a net); a route with no plan has no cost, and its stop is its error.
+
+**What is recorded.** `tests/fixtures/heavy_benchmark/records.json`: every reference route (`REFERENCES`) from **two** runs, with each
+run's figures, the spread of the two costs and the ceiling a new run may reach: the higher recorded cost plus the larger of the spread and
+1% of that cost (the proof gap of OR-39, so that two runs that happened to agree do not make the check fail on a plan the search stopped
+at its proved 1%). `tests/test_benchmark_record.py` checks that the file covers every reference route.
+
+**The check: no worse than the record.** A new run fails a route when its cost is above the ceiling, or when it gives no plan where both
+recorded runs gave one, or when the run holds no entry for it (a runner killed for its memory or its timeout writes none; a check of some
+routes only names them as a third argument). A route that planned in neither recorded run passes whatever it gives (a new plan is told); a route that planned in
+one recorded run only has no spread to check against and passes until the record is renewed. The lower bound, the seconds, the memory and
+the stop are readings beside the cost, not verdicts.
+
+**Where it runs, and why.** On GitHub's `ubuntu-latest` runners through the dispatcher, one route per runner, not on the server (an
+exception to "Heavy runs on the server" above, for a quiet machine). A plan stopped by the time net depends on the machine's speed, so the
+record is only as steady as the machine it came from: on a runner each route has a machine of its own (4 cores, 16 GB, so the default
+memory net is 12.8 GB, the planner settings unchanged), while the server is shared with the owner's other projects, whose load moves from
+10 to 16 of the 24 cores, and its default memory net (48 GB) would need a setting of its own for each run. A check is only meaningful
+against a record from the same kind of machine: run it where the record came from (the record's `runs` name the machines). The figures
+are a 4-core runner's, a slower machine than the site's: the record guards against a change for the worse, it does not say what the site
+gives. `CLAUDE.md`, "Heavy runs", names this exception.
+
+**When it runs.** At each checkpoint of OR-46 (the dispatcher's report of the routes' state to the owner), one run, checked against the
+record; and before a PR lands that changes what the planner offers or how the one search finds and stops on a plan (the main chat decides
+and names the run in its PR; a PR that fails a route fixes it or files the issue). It takes 13 runners (one route each, so that a runner that dies hides no other route; R06 is not planned, #516) for 15 to 60 minutes. One run:
+
+    D="python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH"
+    $D --runners 13 --timeout-minutes 60 --command 'case $RUNNER_INDEX in 1) R=R12;; 13) R=R06;; 2) R=R10;; 3) R=R11;; 4) R=R05;; 5) R=R13;; 6) R=R08;; 7) R=R09;; 8) R=R04;; 9) R=R14;; 10) R=R17;; 11) R=R20;; 12) R=R24;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part --net'
+
+then `gh run download RUN_ID -D DIR` and `python .github/scripts/heavy_benchmark.py check tests/fixtures/heavy_benchmark/records.json DIR`
+(exit 1 when a route fails; each route's line says why).
+
+**Renewing the record.** A change that makes a route's plan better (or a new price snapshot, or a new reference route) renews the record:
+two runs of the command above, dispatched one after the other, then
+`python .github/scripts/heavy_benchmark.py record DIR1 DIR2 tests/fixtures/heavy_benchmark/records.json`, which prints each route's two
+costs, spread and ceiling (it refuses two runs that do not both hold every reference route). The PR that renews it says why, names both
+run ids, and states each route's state and spread; a spread above 10% of the lower cost, an unstable route and a route with no plan are
+each said so there, and a route with no plan in both runs is an open issue (the site gives no plan there). Renewals of the record share the route queue of `CLAUDE.md` with every reference route.
 
 ### The naive crafter's long simulation (#555)
 

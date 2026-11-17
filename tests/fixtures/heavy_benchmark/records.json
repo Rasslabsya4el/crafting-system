@@ -1,0 +1,353 @@
+{
+  "format": "crafting-system-heavy-benchmark-record/1",
+  "runs": [
+    {
+      "machine": [
+        {
+          "os": "Linux 7.0.0-1019-azure",
+          "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+          "cpu": "x86_64",
+          "cpu_count": 4,
+          "python": "CPython 3.14.4",
+          "commit": "5d7b4824c22a561ad1fe4438fed4b8c5a28b6d6e"
+        },
+        {
+          "os": "Linux 7.0.0-1016-aws",
+          "platform": "Linux-7.0.0-1016-aws-x86_64-with-glibc2.43",
+          "cpu": "x86_64",
+          "cpu_count": 4,
+          "python": "CPython 3.14.4",
+          "commit": "5d7b4824c22a561ad1fe4438fed4b8c5a28b6d6e"
+        }
+      ],
+      "ran_at": "2026-11-17T10:26:34+00:00",
+      "prices": {
+        "league": "Allflame",
+        "fetched_at": "2026-07-31T00:00:00Z"
+      },
+      "budget": {
+        "aim_seconds": 60.0,
+        "seconds": 600.0,
+        "memory_mb": 12785.646875
+      }
+    },
+    {
+      "machine": [
+        {
+          "os": "Linux 7.0.0-1016-aws",
+          "platform": "Linux-7.0.0-1016-aws-x86_64-with-glibc2.43",
+          "cpu": "x86_64",
+          "cpu_count": 4,
+          "python": "CPython 3.14.4",
+          "commit": "5d7b4824c22a561ad1fe4438fed4b8c5a28b6d6e"
+        },
+        {
+          "os": "Linux 7.0.0-1019-azure",
+          "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+          "cpu": "x86_64",
+          "cpu_count": 4,
+          "python": "CPython 3.14.4",
+          "commit": "5d7b4824c22a561ad1fe4438fed4b8c5a28b6d6e"
+        }
+      ],
+      "ran_at": "2026-11-17T10:49:04+00:00",
+      "prices": {
+        "league": "Allflame",
+        "fetched_at": "2026-07-31T00:00:00Z"
+      },
+      "budget": {
+        "aim_seconds": 60.0,
+        "seconds": 600.0,
+        "memory_mb": 12560.581250000001
+      }
+    }
+  ],
+  "routes": {
+    "R12": {
+      "runs": [
+        {
+          "mean": 40.930980408871676,
+          "lower": 1.0,
+          "seconds": 0.5218549070000051,
+          "peak_mb": 202.95703125,
+          "stop": "proved within 1.00% of the cheapest"
+        },
+        {
+          "mean": 40.930980408871676,
+          "lower": 1.0,
+          "seconds": 0.4113478620000137,
+          "peak_mb": 203.732421875,
+          "stop": "proved within 1.00% of the cheapest"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 41.34029021296039
+    },
+    "R10": {
+      "runs": [
+        {
+          "mean": 37.591986174965406,
+          "lower": 17.0,
+          "seconds": 31.408066201999986,
+          "peak_mb": 288.3544921875,
+          "stop": "proved within 1.00% of the cheapest"
+        },
+        {
+          "mean": 37.591986174965406,
+          "lower": 17.0,
+          "seconds": 43.435359094000006,
+          "peak_mb": 318.044921875,
+          "stop": "proved within 1.00% of the cheapest"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 37.96790603671506
+    },
+    "R11": {
+      "runs": [
+        {
+          "mean": 188.02777958743965,
+          "lower": 20.0,
+          "seconds": 3.085291226999999,
+          "peak_mb": 274.5166015625,
+          "stop": "proved within 1.00% of the cheapest"
+        },
+        {
+          "mean": 188.02777958743965,
+          "lower": 20.0,
+          "seconds": 3.106555103000005,
+          "peak_mb": 273.4462890625,
+          "stop": "proved within 1.00% of the cheapest"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 189.90805738331406
+    },
+    "R05": {
+      "runs": [
+        {
+          "mean": 92.76668330184138,
+          "lower": 2.2,
+          "seconds": 4.091578655000006,
+          "peak_mb": 240.251953125,
+          "stop": "proved within 1.00% of the cheapest"
+        },
+        {
+          "mean": 92.76668330184138,
+          "lower": 2.2,
+          "seconds": 5.15473603800001,
+          "peak_mb": 248.22265625,
+          "stop": "proved within 1.00% of the cheapest"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 93.6943501348598
+    },
+    "R13": {
+      "runs": [
+        {
+          "mean": 11245.954748643486,
+          "lower": 17.4,
+          "seconds": 300.49792435099994,
+          "peak_mb": 854.6435546875,
+          "stop": "stopped: not every round of the methods finished"
+        },
+        {
+          "mean": 11245.954748643486,
+          "lower": 17.4,
+          "seconds": 326.900957963,
+          "peak_mb": 834.0380859375,
+          "stop": "stopped: not every round of the methods finished"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 11358.41429612992
+    },
+    "R08": {
+      "runs": [
+        {
+          "mean": 209.50962881360186,
+          "lower": 43.82409,
+          "seconds": 550.338813072,
+          "peak_mb": 420.26171875,
+          "stop": "stopped: not every round of the methods finished"
+        },
+        {
+          "mean": 209.50962881360186,
+          "lower": 43.82409,
+          "seconds": 565.614269865,
+          "peak_mb": 426.7587890625,
+          "stop": "stopped: not every round of the methods finished"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 211.60472510173787
+    },
+    "R09": {
+      "runs": [
+        {
+          "mean": 59.268873643783216,
+          "lower": 5.02409,
+          "seconds": 313.63743897399996,
+          "peak_mb": 417.8134765625,
+          "stop": "stopped: not every round of the methods finished"
+        },
+        {
+          "mean": 59.268873643783216,
+          "lower": 5.02409,
+          "seconds": 309.984997171,
+          "peak_mb": 364.6923828125,
+          "stop": "stopped: not every round of the methods finished"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 59.861562380221045
+    },
+    "R04": {
+      "runs": [
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 449.729 seconds was reached) before any policy that can be executed was found: it had looked at 86,072 of 103,140 states and no plan costs less than 14.0083 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.948 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 412 of the 6,553 kinds of item it had found and counted 53 of the 55 actions offered)"
+        },
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 449.715 seconds was reached) before any policy that can be executed was found: it had looked at 85,154 of 103,081 states and no plan costs less than 13.9953 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.946 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 405 of the 6,519 kinds of item it had found and counted 53 of the 55 actions offered)"
+        }
+      ],
+      "state": "no plan",
+      "spread": null,
+      "spread_share": null,
+      "ceiling": null
+    },
+    "R14": {
+      "runs": [
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 449.711 seconds was reached) before any policy that can be executed was found: it had looked at 127,874 of 143,039 states and no plan costs less than 0.536743 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.946 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while adding the actions that matter to that count: it had worked through 246 of the 246 kinds of item it had found and counted 73 of the 76 actions offered)"
+        },
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 449.863 seconds was reached) before any policy that can be executed was found: it had looked at 113,487 of 121,403 states and no plan costs less than 0.417402 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.94 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while adding the actions that matter to that count: it had worked through 246 of the 246 kinds of item it had found and counted 73 of the 76 actions offered)"
+        }
+      ],
+      "state": "no plan",
+      "spread": null,
+      "spread_share": null,
+      "ceiling": null
+    },
+    "R17": {
+      "runs": [
+        {
+          "mean": 2501.498556422159,
+          "lower": 605.722592368578,
+          "seconds": 665.7660080759999,
+          "peak_mb": 3862.8837890625,
+          "stop": "stopped: the time limit of 449.322 seconds was reached"
+        },
+        {
+          "mean": 2501.498556422159,
+          "lower": 609.2123403865392,
+          "seconds": 648.499668677,
+          "peak_mb": 4264.95703125,
+          "stop": "stopped: the time limit of 449.356 seconds was reached"
+        }
+      ],
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 2526.5135419863805
+    },
+    "R20": {
+      "runs": [
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 449.515 seconds was reached) before any policy that can be executed was found: it had looked at 577,074 of 582,601 states and no plan costs less than 13.2247 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.582 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 179 of the 1,353 kinds of item it had found and counted 8 of the 8 actions offered)"
+        },
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 429.759 seconds was reached) before any policy that can be executed was found: it had looked at 577,074 of 582,601 states and no plan costs less than 13.2547 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 170 of the 599.681 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 197 of the 1,396 kinds of item it had found and counted 8 of the 8 actions offered)"
+        }
+      ],
+      "state": "no plan",
+      "spread": null,
+      "spread_share": null,
+      "ceiling": null
+    },
+    "R06": {
+      "runs": [
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "not planned: the target asks for an implicit roll and catalyst quality, which the planner does not plan yet (#516); the route file holds the guide's steps 2 and 3 only"
+        },
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "not planned: the target asks for an implicit roll and catalyst quality, which the planner does not plan yet (#516); the route file holds the guide's steps 2 and 3 only"
+        }
+      ],
+      "state": "no plan",
+      "spread": null,
+      "spread_share": null,
+      "ceiling": null
+    },
+    "R24": {
+      "runs": [
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 448.894 seconds was reached) before any policy that can be executed was found: it had looked at 750,477 of 767,109 states and no plan costs less than 18.48 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.633 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 11,209 of the 38,009 kinds of item it had found and counted 13 of the 13 actions offered)"
+        },
+        {
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "no policy of the offered actions reaches the goal from the start item (the search stopped (the time limit of 449.044 seconds was reached) before any policy that can be executed was found: it had looked at 750,477 of 751,793 states and no plan costs less than 18.48 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 150 of the 599.617 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 8,285 of the 35,141 kinds of item it had found and counted 13 of the 13 actions offered)"
+        }
+      ],
+      "state": "no plan",
+      "spread": null,
+      "spread_share": null,
+      "ceiling": null
+    }
+  }
+}
