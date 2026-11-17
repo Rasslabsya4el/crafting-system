@@ -440,8 +440,11 @@ is the **view** `tests/golden_diff.py` makes of them, and the same view is used 
 of a target whose offers split into rounds plans under `Budget.in_states(N)` (`src/crafting_system/budget.py`): a net of N states and no
 time or memory net, so nothing in the search or its rounds reads the clock and every runner gives the same plan and text. N is a test
 setting chosen per record by measurement (each record says its figure and why it is enough), never a limit of a user's run, which keeps the
-time net (OR-39, OR-40). Only the rounds of offers share N out; every other search of the run has the whole of it, and the bound's build and
-the Lock's check have no cap in such a run, so a record that runs out of memory needs a smaller N, not a memory net.
+time net (OR-39, OR-40). Every stage counts its work and stops by it (#1101): every envelope search of the run (the rounds, the plan
+without the metamod crafts, an Awakener's Orb's donors, each start option) shares one account of N states; the bound's build of a search
+counts pieces of work (a member tried with an offer, or an offer's floor worked out) up to `Budget.build_per_state` per state of its
+search's net; the Lock's check counts the states its walk meets, up to N. A stage that stops says so in its own unit. Time and memory then
+grow with N, so a record that runs out of memory or time needs a smaller N.
 
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
 in the PR, and commit the file (a golden that needs the real game data is re-recorded on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the

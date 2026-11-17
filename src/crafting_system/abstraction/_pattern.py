@@ -1011,6 +1011,22 @@ def build_pattern_model(
     return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop, approximate=approximate).extend(offers)
 
 
+class Tally:
+    """The pieces of work of a bound's build counted against a cap, for a run that counts its work and not its seconds (#1101).
+
+    A piece is a (member, offer) pair the builder looks at (`PatternBuilder`) or one offer's floor raised (`_offer_floor.OfferFloors`): what
+    the build spends its time and memory on, the same on every machine. Called, it is the build's net: the reason once `done` reaches `cap`
+    (`words(done, cap)`), else what `then` (another net, or None) says."""
+
+    def __init__(self, cap: int, words: Callable[[int, int], str], then: Callable[[], str | None] | None = None) -> None:
+        self.cap, self.words, self.then, self.done = cap, words, then, 0
+
+    def __call__(self) -> str | None:
+        if self.done >= self.cap:
+            return self.words(self.done, self.cap)
+        return None if self.then is None else self.then()
+
+
 class PatternBuilder:
     """The model of the key, built on a list of offers that can grow: `extend` adds offers and builds only what they add (ticket #626).
 
@@ -1041,7 +1057,9 @@ class PatternBuilder:
         stop=None,
         grow: bool = False,
         approximate: bool = False,
+        tally: "Tally | None" = None,
     ) -> None:
+        self.tally = tally  # a build counted in pieces of work (`Tally`): each (member, offer) pair adds one, and the net is asked at every offer, never on the clock
         self.approximate = approximate  # the kernels are made in floats, shrunk and completed with the sink (see `_lowered`): a lower bound of the exact model
         self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
         self.ab = abstraction
@@ -1165,9 +1183,10 @@ class PatternBuilder:
             """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step)."""
             nonlocal last, polled
             now = time.perf_counter()
-            if now - polled < POLL_SECONDS:
-                return
-            polled = now
+            if self.tally is None:  # counted in pieces of work, the net is asked at every offer: where it stops must not depend on the machine's speed
+                if now - polled < POLL_SECONDS:
+                    return
+                polled = now
             if self.stop is not None:
                 reason = self.stop()
                 if reason is not None:
@@ -1253,6 +1272,8 @@ class PatternBuilder:
             seen: set[int] = set()
             for member in members:
                 stats.pairs += 1
+                if self.tally is not None:
+                    self.tally.done += 1
                 try:
                     ck = ab.kernel_key(member, offer.action)
                 except NotApplicableError:
@@ -1446,4 +1467,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["Mode", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "build_pattern_model"]
+__all__ = ["Mode", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "Tally", "build_pattern_model"]
