@@ -624,3 +624,34 @@ def test_through_the_entry_two_plans_of_one_counted_run_share_its_states_and_the
     (bound,) = [limit for limit in plan.limits if limit.kind == BUDGET]
     assert Binding(LOCK_STAGE, STATES, 96, 97, _plan.LOCK_KEPT).words() in bound.names
     read(bound)
+
+
+def test_a_counted_run_s_donors_and_rounds_spend_on_its_one_account(monkeypatch):
+    # #1101: an Awakener's Orb's donors each spend the states their search knew (its plan's, or its refusal's) on the run's account, and the
+    # rounds' meter puts each round's states on it as the round ends and counts off what others spent while the rounds ran (donors searched
+    # inside a round): N is one figure for every search of the run.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _awakener, _rounds
+    from crafting_system.planner._envelope import NoPolicy
+
+    clock = Budget.in_states(1_000).start()
+    nets = []
+
+    def solve_donor(abstraction, action, priced, *, net=None, gap=0.0, gap_after=None):
+        nets.append(net)
+        if action == "refused":
+            raise NoPolicy("no donor plan", states=30)
+        return SimpleNamespace(action=action), SimpleNamespace(info={"envelope": SimpleNamespace(touched=200)})
+
+    monkeypatch.setattr(_awakener, "solve_donor", solve_donor)
+    orbs = [SimpleNamespace(label=name, offer=SimpleNamespace(action=name)) for name in ("first", "refused")]
+    donors, left_out = _awakener.solve_donors(None, orbs, (), net=lambda searches: _plan.search_net(clock, searches).states, spend=clock.spend)
+    assert nets == [1_000 // 3, (1_000 - 200) // 2] and len(donors) == 1 and len(left_out) == 1
+    assert clock.spent == 230
+    meter = _rounds.StatesMeter(clock.states_left(), clock)
+    assert meter.left() == 770
+    clock.spend(70)  # a donor inside a round
+    assert meter.left() == 700
+    meter.ended(100)  # a round that knew 100 states
+    assert (meter.spent, clock.spent, meter.left(), clock.states_left()) == (100, 400, 600, 600)

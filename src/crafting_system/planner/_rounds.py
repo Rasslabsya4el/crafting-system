@@ -207,11 +207,15 @@ class StatesMeter:
 
     unit = "states"
 
-    def __init__(self, given: int) -> None:
+    def __init__(self, given: int, clock=None) -> None:
         self.given, self.spent, self.running = given, 0, 0
+        # the run's account (`budget.Clock.spend`, #1101): each round's states go on it as the round ends, and what other searches spend on it
+        # while the rounds run (an Awakener's Orb's donors, searched inside a round) comes off the states left
+        self.clock, self.base = clock, (0 if clock is None else clock.spent)
 
     def left(self) -> float:
-        return float(max(self.given - self.spent - self.running, 0))
+        outside = 0 if self.clock is None else self.clock.spent - self.base - self.spent
+        return float(max(self.given - self.spent - self.running - outside, 0))
 
     def now(self) -> float:
         return float(self.spent + self.running)
@@ -227,6 +231,8 @@ class StatesMeter:
         """Close the round: the states it knew (its plan's count, or what its search last stood at), added to the spent ones."""
         known = max(self.running, int(touched or 0))
         self.spent, self.running = self.spent + known, 0
+        if self.clock is not None:
+            self.clock.spend(known)
         return known
 
 

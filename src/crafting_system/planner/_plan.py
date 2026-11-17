@@ -807,10 +807,15 @@ def _make_plan(
     unfolded = priced
     if awakened:  # each donor first, by the same search (#832): the orb is then an ordinary offer whatever solver takes the target
         # a donor stops as the target does (past the aim, at a proved gap) on its share of the net; its [lower, upper] goes into `whole_lower`
+        # in a round of a run counted in states the donors share the round's own share of the states with its search (#1101)
+        share = None if round_call is None or round_call.states is None else round_call.states
+        spent_before = 0 if clock is None else clock.spent
         donors, left_out = solve_donors(
-            abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), stop=lambda: search_gap(clock),
-            spend=None if clock is None else clock.spend,
+            abstraction, awakened, priced, net=lambda searches: search_net(clock, searches, states=None if share is None else max(share // searches, 1)),
+            stop=lambda: search_gap(clock), spend=None if clock is None else clock.spend,
         )  # fmt: skip
+        if share is not None and clock is not None:
+            round_call = replace(round_call, states=max(share - (clock.spent - spent_before), 1))  # the round's search has what its donors left
         kept_orbs = {d.action for d in donors}
         priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
         limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
@@ -1078,8 +1083,6 @@ def widened_plan(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
         left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=meter,
     )  # fmt: skip
-    if meter is not None and clock is not None:
-        clock.spend(meter.spent)  # the rounds' states, on the run's account (a start option after this one shares what is left)
     if widened.plan is None:
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
     plan, records = widened.plan, widened.records
@@ -1116,7 +1119,7 @@ def states_meter(clock: Clock | None) -> _rounds.StatesMeter | None:
     rounds share the states left on the run's account (`Clock.spend`), what an earlier search of the run (a start option's) did not use (#1101)."""
     if clock is None or not clock.budget.counted:
         return None
-    return _rounds.StatesMeter(int(clock.states_left() or 0))
+    return _rounds.StatesMeter(int(clock.states_left() or 0), clock)
 
 
 def price_cut_applies(data: GameData, target: Target, priced: Sequence[PricedOffer], start: StartPrice, *, solve_it: bool, judged: bool) -> bool:
