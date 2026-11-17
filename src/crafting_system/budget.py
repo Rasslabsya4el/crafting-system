@@ -58,7 +58,8 @@ class Budget:
     the dispatcher decided on #925; `_plan.search_gap`), and the retired forecast of `_decide` reads it for a walk asked for by name; with no aim
     the stop at the gap applies from the first round. `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
-    its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure.
+    its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure. A run with a states net and
+    no time net counts its work in states (`in_states`), and its plan then does not depend on the machine's speed.
     `gap` is the proof the run owes once the plan has passed its aim (OR-32 as narrowed by OR-39, #925): the envelope search then stops by itself
     at the first round whose plan is proved to cost at most this share more than the cheapest; 0 keeps the proof exact. A craft whose proof
     closes inside the aim is proved the cheapest; a longer one ends at the gap it proved. Every figure is a setting of the machine and the user the run is for, never a constant sized
@@ -83,6 +84,18 @@ class Budget:
     def unlimited(cls) -> "Budget":
         """No aim, no net and no gap: every stage runs to its end and every proof is exact (a library call, a measurement, a test of the exact answer)."""
         return cls(None, None, None, None, 0.0)
+
+    @classmethod
+    def in_states(cls, states: int, gap: float = 0.0) -> "Budget":
+        """A run counted in work, not seconds: a net of `states` states known (summed over the planner's rounds of offers, `_rounds.StatesMeter`),
+        no aim, no time net and no memory net, and the proof `gap` from the first round (0: exact). Nothing in the search or its rounds then
+        reads the clock, so the same target under the same figure gives the same plan and the same answer on every machine (#886). It is the
+        setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose offers split into rounds;
+        its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
+        net, OR-39, OR-40)."""
+        if not (isinstance(states, int) and states >= 1):
+            raise ValueError(f"the budget's states net is a whole number of states, one or more; got {states!r}")
+        return cls(None, None, None, states, gap)
 
     @classmethod
     def default(cls) -> "Budget":

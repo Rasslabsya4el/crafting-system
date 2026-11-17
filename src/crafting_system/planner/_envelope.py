@@ -276,6 +276,7 @@ class Standing:
     upper: float | None
     rounds: int
     seconds: float
+    states: int = 0  # the states the search knew when it stood: what a caller that counts its work in states, not seconds, reads (`_rounds.StatesMeter`)
 
     @property
     def gap(self) -> float | None:
@@ -798,7 +799,7 @@ class Search[S]:
 
     def _stand(self, lower: float, began: float) -> None:
         """Record where the search stands and tell the watcher."""
-        self.standing = Standing(lower, self.upper, self.stats.rounds, time.perf_counter() - began)
+        self.standing = Standing(lower, self.upper, self.stats.rounds, time.perf_counter() - began, len(self.states))
         if self.watch is not None:
             self.watch(self.standing)
 
@@ -999,7 +1000,7 @@ class Search[S]:
                     self.p.release()
                     if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
                         polled = time.perf_counter()
-                        stopped = self._net(began)
+                        stopped = self._net(began, states=False)  # the state net is asked between rounds only: inside one, when the clock polls, its count would depend on the machine's speed
                         if stopped is not None:
                             break
             except MemoryNet as stop:
