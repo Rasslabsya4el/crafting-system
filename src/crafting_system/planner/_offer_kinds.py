@@ -377,10 +377,10 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
             return VEILED, frozenset(adds.named) if adds.named is not None else unveil_pool_mods(data, item.base_id)
     if reads.item_state:
         return TERMINAL, frozenset()  # its result depends on the implicits, the quality or the offer, which the bound read at one state does not hold fixed
-    if not reads.junk:
-        return REROLL, frozenset()
     adds = action.adds(data, item)
-    if not adds.fractures and not adds.draws and adds.named is not None:
+    if not reads.junk:
+        return (TERMINAL if adds.imprints else REROLL), frozenset()  # an imprint made before the first terminal use would void the restores' set-aside
+    if not adds.fractures and not adds.draws and adds.named is not None and not adds.imprints:
         return CRAFT, frozenset(adds.named)
     if (
         reads.pool_weight

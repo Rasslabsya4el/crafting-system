@@ -504,7 +504,7 @@ def test_the_floor_of_an_offer_is_below_its_exact_q_at_every_state_of_the_world_
             q = priced.cost + float(sum(chance * exact[successor] for successor, chance in successors.items()))
             assert floors.lower(position, klass) <= q * (1 + 1e-9), (priced.label, klass, state)
     assert seen == {OTHER, INSIDE, OUTSIDE} or seen == {INSIDE, OUTSIDE}, seen  # the world has states in E and outside it
-    assert floors.klass(start.flags, start.fractured, start.status) == OUTSIDE
+    assert floors.klass(start.flags, start.fractured, start.status, start.imprints) == OUTSIDE
 
 
 def listing_world(restart_price: float = 3.0):
@@ -533,7 +533,7 @@ def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and
         assert floors.rho == pytest.approx(plain.rho, rel=1e-12)
     else:  # the restart and its draw are the cheapest way into E, below the Chaos Orb's cost / chance
         assert floors.rho < plain.rho
-    assert floors.klass(start.flags, start.fractured, start.status) == UNOPENED
+    assert floors.klass(start.flags, start.fractured, start.status, start.imprints) == UNOPENED
     for position, priced in enumerate(offers):  # at the listing only the draw works, and the restart buys it again: every other offer is refused there
         action = priced.offer.action
         if getattr(action, "opens_listing", False):
@@ -545,7 +545,7 @@ def test_the_floors_of_an_unopened_start_are_those_of_the_item_it_opens_into_and
             with pytest.raises(NotApplicableError):
                 ab.kernel(start, action)
     shape = ab.compress(opened)
-    assert floors.klass(shape.flags, shape.fractured, shape.status) == OUTSIDE
+    assert floors.klass(shape.flags, shape.fractured, shape.status, shape.imprints) == OUTSIDE
     for entry in floors.entries:
         if entry.kind == "reroll":
             floors._raise(entry, 2)
