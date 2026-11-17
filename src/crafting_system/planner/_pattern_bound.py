@@ -22,6 +22,11 @@ value of growing-4-harvest/small was 0.0095 (an Orb of Augmentation) where the o
 search can raise those floors, and the search, its bounds that low at every tip, ran out of time where the grown model ended exact (#829 had
 dropped the growth: R08 at the prices of 2026-11-10 spent its whole run on rounds).
 
+*What a round costs (#1086).* The builder keeps every key it expanded and builds at them only the offers that join (`PatternBuilder.extend`). An
+offer that joins with a mod the pool does not list (an essence's forced mod) grows the universe, and the build begins again only at the keys the new
+slot may be in (`Pattern.may_hold`), keeping every key and kernel (R11 with the Exalted Orb: four essences joined; the bound took 16.7 s here, 17.9 s
+on a runner, where the model takes 4.6 s built at once; now 6.4 s, the same value).
+
 **The net (OR-12, OR-13).** The build is asked for its `stop` between two offers, so a key of thousands of offers is no longer one step. A build that
 stops leaves the keys it did not expand as tips, each with a floor action of the least floor of *all* the offers at that key, and the model is
 solved as it is: its value is still a lower bound, weaker where the build did not reach. `PatternBound.stopped` says why and `PatternBound.phase` says
