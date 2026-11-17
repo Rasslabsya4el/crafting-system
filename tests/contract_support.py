@@ -364,6 +364,8 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     check_socket_declarations(action, reads, adds, items, item, data, reading)
     check_corruption_declarations(action, reads, adds, items, item, data, goal)
     check_added_draw(action, item, items, data)
+    if not item.memory_strands:
+        check_rarities_declared(action, item, items, data)
     if item.memory_strands:
         check_strand_declarations(action, item, outcomes, items, data, reading)
     elif adds.only_sockets:
@@ -371,6 +373,14 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     elif not outcomes.fractures and not _rerolls_values(outcomes):
         check_kernel_equals_brute_force(action, reads, item, items, data, goal, reading)
     return True
+
+
+def check_rarities_declared(action, given: Item, items, data) -> None:
+    """`Action.rarities` holds the rarity of every finished item: the planner lists the offers for each rarity it names (#973), so a rarity
+    left out would leave the item there with no offer it takes (a fossil set answers from its rules, not from its pools)."""
+    declared = action.rarities(data, given)
+    made = {finished.rarity for _, finished in items}
+    assert made <= declared, f"{action.label(data)} on a {given.rarity} item declares the rarities {sorted(declared)} but leaves {sorted(made)}"
 
 
 def _rerolls_values(outcomes) -> bool:

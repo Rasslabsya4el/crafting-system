@@ -139,8 +139,11 @@ def test_the_rerolls_and_the_essences_of_the_item_class_are_offered_by_their_nam
 
     assert any(isinstance(offer.action, ChaosOrb) for offer in chosen.offers)
     assert any(offer.label == "Harvest Reforge Lightning" for offer in chosen.offers)
-    # level 1 works on a normal item only; the corrupted essences work on a rare item and are offered by default since #886
-    assert {offer.label for offer in chosen.offers if isinstance(offer.action, ApplyEssence)} <= CORRUPTED_ESSENCES
+    # level 1 works on a normal item only: it is offered for the Normal item an Orb of Scouring leaves (#973); the corrupted essences work
+    # on a rare item and are offered by default since #886
+    assert {offer.label for offer in chosen.offers if isinstance(offer.action, ApplyEssence)} <= CORRUPTED_ESSENCES | {"Whispering Essence of Hatred"}
+    without_scouring = offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["chaos-orb", "essence", "corrupted-essence"])
+    assert {offer.label for offer in without_scouring.offers if isinstance(offer.action, ApplyEssence)} <= CORRUPTED_ESSENCES
 
 
 def test_a_low_essence_is_offered_for_a_normal_start_item_only():
@@ -205,18 +208,22 @@ def test_an_unknown_action_kind_is_refused_with_the_kinds_there_are():
 MAGIC_ORBS = {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb"}
 
 
-def test_a_rare_start_item_is_offered_none_of_the_orbs_of_magic_items_and_a_normal_one_is():
+def test_a_rare_start_item_is_offered_the_orbs_of_magic_items_only_for_the_item_an_orb_of_scouring_leaves():
+    """#973: the offers are listed for every rarity the offered actions reach, not for the start item's alone."""
     goal = Goal((Wanted(frozenset({LIFE})),))
     rare = item(roll(LIFE), base_id=BELT)  # rare: the start items of R10, R11, R05 and R12
     normal = item(base_id=BELT, rarity=Rarity.NORMAL)
+    magic_kinds = ["transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb"]
 
-    assert not MAGIC_ORBS & {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
-    assert MAGIC_ORBS <= {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, normal).offers}
+    scoured = {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
+    assert MAGIC_ORBS | {"Orb of Scouring", "Orb of Alchemy"} <= scoured
+    assert not MAGIC_ORBS & {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare, ["chaos-orb", *magic_kinds]).offers}
+    assert MAGIC_ORBS | {"Orb of Alchemy"} <= {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, normal).offers}
 
 
 def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
-    with pytest.raises(ValueError, match=r"scouring-orb cannot be used by the planner yet; the kinds the planner can use are"):
-        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["scouring-orb"])
+    with pytest.raises(ValueError, match=r"blessed-orb cannot be used by the planner yet; the kinds the planner can use are"):
+        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["blessed-orb"])
 
 
 # --- kinds named, and single actions named by label (ticket #70) ---------------------------------------------------

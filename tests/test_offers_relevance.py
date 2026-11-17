@@ -8,7 +8,7 @@ the Harvest crafts and the veiled orbs on a jewel) and (B) an action that needs 
 Pick). Done when (#848), and the test of each:
 
 1. A kind it leaves out changes no exact mean, the walk with and without it, to 1e-12: `test_j01_with_the_left_out_kinds_forced_in_*` and
-   `test_on_generated_jewel_targets_*`; on J01 the left-out set holds the 17 kinds the probe of #637 found inert:
+   `test_on_generated_jewel_targets_*`; on J01 the left-out set holds the kinds the probe of #637 found inert (17 until #973 listed the orbs of Normal and Magic items for the item a Scouring leaves):
    `test_on_j01_every_kind_named_*`.
 2. The answer lists the kinds left out with what it still guarantees (OR-13): the same test and `test_the_answer_of_j01_*`.
 3. The counts on a runner: the PR's measurement (its script `.github/scripts/actions_key.py` retired with the key, #405), not a test.
@@ -55,11 +55,13 @@ COBALT, CRIMSON, VIRIDIAN = "Metadata/Items/Jewels/JewelInt", "Metadata/Items/Je
 BELT = "Metadata/Items/Belts/Belt3"
 LIFE, ATTACK_SPEED, WAND_SPEED = "MaximumLifeIncreasePercent", "IncreasedAttackSpeed", "SpecificWeaponSpeed"
 
-# The 17 kinds the probe of #637 (run 42378616946) found to add no state to J01 and that list no action for a rare Cobalt Jewel.
+# The kinds the probe of #637 (run 42378616946) found to add no state to J01 and that list no action for a rare Cobalt Jewel. The four orbs
+# of Normal and Magic items were among its 17 until #973: the Orb of Scouring leaves the jewel Normal, and they are listed for it.
 INERT_ON_J01 = frozenset({
-    "harvest-reforge-influence", "essence", "corrupted-essence", "bench-craft", "remove-crafted-mods", "transmutation-orb", "alteration-orb",
-    "augmentation-orb", "regal-orb", "talisman-fracture", "aspect-beast", "wild-bristle-matron", "divine-orb", "imprint", "restore", "vaal", "locus",
+    "harvest-reforge-influence", "essence", "corrupted-essence", "bench-craft", "remove-crafted-mods", "talisman-fracture", "aspect-beast",
+    "wild-bristle-matron", "divine-orb", "imprint", "restore", "vaal", "locus",
 })  # fmt: skip
+MAGIC_ON_J01 = frozenset({"scouring-orb", "alchemy-orb", "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb"})  # #973
 REFUSED_ON_A_JEWEL = frozenset({  # cut A: listed for the jewel, refused by the model on every item of the base
     "harvest-reforge", "harvest-add-remove", "harvest-resistance-swap", "harvest-damage-swap", "veiled-chaos-orb", "veiled-exalted-orb",
 })  # fmt: skip
@@ -139,7 +141,7 @@ def forced_walk_mean(data, target, prices, monkeypatch) -> tuple[float, int]:
 # --- 1 and 2: J01 -------------------------------------------------------------------------------------------------------------------
 
 
-def test_on_j01_every_kind_named_leaves_out_the_seventeen_inert_kinds_and_the_eight_it_proves_unusable(data, tmp_path):
+def test_on_j01_every_kind_named_leaves_out_the_inert_kinds_and_the_eight_it_proves_unusable(data, tmp_path):
     target = jewel_target(data, tmp_path, "Cobalt Jewel", (LIFE, ATTACK_SPEED, WAND_SPEED), every_kind())
 
     chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions)
@@ -148,7 +150,7 @@ def test_on_j01_every_kind_named_leaves_out_the_seventeen_inert_kinds_and_the_ei
     left_out = set(target.actions) - offered
     assert INERT_ON_J01 <= left_out
     assert REFUSED_ON_A_JEWEL | NEED_A_VEIL <= left_out
-    assert offered == {"chaos-orb", "fossil-set", "exalted-orb", "annulment-orb", "fracturing-orb", "beast-side-swap"}
+    assert offered == {"chaos-orb", "fossil-set", "exalted-orb", "annulment-orb", "fracturing-orb", "beast-side-swap", *MAGIC_ON_J01}
     gaps = [limit for limit in chosen.limits if limit.kind == _limits.LISTING_GAP]
     assert len(gaps) == 1 and set(gaps[0].labels) == {_limits.kind_title(name) for name in REFUSED_ON_A_JEWEL}
     assert "An action the model has no rule for could make it cheaper." in gaps[0].guarantee  # a model gap is never silent (#506)

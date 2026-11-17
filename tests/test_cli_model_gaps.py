@@ -113,6 +113,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_offers.py", "_roll_limit_can_matter", ("NotApplicableError", "OutOfScopeError"), EITHER, "a pool that cannot be built is no proof the mod is out of reach, so the orb stays and nothing is left out"),
     ("planner/_offers.py", "_implicits_made", ("NotApplicableError", "OutOfScopeError"), EITHER, "an Ember or an Ichor the start item cannot take reaches no grade: what refuses it (the base, its class, influence, corruption) holds for every later item too"),
     ("planner/_offers.py", "_told_families", ("ItemError", "NotApplicableError", "OutOfScopeError"), EITHER, "a probe item whose pool cannot be built (an influence the base refuses, a model gap) gives no draw, so no family to tell apart there (#886)"),
+    ("planner/_offers.py", "reached_items", ("ItemError", "NotApplicableError", "OutOfScopeError"), EITHER, "an action that leaves nothing at an item (the game refuses it, no rule covers it, the data cannot build it) is no way to another rarity there; at plan time it is refused at that item too (#973)"),
     ("planner/_offers.py", "donor_wants", ("OutOfScopeError", "NotApplicableError"), EITHER, "an Awakener's Orb whose donor cannot be read (#832) is kept, so that its donor's search (`_awakener.solve_donors`) leaves it out and says why"),
     ("planner/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_packed.py", "walk", ("OutOfScopeError",), RECORDS, "a model gap: written"),

@@ -12,7 +12,6 @@ from .contract import Action, Adds, Previewable, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
-from .scour import PLAYER_WHY, WHY_NOT_PLANNER
 from .strand_use import SPEND_CHAOS_FAMILY, SpendLaw, StrandUse
 
 __all__ = [
@@ -69,7 +68,7 @@ class AlchemyOrb(Action):
         return Outcomes.reroll(data, item, tag=None, cut=self.cut_of(data, item))
 
 
-@kind("alchemy-orb", order=70, planner=False, why_not=WHY_NOT_PLANNER, player_why=PLAYER_WHY)
+@kind("alchemy-orb", order=70)  # a planner kind since #973, with the Orb of Scouring that leaves a Normal item
 def _alchemy_orb(data: GameData, item: Item):
     if item.rarity is Rarity.NORMAL:
         yield AlchemyOrb()

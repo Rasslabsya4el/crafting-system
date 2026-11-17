@@ -130,18 +130,6 @@ class ScouringOrb(Action):
         return ScourOutcomes(data, item.changed(data, rarity=rarity, mods=kept))
 
 
-WHY_NOT_PLANNER = (
-    "the offers are listed once, for the start item (`planner/_offers.py` `_listed`), and a kind lists only what fits that item's rarity: "
-    "on a Rare start the Normal item a Scouring leaves (or the Magic one holding the fractured mod) is offered nothing it takes, so the "
-    "Scouring would be a dead offer; the Orb of Alchemy is held back with it, on a Normal start too; both wait for the offers of the item a "
-    "Scouring leaves (#973, #943)"
-)
-PLAYER_WHY = (
-    "not offered yet on any item, a Normal one included: a Scouring leaves the item Normal, or Magic with its fractured mod, and the "
-    "planner cannot yet choose actions for that item, only for the item it starts from, so the Orb of Alchemy waits with the Scouring"
-)
-
-
-@kind("scouring-orb", order=80, planner=False, why_not=WHY_NOT_PLANNER, player_why=PLAYER_WHY)
+@kind("scouring-orb", order=80)  # a planner kind since #973: the offers are listed for every rarity the actions reach (`planner/_offers.py`)
 def _scouring_orb(data: GameData, item: Item):
     yield ScouringOrb()

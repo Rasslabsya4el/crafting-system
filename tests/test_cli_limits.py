@@ -94,45 +94,21 @@ def test_k2_the_kinds_the_planner_cannot_use_yet_are_listed_in_every_answer(plan
     assert all("cheapest among the methods the planner can use" in limit.guarantee for limit in cannot)
 
 
-STATED = (
-    "Not offered: Alchemy Orb, Scouring Orb (not offered yet on any item, a Normal one included: a Scouring leaves the item Normal, or Magic "
-    "with its fractured mod, and the planner cannot yet choose actions for that item, only for the item it starts from, so the Orb of Alchemy "
-    "waits with the Scouring). The plan is the cheapest among the methods the planner can use."
-)
-
-
-def _not_built_apart(limits):
-    """The general limit of the kinds the planner cannot use and the one that names the Scouring and the Alchemy Orb with their reason."""
-    found = of_kind(limits, "kinds-not-built")
-    stated = [limit for limit in found if "Scouring Orb" in limit.labels]
-    general = [limit for limit in found if limit.why == "methods the planner cannot use yet"]
-    assert len(stated) == 1 and len(general) == 1 and len(found) == 2, [limit.labels for limit in found]
-    return general[0], stated[0]
-
-
-def test_k2_the_scouring_and_the_alchemy_orb_are_named_apart_with_their_true_reason_in_player_words(plan):
-    """#943: the two are held back because the offers are listed for the start item only (#973), not for speed; the answer says so."""
-    general, stated = _not_built_apart(plan.limits)
-
-    assert not {"Alchemy Orb", "Scouring Orb"} & set(general.labels)
-    assert stated.labels == ("Alchemy Orb", "Scouring Orb")
-    assert limit_text(stated) == STATED
-    assert "pruning" not in stated.why and "#" not in stated.why  # a player's words, no ticket numbers and no speed cut
-    registered = {entry.name: entry for entry in kinds()}
-    assert all("#973" in registered[name].why_not and "pruning" not in registered[name].why_not for name in ("alchemy-orb", "scouring-orb"))
-
-
-@pytest.mark.parametrize("named", [None, ["chaos-orb"]], ids=["no actions key", "actions key"])
+@pytest.mark.parametrize("named", [None, ["chaos-orb", "scouring-orb", "alchemy-orb"]], ids=["no actions key", "actions key"])
 @pytest.mark.parametrize("rarity", ["rare", "normal"])
-def test_k2_the_reason_of_the_scouring_and_the_alchemy_orb_stands_on_a_normal_and_a_rare_start_with_or_without_a_methods_setting(rarity, named):
-    """On a Normal start the Orb of Alchemy would fit the start item and is still held back: the sentence says so (#943, checker)."""
+def test_k2_the_scouring_and_the_alchemy_orb_are_methods_the_planner_uses_on_a_normal_and_a_rare_start(rarity, named):
+    """#943 held the two back with a reason of their own; #973 lists the offers for the item a Scouring leaves, and no answer names them."""
     target = load_target(R12, DATA)
     start = target.start_item if rarity == "rare" else target.start_item.changed(DATA, rarity=Rarity.NORMAL, mods=())
 
     chosen = offers_for(DATA, Goal.from_target(target), target.base_id, start, named)
 
-    general, stated = _not_built_apart(chosen.limits)
-    assert limit_text(stated) == STATED and "Alchemy Orb" not in general.labels
+    assert not {"Alchemy Orb", "Scouring Orb"} & {label for limit in of_kind(chosen.limits, "kinds-not-built") for label in limit.labels}
+    labels = {offer.label for offer in chosen.offers}
+    # R12's rare start holds a fractured mod: a Scouring leaves it Magic, never Normal, so the Alchemy has no item to take there
+    assert "Orb of Scouring" in labels and ("Orb of Alchemy" in labels) == (rarity == "normal")
+    registered = {entry.name: entry for entry in kinds(planner_only=True)}
+    assert {"alchemy-orb", "scouring-orb"} <= registered.keys()
 
 
 def test_g1_k3_k6_the_kinds_that_need_memory_strands_are_one_limit_named_in_player_words(plan):

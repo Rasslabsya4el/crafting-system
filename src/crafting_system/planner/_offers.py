@@ -846,7 +846,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     kind_names = {name for name in names if name in exist}
     absent = _strand_kinds_absent(start_item)  # a kind that needs Memory Strands is no kind of this item's catalog until the planner passes `strands` (#277)
     unready = sorted((kind_names - usable) | (kind_names & absent))
-    labels = {action.label(data) for action in catalog(data, start_item, planner_only=True, names=usable)}
+    labels = {action.label(data) for probe in _probe_items(data, start_item) for action in catalog(data, probe, planner_only=True, names=usable)}
     unknown = sorted(name for name in names if name not in exist and name not in labels)
     problems = []
     if unknown:
@@ -866,12 +866,56 @@ def _listed(
     With `gaps`, the model gaps the kinds named meet while they list are added to it (`catalog_kinds`); a kind searched only for a label
     adds none, as it is not offered as a kind.
     """
-    found = catalog_kinds(data, start_item, planner_only=True, names=kind_names, gaps=gaps)
+    found: dict[Action, str] = {}
+    for reached in reached_items(data, start_item, kind_names, label_names):
+        found.update({a: k for a, k in _listed_at(data, reached, kind_names, label_names, gaps).items() if a not in found})
+    return found
+
+
+def _listed_at(
+    data: GameData, item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str], gaps: list[ListingGap] | None = None
+) -> dict[Action, str]:
+    """`_listed` for one item: the planner actions of the kinds named that `item` takes, plus those named by label, each with its kind."""
+    found = catalog_kinds(data, item, planner_only=True, names=kind_names, gaps=gaps)
     if label_names:
         usable = {entry.name for entry in kinds(planner_only=True)}
-        extra = {a: k for a, k in catalog_kinds(data, start_item, planner_only=True, names=usable).items() if a.label(data) in label_names}
+        extra = {a: k for a, k in catalog_kinds(data, item, planner_only=True, names=usable).items() if a.label(data) in label_names}
         found.update({a: k for a, k in extra.items() if a not in found})
     return found
+
+
+def reached_items(data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str]) -> tuple[Item, ...]:
+    """The start item, then one item of each other rarity that the listed actions can turn it into, in the order found (#973).
+
+    A kind lists only what the item it is asked for takes at that item's rarity (`actions.catalog`: a Transmutation or an Alchemy on a Normal
+    item only, the magic orbs on a Normal or Magic one, an essence of level 1 to 4 on a Normal one), so offers listed for the start item alone
+    leave a Rare start offered nothing the Normal item an Orb of Scouring leaves takes. The rarities are closed under the actions: each item
+    found is asked what every action listed for it leaves (the `retained` item of each part of its outcomes: the item after a Scouring, its
+    fractured mods kept; the empty Rare item an Alchemy draws on), and an uncorrupted item of a rarity not yet found is added and asked in
+    turn (`Action.rarities` first, which a fossil set answers without building its pools). Nothing names an action here: a Restore of a Magic imprint, or any new action that changes the rarity, is followed the same way.
+    An action the item refuses (`NotApplicableError`), the model has no rule for (`OutOfScopeError`) or the data cannot build there
+    (`ItemError`: a game data without the veiled placeholders) leaves nothing: at plan time it is refused at that item too, so it reaches
+    no item the plan could use.
+    """
+    found = {start_item.rarity: start_item}
+    queue = [start_item]
+    while queue:
+        item = queue.pop(0)
+        for action in _listed_at(data, item, kind_names, label_names):
+            if len(found) == len(Rarity):
+                return tuple(found.values())
+            try:
+                if not action.rarities(data, item) - found.keys():  # cheap for every action (a fossil set answers from its rules)
+                    continue
+                parts = action.outcomes(data, item).components
+            except (ItemError, NotApplicableError, OutOfScopeError):  # it leaves nothing here, so it is no way to another rarity
+                continue
+            for _, part in parts:
+                made = part.retained
+                if made.rarity not in found and not made.corrupted:
+                    found[made.rarity] = made
+                    queue.append(made)
+    return tuple(found.values())
 
 
 def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed: Iterable[Action]) -> bool:
