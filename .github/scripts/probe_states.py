@@ -44,7 +44,7 @@ def one(route: str, states: int) -> None:
     prices = load_price_file(VENDOR if route == "V01" else PRICES.with_name("references-allflame-2026-07-31.json") if route == "R24" else PRICES)  # R24: its own file, with its start boots (#901)
     result: dict = {"route": route, "N": states, "bps": int(os.environ.get("PROBE_BPS", "100"))}
     try:
-        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=bench.route is not None, budget=Budget.in_states(states, build_per_state=int(os.environ.get("PROBE_BPS", "100"))))
+        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=bench.route is not None, budget=Budget.default() if os.environ.get("PROBE_TIME") else Budget.in_states(states, build_per_state=int(os.environ.get("PROBE_BPS", "100"))))
         plan = plan_target(data, target, prices, settings)
         search = plan.search
         result.update(
