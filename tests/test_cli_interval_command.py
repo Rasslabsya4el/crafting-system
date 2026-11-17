@@ -110,7 +110,12 @@ def test_the_report_carries_the_interval_of_the_plan_over_the_grid(lucky):
     assert report.interval.worst_reading == "luck = 0.2"
 
 
-def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky, tmp_path, capsys):
+def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky, tmp_path, capsys, monkeypatch):
+    from crafting_system.budget import Budget
+    from crafting_system.cli import _main
+
+    # counted in states, not in the default budget's memory share: a process that already holds real game data stops at once (tests/conftest.py)
+    monkeypatch.setattr(_main, "run_budget", lambda *args, **kwargs: Budget.in_states(100_000))
     out = tmp_path / "policy.json"
     named = tmp_path / R12.name  # R12's file with the methods of `r12` named in it
     named.write_text(R12.read_text(encoding="utf-8") + f"\nactions: [{', '.join(r12().actions)}]\n", encoding="utf-8")

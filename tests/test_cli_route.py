@@ -309,7 +309,8 @@ requirements:
 start_item:
   rarity: rare
 start: bought
-"""
+actions: [chaos-orb, harvest-reforge]
+"""  # the module's methods (`target`): a judged plan of every method is #1110
     two = parse_target(text, DATA, source="two.yaml")
     plan = make_plan(DATA, two, priced_for(two), judges_route=True)
     outcomes = ChaosOrb().outcomes(DATA, two.start_item)
@@ -516,7 +517,7 @@ def test_an_unknown_requirement_selector_lists_the_selectors_of_the_target(plan)
 def test_a_selector_that_names_two_leaves_is_ambiguous():
     twice = parse_target(
         f"base: Paua Amulet\nitem_level: 84\nrequirements:\n  - stat: \"{GEM_TEXT}\"\n  - stat: \"{GEM_TEXT}\"\n"
-        "start_item:\n  rarity: rare\nstart: bought\n",
+        "start_item:\n  rarity: rare\nstart: bought\nactions: [chaos-orb, harvest-reforge]\n",  # the module's methods (`target`): a judged plan of every method is #1110
         DATA,
         source="twice.yaml",
     )

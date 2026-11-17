@@ -8,6 +8,10 @@ CI fetches it. Nothing here solves a hard route: the options are listed (no solv
 * The B1 routes with a base a recipe takes (R08 to R10 boots, R12 amulet) list their refusals, and with the setting off
   R12 is the report `make_plan` gives, byte for byte.
 * The gem recipes (a Minion helmet, a Fire spell-gem wand and staff) list a start item priced by the gem line.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import json
@@ -38,6 +42,7 @@ def parse_target(text: str, data, source: str = "t.yaml"):
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"
 LIFEFORCE_PRICE = 0.03458
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 
 @pytest.fixture(scope="module")
