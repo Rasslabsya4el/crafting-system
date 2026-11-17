@@ -45,10 +45,13 @@ def one(route: str, states: int) -> None:
     result: dict = {"route": route, "N": states, "bps": int(os.environ.get("PROBE_BPS", "100"))}
     try:
         settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=bench.route is not None, budget=Budget.default() if os.environ.get("PROBE_TIME") else Budget.in_states(states, build_per_state=int(os.environ.get("PROBE_BPS", "100"))))
+        if os.environ.get("PROBE_PLAIN"):  # the settings of #1080's probe_rounds.py (the 10-minute figures R05 92.86 ...): no judged route
+            settings = PlanSettings(recipe_starts=False, budget=Budget.default())
         plan = plan_target(data, target, prices, settings)
         search = plan.search
         result.update(
             planned=True,
+            remaining=round(float(plan.mean_remaining) + plan.start_price.chaos, 2),
             mean=None if plan.risk is None else round(plan.risk.mean.value + plan.start_price.chaos, 2),
             upper=None if search is None else round(search.upper + plan.start_price.chaos, 2),
             lower=None if search is None else round(search.lower + plan.start_price.chaos, 2),
