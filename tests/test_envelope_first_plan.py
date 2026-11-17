@@ -275,3 +275,76 @@ def test_the_crafting_plan_of_a_search_a_refused_round_ended_says_so_with_its_ga
     assert info.lower <= full.solution.values[start] <= certified_upper(info)  # the gap stated holds the cheapest plan
     text = limit_text(envelope_limits(info)[0])
     assert "The search was stopped" in text and "the search could not go further" in text and "costs at most" in text
+
+
+# ---- a first plan that reaches no goal, and the walk toward the goal (#1142) -------------------------------------------------------------
+#
+# Start 0, the start item bought (offer 0, the restart, costs 3, offered everywhere but at the start), goal 9. A blind bound: every state 0, every
+# offer at its price.
+#   state 0: offer 1, a reroll for 0.1: state 1; offer 2, a craft for 10: state 1 or state 2, half each.
+#   state 1: offer 1, the reroll: state 0 back; offer 3, a finish for 10: the goal; the restart.
+#   state 2: offer 1, the reroll: state 0; the restart.
+# The least `la` takes the reroll at 0 and at 1: a chain of two states that never meets the goal, so no policy of what it realized reaches it and
+# the plan in hand costs infinity (R04, R14, R20, R24 on the heavy benchmark's records: 10,603 to 750,477 states and no goal). The distance to the
+# goal (the requirements a state lacks) is 2 at 0 and 2, 1 at 1. The walk pops state 1 first (nearest) and realizes what it has left: the finish
+# reaches the goal. The plan in hand: reroll at 0 (0.1), finish at 1 (10): U = 10.1, the optimum itself; one offer realized by the walk.
+
+def looping(**changes) -> Hand:
+    world = Hand(
+        goal={9},
+        costs={0: 3.0, 1: 0.1, 2: 10.0, 3: 10.0},
+        actions={0: {1: {1: 1}, 2: {1: 1, 2: 1}}, 1: {1: {0: 1}, 3: {9: 1}, 0: {0: 1}}, 2: {1: {0: 1}, 0: {0: 1}}, 9: {}},
+        la={(0, 1): 0.1, (0, 2): 10.0, (1, 1): 0.1, (1, 3): 10.0, (1, 0): 3.0, (2, 1): 0.1, (2, 0): 3.0},
+        lb={0: 0.0, 1: 0.0, 2: 0.0, 9: 0.0},
+        restart=0,
+    )
+    for name, value in changes.items():
+        setattr(world, name, value)
+    return world
+
+
+DISTANCE = {0: 2, 1: 1, 2: 2, 9: 0}.__getitem__
+
+
+def test_a_chain_that_reaches_no_goal_has_no_plan_in_hand():
+    result = Search(looping()).run()
+    assert result.stats.first_upper is None and result.stats.seeded == 2 and result.stats.reached == 0  # the reroll at 0 and at 1, nothing more
+    assert result.exact and answer(result)[0] == pytest.approx(10.1, rel=1e-9)  # the proof is not at fault: with no net it ends on the optimum
+
+
+def test_the_walk_toward_the_goal_realizes_a_path_to_it_when_the_chain_reaches_none():
+    world = looping()
+    world.distance = DISTANCE
+    result = Search(world).run()
+    assert world.asked[:3] == [(0, 1), (1, 1), (1, 3)]  # the chain's two rerolls, then the finish at state 1, the nearest state
+    assert result.stats.seeded == 2 and result.stats.reached == 1
+    assert result.stats.first_upper == pytest.approx(10.1, rel=1e-9)
+    assert result.exact and answer(result) == (pytest.approx(10.1, rel=1e-9), {0: 1, 1: 3})  # the same answer as without the walk
+
+
+def test_a_net_that_ends_the_search_after_the_walk_returns_its_plan():
+    world = looping()
+    world.distance = DISTANCE
+    result = Search(world, net=Net(give_way=lambda standing: "the caller's rule")).run()  # the first stop there is: right after the first plan
+    assert not result.exact and result.stopped == "the caller's rule"
+    assert answer(result)[0] == pytest.approx(10.1, rel=1e-9)
+
+
+def test_on_a_stopped_build_with_no_order_the_walk_replaces_the_chain():
+    world = looping()
+    world.distance = DISTANCE
+    world.reach_first = True  # the problem's bound was stopped and gives no order: the least-`la` chain is not walked
+    result = Search(world).run()
+    # state 0 is the only one known: its offers are realized (reroll, craft), then state 1 (nearest) and its offers until the finish meets the goal
+    assert world.asked[:4] == [(0, 1), (0, 2), (1, 1), (1, 3)]
+    assert result.stats.seeded == 0 and result.stats.reached == 4
+    assert result.stats.first_upper == pytest.approx(10.1, rel=1e-9)
+    assert result.exact and answer(result)[0] == pytest.approx(10.1, rel=1e-9)
+
+
+def test_with_no_restart_the_walk_is_not_taken():
+    world = looping(restart=None, actions={0: {1: {1: 1}, 2: {1: 1, 2: 1}}, 1: {1: {0: 1}, 3: {9: 1}}, 2: {1: {0: 1}}, 9: {}})
+    world.distance = DISTANCE
+    world.reach_first = True  # a given start: a path to the goal is no executable plan (a tip has no action), so the chain stays
+    result = Search(world).run()
+    assert result.stats.reached == 0 and result.stats.seeded == 2

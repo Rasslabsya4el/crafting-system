@@ -105,8 +105,13 @@ class CraftingProblem:
         self.bound_error = float(bound.error_bound)  # what the values below are lowered by: the search's consistency guard allows for it above 1e-6 (#867)
         self._last_key: tuple[CompressedState, int | None] | None = None
         self.closed_start: float | None = None  # the closed model's value of the start key, when the first plan follows it (#948)
+        if goal is None:  # the search's walk toward the goal reads the target's own goal; a donor's want has none of its own (#1142)
+            self.distance = abstraction.unmet
         if not bound.complete:
             self._closed(model, bound)
+        # a build a net stopped with no closed order (its model reaches the goal from no start): the least-`la` chain is the cheapest offer at every
+        # state and reaches no goal (R20: 577,074 states, R24: 750,477 and the whole time net, #1142), so the search walks toward the goal instead
+        self.reach_first = not bound.complete and getattr(self, "first_choice", None) is None
 
     def _closed(self, model, bound: PatternBound) -> None:
         """The first plan's order on a bound whose build a net stopped (#948, `_envelope`, "A blind bound"): the model solved on what the build
