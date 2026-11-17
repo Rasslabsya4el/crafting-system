@@ -1,7 +1,7 @@
 """The heavy benchmark's record of the default-on plans of the reference routes, and the check of a new run against it (#1109).
 
-`benchmark --net` plans every benchmark route the way a user's run does: the default offers (every beta method on) under the run's budget from
-the planner settings of the machine (OR-40; with the default settings `Budget.default()`, the 10-minute net). Each route's entry then carries
+`benchmark --net` plans every benchmark route the way a user's run does: the default offers (every beta method on; a route judged against its
+guide has the guide's actions leading the first round of offers, #1110) under the run's budget from the planner settings of the machine (OR-40; with the default settings `Budget.default()`, the 10-minute net). Each route's entry then carries
 a `record` (`record_of_plan`): the plan's cost (its mean, the start item included), the figure no plan can cost less than (`lower`, the start
 item included), the seconds of the plan, the peak memory the search read, and how the search ended (`stop`). A route the run could not plan
 carries no cost and its error is its stop.
@@ -32,7 +32,7 @@ NO_PLAN = "no plan"  # neither recorded run gave a plan
 
 PASS = "pass"
 FAIL = "fail"
-NOT_RUN = "not run"  # a route of the record the new run left out (a run of some routes only)
+NOT_RUN = "not run"  # a route of the record the new run left out: a failure, unless the check was asked for some routes only
 NOT_RECORDED = "not recorded"  # a route of the new run the record does not hold
 
 
@@ -72,7 +72,9 @@ def runs_of(document: Mapping) -> dict[str, dict]:
     for entry in document.get("routes", ()):
         record = entry.get("record")
         if record is None:
-            record = record_of_plan(None, None, None, None, entry.get("error") or "no record: the run was not made with --net")
+            if not entry.get("error"):
+                raise ValueError(f"route {entry['id']} has no record: the run was not made with --net")
+            record = record_of_plan(None, None, None, None, entry["error"])
         found[entry["id"]] = record
     return found
 
@@ -144,13 +146,22 @@ class Verdict:
     why: str
 
 
-def check_run(record: Mapping, document: Mapping) -> list[Verdict]:
-    """The verdict of every route of the record, and of every route of the new run the record does not hold (see the module text)."""
+def check_run(record: Mapping, document: Mapping, routes: Iterable[str] | None = None) -> list[Verdict]:
+    """The verdict of every route of the record (or of `routes`, a run of some routes only), and of every route of the new run the record
+    does not hold (see the module text). A route asked for that the run does not hold fails (`NOT_RUN`): a runner killed for its memory or
+    its timeout writes no `benchmark.json`, and its routes must not pass by being absent."""
+    if record.get("format") != FORMAT:
+        raise ValueError(f"not a record of the heavy benchmark (format {record.get('format')!r}, not {FORMAT!r})")
     new = runs_of(document)
+    wanted = list(record["routes"]) if routes is None else list(routes)
+    unknown = [name for name in wanted if name not in record["routes"]]
+    if unknown:
+        raise ValueError(f"the record does not hold {', '.join(unknown)}")
     verdicts = []
-    for name, held in record["routes"].items():
+    for name in wanted:
+        held = record["routes"][name]
         if name not in new:
-            verdicts.append(Verdict(name, NOT_RUN, "the new run did not plan this route"))
+            verdicts.append(Verdict(name, NOT_RUN, "the run holds no entry for this route (a runner that died writes none)"))
             continue
         first, second = held["runs"]
         verdicts.append(_verdict(name, RouteRecord(first, second), new[name]))
@@ -181,4 +192,4 @@ def render_check(verdicts: Iterable[Verdict]) -> str:
 
 def failed(verdicts: Iterable[Verdict]) -> bool:
     """Whether any route failed the check."""
-    return any(verdict.outcome == FAIL for verdict in verdicts)
+    return any(verdict.outcome in (FAIL, NOT_RUN) for verdict in verdicts)

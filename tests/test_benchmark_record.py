@@ -83,12 +83,27 @@ def test_a_route_with_no_recorded_plan_or_an_unstable_one_passes_whatever_it_giv
     assert verdict_of(run(R12=planned(1000.0)), "R12").outcome == PASS
 
 
-def test_a_route_left_out_or_not_recorded_is_told_and_fails_nothing():
+def test_a_route_missing_from_the_run_fails_and_a_route_not_recorded_is_told():
+    """A runner killed for its memory or its timeout writes no entry: its routes fail, they do not pass by being absent."""
     verdicts = check_run(RECORD, run(R05=planned(95.0), R99=planned(1.0)))
     outcomes = {verdict.route: verdict.outcome for verdict in verdicts}
     assert outcomes == {"R05": PASS, "R10": NOT_RUN, "R11": NOT_RUN, "R12": NOT_RUN, "R99": NOT_RECORDED}
-    assert not failed(verdicts)
+    assert failed(verdicts)
     assert render_check(verdicts).splitlines()[0] == "R05: PASS: 95.00 c, within the ceiling of 110.00 c"
+
+
+def test_a_check_of_some_routes_only_asks_for_those():
+    verdicts = check_run(RECORD, run(R05=planned(95.0)), routes=["R05"])
+    assert [(verdict.route, verdict.outcome) for verdict in verdicts] == [("R05", PASS)] and not failed(verdicts)
+    with pytest.raises(ValueError, match="does not hold R99"):
+        check_run(RECORD, run(R05=planned(95.0)), routes=["R99"])
+
+
+def test_a_file_that_is_not_a_record_or_a_run_without_the_net_is_refused():
+    with pytest.raises(ValueError, match="not a record of the heavy benchmark"):
+        check_run({"routes": {}}, run())
+    with pytest.raises(ValueError, match="R05 has no record: the run was not made with --net"):
+        check_run(RECORD, {"routes": [{"id": "R05", "error": None, "record": None}]})
 
 
 def test_a_record_needs_both_runs_of_every_route_asked_for():
