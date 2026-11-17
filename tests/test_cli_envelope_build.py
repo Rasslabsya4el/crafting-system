@@ -713,44 +713,57 @@ def new_names_gain(monkeypatch):
     monkeypatch.setattr(_pattern._Universe, "_seed_named", gaining)
 
 
-def test_offers_that_join_later_are_in_the_universe_from_the_start_and_the_build_never_begins_again(world, monkeypatch):
-    """#1086: an offer that joins the model adds its forced mod to the universe, and a universe that grows begins the whole build again (R11: four
-    times, 27.6 s for a model that takes 7.7 s built at once). Seeded from the start with the offers that may join (`joining`), the builder makes one
-    pass for each `extend` and the same model as one build on every offer; without them, each offer that brings a name begins it again."""
+def count_kernels_made(monkeypatch, ab):
+    """Count the kernels the abstraction `ab` is asked to make."""
+    made = []
+    real = ab.kernel
+
+    def counted(state, action):
+        made.append(1)
+        return real(state, action)
+
+    monkeypatch.setattr(ab, "kernel", counted)
+    return made
+
+
+def test_a_build_that_begins_again_makes_no_kernel_twice_and_ends_on_the_model_built_at_once(world, monkeypatch):
+    """#1086: an offer that joins the model adds its forced mod to the universe, and a universe that grows begins the build again (R11: four times,
+    27.6 s for a model that takes 7.7 s built at once). The keys and the kernels do not depend on the universe and are kept: the build that began
+    again makes no kernel it made before, and it ends on the model built at once on every offer, with as many kernels made."""
     _, start, offers, _, _, _ = world
     all_offers = pattern_offers(offers)
     new_names_gain(monkeypatch)
-    whole = build_pattern_model(abstraction(), start, all_offers)
-    joining = [offer.action for offer in all_offers if offer.action is not None]
-    seeded = PatternBuilder(abstraction(), start, joining=joining)
-    seeded.extend(all_offers[:2])
-    seeded.extend(all_offers[2:5])
-    grown = seeded.extend(all_offers[5:])
-    assert seeded.restarts == 0 and grown.stats.universe_growth == 0
+    once = abstraction()
+    once_made = count_kernels_made(monkeypatch, once)
+    whole = build_pattern_model(once, start, all_offers)
+    grown_ab = abstraction()
+    grown_made = count_kernels_made(monkeypatch, grown_ab)
+    builder = PatternBuilder(grown_ab, start, grow=True)
+    builder.extend(all_offers[:2])
+    builder.extend(all_offers[2:5])
+    grown = builder.extend(all_offers[5:])
+    assert builder.restarts > 0  # the names of the offers that join began the build again
     assert canonical(grown) == canonical(whole)
-    assert grown.stats.kernels == whole.stats.kernels
-    unseeded = PatternBuilder(abstraction(), start)
-    unseeded.extend(all_offers[:2])
-    unseeded.extend(all_offers[2:5])
-    assert unseeded.restarts > 0  # the control: the names of the offers that join begin the build again
-    assert canonical(unseeded.extend(all_offers[5:])) == canonical(whole)
+    assert len(grown_made) == len(builder.computed) == len(once_made) == grown.stats.kernels == whole.stats.kernels
 
 
-def test_the_bound_grown_on_a_universe_seeded_with_every_offer_is_the_model_of_every_offer_and_a_lower_bound(world, floors_on, monkeypatch):
-    """#1086: the bound with the offers' floors seeds the universe with every offer, those that never join included; its rounds begin no build again,
-    its start value is the model of every offer's, and every key stays at most the exact value of each state that has it (the full walk)."""
+def test_the_bound_whose_build_begins_again_is_the_model_of_every_offer_and_a_lower_bound(world, floors_on, monkeypatch):
+    """#1086: with the offers' floors, offers join the bound's model round after round; each brings a name, so each round begins the build again.
+    The start value is the model of every offer's, no kernel is made twice, and every key stays at most the exact value of each state that has it."""
     ab, _, offers, _, exact, whole = world
     new_names_gain(monkeypatch)
     fresh = abstraction()
+    made = count_kernels_made(monkeypatch, fresh)
     bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
-    assert bound.complete and bound.rounds > 1 and bound.model.stats.universe_growth == 0
+    assert bound.complete and bound.rounds > 1 and bound.model.stats.universe_growth > 0
+    assert len(made) == bound.model.stats.kernels <= whole.model.stats.kernels
     assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)
     assert_lower_bound(bound, ab, exact)
 
 
-def test_through_the_envelope_entry_the_seeded_bound_begins_no_build_again_and_the_plan_is_the_full_walks(world, floors_on, monkeypatch):
-    """#1086 through the search's entry: with every new name counted as a slot gained, the bound's rounds begin no build again (each builder made ends
-    with no restart) and the plan is the full walk's mean, as with the model of every offer."""
+def test_through_the_envelope_entry_a_bound_that_begins_again_gives_the_full_walks_plan(world, floors_on, monkeypatch):
+    """#1086 through the search's entry: every name counted as a slot gained, the bound's rounds begin the build again, keep their kernels, and
+    the plan is the full walk's mean."""
     _, start, offers, full, _, _ = world
     new_names_gain(monkeypatch)
     builders = []
@@ -762,8 +775,23 @@ def test_through_the_envelope_entry_the_seeded_bound_begins_no_build_again_and_t
 
     monkeypatch.setattr(PatternBuilder, "__init__", keep)
     fresh = abstraction()
+    building = []
+    real_pass = PatternBuilder._pass
+
+    def passing(self):
+        building.append(self)
+        try:
+            return real_pass(self)
+        finally:
+            building.pop()
+
+    monkeypatch.setattr(PatternBuilder, "_pass", passing)
+    made = []
+    real_kernel = fresh.kernel
+    monkeypatch.setattr(fresh, "kernel", lambda state, action: (made.append(1) if building else None, real_kernel(state, action))[1])
     result = envelope_result(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
     info = result.info["envelope"]
     assert info.exact and info.bound_stopped is None and info.bound_rounds > 1
-    assert builders and all(builder.restarts == 0 for builder in builders)
+    assert any(builder.restarts for builder in builders)
+    assert len(made) == sum(len(builder.computed) for builder in builders)  # no kernel made twice by the builds (the search makes its own)
     assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)

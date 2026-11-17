@@ -331,7 +331,10 @@ class _Universe:
                 mod = ab.data.mods.get(mod_id)
                 if mod is None or mod.domain == "crafted" or mod.generation_type not in (side.value for side in SIDES):
                     continue
-                gained += self.note(Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences)))
+                slot = Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences))
+                if self.note(slot):
+                    gained += 1
+                    pattern.grown.append((influences, slot))
         return gained
 
     def note(self, slot: Slot) -> bool:
@@ -411,6 +414,7 @@ class PatternStats:
     refused_pairs: int = 0
     gap_pairs: int = 0  # pairs left out because the action is a model gap at every member of the key that is not a game refusal
     universe_growth: int = 0
+    restarted_keys: int = 0  # expanded keys a grown universe made again (`PatternBuilder._begin_again`, #1086)
     modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
     fallbacks: int = 0  # keys whose extremes were impossible and used every member
@@ -485,6 +489,7 @@ class Pattern:
         self._snapshot_orders: dict[PatternKey, tuple] = {}
         self._partners: dict[frozenset, bool] = {}
         self.grew = 0
+        self.grown: list[tuple[frozenset, Slot]] = []  # the slots the universes gained, with their influences (`may_hold`, #1086)
         self.fallbacks = 0
 
     def keep_universes(self, before: "Pattern") -> None:
@@ -653,6 +658,23 @@ class Pattern:
         for slot in state.slots:
             if not slot.crafted and not self.is_veiled(slot) and universe.note(slot):  # a veiled slot is in the key, never a member's choice
                 self.grew += 1
+                self.grown.append((state.flags.influences, slot))
+
+    def may_hold(self, key: PatternKey, influences: frozenset, slot: Slot) -> bool:
+        """Whether a member of `key` may hold the ordinary `slot` of the universe of `influences`: False only when none can (#1086).
+
+        A member is a state whose key is `key` (`members` assembles it so), so it holds a slot only where the key has a place for it: an item of
+        the same influences (each has its universe), a slot on its side (`counts`), with the tags its kind has when the key counts them (`tags`),
+        and a contribution the key's status allows (`_relevant`; a slot of pure junk adds nothing). A key no grown slot fits keeps its members.
+        """
+        if key.flags.influences != influences:
+            return False
+        side = 0 if slot.side is Side.PREFIX else 1
+        if not key.counts[side]:
+            return False
+        if key.tags is not None and (side, _tagset(slot.kind)) not in dict(key.tags):
+            return False
+        return all(c <= s for c, s in zip(slot.contribution, key.status))
 
     # ---- the member policy of an action -----------------------------------------------------------------------
 
@@ -996,13 +1018,15 @@ class PatternBuilder:
     again; here a key that is expanded keeps its actions, and an offer added later is offered at the keys already expanded (its members, its kernels,
     each distinct kernel once) and at the keys it finds. `extend` returns a snapshot of the model, so a model returned stays what it was when the builder
     goes on. A build that stops (`stop`) leaves the builder unusable: the keys it had expanded do not all hold the offers being added, so the caller keeps
-    the model of the round before. A universe that grows (a slot no member held) begins the whole build again, as `build_pattern_model` always has.
+    the model of the round before. A universe that grows (a slot no member held) begins the build again at every key whose members it may change.
 
-    `joining` are the actions of the offers that may be added later: what they add by name is in the universe from the first pass, so an offer that
-    joins never grows it by name (#1086: on R11 four essences joined the bound's model with a forced mod the pool does not list, each beginning
-    the build again, 27.6 s for a model built in 7.7 s at once). A universe larger than the offers in the model need is still a universe: its
-    members stand for every state of their key all the same (the slots no offer of the model produces are only more members to choose from), as
-    on a universe a kernel's slot grew (`keep_universes`), and the model it ends on is the one built at once on every offer, seeded the same.
+    What a universe decides is which states are members of a key; the keys (read off states, `Pattern.key`) and the kernels (the abstraction's, at
+    a member, their successors' keys read off states) do not depend on it. So a build that begins again (#1086) keeps the keys and the kernels, and
+    makes again the members and the row of each key a grown slot may be in (`Pattern.may_hold`); the other keys have the same members on the grown
+    universe, so the same kernel keys and the same row. The model it ends on is the one a build from scratch on the grown universe makes, and a
+    kernel met again is not made again. The keys a build from scratch would not reach are none: the members of a key on a grown universe are more,
+    so the keys they reach are more. Before, every key began again: on R11 with the Exalted Orb four essences joined the bound's model with a forced
+    mod the pool does not list, and the bound took 17.9 s on a runner where the model takes 5.6 s built at once.
     """
 
     def __init__(
@@ -1016,10 +1040,8 @@ class PatternBuilder:
         stop=None,
         grow: bool = False,
         approximate: bool = False,
-        joining: Sequence[Action] = (),
     ) -> None:
         self.approximate = approximate  # the kernels are made in floats, shrunk and completed with the sink (see `_lowered`): a lower bound of the exact model
-        self.joining = tuple(joining)  # the actions of the offers that may join later: what they add by name is in the universe from the start (#1086)
         self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
         self.ab = abstraction
         self.start = start
@@ -1035,7 +1057,7 @@ class PatternBuilder:
 
     def _reset(self) -> None:
         before = getattr(self, "pattern", None)
-        self.pattern = Pattern(self.ab, self.tags, [*(offer.action for offer in self.offers if offer.action is not None), *self.joining])
+        self.pattern = Pattern(self.ab, self.tags, [offer.action for offer in self.offers if offer.action is not None])
         if before is not None:
             # the build begins again because the universe grew: it begins on the grown universe. Made afresh, the universe would lose the slots the
             # kernels found (a fossil's added mods, which the pool does not list), find them again in the same pass, and begin again forever (#829:
@@ -1080,7 +1102,11 @@ class PatternBuilder:
             self._reset()
         else:
             self.pattern.grew = 0
+            self.pattern.grown = []
             self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
+            if self.pattern.grew:  # the names of the offers that join grew the universe: the keys they fit begin again before the pass
+                self.restarts += 1
+                self._begin_again()
         while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
             stopped = self._pass()
             if stopped is not None:
@@ -1092,8 +1118,23 @@ class PatternBuilder:
             if not self.pattern.grew:
                 return self._snapshot(None)
             self.restarts += 1
-            self._reset()
-            self.pattern.grew = 0
+            self._begin_again()
+
+    def _begin_again(self) -> None:
+        """The universe grew (`Pattern.grown`): every expanded key a grown slot may be in is made again (members, row, gaps); keys and kernels stay."""
+        grown, pattern = self.pattern.grown, self.pattern
+        again = {
+            i for i, key in enumerate(self.keys) if self.expanded[i] and any(pattern.may_hold(key, influences, slot) for influences, slot in grown)
+        }
+        for i in again:
+            self.rows[i] = []
+            self.expanded[i] = False
+            self.members_kept.pop(i, None)
+        keys = {self.keys[i] for i in again}
+        self.gaps = {found: value for found, value in self.gaps.items() if found[0] not in keys}
+        self.stats.restarted_keys += len(again)
+        pattern.grew = 0
+        pattern.grown = []
 
     def _snapshot(self, stopped: str | None) -> PatternModel:
         stats = replace(self.stats)

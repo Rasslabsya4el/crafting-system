@@ -22,11 +22,10 @@ value of growing-4-harvest/small was 0.0095 (an Orb of Augmentation) where the o
 search can raise those floors, and the search, its bounds that low at every tip, ran out of time where the grown model ended exact (#829 had
 dropped the growth: R08 at the prices of 2026-11-10 spent its whole run on rounds).
 
-*What a round costs (#1086).* The builder keeps every key it expanded and builds at them only the offers that join (`PatternBuilder.extend`), and the
-universe of slots is seeded from the start with what every offer adds by name, those outside `S` included (`joining`): an essence's forced mod is
-not in the pool, and seeded only when the essence joined it grew the universe and began the whole build again (R11 with the Exalted Orb: four times,
-the bound 27.6 s where the same model takes 7.7 s built at once; seeded, 11.1 s and the same value). The rounds then cost the offers' own kernels,
-a solve and a pass over the offers outside, whatever their number.
+*What a round costs (#1086).* The builder keeps every key it expanded and builds at them only the offers that join (`PatternBuilder.extend`). An
+offer that joins with a mod the pool does not list (an essence's forced mod) grows the universe, and the build begins again only at the keys the new
+slot may be in (`Pattern.may_hold`), keeping every key and kernel (R11 with the Exalted Orb: four essences joined; the bound took 16.7 s here, 17.9 s
+on a runner, where the model takes 4.6 s built at once; now 6.4 s, the same value).
 
 **The net (OR-12, OR-13).** The build is asked for its `stop` between two offers, so a key of thousands of offers is no longer one step. A build that
 stops leaves the keys it did not expand as tips, each with a floor action of the least floor of *all* the offers at that key, and the model is
@@ -174,9 +173,7 @@ def pattern_lower_bound(
                 f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
                 f"({phases['floors']:.1f} s)"
             )
-    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate,
-        joining=[offer.action for offer in all_offers if offer.action is not None] if floors is not None else (),
-    )  # fmt: skip
+    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate)
     kept = None  # the last round that ran to its end: (model, value, error bound, order)
     adding = list(order)
     rounds = 0

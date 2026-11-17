@@ -256,29 +256,58 @@ def test_the_model_is_a_lower_bound_at_every_concrete_state(world, tags):
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
-def test_a_universe_seeded_with_an_offer_that_never_joins_keeps_the_model_a_lower_bound(world, tags):
-    """#1086: the bound seeds the universe with what every offer that may join adds by name. Here the essence whose forced mod the pool does not list
-    is seeded and never joins: its slot is one more member of the keys it fits, the model built in steps on that universe is still at most the exact
-    value at every state of the exact graph of the offers it holds, and at most the model on the universe of its own offers (more members can only
-    lower a key's least backup)."""
+def test_an_essence_that_joins_with_a_mod_outside_the_pool_begins_the_build_again_on_its_kernels_and_ends_on_the_whole_model(world, tags):
+    """#1086: the essence forces a mod the pool does not list; joining a model built without it, it grows the universe and the build begins again.
+    The keys and kernels made before are kept (no kernel is made twice), and the model is the one built at once on every offer: the same keys and
+    the same value at each."""
     data, ab, _ = world
     start = ab.compress(build(data, BOW, STARTS[0]))
-    offers = offers_of()
-    exact = exact_values(ab, start, offers)
-    plain = solve_packed(pack_pattern_model(build_pattern_model(ab, start, offers, tags=tags), offers))
-    builder = PatternBuilder(ab, start, tags=tags, grow=True, joining=[ACTIONS["essence-outside-pool"]])
-    slots = lambda pattern: {slot for side in pattern.universe(frozenset()).relevant.values() for slot in side}
-    assert slots(builder.pattern) > slots(PatternBuilder(ab, start, tags=tags).pattern)  # the essence's slot is in the universe and its offer is not
-    builder.extend(offers[:2])
-    model = builder.extend(offers[2:])
-    assert builder.restarts == 0
-    solved = solve_packed(pack_pattern_model(model, offers))
-    pattern = Pattern(ab, tags, [ACTIONS["essence-outside-pool"], *(offer.action for offer in offers if offer.action is not None)])
-    for state, value in exact.items():
-        key = pattern.key(state)
-        assert key in model.index, "a state of the exact graph has a key the model never reached"
-        assert float(solved.value[model.index[key]]) <= value * (1 + 1e-9) + 1e-9, (state, value)
-    assert 0 < float(solved.value[0]) <= float(plain.value[0]) * (1 + 1e-9)
+    offers = [*offers_of(), PatternOffer("essence-outside-pool", ACTIONS["essence-outside-pool"], 4.0)]
+    whole = build_pattern_model(ab, start, offers, tags=tags)
+    made = []
+    real = ab.kernel
+    builder = PatternBuilder(ab, start, tags=tags, grow=True)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(ab, "kernel", lambda state, action: (made.append(1), real(state, action))[1])
+        builder.extend(offers[:-1])
+        before = len(made)
+        grown = builder.extend(offers[-1:])
+    assert builder.restarts == 1 and len(made) == len(builder.computed) > before
+    assert set(grown.index) == set(whole.index)
+    by_whole = solve_packed(pack_pattern_model(whole, offers)).value
+    by_grown = solve_packed(pack_pattern_model(grown, offers)).value
+    for key, k in whole.index.items():
+        assert float(by_grown[grown.index[key]]) == pytest.approx(float(by_whole[k]), rel=1e-9), key
+    assert 0 < grown.stats.restarted_keys < len(grown.keys)  # only the keys the essence's slot fits began again
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_a_key_no_grown_slot_fits_has_the_same_members_on_the_grown_universe(world, tags):
+    """#1086, `Pattern.may_hold`: at every key the exact walk meets, a key where the essence's forced mod (outside the pool) may not be has the same
+    members, in every mode, with and without the essence's name in the universe; the keys where it may be are some, not all."""
+    _, ab, states = world
+    before = Pattern(ab, tags, [ACTIONS[name] for name in MODEL_ACTIONS])
+    after = Pattern(ab, tags, [*(ACTIONS[name] for name in MODEL_ACTIONS), ACTIONS["essence-outside-pool"]])
+    for state in states:
+        if not any(ESSENCE_ONLY in slot.kind for slot in state.slots):  # the essence's slot comes by its name alone
+            before.note(state)
+            after.note(state)
+    grown = [
+        (influences, slot)
+        for influences, universe in after._universes.items()
+        for side in universe.relevant
+        for slot in universe.relevant[side]
+        if slot not in before.universe(influences).relevant[side]
+    ]
+    assert grown
+    fits = {True: 0, False: 0}
+    for key in dict.fromkeys(after.key(state) for state in states):
+        held = any(after.may_hold(key, influences, slot) for influences, slot in grown)
+        fits[held] += 1
+        if not held:
+            for mode in (Mode.ALL, Mode.EXTREMES, Mode.ANY):
+                assert set(before.members(key, mode)) == set(after.members(key, mode)), (key, mode)
+    assert fits[True] and fits[False]
 
 
 def test_a_key_without_tags_is_not_stronger_than_one_with_them(world):
