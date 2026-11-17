@@ -402,7 +402,7 @@ def test_the_kind_lists_both_recipes_for_a_rare_talisman_and_is_a_planner_kind_o
     assert [a for a in catalog(BEAST_DATA, talisman(0)) if isinstance(a, TalismanFracture)] == [TalismanFracture(1), TalismanFracture(2)]
     assert not [a for a in catalog(BEAST_DATA, rare(TALISMAN, (LIFE,), rarity=Rarity.MAGIC)) if isinstance(a, TalismanFracture)]
     assert not [a for a in catalog(DATA, rare(AMULET, SIX_MODS, data=DATA)) if isinstance(a, TalismanFracture)]
-    assert TalismanFracture(1) not in catalog(BEAST_DATA, talisman(6), planner_only=True)  # opt-in: listed only when a target names the kind
+    assert TalismanFracture(1) in catalog(BEAST_DATA, talisman(6), planner_only=True)  # offered by default (#886), as when a target names it
     assert TalismanFracture(1) in catalog(BEAST_DATA, talisman(6), planner_only=True, names={"talisman-fracture"})
     registered = {entry.name: entry for entry in kinds()}["talisman-fracture"]
     assert registered.planner and not registered.opt_in and registered.order == 83 and not registered.why_not

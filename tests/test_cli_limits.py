@@ -152,8 +152,10 @@ def test_k5_a_corrupting_kind_is_named_as_unused_for_a_target_that_takes_no_corr
     assert "Vaal Orb" in corrupting.labels and "unaffected" in corrupting.guarantee
 
 
-def test_k10_remove_crafted_mods_is_named_when_no_crafted_mod_can_exist(plan):
-    removed = only(plan.limits, "crafted-mods")
+def test_k10_remove_crafted_mods_is_named_when_no_crafted_mod_can_exist():
+    # no bench craft named: with every method on by default (#886) the blocking crafts put crafted mods on R12
+    target = dataclasses.replace(load_target(R12, DATA), actions=("chaos-orb", "harvest-reforge", "essence", "remove-crafted-mods"))
+    removed = only(make_plan(DATA, target, price_file()).limits, "crafted-mods")
 
     assert removed.labels == ("Remove Crafted Mods",)
     assert "nothing to remove" in removed.why
@@ -161,6 +163,9 @@ def test_k10_remove_crafted_mods_is_named_when_no_crafted_mod_can_exist(plan):
 
 def test_u1_the_actions_without_a_price_are_limits_grouped_by_what_is_missing(plan):
     unpriced = of_kind(plan.limits, "unpriced")
+    own = [limit for limit in unpriced if not limit.names]  # an action whose own item has no price: one limit a kind, its head names it (#487)
+    assert all(limit.why == "" and limit.what != "Not offered" for limit in own)
+    unpriced = [limit for limit in unpriced if limit.names]
 
     assert unpriced and all(limit.names and limit.labels for limit in unpriced)
     assert len({limit.names for limit in unpriced}) == len(unpriced)  # one limit for each set of missing prices
@@ -254,12 +259,12 @@ def test_a_target_with_an_actions_key_and_a_target_without_one_both_list_what_is
     keyed = tmp_path / "keyed.yaml"
     keyed.write_text(text + "actions: [harvest-reforge, chaos-orb]\n", encoding="utf-8")
 
-    for path, kind in ((R12, "kinds-opt-in"), (keyed, "kinds-not-named")):
+    for path, kind, label in ((R12, "kinds-opt-in", "Recombinators"), (keyed, "kinds-not-named", "Exalted Orb")):  # Exalted on by default (#886)
         made = make_plan(DATA, load_target(path, DATA), price_file())
         report = render_text(build_report(made, DATA))
         withheld = only(made.limits, kind)
 
-        assert "Exalted Orb" in withheld.labels
+        assert label in withheld.labels
         assert f"  {limit_text(withheld)}" in report.splitlines() or limit_text(withheld) in report
         assert withheld.guarantee in report  # OR-13
 
@@ -446,7 +451,7 @@ def test_a_guarantee_that_claims_the_cheapest_plan_must_have_its_form_for_an_app
 
 
 def test_the_text_and_the_json_name_every_withheld_kind_and_the_page_holds_the_rest_in_a_closed_details(plan):
-    opt_in = only(plan.limits, "kinds-not-built")  # a limit with more labels than the page shows
+    opt_in = of_kind(plan.limits, "kinds-not-built")[0]  # a limit with more labels than the page shows (the second: Alchemy and Scouring)
     assert len(opt_in.labels) > SHOWN_LABELS
     report = build_report(plan, DATA)
     text = render_text(report)
