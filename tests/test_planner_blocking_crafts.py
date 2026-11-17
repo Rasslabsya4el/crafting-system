@@ -1219,3 +1219,32 @@ def test_a_round_that_proves_no_plan_with_a_plan_in_hand_is_set_aside_like_a_bea
     assert seen == [("a",), ("a", "b"), ("a", "c"), ("a", "b", "c")]
     assert [record.status for record in widened.records] == ["closed", "no plan", "beaten", "beaten"] and _rounds.all_closed(widened.records)
     assert widened.records[1].reason.endswith("the last round held them again, with every method")
+
+
+def test_a_plan_in_hand_that_a_stopped_search_walked_to_is_not_held_by_the_next_round():
+    # #1142 (R13 on the heavy benchmark: 11,246 c on main, 32,813 c once the walk gave round 1 a plan): a round that begins with a plan in hand
+    # lets its bound's build take its whole share (`RoundCall.held`, #1099). A plan its search walked to (a `REACHED` limit) is proved near
+    # nothing, so the round after it keeps the room for its search a round with no plan keeps; a plan of any other search is held as before
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _limits, _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abc"))
+    walk = _limits.Limit(_limits.REACHED, "walked", "why", "Not proved: near the best.")
+
+    def rounds(limits):
+        held = []
+
+        def run(chosen, call):
+            held.append(call.held)
+            return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=100.0 - len(chosen), limits=limits if len(chosen) == 1 else ())
+
+        _rounds.widen(
+            groups, tuple("abc"), run, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.STOPPED, "stopped"), left=lambda: 600.0, clock_now=lambda: 0.0,
+        )  # fmt: skip
+        return held
+
+    assert rounds((walk,)) == [False, False, True]  # round 2 begins with round 1's walked plan: not held; round 3 with round 2's own plan: held
+    assert rounds(()) == [False, True, True]
+    assert _rounds.walked(SimpleNamespace(limits=(walk,))) and not _rounds.walked(SimpleNamespace(limits=())) and not _rounds.walked(object())
