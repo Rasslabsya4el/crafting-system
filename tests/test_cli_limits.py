@@ -62,7 +62,9 @@ def plan():
 def test_k1_a_run_without_a_methods_setting_lists_the_kinds_it_would_have_to_name(plan):
     withheld = only(plan.limits, "kinds-opt-in")
 
-    assert withheld.labels == ("Recombinators",)  # every kind of the beta is offered by default since #886 (OR-41); the recombinator waits
+    # every kind of the beta is offered by default since #886 (OR-41); the deferred methods wait (OR-37): the recombinator, and Hinekora's Lock
+    # (#1125); R12 takes no corrupted item, so the Vaal Orb and the Locus are the corrupting limit's, not this one's
+    assert withheld.labels == ("Recombinators", "Hinekora's Lock")
     assert withheld.why == "kinds that are offered only when the run's methods setting names them"
     assert "cheapest among the kinds offered" in withheld.guarantee
     assert not of_kind(plan.limits, "kinds-not-named")  # the run has no methods setting (#405)
@@ -261,6 +263,7 @@ def test_a_run_with_a_methods_setting_and_a_run_without_one_both_list_what_is_wi
         withheld = only(made.limits, kind)
 
         assert label in withheld.labels
+        assert "Hinekora's Lock" in withheld.labels  # off unless named (OR-37, #1125), and said in both (OR-13)
         assert f"  {limit_text(withheld)}" in report.splitlines() or limit_text(withheld) in report
         assert withheld.guarantee in report  # OR-13
 
