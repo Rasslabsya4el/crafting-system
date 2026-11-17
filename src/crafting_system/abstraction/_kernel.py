@@ -520,7 +520,7 @@ class Abstraction:
         twin._numbers = self._numbers  # before any context of the twin numbers a type: the kinds of the types are this one's
         twin._contexts.clear()
         twin._kinds = twin._new_context(frozenset()).kinds
-        twin.share_items, twin.project = self.share_items, self.project
+        twin.share_items, twin.project, twin.share_refusals = self.share_items, self.project, self.share_refusals
         return twin
 
     def lumps(self, state: CompressedState, action: Action) -> bool:

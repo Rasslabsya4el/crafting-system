@@ -157,6 +157,7 @@ class Kinds:
         alike: bool = False,
     ):
         self.data = data
+        self._reads: dict[Action, Reads] = {}  # `reads`
         self.profile = profile
         self.alike = alike  # the slots of the ordinary mods drawn or held are told apart by side and protected tags alone (`slot_kind`, #1146)
         self.lumped: list[Mod] = []  # the mods `slot_kind` lumped, each once, in the order met (only appended to)
@@ -205,7 +206,6 @@ class Kinds:
         self._places: dict[str, int] = {}  # mod id -> its place in its family type (with `classed`)
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
         self._pooled = None
-        self._reads: dict[Action, Reads] = {}  # `reads`
 
     def reads(self, action: Action) -> Reads:
         """`action.reads(self.data)`, asked once per action (every pair asks it, `Abstraction._erases`: 2.4 million times on R05, #1178)."""
