@@ -344,7 +344,13 @@ class Item(_Validated):
     def validate(self, data: GameData) -> None:
         """Raise an `ItemError` subclass for the first problem found, checking in this order: unknown
         base, unknown mod, wrong slot or domain, wrong values, capacity, family conflict, implicits, quality, sockets, veil
-        offer, enchantment."""
+        offer, enchantment.
+
+        An item that passed them against this very `data` passes them again (the item is frozen and the checks read the item and the data
+        alone), so it is not checked twice: an action validates the item it is given, and the bound's build gives one item to every offer of a
+        member (#1170: R05 at N = 10,000 asked a million times for 41,141 items)."""
+        if getattr(self, "_valid_in", None) is data:
+            return
         base = data.base_items.get(self.base_id)
         if base is None:
             raise self._error("the base is not in the game data", UnknownBaseError)

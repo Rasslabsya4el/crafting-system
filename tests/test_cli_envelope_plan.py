@@ -22,6 +22,7 @@ from targets_support import DATA, with_methods
 from test_cli_approximate import PRICES as APPROX_PRICES
 from test_cli_approximate import TARGET as APPROX_TARGET
 
+from crafting_system.abstraction import _pattern
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
 from crafting_system.planner._envelope import Net
 from crafting_system.planner._envelope_plan import EnvelopeInfo, certificate_gap, certificate_gap_text, certificate_text
@@ -79,6 +80,14 @@ def coarse():
     return target, prices, make_plan(COARSE, target, prices, start_price=5.0, solver="packed", with_risk=False)
 
 
+@pytest.fixture
+def fine_build(monkeypatch):
+    """The bound's build makes its erasing kernels itself (`LUMP_ERASING` off, #1146): the search then finds the start's Chaos Orb made and a net
+    of 96 states stops it with a plan in hand. With the alike twin the search makes that kernel on its count (119 end states), and no states
+    net of this world stops between no plan and the exact one; these tests are of a stopped search's words, not of the build."""
+    monkeypatch.setattr(_pattern, "LUMP_ERASING", False)
+
+
 def test_a_mid_sized_plan_is_the_full_walks(coarse):
     target, prices, full = coarse
     plan = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", with_risk=False)
@@ -89,7 +98,7 @@ def test_a_mid_sized_plan_is_the_full_walks(coarse):
         assert plan.solution.values[state] == pytest.approx(full.solution.values[state], rel=1e-9)
 
 
-def test_a_net_in_make_plan_stops_the_search_and_the_plan_says_so(coarse):
+def test_a_net_in_make_plan_stops_the_search_and_the_plan_says_so(coarse, fine_build):
     target, prices, full = coarse
     exact = full.mean_remaining
     stopped = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96), with_risk=False)
@@ -101,7 +110,7 @@ def test_a_net_in_make_plan_stops_the_search_and_the_plan_says_so(coarse):
     assert stopped.mean_remaining == info.upper
 
 
-def test_a_stopped_search_prints_the_certificate_next_to_the_point_answer(coarse):
+def test_a_stopped_search_prints_the_certificate_next_to_the_point_answer(coarse, fine_build):
     """#499: the `Limit` of a net stop carries [LB, U], the gap, the bound used and that it bounds the whole graph; the plan stays the answer."""
     target, prices, full = coarse
     stopped = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96))
@@ -145,7 +154,7 @@ def test_a_lower_figure_rounded_just_above_the_plan_is_clipped_to_it():
     assert "[10.00, 10.00]" in certificate_text(info) and "costs less than 10.00 on average" in certificate_text(info)
 
 
-def test_the_guarantee_of_a_stopped_search_is_in_player_words_like_every_limit(coarse):
+def test_the_guarantee_of_a_stopped_search_is_in_player_words_like_every_limit(coarse, fine_build):
     """The rule of `test_cli_limits` (no internal name in a guarantee) holds for the stopped-search limit too, not only for the finished one."""
     target, prices, _ = coarse
     stopped = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", net=Net(states=96), with_risk=False)
