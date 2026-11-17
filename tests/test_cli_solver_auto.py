@@ -14,7 +14,7 @@ Real routes: `test_cli_envelope_real.py`. Fixture world, no game dump needed.
 import dataclasses
 
 import pytest
-from cli_support import R12, TODAY, price_file, run
+from cli_support import R12, TODAY, price_file, r12_named, run
 from targets_support import DATA
 
 from crafting_system.abstraction import Pattern, pattern_refusal
@@ -82,7 +82,9 @@ def test_auto_is_the_envelope_search_where_the_bound_can_be_built_and_gives_the_
 
 def test_auto_never_takes_the_ladder_of_coarse_levels_where_the_envelope_search_can_be_built(packed):
     for budget in (0.0, 1e-9, 60.0):
-        auto = make_plan(DATA, load_target(R12, DATA), price_file(), budget=budget)
+        # R12's methods named: one search, proved exact whatever the budget (#886: with every method on it is searched in rounds, and past
+        # its aim each round stops at the run's gap; `test_cli_envelope_plan.py` holds that case)
+        auto = make_plan(DATA, r12_named(), price_file(), budget=budget)
 
         assert auto.approximation is None and auto.packed.info["envelope"].exact
         assert not [limit for limit in auto.limits if limit.what.startswith("The whole search")]

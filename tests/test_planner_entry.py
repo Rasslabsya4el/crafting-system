@@ -44,12 +44,18 @@ def settings_of_the_command() -> PlanSettings:
     )
 
 
-def test_the_entry_gives_the_plan_the_command_prints_on_r12(tmp_path, capsys):
+def test_the_entry_gives_the_plan_the_command_prints_on_r12(tmp_path, capsys, monkeypatch):
+    # counted in states on both sides (#886: with every method on R12 is searched in rounds, whose limit states each round's seconds
+    # otherwise; `Budget.in_states`, docs/ci.md). 100,000 states never bind: the fixture R12's rounds close in under 100 states each.
+    from crafting_system.cli import _main
+
+    monkeypatch.setattr(_main, "run_budget", lambda *args, **kwargs: Budget.in_states(100_000))
     code, out = run_command(tmp_path, prices=price_file())
     printed = capsys.readouterr().out
     assert code == 0
 
-    plan = plan_target(DATA, load_target(R12, DATA), price_file(), settings_of_the_command())
+    settings = dataclasses.replace(settings_of_the_command(), budget=Budget.in_states(100_000))
+    plan = plan_target(DATA, load_target(R12, DATA), price_file(), settings)
 
     assert isinstance(plan, Plan)
     report = build_report(plan, DATA)

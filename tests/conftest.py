@@ -53,16 +53,19 @@ def progress_sink_restored(monkeypatch):
 #   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). It
 #   is set once for the whole process, module fixtures included; a module of the budget itself (`OWN_NET = True`) sees the undivided share.
 # * Where the machine has `SIGALRM` (Linux, the CI runners), a watchdog wakes every `WATCH_SECONDS` during a test's setup, call and
-#   teardown: past `SUITE_TEST_SECONDS` of wake-ups, or when the machine has less than `SUITE_FREE_MB` left and the process holds more
-#   than its share of the machine (physical memory over `SLOTS_PER_RUNNER`; a fixed figure a process failed the real-data tests that
-#   legitimately hold 4 GB, PR CI 44021960386), the phase fails by name
+#   teardown: past `SUITE_TEST_SECONDS` of wake-ups, or, in a test's call only, when the machine has less than `SUITE_FREE_MB` left and
+#   the call itself has grown the process by more than `SUITE_GROWTH_MB` (what the process held before the call, the real game data a
+#   module's fixture loaded included, is not the call's: a fixed 3,500 MB a process failed the real-data tests that legitimately hold
+#   4 GB, PR CI 44021960386, and a share of the machine failed 700 setups of modules that load it while four did at once, PR CI
+#   44024487664), the phase fails by name
 #   (`pytest.fail`, a `BaseException` no `except Exception` or `except MemoryError` of the planner catches). It reads no clock (it counts its
 #   wake-ups) and puts no cap on the process, so no allocation fails and no fallback of the planner on a MemoryError is taken because of it.
 # The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes its own budget keeps it.
-# `CRAFTING_TEST_SECONDS` and `CRAFTING_TEST_FREE_MB` set other figures; 0 turns that net off.
+# `CRAFTING_TEST_SECONDS`, `CRAFTING_TEST_FREE_MB` and `CRAFTING_TEST_GROWTH_MB` set other figures; 0 turns that net off.
 SLOTS_PER_RUNNER = max(1, int(os.environ.get("CRAFTING_TEST_SLOTS", "1")))
 SUITE_TEST_SECONDS = int(os.environ.get("CRAFTING_TEST_SECONDS", "300"))
 SUITE_FREE_MB = int(os.environ.get("CRAFTING_TEST_FREE_MB", "1000"))
+SUITE_GROWTH_MB = int(os.environ.get("CRAFTING_TEST_GROWTH_MB", "1000"))
 WATCH_SECONDS = 1
 MEMINFO = os.path.join(os.sep, "proc", "meminfo")
 
@@ -103,22 +106,26 @@ def _watched(phase: str):
     if not hasattr(signal, "SIGALRM") or (SUITE_TEST_SECONDS <= 0 and SUITE_FREE_MB <= 0):
         yield
         return
-    from crafting_system.budget import physical_mb, process_mb
+    from crafting_system.budget import process_mb
 
     woken = [0]
+    memory_net = phase == "test" and SUITE_FREE_MB > 0 and SUITE_GROWTH_MB > 0
+    before = process_mb() if memory_net else None
 
     def wake(signum, frame):
         woken[0] += 1
         if SUITE_TEST_SECONDS > 0 and woken[0] * WATCH_SECONDS >= SUITE_TEST_SECONDS:
             pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
-        free = _available_mb() if SUITE_FREE_MB > 0 else None
+        if before is None:
+            return
+        free = _available_mb()
         if free is None or free >= SUITE_FREE_MB:
             return
-        held, physical = process_mb(), physical_mb()
-        if held is not None and physical is not None and held > physical / SLOTS_PER_RUNNER:
+        held = process_mb()
+        if held is not None and held - before > SUITE_GROWTH_MB:
             pytest.fail(
-                f"the {phase} held {held:.0f} MB, over its share of {physical / SLOTS_PER_RUNNER:.0f} MB, while the machine had {free:.0f} MB"
-                f" left, under the suite's {SUITE_FREE_MB} MB (conftest.SUITE_FREE_MB, #886)",
+                f"the {phase} grew its process by {held - before:.0f} MB, past the suite's {SUITE_GROWTH_MB} MB, while the machine had {free:.0f} MB"
+                f" left, under the suite's {SUITE_FREE_MB} MB (conftest.SUITE_GROWTH_MB, SUITE_FREE_MB, #886)",
                 pytrace=False,
             )
 
