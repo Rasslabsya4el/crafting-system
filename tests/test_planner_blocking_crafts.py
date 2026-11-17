@@ -1345,14 +1345,14 @@ def test_a_later_round_that_makes_the_first_plan_and_gives_way_joins_the_base_of
 def test_once_the_first_plan_is_in_hand_the_rounds_left_go_by_their_offers_floors_lowest_first():
     # #1135 (R11 without the guide: the Exalted Orb's round, its floor 9.64 c over the essences, was the tenth after the essence round, behind
     # rounds whose floor was the essences' own 75.2 c; on probe 44104520931's runner 5 they took its share). Round 1 (a) makes the first plan
-    # of 100; the groups b, c, d, e then have floors (with the base a) of 75, 10, 75 and none (a net ended them): c goes first, b and d keep
-    # their order, e goes last. Each floor is asked once, of the group's offers with the base, as a floors-only call.
+    # of 100; the groups b, c, d, e then have floors (with the base a) of 75, 10, 75 and none (the floors pass was refused): c goes first, b
+    # and d keep their order, e goes last. Each floor is asked once, of the group's offers with the base, as a floors-only call.
     from types import SimpleNamespace
 
     from crafting_system.planner import _rounds
 
     groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abcde"))
-    floors = {"b": 75.0, "c": 10.0, "d": 75.0, "e": None}
+    floors = {"b": 75.0, "c": 10.0, "d": 75.0, "e": ValueError("refused: the model of these offers cannot be built")}
     asked = []
 
     def search(chosen, call):
@@ -1362,7 +1362,9 @@ def test_once_the_first_plan_is_in_hand_the_rounds_left_go_by_their_offers_floor
     def floor(chosen, call):
         assert call.floors and call.upper == 100.0 and call.held and call.searches == 4
         asked.append(chosen)
-        return floors[chosen[-1]]
+        if isinstance(figure := floors[chosen[-1]], Exception):
+            raise figure  # a refusal of the floors pass is no figure: the group goes last, and its round says the refusal itself
+        return figure
 
     widened = _rounds.widen(
         groups, tuple("abcde"), search, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
@@ -1371,3 +1373,6 @@ def test_once_the_first_plan_is_in_hand_the_rounds_left_go_by_their_offers_floor
     assert asked == [("a", "b"), ("a", "c"), ("a", "d"), ("a", "e")]  # once, after the first plan, never again
     assert [record.kinds for record in widened.records][:5] == [("a",), ("c",), ("b",), ("d",), ("e",)]
     assert _rounds.by_floor(groups, lambda group: {"a": 3.0, "b": None}.get(group.kinds[0], 3.0)) == [groups[0], *groups[2:], groups[1]]
+    assert _rounds.figure_of(floor, ("a", "b"), widened_call := _rounds.RoundCall(4, 100.0, False, held=True, floors=True), lambda: 0.0) is None
+    assert asked[-1] == ("a", "e")  # with the run's time used up nothing is asked
+    assert _rounds.figure_of(floor, ("a", "b"), widened_call, lambda: None) == 75.0

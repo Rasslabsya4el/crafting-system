@@ -1132,9 +1132,7 @@ def widened_plan(
             run(chosen, call)
         except _rounds.Floor as figure:
             return figure.figure
-        except (PlanError, BudgetExceeded, _rounds.NoPlan, _rounds.Stopped):  # the round itself will say why (a refusal or a net before the floors)
-            return None
-        return None
+        return None  # (a refusal or a net before the floors is `_rounds.figure_of`'s: the group then has no figure)
 
     meter = states_meter(clock)
     widened = _rounds.widen(

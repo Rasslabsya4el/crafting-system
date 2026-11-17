@@ -388,7 +388,7 @@ def widen(
             # the first plan is in hand: the rounds left (two or more) go by the cheapest a plan of their offers with the base can be, lowest first (#1135)
             searches = len(queue) - k - 1
             call = RoundCall(searches, best_upper, False, None, None if meter is None else meter.net(searches), True, floors=True)
-            queue[k + 1 :] = by_floor(queue[k + 1 :], lambda g: floor(tuple(offers[i] for i in sorted({*base, *g.positions})), call))
+            queue[k + 1 :] = by_floor(queue[k + 1 :], lambda g: figure_of(floor, tuple(offers[i] for i in sorted({*base, *g.positions})), call, left))
         if k == len(queue) - 1 and closing is None and set_aside and _all_ended(records):
             # every round closed, some groups were set aside: one last round holds them with the base, which is then every offer, so
             # the last round again holds every offer and its proof is the whole one (a plan joining a set-aside group with a later one is in it)
@@ -401,6 +401,19 @@ def widen(
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error)
+
+
+def figure_of(floor: Callable[[tuple, RoundCall], float | None], chosen: tuple, call: RoundCall, left: Callable[[], float | None]) -> float | None:
+    """The floor figure of `chosen` (`widen`'s `floor`), or None: when the run's time or states are used up (nothing is asked), or when the
+    floors pass was refused (a `PlanError` or any model refusal, a `ValueError`: the abstraction of these offers cannot be built, as a round
+    records) or a net ended it first (`BudgetExceeded`, `NoPlan`, `Stopped`). The round itself says why when it runs; the order only puts the
+    group after those with a figure (#1135)."""
+    if (still := left()) is not None and still <= 0.0:
+        return None
+    try:
+        return floor(chosen, call)
+    except (ValueError, BudgetExceeded, NoPlan, Stopped):
+        return None
 
 
 def by_floor(groups: Sequence[Group], figure: Callable[[Group], float | None]) -> list[Group]:
