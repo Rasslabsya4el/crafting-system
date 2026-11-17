@@ -701,6 +701,62 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     assert all(record.states is not None for record in slow.search.widening)
 
 
+@pytest.mark.parametrize("states", [3, 1_000])
+def test_through_the_entry_the_plan_without_the_lock_is_made_first_counted_in_states_and_the_lock_s_round_gets_what_is_left(data, target, monkeypatch, states):
+    # #1108: the metamod craft the rule of blocking crafts offers unasked (the lock, Prefixes Cannot Be Changed) adds the feature `metamods` to
+    # the model, so the planner's own offers that hold it always split into rounds (`offer_groups`): the plan without the lock is round 1 and
+    # is made first, the lock's round 2 holds the lock with them. (The plan made first without the metamod crafts outside the rounds,
+    # `_plan.plan_without` and its "Not tried" limit, is reached from the entry only by a walk asked for by name, `solver` object or packed,
+    # which is being retired: no test is written against it.) Under `Budget.in_states(N)` round 1 is given the whole
+    # account, N; its search knows 4 states (the belt's chain: start, the filler, the exalt that hits, the restart) and round 2 is given N - 4.
+    # With N = 3 round 1's net stops it after its plan of 133 (counted at every state of its chain, #1101): that plan is the answer, and round 2,
+    # the lock's, is not tried and the answer says so in states. Either way the plan and every line of the answer are the same whether every
+    # reading of the clock moves it by 1,000 s or by nothing (the clock driven through `budget_module.time`).
+    from crafting_system import budget as budget_module
+    from crafting_system.budget import Budget
+    from crafting_system.planner import _limits
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    step, readings = [0.0], iter(range(10**9))
+    monkeypatch.setattr(budget_module.time, "perf_counter", lambda: step[0] * next(readings))
+    calls, real = [], planner_plan._make_plan
+
+    def spied(*args, **kwargs):  # each round's offers and the states net it is given
+        if (call := kwargs.get("round_call")) is not None:
+            calls.append((LOCK in {offer.label for offer in kwargs["offers"]}, call.states))
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(planner_plan, "_make_plan", spied)
+
+    def planned(seconds_per_reading: float):
+        step[0], calls[:] = seconds_per_reading, []
+        plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=Budget.in_states(states)))
+        return plan, list(calls)
+
+    (slow, slow_calls), (fast, fast_calls) = planned(1000.0), planned(0.0)
+    assert slow_calls == fast_calls and slow.mean_remaining == fast.mean_remaining and slow.solution.policy == fast.solution.policy
+    assert slow.limits == fast.limits and slow.risk == fast.risk
+    assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
+    rounds = slow.search.widening
+    assert slow.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # round 1's plan: the filler, then exalt
+    assert LOCK not in {entry.label for entry in slow.offers} and not slow.abstraction.models_metamods
+    assert rounds[0].states == 4
+    if states == 1_000:
+        assert slow_calls == [(False, 1_000), (True, 1_000 - 4)]  # the plan without the lock first, on the whole account; the lock's round the rest
+        assert [record.status for record in rounds] == ["closed", "closed"] and slow.search.exact
+        assert not any(limit.kind == _limits.UNTRIED for limit in slow.limits)
+    else:
+        assert slow_calls == [(False, 3)]  # the lock's round is never searched
+        assert [(record.status, record.states) for record in rounds] == [("stopped", 4), ("not tried", 0)]
+        assert "4 states were known, the limit is 3" in rounds[0].reason
+        untried = [limit for limit in slow.limits if limit.kind == _limits.UNTRIED]
+        assert len(untried) == 1 and untried[0].what == "Not finished"
+        line = untried[0].names[-1]  # (the round's name does not yet say its bench craft is the lock: #1121)
+        assert line.startswith("round 2 (bench-craft;") and line.endswith("0 states): not tried, the run's states net was used up before this round")
+        assert not slow.search.exact
+
+
 @pytest.mark.parametrize("states, per_state", [(10, 0.2), (10, 2.0), (10, 100.0), (40, 100.0)])
 def test_through_the_entry_the_bound_s_build_and_its_binding_count_their_work_and_stop_on_it_whatever_the_clock_does(data, target, monkeypatch, states, per_state):
     # #1101: the same run as above with the offers' floors on (`MIN_OFFERS` 3 here; 40 for a real target), so the bound's build works out
