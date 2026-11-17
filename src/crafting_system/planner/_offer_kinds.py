@@ -10,7 +10,8 @@ cheaper one in any policy lowers or keeps its cost and changes nothing else.
 
 THE NUMBER pbar. Let U be a set of NECESSARY goal leaves (a leaf is necessary when it sits directly under
 the requirements, or only under `AtLeast` nodes with k equal to the number of members; U is the necessary
-leaves that are not PASSING at the start, less the ones a bench craft can finish when something is left).
+leaves that are not PASSING at the start, less the ones a bench craft can finish when something is left: one a mod
+it adds can pass, by the leaf's tier limit and its refusal of crafted mods, `finishes`, #1112).
 Let E be "every leaf of U is PASSING". The goal implies E, and the start is outside E. For an offer x,
 pbar(x) is a number such that one use of x, from ANY state outside E that has the flags and the fractured
 mods of the start, lands in E with chance at most pbar(x):
@@ -36,8 +37,9 @@ mods of the start, lands in E with chance at most pbar(x):
     but the fractured ones): a reroll refused there is refused wherever the shape holds (it reads
     nothing else), so it is set aside as inapplicable.
   * a bench craft (reads the junk, adds a named mod, draws nothing, does not fracture): it only adds a
-    mod, so it makes a leaf of U PASSING only if the mod is one of that leaf's: pbar = 1 if its named
-    mods meet the mods of a leaf of U, else 0. It stays in the model.
+    mod, so it makes a leaf of U PASSING only if the mod can pass that leaf (`finishes`: one of its mods the
+    tier limit accepts, and not crafted where the leaf refuses crafted mods): pbar = 1 if one of its named
+    mods can pass a leaf of U, else 0. It stays in the model.
   * an addition (#1072): it keeps the mods and adds one mod drawn from the pool less the families on the item
     (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Eldritch Exalted Orb, an Orb of Augmentation;
     it draws, names no mod, fractures nothing, reads no roll, input or influence). A Regal Orb (it changes the rarity, so it

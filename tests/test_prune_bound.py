@@ -401,6 +401,22 @@ def test_the_leaf_a_craft_can_finish_is_dropped_from_the_set_the_bound_is_read_o
     assert goal_set(abstraction.goal, start, ()) == (0, 1)
 
 
+def test_the_bench_life_does_not_finish_a_life_leaf_that_asks_a_tier_or_refuses_crafted_mods(bench):
+    """#1112, R05's case: the leaf of a family lists the bench mod among its mods, yet a tier limit or `not_crafted` keeps the craft from passing it,
+    so the leaf stays in the goal set the Wald floor is read on, and the craft cannot land in E (its pbar is 0)."""
+    adds = BenchCraft(LIFE_CRAFT).adds(bench.data, bench.item)
+    crafted = [(frozenset(adds.named), adds.crafted)]
+    speed1 = requirement(bench.data, "MovementVelocity", min_tier=1)
+    assert LIFE_CRAFT in requirement(bench.data, "IncreasedLife").mod_ids
+    for limits in ({"min_tier": 1}, {"not_crafted": True}):
+        life = requirement(bench.data, "IncreasedLife", **limits)
+        target = Target(BASE, LEVEL, frozenset(), (life, speed1), bench.item, start=StartKind.GIVEN)
+        abstraction = Abstraction(bench.data, Goal.from_target(target), BASE, LEVEL, [BenchCraft(LIFE_CRAFT), RemoveCraftedMods()])
+
+        assert goal_set(abstraction.goal, abstraction.compress(bench.item), crafted) == (0, 1), limits
+        assert not finishes(abstraction.goal.leaves[0], frozenset(adds.named), True), limits
+
+
 # --- the kind of an offer -----------------------------------------------------------------------------------
 
 
