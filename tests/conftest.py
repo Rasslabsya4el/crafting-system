@@ -212,7 +212,7 @@ WAITS_FOR_1101 = (
     "tests/test_add_bound.py::test_through_the_entry_r12_with_the_exalted_orb_offered_gets_its_exact_plan_as_cheap_as_without",
     "tests/test_cli_envelope_real.py::*[[]R05[]]",
     "tests/test_cli_envelope_real.py::test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught",
-    "tests/test_cli_r08_r09_real.py::*[[]r08[]]",
+    "tests/test_cli_r08_r09_real.py::*",
     "tests/test_cli_r13_real.py::*",
     "tests/test_cli_real.py::test_the_command_on_the_real_r12_amulet",
     "tests/test_cli_real.py::test_verify_agrees_with_the_computed_mean_on_the_real_amulet",
