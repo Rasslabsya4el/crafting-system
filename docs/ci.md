@@ -68,7 +68,7 @@ the merge is step 3 on the reviewed head. `main` then differs from the last test
 
 ## Running the suite on your own machine
 
-The serial command is unchanged:
+On the server the full suite is a heavy run ("Heavy runs on the server" below: the data folder, the cores). The serial command is unchanged:
 
     CRAFTING_CACHE_DIR=<cache> uv run --frozen pytest -q -p no:cacheprovider
 
@@ -85,9 +85,36 @@ the clock is added to `CLOCK_READERS`. `CRAFTING_TEST_REAL_CLOCK=1` turns the fi
 pinned on the committed price files in `tests/test_price_age_rule.py`. To check that the suite does not depend on the date, run it
 under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime '2026-12-01 12:00:00' <the shard command>`.
 
+## Heavy runs on the server (owner, 2026-11-17)
+
+The chats work on the owner's server (Ubuntu 24.04, 24 cores, 60 GB, the repo at `/root/projects/crafting system`), and heavy work
+runs there: benchmarks, profiling, sweeps, solves, measurements, golden re-records and the full suite. Nothing heavy runs on the
+owner's own PC. The main chat starts a run from its ticket's worktree as a background command, whose exit is its notification,
+and writes the output under `.claude/scratch/`:
+
+    export CRAFTING_CACHE_DIR="/root/projects/crafting system/.claude/scratch/crafting-cache"
+    uv sync --locked --extra web        # once per worktree
+    timeout 90m uv run --no-sync python bench.py --out "/root/projects/crafting system/.claude/scratch/t123" > ... 2>&1
+
+- **Data.** `CRAFTING_CACHE_DIR` above is shared by every worktree (without the variable each worktree would look in its own
+  `local/cache`). When the folder is gone, `uv run --no-sync python -m crafting_system.data fetch` fills it and `... data verify`
+  checks it against the pin; a new pin needs a new fetch.
+- **Cores.** The chats share the 24 cores and nothing queues the runs for them. One run takes at most 8 processes, and starts
+  only when the 1-minute load (the first number after `load average:` in `uptime`) plus its processes is at most 20; otherwise the chat
+  starts it later. A sweep the dispatcher would split over N runners is one command with N processes here, or N parts one after another.
+- **Time.** The chat gives the run a limit with `timeout`, about twice what it expects. The 60-minute cap and `--long` below are
+  rules for GitHub's runners and do not bind a server run.
+- **Re-records.** A command that re-records files (`UPDATE_GOLDEN=1 ...`) writes them in the worktree; the chat reads the diff and
+  commits them itself. The integration run then checks them on Ubuntu and Windows.
+- **Helpers.** `finder`, `checker` and `crafter` start no heavy run, on the server or on GitHub; they run quick, targeted tests
+  only (under a minute, one process).
+
+GitHub keeps what the server does not give: a PR's own CI, the integration run that lands a PR, and a run that needs Windows.
+The lines "never on a PC" further down mean the owner's PC: the server or a runner is where those scripts run.
+
 ## Heavy runs on GitHub: the runner budget (#249)
 
-**Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite goes to CI and benchmarks, profiling, sweeps, solves and measurements go to a heavy run, because a local multi-process sweep pins his machine at 100%. `.github/workflows/run.yml`
+A heavy run goes to GitHub when it needs Windows, or when the server is full. `.github/workflows/run.yml`
 checks out a branch, puts the pinned game data in place with the same step CI uses (`.github/actions/real-data`),
 runs a bash command from the repository root on 1 to 16 runners and uploads what the command wrote into `$OUT_DIR`
 (plus `output.log`, its console output). The command sees `RUNNER_INDEX` (1..N) and `RUNNER_COUNT`, so N runners can
@@ -102,7 +129,7 @@ dispatcher, never `gh workflow run run.yml`:**
     python .github/scripts/heavy_dispatch.py status
 
 (Use `../../scratch/uv-venv/Scripts/python.exe` or any Python 3.10+; the script is standard library only. It takes its
-token from `GH_TOKEN`, else `gh auth token`, else `git credential fill`.) The dispatcher waits on your PC, which costs
+token from `GH_TOKEN`, else `gh auth token`, else `git credential fill`.) The dispatcher waits on the machine it was started on (the server), which costs
 no runner, polls every 3 minutes and prints one line per poll. It reads the jobs of `ci.yml` and `run.yml` and
 dispatches only while
 
@@ -118,16 +145,16 @@ With `CI_RESERVE` 4, heavy runs may use 16 runners when no CI run is waiting (20
 (8 jobs: 20 - 4 - 8), and only the floor when two are (or one dispatched run, 16 jobs: 20 - 4 - 16 = 0): 6 now, 4 with the script's default. The main chat turns the knobs without a commit (Settings, Secrets and variables, Actions, Variables, or
 `gh variable set HEAVY_FLOOR --body 6`); the next poll of every waiting dispatcher sees the new value. A heavy run that
 is queued or running counts against the budget from the moment it is dispatched, so two sessions cannot both take the
-same free runners (sessions on one PC also share a lock while they decide).
+same free runners (sessions on one machine also share a lock while they decide).
 
-The 5,000 GitHub API calls an hour are **one limit for every agent and session**: the dispatchers on one PC share a
+The 5,000 GitHub API calls an hour are **one limit for every agent and session**: the dispatchers on one machine share a
 snapshot of the runs for 90 seconds (`snapshot.json` in the dispatcher's temp folder, read and written under that lock and
 dropped when a run is dispatched), and a dispatcher that meets the rate-limit refusal waits for its reset (at most an hour,
 one line printed) instead of retrying; for GitHub's secondary limit (a refusal with `Retry-After`) it waits that many
 seconds, at most 10 minutes (`RETRY_AFTER_CAP_SECONDS`). Nobody should poll a run more often than every 4 minutes
 (tickets #565, #567). A run started by something else (a CI push, an integration dispatch by the main chat) can be
 seen up to `SNAPSHOT_SECONDS` (90 seconds) late; the cost is runners queued on GitHub, not a failure. A dispatcher
-waiting for the PC's lock obeys `--max-wait` and `--no-wait` too, and prints who holds the lock and since when.
+waiting for the machine's lock obeys `--max-wait` and `--no-wait` too, and prints who holds the lock and since when.
 
 Options of `run`:
 
@@ -447,12 +474,12 @@ search's net; the Lock's check counts the states its walk meets, up to N. A stag
 grow with N, so a record that runs out of memory or time needs a smaller N.
 
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
-in the PR, and commit the file (a golden that needs the real game data is re-recorded on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
+in the PR, and commit the file (a golden that needs the real game data is re-recorded on the server, where the data is, or on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
 real game data is taken from where it is made, since a PC without the cache cannot make it. `reachability.md` is the artifact
 `reachability` of the PR's CI run (uploaded by the "Reachability report" step above). The `real_*` pages (`tests/golden/real_r05.html`,
 `real_r10.html`, `real_r11.html`) are not CI artifacts: `assert_golden` in `tests/route_view_support.py` rewrites each one when
 `UPDATE_GOLDEN=1` is set, and `tests/test_cli_routes_real.py` makes them on a runner or machine that has the real game data in its
-cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run that copies the three files into `$OUT_DIR`, with this command (`BRANCH` is the branch to run):
+cache (`CRAFTING_CACHE_DIR`). On the server, regenerate them in the worktree with the `UPDATE_GOLDEN=1 ... pytest` command inside the lines below ("Heavy runs on the server"), and commit them. On GitHub, regenerate them through a heavy run that copies the three files into `$OUT_DIR`, with this command (`BRANCH` is the branch to run):
 
     python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -k route_view_page_is_the_golden_file -q && cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
 
