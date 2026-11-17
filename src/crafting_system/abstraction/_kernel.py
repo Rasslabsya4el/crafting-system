@@ -4,7 +4,7 @@ import math
 from collections import Counter, defaultdict, deque
 from contextlib import contextmanager
 from collections.abc import Callable, Hashable, Iterable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from fractions import Fraction
 from typing import NamedTuple
 from functools import reduce
@@ -313,6 +313,11 @@ class Abstraction:
         self._shared_by: dict[Hashable, _Prepared] = {}  # the same for a view smaller than its state (many states have it): kept, the latest used last
         self._items_by: dict[tuple[_View, bool], tuple[Item, Origins] | ValueError] = {}  # (view, erasing) -> `_item_of` of it, or what it raised (`_item_of_view`)
         self._enabled_checked: set[Action] = set()  # the actions `_check_enabled` passed
+        self._refused_by: dict[Hashable, NotApplicableError] = {}  # the refusal class of a pair (`_refusal_class`) -> the game's refusal of it
+        self._junk_of: dict[int, tuple[Item, int, tuple[tuple[str, frozenset[str]], ...]]] = {}  # id of an item -> (it, its rest, its junk)
+        self._rests: dict[Hashable, int] = {}  # the item without its junk, apart from its count per side -> its number (`_junk_parts`)
+        self.share_refusals = True  # False: every pair asks the action whether it is refused (the reference of ticket #1178)
+        self.refusals_shared = 0  # how many pairs took the refusal of another item of their refusal class (`_refusal_class`)
         self._free_lock: bool | None = None  # whether the game data has a lock outside the crafted domain (`_holds_lock`)
         self._lock_mods: dict[str, bool] = {}  # mod id -> whether it is a lock (Prefixes or Suffixes Cannot Be Changed)
         self.share_items = True  # False: every prepared pair builds its own item and asks validated results (the reference of ticket #935)
@@ -515,7 +520,7 @@ class Abstraction:
         twin._numbers = self._numbers  # before any context of the twin numbers a type: the kinds of the types are this one's
         twin._contexts.clear()
         twin._kinds = twin._new_context(frozenset()).kinds
-        twin.share_items, twin.project = self.share_items, self.project
+        twin.share_items, twin.project, twin.share_refusals = self.share_items, self.project, self.share_refusals
         return twin
 
     def lumps(self, state: CompressedState, action: Action) -> bool:
@@ -1455,10 +1460,13 @@ class Abstraction:
         With `keep_erased` the pairs whose view is smaller than their state stay (`_shared_by`): an action that erases the ordinary mods is
         prepared on the flags, the fractured and the crafted mods alone, and every state that shares them finds the same pair (tickets #626,
         #827). They are kept up to `SHARED_PAIRS`, the least recently used leaving first. Without it everything is dropped. The items of the
-        views (`_item_of_view`) are dropped either way.
+        views (`_item_of_view`) and the refusals of the refusal classes (`_refusal_class`) are dropped either way.
         """
         self._prepared_by.clear()
         self._items_by.clear()
+        self._refused_by.clear()
+        self._junk_of.clear()
+        self._rests.clear()
         if not keep_erased:
             self._shared_by.clear()
 
@@ -1574,10 +1582,18 @@ class Abstraction:
             )
             self._outcomes(action, bare)
             raise
+        refusal_class = self._refusal_class(view, action, item)
+        if refusal_class is not None:
+            known = self._refused_by.get(refusal_class)
+            if known is not None:
+                self.refusals_shared += 1
+                raise known.with_traceback(None)
         try:
             outcomes = self._outcomes(action, item)  # a refusal of the action comes first
-        except NotApplicableError:
+        except NotApplicableError as refusal:
             self._refusal_depends_on_the_family(view, erasing, action, origins)
+            if refusal_class is not None:
+                self._refused_by[refusal_class] = refusal
             raise
         self._check_type_blind(view, outcomes)
         self._check_fracture_without_partners(view, outcomes)
@@ -1610,6 +1626,65 @@ class Abstraction:
             raise found.with_traceback(None)
         return found
 
+    def _refusal_class(self, view: _View, action: Action, item: Item) -> Hashable | None:
+        """What decides whether the game refuses `action` on `item`, for an action that declares `Reads.refusal_by_families`; None for any other.
+
+        Such an action's refusal reads, of the junk (the ordinary mods: not fractured, not crafted, not veiled), only their number per side and
+        those of them that share a family with `Reads.families`; the rest of the item it may read as it likes. So the class is the action, the
+        item without its junk with the junk's count per side (`_junk_parts`), and the ids of the junk mods that share a family with the action's:
+        two items of one class are refused alike (and with the same exception: the refusal of the first is kept, `_build`). The bound's build
+        asks every offer at every member of a key (`PatternBuilder._offers_of_key`), and the members of a key differ in their junk alone: a bench
+        craft refused at a key (its side full, the crafted mods at their limit, its family in a crafted or fractured mod) was asked at each of
+        them (#1178: 789,000 of the 1,000,568 pairs of R05 at N = 10,000). The class is made from the item the action is given, never from the
+        state, so a representative mod the item holds for a slot is read as the action reads it.
+
+        A view whose refusal may depend on which family a fractured family type stands for (`_refusal_depends_on_the_family`) has no class: its
+        answer is made at each pair. A refusal is kept until `release_prepared`, as the pairs are.
+        """
+        if not self.share_refusals:
+            return None
+        reads = self._kinds.reads(action)
+        if not (reads.refusal_by_families and reads.junk and reads.families is not None) or self._fractured_family_may_decide(view):
+            return None
+        found = self._junk_of.get(id(item))
+        if found is None or found[0] is not item:
+            found = self._junk_of[id(item)] = (item, *self._junk_parts(item))
+        _, rest, junk = found
+        families = reads.families
+        return (action, rest, tuple(mod_id for mod_id, held in junk if not held.isdisjoint(families)))
+
+    def _junk_parts(self, item: Item) -> tuple[int, tuple[tuple[str, frozenset[str]], ...]]:
+        """The number of `item` without its junk, with the junk's count per side (`_refusal_class`), and the junk mods with their families."""
+        mods = self.data.mods
+        kept: list[ExplicitMod] = []
+        junk: list[tuple[str, frozenset[str]]] = []
+        sides: Counter = Counter()
+        for entry in item.mods:
+            mod = mods[entry.mod_id]
+            if entry.fractured or entry.crafted or mod.domain in (VEILED_DOMAIN, UNVEILED_DOMAIN):
+                kept.append(entry)
+            else:
+                junk.append((entry.mod_id, frozenset(mod.families)))
+                sides[mod.generation_type] += 1
+        rest = (
+            tuple(getattr(item, field.name) for field in fields(item) if field.name != "mods"),
+            tuple(kept),
+            tuple(sorted(sides.items())),
+        )
+        number = self._rests.get(rest)
+        if number is None:
+            number = self._rests[rest] = len(self._rests)
+        return number, tuple(junk)
+
+    def _fractured_family_may_decide(self, state: CompressedState | _View) -> bool:
+        """Whether the state holds a fractured mod known only by a family type of several families: a refusal there may depend on the family
+        (`_refusal_depends_on_the_family`)."""
+        held = [entry for entry in state.fractured if entry.mod_id.startswith(TYPE_PREFIX)]
+        if not held:
+            return False
+        kinds = self._context(state.flags.influences).kinds
+        return any(kinds.shared_families(entry.mod_id) for entry in held)
+
     def _refusal_depends_on_the_family(
         self, state: CompressedState, erasing: bool, action: Action, origins: Origins
     ) -> None:
@@ -1620,10 +1695,9 @@ class Abstraction:
         others. Each other family of the type is tried as the fractured mod; if one is accepted the refusal
         depends on the family. If all of them are refused too, the caller re-raises the refusal.
         """
-        held = [entry for entry in state.fractured if entry.mod_id.startswith(TYPE_PREFIX)]
-        kinds = self._context(state.flags.influences).kinds
-        if not held or not any(kinds.shared_families(entry.mod_id) for entry in held):
+        if not self._fractured_family_may_decide(state):
             return
+        held = [entry for entry in state.fractured if entry.mod_id.startswith(TYPE_PREFIX)]
         avoid: set[str] = set()
         while True:
             before = len(avoid)
