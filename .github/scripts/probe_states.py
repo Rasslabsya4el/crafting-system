@@ -42,9 +42,9 @@ def one(route: str, states: int) -> None:
     data = load_game_data()
     target = load_target(ROOT / bench.target, data)
     prices = load_price_file(VENDOR if route == "V01" else PRICES.with_name("references-allflame-2026-07-31.json") if route == "R24" else PRICES)  # R24: its own file, with its start boots (#901)
-    result: dict = {"route": route, "N": states}
+    result: dict = {"route": route, "N": states, "bps": int(os.environ.get("PROBE_BPS", "100"))}
     try:
-        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=bench.route is not None, budget=Budget.in_states(states))
+        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=bench.route is not None, budget=Budget.in_states(states, build_per_state=int(os.environ.get("PROBE_BPS", "100"))))
         plan = plan_target(data, target, prices, settings)
         search = plan.search
         result.update(
@@ -54,6 +54,7 @@ def one(route: str, states: int) -> None:
             lower=None if search is None else round(search.lower + plan.start_price.chaos, 2),
             exact=None if search is None else search.exact,
             offers=len(plan.offers),
+            rounds=[(r.status, r.states, getattr(r, "lower", None)) for r in (getattr(search, "widening", None) or ())],
             solve_seconds=round(plan.solve_seconds, 1),
             limits=[str(limit)[:400] for limit in plan.limits],
         )
