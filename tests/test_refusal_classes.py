@@ -57,13 +57,15 @@ def _junk(data, entry: ExplicitMod) -> bool:
     return not (entry.fractured or entry.crafted) and data.mods[entry.mod_id].domain not in (VEILED_DOMAIN, UNVEILED_DOMAIN)
 
 
-def swapped_refusals(action, item: Item, data, per_mod: int = 6) -> list[tuple[str, str, str | None, str | None]]:
+def swapped_refusals(action, item: Item, data, per_mod: int = 6) -> tuple[list[tuple[str, str, str | None, str | None]], int]:
     """For `action` declaring `Reads.refusal_by_families`: each junk mod of `item` outside the action's families swapped for up to `per_mod`
-    ordinary mods of its side outside them, where the refusal changed: (the mod, its swap, the refusal before, after). Empty when it holds."""
+    ordinary mods of its side outside them, where the refusal changed: (the mod, its swap, the refusal before, after), empty when it holds;
+    and how many swaps were tried."""
     reads = action.reads(data)
     families = reads.families
     before = _refusal(action, data, item)
     changed = []
+    tried_all = 0
     for index, entry in enumerate(item.mods):
         mod = data.mods[entry.mod_id]
         if not _junk(data, entry) or not families.isdisjoint(mod.families):
@@ -82,10 +84,11 @@ def swapped_refusals(action, item: Item, data, per_mod: int = 6) -> list[tuple[s
             except (ItemError, ValueError):
                 continue
             tried += 1
+            tried_all += 1
             after = _refusal(action, data, swapped)
             if after != before:
                 changed.append((mod.id, other.id, before, after))
-    return changed
+    return changed, tried_all
 
 
 DECLARING = [
@@ -104,7 +107,19 @@ def test_the_bench_declares_its_refusal_by_families():
 @pytest.mark.parametrize(("kind", "action", "name"), DECLARING, ids=[f"{kind}-{name}-{i}" for i, (kind, _, name) in enumerate(DECLARING)])
 def test_a_declared_refusal_reads_no_other_family_of_the_junk(kind, action, name):
     item = fixture_items()[name]
-    assert swapped_refusals(action, item, CONTRACT_DATA) == []
+    changed, tried = swapped_refusals(action, item, CONTRACT_DATA)
+    assert changed == []
+    SWAPS[name] = SWAPS.get(name, 0) + tried
+
+
+SWAPS: dict[str, int] = {}
+
+
+def test_the_swaps_were_tried_on_items_that_hold_junk():
+    for kind, action, name in DECLARING:
+        if name not in SWAPS:
+            SWAPS[name] = swapped_refusals(action, fixture_items()[name], CONTRACT_DATA)[1]
+    assert SWAPS.get("rare_junk", 0) > 0 and SWAPS.get("rare_four", 0) > 0
 
 
 def test_a_wrong_declaration_is_caught():
@@ -125,7 +140,7 @@ def test_a_wrong_declaration_is_caught():
     craft = next(action for _, action, name in DECLARING if isinstance(action, BenchCraft) and name == "rare_junk")
     wrong = PicksyCraft(craft.mod_id)
     assert isinstance(wrong.reads(CONTRACT_DATA), Reads) and wrong.reads(CONTRACT_DATA).refusal_by_families
-    assert swapped_refusals(wrong, item, CONTRACT_DATA) != []
+    assert swapped_refusals(wrong, item, CONTRACT_DATA)[0] != []
 
 
 @pytest.mark.parametrize(("name", "seed"), [("tiny", 1), ("bow", 2), ("bow", 3)])
