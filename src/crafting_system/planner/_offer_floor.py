@@ -13,16 +13,20 @@ with the same shape (the claim and its proof are in `_offer_kinds`: Wald's ident
     class INSIDE  (in E, the start's shape):        Q*(s, a) >= c(a) + (1 - pbar(a)) rho  for an *erasing reroll* `a` (its result does not depend on the state
                                                     but through the flags and the fractured mods, so it lands in E with the same chance as from outside),
                                                     Q*(s, a) >= c(a) for any other offer (a craft from a state in E may stay in E),
-    class OTHER   (any other shape):                Q*(s, a) >= c(a),
+    class OTHER   (any other shape; a state that holds an imprint when the start holds none and the restores are set aside, #1074):
+                                                    Q*(s, a) >= c(a),
     class UNOPENED (an unopened listing, ADR-0064): Q*(s, a) >= c(a) for the draw that opens it and the restart, and infinity for any other offer
                                                     (the kernel refuses every other action on an unopened item: `Abstraction._prepare`),
 
 and `V*(s) >= 0` everywhere (costs are not negative).
 
-An offer that fractures, changes the flags or reads the item's implicits, quality or offer has `pbar = 1`: its floor is its cost. The one thing taken
-on the contract of `Reads` and not checked is the assumption of `_offer_kinds` (1): an offer the game refuses on the bare item of the start's shape
-is refused at every state of that shape; it only moves `rho` (the refused offers are not in the minimum that makes `rho`). The floors of the offers
-themselves treat a refused offer as any other, at its cost.
+An offer that fractures, changes the flags or reads the item's implicits, quality, offer or imprints has `pbar = 1`: its floor is its cost; but a
+veiled choice (an Unveil, a Pick: it reads the offer) has the pbar of the mods it may add, as a bench craft (`_offer_kinds`, #1074), and a restore of
+an imprint offered to a start with none is set aside as refused. The things taken on the contracts of `Reads` and `Adds` and not checked are the
+assumptions of `_offer_kinds`: (1) an offer the game refuses on the bare item of the start's shape is refused at every state of that shape; (2) an
+action that needs the veiled placeholder changes no flag but by what `Adds` declares; (3) only an offer that reads the imprints makes one (a
+reroll that declares `Adds.imprints` is made TERMINAL). They only move `rho` (the refused offers are not in the minimum that makes `rho`). The floors
+of the offers themselves treat a refused offer as any other, at its cost (its floor outside E is `rho`, as every offer's).
 
 `OfferFloors.lower(position, klass)` is the floor of an offer in a class of states, and `OfferFloors.tighten` raises it, level by level, only for an
 offer the envelope search would otherwise build at a state (#829), so that the exact chance of a reroll, which is an exact distribution, is computed
@@ -39,8 +43,9 @@ from crafting_system.abstraction import Abstraction, CompressedState, Status
 from crafting_system.abstraction._pattern import Tally
 
 from ._offer_kinds import (
-    CRAFT,
+    NAMING,
     REROLL,
+    REFUSED,
     RESTART_KIND,
     SLACK,
     SMALL_START,
@@ -95,8 +100,8 @@ class OfferFloors:
             if index % 256 == 0:
                 self.ask()
             kinds.append(_kind_of(data, item, offer))
-        crafted = [bool(kind == CRAFT and offer.offer.action.adds(data, item).crafted) for offer, (kind, _named) in zip(priced, kinds)]
-        crafts = {(named, made) for (kind, named), made in zip(kinds, crafted) if kind == CRAFT}  # the mods each craft adds by name, and whether crafted
+        crafted = [bool(kind in NAMING and offer.offer.action.adds(data, item).crafted) for offer, (kind, _named) in zip(priced, kinds)]
+        crafts = {(named, made) for (kind, named), made in zip(kinds, crafted) if kind in NAMING}  # the mods each craft or veiled choice may add, and whether crafted
         # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
         # as the retired bound pruning's were (`shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
         # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
@@ -110,12 +115,13 @@ class OfferFloors:
             pbar = ONE
             if kind == RESTART_KIND:
                 pbar = ZERO
-            elif kind == CRAFT:
-                pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft lands in E only by passing a leaf of U
+            elif kind in NAMING:
+                pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft or a veiled choice lands in E only by passing a leaf of U
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
+        self.unimprinted = any(kind == REFUSED for kind, _named in kinds)  # restores set aside: a state that holds an imprint is of another shape (#1074)
         if self.chosen:
             declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
@@ -135,11 +141,13 @@ class OfferFloors:
 
     # ---- the classes of states ------------------------------------------------------------------------------------------
 
-    def klass(self, flags, fractured, status: tuple) -> int:
-        """The class of a state with these flags, fractured mods and status: `UNOPENED` (a listing), `OUTSIDE` (outside `E`, the start's shape), `INSIDE` (in `E`, the start's shape) or `OTHER`."""
+    def klass(self, flags, fractured, status: tuple, imprints: tuple) -> int:
+        """The class of a state with these flags, fractured mods, status and imprints: `UNOPENED` (a listing), `OUTSIDE` (outside `E`, the start's
+        shape), `INSIDE` (in `E`, the start's shape) or `OTHER`. When the restores are set aside (`_offer_kinds`, #1074), a state that holds an
+        imprint is not of the start's shape."""
         if getattr(flags, "unopened", False):
             return UNOPENED
-        if not self.chosen or (flags, fractured) != self.shape:
+        if not self.chosen or (flags, fractured) != self.shape or (imprints and self.unimprinted):
             return OTHER
         return INSIDE if all(status[index] is Status.PASSING for index in self.chosen) else OUTSIDE
 
@@ -165,8 +173,9 @@ class OfferFloors:
         return min((self.lower(position, klass) for position in positions), default=math.inf)
 
     def initial(self) -> list[int]:
-        """The offers the model starts with: the restart, the crafts and the `SMALL_START` rerolls of least cost / pbar (the cheapest offers if none)."""
-        inside = {entry.index for entry in self.entries if entry.kind in (RESTART_KIND, CRAFT)}
+        """The offers the model starts with: the restart, the crafts, the veiled choices and the `SMALL_START` rerolls of least cost / pbar (the cheapest
+        offers if none)."""
+        inside = {entry.index for entry in self.entries if entry.kind in (RESTART_KIND, *NAMING)}
         rerolls = sorted((entry for entry in self.entries if entry.kind == REROLL), key=lambda entry: (entry.ratio, entry.index))
         inside.update(entry.index for entry in rerolls[:SMALL_START])
         if not inside:

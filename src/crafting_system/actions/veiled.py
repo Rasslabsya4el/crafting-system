@@ -78,6 +78,7 @@ __all__ = [
     "offer_distribution",
     "offer_pool",
     "unveil_pool_families",
+    "unveil_pool_mods",
 ]
 
 CHAOS_REROLLS_WITH_ONE_VEILED_MOD = get_rule("veiled.chaos_reforge_with_one_veiled_mod")
@@ -322,6 +323,12 @@ def unveil_pool_families(data: GameData, base_id: str) -> frozenset[str]:
     its mod counts toward no requirement. A family whose unveiled mods all have weight 0 on the base (R07's Trigger) is not one.
     """
     return frozenset(family for side in Side for mod, _ in _side_pool(data, base_id, side.value) for family in mod.families)
+
+
+def unveil_pool_mods(data: GameData, base_id: str) -> frozenset[str]:
+    """The ids of every mod an unveil on the base `base_id` can offer, on either side: the only mods a pick can put on an item (`offer_pool` is a
+    part of them). A planner's bound reads it to know which goal leaves a pick can pass (`planner/_offer_kinds.py`, #1074)."""
+    return frozenset(mod.id for side in Side for mod, _ in _side_pool(data, base_id, side.value))
 
 
 def offer_pool(data: GameData, item: Item, placeholder: Mod) -> tuple[tuple[Mod, int], ...]:

@@ -161,7 +161,7 @@ class CraftingProblem:
         return k
 
     def _klass(self, state: CompressedState) -> int:
-        return OTHER if self.floors is None else self.floors.klass(state.flags, state.fractured, state.status)
+        return OTHER if self.floors is None else self.floors.klass(state.flags, state.fractured, state.status, state.imprints)
 
     def lower(self, state: CompressedState) -> float:
         k = self._key(state)

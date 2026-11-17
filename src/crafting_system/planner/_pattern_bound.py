@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.abstraction._pattern import PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Tally
+from crafting_system.abstraction._pattern import IMPRINTS, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Tally
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
@@ -272,7 +272,7 @@ def _floor_of(floors: OfferFloors, outside: list[int], priced: Sequence[PricedOf
     table = {klass: (floors.floor(outside, klass), floors.floor(names, klass)) for klass in CLASSES}
 
     def floor(key: PatternKey, expanded: bool) -> float | None:
-        cost = table[floors.klass(key.flags, key.fractured, key.status)][0 if expanded else 1]
+        cost = table[floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS])][0 if expanded else 1]
         return None if cost == float("inf") else cost
 
     return floor
@@ -305,7 +305,7 @@ def _binding(
     binding = fake < best * (1.0 - BINDING)
     reached = np.zeros(n, dtype=bool)
     reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
-    shaped = np.array([floors.klass(key.flags, key.fractured, key.status) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
+    shaped = np.array([floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
     binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape has the cost of an offer as its floor and is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
         return [], dict.fromkeys(CLASSES)
@@ -314,7 +314,7 @@ def _binding(
         key = model.keys[k]
         if not model.expanded[k]:
             continue
-        klass = floors.klass(key.flags, key.fractured, key.status)
+        klass = floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS])
         bound = float(best[k])
         limit[klass] = bound if limit[klass] is None else max(limit[klass], bound)
     found: list[tuple[float, int]] = []
