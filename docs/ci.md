@@ -97,7 +97,9 @@ into one named failing test:
 - **Time per phase** (Linux only, `SIGALRM`, no clock read): a test's setup (its module fixtures included) or its call that runs past
   `CRAFTING_TEST_SECONDS` (300) fails there, so a hung test fails by name instead of the job hitting `timeout-minutes`.
 - **Data per process** (Linux only, `RLIMIT_DATA`): a test process holds at most `CRAFTING_TEST_DATA_MB` (3,500 MB), so a test that asks
-  for more fails with a MemoryError instead of the runner shutting down (exit 143) and losing the whole shard.
+  for more fails with a MemoryError instead of the runner shutting down (exit 143) and losing the whole shard. The MemoryError is
+  reported as a one-line failure once the test's frames are freed (formatting its traceback at the cap was an INTERNALERROR that
+  stopped the process's other tests).
 
 0 turns the time or data net off.
 

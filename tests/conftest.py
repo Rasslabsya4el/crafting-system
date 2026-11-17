@@ -84,23 +84,32 @@ def suite_net(request, monkeypatch):
 
 
 def _alarmed(phase: str):
-    """The time net of one phase of a test (its setup, a module's fixtures included, or its call): `SUITE_TEST_SECONDS`, where `SIGALRM` is."""
+    """The nets of one phase of a test (its setup, a module's fixtures included, or its call): `SUITE_TEST_SECONDS`, where `SIGALRM` is,
+    and a MemoryError (the `SUITE_DATA_MB` cap) reported as a short failure once the phase's frames are freed, since pytest cannot format
+    a traceback while they still hold the memory (an INTERNALERROR that stopped the rest of the process's tests)."""
+    import gc
     import signal
 
-    if SUITE_TEST_SECONDS <= 0 or not hasattr(signal, "SIGALRM"):
-        yield
-        return
+    alarmed = SUITE_TEST_SECONDS > 0 and hasattr(signal, "SIGALRM")
 
     def ran_past(signum, frame):
         pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
 
-    previous = signal.signal(signal.SIGALRM, ran_past)
-    signal.alarm(SUITE_TEST_SECONDS)
+    if alarmed:
+        previous = signal.signal(signal.SIGALRM, ran_past)
+        signal.alarm(SUITE_TEST_SECONDS)
+    ran_out = False
     try:
         yield
+    except MemoryError:
+        ran_out = True  # the exception and its frames are dropped when this clause ends
     finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, previous)
+        if alarmed:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous)
+    if ran_out:
+        gc.collect()
+        pytest.fail(f"the {phase} ran out of memory (MemoryError; the suite's cap is {SUITE_DATA_MB} MB a process, conftest.SUITE_DATA_MB, #886)", pytrace=False)
 
 
 @pytest.hookimpl(wrapper=True)

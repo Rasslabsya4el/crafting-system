@@ -187,7 +187,7 @@ def test_the_orb_is_named_priced_and_declared():
 def test_the_kind_lists_every_rarity_and_is_a_planner_kind_offered_by_default():
     assert FracturingOrb() in catalog(DATA, rare(4))
     assert FracturingOrb() in catalog(DATA, amulet(roll(MODS[0]), rarity=Rarity.MAGIC))  # a magic item becomes rare on the way (ticket #70)
-    assert FracturingOrb() not in catalog(DATA, rare(4), planner_only=True)  # not offered by default
+    assert FracturingOrb() in catalog(DATA, rare(4), planner_only=True)  # offered by default (#886)
     assert FracturingOrb() in catalog(DATA, rare(4), planner_only=True, names={"fracturing-orb"})
     registered = {entry.name: entry for entry in kinds()}["fracturing-orb"]
     assert registered.planner is True and registered.opt_in is False  # offered by default since #886 (OR-41)
