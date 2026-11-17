@@ -477,12 +477,13 @@ def run_route(
             raise ValueError(_missing_message(missing))
         # Without a net the guide's route is judged against the plan, on the route's own reach (#829, #986): the actions of the guide's route
         # and of its completed one lead the first round of the offers, so the plan holds them (#1110). With the net (`--net`, the heavy
-        # benchmark) the plan is the site's: the target alone, with no guide's actions, as a user's run plans it (#1156); the guide's route is
-        # still evaluated and judged against that plan on its own reach.
+        # benchmark) the plan is the site's: the target alone, with no guide's actions and the vendor-recipe starts of the planner settings, as
+        # a user's run plans it (#1156); the guide's route is then evaluated against that plan when the plan offers every action it takes.
         site = budget is not None
         judged = bench.route is not None and not site
         named = None if not judged else _route_labels(root, bench)
-        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=judged, route_actions=named, budget=budget)
+        recipes = config.recipe_starts if site else bench.start is not None
+        settings = PlanSettings(recipe_starts=recipes, judges_route=judged, route_actions=named, budget=budget)
         plan = plan_target(data, target, loaded, settings)  # a route with no start entry plans from the target's own item
         entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos

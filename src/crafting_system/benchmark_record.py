@@ -1,7 +1,7 @@
 """The heavy benchmark's record of the site's plans of the reference routes (every beta method on, no guide's actions), and the check of a new run against it (#1109).
 
 `benchmark --net` plans every benchmark route the way the site does (`SITE_PLAN`, #1156): the target alone with the default offers (every beta
-method on, OR-41), no guide's actions leading the first round of offers (those lead only the guided plan of a plain `benchmark`, #1110, which
+method on, OR-41) and the planner settings' vendor-recipe starts, no guide's actions leading the first round of offers (those lead only the guided plan of a plain `benchmark`, #1110, which
 no user gets), under the run's budget from the planner settings of the machine (OR-40; with the default settings `Budget.default()`, the
 10-minute net). A record and a check take only runs of the site's plan, so a record of the guided plan cannot guard the site's. Each route's entry then carries
 a `record` (`record_of_plan`): the plan's cost (its mean, the start item included), the figure no plan can cost less than (`lower`, the start

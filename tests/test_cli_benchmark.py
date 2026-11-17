@@ -300,6 +300,7 @@ def test_with_the_net_the_plan_is_the_site_s_with_no_guide_s_actions(tmp_path, m
     code, path = run_benchmark(tmp_path, "--net")
     assert code == 0 and good.route is not None
     assert [(settings.judges_route, settings.route_actions, settings.budget is not None) for settings in seen] == [(False, None, True)]
+    assert [settings.recipe_starts for settings in seen] == [load_config({}).recipe_starts]  # the site's setting, not the route's own start
     document = read_json(path)
     assert document["plan"] == "site"
     entry = entry_of(document)

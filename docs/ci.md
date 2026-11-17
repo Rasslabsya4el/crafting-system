@@ -294,7 +294,7 @@ and with `--skip-refused` a rule whose action the game refuses is skipped (for t
 
 No CI test plans a real route with every beta method on (above, "The suite's machine net"); the heavy benchmark records those plans, the
 ones the site gives. `benchmark --net` plans every route as the site does: the target alone, with the default offers (every beta method on,
-OR-41) and **no guide's actions**, under the time and memory limits of the
+OR-41), the vendor-recipe starts of the planner settings (`recipe_starts`, on by default, as on the site) and **no guide's actions**, under the time and memory limits of the
 planner settings of the machine (OR-40; by default `Budget.default()`: an aim of a minute, the 10-minute net, 80% of the machine's memory).
 Each route's entry then carries its `record` (`src/crafting_system/benchmark_record.py`): the plan's mean cost and its lower bound (the
 start item included), the seconds of the plan, the peak memory the search read, and how the search ended (exact, proved within the gap, or
@@ -305,9 +305,12 @@ stopped by a net); a route with no plan has no cost, and its stop is its error.
 No user gets that plan, since the site plans a target with no guide; and a guided round can hide a change that makes the site's plan worse
 (R11, probe run 44086633901: without the guide a branch of #1135 planned 617.28 c where `main` plans 188.03 c, while the guided plan, one
 round, stayed at 188.03 c and the record of #1109 passed it).
-So `--net` plans with no guide's actions; the guide's route is still evaluated against that plan (`solver_not_dearer`), which is the
-comparison a player makes. The guided plan is not kept as a second record: it guards no plan a user sees, the guide's own route is
-evaluated against the plan either way, and a second plan per route would double the runners' time. Each `benchmark.json` names its plan
+So `--net` plans with no guide's actions. The guide's route is then evaluated against that plan (`solver_not_dearer`, the comparison a
+player makes) only when the plan offers every action the route takes and starts where it does; otherwise the route's entry carries the
+error (the route file names an action the plan does not offer) and no verdict, and the record is unaffected: the renewal names such routes.
+The guided plan is not kept as a second record: the record is to guard the plans users get, and the ticket asked for those. The cost is
+that the guided path (#1110: the guide's actions leading the first round) has no regular check under the net any more; a plain
+`benchmark` (no net) still plans it. Each `benchmark.json` names its plan
 (`"plan": "site"` with `--net`, `"guided"` without), and `heavy_benchmark.py` records and checks only runs of the site's plan (a record of
 format `/1`, the guided plans of #1109, is refused).
 
