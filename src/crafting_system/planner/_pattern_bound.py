@@ -255,7 +255,7 @@ def _bound(model, value, error, phases, began, order, floors, rounds, stopped, p
 def _pieces_words(done: int, cap: int) -> str:
     """Why a build counted in pieces of work stopped (OR-13)."""
     return (
-        f"it had done {done:,} pieces of work, its share of the run's states net being {cap:,} (a piece is an action tried at one item of a kind, "
+        f"it had done {done:,} pieces of work, its allowance being {cap:,} pieces of work, set from the run's states net (a piece is an action tried at one item of a kind, "
         "or the least cost an action can have worked out)"
     )
 

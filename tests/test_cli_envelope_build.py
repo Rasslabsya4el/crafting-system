@@ -273,7 +273,7 @@ def test_a_build_counted_in_pieces_of_work_stops_at_its_count_in_every_phase_wha
     if phase == "complete":
         assert slow.stopped is None and slow.pieces < pieces and slow.start_value == pytest.approx(whole.start_value, rel=1e-8)
     else:
-        assert slow.pieces >= pieces and slow.stopped.startswith(f"it had done {slow.pieces:,} pieces of work, its share of the run's states net being {pieces:,}")
+        assert slow.pieces >= pieces and slow.stopped.startswith(f"it had done {slow.pieces:,} pieces of work, its allowance being {pieces:,} pieces of work, set from the run's states net")
     assert_lower_bound(slow, ab, exact)
 
 

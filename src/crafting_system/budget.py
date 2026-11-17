@@ -61,8 +61,10 @@ class Budget:
     the dispatcher decided on #925; `_plan.search_gap`), and the retired forecast of `_decide` reads it for a walk asked for by name; with no aim
     the stop at the gap applies from the first round. `seconds` and `memory_mb` are the
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
-    its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure. A run with a states net and
-    no time net counts its work in states (`in_states`), and its plan then does not depend on the machine's speed.
+    its rounds: beside a time or memory net the search's first plan is built whole before the first round, so its reach can pass the figure. A
+    run with a states net and no time net counts its work in states (`in_states`), and its plan then does not depend on the machine's speed:
+    there the net is asked at every state of the first plan's chain and of each round, so the search knows at most the figure plus the outcomes
+    of the state that crossed it.
     `build_per_state` is read only by a run counted in states: the bound's build of each search may do that many pieces of work (`PIECES`) per
     state of the search's own states net, as under the time net it may take a quarter of the search's seconds (`_envelope_plan.build_stop`).
     `gap` is the proof the run owes once the plan has passed its aim (OR-32 as narrowed by OR-39, #925): the envelope search then stops by itself
@@ -111,7 +113,7 @@ class Budget:
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
-        - the Lock's check after the plan counts the states its second solve walks, up to `states` of its own: under the time net it takes what
+        - the Lock's check after the plan counts every state its walks meet (one per `checkpoint` of its stage), up to `states` of its own: under the time net it takes what
           the search left, and a count has nothing left once the search used its net.
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
         net, OR-39, OR-40). It is the setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose

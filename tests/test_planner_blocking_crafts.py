@@ -674,7 +674,8 @@ def test_a_round_whose_search_a_net_stops_before_any_plan_is_stopped_not_refused
 def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answer_whatever_the_clock_does(data, target, monkeypatch, states):
     # #886: the belt's offers split into two rounds (the lock's is the second). Under `Budget.in_states` the plan and every line of the answer are
     # the same whether every reading of the clock moves it by 1,000 s or by nothing; the test drives the clock itself and never reads it. With 3
-    # states, round 1 uses the net and the lock's round is not tried; with 10, both rounds close.
+    # states, round 1's first plan reaches the net (counted at every state of its chain, #1101) and the lock's round is not tried; with 10, both
+    # rounds close.
     from crafting_system import budget as budget_module
     from crafting_system.budget import Budget
 
@@ -694,7 +695,7 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     assert slow.solution.policy == fast.solution.policy and slow.limits == fast.limits  # every line of the answer
     assert slow.risk is not None and slow.risk == fast.risk  # the cost figures too (their ladder has no time net in such a run)
     assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
-    assert [record.status for record in slow.search.widening] == (["closed", "not tried"] if states == 3 else ["closed", "closed"])
+    assert [record.status for record in slow.search.widening] == (["stopped", "not tried"] if states == 3 else ["closed", "closed"])
     assert all(record.states is not None for record in slow.search.widening)
 
 
@@ -759,7 +760,7 @@ def test_through_the_entry_the_bound_s_build_and_its_binding_count_their_work_an
         assert [record.status for record in slow.search.widening] == ["closed", "closed"]
         assert slow.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     if stopped is not None:  # the answer names the build's count where round 1 stopped (OR-13)
-        assert stopped.startswith(f"it had done {pieces:,} pieces of work, its share of the run's states net being {share:,}")
+        assert stopped.startswith(f"it had done {pieces:,} pieces of work, its allowance being {share:,} pieces of work, set from the run's states net")
         assert f"was stopped too: {stopped}" in slow.search.widening[0].reason
 
 
