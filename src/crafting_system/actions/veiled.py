@@ -77,6 +77,7 @@ __all__ = [
     "holds_placeholder",
     "offer_distribution",
     "offer_pool",
+    "placeholder_mods",
     "unveil_pool_families",
     "unveil_pool_mods",
 ]
@@ -323,6 +324,12 @@ def unveil_pool_families(data: GameData, base_id: str) -> frozenset[str]:
     its mod counts toward no requirement. A family whose unveiled mods all have weight 0 on the base (R07's Trigger) is not one.
     """
     return frozenset(family for side in Side for mod, _ in _side_pool(data, base_id, side.value) for family in mod.families)
+
+
+def placeholder_mods() -> frozenset[str]:
+    """The ids of the veiled placeholders a Veiled Exalted Orb or a Veiled Chaos Orb puts on an item (the generic ones): the only mods a Veiled
+    Exalted Orb adds. A planner's bound reads it to know that such a use passes no goal leaf (`planner/_offer_kinds.py`, #1074)."""
+    return GENERIC_PLACEHOLDERS
 
 
 def unveil_pool_mods(data: GameData, base_id: str) -> frozenset[str]:

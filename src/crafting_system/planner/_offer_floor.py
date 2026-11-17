@@ -21,9 +21,10 @@ with the same shape (the claim and its proof are in `_offer_kinds`: Wald's ident
 and `V*(s) >= 0` everywhere (costs are not negative).
 
 An offer that fractures, changes the flags or reads the item's implicits, quality, offer or imprints has `pbar = 1`: its floor is its cost; but a
-veiled choice (an Unveil, a Pick: it reads the offer) has the pbar of the mods it may add, as a bench craft (`_offer_kinds`, #1074), and a restore of
-an imprint offered to a start with none is set aside as refused. The things taken on the contracts of `Reads` and `Adds` and not checked are the
-assumptions of `_offer_kinds`: (1) an offer the game refuses on the bare item of the start's shape is refused at every state of that shape; (2) an
+veiled choice (an Unveil, a Pick: it reads the offer) and a veil (a Veiled Exalted Orb) have the pbar of the mods they may add, as a bench craft,
+an implicit change (an Ember, an Ichor) has pbar 0, an addition whose class declares its draw (a Beastcraft side swap, an Eldritch Exalted Orb)
+the bound of one added mod (`_offer_kinds`, #1074), and a restore of an imprint offered to a start with none is set aside as refused. The
+things taken on the contracts of `Reads` and `Adds` and not checked are the assumptions of `_offer_kinds`: (1) an offer the game refuses on the bare item of the start's shape is refused at every state of that shape; (2) an
 action that needs the veiled placeholder changes no flag but by what `Adds` declares; (3) only an offer that reads the imprints makes one (a
 reroll that declares `Adds.imprints` is made TERMINAL). They only move `rho` (the refused offers are not in the minimum that makes `rho`). The floors
 of the offers themselves treat a refused offer as any other, at its cost (its floor outside E is `rho`, as every offer's).
@@ -43,6 +44,7 @@ from crafting_system.abstraction import Abstraction, CompressedState, Status
 from crafting_system.abstraction._pattern import Tally
 
 from ._offer_kinds import (
+    FINISHING,
     NAMING,
     REROLL,
     REFUSED,
@@ -115,7 +117,7 @@ class OfferFloors:
             pbar = ONE
             if kind == RESTART_KIND:
                 pbar = ZERO
-            elif kind in NAMING:
+            elif kind in FINISHING:
                 pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft or a veiled choice lands in E only by passing a leaf of U
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw

@@ -220,7 +220,7 @@ No mechanic is decided here: this module only recombines the results of `actions
 claim of the rules registry.
 """
 
-from ._bound import add_bound, declared_bounds, keeps_shape, reach_bound
+from ._bound import add_bound, declared_add_bound, declared_bounds, keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._finish import Finish, FinishModel, FinishStep, FinishValues, SocketWanted, solve_finish
@@ -270,6 +270,7 @@ __all__ = [
     "Wanted",
     "integer_weights",
     "add_bound",
+    "declared_add_bound",
     "declared_bounds",
     "keeps_shape",
     "reach_bound",

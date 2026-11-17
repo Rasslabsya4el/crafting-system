@@ -75,7 +75,7 @@ from crafting_system.rules import get_rule
 
 from .add import refuse_if_nothing_to_draw
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, AddedDraw, Adds, Reads
 from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
@@ -388,6 +388,23 @@ class EldritchExaltedOrb(Action):
                 METAMOD_INTERACTION, COST,
             )
         )
+
+    def added_draw(self, data: GameData, item: Item) -> AddedDraw | None:
+        """One mod drawn from the ordinary pool, less the families held, on the dominant side when it has room (`Action.added_draw`, #1074): the
+        implicits pick the side and nothing else, so the draw of every item of the shape is one of the sides of the bare item's pool. The bare item
+        has no dominant side (it is refused there), so the class declares it."""
+        try:
+            _refuse_ineligible(data, item, self.label())
+        except NotApplicableError:
+            return None
+        if item.rarity is not Rarity.RARE:
+            return None
+        bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
+        try:
+            pool = build_pool(data, bare)
+        except OutOfScopeError:
+            return None  # no pool is modelled for the item: nothing is declared, the offer stays terminal
+        return AddedDraw(pool, {side: bare.free_slots(data, side) for side in Side})
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """One more mod on the dominant side, drawn by weight from the ordinary pool of that side.

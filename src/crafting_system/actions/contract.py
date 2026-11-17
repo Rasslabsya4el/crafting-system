@@ -98,6 +98,7 @@ from .strand_use import Spent, StrandUse
 __all__ = [
     "Action",
     "ActionOutcomes",
+    "AddedDraw",
     "Adds",
     "Axis",
     "BurnKeeps",
@@ -115,6 +116,7 @@ __all__ = [
 
 if TYPE_CHECKING:
     from .outcomes import Outcomes
+    from .pool import PoolFamily
 
 
 SocketShape = Callable[[int, tuple[int, ...]], "tuple[tuple[int, tuple[int, ...], Fraction], ...] | None"]
@@ -688,6 +690,23 @@ class BurnKeeps:
 
 
 @dataclass(frozen=True)
+class AddedDraw:
+    """The one mod an action adds at every item of a shape, as the action declares it (`Action.added_draw`, ticket #1074).
+
+    At ANY item with the rarity, the corruption, the influences and the fractured mods of the item it was declared for (whatever else it holds),
+    one use keeps those four, keeps every mod but at most ones it removes, and adds ONE mod drawn by weight from the mods of `pool` (with `tag`
+    when it is not None) whose family the item does not hold and whose tags its Attack or Caster metamod does not keep out, on ONE side of `free`
+    whose room is not filled (`free` is the room of each side at the bare item, its fractured mods and nothing else); which open side, when
+    several are, may depend on the item. That is what the bound of one added mod (`abstraction.add_bound`) ranges over, so it bounds the action
+    at every item of the shape without building its outcomes there; the contract suite compares it with the built outcomes.
+    """
+
+    pool: "tuple[PoolFamily, ...]"
+    free: Mapping  # Side -> the free slots of that side at the bare item
+    tag: str | None = None
+
+
+@dataclass(frozen=True)
 class ReachDeclared:
     """What an action declares, without building its outcomes, of one use on an item (`Action.reach_batch`, ticket #1073).
 
@@ -907,6 +926,13 @@ class Action(ABC):
         `passes(mod)` says, for each leaf asked about, whether some roll of `mod` makes that leaf PASSING. An entry is None for an action the
         class gives no declaration for (refused on `item`, a model gap, a pool it has no argument for). `item` is the bare item of a shape: its
         fractured mods and nothing else. A planner groups its offers by class and asks each class once.
+        """
+        return None
+
+    def added_draw(self, data: GameData, item: Item) -> AddedDraw | None:
+        """The one mod the action adds at every item of the shape of `item` (`AddedDraw`), read at the bare item of that shape (its fractured mods
+        and nothing else), for an action the bare item refuses or that reads more than the families (a Beastcraft side swap: nothing to remove at
+        the bare item; an Eldritch Exalted Orb: the implicits pick its side); None (the default) says the action declares none (ticket #1074).
         """
         return None
 
