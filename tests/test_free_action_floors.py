@@ -236,3 +236,27 @@ def test_the_envelope_search_with_the_floors_on_gives_the_exact_mean_with_an_imp
     info = result.info["envelope"]
     assert info.exact and info.bound_stopped is None
     assert result.solution.values[first] == pytest.approx(exact, rel=TOLERANCE)
+
+
+def test_a_veiled_exalted_orb_keeps_the_shape_and_adds_no_mod_but_a_placeholder():
+    """The contract the veil kind rests on (`_offer_kinds`, assumption 6), at the items of the amulet world it takes: every result keeps the
+    rarity, the corruption, the influences and the fractured mods, and the one mod it adds is a placeholder."""
+    from itertools import combinations
+
+    from abstraction_pool import LIFE_2, RESIST_2 as RESIST
+
+    checked = 0
+    for count in (1, 2):
+        for mods in combinations((LIFE_1, LIFE_2, RESIST, SPEED), count):
+            try:
+                item = amulet(*(rolled(mod) for mod in mods))
+                results = VeiledExaltedOrb().outcomes(DATA, item)
+            except (NotApplicableError, OutOfScopeError, ValueError):
+                continue
+            held = {entry.mod_id for entry in item.mods}
+            for _chance, result in results.results:
+                assert (result.rarity, result.corrupted, result.influences) == (item.rarity, item.corrupted, item.influences)
+                assert sorted(e.mod_id for e in result.mods if e.fractured) == sorted(e.mod_id for e in item.mods if e.fractured)
+                assert {e.mod_id for e in result.mods} - held <= placeholder_mods()
+            checked += 1
+    assert checked

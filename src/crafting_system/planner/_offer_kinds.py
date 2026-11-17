@@ -71,7 +71,8 @@ mods of the start, lands in E with chance at most pbar(x):
   * an implicit change (#1074: it changes the implicits, `Adds.implicits`, and puts no explicit mod on: `Adds.named` empty, no draw, no fracture,
     corruption, quality, offer, imprint or veil; an Ember, an Ichor, an Orb of Conflict, a Blessed Orb): E reads the explicit leaves only (the
     implicits wanted are not leaves of U), and no explicit mod changes, so one use never lands in E: pbar 0, once its use at the bare item keeps
-    the shape (level 1; refused there or leaving it: TERMINAL). That the states it leads to differ in their implicits changes no other pbar: no
+    the shape (level 1; refused there or leaving it: TERMINAL, so an Orb of Conflict, which needs both Eldritch implicits, stays TERMINAL
+    from a start that holds fewer). That the states it leads to differ in their implicits changes no other pbar: no
     offer of the other kinds reads the implicits, but an addition whose class declares its draw, whose bound ranges over every side. Before
     #1074 they were TERMINAL (they read the implicits), and a Lesser Eldritch Ember set rho at its price (R10 and R11's single search: 0.2432).
   * a veil (#1074: it puts a veiled placeholder on, `Adds.veils`, names no mod and draws none, reads the junk and needs no placeholder: a

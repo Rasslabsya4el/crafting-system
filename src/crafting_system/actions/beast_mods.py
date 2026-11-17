@@ -25,7 +25,7 @@ from .contract import Action, AddedDraw, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .metamods import crafted_limit, locked_sides
-from .pool import build_pool
+from .pool import build_pool, partners
 
 __all__ = [
     "BeastSideSwap",
@@ -208,7 +208,13 @@ class BeastSideSwap(Action):
         if item.rarity is not Rarity.RARE or item.corrupted:
             return None
         bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
-        pool = tuple(family for family in build_pool(data, bare.changed(data, item_level=self.beast_level)) if family.side is self.add_side)
+        try:
+            whole = build_pool(data, bare.changed(data, item_level=self.beast_level))
+        except OutOfScopeError:
+            return None  # no pool is modelled for the item: nothing is declared, the offer stays terminal
+        if partners(whole):
+            return None  # a family on both sides (a jewel): a family held on the other side leaves the draw too, which the bound does not range over
+        pool = tuple(family for family in whole if family.side is self.add_side)
         return AddedDraw(pool, {self.add_side: bare.free_slots(data, self.add_side), self.remove_side: 0})
 
     def outcomes(self, data: GameData, item: Item) -> Finite:

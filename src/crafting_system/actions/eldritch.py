@@ -400,7 +400,11 @@ class EldritchExaltedOrb(Action):
         if item.rarity is not Rarity.RARE:
             return None
         bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
-        return AddedDraw(build_pool(data, bare), {side: bare.free_slots(data, side) for side in Side})
+        try:
+            pool = build_pool(data, bare)
+        except OutOfScopeError:
+            return None  # no pool is modelled for the item: nothing is declared, the offer stays terminal
+        return AddedDraw(pool, {side: bare.free_slots(data, side) for side in Side})
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """One more mod on the dominant side, drawn by weight from the ordinary pool of that side.

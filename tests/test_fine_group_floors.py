@@ -148,3 +148,16 @@ def test_the_declared_draw_is_what_the_action_does_at_every_member(action):
         check_added_draw(action, item, finished(outcomes, DATA), DATA)
         checked += 1
     assert checked > 50
+
+
+def test_a_side_swap_on_a_jewel_declares_no_draw_so_its_offer_stays_terminal():
+    """A jewel's family sits on both sides, and a family held on one side leaves the other side's draw: the bound of one added mod does not range
+    over that (`abstraction._bound._guard`), and the side swap declares only its own side, so it declares nothing there (checker of #1074 part 2:
+    the declared bound was 0.0293 against an exact chance of 0.0312)."""
+    from abstraction_support import real_game_data
+
+    from crafting_system.items import Item, Rarity
+
+    data = real_game_data()
+    jewel = Item.build(data, base_id="Metadata/Items/Jewels/JewelDex", item_level=84, rarity=Rarity.RARE)
+    assert BeastSideSwap(Side.PREFIX, beast_level=84).added_draw(data, jewel) is None
