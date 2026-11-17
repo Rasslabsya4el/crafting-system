@@ -1689,7 +1689,7 @@ class Abstraction:
         for state, chance in result.items():
             for count, each in after.items():
                 if allowance is not None:
-                    allowance.add()
+                    allowance.add("spread state")
                 spread[replace(state, strands=count)] += chance * each
         return dict(spread)
 
@@ -2167,7 +2167,7 @@ class Abstraction:
         for outcome, chance in part.distribution(self._labeller(part.retained.influences, part.rolls_lucky)).items():
             for concrete, each in self._concrete(outcome) if self._has_laws else ((outcome, ONE),):
                 if allowance is not None:
-                    allowance.add()
+                    allowance.add("outcome")
                 weight = chance if each == 1 else chance * each
                 if tracked:
                     merged[concrete] += weight

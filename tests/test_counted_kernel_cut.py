@@ -116,6 +116,18 @@ def test_the_allowance_counts_on_and_stops_past_its_figure():
     assert not isinstance(cut.value, Exception)  # no `except Exception` (nor a refusal's `except ValueError`) of the making swallows it
 
 
+def test_each_stage_of_the_making_counts_on_its_own():
+    # one outcome is met once at each stage of its making (an end state, a group, a way, a state added): each stage is held to the allowance
+    # apart, so a kernel of 2 outcomes is made whole on an allowance of 2 (a sum over the stages would cut it at 8 of them, #1137)
+    with budget.counting(2) as allowance:
+        for stage in ("end state", "group", "way", "outcome", "state", "spread state"):
+            allowance.add(stage)
+            allowance.add(stage)
+        with pytest.raises(budget.OutcomesCut) as cut:
+            allowance.add("way")
+    assert (cut.value.stage, cut.value.made, cut.value.given) == ("way", 3, 2)
+
+
 # ---- through the planner's entry, on the coarse world --------------------------------------------------------------------------------------
 #
 # The start item is bought; the first plan's chain begins with a Chaos Orb at the start, whose kernel has 94 outcomes, none of them the start.

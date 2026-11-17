@@ -517,7 +517,7 @@ class Search[S]:
                 weights = self.p.kernel(state, position)
         except budget.OutcomesCut as cut:
             self.stats.cut = cut.made
-            raise _Cut(f"{known}, and the next action's outcomes would pass it (its making was stopped at outcome {cut.made:,}): it was left unmade") from None
+            raise _Cut(f"{known}, and the next action's outcomes would pass it (its making was stopped at {cut.stage} {cut.made:,}): it was left unmade") from None
         fresh = sum(1 for s in weights if s not in self.index)
         if fresh > left:
             self.stats.cut = fresh

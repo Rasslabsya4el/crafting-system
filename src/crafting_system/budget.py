@@ -311,10 +311,12 @@ class OutcomesCut(BaseException):
     envelope search that opened the allowance catches it and ends there as at its states net, keeping the plan in hand (`_envelope.Search._kernel`).
     """
 
-    def __init__(self, allowance: "Allowance") -> None:
-        super().__init__(f"the making of one kernel made {allowance.made:,} outcomes, {allowance.given:,} were allowed")
+    def __init__(self, allowance: "Allowance", stage: str) -> None:
+        made = allowance.made[stage]
+        super().__init__(f"the making of one kernel made {made:,} {stage}s, {allowance.given:,} were allowed")
         self.given = allowance.given
-        self.made = allowance.made
+        self.made = made
+        self.stage = stage
 
 
 @dataclass
@@ -323,17 +325,20 @@ class Allowance:
 
     One kernel of a drawing action is made whole from its pool's distribution (`actions.draw.exact_distributions`), hundreds of thousands of
     outcomes for a pool whose junk is tracked, and the count between two kernels never sees them: one expansion took R05 at a net of 1,000
-    states to 303,950 (#1101). The engine and the kernel's assembly count here every outcome as they make it (a way of drawing grown, an end
-    state of the draws, a state of the kernel added; `made`), and the next one past `given` raises `OutcomesCut`. Only a search counted in states
-    opens one; elsewhere `allowed()` is None and the making counts nothing."""
+    states to 303,950 (#1101). The engine and the kernel's assembly count here what they make as they make it, each stage of the making on its
+    own count (`stage`: an end state of the draws, a group of them, a way of drawing grown, an outcome of concrete rolls merged, a state of the
+    kernel added; `made`), and the first stage to pass `given` raises `OutcomesCut`. Each stage is held to `given` apart, because one outcome is
+    met once at each stage: a sum over the stages would cut a kernel of a few new states at a fraction of the net (#1137). So every structure of
+    the making holds at most `given` entries, and a kernel made whole still has its new states checked against the net by its search. Only a
+    search counted in states opens one; elsewhere `allowed()` is None and the making counts nothing."""
 
     given: int
-    made: int = 0
+    made: dict[str, int] = field(default_factory=dict)
 
-    def add(self, count: int = 1) -> None:
-        self.made += count
-        if self.made > self.given:
-            raise OutcomesCut(self)
+    def add(self, stage: str = "state", count: int = 1) -> None:
+        made = self.made[stage] = self.made.get(stage, 0) + count
+        if made > self.given:
+            raise OutcomesCut(self, stage)
 
 
 _allowance: contextvars.ContextVar[Allowance | None] = contextvars.ContextVar("crafting_system_budget_allowance", default=None)

@@ -232,8 +232,9 @@ def exact_distributions(
     whose label tells those values apart from the rest gets whole. A Fractured Fossil reads one view per family type out of one walk
     (`Abstraction._fracture_entries`, #934).
 
-    Under a search counted in states (`budget.counting`, #1105) the walk counts what it makes as it makes it: each end state of a draw met for
-    the first time, each group of end states and each way of spreading a group's labels; past the allowance it raises `budget.OutcomesCut`.
+    Under a search counted in states (`budget.counting`, #1105) the walk counts what it makes as it makes it, each stage on its own count: each end state of
+    a draw met for the first time, each group of end states and each way of spreading a group's labels; past the allowance it raises
+    `budget.OutcomesCut`.
     """
     number = NUMBER
     allowance = budget.allowed()  # None outside a counted search: nothing is counted
@@ -390,7 +391,7 @@ def exact_distributions(
                         step = each * weight
                         before = following.get(child)
                         if before is None and allowance is not None:
-                            allowance.add()
+                            allowance.add("end state")
                         following[child] = step if before is None else before + step
                     continue
                 numerator, denominator = chance
@@ -402,7 +403,7 @@ def exact_distributions(
                     top, bottom = numerator * (weight // common), denominator // common  # chance x weight / total, reduced
                     before = following.get(child)
                     if before is None and allowance is not None:
-                        allowance.add()
+                        allowance.add("end state")
                     if before is not None:
                         other, under = before
                         if under == bottom:
@@ -467,7 +468,7 @@ def exact_distributions(
             known = grouped.get(group)
             if known is None:
                 if allowance is not None:
-                    allowance.add()
+                    allowance.add("group")
                 # the orderings an outcome of the group can reach: a view that needs a label is skipped where none can be drawn
                 drawable = {index for index, n in enumerate(base) if n} | {lab for part, _ in mixed for lab, _ in part_labels[part]}
                 known = grouped[group] = [zero, [None if needed is not None and drawable.isdisjoint(needed) else () for *_, needed, _ in orderings]]
@@ -486,7 +487,7 @@ def exact_distributions(
                 for tally, before, drawn in ways:
                     for counts, each in spread(part, n):
                         if allowance is not None:
-                            allowance.add()
+                            allowance.add("way")
                         after = list(tally)
                         pairs = list(drawn)
                         for lab, k in counts:

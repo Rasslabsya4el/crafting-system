@@ -672,12 +672,13 @@ def test_a_round_whose_search_a_net_stops_before_any_plan_is_stopped_not_refused
     assert not plan.search.exact
 
 
-@pytest.mark.parametrize("states", [3, 10])
+@pytest.mark.parametrize("states", [4, 10])
 def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answer_whatever_the_clock_does(data, target, monkeypatch, states):
     # #886: the belt's offers split into two rounds (the lock's is the second). Under `Budget.in_states` the plan and every line of the answer are
-    # the same whether every reading of the clock moves it by 1,000 s or by nothing; the test drives the clock itself and never reads it. With 3
-    # states, round 1's first plan reaches the net (counted at every state of its chain, #1101) and the lock's round is not tried; with 10, both
-    # rounds close.
+    # the same whether every reading of the clock moves it by 1,000 s or by nothing; the test drives the clock itself and never reads it. With 4
+    # states, round 1's first plan reaches the net (counted at every state of its chain, #1101, and inside each kernel, #1105: with 3 the next
+    # kernel is left unmade before any plan closes) and the lock's round is not tried; with 10, both rounds close. The run never knows more
+    # states than its net.
     from crafting_system import budget as budget_module
     from crafting_system.budget import Budget
 
@@ -697,8 +698,9 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     assert slow.solution.policy == fast.solution.policy and slow.limits == fast.limits  # every line of the answer
     assert slow.risk is not None and slow.risk == fast.risk  # the cost figures too (their ladder has no time net in such a run)
     assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
-    assert [record.status for record in slow.search.widening] == (["stopped", "not tried"] if states == 3 else ["closed", "closed"])
+    assert [record.status for record in slow.search.widening] == (["stopped", "not tried"] if states == 4 else ["closed", "closed"])
     assert all(record.states is not None for record in slow.search.widening)
+    assert sum(record.states for record in slow.search.widening) <= states
 
 
 @pytest.mark.parametrize("states", [3, 1_000])
