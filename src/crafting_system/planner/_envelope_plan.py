@@ -339,6 +339,8 @@ class EnvelopeInfo:
     proved_upper: float | None = None  # the search's own certified upper figure of the plan returned (its solve's value with its error added), when it is not exact: what its stop compared
     bound_rounds: int = 1  # models the bound's build solved (more than one when offers joined the model, `_pattern_bound`, #988)
     widening: tuple = ()  # the rounds the offers were searched in (`_rounds.RoundRecord`, #1069); empty for one search over every offer
+    bound_pieces: int = 0  # a run counted in states (#1101): the pieces of work the bound's build did (`_pattern_bound.PatternBound.pieces`)
+    bound_share: int | None = None  # and the pieces it was given; None for a build on the clock
 
 
 def envelope_result(
@@ -396,13 +398,15 @@ def _envelope_run(
     began = time.perf_counter()
     if bound is None:
         bound = pattern_lower_bound(
-            abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after)
+            abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after),
+            pieces=None if net is None else net.pieces,
         )  # fmt: skip
     built = time.perf_counter()
     expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)
     say(
         f"bound built: {bound.model.stats.keys:,} keys ({expanded:,} expanded), {len(bound.positions):,} of {len(offers):,} offers in the model, start value "
-        f"{bound.start_value!r} ({built - began:.0f} s)" + ("" if bound.complete else f"; STOPPED in the {bound.phase} phase: {bound.stopped}")
+        f"{bound.start_value!r} ({built - began:.0f} s)" + ("" if bound.share is None else f", {bound.pieces:,} of {bound.share:,} pieces of work")
+        + ("" if bound.complete else f"; STOPPED in the {bound.phase} phase: {bound.stopped}")
     )
     problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting, goal=goal)
     ready = time.perf_counter()
@@ -422,7 +426,7 @@ def _envelope_run(
     except NoPolicy as refusal:
         if bound.complete:
             raise
-        raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}") from refusal
+        raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}", states=refusal.states) from refusal
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
     # the mean shown: of an exact answer to the solver's 1e-6; of a plan proved within a gap, or one a net stopped, to the error the search took its
     # figures at, and the limit says so when it is above 1e-6 (`mean_error_text`, #867): OR-33 asks for a plan with its gap, not a refusal
@@ -436,7 +440,7 @@ def _envelope_run(
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), stats.tightened,
         result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
-        None if result.exact else result.upper, bound.rounds,
+        None if result.exact else result.upper, bound.rounds, (), bound.pieces, bound.share,
     )  # fmt: skip
     return packed
 
