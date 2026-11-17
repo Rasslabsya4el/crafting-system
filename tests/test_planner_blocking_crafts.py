@@ -245,6 +245,63 @@ def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share
     assert calls[0].give_way is None  # the last round has no rounds after it to give way to: it has all the time left
 
 
+def test_counted_in_states_the_rounds_share_the_states_left_and_give_way_on_states_whatever_the_clock_does():
+    # #886: the same rounds as the test above, in a run counted in states (`Budget.in_states`): 600 states, three rounds. Round 1 has no plan in
+    # hand: its net is all 600 states and its share 200; its search knows 50 more states after each of its rounds, with the plan of 10 from the
+    # first, so it gives way at 200 states. Round 2 has the plan in hand and the 400 states left over the 2 rounds left: a net of 200; its plan
+    # of 7 closes knowing 120 states. Round 3, the last, has the 280 left. The clock jumps by 1,000 s at every reading, or stands still: the
+    # rounds are the same, and each line names its states, never its seconds.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abc"))
+
+    def rounds(clock_now):
+        nets, asked = [], []
+
+        def search(chosen, call):
+            nets.append((len(chosen), call.states))
+            if "a" in chosen and len(chosen) == 1:
+                for step in range(100):
+                    standing = SimpleNamespace(lower=1.0 + step / 100, upper=10.0, rounds=step, seconds=clock_now(), states=50 * (step + 1))
+                    if (said := call.give_way(standing)) is not None:
+                        asked.append(standing.states)
+                        return SimpleNamespace(search=SimpleNamespace(lower=standing.lower, touched=standing.states), mean_remaining=10.0, stopped=said)
+                raise AssertionError("the round never gave way")
+            call.give_way(SimpleNamespace(lower=7.0, upper=7.0, rounds=1, seconds=clock_now(), states=60))
+            return SimpleNamespace(search=SimpleNamespace(lower=7.0, touched=120), mean_remaining=7.0, stopped=None)
+
+        meter = _rounds.StatesMeter(600)
+        widened = _rounds.widen(
+            groups, tuple("abc"), search, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.STOPPED, plan.stopped) if plan.stopped else (_rounds.CLOSED, ""),
+            left=lambda: pytest.fail("a run counted in states reads no time left"), clock_now=clock_now, meter=meter,
+        )  # fmt: skip
+        return nets, asked, widened, meter
+
+    jumps = iter(range(0, 10**9, 1000))
+    slow = rounds(lambda: float(next(jumps)))
+    still = rounds(lambda: 0.0)
+    nets, asked, widened, meter = slow
+    assert nets == [(1, 600), (2, 200), (3, 280)] and asked == [200]  # round 2 made the cheaper plan: round 3 holds it
+    assert [record.status for record in widened.records] == ["gave way", "closed", "closed"] and widened.plan.mean_remaining == 7.0
+    assert [record.states for record in widened.records] == [200, 120, 120] and meter.spent == 440
+    lines = [_rounds.round_line(n, record) for n, record in enumerate(widened.records, start=1)]
+    assert "200 states)" in lines[0] and "share of the states (200 states, the states left over the rounds left)" in lines[0]
+    assert not any(" s)" in line for line in lines)
+    other = still[2]
+    assert (still[0], still[1]) == (nets, asked) and [_rounds.round_line(n, record) for n, record in enumerate(other.records, start=1)] == lines
+    # out of states, the rounds after are not tried, and say so in states
+    spent = _rounds.widen(
+        groups, tuple("abc"), lambda chosen, call: SimpleNamespace(search=SimpleNamespace(lower=7.0, touched=900), mean_remaining=7.0),
+        upper_of=lambda plan: 7.0, mean_of=lambda plan: 7.0, ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: None, clock_now=lambda: 0.0,
+        meter=_rounds.StatesMeter(600),
+    )  # fmt: skip
+    assert [record.status for record in spent.records] == ["closed", "not tried", "not tried"]
+    assert _rounds.round_line(2, spent.records[1]).endswith("0 states): not tried, the run's states net was used up before this round")
+
+
 def test_a_group_beaten_before_the_last_round_is_not_carried_and_the_answer_does_not_call_the_plan_the_cheapest():
     # #1080 / #1091: the plan in hand is 10. Round 2 (b) ends at once on its lower figure: it is not carried, so round 3 holds a and c only, and
     # the answer names b among the rounds that do not make the plan the cheapest of every method (b with c was not searched: the module text has
@@ -576,6 +633,38 @@ def test_a_round_whose_search_a_net_stops_before_any_plan_is_stopped_not_refused
     first, last = _rounds_of(plan)
     assert first.status == "closed" and last.status == "stopped" and last.reason == "the time limit of 30 seconds was reached" and last.lower == 120.0
     assert not plan.search.exact
+
+
+@pytest.mark.parametrize("states", [3, 10])
+def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answer_whatever_the_clock_does(data, target, monkeypatch, states):
+    # #886: the belt's offers split into two rounds (the lock's is the second). Under `Budget.in_states` the plan and every line of the answer are
+    # the same whether every reading of the clock moves it by 1,000 s or by nothing; the test drives the clock itself and never reads it. With 3
+    # states, round 1 uses the net and the lock's round is not tried; with 10, both rounds close.
+    from crafting_system import budget as budget_module
+    from crafting_system.budget import Budget
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+
+    step, readings = [0.0], iter(range(10**9))
+    # the clock as the test drives it, for every module of the run: `budget_module.time` is the one clock module they all read
+    monkeypatch.setattr(budget_module.time, "perf_counter", lambda: step[0] * next(readings))
+
+    def planned(seconds_per_reading: float):
+        step[0] = seconds_per_reading
+        return plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=Budget.in_states(states)))
+
+    slow, fast = planned(1000.0), planned(0.0)
+    assert slow.mean_remaining == fast.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert slow.solution.policy == fast.solution.policy and slow.limits == fast.limits  # every line of the answer
+    assert slow.risk is not None and slow.risk == fast.risk  # the cost figures too (their ladder has no time net in such a run)
+    assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
+    assert [record.status for record in slow.search.widening] == (["closed", "not tried"] if states == 3 else ["closed", "closed"])
+    assert all(record.states is not None for record in slow.search.widening)
+
+
+def replace_seconds(record):
+    return dataclasses.replace(record, seconds=0.0)
 
 
 def test_a_later_round_that_finds_a_cheaper_plan_replaces_the_plan_in_hand(data, target, monkeypatch):

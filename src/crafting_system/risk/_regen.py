@@ -25,6 +25,7 @@ loop) is killed; its jobs are not run again here. Either way the step is refused
 """
 
 import gc
+import math
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -74,6 +75,8 @@ def ladder_net(seconds: float) -> LadderNet:
     One net for every step and every attempt run of the ladder, run side by side or one after another: before #745 each run had `seconds` from its own
     start, so a ladder of five steps of four runs one after another could take twenty nets (about 10 hours at 30 minutes)."""
     clock = budget.active()
+    if clock is not None and clock.budget.seconds is None and clock.budget.states is not None:
+        return LadderNet(math.inf, math.inf, False)  # a run counted in states (`Budget.in_states`): no clock decides its figures
     left = None if clock is None else clock.left()
     if left is not None and left < seconds:
         return LadderNet(time.monotonic() + left, left, True)
