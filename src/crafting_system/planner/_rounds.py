@@ -15,8 +15,9 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   tried, with what the plan is proved against without it (OR-13). No kind is named and no count is a cut.
 * **Rounds.** Round 1 is the first group. Each later round is the offers of every round that closed before it, plus its own group. It is cut
   against the best plan so far: the exact price cut (`_price_cut`) with that plan's certified upper figure, and the search ends at once when its
-  lower figure reaches that figure (`_envelope.Beaten`). A round that closes (exact, within the gap, or shown to reach no plan) joins
-  the base of the next rounds, and so does one a refusal ended (a solve that failed proves nothing against its offers and took no time from the
+  lower figure reaches that figure (`_envelope.Beaten`). A round that closes (exact, within the gap, or shown to reach no plan) with a plan
+  cheaper than the plan in hand (beyond the error of either figure), or with no plan in hand when it began, or as the last round, joins
+  the base of the next rounds (one that closes with no cheaper plan is set aside: below), and so does one a refusal ended (a solve that failed proves nothing against its offers and took no time from the
   others: a wider round may solve them); one that its share of the time or the memory net stopped is set aside, and its plan is kept if it is
   cheaper. Until a plan is in hand, a round may take all the time left: the answer must hold a plan (OR-33), and a later round cannot
   give one sooner than the rounds before it. Once a plan is in hand, the share of a round is the run's time left over the rounds left
@@ -259,7 +260,7 @@ def widen(
             search = getattr(plan, "search", None)
             lower, upper = getattr(search, "lower", None), mean_of(plan)
             within = getattr(search, "within", None) if status == WITHIN else None
-            if best is None or upper < best_mean:
+            if best is None or _cheaper(upper, upper_of(plan), best_mean, best_upper):
                 best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
         if lower is not None and best_upper is not None and k > 0:
             lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
@@ -294,6 +295,17 @@ def widen(
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error)
+
+
+def _cheaper(mean: float, upper: float | None, best_mean: float, best_upper: float | None) -> bool:
+    """Whether a round's plan (its mean, and its certified upper figure) costs less than the plan in hand beyond the error of either figure.
+    Two solves of plans of the same cost differ by their solvers' error (OR-32's 1e-6 of an exact mean), so a plain `mean < best_mean` takes a
+    round that closed at the plan in hand's cost for a cheaper one, and carries its group (#1080: R05's fossil round, which closed at the
+    plan in hand's cost in 2 s). The plan in hand's figure with its error taken off is its mean less the error its upper figure adds; with no
+    certified figure of either plan, the means decide."""
+    if upper is None or best_upper is None:
+        return mean < best_mean
+    return upper < best_mean - max(best_upper - best_mean, 0.0)
 
 
 def _growing(queue: list[Group]):
