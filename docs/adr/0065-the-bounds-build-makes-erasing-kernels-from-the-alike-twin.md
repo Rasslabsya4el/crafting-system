@@ -40,4 +40,4 @@ One thing moves: **where a run counted in states stops.** Before, the build had 
 
 ## What it does not solve
 
-At N = 10,000 the build's largest cost on R05 is not the erasing draws: 336 s of the profiled 475 s are `Abstraction.kernel_key` of the readers at each member (about a million calls, each building an item). That is a separate root; see the issue filed from this ticket's PR. The search's own first draw at small N (the ticket's old title) is cut by `_counted_kernel` as before (#1105).
+At N = 10,000 the build's largest cost on R05 is not the erasing draws: 336 s of the profiled 475 s are `Abstraction.kernel_key` of the readers at each member (about a million calls, each building an item). That is a separate root, [#1170](https://github.com/Rasslabsya4el/crafting-system/issues/1170). The search's own first draw at small N (the ticket's old title) is cut by `_counted_kernel` as before (#1105).
