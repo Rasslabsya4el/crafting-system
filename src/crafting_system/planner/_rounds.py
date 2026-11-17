@@ -96,7 +96,7 @@ class RoundCall:
     watched: bool
     give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
     states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
-    held: bool = False  # a plan in hand when the round began: its bound's build may take the round's whole share (`_plan.search_net`, #1099)
+    held: bool = False  # a plan in hand when the round began, other than one a stopped search walked to (`walked`, #1142): its bound's build may take the round's whole share (`_plan.search_net`, #1099)
 
 
 @dataclass(frozen=True)
