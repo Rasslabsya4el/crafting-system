@@ -26,7 +26,7 @@ from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
 UNVEIL_KIND = "unveil"  # the catalog kind whose offer a bench craft can block (ADR-0026)
-LOCK_KIND = "hinekora-lock"  # the name a target's `actions:` gives Hinekora's Lock, on by default (`_foresight`, ticket #296)
+LOCK_KIND = "hinekora-lock"  # the name the run's methods setting gives Hinekora's Lock, on by default (`_foresight`, ticket #296)
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 # What the draw of a bought item's mods costs (ADR-0064), as a share of the cheapest offer that costs something. It is not free like an unveil
 # because it lies on every cycle of a restart: the certified error of a component is about (m + 2) * epsilon * value / g for its smallest constant
@@ -437,7 +437,7 @@ def offers_for(
       unveiled pool of the base (`unveil_pool_families`, either side, weight above 0 on the base) is offered even though it counts toward
       no requirement, because explicit mods, crafts included, take their families out of the next offer. Crafts of one family give one
       kernel, so the solver keeps the cheapest of them at each state (ADR-0031, equal kernels).
-    * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
+    * With `kinds_named` (the run's methods, `PlanSettings.methods`, #405) only the kinds of those names are listed at all and the filters
       below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
       and the kinds not named are a `Limit` of the answer (`_limits`). A name may also be the label of ONE action (`Essence of
       Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
@@ -716,7 +716,7 @@ def _kind_limits(
                 Limit(
                     _limits.NOT_NAMED,
                     "Not offered",
-                    "kinds this target does not name",
+                    "kinds the run's methods setting does not name",
                     labels=not_named,
                     **claim("the kinds offered"),
                 ),
@@ -728,7 +728,7 @@ def _kind_limits(
                 Limit(
                     _limits.OPT_IN,
                     "Not offered",
-                    "kinds that are offered only when a target names them",
+                    "kinds that are offered only when the run's methods setting names them",
                     labels=opt_in,
                     **claim("the kinds offered", "A kind left out could be cheaper."),
                 ),
@@ -833,7 +833,7 @@ def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
 
 
 def _split_names(data: GameData, start_item: Item, names: Collection[str] | None) -> tuple[frozenset[str] | None, frozenset[str]]:
-    """The names of a target's `actions:` as (kinds, labels): a name is a kind of the catalog, else the label of one action.
+    """The run's methods (`PlanSettings.methods`, #405) as (kinds, labels): a name is a kind of the catalog, else the label of one action.
 
     No names (`None`) is every kind offered by default and no label. A name that is neither is an error, as is a
     kind the planner cannot use yet.

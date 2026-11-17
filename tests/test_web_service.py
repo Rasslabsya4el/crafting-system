@@ -63,7 +63,7 @@ def test_a_request_is_planned_as_a_job_and_its_route_is_stored_with_its_page():
 
         assert job["state"] == "done" and job["error"] is None, job
         route = http.get(job["route"]["url"]).json()
-        assert route["request"]["methods"] == {"recipe_starts": True, "strands": False}  # the machine's defaults, filled in
+        assert route["request"]["methods"] == {"recipe_starts": True, "strands": False, "allowed": None}  # the machine's defaults, filled in
         assert route["summary"]["totals"]["mean_cost"]["value"] > 0
         assert route["summary"]["answer"] == {"approximate": False}
         page = http.get(route["page_url"])
@@ -174,6 +174,9 @@ def test_a_job_cut_off_by_a_restart_is_planned_again(tmp_path):
         ({"target": r12_target(), "economy": "hardcore"}, "unknown keys ['economy']"),
         ({"target": r12_target(), "methods": {"fossils": True}}, "unknown keys ['fossils']"),
         ({"target": r12_target(), "methods": {"strands": "yes"}}, "methods.strands must be true or false"),
+        ({"target": r12_target(), "methods": {"allowed": []}}, "methods.allowed must be a non-empty list"),
+        ({"target": r12_target(), "methods": {"allowed": "chaos-orb"}}, "methods.allowed must be a non-empty list"),
+        ({"target": {**r12_target(), "actions": ["chaos-orb"]}}, "a target no longer names the methods"),
         ({"target": r12_target(), "settings": {"start_price": -1}}, "settings.start_price"),
         ({"target": r12_target(), "settings": {"price_source": "guess"}}, "settings.price_source"),
         ({"target": r12_target(price_file="prices.json")}, "target.price_file"),
@@ -213,7 +216,13 @@ def test_the_key_is_the_request_not_its_spelling():
     spelled = parse_request({"target": r12_target(), "methods": {"recipe_starts": True, "strands": False}, "settings": {"start_price": None}}, "poe1", world)
     priced = parse_request({"target": r12_target(), "settings": {"start_price": 6}}, "poe1", world)
 
-    assert plain.key == spelled.key
+    every = parse_request({"target": r12_target(), "methods": {"allowed": None}}, "poe1", world)
+    allowed = parse_request({"target": r12_target(), "methods": {"allowed": ["harvest-reforge", " chaos-orb", "chaos-orb"]}}, "poe1", world)
+    reordered = parse_request({"target": r12_target(), "methods": {"allowed": ["chaos-orb", "harvest-reforge"]}}, "poe1", world)
+
+    assert plain.key == spelled.key == every.key
+    assert allowed.key == reordered.key != plain.key  # the methods a user allows (#405) are part of what he asks; their order is not
+    assert allowed.document["methods"]["allowed"] == ["chaos-orb", "harvest-reforge"]
     assert priced.key != plain.key
     assert parse_request({"target": r12_target()}, "poe2", world).key != plain.key
     with pytest.raises(RequestError):

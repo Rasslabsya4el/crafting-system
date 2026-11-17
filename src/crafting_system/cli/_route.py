@@ -444,8 +444,8 @@ class _Reader:
             self.fail(
                 line,
                 path,
-                "the states of this plan hold no imprint (no imprint action is offered: name `imprint` and `restore` in the target's "
-                "`actions:`), so the imprints cannot be counted; leave the condition out",
+                "the states of this plan hold no imprint (no imprint action is offered: name `imprint` and `restore` in the run's "
+                "methods setting, `--methods`), so the imprints cannot be counted; leave the condition out",
             )
         return value
 

@@ -118,10 +118,8 @@ def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky,
     # counted in states, not in the default budget's memory share: a process that already holds real game data stops at once (tests/conftest.py)
     monkeypatch.setattr(_main, "run_budget", lambda *args, **kwargs: Budget.in_states(100_000))
     out = tmp_path / "policy.json"
-    named = tmp_path / R12.name  # R12's file with the methods of `r12` named in it
-    named.write_text(R12.read_text(encoding="utf-8") + f"\nactions: [{', '.join(r12().actions)}]\n", encoding="utf-8")
-
-    code = main([str(named), "--json", str(out)], data=DATA, prices=lucky, env={}, today=TODAY)
+    # R12 planned with the methods of `r12`, given as the run's setting (#405)
+    code = main([str(R12), "--json", str(out), "--methods", ",".join(r12().actions)], data=DATA, prices=lucky, env={}, today=TODAY)
 
     shown = capsys.readouterr().out
     assert code == 0, shown

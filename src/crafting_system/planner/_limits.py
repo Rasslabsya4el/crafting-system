@@ -70,8 +70,8 @@ RISK = "risk"
 FINISH = "socket-finish"
 
 GROUPS: tuple[tuple[str, str], ...] = (
-    (NOT_NAMED, "Methods the target does not name"),
-    (OPT_IN, "Methods offered only when the target names them"),
+    (NOT_NAMED, "Methods this run's setting leaves out"),
+    (OPT_IN, "Methods offered only when the run's setting names them"),
     (NOT_BUILT, "Methods the planner cannot use yet"),
     (LISTING_GAP, "Methods the model cannot list for this item"),
     (CORRUPTING, "Corrupting methods the target does not ask for"),

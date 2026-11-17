@@ -108,8 +108,8 @@ When a guide gives a tier, a number or a soft wish, the target takes the guide's
 
 A target states what to end with and what to start from, and every kind of action is offered and pruned by the search; turning a method off is a setting of whoever runs the planner ([#323](https://github.com/Rasslabsya4el/crafting-system/issues/323), the owner's list of user inputs), and the answer shows it (OR-13).
 
-- **Example.** None. No target in `examples/targets/` meets this today: the seven with an `actions:` key (J01, R04, R08, R09, R13, R14, V01) name the allowed kinds, and a target without it gets the silent default of leaving out the opt-in kinds. The rule is the owner's decision, and R05 (no key, yet no Exalted Orb offered) is the nearest case.
-- **Counter-example.** `j01-cobalt-life-attack-speed.yaml:23` (`actions: [chaos-orb]`); V01 (`v01-minion-helmet.yaml:44`) lists four orbs "because fewer kinds keep the state space small".
+- **Example.** Every target in `examples/targets/` since #405: a target file names no methods (the parser refuses an `actions:` key), every beta method is offered (OR-41), and a run that wants fewer says so in its setting (`--methods`, `PlanSettings.methods`, the site's `methods.allowed`); the answer then lists the methods it left out under "Methods this run's setting leaves out".
+- **Counter-example.** Before #405, `j01-cobalt-life-attack-speed.yaml` (`actions: [chaos-orb]`) and V01 (`v01-minion-helmet.yaml`), which listed four orbs "because fewer kinds keep the state space small".
 - **Source.** Owner decisions on #396, point 2, 2026-11-02, which says "as the norm" (memory note `audit-decisions-2026-11-02.md`): the silent opt-in default is "a hard contradiction" with the product. The user setting is #323, "turn methods off".
 - **Narrowed by** OR-41 (owner, 2026-11-13): the setting starts with every method of the beta on, and the planner offers blocking and filler bench crafts by itself.
 
@@ -228,7 +228,7 @@ The planner recognises an unrealistic branch by a general rule, not by a fixed n
 
 Every cut of the search states what the answer still guarantees.
 
-- **Example.** A target with an `actions:` key prints "the plan is the cheapest among the named ones" in the text report.
+- **Example.** A run with a methods setting (`--methods`, #405) lists the methods it left out ("kinds the run's methods setting does not name") and prints "The plan is the cheapest among the kinds offered" in the text report.
 - **Counter-example.** The route page of R13 and R14 says "Cheapest policy of the planner" with no word of the kinds left out (audit ROUTES-5, PLANNING-3).
 - **Source.** Memory note `realism-rails.md`, 2026-11-01.
 

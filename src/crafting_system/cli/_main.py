@@ -1,4 +1,4 @@
-"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--solver auto|object|packed|envelope] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
+"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--methods NAME,...] [--price-source ninja|trade|both] [--solver auto|object|packed|envelope] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
 
 This is the one place that reads the day and the settings of the environment for a plan (the planner is given both; it only times its own stages). It loads the game
 data from the cache, the target, and the price file with its hand overrides, asks the planner for the plan (`planner.plan_target`), prints
@@ -99,6 +99,14 @@ def _percent(text: str) -> float:
     return value
 
 
+def _methods(text: str) -> tuple[str, ...]:
+    """A `--methods` value: the names of the methods a run may use, separated by commas (#405); the planner checks each name."""
+    names = tuple(dict.fromkeys(name.strip() for name in text.split(",") if name.strip()))
+    if not names:
+        raise argparse.ArgumentTypeError(f"name at least one method, such as chaos-orb or essence, separated by commas; got {text!r}")
+    return names
+
+
 _FROM_SETTINGS = object()  # a limit not given on the command line: the planner settings' value
 
 
@@ -144,6 +152,11 @@ def main(
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
     parser.add_argument("--strands", action="store_true", help="consider Memory Strands (or turn them on in the planner settings); a start item with strands turns it on by itself")
     parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (or turn recipe starts off in the planner settings)")
+    parser.add_argument(
+        "--methods", type=_methods, metavar="NAME[,NAME...]",
+        help="use only these methods: kinds such as chaos-orb,essence,bench-craft or labels of single actions such as \"Essence of Insanity\" "
+        "(default: every beta method the planner offers; the answer names the methods a run leaves out). A target file names none (#405)",
+    )
     parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (or set it in the planner settings; default both)")
     parser.add_argument(
         "--solver", choices=SOLVERS, default="auto",
@@ -201,6 +214,7 @@ def main(
             price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit, 0.0 if args.exact else args.gap / 100.0),
             strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
             route_actions=route_actions(Path(args.route)) if args.route else None,  # they lead the first round of the offers (#1110)
+            methods=args.methods,
         )  # fmt: skip
         plan = plan_target(game, target, price_file, settings)
         if plan.approximation is not None and args.route:

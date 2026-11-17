@@ -3,12 +3,6 @@
 base: Thicket Bow
 item_level: 78
 influence: [hunter]
-actions:
-  - transmutation-orb
-  - alteration-orb
-  - augmentation-orb
-  - regal-orb
-  - annulment-orb
 requirements:
   - family: IncreasedAttackSpeed
     min_tier: 1

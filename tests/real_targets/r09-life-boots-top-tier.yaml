@@ -47,9 +47,6 @@ start_item:
 # (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
 start: bought
 
-# See R08: the guide's fossils and the bench.
-actions: [fossil-set, bench-craft]
-
 requirements:
   # High Life, rolled. Guide (poe-vault.com/guides/crafting-basic-boots): "When reforging, focus on a higher Life tier as well as a
   # movement speed modifier". It names no tier, so OR-1 holds: the top tier.

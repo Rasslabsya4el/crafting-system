@@ -90,14 +90,15 @@ def every_kind() -> list[str]:
 
 
 def jewel_target(data, tmp_path, base_name: str, families: tuple[str, ...], named: list[str], name: str = "target"):
-    """A target on `base_name` (a jewel, or any base) at item level 84 from a given rare start item, with the kinds `named`."""
+    """A target on `base_name` (a jewel, or any base) at item level 84 from a given rare start item, planned with the kinds `named` (the run's
+    methods setting, #405)."""
     text = (
-        f"base: {base_name}\nitem_level: 84\nstart_item:\n  rarity: rare\nstart: given\nactions: [{', '.join(named)}]\nrequirements:\n"
+        f"base: {base_name}\nitem_level: 84\nstart_item:\n  rarity: rare\nstart: given\nrequirements:\n"
         + "".join(f"  - family: {family}\n" for family in families)
     )
     path = tmp_path / f"{name}.yaml"
     path.write_text(text, encoding="utf-8")
-    return load_target(path, data)
+    return dataclasses.replace(load_target(path, data), actions=tuple(named))
 
 
 def forced_offers(data, target):

@@ -41,6 +41,7 @@ from vendor_starts_support import (
     RUBY,
     TOY,
     TOY_BOOTS,
+    TOY_METHODS,
     WAND_TARGET,
     prices,
     toy_target,
@@ -483,11 +484,11 @@ def test_a_target_no_recipe_takes_is_planned_as_before_even_with_the_setting_on(
     real = starts_module.make_plan
     monkeypatch.setattr(starts_module, "make_plan", lambda *args, **kwargs: calls.append(1) or real(*args, **kwargs))
     belt = parse_target(
-        "base: Leather Belt\nitem_level: 86\nstart_item:\n  rarity: rare\n  mods: []\nactions: [chaos-orb]\nrequirements:\n  - family: IncreasedLife\n",
+        "base: Leather Belt\nitem_level: 86\nstart_item:\n  rarity: rare\n  mods: []\nrequirements:\n  - family: IncreasedLife\n",
         DATA, source="belt.yaml",
     )
 
-    plan = plan_with_starts(DATA, belt, prices())
+    plan = plan_with_starts(DATA, belt, prices(), methods=("chaos-orb",))
 
     assert len(calls) == 1 and plan.starts is None
     assert "Start options" not in render_text(build_report(plan, DATA))
@@ -606,12 +607,12 @@ def test_a_tier_both_caps_reach_is_one_start_at_both_readings_and_the_range_is_a
 # --- the setting and the command ----------------------------------------------------------------------------------------
 
 
-def run_command(tmp_path, *arguments, target=BOOTS_TARGET, data=TOY, price_file=None, env=None):
+def run_command(tmp_path, *arguments, target=BOOTS_TARGET, data=TOY, price_file=None, env=None, methods=TOY_METHODS):
     path = tmp_path / "toy.yaml"
     path.write_text(with_start(target), encoding="utf-8")
     out = tmp_path / "policy.json"
     code = main(
-        [str(path), "--json", str(out), *arguments], data=data, prices=price_file if price_file is not None else prices(),
+        [str(path), "--json", str(out), "--methods", ",".join(methods), *arguments], data=data, prices=price_file if price_file is not None else prices(),
         env=env if env is not None else {}, today=TODAY,
     )  # fmt: skip
     return code, out

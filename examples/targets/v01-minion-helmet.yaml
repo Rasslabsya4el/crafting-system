@@ -40,9 +40,6 @@ item_level: 84
 # [] means none.
 influence: []
 
-# The kinds of actions the planner may use (the kind names are those of `crafting_system.actions.kinds()`).
-actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb]
-
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   # The Minion gem level, by its exact English stat text.

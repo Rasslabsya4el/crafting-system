@@ -39,15 +39,6 @@ item_level: 86
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord). [] means none.
 influence: [shaper, elder]
 
-# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action.
-actions:
-  - Essence of Horror
-  - annulment-orb
-  - Bench craft Suffixes Cannot Be Changed
-  - Harvest Reforge Fire
-  - wild-bristle-matron
-  - Harvest Reforge Influence
-
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   # The Essence of Horror's suffix.

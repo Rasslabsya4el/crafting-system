@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from former_keys import former_methods
+from targets_support import with_methods
 
 from crafting_system.actions import drawable_mod_ids
 from crafting_system.targets import (
@@ -172,7 +174,8 @@ def test_a_target_whose_leaf_needs_more_than_its_level_stays_at_its_level(data):
     shorter = re.sub(r"(?m)^item_level:\s*86", "item_level: 83", text)
     assert shorter != text
 
-    options = item_level_options(data, parse_target(shorter, data))
+    # #405: read as the suite reads the file, with its former methods (tests/former_keys.py)
+    options = item_level_options(data, with_methods(parse_target(shorter, data), former_methods(EXAMPLES / "r13-life-resist-belt.yaml")))
 
     assert (options.floor.level, options.floor.kind) == (83, "at target")
     assert spans(options) == [(83, 83)]  # nothing below 83 is planned, and level 84 opens the tier-1 resistances

@@ -35,22 +35,6 @@ base: Croaker Talisman
 
 item_level: 85
 
-# The actions the planner may use: the guide's orbs, the imprint and its restore, the Lightning Harvest craft and the three
-# metamods of step 7 (they count toward no requirement, so they are named by their label), and the Augmentation Orb that
-# goes with every Alteration loop. The plan is the cheapest among these; the report lists what was left out.
-actions:
-  - transmutation-orb
-  - alteration-orb
-  - augmentation-orb
-  - regal-orb
-  - annulment-orb
-  - imprint
-  - restore
-  - Harvest Add Remove Lightning
-  - Bench craft Can have up to 3 Crafted Modifiers
-  - Bench craft Prefixes Cannot Be Changed
-  - Bench craft Cannot roll Attack Modifiers
-
 # Everything below must be present on the finished Talisman.
 requirements:
   # Guide, step 4: "Alteration spam for +1 all skills". One tier.

@@ -7,6 +7,7 @@ weighs 10. `rare_toy()` holds three prefix families (weights 1, 2, 3) and three 
 
 import datetime
 import itertools
+import dataclasses
 import textwrap
 from fractions import Fraction
 
@@ -96,7 +97,6 @@ item_level: 86
 start_item:
   rarity: {rarity}
 {mods}start: {start}
-actions: [{actions}]
 requirements:
   - family: {first}
     min_tier: any
@@ -109,9 +109,11 @@ def target(
     data: GameData, *, rarity: str = "magic", start: str = "bought", mods: str = "", actions: str = "alteration-orb, augmentation-orb",
     wanted: tuple[str, str] = ("ToyA", "ToyC"),
 ) -> Target:
-    """The toy target: a magic item holding the A prefix and the C suffix, from a bought (or given) start item of `rarity`."""
-    text = TARGET.format(rarity=rarity, start=start, mods=mods, actions=actions, first=wanted[0], second=wanted[1])
-    return parse_target(textwrap.dedent(text), data, source="toy-listing.yaml")
+    """The toy target: a magic item holding the A prefix and the C suffix, from a bought (or given) start item of `rarity`, planned with the
+    methods `actions` (the run's methods setting, comma-separated; #405: a target names none)."""
+    text = TARGET.format(rarity=rarity, start=start, mods=mods, first=wanted[0], second=wanted[1])
+    methods = tuple(name.strip() for name in actions.split(","))
+    return dataclasses.replace(parse_target(textwrap.dedent(text), data, source="toy-listing.yaml"), actions=methods)
 
 
 ALTERATION = 1.0
