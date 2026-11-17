@@ -62,6 +62,7 @@ UNTRIED = "kinds-not-tried"
 ROUNDS = "rounds"
 START = "start-item"
 SOLVE = "how-solved"
+REACHED = "plan-reached"  # a plan the search walked to when its first plan reached no goal, and a net stopped it there (#1142)
 BUDGET = "time-and-memory"
 DISPLAY = "display"
 STEPS = "step-numbers"
@@ -70,8 +71,8 @@ RISK = "risk"
 FINISH = "socket-finish"
 
 GROUPS: tuple[tuple[str, str], ...] = (
-    (NOT_NAMED, "Methods the target does not name"),
-    (OPT_IN, "Methods offered only when the target names them"),
+    (NOT_NAMED, "Methods this run's setting leaves out"),
+    (OPT_IN, "Methods offered only when the run's setting names them"),
     (NOT_BUILT, "Methods the planner cannot use yet"),
     (LISTING_GAP, "Methods the model cannot list for this item"),
     (CORRUPTING, "Corrupting methods the target does not ask for"),
@@ -92,6 +93,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (START, "The start item"),
     (FINISH, "The sockets"),
     (SOLVE, "How the answer was found"),
+    (REACHED, "A plan that reaches the target, not one shown near the best"),
     (BUDGET, "Time and memory limits that stopped a stage"),
     (DISPLAY, "What is shown"),
     (STEPS, "What the steps show"),

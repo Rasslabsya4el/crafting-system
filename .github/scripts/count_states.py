@@ -17,7 +17,7 @@ from pathlib import Path
 
 from crafting_system.abstraction import Abstraction, Goal
 from crafting_system.planner._offers import RESTART, BuyStartItem, Offer, PricedOffer, offers_for, price_offers, usable_actions
-from crafting_system.planner._plan import offer_action, resolve_start_price
+from crafting_system.planner._plan import offer_action, resolve_start_price, with_methods
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -33,6 +33,7 @@ def rss_mb() -> float:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("target")
+    parser.add_argument("--methods", default="", help="the run's methods setting (#405), names separated by commas; empty: every beta method")
     parser.add_argument("--drop", default="", help="offer labels to leave out, separated by commas")
     parser.add_argument("--limit", type=int, default=5_000_000)
     parser.add_argument("--seconds", type=float, default=19_000)
@@ -45,7 +46,8 @@ def main() -> None:
 
     data = load_game_data()
     path = Path(args.target)
-    target = load_target(path, data)
+    methods = tuple(name.strip() for name in args.methods.split(",") if name.strip()) or None
+    target = with_methods(load_target(path, data), methods)
     prices = load_price_file(PRICES)
     chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions)
     priced, _ = price_offers(chosen.offers, prices)

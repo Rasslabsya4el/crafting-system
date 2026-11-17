@@ -249,17 +249,13 @@ def test_the_old_start_price_line_is_an_unknown_key():
     assert message.startswith("t.yaml:5: ") and "unknown key `start_price`" in message
 
 
-def test_the_actions_key_names_the_kinds_the_planner_may_use():
-    target = parse("requirements:\n  - family: IncreasedLife\nactions: [alteration-orb, ' regal-orb ']\n")
-
-    assert target.actions == ("alteration-orb", "regal-orb")
-    assert parse("requirements:\n  - family: IncreasedLife\n").actions is None
-
-
-def test_the_actions_key_must_be_a_non_empty_list_of_text_without_repeats():
+def test_a_target_names_no_methods_and_the_key_is_refused_with_the_setting_named():
+    """#405 (OR-5, OR-13, OR-41): which methods a run may use is the run's setting; a target file that still names them is refused, in
+    any spelling of the key's value, with the line of the key and where the setting is."""
     head = "requirements:\n  - family: IncreasedLife\n"
 
-    assert ": actions: must be a non-empty list of action kinds" in parse_error(head + "actions: []\n")
-    assert ": actions: must be a non-empty list of action kinds" in parse_error(head + "actions: regal-orb\n")
-    assert ": actions[1]: must be the name of an action kind" in parse_error(head + "actions: [regal-orb, 5]\n")
-    assert "is listed twice (first at actions[0])" in parse_error(head + "actions: [regal-orb, regal-orb]\n")
+    assert parse(head).actions is None
+    for value in ("[alteration-orb, ' regal-orb ']", "[]", "regal-orb"):
+        message = parse_error(head + f"actions: {value}\n")
+        assert ":5: actions: a target no longer names the methods the planner may use" in message
+        assert "`--methods`" in message and "`PlanSettings.methods`" in message

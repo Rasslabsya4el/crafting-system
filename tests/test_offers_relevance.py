@@ -11,7 +11,7 @@ Pick). Done when (#848), and the test of each:
    `test_on_generated_jewel_targets_*`; on J01 the left-out set holds the 17 kinds the probe of #637 found inert:
    `test_on_j01_every_kind_named_*`.
 2. The answer lists the kinds left out with what it still guarantees (OR-13): the same test and `test_the_answer_of_j01_*`.
-3. The counts on a runner: the PR's measurement (`.github/scripts/actions_key.py`), not a test.
+3. The counts on a runner: the PR's measurement (its script `.github/scripts/actions_key.py` retired with the key, #405), not a test.
 
 The hand number: J01's Chaos Orb plan costs `chaos / p`, `p` the chance that one reroll holds the three families (65% 3 mods, 35% 4,
 `jewel.reroll_mod_count`), from `jewel_oracle`, which reads the raw mods and shares no code with the engine (as `test_cli_jewel_real.py`).
@@ -90,14 +90,15 @@ def every_kind() -> list[str]:
 
 
 def jewel_target(data, tmp_path, base_name: str, families: tuple[str, ...], named: list[str], name: str = "target"):
-    """A target on `base_name` (a jewel, or any base) at item level 84 from a given rare start item, with the kinds `named`."""
+    """A target on `base_name` (a jewel, or any base) at item level 84 from a given rare start item, planned with the kinds `named` (the run's
+    methods setting, #405)."""
     text = (
-        f"base: {base_name}\nitem_level: 84\nstart_item:\n  rarity: rare\nstart: given\nactions: [{', '.join(named)}]\nrequirements:\n"
+        f"base: {base_name}\nitem_level: 84\nstart_item:\n  rarity: rare\nstart: given\nrequirements:\n"
         + "".join(f"  - family: {family}\n" for family in families)
     )
     path = tmp_path / f"{name}.yaml"
     path.write_text(text, encoding="utf-8")
-    return load_target(path, data)
+    return dataclasses.replace(load_target(path, data), actions=tuple(named))
 
 
 def forced_offers(data, target):

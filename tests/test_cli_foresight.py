@@ -246,7 +246,7 @@ def test_a_lock_that_survives_the_pruning_on_the_coarse_bounds_has_no_approximat
     prices, plan = coarse
     with pytest.raises(PlanError, match="Hinekora's Lock could pay") as refused:
         plan(with_lock(prices, 0.001))
-    assert "`actions:`" in str(refused.value)
+    assert "`--methods`" in str(refused.value) and "`actions:`" not in str(refused.value)  # #405: the run's setting, not the target's key
 
 
 def test_a_lock_pruned_everywhere_keeps_the_level_with_the_bounds_of_no_lock(coarse):

@@ -273,9 +273,11 @@ class Target:
     (required, with its `rarity`, #545): nothing is made up for it. `price_file` is the path as resolved against the
     target file's folder; it is not read or checked here. `start` says how the start item is had (OR-6, #505): `given` (its cost is not
     counted and the plan never buys another) or `bought` (it must have a price under the key computed from the target, `start_buy.py`,
-    #474, and a restart buys it again). The file must say which, and so must a `Target` built in code: the field has no default, because a target built without it would silently be given. `actions` names the
-    kinds of actions the planner may use, or the labels of single actions (ADR-0024, ticket #70), or None for every kind it
-    offers by default; the names are not checked here.
+    #474, and a restart buys it again). The file must say which, and so must a `Target` built in code: the field has no default, because a target built without it would silently be given. `actions` is not the
+    target's: it is the run's methods setting (`planner.PlanSettings.methods`, #405), the kinds of actions the planner may use or the labels
+    of single actions (ADR-0024, ticket #70), or None for every kind it offers by default. A target file never sets it (the parser refuses
+    the key); the planner's entry sets it from the run's setting, and a test of the planner's inner parts may set it in code. The names are
+    not checked here.
     `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
     `allow_corrupted` lets the goal be a corrupted item that has no corrupted implicit (ADR-0036); a target that asks for a
     corrupted implicit (`asks_corrupted`) takes a corrupted item too, and any other target is never met by one.

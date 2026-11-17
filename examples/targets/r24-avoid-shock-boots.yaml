@@ -41,19 +41,6 @@ item_level: 86
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord). [] means none.
 influence: []
 
-# The kinds of actions the planner may use (`crafting_system.actions.kinds()`), or the label of one action.
-actions:
-  - Deafening Essence of Torment
-  - annulment-orb
-  - Harvest Add Remove Fire
-  - Harvest Add Remove Cold
-  - Harvest Add Remove Lightning
-  - Bench craft Suffixes Cannot Be Changed
-  - remove-crafted-mods
-  - veiled-chaos-orb
-  - unveil
-  - pick
-
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   # The fractured Mana of the bought boots, the top tier.

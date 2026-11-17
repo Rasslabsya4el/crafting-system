@@ -87,8 +87,6 @@ Keys (unknown keys are errors, with a close-match hint):
                             # description), and a `restart` buys it again. A given one costs nothing, is never bought again, and
                             # names its reason in a comment that quotes the guide ("you already have the item")
     price_file: prices.json # optional path; a relative path counts from the target file's folder
-    actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it offers by
-                            # default); a name may also be the label of one action, e.g. "Essence of Insanity" (#70)
     item_level_floor: 84    # optional (ADR-0061): the lowest item level the planner may plan at; 1 to `item_level`. Without it the planner
                             # derives the floor from the tiers the requirements ask for (`floor.py`). It never goes below the derived one.
     allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
@@ -115,8 +113,11 @@ them (say a family and a stat text that select the same mod); groups may nest 20
 (`<<`), anchors (`&name`) and aliases (`*name`) are not supported.
 Whether a mod can spawn on the base is not checked here; that belongs to `actions`.
 
+A target names no methods (#405, OR-5, OR-41): the key `actions:` is refused with a message that names the setting. Which methods a run
+may use is the run's setting (`planner.PlanSettings.methods`, `--methods` on the command line), every beta method by default.
+
 Corruption (ADR-0036): a corrupted implicit that the pool cannot give at `item_level`, more corrupted implicits than the corrupting
-kinds of `actions:` give (`vaal` and `fossil-set` one, `locus` two; not checked when the target buys its item, that is when it says
+kinds offered by default give (`vaal` and `fossil-set` one, `locus` two; not checked when the target buys its item, that is when it says
 `start: bought` or its start item is corrupted), two of one mod group (the Locus never draws them), more implicits in all than the item
 holds after the corrupting action, and a corrupted start item under a target that neither asks nor allows are errors when the file
 is read. `Target.is_met_by` is false for a corrupted item unless the target asks for a corrupted implicit or allows one.

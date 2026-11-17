@@ -17,7 +17,8 @@ never emitted: the generator draws again), a start price and a price recipe:
 - **Wanted mods**: `SIZES` gives the number of wanted families (1-2, 3-4, 5-6), their tiers (T3; T2-T3; T1-T2), and the scale of the method set
   (essences, fossils, strands); the prefix and suffix mix is drawn within three of each. Mods are drawn from the base's own pool.
 - **Methods**: `METHODS`, one entry per v1 method family: the `actions:` it names and the target keys it needs. Every family names its
-  actions, so the plan is the cheapest among the named ones (OR-13).
+  actions, so the plan is the cheapest among the named ones (OR-13). The case's text keeps them under `actions:`; the planner gets them as
+  the run's methods setting (`parse_case_text`, #405).
 - **Prices**: the committed 3.29 snapshots (`SNAPSHOTS`), one of them drawn as the primary and the others filling the names it lacks; every
   currency but the Chaos Orb is scaled by its own seeded factor, log-uniform between 0.3 and 3 (prices decide where the near ties are: R04's
   expanded share moved from 78% to 94% between two snapshots). A family whose method set grows by size keeps only the essences or fossils it
@@ -594,7 +595,7 @@ def draw_case(data: GameData, seed: int, method: Method, size: Size, item_class:
     }  # fmt: skip
     text = yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=1000)
     try:
-        target = parse_target(text, data, source=f"<{method.name}/{size.name}>")
+        target = parse_case_text(text, data, f"<{method.name}/{size.name}>")
     except Exception as error:  # noqa: BLE001 - TargetError, or what the parser's resolvers raise: draw again
         raise Unsuitable(f"does not parse: {str(error)[:160]}") from None
     primary = rng.choice(SNAPSHOTS)
@@ -749,8 +750,20 @@ def prices_for(case: Case) -> PriceFile:
     )  # fmt: skip
 
 
+def parse_case_text(text: str, data: GameData, source: str) -> Target:
+    """The target of a case's text, planned with the methods its `actions:` names.
+
+    A case's text keeps its methods under `actions:` (the committed cases and the baseline's digests read that text), but a target names no
+    methods since #405: the key is taken off before the parser reads the text, and its methods become the run's setting (`Target.actions`,
+    as the planner's entry sets it from `PlanSettings.methods`)."""
+    doc = yaml.safe_load(text)
+    methods = doc.pop("actions", None)
+    target = parse_target(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=1000), data, source=source)
+    return target if methods is None else dataclasses.replace(target, actions=tuple(methods))
+
+
 def target_of(case: Case, data: GameData) -> Target:
-    return parse_target(case.target_yaml, data, source=f"<{case.id}>")
+    return parse_case_text(case.target_yaml, data, f"<{case.id}>")
 
 
 def write_cases(found: Sequence[Case], path: Path) -> None:

@@ -35,8 +35,8 @@ the state keep it. The model of a route in which nothing changes the quality kee
 `strand_use` yet, so both are refused on an item with one strand or more until ticket B5-11h (ADR-0041, `strand_use.py`) declares what an imprint keeps
 and what a restore brings back (`memory_strands.yaml`: an imprint restore changes the count).
 
-The planner (ticket #223). Both kinds are planner kinds, offered by default since #886 (OR-41); before, a target offered them by naming them in
-`actions:`, because the first imprint multiplies the states of a route by about 200 (ADR-0060, "State growth"). The cap is the setting `max_imprints` of `crafting.toml` (`[planner]`, default 1): the planner sets it for the length of a plan with
+The planner (ticket #223). Both kinds are planner kinds, offered by default since #886 (OR-41); before, a target offered them by naming them in its
+former `actions:` key, because the first imprint multiplies the states of a route by about 200 (ADR-0060, "State growth"). The cap is the setting `max_imprints` of `crafting.toml` (`[planner]`, default 1): the planner sets it for the length of a plan with
 `imprints_held_at_most`, and the catalog kinds list the imprints and restores of that cap; outside such a block they list the default.
 """
 

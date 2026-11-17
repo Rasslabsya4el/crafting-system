@@ -59,31 +59,31 @@ def plan():
 # --- the sources ---------------------------------------------------------------------------------------------
 
 
-def test_k1_a_target_without_actions_lists_the_kinds_it_would_have_to_name(plan):
+def test_k1_a_run_without_a_methods_setting_lists_the_kinds_it_would_have_to_name(plan):
     withheld = only(plan.limits, "kinds-opt-in")
 
     assert withheld.labels == ("Recombinators",)  # every kind of the beta is offered by default since #886 (OR-41); the recombinator waits
-    assert withheld.why == "kinds that are offered only when a target names them"
+    assert withheld.why == "kinds that are offered only when the run's methods setting names them"
     assert "cheapest among the kinds offered" in withheld.guarantee
-    assert not of_kind(plan.limits, "kinds-not-named")  # the target has no `actions:` key
+    assert not of_kind(plan.limits, "kinds-not-named")  # the run has no methods setting (#405)
 
 
-def test_k4_a_target_with_actions_lists_the_kinds_it_does_not_name():
+def test_k4_a_run_with_a_methods_setting_lists_the_kinds_it_does_not_name():
     target = load_target(R12, DATA)
 
     chosen = offers_for(DATA, Goal.from_target(target), target.base_id, target.start_item, ["chaos-orb"])
 
     named = only(chosen.limits, "kinds-not-named")
     assert "Exalted Orb" in named.labels and "Chaos Orb" not in named.labels
-    assert limit_text(named).endswith("(kinds this target does not name). The plan is the cheapest among the kinds offered.")
+    assert limit_text(named).endswith("(kinds the run's methods setting does not name). The plan is the cheapest among the kinds offered.")
     assert not of_kind(chosen.limits, "kinds-opt-in")  # one or the other: the target either names its kinds or it does not
 
 
 def test_k4_the_sentence_of_the_ticket_is_what_the_report_prints():
-    limit = Limit("kinds-not-named", "Not offered", "kinds this target does not name", labels=("Exalted Orb", "Annulment Orb"), **claim("the kinds offered"))
+    limit = Limit("kinds-not-named", "Not offered", "kinds the run's methods setting does not name", labels=("Exalted Orb", "Annulment Orb"), **claim("the kinds offered"))
 
     assert limit_text(limit) == (
-        "Not offered: Exalted Orb, Annulment Orb (kinds this target does not name). The plan is the cheapest among the kinds offered."
+        "Not offered: Exalted Orb, Annulment Orb (kinds the run's methods setting does not name). The plan is the cheapest among the kinds offered."
     )
 
 
@@ -124,7 +124,7 @@ def test_k2_the_scouring_and_the_alchemy_orb_are_named_apart_with_their_true_rea
 
 @pytest.mark.parametrize("named", [None, ["chaos-orb"]], ids=["no actions key", "actions key"])
 @pytest.mark.parametrize("rarity", ["rare", "normal"])
-def test_k2_the_reason_of_the_scouring_and_the_alchemy_orb_stands_on_a_normal_and_a_rare_start_with_or_without_an_actions_key(rarity, named):
+def test_k2_the_reason_of_the_scouring_and_the_alchemy_orb_stands_on_a_normal_and_a_rare_start_with_or_without_a_methods_setting(rarity, named):
     """On a Normal start the Orb of Alchemy would fit the start item and is still held back: the sentence says so (#943, checker)."""
     target = load_target(R12, DATA)
     start = target.start_item if rarity == "rare" else target.start_item.changed(DATA, rarity=Rarity.NORMAL, mods=())
@@ -251,16 +251,12 @@ def test_a_priced_start_item_has_neither_start_limit(plan):
     assert not of_kind(plan.limits, "start-item")
 
 
-# --- OR-5, OR-13: a target with an `actions:` key and one without both list what is withheld ----------------
+# --- OR-5, OR-13: a run with a methods setting and one without both list what is withheld (#405) -----------
 
 
-def test_a_target_with_an_actions_key_and_a_target_without_one_both_list_what_is_withheld(tmp_path):
-    text = R12.read_text(encoding="utf-8")
-    keyed = tmp_path / "keyed.yaml"
-    keyed.write_text(text + "actions: [harvest-reforge, chaos-orb]\n", encoding="utf-8")
-
-    for path, kind, label in ((R12, "kinds-opt-in", "Recombinators"), (keyed, "kinds-not-named", "Exalted Orb")):  # Exalted on by default (#886)
-        made = make_plan(DATA, load_target(path, DATA), price_file())
+def test_a_run_with_a_methods_setting_and_a_run_without_one_both_list_what_is_withheld():
+    for methods, kind, label in ((None, "kinds-opt-in", "Recombinators"), (("harvest-reforge", "chaos-orb"), "kinds-not-named", "Exalted Orb")):  # Exalted on by default (#886)
+        made = make_plan(DATA, load_target(R12, DATA), price_file(), methods=methods)
         report = render_text(build_report(made, DATA))
         withheld = only(made.limits, kind)
 
@@ -280,7 +276,7 @@ def test_every_limit_of_an_answer_has_a_guarantee_without_internal_names(plan):
 
 def test_a_limit_without_a_guarantee_cannot_be_made():
     with pytest.raises(ValueError, match="needs a guarantee"):
-        Limit("kinds-not-named", "Not offered", "kinds this target does not name", " ")
+        Limit("kinds-not-named", "Not offered", "kinds the run's methods setting does not name", " ")
 
 
 def test_a_kind_of_the_catalog_is_written_as_a_player_writes_it():
@@ -293,7 +289,7 @@ def test_the_groups_have_a_title_each_and_a_group_unknown_to_the_list_is_shown_l
     odd = Limit("brand-new-kind", "Not offered", "", "The plan is unaffected.")
     first = Limit("kinds-not-named", "Not offered", "", "The plan is unaffected.")
 
-    assert [title for title, _ in grouped([odd, first])] == ["Methods the target does not name", "brand-new-kind"]
+    assert [title for title, _ in grouped([odd, first])] == ["Methods this run's setting leaves out", "brand-new-kind"]
 
 
 # --- the three surfaces ---------------------------------------------------------------------------------------
@@ -301,11 +297,11 @@ def test_the_groups_have_a_title_each_and_a_group_unknown_to_the_list_is_shown_l
 
 def test_a_limit_with_many_labels_shows_its_count_and_the_first_three_and_the_json_keeps_all():
     labels = tuple(f"Kind {n}" for n in range(1, 11))
-    limit = Limit("kinds-not-named", "Not offered", "kinds this target does not name", labels=labels, **claim("the kinds offered"))
+    limit = Limit("kinds-not-named", "Not offered", "kinds the run's methods setting does not name", labels=labels, **claim("the kinds offered"))
 
     assert SHOWN_LABELS == 3
-    assert limit_text(limit, SHOWN_LABELS).startswith("Not offered, 10 in all: Kind 1, Kind 2, Kind 3 and 7 more (kinds this target does not name).")
-    assert limit_text(limit).startswith("Not offered, 10 in all: " + ", ".join(labels) + " (kinds this target does not name).")  # the text names every label
+    assert limit_text(limit, SHOWN_LABELS).startswith("Not offered, 10 in all: Kind 1, Kind 2, Kind 3 and 7 more (kinds the run's methods setting does not name).")
+    assert limit_text(limit).startswith("Not offered, 10 in all: " + ", ".join(labels) + " (kinds the run's methods setting does not name).")  # the text names every label
     assert limit_document(limit)["labels"] == list(labels) and limit_document(limit)["count"] == 10
 
 
@@ -330,7 +326,7 @@ def test_the_goal_card_of_the_page_has_the_section_grouped_by_kind(plan):
 
     titles = [field.label for field in card.leaves_out]
     assert titles == [title for title, _ in grouped(plan.limits)]
-    assert "Methods offered only when the target names them" in titles and "Memory Strands" in titles
+    assert "Methods offered only when the run's setting names them" in titles and "Memory Strands" in titles
     assert [line.text for field in card.leaves_out for line in field.lines] == sentences(sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind)), SHOWN_LABELS)
     assert "leaves_out" not in [field.label for field in card.fields]
 
@@ -417,7 +413,7 @@ def approximate_pair():
         names |= set(offer_of(action, action.label(COARSE), COARSE).resources)
     prices = dataclasses.replace(APPROX_PRICES, prices={name: PriceEntry(2.0, "test") for name in names})
     keys = json.dumps(["chaos-orb", "remove-crafted-mods", *(craft.label(COARSE) for craft in CRAFTS)])
-    target = parse_target(APPROX_TARGET + f"actions: {keys}\n", COARSE, source="t.yaml")
+    target = dataclasses.replace(parse_target(APPROX_TARGET, COARSE, source="t.yaml"), actions=tuple(json.loads(keys)))  # the run's methods (#405)
     exact = make_plan(COARSE, target, prices, solver="object")
     forecast = exact.abstraction.estimate([exact.start], [priced.offer.action for priced in exact.offers])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
@@ -442,7 +438,7 @@ def test_an_exact_plan_claims_the_cheapest_and_an_approximate_one_only_within_it
 
 def test_a_guarantee_that_claims_the_cheapest_plan_must_have_its_form_for_an_approximate_answer():
     with pytest.raises(ValueError, match="claims the cheapest plan"):
-        Limit("kinds-not-named", "Not offered", "kinds this target does not name", "The plan is the cheapest among the kinds offered.")
+        Limit("kinds-not-named", "Not offered", "kinds the run's methods setting does not name", "The plan is the cheapest among the kinds offered.")
     made = Limit("kinds-not-named", "Not offered", "", **claim("the kinds offered"))
     assert approximate_limits([made])[0].guarantee == "The plan is within the stated gap of the cheapest among the kinds offered."
 

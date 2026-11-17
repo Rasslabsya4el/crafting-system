@@ -32,20 +32,6 @@ item_level: 78
 
 influence: [hunter]
 
-# The actions the planner may use: the guide's orbs and bench (the post names no Transmutation Orb, so none is offered). The metamods of steps 3 count toward no
-# requirement, so they are named by their label. The plan is the cheapest among these; the report lists
-# what was left out.
-actions:
-  - alteration-orb
-  - augmentation-orb
-  - regal-orb
-  - annulment-orb
-  - exalted-orb
-  - bench-craft
-  - Bench craft Can have up to 3 Crafted Modifiers
-  - Bench craft Cannot roll Attack Modifiers
-  - remove-crafted-mods
-
 # Everything below must be present on the finished bow.
 requirements:
   # Post, step 1: "Alteration roll a Hunter Thicket Bow(ilvl 78+) for T1 attack speed". A named tier: tier 1.

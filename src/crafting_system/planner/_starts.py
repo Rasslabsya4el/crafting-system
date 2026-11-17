@@ -36,7 +36,7 @@ from ._offers import Offer
 from ._envelope import Net
 from ._envelope_plan import certificate_gap, certificate_gap_text
 from ._limits import approximate_limits
-from ._plan import Plan, PlanError, StartPrice, add_risk, as_budget, make_plan, resolve_start_price, with_bindings
+from ._plan import Plan, PlanError, StartPrice, add_risk, as_budget, make_plan, resolve_start_price, with_bindings, with_methods
 from ._start_options import StartContext, StartList, StartSource, combine, vendor_recipe_starts
 from ._start_types import (
     SOURCE_PLAIN,
@@ -162,6 +162,7 @@ def plan_with_starts(
     start option reaches the goal (the message is the plain start item's).
     """
     offers = tuple(offers) if offers is not None else None  # several plans read them
+    target = with_methods(target, kwargs.pop("methods", None))  # every start option is planned with the run's methods (#405)
     budget = as_budget(kwargs.pop("budget", None), net)
     kwargs = {**kwargs, "price_source": price_source, "budget": budget}  # every plan reads the trade prices under the profile setting
     with running(budget.start() if budget is not None else None) as clock:

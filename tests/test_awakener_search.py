@@ -202,12 +202,15 @@ def test_an_exact_target_beside_a_stopped_donor_is_not_exact_and_says_the_donors
     assert whole_lower(10.0, [dataclasses.replace(p, cost=0.0) for p in offers], [free]) == 0.0  # a use proved to cost nothing proves nothing
 
 
+RING_METHODS = ("awakeners-orb", "chaos-orb", "transmutation-orb", "regal-orb")
+
+
 def _ring_target(data) -> str:
     def entry(mod_id):
         return f"    - mod: {mod_id}\n      values: {[min(stat.min, stat.max) for stat in data.mods[mod_id].stats]}\n"
 
     return (
-        f"base: {RING}\nitem_level: {LEVEL}\ninfluence: [crusader]\nactions: [awakeners-orb, chaos-orb, transmutation-orb, regal-orb]\n"
+        f"base: {RING}\nitem_level: {LEVEL}\ninfluence: [crusader]\n"
         "requirements:\n- family: ContractRingCrusP\n  min_tier: any\n- family: ContractRingShapS\n  mod: ContractRingShapS1\n"
         f"start_item:\n  rarity: rare\n  mods:\n{entry(CRUS_CURSE)}{entry(PLAIN_P1)}start: bought\n"
     )
@@ -227,7 +230,7 @@ def test_the_planners_entry_plans_the_orb_through_the_one_search_at_the_exact_va
 
     # the bench's crafts that `offers_for` names by their mods (the metamods), which none of the orbs draws
     data = dataclasses.replace(DATA, mods={**DATA.mods, **{k: m for k, m in INFLUENCE_DATA.mods.items() if m.domain == "crafted"}})
-    target = parse_target(_ring_target(data), data, source="<ring>")
+    target = dataclasses.replace(parse_target(_ring_target(data), data, source="<ring>"), actions=RING_METHODS)  # the run's methods (#405)
     entries = {
         name: PriceEntry(cost, "poe.ninja", None, None, Provenance("ninja-exchange", "Test", "2026-11-16", 1.0)) for name, (_, cost) in PLANNER_PRICES.items()
     }
@@ -292,7 +295,7 @@ def test_in_a_round_of_a_counted_run_the_donors_share_the_round_s_states_and_its
     from influence_support import INFLUENCE_DATA
 
     data = dataclasses.replace(DATA, mods={**DATA.mods, **{k: m for k, m in INFLUENCE_DATA.mods.items() if m.domain == "crafted"}})
-    target = parse_target(_ring_target(data), data, source="<ring>")
+    target = dataclasses.replace(parse_target(_ring_target(data), data, source="<ring>"), actions=RING_METHODS)  # the run's methods (#405)
     entries = {
         name: PriceEntry(cost, "poe.ninja", None, None, Provenance("ninja-exchange", "Test", "2026-11-16", 1.0)) for name, (_, cost) in PLANNER_PRICES.items()
     }
