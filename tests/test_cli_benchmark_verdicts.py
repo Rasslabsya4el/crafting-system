@@ -4,6 +4,10 @@ A route below the review line that a person took apart prints `reviewed: real fi
 "NEEDS A HUMAN AGAIN" when its ratio moves past the tolerance (either way), a hash of the target or of the route file changes, or the planner's
 first divergent action changes. The per-use numbers are pinned on a toy action worked by hand and on the toy route of the divergence tests.
 No test asserts a run time.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import pytest
@@ -21,6 +25,8 @@ from crafting_system.cli._benchmark_verdicts import COMPLETED, GUIDE, REAL_FIND,
 from crafting_system.planner._offers import Offer, PricedOffer
 from crafting_system.config import load_config
 from crafting_system.solver import Action, Outcome
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = EXAMPLES.parents[1]
 FIND = Verdict("R08", GUIDE, REAL_FIND, (591,), 0.057, "2026-11-07", "t" * 16, "r" * 16, "Fossils Prismatic Fossil")
