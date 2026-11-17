@@ -23,14 +23,17 @@ from crafting_system.targets import load_target
 UNREACHABLE = "no policy of the offered actions reaches the goal"
 
 
-def _target(tmp_path, data, actions: str):
+def _target(tmp_path, data):
     path = tmp_path / "belt.yaml"
-    path.write_text(TARGET.replace("actions: [exalted-orb, bench-craft]", f"actions: [{actions}]"), encoding="utf-8")
+    path.write_text(TARGET, encoding="utf-8")
     return load_target(path, data)
 
 
-def _settings(states: int | None) -> PlanSettings:
-    return PlanSettings(recipe_starts=False, start_price=S, solver="auto", budget=None if states is None else Budget.in_states(states))
+def _settings(states: int | None, methods: tuple[str, ...] = ("exalted-orb", "bench-craft")) -> PlanSettings:
+    """The run's settings: its methods (#405: the run's setting, not the target's), counted in `states` (None: no net)."""
+    return PlanSettings(
+        recipe_starts=False, start_price=S, solver="auto", budget=None if states is None else Budget.in_states(states), methods=methods
+    )  # fmt: skip
 
 
 def _by_hand(monkeypatch, *, exalted: bool):
@@ -51,7 +54,7 @@ def _by_hand(monkeypatch, *, exalted: bool):
 def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_that_none_reaches_the_goal(tmp_path, data, monkeypatch, states):
     # 2 states: round 1 stops too, round 2 is not tried; 5: round 1 proves no plan of the fillers alone (2 states), round 2 stops at 3
     _by_hand(monkeypatch, exalted=True)
-    target = _target(tmp_path, data, "exalted-orb, bench-craft")
+    target = _target(tmp_path, data)
     assert plan_target(data, target, _prices(), _settings(None)).mean_remaining == pytest.approx(133.0)  # a plan exists: 3 (c + e) + 2 S
     with pytest.raises(PlanError) as raised:
         plan_target(data, target, _prices(), _settings(states))
@@ -73,7 +76,7 @@ def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_th
 
 def test_through_the_entry_rounds_that_all_finish_with_no_plan_are_the_proof(tmp_path, data, monkeypatch):
     _by_hand(monkeypatch, exalted=False)
-    target = _target(tmp_path, data, "exalted-orb, bench-craft")
+    target = _target(tmp_path, data)
     for states in (None, 50):
         with pytest.raises(PlanError) as raised:
             plan_target(data, target, _prices(), _settings(states))
@@ -82,7 +85,7 @@ def test_through_the_entry_rounds_that_all_finish_with_no_plan_are_the_proof(tmp
 
 def test_through_the_entry_one_search_a_net_stops_says_no_plan_found_yet(tmp_path, data, monkeypatch):
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", False)  # the offers are one search, not rounds
-    target = _target(tmp_path, data, "exalted-orb, bench-craft")
+    target = _target(tmp_path, data)
     assert plan_target(data, target, _prices(), _settings(None)).search.widening == ()
     for states in (1, 3):
         with pytest.raises(PlanError) as raised:
@@ -95,10 +98,10 @@ def test_through_the_entry_one_search_a_net_stops_says_no_plan_found_yet(tmp_pat
 
 def test_through_the_entry_one_search_that_finishes_with_no_plan_is_the_proof(tmp_path, data, monkeypatch):
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)  # the fillers, offered by the rule: the only priced actions of a target naming the bench
-    target = _target(tmp_path, data, "bench-craft")
+    target = _target(tmp_path, data)
     for states in (None, 50):
         with pytest.raises(PlanError) as raised:
-            plan_target(data, target, _prices(), _settings(states))
+            plan_target(data, target, _prices(), _settings(states, ("bench-craft",)))
         assert str(raised.value).startswith(UNREACHABLE) and "no plan found yet" not in str(raised.value)
 
 
