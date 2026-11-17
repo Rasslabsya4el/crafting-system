@@ -141,7 +141,10 @@ def test_each_stage_of_the_making_counts_on_its_own():
 #
 # The start item is bought; the first plan's chain begins with a Chaos Orb at the start, whose kernel has 94 outcomes, none of them the start.
 # A count of N <= 94 leaves no room for them (1 + 94 > N): before, the search knew 95 states at every such N; now it knows the start alone,
-# says the stop, and has no plan (the start item is not given a restart). From N = 95 the kernel fits; past it the states known stay at most N.
+# says the stop, and has no plan (the start item is not given a restart). Its making counts the draw walk's 119 end states (merged into the 94
+# outcomes), so it fits from N = 120; past it the states known stay at most N. (Until #1146 the bound's build had made that kernel already and
+# the search found it made: it fitted from N = 95. The build now takes an erasing kernel from the alike twin, ADR-0065, and the search makes it.)
+END_STATES = 119
 
 
 def plan_counted(coarse, states: int):  # noqa: F811
@@ -161,19 +164,18 @@ def test_the_start_s_chaos_orb_has_94_outcomes(coarse):  # noqa: F811
     assert len(outcomes) == 94 and full.start not in outcomes
 
 
-@pytest.mark.parametrize("states", [2, 5, 50, 94])
+@pytest.mark.parametrize("states", [2, 5, 50, 94, 95, END_STATES])
 def test_through_the_entry_a_count_below_the_first_kernel_knows_at_most_its_states(coarse, states):  # noqa: F811
     plan, said, known = plan_counted(coarse, states)
     assert plan is None and known == 1 <= states  # before: 95
     assert f"1 states were known, the limit is {states:,}, and the next action's outcomes would pass it" in said and UNMADE in said
 
 
-@pytest.mark.parametrize("states", [95, 96, 98, 100, 150])
+@pytest.mark.parametrize("states", [END_STATES + 1, END_STATES + 2, 150, 200])
 def test_through_the_entry_the_states_known_never_pass_the_count(coarse, states):  # noqa: F811
     plan, said, known = plan_counted(coarse, states)
     assert known <= states and UNMADE not in (said or "")
-    if states >= 96:
-        assert plan is not None and plan.search.touched == known
+    assert plan is not None and plan.search.touched == known
 
 
 # ---- what a cut leaves, and what one making may hold (#1137) -----------------------------------------------------------------------------

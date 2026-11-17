@@ -13,6 +13,7 @@ import re
 
 import pytest
 from test_cli_envelope_plan import coarse  # noqa: F401 (the fixture: the coarse world of about 200 states, its start bought for 5 Chaos)
+from test_cli_envelope_plan import fine_build  # noqa: F401 (the fixture: the build makes its own erasing kernels, so a net of 96 states stops the search with a plan, #1146)
 from coarse_support import DATA as COARSE
 
 from test_cli_limit_words import read  # the rule of player words (#481)
@@ -239,7 +240,7 @@ def test_a_run_that_asks_for_the_whole_proof_takes_the_envelope_search_to_the_en
     assert plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-9)
 
 
-def test_under_a_budget_many_offers_stop_at_the_net_in_the_searchs_own_words(coarse, monkeypatch, no_forecast):  # noqa: F811
+def test_under_a_budget_many_offers_stop_at_the_net_in_the_searchs_own_words(coarse, monkeypatch, no_forecast, fine_build):  # noqa: F811
     target, prices, full = coarse
     stopped = make_plan(COARSE, target, prices, start_price=5.0, with_risk=False, budget=Budget(seconds=None, memory_mb=None, states=96, gap=1e-12))
     info = stopped.search
@@ -290,7 +291,7 @@ def test_a_walk_asked_for_by_name_says_no_cause(coarse, solver):  # noqa: F811
     assert refusal(coarse, solver=solver, budget=Budget(seconds=0.0, memory_mb=None)).endswith(": no plan found yet")
 
 
-def test_a_stopped_search_keeps_its_plan_and_the_plan_says_which_limit_bound(coarse):  # noqa: F811
+def test_a_stopped_search_keeps_its_plan_and_the_plan_says_which_limit_bound(coarse, fine_build):  # noqa: F811
     target, prices, full = coarse
     stopped = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", budget=Budget(seconds=None, memory_mb=None, states=96), with_risk=False)
     info = stopped.packed.info["envelope"]
@@ -301,7 +302,7 @@ def test_a_stopped_search_keeps_its_plan_and_the_plan_says_which_limit_bound(coa
     read(bound)
 
 
-def test_the_old_net_argument_is_the_same_budget(coarse):  # noqa: F811
+def test_the_old_net_argument_is_the_same_budget(coarse, fine_build):  # noqa: F811
     from crafting_system.planner._envelope import Net
 
     target, prices, _ = coarse
@@ -324,7 +325,7 @@ def test_a_stop_met_in_a_worker_is_listed_on_the_runs_own_clock(coarse, monkeypa
     assert plan.foresight.status is LockStatus.STOPPED
 
 
-def test_a_stop_in_the_check_of_the_lock_keeps_the_plan_without_it_and_both_stops_are_listed_once(coarse, monkeypatch):  # noqa: F811
+def test_a_stop_in_the_check_of_the_lock_keeps_the_plan_without_it_and_both_stops_are_listed_once(coarse, monkeypatch, fine_build):  # noqa: F811
     """A plan has closed when the Lock is checked: the stop keeps it (OR-33), and the one limit lists the search's stop and the Lock's, in order."""
     target, prices, _ = coarse
 
@@ -598,7 +599,7 @@ def test_a_run_counted_in_states_keeps_one_account_of_its_searches_and_gives_eac
         Budget.in_states(10, build_per_state=0.0)
 
 
-def test_through_the_entry_two_plans_of_one_counted_run_share_its_states_and_the_lock_s_check_stops_on_its_count(coarse, monkeypatch):  # noqa: F811
+def test_through_the_entry_two_plans_of_one_counted_run_share_its_states_and_the_lock_s_check_stops_on_its_count(coarse, monkeypatch, fine_build):  # noqa: F811
     # #1101: two plans made inside one run (as its start options are) share its states net: the second plan's search has what the first left,
     # and the run's account holds both searches' states. The Lock's check then counts the states of its walk, up to the run's net.
     target, prices, _ = coarse
