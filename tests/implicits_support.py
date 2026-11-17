@@ -72,8 +72,6 @@ HAND_MADE = (
     _eldritch("ShockProliferationEldritchImplicit1", EXARCH, "ShockProliferation", [("gloves_shock_proliferation_radius", 12, 12)]),
     # Eater of Worlds
     _eldritch("ChanceToShockEldritchImplicit2", EATER, "ChanceToShock", [("base_chance_to_shock_%", 10, 10)]),
-    # a malformed id the data does not have, to see the helper refuse it
-    _eldritch("ChanceToShockEldritchImplicitX", EATER, "ChanceToShock", [("base_chance_to_shock_%", 10, 10)]),
     # the veiled placeholders (real stats; the value of veiled_mod_type is invented)
     _mod(
         "VeiledPrefix", "prefix", "veiled", "VeiledPrefix", [("veiled_mod_type", 1, 1), ("veiled_mod_seed", 1, 30000)], text=None
@@ -112,6 +110,10 @@ SOME_BOOTS = BaseItem(
     implicits=(),
     release_state="released",
 )
+
+# a malformed id the data does not have, to see the helper refuse it: kept out of `EXTENDED`, since every target is offered the Eldritch
+# currencies since #886 and a plan on the extended data would read it
+MALFORMED_ELDRITCH = _eldritch("ChanceToShockEldritchImplicitX", EATER, "ChanceToShock", [("base_chance_to_shock_%", 10, 10)])
 
 EXTENDED = dataclasses.replace(
     DATA,

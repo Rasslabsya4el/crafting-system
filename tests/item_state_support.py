@@ -56,7 +56,7 @@ _EXTRA = (
 )
 ITEM_DATA: GameData = dataclasses.replace(
     CONTRACT_DATA,
-    mods={**CONTRACT_DATA.mods, **{mod.id: mod for mod in (*HAND_MADE, *_EXTRA) if mod.id != "ChanceToShockEldritchImplicitX"}},
+    mods={**CONTRACT_DATA.mods, **{mod.id: mod for mod in (*HAND_MADE, *_EXTRA)}},
     base_items={**CONTRACT_DATA.base_items, BOOTS: SOME_BOOTS},
 )
 AMULET_TIERS = tier_table(ITEM_DATA, AMULET)

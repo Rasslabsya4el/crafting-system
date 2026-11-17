@@ -2,7 +2,9 @@
 
 The rule under test: a bench craft is offered ONLY WHEN ITS MOD COUNTS TOWARD A REQUIREMENT. Every other
 action of this slice erases crafted mods, so a craft that gives the goal nothing only takes a slot and
-costs currency; leaving it out is exact (see `offers_for`).
+costs currency; leaving it out is exact (see `offers_for`). Since #886 the planner also offers the blocking
+crafts by default (`_offers.BLOCKING_CRAFTS`, tested in `test_planner_blocking_crafts.py`); this module turns
+that rule off and tests the requirement rule beneath it.
 """
 
 import dataclasses
@@ -17,12 +19,19 @@ from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods, bench_crafts
 from crafting_system.cli import RESTART, BuyStartItem, make_plan, offers_for
 from crafting_system.items import Rarity
+from crafting_system.planner import _offers
 from crafting_system.targets import load_target
 
 BELT = "Metadata/Items/Belts/Belt3"
 DAMAGE_1, DAMAGE_2 = "JunMaster2AllDamage2_", "JunMaster2AllDamage3"  # prefixes, Ring and Belt only
 HYBRID = "JunMaster2ArmourAndEnergyShield1"  # a prefix of Belts, not wanted below
 LIFE = "IncreasedLife1"
+CORRUPTED_ESSENCES = {"Essence of Hysteria", "Essence of Insanity", "Essence of Horror", "Essence of Delirium"}  # on a rare item too (#886)
+
+
+@pytest.fixture(autouse=True)
+def requirement_rule_only(monkeypatch):
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", False)
 
 
 def with_currency_names(data):
@@ -83,7 +92,10 @@ def test_two_crafts_of_one_text_are_told_apart_by_their_roll_range_in_the_label_
 
 
 def test_a_craft_giving_the_goal_nothing_is_not_offered_and_neither_is_remove_crafted_mods():
-    chosen = offered(Goal((Wanted(frozenset({LIFE})),)))
+    # the kinds named are the ones of this rule: since #886 a default target is also offered methods that add a crafted mod (a Beastcraft
+    # metamod), and with them Remove Crafted Mods
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    chosen = offers_for(PRICED_DATA, goal, BELT, item(base_id=BELT), ["chaos-orb", "harvest-reforge", "essence", "bench-craft", "remove-crafted-mods"])
 
     assert crafts(chosen) == set()
     assert not any(isinstance(offer.action, RemoveCraftedMods) for offer in chosen.offers)
@@ -127,14 +139,16 @@ def test_the_rerolls_and_the_essences_of_the_item_class_are_offered_by_their_nam
 
     assert any(isinstance(offer.action, ChaosOrb) for offer in chosen.offers)
     assert any(offer.label == "Harvest Reforge Lightning" for offer in chosen.offers)
-    assert not any(isinstance(offer.action, ApplyEssence) for offer in chosen.offers)  # level 1 works on a normal item only
+    # level 1 works on a normal item only; the corrupted essences work on a rare item and are offered by default since #886
+    assert {offer.label for offer in chosen.offers if isinstance(offer.action, ApplyEssence)} <= CORRUPTED_ESSENCES
 
 
 def test_a_low_essence_is_offered_for_a_normal_start_item_only():
     goal = Goal((Wanted(frozenset({LIFE})),))
     normal = offered(goal, start=item(base_id=BELT, rarity=Rarity.NORMAL))
 
-    assert [o.label for o in normal.offers if isinstance(o.action, ApplyEssence)] == ["Whispering Essence of Hatred"]
+    essences = [o.label for o in normal.offers if isinstance(o.action, ApplyEssence)]
+    assert [label for label in essences if label not in CORRUPTED_ESSENCES] == ["Whispering Essence of Hatred"]
 
 
 def test_the_restart_is_an_action_of_every_state_but_the_start_and_ends_in_the_start():
@@ -205,16 +219,16 @@ def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
         offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["scouring-orb"])
 
 
-# --- kinds offered only when named, and single actions named by label (ticket #70) ---------------------------------
+# --- kinds named, and single actions named by label (ticket #70) ---------------------------------------------------
 
-DEFAULT_OFF = {"Orb of Annulment", "Fracturing Orb", "Exalted Orb"}
+DEFAULT_OFF = {"Orb of Annulment", "Fracturing Orb", "Exalted Orb"}  # offered only when named until #886, by default since (OR-41)
 
 
-def test_exalted_annulment_and_fracturing_are_offered_only_to_a_target_that_names_them():
+def test_exalted_annulment_and_fracturing_are_offered_by_default_and_alone_when_named():
     goal = Goal((Wanted(frozenset({LIFE})),))
     rare = item(roll(LIFE), base_id=BELT)
 
-    assert not DEFAULT_OFF & {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
+    assert DEFAULT_OFF <= {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
     named = offers_for(PRICED_DATA, goal, BELT, rare, ["exalted-orb", "annulment-orb", "fracturing-orb"])
     assert {offer.label for offer in named.offers} == DEFAULT_OFF
 

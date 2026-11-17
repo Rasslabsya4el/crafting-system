@@ -47,6 +47,72 @@ def progress_sink_restored(monkeypatch):
     monkeypatch.setattr(_packed, "PROGRESS", _packed.PROGRESS)
 
 
+# The net of the suite's machine (#886, OR-39: a planner limit is a setting of the machine a run is on). CI runs `SLOTS_PER_RUNNER` slots
+# at once on a runner (`run_shard.py`), so:
+# * a run that has a budget (the command's default, `Budget.default()`) takes `budget.MEMORY_SHARE` of the machine divided among the slots;
+# * on a machine that has them (Linux, the CI runners), a test that runs past `SUITE_TEST_SECONDS` fails at that point (`SIGALRM`), and a
+#   test process holds at most `SUITE_DATA_MB` of data (`RLIMIT_DATA`), so a test that asks for more fails with a MemoryError instead of
+#   taking the runner down. The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes
+#   its own budget keeps it. A module of the budget itself (`OWN_NET = True`) sees `MEMORY_SHARE` as it is.
+# `CRAFTING_TEST_SECONDS` and `CRAFTING_TEST_DATA_MB` set other figures; 0 turns that net off.
+SLOTS_PER_RUNNER = 4
+SUITE_TEST_SECONDS = int(os.environ.get("CRAFTING_TEST_SECONDS", "300"))
+SUITE_DATA_MB = int(os.environ.get("CRAFTING_TEST_DATA_MB", "3500"))
+
+
+def pytest_configure(config):
+    try:
+        import resource
+    except ImportError:  # Windows: no such limit
+        return
+    if SUITE_DATA_MB > 0 and hasattr(resource, "RLIMIT_DATA"):
+        soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
+        wanted = SUITE_DATA_MB * 1024 * 1024
+        if soft == resource.RLIM_INFINITY or soft > wanted:
+            resource.setrlimit(resource.RLIMIT_DATA, (wanted, hard))
+
+
+@pytest.fixture(autouse=True)
+def suite_net(request, monkeypatch):
+    """The memory share of a budgeted run of the suite (see `SLOTS_PER_RUNNER`)."""
+    if not getattr(request.module, "OWN_NET", False):
+        from crafting_system import budget as budget_module
+
+        monkeypatch.setattr(budget_module, "MEMORY_SHARE", budget_module.MEMORY_SHARE / SLOTS_PER_RUNNER)
+
+
+def _alarmed(phase: str):
+    """The time net of one phase of a test (its setup, a module's fixtures included, or its call): `SUITE_TEST_SECONDS`, where `SIGALRM` is."""
+    import signal
+
+    if SUITE_TEST_SECONDS <= 0 or not hasattr(signal, "SIGALRM"):
+        yield
+        return
+
+    def ran_past(signum, frame):
+        pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
+
+    previous = signal.signal(signal.SIGALRM, ran_past)
+    signal.alarm(SUITE_TEST_SECONDS)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup(item):
+    yield from _alarmed("setup")
+    return None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call(item):
+    yield from _alarmed("test")
+    return None
+
+
 @pytest.fixture(autouse=True)
 def network_guard(request, monkeypatch):
     """Any connection (or name lookup) to a host other than loopback fails with AssertionError.

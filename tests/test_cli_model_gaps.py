@@ -329,8 +329,11 @@ def refusing(monkeypatch):
     return plant
 
 
+R12_KINDS = ("chaos-orb", "harvest-reforge", "essence", "bench-craft", "remove-crafted-mods")  # the methods of this mechanism, named (#886)
+
+
 def plan_of(**options):
-    return make_plan(DATA, load_target(R12, DATA), price_file(), **options)
+    return make_plan(DATA, dataclasses.replace(load_target(R12, DATA), actions=R12_KINDS), price_file(), **options)
 
 
 def gaps_of(plan):

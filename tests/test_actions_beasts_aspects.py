@@ -262,7 +262,7 @@ def test_the_kind_lists_the_eight_aspects_for_a_rare_item_and_is_a_planner_kind_
     assert listed(amulet(LIFE)) == [AspectBeast(*pair) for pair in ALL]  # the order: aspect, then level
     assert listed(amulet()) == listed(amulet(LIFE))
     assert listed(amulet(LIFE, rarity=Rarity.MAGIC)) == [] and listed(amulet(rarity=Rarity.NORMAL)) == []
-    assert AspectBeast("cat", 20) not in catalog(BEAST_DATA, amulet(LIFE), planner_only=True)  # opt-in: listed only when a target names the kind
+    assert AspectBeast("cat", 20) in catalog(BEAST_DATA, amulet(LIFE), planner_only=True)  # offered by default since #886 (OR-41)
     assert AspectBeast("cat", 20) in catalog(BEAST_DATA, amulet(LIFE), planner_only=True, names={"aspect-beast"})
     registered = {entry.name: entry for entry in kinds()}["aspect-beast"]
     assert registered.planner and not registered.opt_in and registered.order == 84 and not registered.why_not
