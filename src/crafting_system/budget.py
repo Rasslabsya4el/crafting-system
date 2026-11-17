@@ -113,8 +113,13 @@ class Budget:
           option) counts the states it knows on one account of the run (`Clock.spend`): a search's net is the states left (a donor's, an equal
           share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`). A search knows at most its
           net: each kernel is made on an allowance of the states it may still know, what it makes counted as it is made, each stage of the
-          making (an end state of the draws, a group, a way, an outcome merged, a state added) on its own count held to that allowance
-          (`Allowance`, #1105), and a kernel that would pass it is left unmade and the search stops there with its plan in hand;
+          making (`STAGES`: an end state of the draws, a group, a spread, a way, a roll, an outcome, a state added, a spread state) on its own
+          count held to that allowance (`Allowance`, #1105), and a kernel that would pass it is left unmade and the search stops there with its
+          plan in hand. A stage counts the pieces it makes, not the states new to the search (#1137): one kernel's making holds at most
+          `len(STAGES)` (8) times the states left, and it can be cut while its new states would still fit, when one stage makes more pieces
+          than the kernel has new states (an outcome the search knows already, a way that merges with another, an end state met at an earlier
+          draw). Measured on the first draw of R05 and R12 (#1137) the largest stage, the ways, made 1.17 times the kernel's states, all of
+          them new; a kernel made whole is checked on its new states alone;
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
@@ -129,7 +134,8 @@ class Budget:
         100,000 pieces with its 7 distributions holding 3,160,130 outcomes (2.6 GB), the first plan's chain met one kernel of 468,779 outcomes
         (468,781 states known, the limit 1,000), and the Lock's gains grew one distribution by about 12 GB until the process was killed at 16 GB.
         The search's kernels are now counted inside their making (above, #1105): a search knows at most `states`, and the work of one of its
-        kernels is bounded by about six times the states it has left (one allowance per stage). The kernels the bound's build makes (#1126) and
+        kernels is bounded by `len(STAGES)` times the states it has left (one allowance per stage). That first draw of R05 has 303,948 states
+        and R12's 468,779, every one new to the search (#1137), so neither route has a plan under a count below those figures (#1146). The kernels the bound's build makes (#1126) and
         the Lock's gains (#1125) are not counted inside: each counts a kernel asked for, never the work inside it, so their memory and time do
         not follow `states` yet. A run under the time net has the same kernels, and its memory net is never read inside the making of one.
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
@@ -303,6 +309,13 @@ def checkpoint() -> None:
         clock.check(clock.stage, clock.what)
 
 
+# The stages of a kernel's making, each counted on its own (`Allowance.add`, #1105, #1137): the draw walk's end states (every step's, the
+# intermediate ones included), its groups of end states, the entries of a part's spread over its labels, the ways of spreading a group,
+# the entries of an outcome spread over roll laws before the last, the outcomes of concrete rolls, the states added to the kernel and the
+# states a spend spreads them over. A making holds at most `len(STAGES)` times its allowance.
+STAGES = ("end state", "group", "spread", "way", "roll", "outcome", "state", "spread state")
+
+
 class OutcomesCut(BaseException):
     """The making of one kernel made more outcomes than its `Allowance` (a run counted in states, #1105): the kernel is left unmade.
 
@@ -325,11 +338,13 @@ class Allowance:
     One kernel of a drawing action is made whole from its pool's distribution (`actions.draw.exact_distributions`), hundreds of thousands of
     outcomes for a pool whose junk is tracked, and the count between two kernels never sees them: one expansion took R05 at a net of 1,000
     states to 303,950 (#1101). The engine and the kernel's assembly count here what they make as they make it, each stage of the making on its
-    own count (`stage`: an end state of the draws, a group of them, a way of drawing grown, an outcome of concrete rolls merged, a state of the
-    kernel added; `made`), and the first stage to pass `given` raises `OutcomesCut`. Each stage is held to `given` apart, because one outcome is
-    met once at each stage: a sum over the stages would cut a kernel of a few new states at a fraction of the net (#1137). So every structure of
-    the making holds at most `given` entries, and a kernel made whole still has its new states checked against the net by its search. Only a
-    search counted in states opens one; elsewhere `allowed()` is None and the making counts nothing."""
+    own count (`stage`, one of `STAGES`: an end state of the draws, a group of them, a spread built, a way of drawing grown, a roll spread, an
+    outcome of concrete rolls, a state of the kernel added, a spread state; `made`), each as it is built, and the first stage to pass `given`
+    raises `OutcomesCut`. Each stage is held to `given` apart, because one outcome is met once at each stage: a sum over the stages would cut
+    a kernel of a few new states at a fraction of the net (#1137). So every structure of the making holds at most `given` entries (the
+    multinomial table of one roll law, `_rolls.multinomial`, is the one left uncounted: its size is set by the law's values, not by the
+    pool), and a kernel made whole still has its new states checked against the net by its search. Only a search counted in states opens
+    one; elsewhere `allowed()` is None and the making counts nothing."""
 
     given: int
     made: dict[str, int] = field(default_factory=dict)

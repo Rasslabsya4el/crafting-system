@@ -555,7 +555,8 @@ with every method on) one kernel can hold gigabytes whatever N is: R12 at N = 1,
 build (7 distributions, 3.2 million outcomes), met a first-plan kernel of 468,779 outcomes, and was killed at 16 GB inside one distribution of
 the Lock's gains. The search's kernels are counted inside their making (#1105): each stage of a kernel's making is held to the states the
 search has left, a kernel that would pass N is left unmade, and the search stops with its plan in hand, so it never knows more than N
-states. The bound's build (#1126) and the Lock's gains (#1125) still count only the kernels they ask for, not the work inside one: a record
+states. A stage counts the pieces it makes, not the states new to the search (#1137), but on R05 and R12 that is not what stops them: their
+first draw's kernel holds 303,948 and 468,779 states, every one new, so neither has a plan under a count below those figures (#1146). The bound's build (#1126) and the Lock's gains (#1125) still count only the kernels they ask for, not the work inside one: a record
 that runs out of memory or time there is not fixed by a smaller N, and runs with the run wrapped so that a runaway is killed alone
 (`systemd-run --scope -p MemoryMax=...` on the server).
 

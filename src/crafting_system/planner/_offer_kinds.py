@@ -63,13 +63,33 @@ mods of the start, lands in E with chance at most pbar(x):
     action removes passes no leaf), so the chance is at most pbar. Level 0 is pbar = 1, level 1 that bound. It is
     raised only where the bare item of the shape takes it, keeps the shape, and gives one draw; anywhere else
     (refused there, which proves nothing for a state holding more mods; another shape; not one draw) it is TERMINAL.
+    An action whose class declares its one added mod for the shape (`Action.added_draw`, #1074) is an addition too, whatever it reads: the
+    Beastcraft side swap (one mod drawn on its side at the beast level, then a mod of the other side removed: the bare item refuses it, having
+    nothing to remove) and the Eldritch Exalted Orb (the ordinary draw on the dominant side: the implicits pick the side, and the bound ranges over
+    every side alone). Its bound is `declared_add_bound`, the same bound read from the declared pool; that the action keeps the shape is the
+    declaration's, which the contract suite compares with the built outcomes.
+  * an implicit change (#1074: it changes the implicits, `Adds.implicits`, and puts no explicit mod on: `Adds.named` empty, no draw, no fracture,
+    corruption, quality, offer, imprint or veil; an Ember, an Ichor, an Orb of Conflict, a Blessed Orb): E reads the explicit leaves only (the
+    implicits wanted are not leaves of U), and no explicit mod changes, so one use never lands in E: pbar 0, once its use at the bare item keeps
+    the shape (level 1; refused there or leaving it: TERMINAL, so an Orb of Conflict, which needs both Eldritch implicits, stays TERMINAL
+    from a start that holds fewer). That the states it leads to differ in their implicits changes no other pbar: no
+    offer of the other kinds reads the implicits, but an addition whose class declares its draw, whose bound ranges over every side. Before
+    #1074 they were TERMINAL (they read the implicits), and a Lesser Eldritch Ember set rho at its price (R10 and R11's single search: 0.2432).
+  * a veil (#1074: it puts a veiled placeholder on, `Adds.veils`, names no mod and draws none, reads the junk and needs no placeholder: a
+    Veiled Exalted Orb, which removes a mod and puts a placeholder in its place): the one mod it adds is a placeholder (`placeholder_mods`; an
+    action that declares a veil and no draw adds no other: the contract of `Adds.veils`, not a check), which passes no leaf, so pbar = 1 if a
+    placeholder can pass a leaf of U (`finishes`), else 0. The placeholder is not fractured (only a terminal offer fractures), so the veiled
+    choices that follow keep the shape. It is not in the bound's starting model (`NAMING`): it names no goal mod.
   * a restore of an imprint (#1074: `Action.imprint_move()` restores), offered to a start item that holds no imprint: an imprint is made only by
     an offer that reads and changes the imprints (`Reads.item_state`), a TERMINAL one, so no state before the first terminal use holds one, and
     the restore is never used there: it is set aside as REFUSED (it is free, ADR-0026, so as a TERMINAL offer it set rho to its price, about
     1e-8, in every search that offered it: #1112's single search over R05's offers, once the veiled choices no longer did). A state that holds an
     imprint is then of another shape (`_offer_floor.OfferFloors.klass`): from there a restore may bring back a state in E for that price.
   * anything else (it fractures, changes the flags, draws and reads the junk otherwise, has no bound, is unknown):
-    TERMINAL, pbar = 1, and the argument below is cut at its first use.
+    TERMINAL, pbar = 1, and the argument below is cut at its first use. A Fracturing Orb (and a Beastcraft talisman fracture) is TERMINAL for
+    good: it lands in E with chance 0, but it changes the fractured mods, the shape every reroll's pbar is read at, and a fractured mod that
+    passes a leaf of U raises the chance of a reroll after it (fracture, then reroll: the route a player takes), so no pbar read at the start's
+    shape bounds the uses that follow it. Its floor is its price, the floor of this argument; a floor past it needs a rho per fractured shape.
 
 THE LOWER BOUND rho. rho = min over the offers of cost / pbar (an offer with pbar = 0 counts for infinity);
 it is found best first, so that the dear bounds are computed only where they matter: a heap on cost / pbar
@@ -79,7 +99,8 @@ ratios only grow, and the one that stops the loop is the least ratio of all. Cla
 every state s outside E with the flags and the fractured mods of the start, in the FULL model.
 Proof. A policy from s that reaches the goal almost surely enters E (the goal implies E) at a first time T.
 Let tau be the first use of a terminal action and N = min(T, tau). Until N every action used is one of
-`restart`, a bench craft, a veiled choice, an erasing reroll or an addition, none of which moves the flags and the fractured mods, so
+`restart`, a bench craft, a veiled choice, a veil, an erasing reroll, an addition or an implicit change, none of which moves the flags and the
+fractured mods, so
 the state keeps the shape of the start and, given the history, the chance of entering E at step t is at
 most pbar(a_t). With probability 1 either E is entered at a step before tau, or a terminal action is used
 (and the first one is at step tau). So 1 <= sum over t <= N of E[w(a_t)] with w = pbar for the others and
@@ -91,7 +112,11 @@ of that shape (a reroll reads nothing of the item that the shape does not hold; 
 the contract of `Reads`, not a check. (2) An erasing reroll keeps the shape, which `keeps_shape` checks at the bare item. (3) The bound of
 `reach_bound` is a proof by its own tests. (4) An addition draws at every state of the shape as it does at the bare item (one mod from the
 pool less the families held and the tags a metamod blocks, on a side with room): the contract of `Reads.pool_weight`, not a check; its shape
-and its single draw are checked at the bare item, and `add_bound` against every member of hand-worked pools by its tests. Floats: rho is
+and its single draw are checked at the bare item, and `add_bound` against every member of hand-worked pools by its tests. (5) An addition whose
+class declares its draw (`Action.added_draw`) draws at every state of the shape as declared and keeps the shape: the declaration's, compared with
+the built outcomes by the contract suite and at every member of a hand-worked shape (`tests/test_fine_group_floors.py`). (6) A veil adds no mod
+but a placeholder, and an implicit change no explicit mod and no flag: the contracts of `Adds.veils` and `Adds.implicits`, not a check (an
+implicit change's shape is checked at the bare item). Floats: rho is
 lowered by 1e-12 of itself.
 """
 
@@ -104,6 +129,7 @@ from fractions import Fraction
 from crafting_system.abstraction import (
     Abstraction,
     add_bound,
+    declared_add_bound,
     CompressedState,
     Status,
     Wanted,
@@ -111,7 +137,7 @@ from crafting_system.abstraction import (
     declared_bounds,
     reach_bound,
 )
-from crafting_system.actions import NotApplicableError, OutOfScopeError, holds_placeholder, unveil_pool_mods
+from crafting_system.actions import NotApplicableError, OutOfScopeError, holds_placeholder, placeholder_mods, unveil_pool_mods
 from crafting_system.data import GameData
 from crafting_system.items import Item
 
@@ -124,8 +150,10 @@ SLACK = 1e-12  # float slack on rho and on the floors' test
 HUGE = 1e300  # stands for an infinite rho (nothing can reach E): keeps 0 * rho at 0
 
 RESTART_KIND, CRAFT, VEILED, REROLL, ADD, TERMINAL, REFUSED = "restart", "craft", "veiled", "reroll", "add", "terminal", "refused"
-NAMING = (CRAFT, VEILED)  # the kinds whose pbar is read from the mods they may add (`finishes`), and which make the goal set U
-TOP_LEVEL = {REROLL: 2, ADD: 1}  # the highest level of the bound of each kind that has levels (see THE NUMBER pbar); every other kind has none
+VEIL, IMPLICIT = "veil", "implicit"  # a Veiled Exalted Orb's kind (it adds a placeholder), and an implicit change's (an Ember, an Ichor; #1074)
+NAMING = (CRAFT, VEILED)  # the kinds that make the goal set U (a leaf they can pass leaves it) and that the bound's model starts with
+FINISHING = (*NAMING, VEIL)  # the kinds whose pbar is read from the mods they may add (`finishes`)
+TOP_LEVEL = {REROLL: 2, ADD: 1, IMPLICIT: 1}  # the highest level of the bound of each kind that has levels (see THE NUMBER pbar); every other kind has none
 
 
 @dataclass
@@ -292,7 +320,9 @@ def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar
     """The `(kind, pbar, level)` of a reroll or an addition brought to `target` (see `raise_level`); a function of its arguments alone."""
     data = abstraction.data
     if kind == ADD:
-        return _raised_add(abstraction, bare, chosen, action, level, pbar)
+        return _raised_add(abstraction, bare, chosen, action, level, pbar, item)
+    if kind == IMPLICIT:
+        return _raised_implicit(abstraction, bare, action, level)
     if level == 0:
         try:
             same_shape = keeps_shape(abstraction, bare, action)
@@ -316,7 +346,19 @@ def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar
     return kind, pbar, level
 
 
-def _raised_add(abstraction, bare, chosen, action, level: int, pbar: Fraction) -> tuple[str, Fraction, int]:
+def _raised_implicit(abstraction, bare, action, level: int) -> tuple[str, Fraction, int]:
+    """The `(kind, pbar, level)` of an implicit change brought to level 1 (see THE NUMBER pbar): pbar 0 when it keeps the shape at the bare item,
+    TERMINAL when it does not or when the bare item refuses it (which, unlike a reroll's refusal, is not read as a proof for the states)."""
+    if level >= 1:
+        return IMPLICIT, ZERO, level
+    try:
+        same_shape = keeps_shape(abstraction, bare, action)
+    except (NotApplicableError, OutOfScopeError):
+        return TERMINAL, ONE, 1
+    return (IMPLICIT, ZERO, 1) if same_shape else (TERMINAL, ONE, 1)
+
+
+def _raised_add(abstraction, bare, chosen, action, level: int, pbar: Fraction, item: Item | None = None) -> tuple[str, Fraction, int]:
     """The `(kind, pbar, level)` of an addition brought to level 1: its chance of landing in E from any state of the shape (see THE NUMBER pbar).
 
     Unlike a reroll's, a refusal at the bare item proves nothing (the addition reads the mods the item holds: an Exalted Orb on a full side,
@@ -325,6 +367,12 @@ def _raised_add(abstraction, bare, chosen, action, level: int, pbar: Fraction) -
     """
     if level >= 1:
         return ADD, pbar, level
+    if item is not None and action.added_draw(abstraction.data, item) is not None:  # the class declares the draw of the shape (#1074)
+        try:
+            found = declared_add_bound(abstraction, action, item, chosen) if chosen else ZERO
+        except OutOfScopeError:
+            return TERMINAL, ONE, 1
+        return (TERMINAL, ONE, 1) if found is None else (ADD, found, 1)
     try:
         same_shape = keeps_shape(abstraction, bare, action)
         found = add_bound(abstraction, bare, action, chosen) if same_shape and chosen else (ZERO if same_shape else None)
@@ -371,15 +419,29 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     if move is not None and move.restore and not item.imprints:  # a restore with no imprint before the first terminal use (see THE NUMBER pbar)
         return REFUSED, frozenset()
     reads = action.reads(data)
+    if action.added_draw(data, item) is not None:  # one drawn mod its class declares for the shape (a Beastcraft side swap, an Eldritch Exalted Orb)
+        return ADD, frozenset()
     if reads.needs_veiled and not holds_placeholder(data, item):  # a veiled choice (see THE NUMBER pbar, #1074)
         adds = action.adds(data, item)
         if not (adds.draws or adds.fractures or adds.implicits or adds.quality or adds.corrupts or adds.imprints or adds.veils or adds.enchantment):
             return VEILED, frozenset(adds.named) if adds.named is not None else unveil_pool_mods(data, item.base_id)
+    if not (reads.offer or reads.imprints or reads.needs_veiled):
+        adds = action.adds(data, item)
+        if (
+            adds.implicits
+            and adds.named == frozenset()
+            and not (adds.draws or adds.fractures or adds.quality or adds.offer or adds.corrupts or adds.imprints or adds.veils)
+        ):
+            return IMPLICIT, frozenset()  # it changes the implicits and puts no explicit mod on (see THE NUMBER pbar)
     if reads.item_state:
         return TERMINAL, frozenset()  # its result depends on the implicits, the quality or the offer, which the bound read at one state does not hold fixed
     adds = action.adds(data, item)
     if not reads.junk:
         return (TERMINAL if adds.imprints else REROLL), frozenset()  # an imprint made before the first terminal use would void the restores' set-aside
+    if adds.veils and adds.named is None and not reads.needs_veiled and not (
+        adds.draws or adds.fractures or adds.implicits or adds.quality or adds.offer or adds.corrupts or adds.imprints or adds.enchantment
+    ):
+        return VEIL, placeholder_mods()  # it adds no mod but a placeholder (a Veiled Exalted Orb; see THE NUMBER pbar)
     if not adds.fractures and not adds.draws and adds.named is not None and not adds.imprints:
         return CRAFT, frozenset(adds.named)
     if (

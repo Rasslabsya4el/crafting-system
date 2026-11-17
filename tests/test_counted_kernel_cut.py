@@ -11,19 +11,28 @@ Worked by hand below (`Counted`, a world written out by hand whose kernels count
 planner's entry on the coarse world, where the start's Chaos Orb has 94 outcomes.
 """
 
+from fractions import Fraction
+
 import pytest
+from abstraction_pool import RESISTS, fractured_item
+from abstraction_support import ACTIONS, abstraction
 from coarse_support import DATA as COARSE
+from proto_draw_support import draws, family
 from test_cli_envelope import answer
 from test_cli_envelope_plan import coarse  # noqa: F401 (the fixture: the coarse world of about 200 states, its start bought for 5 Chaos)
 from test_envelope_gap_stop import Hand
 
 from crafting_system import budget
-from crafting_system.actions import ChaosOrb
+from crafting_system.abstraction import Goal, Wanted
+from crafting_system.abstraction._rolls import RollLaw
+from crafting_system.actions import ChaosOrb, draw
 from crafting_system.budget import Budget
+from crafting_system.items import Side
 from crafting_system.planner import PlanSettings, plan_target
 from crafting_system.planner._envelope import Net, Search
 from crafting_system.planner._plan import PlanError
 
+PREFIX, SUFFIX = Side.PREFIX, Side.SUFFIX
 UNMADE = "it was left unmade"  # the words of a stop inside the making of a kernel
 
 
@@ -167,3 +176,101 @@ def test_through_the_entry_the_states_known_never_pass_the_count(coarse, states)
     plan, said, known = plan_counted(coarse, states)
     assert known <= states and UNMADE not in (said or "")
     assert plan is not None and plan.search.touched == known
+
+
+# ---- what a cut leaves, and what one making may hold (#1137) -----------------------------------------------------------------------------
+#
+# A kernel cut inside its making is left unmade: nothing of it may stay behind in the abstraction (its cached distributions and expanded
+# entries are stored only once whole), so the same kernel made afterwards without a count is the kernel a fresh abstraction makes. Each
+# stage counts what it builds as it builds it, the spreads of a part over its labels and of an outcome over roll laws included, so a cut
+# making has made at most one piece past its allowance at each stage, and at most `len(STAGES)` stages: that is the multiplier
+# `Budget.in_states` states.
+
+
+def stages_of(abstraction_of, state, action) -> dict[str, int]:
+    """What one whole making of the kernel counts, per stage, on a fresh abstraction."""
+    with budget.counting(10**9) as allowance:
+        abstraction_of().kernel(state, action)
+    return dict(allowance.made)
+
+
+def cut_then_whole(abstraction_of, state, action, given: int):
+    """The kernel made on an allowance of `given`, then again with no count on the same abstraction: (the cut or None, the whole kernel)."""
+    abstraction = abstraction_of()
+    cut = None
+    try:
+        with budget.counting(given):
+            abstraction.kernel(state, action)
+    except budget.OutcomesCut as stopped:
+        cut = stopped
+    return cut, abstraction.kernel(state, action)
+
+
+def check_cuts(abstraction_of, state, action) -> dict[str, int]:
+    whole = stages_of(abstraction_of, state, action)
+    assert set(whole) <= set(budget.STAGES)
+    largest = max(whole.values())
+    fresh = abstraction_of().kernel(state, action)
+    for given in sorted({0, 1, 2, largest // 3, largest // 2, largest - 1, largest}):
+        cut, kernel = cut_then_whole(abstraction_of, state, action, given)
+        assert kernel == fresh  # nothing of the cut making was kept: the kernel made after it is a fresh abstraction's
+        if given < largest:
+            assert cut is not None and cut.made == given + 1 and cut.stage in budget.STAGES  # one piece past the allowance, at one stage
+        else:
+            assert cut is None  # the largest stage fits: the making is whole
+    return whole
+
+
+def test_a_cut_draw_leaves_the_coarse_abstraction_clean(coarse):  # noqa: F811
+    _, _, full = coarse
+    made = full.abstraction
+
+    def fresh():
+        return type(made)(made.data, made.goal, made.base_id, made.item_level, made._kinds.actions, metamods=made._kinds.metamods)
+
+    whole = check_cuts(fresh, full.start, ChaosOrb())
+    # the start's Chaos Orb: 119 states of the draw walk (every step's), 56 groups, 4 entries of the spreads, 76 ways, 94 outcomes and states
+    assert whole == {"end state": 119, "group": 56, "spread": 4, "way": 76, "outcome": 94, "state": 94}
+
+
+def test_a_cut_roll_law_spread_leaves_the_abstraction_clean():
+    # a roll limit: each drawn resist mod spreads over the values of its law (`Abstraction._concrete`), counted as the spread is built
+    goal = Goal((Wanted(RESISTS, min_roll=(10,)),))
+    for action in ACTIONS.values():
+        whole = check_cuts(lambda: abstraction(goal), abstraction(goal).compress(fractured_item()), action)
+        assert "outcome" in whole and whole["outcome"] >= whole["state"]  # one law per outcome here: two laws are below
+
+
+def test_a_cut_walk_with_views_is_made_again_whole():
+    # `exact_distributions` holds what it makes in its own call: a walk cut at any allowance, then made with no count, gives what it gives fresh
+    pool = (family("A", PREFIX, ("A1", 100), ("A2", 300)), family("B", PREFIX, ("B1", 100), ("B2", 50)), family("C", SUFFIX, ("C1", 70), ("C2", 30)), family("D", SUFFIX, 400))
+    free = {PREFIX: 3, SUFFIX: 3}
+    views = [(lambda mod: mod.id[0], None), (lambda mod: "any", None)]
+    fresh = draw.exact_distributions(pool, free, None, draws(3), 0, lambda mod: mod.id, views)
+    with budget.counting(10**9) as allowance:
+        draw.exact_distributions(pool, free, None, draws(3), 0, lambda mod: mod.id, views)
+    whole = dict(allowance.made)
+    assert set(whole) <= set(budget.STAGES) and "spread" in whole
+    for given in range(max(whole.values())):
+        with pytest.raises(budget.OutcomesCut), budget.counting(given):
+            draw.exact_distributions(pool, free, None, draws(3), 0, lambda mod: mod.id, views)
+        assert draw.exact_distributions(pool, free, None, draws(3), 0, lambda mod: mod.id, views) == fresh
+
+
+def test_an_outcome_over_two_roll_laws_counts_each_entry_as_it_is_built():
+    # two mods of two laws (2 and 3 values): the first law's spread makes 2 entries ("roll"), the last's 2 x 3 = 6 outcomes ("outcome")
+    first = RollLaw((((1,), Fraction(1, 2)), ((2,), Fraction(1, 2))))
+    last = RollLaw((((10,), Fraction(1, 3)), ((20,), Fraction(1, 3)), ((30,), Fraction(1, 3))))
+    outcome = frozenset({(first, 1), (last, 1)})
+    model = abstraction(Goal((Wanted(RESISTS, min_roll=(10,)),)))
+    assert not model._kinds.tracked
+    whole = model._concrete(outcome)
+    assert len(whole) == 6 and sum(chance for _, chance in whole) == 1
+    with budget.counting(10**9) as allowance:
+        assert model._concrete(outcome, allowance) == whole
+    assert allowance.made == {"roll": 2, "outcome": 6}
+    for given, stage in ((0, "roll"), (1, "roll"), (2, "outcome"), (5, "outcome")):
+        with pytest.raises(budget.OutcomesCut) as cut, budget.counting(given) as allowance:
+            model._concrete(outcome, allowance)
+        assert (cut.value.stage, cut.value.made) == (stage, given + 1)
+    assert model._concrete(outcome) == whole  # the law's spreads it keeps are whole: a cut leaves nothing behind

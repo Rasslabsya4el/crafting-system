@@ -195,8 +195,9 @@ def test_a_refused_round_joins_the_next_and_a_round_with_no_plan_in_hand_has_all
         left=lambda: 600.0, clock_now=lambda: 0.0,
     )  # fmt: skip
     # round 1 has no plan in hand; then the plan is, and the two rounds left share the time. Round 2 closed at the plan in hand's cost, so it
-    # was not carried and one last round holds it again with every offer (#1080), alone in its share
-    assert shares == [1, 2, 1, 1]
+    # was not carried and one last round holds it again with every offer (#1080): that round is owed from then on, so round 3 shares the time
+    # with it (#1095), and it is alone in its share
+    assert shares == [1, 2, 2, 1]
 
 
 def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share_and_a_later_round_finds_the_saving():
@@ -1108,3 +1109,108 @@ def test_through_the_entry_a_first_round_that_used_its_share_gives_way_with_its_
     assert not plan.search.exact and not any("cheapest among every method" in limit.guarantee for limit in plan.limits)  # round 1 did not finish
     untried = next(limit for limit in plan.limits if limit.what == "Not finished")
     assert "gave way" in untried.names[0] and "its plan costs 133.00 Chaos" in untried.names[0]
+
+
+def test_past_its_share_a_round_whose_plan_falls_by_less_than_the_run_s_gap_gives_way_and_one_still_falling_by_much_goes_on():
+    # #1094: `Share` gave way only after a search round that made no cheaper plan, so a plan falling by a cent a search round never gave way and
+    # took the rest of the net. Past its share (500 of 200 s), a fall of more than the run's gap (1%) goes on: R11's essences, 7,817 c and then
+    # 597 c (a fall of 92%); a fall of 1 c on 597 (0.17%) gives way. With no gap (a run that owes an exact proof) every fall counts, as before.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    def gives_way(gap, uppers):
+        share = _rounds.Share(600.0, 3, 0.0, lambda: 500.0, gap=gap)
+        return [share(SimpleNamespace(upper=upper)) is not None for upper in uppers]
+
+    assert gives_way(0.01, (7817.0, 597.0, 596.0)) == [False, False, True]
+    assert gives_way(0.01, (7817.0, 597.0, 590.0, 589.0)) == [False, False, False, True]  # 597 -> 590 is 1.2%: still falling
+    assert gives_way(0.0, (7817.0, 597.0, 596.0, 595.0, 595.0)) == [False, False, False, False, True]
+    assert "by no more than the run's gap of 1.00%" in _rounds.Share(600.0, 3, 0.0, lambda: 0.0, gap=0.01).said
+    # through the rounds, the clock moved by hand: round 1 has no plan in hand and its search's plan falls by a cent every 50 s search round,
+    # from 10; its share is 600 s over 3 rounds. It gives way at 200 s, and rounds 2 and 3 are tried, round 2 holding the saving
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abc"))
+    now, asked = [0.0], []
+
+    def search(chosen, call):
+        if call.give_way is None:  # a plan in hand: the round closes at once
+            return SimpleNamespace(search=SimpleNamespace(lower=7.0), mean_remaining=7.0 if "b" in chosen else 10.0, stopped=None)
+        for step in range(1_000):
+            now[0] += 50.0
+            standing = SimpleNamespace(lower=1.0, upper=10.0 - 0.01 * step, rounds=step, seconds=now[0])
+            if (said := call.give_way(standing)) is not None:
+                asked.append(now[0])
+                return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=standing.upper, stopped=said)
+            if now[0] >= 600.0:  # the run's net
+                return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=standing.upper, stopped="the time limit was reached")
+        raise AssertionError("the search never stopped")
+
+    def widened(gap):
+        now[0], asked[:] = 0.0, []
+        return _rounds.widen(
+            groups, tuple("abc"), search, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.STOPPED, plan.stopped) if plan.stopped else (_rounds.CLOSED, ""), left=lambda: max(600.0 - now[0], 0.0),
+            clock_now=lambda: now[0], gap=gap,
+        )  # fmt: skip
+
+    trickle = widened(0.01)
+    assert asked == [200.0] and [record.status for record in trickle.records] == ["gave way", "closed", "closed"] and trickle.plan.mean_remaining == 7.0
+    exact = widened(0.0)  # with no gap the trickle is still a cheaper plan at every search round: it takes the whole net, and the rounds after it are not tried
+    assert asked == [] and [record.status for record in exact.records] == ["stopped", "not tried", "not tried"] and exact.plan.mean_remaining > 9.0
+
+
+def test_once_a_group_is_set_aside_the_last_round_that_holds_it_again_is_counted_among_the_rounds_left():
+    # #1095: a group set aside comes back in one last round that holds every offer; the shares counted only the original groups, so when every
+    # round used its share that last round was not tried. Four groups, the plan of 10 from round 1 (at once); each later round is beaten at
+    # once after using its whole share of the time, moved by hand. Round 2 (b) is set aside: from then on the last round is owed and counted.
+    # Shares: round 2 600/3 = 200, round 3 400/3, round 4 (266.7 left) over itself and the last round, then the last round has 133.3 s and
+    # closes: the plan is proved the cheapest over every offer. Counting only the groups (200, 200, 200) left it no time and no proof.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abcd"))
+    now, shares = [0.0], []
+
+    def run(chosen, call):
+        shares.append(call.searches)
+        if call.upper is None:
+            return SimpleNamespace(search=SimpleNamespace(lower=10.0), mean_remaining=10.0)
+        now[0] += (600.0 - now[0]) / call.searches  # the round uses its whole share
+        raise _envelope.Beaten(10.0, None)
+
+    widened = _rounds.widen(
+        groups, tuple("abcd"), run, upper_of=lambda plan: 10.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: max(600.0 - now[0], 0.0), clock_now=lambda: now[0],
+    )  # fmt: skip
+    assert shares == [1, 3, 3, 2, 1] and now[0] == pytest.approx(600.0)
+    assert [(record.status, record.carried) for record in widened.records] == [("closed", True), ("beaten", True), ("beaten", True), ("beaten", True), ("beaten", True)]
+    assert _rounds.all_closed(widened.records) and widened.records[-1].offers == 4
+
+
+def test_a_round_that_proves_no_plan_with_a_plan_in_hand_is_set_aside_like_a_beaten_one():
+    # #1097 point 2: round 2 (b) with the base reaches no plan at all while the plan of 10 is in hand. It proved only that no plan of its offers
+    # with the base costs less than 10 (none exists), as a beaten round does: it is set aside, round 3 does not hold b, and the last round
+    # holds it again with every offer, so the proof is the whole one.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abc"))
+    seen = []
+
+    def run(chosen, call):
+        seen.append(chosen)
+        if chosen == ("a", "b"):
+            raise _rounds.NoPlan("no plan of a and b reaches the target")
+        if call.upper is not None:
+            raise _envelope.Beaten(10.0, None)
+        return SimpleNamespace(search=SimpleNamespace(lower=10.0), mean_remaining=10.0)
+
+    widened = _rounds.widen(
+        groups, tuple("abc"), run, upper_of=lambda plan: 10.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: None, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert seen == [("a",), ("a", "b"), ("a", "c"), ("a", "b", "c")]
+    assert [record.status for record in widened.records] == ["closed", "no plan", "beaten", "beaten"] and _rounds.all_closed(widened.records)
+    assert widened.records[1].reason.endswith("the last round held them again, with every method")

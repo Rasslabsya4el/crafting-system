@@ -2209,11 +2209,14 @@ class Abstraction:
             return cached
         width = len(self.goal.leaves)
         tracked = self._kinds.tracked
-        allowance = budget.allowed()  # a search counted in states counts each outcome of concrete rolls as it is merged (#1105; the draws count in `exact_distributions`)
+        # a search counted in states counts each outcome of concrete rolls (#1105; the draws count in `exact_distributions`): here when the
+        # outcome is its own, in `_concrete` as its list is built when roll laws spread it (#1137)
+        allowance = budget.allowed()
+        laws = self._has_laws
         merged: dict[Hashable, Fraction] = defaultdict(Fraction)
         for outcome, chance in part.distribution(self._labeller(part.retained.influences, part.rolls_lucky)).items():
-            for concrete, each in self._concrete(outcome) if self._has_laws else ((outcome, ONE),):
-                if allowance is not None:
+            for concrete, each in self._concrete(outcome, allowance) if laws else ((outcome, ONE),):
+                if allowance is not None and not laws:
                     allowance.add("outcome")
                 weight = chance if each == 1 else chance * each
                 if tracked:
@@ -2225,12 +2228,15 @@ class Abstraction:
         self._kernels += 1
         return cached
 
-    def _concrete(self, outcome) -> tuple[tuple[Hashable, Fraction], ...]:
+    def _concrete(self, outcome, allowance: "budget.Allowance | None" = None) -> tuple[tuple[Hashable, Fraction], ...]:
         """One outcome of the engine, whose labels may be roll laws, as the outcomes of concrete rolls with their chances.
 
         n mods that share a law (and, with junk kept, a side and a kind) spread over the outcomes of the law with
         the multinomial chance; the counts are merged onto the labels of the concrete rolls. An outcome with no
         law is itself, with chance 1.
+
+        With an `allowance` (a search counted in states, #1105) each entry is counted as it is built (#1137): an outcome of the last law (or
+        the outcome itself) on the "outcome" count, an entry spread over the laws before it on the "roll" count.
         """
         tracked = self._kinds.tracked
         plain: dict[Hashable, int] = {}
@@ -2242,16 +2248,22 @@ class Abstraction:
             else:
                 plain[label] = count
         if not laws:
+            if allowance is not None:
+                allowance.add("outcome")
             return ((outcome, ONE),)
         states: list[tuple[dict[Hashable, int], Fraction]] = [(plain, ONE)]
-        for law, rest, count in laws:
+        last = len(laws) - 1
+        for at, (law, rest, count) in enumerate(laws):
             key = (law, count)
             spreads = self._spread.get(key)
             if spreads is None:
                 spreads = self._spread[key] = multinomial(law.cells, count)
+            stage = "outcome" if at == last else "roll"
             following = []
             for counts, chance in states:
                 for spread, each in spreads:
+                    if allowance is not None:
+                        allowance.add(stage)
                     merged = dict(counts)
                     for ints, taken in spread:
                         label = (ints, *rest) if tracked else ints
