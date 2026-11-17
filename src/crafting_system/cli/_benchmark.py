@@ -29,6 +29,8 @@ from fractions import Fraction
 from pathlib import Path
 
 from crafting_system.actions import imprints_held_at_most
+from crafting_system.benchmark_record import record_of_plan
+from crafting_system.budget import Budget
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, planned_price, stale_warning
@@ -36,7 +38,7 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
-from crafting_system.planner import Plan, PlanSettings, default_offers, plan_target
+from crafting_system.planner import BUDGET_SECONDS, Plan, PlanSettings, default_offers, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
@@ -344,6 +346,10 @@ def benchmark_main(
     )
     parser.add_argument("--out", metavar="DIR", help="where to write benchmark.json (default: the output dir)")
     parser.add_argument("--heavy", action="store_true", help="also solve the routes that take the planner hours (R04, R14); without it only their published odds are checked")
+    parser.add_argument(
+        "--net", action="store_true",
+        help="plan each route as a user's run does, under the time and memory limits of the planner settings (10 minutes by default), and write each route's record of the heavy benchmark (#1109); without it the plans have no limit",
+    )  # fmt: skip
     args = parser.parse_args(list(argv))
 
     try:
@@ -351,11 +357,12 @@ def benchmark_main(
         game = data if data is not None else load_game_data(cache_dir=config.cache_dir)
         root = find_project_root()
         out_dir = Path(args.out) if args.out else config.output_dir
+        budget = _run_budget(config) if args.net else None
         entries = []
         used_prices: PriceFile | None = None
         with imprints_held_at_most(config.max_imprints):  # the setting `max_imprints` for every plan of the run (#223)
             for bench in BENCHMARKS:
-                entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy)
+                entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy, budget=budget)
                 entries.append(entry)
                 used_prices = used_prices or loaded
         document = {
@@ -365,6 +372,7 @@ def benchmark_main(
             "prices": None
             if used_prices is None
             else {"league": used_prices.league, "fetched_at": used_prices.fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ")},
+            "budget": None if budget is None else {"aim_seconds": budget.aim_seconds, "seconds": budget.seconds, "memory_mb": budget.memory_mb},
             "routes": entries,
         }
         write_json(out_dir / FILE_NAME, document)
@@ -374,6 +382,13 @@ def benchmark_main(
         print(f"Error: {error}", file=sys.stderr)
         return 1
     return 0
+
+
+def _run_budget(config: Config) -> Budget:
+    """The budget of a user's run on this machine: the planner settings' limits and the default aim and gap (OR-40; `cli.run_budget`)."""
+    from ._main import run_budget  # `_main` imports this module
+
+    return run_budget(config, BUDGET_SECONDS)
 
 
 def machine_info(root: Path) -> dict:
@@ -411,10 +426,13 @@ def run_route(
     today: date | None,
     *,
     heavy: bool = False,
+    budget: Budget | None = None,
 ) -> tuple[dict, PriceFile | None]:
     """The entry of one benchmark route, and the price file it was run on (None when none was loaded).
 
-    A failure is written to `entry["error"]`; what was done before it stays in the entry.
+    A failure is written to `entry["error"]`; what was done before it stays in the entry. With a `budget` (`benchmark --net`) the plan runs
+    under it and the entry carries the route's `record` of the heavy benchmark (`benchmark_record`, #1109); a route that waits or that the
+    run could not plan then has a record with no cost, whose stop is its error.
     """
     entry: dict = {
         "id": bench.id,
@@ -433,6 +451,7 @@ def run_route(
         "solver_not_dearer_than_completed": None,
         "interval": None,
         "timings_seconds": None,
+        "record": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
     loaded: PriceFile | None = None
@@ -457,13 +476,15 @@ def run_route(
         judged = bench.route is not None  # the guide's route is judged against the plan, on the route's own reach (#829, #986): `auto` searches
         # the actions of the guide's route and of its completed one lead the first round of the offers, so the plan holds them (#1110)
         named = None if bench.route is None else _route_labels(root, bench)
-        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=judged, route_actions=named)
+        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=judged, route_actions=named, budget=budget)
         plan = plan_target(data, target, loaded, settings)  # a route with no start entry plans from the target's own item
         entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos
         risk = plan.risk
         entry["solver"] = _totals(risk.success_probability, risk.mean, risk.p50, risk.p90, shift)
         entry["solver"]["seconds"] = plan.solve_seconds
+        if budget is not None:
+            entry["record"] = _record(plan, entry["solver"]["mean"], shift)
         timings["solver"], timings["risk_evaluate"] = plan.solve_seconds, plan.risk_seconds
         entry["published_odds"] += published_odds(data, plan, bench)
         answer = interval_answer_of(plan, data)
@@ -492,7 +513,23 @@ def run_route(
         entry["error"] = _without_root(str(error), root)
     timings["total"] = time.perf_counter() - began
     entry["timings_seconds"] = timings
+    if budget is not None and entry["record"] is None:
+        entry["record"] = record_of_plan(None, None, None, None, entry["error"] or "no plan")
     return entry, loaded
+
+
+def _record(plan: Plan, mean: float | None, shift: float) -> dict:
+    """The heavy benchmark's record of one plan (`benchmark_record`): its cost, its lower bound and the start item's price both included."""
+    search = plan.search
+    if search is None:
+        return record_of_plan(mean, None, plan.solve_seconds, None, "not the envelope search")
+    if search.exact:
+        stop = "exact"
+    elif search.within is not None:
+        stop = f"proved within {search.within:.2%} of the cheapest"
+    else:
+        stop = f"stopped: {search.stopped}"
+    return record_of_plan(mean, _number(search.lower + shift), plan.solve_seconds, search.peak_mb, stop)
 
 
 def _reviewing(bench: BenchmarkRoute, route_file: str, side: str, root: Path, config: Config) -> Reviewing | None:

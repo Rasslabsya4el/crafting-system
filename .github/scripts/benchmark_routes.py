@@ -1,6 +1,6 @@
 """Run `benchmark --heavy` on some of the benchmark routes only, so that a heavy run can split the routes over its runners (ticket #554).
 
-    python .github/scripts/benchmark_routes.py R12,R10,R11 OUT_DIR [PRICE_FILE]
+    python .github/scripts/benchmark_routes.py R12,R10,R11 OUT_DIR [PRICE_FILE] [--net]
 
 writes `OUT_DIR/benchmark.json` for those routes and prints the summary, as `python -m crafting_system.cli benchmark --heavy` does for all
 of them. A CI checkout has no price file of its own, so the routes with the plain start item are priced from the committed snapshot of
@@ -8,6 +8,9 @@ the other heavy routes (`tests/fixtures/prices/routes-allflame-2026-07-31.json`,
 price file from the project root, to put two snapshots side by side, #616) and a route that starts from a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`. A route whose target
 names its own price file (`price_file:`, R17: the beasts of its imprint, #223) reads that file too, and is written to `OUT_DIR/own/benchmark.json`.
+
+With `--net` each route is planned as a user's run is, under the limits of the planner settings (`benchmark --net`), and its entry carries
+its record of the heavy benchmark (#1109; `.github/scripts/heavy_benchmark.py` makes the record of two such runs and checks a new run).
 
 Since #901 R08 and R09 run at the default snapshot too (their verdicts of #591 and #592 were measured at the prices of 2026-10-31, #703).
 """
@@ -29,6 +32,8 @@ def main(argv: list[str]) -> int:
     from crafting_system.config import find_project_root
     from crafting_system.prices import load_price_file
 
+    net = ["--net"] if "--net" in argv else []
+    argv = [arg for arg in argv if arg != "--net"]
     _packed.PROGRESS = lambda text: print(text, flush=True)  # each phase of the packed solver and of the divergences as it ends
     wanted = [name for name in argv[0].split(",") if name]
     every = _benchmark.BENCHMARKS
@@ -49,7 +54,7 @@ def main(argv: list[str]) -> int:
     ):
         if group:
             _benchmark.BENCHMARKS = tuple(group)
-            code = max(code, _benchmark.benchmark_main(["--heavy", "--out", str(folder)], command="crafting-system", prices=prices))
+            code = max(code, _benchmark.benchmark_main(["--heavy", *net, "--out", str(folder)], command="crafting-system", prices=prices))
     return code
 
 

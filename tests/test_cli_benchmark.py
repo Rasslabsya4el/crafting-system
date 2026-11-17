@@ -274,3 +274,34 @@ def test_the_plan_a_guide_s_route_is_judged_against_is_given_the_route_s_actions
     code, _ = run_benchmark(tmp_path)
     assert code == 0 and good.route == "examples/routes/r12-lightning-amulet.yaml"
     assert [(settings.judges_route, settings.route_actions) for settings in seen] == [(True, ("Harvest Reforge Lightning",))]
+
+
+def test_with_the_net_each_route_carries_its_record_and_the_run_names_its_budget(tmp_path):
+    """`benchmark --net` (#1109): the plan runs under the planner settings' limits and its entry carries the heavy benchmark's record."""
+    code, path = run_benchmark(tmp_path, "--net")
+
+    assert code == 0
+    document = read_json(path)
+    assert document["budget"]["seconds"] == 600.0 and document["budget"]["aim_seconds"] == 60.0
+    record = entry_of(document)["record"]
+    assert set(record) == {"mean", "lower", "seconds", "peak_mb", "stop"}
+    assert record["mean"] == entry_of(document)["solver"]["mean"]
+    assert record["lower"] is None or record["lower"] <= record["mean"] * (1 + 1e-9)
+    assert isinstance(record["stop"], str) and record["stop"]
+
+
+def test_without_the_net_no_route_carries_a_record(tmp_path):
+    _, path = run_benchmark(tmp_path)
+
+    document = read_json(path)
+    assert document["budget"] is None and entry_of(document)["record"] is None
+
+
+def test_with_the_net_a_route_that_waits_has_a_record_with_no_cost_whose_stop_is_its_error(tmp_path, monkeypatch):
+    waiting = dataclasses.replace(benchmark_module.BENCHMARKS[0], waits="the planner does not plan this yet (#516)")
+    monkeypatch.setattr(benchmark_module, "BENCHMARKS", (waiting,))
+
+    _, path = run_benchmark(tmp_path, "--net")
+
+    record = entry_of(read_json(path))["record"]
+    assert record["mean"] is None and record["stop"] == "not planned: the planner does not plan this yet (#516)"
