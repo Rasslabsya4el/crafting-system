@@ -207,11 +207,15 @@ class StatesMeter:
 
     unit = "states"
 
-    def __init__(self, given: int) -> None:
+    def __init__(self, given: int, clock=None) -> None:
         self.given, self.spent, self.running = given, 0, 0
+        # the run's account (`budget.Clock.spend`, #1101): each round's states go on it as the round ends, and what other searches spend on it
+        # while the rounds run (an Awakener's Orb's donors, searched inside a round) comes off the states left
+        self.clock, self.base = clock, (0 if clock is None else clock.spent)
 
     def left(self) -> float:
-        return float(max(self.given - self.spent - self.running, 0))
+        outside = 0 if self.clock is None else self.clock.spent - self.base - self.spent
+        return float(max(self.given - self.spent - self.running - outside, 0))
 
     def now(self) -> float:
         return float(self.spent + self.running)
@@ -227,6 +231,8 @@ class StatesMeter:
         """Close the round: the states it knew (its plan's count, or what its search last stood at), added to the spent ones."""
         known = max(self.running, int(touched or 0))
         self.spent, self.running = self.spent + known, 0
+        if self.clock is not None:
+            self.clock.spend(known)
         return known
 
 
@@ -296,17 +302,17 @@ def widen(
             status, reason = STOPPED, stop.binding.words()
             error = error or stop
         except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next round widens them
-            status, reason, lower = NONE, str(none), math.inf
+            status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
             error = error or none.__cause__ or none  # what the run says when no round made a plan
         except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
-            status, reason, lower = STOPPED, stop.reason, stop.lower
+            status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
             error = error or stop.__cause__ or stop
         except ValueError as refusal:  # a `PlanError`: the round's offers reach no plan, or the search refused them
-            status, reason = REFUSED, str(refusal)
+            status, reason, touched = REFUSED, str(refusal), states_of(refusal)
             error = error or refusal
         if plan is not None:
             status, reason = ended(plan)
-            if give_way is not None and status == STOPPED and reason == give_way.said:
+            if give_way is not None and status == STOPPED and reason.startswith(give_way.said):  # (a counted run may add its build's stop after it)
                 status = GAVE_WAY
             search = getattr(plan, "search", None)
             lower, upper = getattr(search, "lower", None), mean_of(plan)
@@ -318,7 +324,7 @@ def widen(
         if lower is not None and not math.isfinite(lower):
             lower = None  # a round with no plan states no figure (the JSON holds no infinity)
         touched = getattr(getattr(plan, "search", None), "touched", None) if plan is not None else touched
-        known = None if meter is None else meter.ended(touched)  # a round that raised is counted where its search last stood
+        known = None if meter is None else meter.ended(touched)  # a round that raised is counted at the states its search knew when it ended
         records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known))
         if status == REFUSED and k > 0 and refused_last is not None:
             # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
@@ -348,6 +354,18 @@ def widen(
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error)
+
+
+def states_of(error: BaseException) -> int | None:
+    """The states the search knew when it ended, read off the first error of `error`'s chain that carries them (`_envelope.NoPolicy.states`,
+    #1101), so a round that raised is counted as exactly as one that made a plan; None when none does."""
+    seen: BaseException | None = error
+    while seen is not None:
+        states = getattr(seen, "states", None)
+        if isinstance(states, int) and states > 0:
+            return states
+        seen = seen.__cause__
+    return None
 
 
 def _seen_by(meter: StatesMeter, give_way: Share | None) -> Callable[[object], str | None]:

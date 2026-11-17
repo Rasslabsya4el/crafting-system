@@ -276,3 +276,40 @@ def test_a_donor_is_offered_the_target_s_actions_but_not_its_restart_its_listing
     }
     for label, (action, applies) in offers.items():
         assert _applies_to_donors(PricedOffer(Offer(label, action, {}), 1.0, ())) is applies, label
+
+
+def test_in_a_round_of_a_counted_run_the_donors_share_the_round_s_states_and_its_search_has_what_they_left(monkeypatch):
+    """#1101: `_make_plan` with a round's share of a run counted in states gives each donor its part of that share, the donors spend on the
+    run's one account, and the round's own search is given the share less what they spent (never the whole share again)."""
+    import datetime
+
+    from crafting_system.budget import Budget
+    from crafting_system.planner import _plan
+    from crafting_system.planner._rounds import RoundCall
+    from crafting_system.prices.price_file import PriceEntry, PriceFile, Provenance
+    from crafting_system.targets import parse_target
+
+    from influence_support import INFLUENCE_DATA
+
+    data = dataclasses.replace(DATA, mods={**DATA.mods, **{k: m for k, m in INFLUENCE_DATA.mods.items() if m.domain == "crafted"}})
+    target = parse_target(_ring_target(data), data, source="<ring>")
+    entries = {
+        name: PriceEntry(cost, "poe.ninja", None, None, Provenance("ninja-exchange", "Test", "2026-11-16", 1.0)) for name, (_, cost) in PLANNER_PRICES.items()
+    }
+    prices = PriceFile("Test", datetime.datetime(2026, 11, 16, tzinfo=datetime.UTC), 300.0, entries)
+    clock = Budget.in_states(100_000).start()
+    share, asked, real_net = 600, [], _plan.search_net
+
+    def search_net(clock_, searches=1, give_way=None, states=None):
+        asked.append((states, clock_.spent))
+        return real_net(clock_, searches, give_way, states)
+
+    monkeypatch.setattr(_plan, "search_net", search_net)
+    _plan._make_plan(
+        data, target, prices, start_price=RESTART_PRICE, offers=None, aim=None, rates=None, strands=False, solve_it=True, start_price_of=None,
+        price_source=_plan.DEFAULT_PRICE_SOURCE, solver="auto", with_risk=False, incumbent=None, clock=clock, foresee=False,
+        round_call=RoundCall(searches=1, upper=None, watched=False, states=share),
+    )  # fmt: skip
+    donor_asks, (target_states, spent) = asked[:-1], asked[-1]
+    assert donor_asks and all(states is not None and states <= share for states, _ in donor_asks)
+    assert 0 < spent < share and target_states == share - spent  # the donors spent on the run's account, the round's search has the rest

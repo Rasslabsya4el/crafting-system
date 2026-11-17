@@ -107,7 +107,10 @@ def stopped(data, both):
     route, full, _ = both
     target = load_target(TARGETS[route], data)
     prices = load_price_file(PRICES)
-    options = {"net": Net(states=1)}
+    # R13's net sits beside a time net that never binds (an hour), so the run is on the clock, not counted in states: there the state net waits
+    # for the first round and the given route's chain is whole. Counted in states (a net of states alone, `Budget.in_states`), every state of
+    # that chain counts (#1101): the chain alone knows about 191 states, as many as the exact search, so no count stops R13 with a plan in hand.
+    options = {"net": Net(seconds=3600.0, states=1)}
     if route == "R13":
         unsolved = make_plan(data, target, prices, solve_it=False)
         options["incumbent"] = route_incumbent(load_route(ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml", unsolved, data), data)

@@ -137,12 +137,14 @@ def solve_donors(
     *,
     net: Callable[[int], object] | None = None,
     stop: Callable[[], tuple[float, float | None]] | None = None,
+    spend: Callable[[int], None] | None = None,
 ) -> tuple[tuple[Donor, ...], tuple[Limit, ...]]:
     """Each orb's donor by `solve_donor`; an orb whose donor no plan makes is left out and the plan says why (`no_donor_limit`, OR-13).
 
     `net(searches)` is the net of a donor's search when `searches` searches are still to run, the target's included (`_plan.search_net`: an
     equal share of the time left, so the donors never leave the target nothing, OR-33); `stop()` is the target's stop at the moment each donor's
-    search starts (`_plan.search_gap`: the aim the run has not yet spent), exact when None."""
+    search starts (`_plan.search_gap`: the aim the run has not yet spent), exact when None. `spend(states)` is told the states each donor's search
+    knew, its plan's or, when it raised, its refusal's (`Clock.spend`: a run counted in states shares one account, #1101)."""
     from crafting_system.actions import NotApplicableError, OutOfScopeError
     from crafting_system.solver import ConvergenceError
 
@@ -154,12 +156,16 @@ def solve_donors(
         searches = len(awakened) - done + 1
         gap, gap_after = (0.0, None) if stop is None else stop()
         try:
-            donor, _ = solve_donor(
+            donor, packed = solve_donor(
                 target_abstraction, orb.offer.action, priced, net=None if net is None else net(searches), gap=gap, gap_after=gap_after
             )
         except (NoPolicy, BoundError, ConvergenceError, OutOfScopeError, NotApplicableError) as error:  # either family: the orb is left out, said
+            if spend is not None:
+                spend(getattr(error, "states", 0))
             left_out.append(no_donor_limit(orb.label, str(error)))
             continue
+        if spend is not None:
+            spend(packed.info["envelope"].touched)
         donors.append(donor)
     return tuple(donors), tuple(left_out)
 

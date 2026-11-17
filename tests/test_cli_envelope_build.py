@@ -248,6 +248,59 @@ def test_the_net_ends_the_examination_of_the_offers_outside_the_model_and_the_ro
     assert_lower_bound(bound, ab, exact)
 
 
+@pytest.mark.parametrize("pieces, phase", [(1, "floors"), (2, "model"), (12, "model"), (30, "growth"), (10**6, "complete")])
+def test_a_build_counted_in_pieces_of_work_stops_at_its_count_in_every_phase_whatever_the_clock_does(world, floors_on, monkeypatch, pieces, phase):
+    """#1101: in a run counted in states the build counts its pieces of work (a (member, offer) pair it looks at, an offer's floor raised) and
+    asks its net at every offer, never on the clock (`POLL_SECONDS` is not patched): the same count stops it at the same point, with the same
+    bound, whether every reading of the clock moves it by 1,000 s or by nothing. The time net's stop (`build_stop`) is asked too, and decides
+    nothing with no time net. The bound is a lower bound wherever it stopped."""
+    from crafting_system import budget as budget_module
+
+    ab, start, offers, _, exact, whole = world
+    step, readings = [0.0], iter(range(10**9))
+    monkeypatch.setattr(budget_module.time, "perf_counter", lambda: step[0] * next(readings))  # the one clock module every stage reads
+
+    def built(seconds_per_reading: float):
+        step[0] = seconds_per_reading
+        fresh = abstraction()
+        net = Net(states=10**6, pieces=pieces)
+        return pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, stop=build_stop(net, 0.0), pieces=net.pieces)
+
+    slow, fast = built(1000.0), built(0.0)
+    assert (slow.phase, slow.pieces, slow.share, slow.stopped, slow.rounds, slow.positions) == (fast.phase, fast.pieces, fast.share, fast.stopped, fast.rounds, fast.positions)
+    assert slow.start_value == fast.start_value and slow.model.keys == fast.model.keys
+    assert slow.phase == phase and slow.share == pieces
+    if phase == "complete":
+        assert slow.stopped is None and slow.pieces < pieces and slow.start_value == pytest.approx(whole.start_value, rel=1e-8)
+    else:
+        assert slow.pieces >= pieces and slow.stopped.startswith(f"it had done {slow.pieces:,} pieces of work, its allowance being {pieces:,} pieces of work, set from the run's states net")
+    assert_lower_bound(slow, ab, exact)
+
+
+def test_a_build_counted_in_pieces_of_work_counts_each_floor_the_binding_step_raises_and_stops_there():
+    """#1101: the binding step examines the offers outside the model, and raising a reroll's floor is an exact chance (R09: 4,922 offers, about
+    80 s a round). Each raise is one piece of work, and the count is asked before each: past it, the step stops (`FloorsStopped`, with the
+    count's words), and the round's model stands (`pattern_lower_bound`)."""
+    from crafting_system.abstraction._pattern import Tally
+    from crafting_system.planner._offer_kinds import ONE
+
+    offers = make_offers()
+    fresh = abstraction()
+    tally = Tally(10**6, lambda done, cap: f"{done:,} of {cap:,} pieces")
+    floors = OfferFloors(fresh, fresh.compress(START_ITEM), offers, START_ITEM, tally, tally)
+    reroll = floors.entries[0]  # the Chaos Orb, raised to its exact chance by `rho` (two pieces)
+    assert (offers[0].label, reroll.level, tally.done) == ("Chaos Orb", 2, 2)
+    limits = {INSIDE: math.inf, OUTSIDE: math.inf, OTHER: None, UNOPENED: None}  # every floor is needed: each level is raised
+    reroll.level, reroll.pbar = 0, ONE  # back to its loose floor, as an offer the binding step meets first
+    floors.needed(0, limits)
+    assert (reroll.level, tally.done) == (2, 4)
+    reroll.level, reroll.pbar = 0, ONE
+    tally.cap = 5  # one more raise
+    with pytest.raises(FloorsStopped, match="^5 of 5 pieces$"):
+        floors.needed(0, limits)
+    assert (reroll.level, tally.done) == (1, 5)
+
+
 def test_the_net_is_asked_before_the_solve_of_a_round_that_grew_and_the_round_before_stands(world, floors_on, monkeypatch):
     ab, start, offers, _, exact, _ = world
     packed, solved = [], []

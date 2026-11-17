@@ -551,3 +551,109 @@ def test_a_run_counted_in_states_names_states_and_gives_the_cost_figures_ladder_
     bind_search(clock, SimpleNamespace(exact=False, within=None, bound_stopped=None, touched=7, peak_mb=None))
     (found,) = clock.bindings
     assert (found.limit, found.given, found.reached) == (STATES, 10, 7)
+
+
+def test_a_stage_counted_in_states_stops_at_its_count_of_checkpoints_and_names_it():
+    # #1101: under a run counted in states a stage given `states` (the Lock's check) counts one state per checkpoint of its walk and stops
+    # past its count with a binding in states; a stage inside it counts on its cap, and outside it no checkpoint counts
+    from crafting_system.budget import checkpoint, running, stage
+
+    clock = Budget.in_states(1_000).start()
+    with running(clock):
+        checkpoint()  # no cap: nothing counts and nothing stops (no time or memory net)
+        with pytest.raises(BudgetExceeded) as stopped:
+            with stage("the walk", "what is kept", states=3):
+                checkpoint()
+                with stage("a part of it"):  # no cap of its own: it counts on the walk's
+                    checkpoint()
+                checkpoint()
+                assert clock.walked == 3
+                checkpoint()  # the fourth
+        assert stopped.value.binding == Binding("the walk", STATES, 3, 4, "what is kept")
+        assert stopped.value.binding.words() == "the walk stopped at the limit of 3 states (4 reached): what is kept"
+        assert clock.bindings == [stopped.value.binding] and clock.cap is None
+        checkpoint()
+
+
+def test_a_run_counted_in_states_keeps_one_account_of_its_searches_and_gives_each_build_its_share():
+    # #1101: every envelope search of a counted run spends the states it knew on one account (`Clock.spend`); a search's net is what is left
+    # (an equal share of it when more searches are to run, at least one state), and its build's net is `build_per_state` pieces per state of
+    # it. A run on the clock keeps its states net as it is and gives its build no count.
+    clock = Budget.in_states(1_000, build_per_state=10.0).start()
+    net = _plan.search_net(clock)
+    assert (net.states, net.pieces, net.seconds) == (1_000, 10_000, None)
+    clock.spend(600)
+    assert clock.states_left() == 400 and _plan.search_net(clock).states == 400 and _plan.search_net(clock, 2).pieces == 2_000
+    clock.spend(900)
+    assert clock.states_left() == 0 and (_plan.search_net(clock).states, _plan.search_net(clock).pieces) == (1, 10)
+    assert _plan.states_meter(clock).given == 0
+    timed = Budget(seconds=600.0, memory_mb=None, states=96).start()
+    timed.spend(50)
+    assert timed.spent == 0 and _plan.states_meter(timed) is None
+    assert (_plan.search_net(timed).states, _plan.search_net(timed).pieces) == (96, None)
+    with pytest.raises(ValueError):
+        Budget.in_states(10, build_per_state=0.0)
+
+
+def test_through_the_entry_two_plans_of_one_counted_run_share_its_states_and_the_lock_s_check_stops_on_its_count(coarse, monkeypatch):  # noqa: F811
+    # #1101: two plans made inside one run (as its start options are) share its states net: the second plan's search has what the first left,
+    # and the run's account holds both searches' states. The Lock's check then counts the states of its walk, up to the run's net.
+    target, prices, _ = coarse
+    nets = []
+    real = _plan.envelope_result
+
+    def spy(*args, **kwargs):
+        nets.append(kwargs["net"])
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(_plan, "envelope_result", spy)
+    clock = Budget.in_states(10_000).start()
+    with budget.running(clock):
+        first = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", with_risk=False)
+        spent = clock.spent
+        second = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", with_risk=False)
+    assert spent == first.search.touched > 0 and clock.spent == spent + second.search.touched
+    assert [net.states for net in nets] == [10_000, 10_000 - spent] and nets[0].pieces == 10_000 * budget.BUILD_PER_STATE
+    assert first.mean_remaining == second.mean_remaining
+
+    def walked(*args, **kwargs):  # a Lock's check whose walk would go on and on: the run's count stops it, and the plan is kept without it
+        while True:
+            budget.checkpoint()
+
+    monkeypatch.setattr(_plan, "plan_foresight", walked)
+    plan = make_plan(COARSE, target, prices, start_price=5.0, solver="envelope", budget=Budget.in_states(96), with_risk=False)
+    assert plan.foresight.status is LockStatus.STOPPED and plan.solution is not None
+    (bound,) = [limit for limit in plan.limits if limit.kind == BUDGET]
+    assert Binding(LOCK_STAGE, STATES, 96, 97, _plan.LOCK_KEPT).words() in bound.names
+    read(bound)
+
+
+def test_a_counted_run_s_donors_and_rounds_spend_on_its_one_account(monkeypatch):
+    # #1101: an Awakener's Orb's donors each spend the states their search knew (its plan's, or its refusal's) on the run's account, and the
+    # rounds' meter puts each round's states on it as the round ends and counts off what others spent while the rounds ran (donors searched
+    # inside a round): N is one figure for every search of the run.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _awakener, _rounds
+    from crafting_system.planner._envelope import NoPolicy
+
+    clock = Budget.in_states(1_000).start()
+    nets = []
+
+    def solve_donor(abstraction, action, priced, *, net=None, gap=0.0, gap_after=None):
+        nets.append(net)
+        if action == "refused":
+            raise NoPolicy("no donor plan", states=30)
+        return SimpleNamespace(action=action), SimpleNamespace(info={"envelope": SimpleNamespace(touched=200)})
+
+    monkeypatch.setattr(_awakener, "solve_donor", solve_donor)
+    orbs = [SimpleNamespace(label=name, offer=SimpleNamespace(action=name)) for name in ("first", "refused")]
+    donors, left_out = _awakener.solve_donors(None, orbs, (), net=lambda searches: _plan.search_net(clock, searches).states, spend=clock.spend)
+    assert nets == [1_000 // 3, (1_000 - 200) // 2] and len(donors) == 1 and len(left_out) == 1
+    assert clock.spent == 230
+    meter = _rounds.StatesMeter(clock.states_left(), clock)
+    assert meter.left() == 770
+    clock.spend(70)  # a donor inside a round
+    assert meter.left() == 700
+    meter.ended(100)  # a round that knew 100 states
+    assert (meter.spent, clock.spent, meter.left(), clock.states_left()) == (100, 400, 600, 600)
