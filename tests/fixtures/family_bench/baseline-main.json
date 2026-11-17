@@ -1,51 +1,61 @@
 {
  "bound_violations": [],
  "cases": 126,
- "commit": "2563837c",
+ "commit": "0f5164b7",
  "families": {
   "alchemy-scouring": {
    "batch": "B1",
    "sizes": {
     "large": {
      "checks": {
-      "mark_agrees": true
+      "exact_mean_equals_optimum": true,
+      "gap_to_optimum": 7.668288226625464e-11,
+      "lower_le_optimum": true,
+      "mark_agrees": true,
+      "optimum_le_upper": true
      },
-     "exact": null,
-     "gap": null,
-     "path": null,
-     "plan_peak_mb": null,
-     "plan_seconds": 0.04,
-     "reach": null,
-     "reason": "PlanError: action kind(s) alchemy-orb, scouring-orb cannot be used by the planner yet; the kinds the planner can use are alteration-orb, annulment-orb, aspect-beast, augmentation-orb, awakeners-orb, b",
-     "status": "refused",
+     "exact": true,
+     "gap": 3.2887815804016896e-08,
+     "path": "envelope search",
+     "plan_peak_mb": 634.0,
+     "plan_seconds": 97.42,
+     "reach": 35883,
+     "reason": "",
+     "status": "planned",
      "within": null
     },
     "medium": {
      "checks": {
       "mark_agrees": true
      },
-     "exact": null,
-     "gap": null,
-     "path": null,
-     "plan_peak_mb": null,
-     "plan_seconds": 0.01,
-     "reach": null,
-     "reason": "PlanError: action kind(s) alchemy-orb, scouring-orb cannot be used by the planner yet; the kinds the planner can use are alteration-orb, annulment-orb, aspect-beast, augmentation-orb, awakeners-orb, b",
-     "status": "refused",
+     "exact": true,
+     "gap": 2.393394742394861e-07,
+     "path": "envelope search",
+     "plan_peak_mb": 1799.9,
+     "plan_seconds": 760.86,
+     "reach": 130205,
+     "reason": "",
+     "status": "planned",
      "within": null
     },
     "small": {
      "checks": {
-      "mark_agrees": true
+      "exact_mean_equals_optimum": true,
+      "gap_to_optimum": -1.8762769116165146e-14,
+      "lower_le_optimum": true,
+      "mark_agrees": true,
+      "optimum_le_upper": true,
+      "z": 1.3489528404489588,
+      "z_within": true
      },
-     "exact": null,
-     "gap": null,
-     "path": null,
-     "plan_peak_mb": null,
-     "plan_seconds": 0.04,
-     "reach": null,
-     "reason": "PlanError: action kind(s) alchemy-orb, scouring-orb cannot be used by the planner yet; the kinds the planner can use are alteration-orb, annulment-orb, aspect-beast, augmentation-orb, awakeners-orb, b",
-     "status": "refused",
+     "exact": true,
+     "gap": 9.722004312706645e-09,
+     "path": "envelope search",
+     "plan_peak_mb": 412.0,
+     "plan_seconds": 10.59,
+     "reach": 78295,
+     "reason": "",
+     "status": "planned",
      "within": null
     }
    }
@@ -2181,9 +2191,16 @@
  "gap_violations": [],
  "mark_disagreements": [],
  "planned_at_a_proved_gap": [],
- "planned_within_a_minute": 21,
+ "planned_within_a_minute": 22,
  "records": [
   {
+   "breakdown": {
+    "after_search": 0.46,
+    "bound": 5.11,
+    "note": "",
+    "risk": 0.0,
+    "search": 91.85
+   },
    "case": {
     "actions": [
      "alchemy-orb",
@@ -2194,14 +2211,14 @@
     ],
     "base_id": "Metadata/Items/Belts/Belt4",
     "batch": "B1",
-    "digest": "26012626e07f3f2c",
+    "digest": "ad833273e136f583",
     "id": "alchemy-scouring/large",
     "item_class": "Belt",
     "item_level": 84,
     "keep_count": null,
     "method": "alchemy-scouring",
     "primary_snapshot": "tests/fixtures/prices/vendor-v01-2026-11-01.json",
-    "refused": "alchemy-orb: planner=False; scouring-orb: planner=False",
+    "refused": null,
     "seed": 824,
     "size": "large",
     "start": "bought",
@@ -2209,18 +2226,310 @@
     "vendor_starts": false,
     "wanted": 5
    },
+   "certified_upper": 666557.524109888,
    "checks": {
-    "mark_agrees": true
+    "exact_mean_equals_optimum": true,
+    "gap_to_optimum": 7.668288226625464e-11,
+    "lower_le_optimum": true,
+    "mark_agrees": true,
+    "optimum_le_upper": true
    },
-   "envelope_rounds": [],
-   "exit": 0,
+   "envelope": {
+    "bound_expanded": 1297,
+    "bound_keys": 1297,
+    "bound_offers": 6,
+    "bound_pieces": 0,
+    "bound_rounds": 1,
+    "bound_seconds": 5.110796912000012,
+    "bound_share": null,
+    "bound_stopped": null,
+    "candidates": 168149,
+    "exact": true,
+    "expanded": 37124,
+    "first_plan": 35881,
+    "first_upper": 666913.6706782558,
+    "gap": 3.2887815804016896e-08,
+    "held": false,
+    "incumbent": false,
+    "keys_missing": 0,
+    "lower": 666557.5021882677,
+    "mean_error": 3.290127881250271e-08,
+    "peak_mb": 492.8447265625,
+    "proved_upper": null,
+    "reached": 0,
+    "realized": 168129,
+    "restarts": false,
+    "rounds": 29,
+    "seconds": 96.95726953599996,
+    "stopped": null,
+    "tightened": 0,
+    "touched": 37131,
+    "upper": 666557.524109888,
+    "upper_refused": 0,
+    "upper_seconds": 0.5249171400000137,
+    "widening": [],
+    "within": null
+   },
+   "envelope_rounds": [
+    {
+     "expanded": 35881,
+     "known": 35888,
+     "lower": 608420.980318452,
+     "realized": 35881,
+     "round": 1,
+     "seconds": 4.9
+    },
+    {
+     "expanded": 35881,
+     "known": 35920,
+     "lower": 608421.242963902,
+     "realized": 67859,
+     "round": 2,
+     "seconds": 6.15
+    },
+    {
+     "expanded": 35886,
+     "known": 36001,
+     "lower": 608421.5342273059,
+     "realized": 100229,
+     "round": 3,
+     "seconds": 15.7
+    },
+    {
+     "expanded": 35945,
+     "known": 36003,
+     "lower": 608428.3499085475,
+     "realized": 115017,
+     "round": 4,
+     "seconds": 26.74
+    },
+    {
+     "expanded": 35945,
+     "known": 36015,
+     "lower": 608440.8837776326,
+     "realized": 119668,
+     "round": 5,
+     "seconds": 28.41
+    },
+    {
+     "expanded": 35954,
+     "known": 36106,
+     "lower": 608451.2263867994,
+     "realized": 122607,
+     "round": 6,
+     "seconds": 30.16
+    },
+    {
+     "expanded": 36024,
+     "known": 36385,
+     "lower": 608454.106019223,
+     "realized": 126699,
+     "round": 7,
+     "seconds": 33.31
+    },
+    {
+     "expanded": 36195,
+     "known": 37119,
+     "lower": 608454.1906729629,
+     "realized": 157297,
+     "round": 8,
+     "seconds": 53.92
+    },
+    {
+     "expanded": 36947,
+     "known": 37120,
+     "lower": 608487.5805971787,
+     "realized": 161347,
+     "round": 9,
+     "seconds": 55.64
+    },
+    {
+     "expanded": 37113,
+     "known": 37130,
+     "lower": 608529.0675593741,
+     "realized": 163533,
+     "round": 10,
+     "seconds": 56.82
+    },
+    {
+     "expanded": 37123,
+     "known": 37131,
+     "lower": 608554.4332305512,
+     "realized": 164139,
+     "round": 11,
+     "seconds": 57.63
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 608634.4087130661,
+     "realized": 164356,
+     "round": 12,
+     "seconds": 58.75
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 608769.9306167328,
+     "realized": 165469,
+     "round": 13,
+     "seconds": 59.67
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 608986.0666008411,
+     "realized": 166470,
+     "round": 14,
+     "seconds": 60.57
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 609269.4176476283,
+     "realized": 166853,
+     "round": 15,
+     "seconds": 61.44
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 609644.1058624412,
+     "realized": 167068,
+     "round": 16,
+     "seconds": 62.25
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 610302.6309455342,
+     "realized": 167234,
+     "round": 17,
+     "seconds": 63.07
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 611470.6707244352,
+     "realized": 167491,
+     "round": 18,
+     "seconds": 63.9
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 613673.1705049948,
+     "realized": 167688,
+     "round": 19,
+     "seconds": 64.81
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 616335.0885604358,
+     "realized": 167853,
+     "round": 20,
+     "seconds": 65.71
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 620032.9800460573,
+     "realized": 167892,
+     "round": 21,
+     "seconds": 66.52
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 624557.1513380314,
+     "realized": 167925,
+     "round": 22,
+     "seconds": 67.32
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 631335.331283617,
+     "realized": 167975,
+     "round": 23,
+     "seconds": 68.12
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 649758.9072726095,
+     "realized": 168093,
+     "round": 24,
+     "seconds": 68.99
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 658259.3670110607,
+     "realized": 168103,
+     "round": 25,
+     "seconds": 69.83
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 663834.2743708506,
+     "realized": 168108,
+     "round": 26,
+     "seconds": 70.67
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 665812.3533515664,
+     "realized": 168123,
+     "round": 27,
+     "seconds": 71.19
+    },
+    {
+     "expanded": 37124,
+     "known": 37131,
+     "lower": 666315.3941711471,
+     "realized": 168126,
+     "round": 28,
+     "seconds": 72.0
+    }
+   ],
+   "exact": true,
+   "exit": -9,
+   "lower": 666557.5021882677,
    "mode": "plan",
-   "no_plan": true,
+   "path": "envelope search",
+   "plan": {
+    "error_bound": 3.290127881250271e-08,
+    "limits": [
+     "Not offered",
+     "Not offered",
+     "Not offered",
+     "Memory Strands are not considered",
+     "The search expanded only what could matter",
+     "The tree shows groups of states",
+     "A state lists the other mods only as a count per side",
+     "The chance of reaching each state is not shown"
+    ],
+    "lock": "Foresight(status=<Status.SWITCHED_OFF: \"switched off by the run's methods setting\">, price=210737.7544471648, n=None, n_exact=True, best_state=None, by_item_text=(), kept=0, pruned=0, lock_free_mean=None, saving=None, seconds=0.0)",
+    "mean_remaining": 666557.524109888,
+    "mean_total": 666558.259509888,
+    "offers": 6,
+    "reach": 35883,
+    "shown_reach": 4696,
+    "solve_seconds": 96.96,
+    "start_label": "Orb of Alchemy",
+    "start_option": null,
+    "start_price": 0.7354,
+    "states_known": 37131
+   },
    "prices": {
     "names": 201,
     "primary": "tests/fixtures/prices/vendor-v01-2026-11-01.json"
    },
-   "reason": "PlanError: action kind(s) alchemy-orb, scouring-orb cannot be used by the planner yet; the kinds the planner can use are alteration-orb, annulment-orb, aspect-beast, augmentation-orb, awakeners-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-influence, harvest-resistance-swap, hinekora-lock, imprint, locus, orb-of-conflict, pick, recombinator, regal-orb, remove-crafted-mods, restore, talisman-fracture, transmutation-orb, unveil, vaal, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron",
+   "reason": null,
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -2235,22 +2544,72 @@
    "stages": {
     "plan": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 252.2,
-     "seconds": 0.04
+     "peak_mb": 634.0,
+     "process_peak_mb": 675.4,
+     "seconds": 97.42
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 252.2,
-     "seconds": 1.74
+     "process_peak_mb": 253.2,
+     "seconds": 1.13
+    },
+    "simulate": {
+     "done": false,
+     "peak_mb": 565.5,
+     "seconds": 241.11,
+     "stopped": "stopped by the benchmark's net: the simulate stage passed 240 s"
     }
    },
-   "status": "refused",
-   "walk": null,
-   "wall_seconds": 3.1
+   "status": "planned",
+   "stopped": "stopped by the benchmark's net: the simulate stage passed 240 s",
+   "upper": 666557.524109888,
+   "walk": {
+    "error_bound": 3.290127881250271e-08,
+    "exit": 0,
+    "mode": "walk",
+    "optimum": 666557.5240587745,
+    "reason": null,
+    "settings": {
+     "aim_seconds": null,
+     "gap": 0.01,
+     "memory_mb": 13000.0,
+     "plan_seconds": 600.0,
+     "risk_seconds": 300.0,
+     "seed": 824,
+     "sim_seconds": 120.0,
+     "upper_per_round": false,
+     "walk_seconds": 300.0
+    },
+    "stages": {
+     "setup": {
+      "done": true,
+      "peak_mb": null,
+      "process_peak_mb": 252.6,
+      "seconds": 1.16
+     },
+     "walk": {
+      "done": true,
+      "peak_mb": 705.7,
+      "process_peak_mb": 720.2,
+      "seconds": 40.54
+     }
+    },
+    "states": 37131,
+    "status": "solved",
+    "wall_seconds": 44.4
+   },
+   "wall_seconds": 340.4,
+   "within": null
   },
   {
+   "breakdown": {
+    "after_search": 1.78,
+    "bound": 4.01,
+    "note": "",
+    "risk": 0.0,
+    "search": 755.07
+   },
    "case": {
     "actions": [
      "alchemy-orb",
@@ -2261,14 +2620,14 @@
     ],
     "base_id": "Metadata/Items/Weapons/OneHandWeapons/Daggers/Dagger1",
     "batch": "B1",
-    "digest": "70ea23fbfb8a7567",
+    "digest": "daf5dec6ced83018",
     "id": "alchemy-scouring/medium",
     "item_class": "Dagger",
     "item_level": 75,
     "keep_count": null,
     "method": "alchemy-scouring",
     "primary_snapshot": "tests/fixtures/prices/routes-allflame-2026-11-10.json",
-    "refused": "alchemy-orb: planner=False; scouring-orb: planner=False",
+    "refused": null,
     "seed": 824,
     "size": "medium",
     "start": "bought",
@@ -2276,18 +2635,314 @@
     "vendor_starts": false,
     "wanted": 4
    },
+   "certified_upper": 720808.3989934642,
    "checks": {
     "mark_agrees": true
    },
-   "envelope_rounds": [],
-   "exit": 0,
+   "envelope": {
+    "bound_expanded": 541,
+    "bound_keys": 541,
+    "bound_offers": 6,
+    "bound_pieces": 0,
+    "bound_rounds": 1,
+    "bound_seconds": 4.0123848150000185,
+    "bound_share": null,
+    "bound_stopped": null,
+    "candidates": 588390,
+    "exact": true,
+    "expanded": 132515,
+    "first_plan": 130163,
+    "first_upper": 721819.7936092246,
+    "gap": 2.393394742394861e-07,
+    "held": false,
+    "incumbent": false,
+    "keys_missing": 0,
+    "lower": 720808.2264756022,
+    "mean_error": 2.3912140090232015e-07,
+    "peak_mb": 1474.142578125,
+    "proved_upper": null,
+    "reached": 0,
+    "realized": 588390,
+    "restarts": false,
+    "rounds": 30,
+    "seconds": 759.079042616,
+    "stopped": null,
+    "tightened": 0,
+    "touched": 132609,
+    "upper": 720808.3989934642,
+    "upper_refused": 0,
+    "upper_seconds": 1.7604728259999831,
+    "widening": [],
+    "within": null
+   },
+   "envelope_rounds": [
+    {
+     "expanded": 130163,
+     "known": 130257,
+     "lower": 687752.6055307161,
+     "realized": 130163,
+     "round": 1,
+     "seconds": 20.25
+    },
+    {
+     "expanded": 130163,
+     "known": 130299,
+     "lower": 687752.8452216537,
+     "realized": 247661,
+     "round": 2,
+     "seconds": 135.3
+    },
+    {
+     "expanded": 130205,
+     "known": 130299,
+     "lower": 687754.3699611308,
+     "realized": 361074,
+     "round": 3,
+     "seconds": 252.76
+    },
+    {
+     "expanded": 130205,
+     "known": 130323,
+     "lower": 687754.5507532157,
+     "realized": 376564,
+     "round": 4,
+     "seconds": 280.17
+    },
+    {
+     "expanded": 130205,
+     "known": 130323,
+     "lower": 687762.7525703309,
+     "realized": 409272,
+     "round": 5,
+     "seconds": 332.98
+    },
+    {
+     "expanded": 130228,
+     "known": 130351,
+     "lower": 687777.5294722917,
+     "realized": 414871,
+     "round": 6,
+     "seconds": 341.01
+    },
+    {
+     "expanded": 130228,
+     "known": 131798,
+     "lower": 687779.1122003518,
+     "realized": 426781,
+     "round": 7,
+     "seconds": 353.26
+    },
+    {
+     "expanded": 130713,
+     "known": 132424,
+     "lower": 687779.1754396117,
+     "realized": 440619,
+     "round": 8,
+     "seconds": 373.65
+    },
+    {
+     "expanded": 131052,
+     "known": 132595,
+     "lower": 687779.2692802197,
+     "realized": 537109,
+     "round": 9,
+     "seconds": 506.53
+    },
+    {
+     "expanded": 132206,
+     "known": 132595,
+     "lower": 687793.308587717,
+     "realized": 542879,
+     "round": 10,
+     "seconds": 512.04
+    },
+    {
+     "expanded": 132421,
+     "known": 132609,
+     "lower": 687810.8035805096,
+     "realized": 550969,
+     "round": 11,
+     "seconds": 518.19
+    },
+    {
+     "expanded": 132502,
+     "known": 132609,
+     "lower": 687833.4619447263,
+     "realized": 555804,
+     "round": 12,
+     "seconds": 523.02
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 687890.705857146,
+     "realized": 564521,
+     "round": 13,
+     "seconds": 531.55
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 687940.2750231166,
+     "realized": 573122,
+     "round": 14,
+     "seconds": 537.57
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 687993.7956911499,
+     "realized": 574644,
+     "round": 15,
+     "seconds": 541.01
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 688101.5961146301,
+     "realized": 578255,
+     "round": 16,
+     "seconds": 545.25
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 688258.4453604516,
+     "realized": 579527,
+     "round": 17,
+     "seconds": 548.62
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 688403.8958576072,
+     "realized": 579717,
+     "round": 18,
+     "seconds": 551.77
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 688732.729041407,
+     "realized": 580264,
+     "round": 19,
+     "seconds": 554.99
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 690055.0619240897,
+     "realized": 580593,
+     "round": 20,
+     "seconds": 558.48
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 691651.9686040463,
+     "realized": 582290,
+     "round": 21,
+     "seconds": 562.54
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 693608.3622985696,
+     "realized": 584000,
+     "round": 22,
+     "seconds": 566.54
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 694767.0947571793,
+     "realized": 584413,
+     "round": 23,
+     "seconds": 573.04
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 696168.699408254,
+     "realized": 586692,
+     "round": 24,
+     "seconds": 576.93
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 700660.2806975825,
+     "realized": 587435,
+     "round": 25,
+     "seconds": 580.4
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 703323.1234731564,
+     "realized": 587734,
+     "round": 26,
+     "seconds": 583.72
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 705478.7978106157,
+     "realized": 587965,
+     "round": 27,
+     "seconds": 586.84
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 709612.025175483,
+     "realized": 588051,
+     "round": 28,
+     "seconds": 589.86
+    },
+    {
+     "expanded": 132515,
+     "known": 132609,
+     "lower": 715176.8671887943,
+     "realized": 588103,
+     "round": 29,
+     "seconds": 591.69
+    }
+   ],
+   "exact": true,
+   "exit": -9,
+   "lower": 720808.2264756022,
    "mode": "plan",
-   "no_plan": true,
+   "path": "envelope search",
+   "plan": {
+    "error_bound": 2.3912140090232015e-07,
+    "limits": [
+     "Not offered",
+     "Not offered",
+     "Not offered",
+     "Memory Strands are not considered",
+     "The search expanded only what could matter",
+     "The tree shows groups of states",
+     "A state lists the other mods only as a count per side",
+     "The chance of reaching each state is not shown"
+    ],
+    "lock": "Foresight(status=<Status.SWITCHED_OFF: \"switched off by the run's methods setting\">, price=229436.98274690966, n=None, n_exact=True, best_state=None, by_item_text=(), kept=0, pruned=0, lock_free_mean=None, saving=None, seconds=0.0)",
+    "mean_remaining": 720808.3989934642,
+    "mean_total": 720809.6176934642,
+    "offers": 6,
+    "reach": 130205,
+    "shown_reach": 15554,
+    "solve_seconds": 759.08,
+    "start_label": "Orb of Alchemy",
+    "start_option": null,
+    "start_price": 1.2187,
+    "states_known": 132609
+   },
    "prices": {
     "names": 201,
     "primary": "tests/fixtures/prices/routes-allflame-2026-11-10.json"
    },
-   "reason": "PlanError: action kind(s) alchemy-orb, scouring-orb cannot be used by the planner yet; the kinds the planner can use are alteration-orb, annulment-orb, aspect-beast, augmentation-orb, awakeners-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-influence, harvest-resistance-swap, hinekora-lock, imprint, locus, orb-of-conflict, pick, recombinator, regal-orb, remove-crafted-mods, restore, talisman-fracture, transmutation-orb, unveil, vaal, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron",
+   "reason": null,
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -2302,22 +2957,71 @@
    "stages": {
     "plan": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 252.1,
-     "seconds": 0.01
+     "peak_mb": 1799.9,
+     "process_peak_mb": 1818.7,
+     "seconds": 760.86
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 252.1,
-     "seconds": 1.05
+     "process_peak_mb": 253.2,
+     "seconds": 1.12
+    },
+    "simulate": {
+     "done": false,
+     "peak_mb": 1835.3,
+     "seconds": 243.22,
+     "stopped": "stopped by the benchmark's net: the simulate stage passed 240 s"
     }
    },
-   "status": "refused",
-   "walk": null,
-   "wall_seconds": 1.9
+   "status": "planned",
+   "stopped": "stopped by the benchmark's net: the simulate stage passed 240 s",
+   "upper": 720808.3989934642,
+   "walk": {
+    "exit": -9,
+    "mode": "walk",
+    "no_plan": false,
+    "reason": "stopped by the benchmark's net: the walk stage passed 300 s",
+    "settings": {
+     "aim_seconds": null,
+     "gap": 0.01,
+     "memory_mb": 13000.0,
+     "plan_seconds": 600.0,
+     "risk_seconds": 300.0,
+     "seed": 824,
+     "sim_seconds": 120.0,
+     "upper_per_round": false,
+     "walk_seconds": 300.0
+    },
+    "stages": {
+     "setup": {
+      "done": true,
+      "peak_mb": null,
+      "process_peak_mb": 252.7,
+      "seconds": 1.09
+     },
+     "walk": {
+      "done": false,
+      "peak_mb": 2100.2,
+      "seconds": 300.08,
+      "stopped": "stopped by the benchmark's net: the walk stage passed 300 s"
+     }
+    },
+    "status": "stopped",
+    "stopped": "stopped by the benchmark's net: the walk stage passed 300 s",
+    "wall_seconds": 301.9
+   },
+   "wall_seconds": 1006.0,
+   "within": null
   },
   {
+   "breakdown": {
+    "after_search": 0.71,
+    "bound": 2.15,
+    "note": "",
+    "risk": 0.0,
+    "search": 7.73
+   },
    "case": {
     "actions": [
      "alchemy-orb",
@@ -2328,14 +3032,14 @@
     ],
     "base_id": "Metadata/Items/Rings/Ring16",
     "batch": "B1",
-    "digest": "6b6c5b67b77fd94e",
+    "digest": "8c63d19bb7eccdd5",
     "id": "alchemy-scouring/small",
     "item_class": "Ring",
     "item_level": 79,
     "keep_count": null,
     "method": "alchemy-scouring",
     "primary_snapshot": "tests/fixtures/prices/foresight-allflame-2026-11-02.json",
-    "refused": "alchemy-orb: planner=False; scouring-orb: planner=False",
+    "refused": null,
     "seed": 824,
     "size": "small",
     "start": "bought",
@@ -2343,18 +3047,104 @@
     "vendor_starts": false,
     "wanted": 1
    },
+   "certified_upper": 21.395626067089548,
    "checks": {
-    "mark_agrees": true
+    "exact_mean_equals_optimum": true,
+    "gap_to_optimum": -1.8762769116165146e-14,
+    "lower_le_optimum": true,
+    "mark_agrees": true,
+    "optimum_le_upper": true,
+    "z": 1.3489528404489588,
+    "z_within": true
+   },
+   "envelope": {
+    "bound_expanded": 41,
+    "bound_keys": 41,
+    "bound_offers": 6,
+    "bound_pieces": 0,
+    "bound_rounds": 1,
+    "bound_seconds": 2.151037099,
+    "bound_share": null,
+    "bound_stopped": null,
+    "candidates": 349351,
+    "exact": true,
+    "expanded": 78295,
+    "first_plan": 78295,
+    "first_upper": 21.395626275097893,
+    "gap": 9.722004312706645e-09,
+    "held": false,
+    "incumbent": false,
+    "keys_missing": 0,
+    "lower": 21.395625859081182,
+    "mean_error": 9.722084248764418e-09,
+    "peak_mb": 398.3408203125,
+    "proved_upper": null,
+    "reached": 0,
+    "realized": 78295,
+    "restarts": false,
+    "rounds": 1,
+    "seconds": 9.882342958999999,
+    "stopped": null,
+    "tightened": 0,
+    "touched": 90307,
+    "upper": 21.395626067089548,
+    "upper_refused": 0,
+    "upper_seconds": 0.10273418899999598,
+    "widening": [],
+    "within": null
    },
    "envelope_rounds": [],
+   "exact": true,
    "exit": 0,
+   "lower": 21.395625859081182,
    "mode": "plan",
-   "no_plan": true,
+   "path": "envelope search",
+   "plan": {
+    "error_bound": 9.722084248764418e-09,
+    "limits": [
+     "Not offered",
+     "Not offered",
+     "Not offered",
+     "Memory Strands are not considered",
+     "The search expanded only what could matter",
+     "The tree shows groups of states",
+     "A state lists the other mods only as a count per side"
+    ],
+    "lock": "Foresight(status=<Status.SWITCHED_OFF: \"switched off by the run's methods setting\">, price=143260.0187796323, n=None, n_exact=True, best_state=None, by_item_text=(), kept=0, pruned=0, lock_free_mean=None, saving=None, seconds=0.0)",
+    "mean_remaining": 21.395626067089548,
+    "mean_total": 21.80662606708955,
+    "offers": 6,
+    "reach": 78295,
+    "shown_reach": 2,
+    "solve_seconds": 9.88,
+    "start_label": "Orb of Alchemy",
+    "start_option": null,
+    "start_price": 0.411,
+    "states_known": 90307
+   },
    "prices": {
     "names": 201,
     "primary": "tests/fixtures/prices/foresight-allflame-2026-11-02.json"
    },
-   "reason": "PlanError: action kind(s) alchemy-orb, scouring-orb cannot be used by the planner yet; the kinds the planner can use are alteration-orb, annulment-orb, aspect-beast, augmentation-orb, awakeners-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-influence, harvest-resistance-swap, hinekora-lock, imprint, locus, orb-of-conflict, pick, recombinator, regal-orb, remove-crafted-mods, restore, talisman-fracture, transmutation-orb, unveil, vaal, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron",
+   "reason": null,
+   "risk": {
+    "grid": "GridInfo(step=0.0007543139539730984, exact=False, bins=65895, unresolved_mass=0.09826079669581535, rounding=5.952651696613975e-11)",
+    "mean": {
+     "high": 21.395626067101063,
+     "low": 21.395626067078034,
+     "value": 21.395626067089548
+    },
+    "p50": {
+     "high": 14.623884625676459,
+     "low": 14.574854218668207,
+     "value": 14.599369422172334
+    },
+    "p90": {
+     "high": 49.70551799705732,
+     "low": 49.54032324113721,
+     "value": 49.622920619097265
+    }
+   },
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -2366,23 +3156,81 @@
     "upper_per_round": false,
     "walk_seconds": 300.0
    },
+   "simulate": {
+    "computed": 21.80662606708955,
+    "mean": 22.094536985217047,
+    "runs": 10411,
+    "seconds": 120.2,
+    "standard_error": 0.21343290105803486,
+    "stopped": 0,
+    "unfinished": 0,
+    "z": 1.3489528404489588
+   },
    "stages": {
     "plan": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 252.2,
-     "seconds": 0.04
+     "peak_mb": 412.0,
+     "process_peak_mb": 429.2,
+     "seconds": 10.59
+    },
+    "risk": {
+     "done": true,
+     "peak_mb": 431.9,
+     "process_peak_mb": 449.4,
+     "seconds": 0.09
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 252.2,
-     "seconds": 1.78
+     "process_peak_mb": 252.8,
+     "seconds": 1.73
+    },
+    "simulate": {
+     "done": true,
+     "peak_mb": 431.9,
+     "process_peak_mb": 447.4,
+     "seconds": 120.22
     }
    },
-   "status": "refused",
-   "walk": null,
-   "wall_seconds": 3.2
+   "status": "planned",
+   "upper": 21.395626067089548,
+   "walk": {
+    "error_bound": 9.722164406866796e-09,
+    "exit": 0,
+    "mode": "walk",
+    "optimum": 21.39562606708995,
+    "reason": null,
+    "settings": {
+     "aim_seconds": null,
+     "gap": 0.01,
+     "memory_mb": 13000.0,
+     "plan_seconds": 600.0,
+     "risk_seconds": 300.0,
+     "seed": 824,
+     "sim_seconds": 120.0,
+     "upper_per_round": false,
+     "walk_seconds": 300.0
+    },
+    "stages": {
+     "setup": {
+      "done": true,
+      "peak_mb": null,
+      "process_peak_mb": 252.3,
+      "seconds": 1.78
+     },
+     "walk": {
+      "done": true,
+      "peak_mb": 1439.8,
+      "process_peak_mb": 1455.4,
+      "seconds": 176.21
+     }
+    },
+    "states": 93139,
+    "status": "solved",
+    "wall_seconds": 187.3
+   },
+   "wall_seconds": 134.5,
+   "within": null
   },
   {
    "case": {
@@ -37698,27 +38546,27 @@
   }
  ],
  "relation": {
-  "cases": 38,
+  "cases": 41,
   "peak_mb": {
-   "largest": 1224.0947265625,
-   "largest_residual": 719.5140953101558,
-   "r2": 0.7287229839725242,
+   "largest": 1474.142578125,
+   "largest_residual": 715.4462163636907,
+   "r2": 0.7599608558540776,
    "rates": [
-    260.509704061782,
-    0.019129185633190375,
-    0.0014056307848574895,
-    0.003777071296626918
+    264.833750241442,
+    0.016812478439569834,
+    0.001454604396988047,
+    0.0028017353489500872
    ]
   },
   "seconds": {
-   "largest": 587.9121126360001,
-   "largest_residual": 387.5650256231388,
-   "r2": 0.6161572217440427,
+   "largest": 759.079042616,
+   "largest_residual": 402.84023708510864,
+   "r2": 0.6696829691632634,
    "rates": [
-    32.634064307757285,
-    0.015597676559071067,
-    0.0007704135141325241,
-    -0.00028927062149954616
+    15.054492234952699,
+    0.011376557861179413,
+    0.0008247283377153178,
+    0.0003584632040296109
    ]
   },
   "terms": [
@@ -37729,6 +38577,7 @@
   ]
  },
  "run_ids": [
+  "44194206614",
   "43837986241",
   "43838030138",
   "43853845389"
@@ -37736,8 +38585,8 @@
  "schema": 1,
  "status_counts": {
   "failed": 3,
-  "planned": 38,
-  "refused": 35,
+  "planned": 41,
+  "refused": 32,
   "stopped": 50
  },
  "ticket": 824,
