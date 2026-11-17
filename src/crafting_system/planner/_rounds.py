@@ -396,7 +396,8 @@ def widen(
             # 0 s). It is tried once more after the other rounds, with the time they leave: most rounds after it end at once on the plan in
             # hand, and the time they do not use is its second share. Its first share is spent, and the cost to the rounds after it is that
             # they share the time with one more round, its second try. The last group too, when the last round that restores the proof was
-            # owed: its share left room for that round, which cannot come once this one stopped, so its second try has that room
+            # owed: its share left room for that round, which cannot come once this one stopped. Its second try shares the time left with
+            # that round (half each when nothing else waits), and that round runs only when the second try ends closed
             queue.append(group)
             again[len(queue) - 1] = place
             tried.add(len(queue) - 1)

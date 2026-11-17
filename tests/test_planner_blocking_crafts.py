@@ -1354,3 +1354,47 @@ def test_a_second_try_goes_last_the_last_group_is_tried_again_when_the_proof_s_r
         (("a",), "closed", True), (("c",), "beaten", False), (("d",), "beaten", False), (("b",), "stopped", True),
     ]  # fmt: skip
     assert not _rounds.all_closed(widened.records) and widened.plan.mean_remaining == 10.0
+
+
+def test_the_last_group_s_second_try_shares_the_time_with_the_owed_last_round_and_says_so_when_it_stops_again_or_has_no_time():
+    # #1135, the last group's second try (checker round 2). Plan of 10 from a at once; b is beaten and set aside, so the last round that
+    # restores the proof is owed. Each later round uses its whole share, moved by hand on a 600 s run: b 600/2 = 300; c, the last group,
+    # over itself and the owed last round, 300/2 = 150; c's second try over itself and the last round, 150/2 = 75; the last round 75.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    def rounds(outcome, spend=None):
+        groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abc"))
+        now, seen = [0.0], []
+
+        def run(chosen, call):
+            seen.append(("".join(chosen), call.searches))
+            if call.upper is None:
+                return SimpleNamespace(search=SimpleNamespace(lower=10.0), mean_remaining=10.0)
+            kind = next(kind for kind in "cba" if kind in chosen and outcome.get(kind))
+            what = outcome[kind].pop(0)
+            share = (600.0 - now[0]) / call.searches
+            now[0] += share if spend is None else spend(chosen, share)
+            if what == "unbuilt":
+                raise _rounds.Stopped("the time limit was reached", 3.0, "it had done 5 pieces")
+            raise _envelope.Beaten(call.upper, None)
+
+        widened = _rounds.widen(
+            groups, tuple("abc"), run, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: max(600.0 - now[0], 0.0), clock_now=lambda: now[0],
+        )  # fmt: skip
+        return widened, seen, now[0]
+
+    widened, seen, end = rounds({"b": ["beaten"], "c": ["unbuilt", "beaten", "beaten"]})
+    assert seen == [("a", 1), ("ab", 2), ("ac", 2), ("ac", 2), ("abc", 1)] and end == pytest.approx(600.0)
+    assert [record.seconds for record in widened.records[1:]] == pytest.approx([300.0, 225.0, 75.0])  # b; c's two tries on one line (150 + 75); the last round
+    assert _rounds.all_closed(widened.records)
+    # the second try stops again: the last round cannot come, so no proof is claimed (OR-13)
+    widened, seen, _ = rounds({"b": ["beaten"], "c": ["unbuilt", "unbuilt"]})
+    assert [own for own, _ in seen] == ["a", "ab", "ac", "ac"] and len(widened.records) == 3
+    assert not _rounds.all_closed(widened.records) and widened.plan.mean_remaining == 10.0
+    # c's first try uses all the run's time: its line says it was not tried again, and no line is added for the try that did not run
+    widened, seen, _ = rounds({"b": ["beaten"], "c": ["unbuilt"]}, spend=lambda chosen, share: 600.0 if chosen == ("a", "c") else share)
+    assert [own for own, _ in seen] == ["a", "ab", "ac"] and len(widened.records) == 3
+    assert widened.records[-1].kinds == ("c",) and widened.records[-1].reason.endswith("; it was not tried again: the run's time was used up")
