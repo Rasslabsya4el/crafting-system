@@ -1141,6 +1141,12 @@ def widened_plan(
         gap=0.0 if clock is None else clock.budget.gap,
     )  # fmt: skip
     if widened.plan is None:
+        said = _rounds.no_plan_words(widened.records)
+        if said is not None:  # a net stopped a round, or left one untried: no plan found yet, never "no plan reaches the goal" (#1168, OR-33)
+            if isinstance(widened.error, BudgetExceeded) and clock is not None:
+                clock.bind(widened.error.binding)  # as `make_plan` binds a stop that reaches it (a forked worker's was bound on its own clock)
+            spent = f" after {clock.elapsed():,.0f} s" if clock is not None and not clock.budget.counted else ""
+            raise PlanError(f"stopped{spent}, {NO_PLAN}: {said}") from widened.error  # as `stopped_refusal` says a stop (OR-33's example)
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
     plan, records = widened.plan, widened.records
     closed = _rounds.all_closed(records)
@@ -1455,16 +1461,28 @@ def envelope_refusal(solver: str, error: Exception) -> str:
     """The `PlanError` text of an envelope search that cannot answer (OR-13): the cause in words, and for `auto` the way to the walk, which is never taken silently (#535).
 
     Under `auto` a refusal of the bound's build carries a player's cause (`.player`, set by `abstraction._pattern`) in place of the developer's text,
-    and a search that found no route says so as the walk does, with no advice to walk: the walk would find none either.
+    and a search that found no route says so as the walk does, with no advice to walk: the walk would find none either. A search a net
+    stopped before any plan closed (a `NoPolicy` of its chain carries the net's words, `.stopped`) found no plan yet: it says so, never that
+    no plan reaches the goal, with what the user can do (#1168, OR-13, OR-33).
     """
+    if isinstance(error, NoPolicy):
+        chain, cause = [error], error.__cause__
+        while isinstance(cause, NoPolicy):  # (the note of a bound cut short is raised from the search's refusal)
+            chain.append(cause)
+            cause = cause.__cause__
+        if isinstance(cause, ConvergenceError):  # a plan exists, but its cost could not be certified (#867): not "no route", nor "none found"
+            if solver == "envelope":
+                return f"the envelope search cannot answer this target: {error}"
+            return f"a plan was found, but its average cost could not be worked out to a certified figure, so it is not shown ({error})"
+        if any(each.stopped is not None for each in chain):  # a net stopped the search before a plan closed: it found none yet (#1168, OR-33)
+            return (
+                f"stopped, {NO_PLAN}: the search found no plan before it stopped, so this does not show that no plan exists ({error}). To get a plan, "
+                "run again with a larger time, states or memory limit, or with fewer methods: a search over fewer methods is smaller and may finish where "
+                "this one stopped"
+            )
     if solver == "envelope":
         return f"the envelope search cannot answer this target: {error}"
     if isinstance(error, NoPolicy):
-        cause = error.__cause__
-        while isinstance(cause, NoPolicy):  # (the note of a bound cut short is raised from the search's refusal)
-            cause = cause.__cause__
-        if isinstance(cause, ConvergenceError):  # a plan exists, but its cost could not be certified (#867): not "no route"
-            return f"a plan was found, but its average cost could not be worked out to a certified figure, so it is not shown ({error})"
         return f"no policy of the offered actions reaches the goal from the start item ({error})"
     cause = getattr(error, "player", None) or str(error)
     return (
