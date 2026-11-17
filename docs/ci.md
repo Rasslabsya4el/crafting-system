@@ -68,7 +68,7 @@ the merge is step 3 on the reviewed head. `main` then differs from the last test
 
 ## Running the suite on your own machine
 
-The serial command is unchanged:
+On the server the full suite is a heavy run ("Heavy runs on the server" below: the data folder, the cores). The serial command is unchanged:
 
     CRAFTING_CACHE_DIR=<cache> uv run --frozen pytest -q -p no:cacheprovider
 
@@ -85,9 +85,36 @@ the clock is added to `CLOCK_READERS`. `CRAFTING_TEST_REAL_CLOCK=1` turns the fi
 pinned on the committed price files in `tests/test_price_age_rule.py`. To check that the suite does not depend on the date, run it
 under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime '2026-12-01 12:00:00' <the shard command>`.
 
+## Heavy runs on the server (owner, 2026-11-17)
+
+The chats work on the owner's server (Ubuntu 24.04, 24 cores, 60 GB, the repo at `/root/projects/crafting system`), and heavy work
+runs there: benchmarks, profiling, sweeps, solves, measurements, golden re-records and the full suite. Nothing heavy runs on the
+owner's own PC. The main chat starts a run from its ticket's worktree as a background command, whose exit is its notification,
+and writes the output under `.claude/scratch/`:
+
+    export CRAFTING_CACHE_DIR="/root/projects/crafting system/.claude/scratch/crafting-cache"
+    uv sync --locked --extra web        # once per worktree
+    timeout 90m uv run --no-sync python bench.py --out "/root/projects/crafting system/.claude/scratch/t123" > ... 2>&1
+
+- **Data.** `CRAFTING_CACHE_DIR` above is shared by every worktree (without the variable each worktree would look in its own
+  `local/cache`). When the folder is gone, `uv run --no-sync python -m crafting_system.data fetch` fills it and `... data verify`
+  checks it against the pin; a new pin needs a new fetch.
+- **Cores.** The chats share the 24 cores and nothing queues the runs for them. One run takes at most 8 processes, and starts
+  only when the 1-minute load (the first number after `load average:` in `uptime`) plus its processes is at most 20; otherwise the chat
+  starts it later. A sweep the dispatcher would split over N runners is one command with N processes here, or N parts one after another.
+- **Time.** The chat gives the run a limit with `timeout`, about twice what it expects. The 60-minute cap and `--long` below are
+  rules for GitHub's runners and do not bind a server run.
+- **Re-records.** A command that re-records files (`UPDATE_GOLDEN=1 ...`) writes them in the worktree; the chat reads the diff and
+  commits them itself. The integration run then checks them on Ubuntu and Windows.
+- **Helpers.** `finder`, `checker` and `crafter` start no heavy run, on the server or on GitHub; they run quick, targeted tests
+  only (under a minute, one process).
+
+GitHub keeps what the server does not give: a PR's own CI, the integration run that lands a PR, and a run that needs Windows.
+The lines "never on a PC" further down mean the owner's PC: the server or a runner is where those scripts run.
+
 ## Heavy runs on GitHub: the runner budget (#249)
 
-**Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite goes to CI and benchmarks, profiling, sweeps, solves and measurements go to a heavy run, because a local multi-process sweep pins his machine at 100%. `.github/workflows/run.yml`
+A heavy run goes to GitHub when it needs Windows, or when the server is full. `.github/workflows/run.yml`
 checks out a branch, puts the pinned game data in place with the same step CI uses (`.github/actions/real-data`),
 runs a bash command from the repository root on 1 to 16 runners and uploads what the command wrote into `$OUT_DIR`
 (plus `output.log`, its console output). The command sees `RUNNER_INDEX` (1..N) and `RUNNER_COUNT`, so N runners can
