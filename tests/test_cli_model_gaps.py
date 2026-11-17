@@ -53,6 +53,9 @@ GAME, GAP, RECORDS, EITHER, LISTS = "game", "gap", "records", "either", "lists"
 # model gap said with `listing_gap` (a limit of the kinds), the game refusal silent. EITHER: both families, named, and why.
 CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_bound.py", "reach_bound", ("OutOfScopeError",), GAP, "no bound is given for a pool the model cannot build"),
+    ("actions/fossil_reach.py", "declared", ("NotApplicableError", "OutOfScopeError"), EITHER, "the item takes no resonator (the game) or no rule covers it (a gap): no set declares anything, and the floors start at pbar 1 (#1073)"),
+    ("actions/fossil_reach.py", "declared", ("NotApplicableError", "OutOfScopeError", "ValueError"), EITHER, "the set is refused (the game) or out of scope (a gap) on the bare item: it declares nothing, and its floor is raised as before (#1073)"),
+    ("actions/fossil_reach.py", "declared", ("OutOfScopeError",), GAP, "no rule for the pool of the added mods: those sets declare nothing (#1073)"),
     ("abstraction/_coarse.py", "Coarsening._run_members", ("NotApplicableError", "OutOfScopeError"), EITHER, "the first refusal is kept and raised again by `variants`; a model gap wins over a game refusal"),
     ("abstraction/_coarse.py", "Coarsening.reachable", ("NotApplicableError", "OutOfScopeError"), EITHER, "a helper for tests, no caller in src: the blocks reachable by what can be applied"),
     ("abstraction/_estimate.py", "_Pilot.kernel_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the forecast only counts the graph; the build writes the gap"),
@@ -145,6 +148,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
 # packages that walk, solve and plan. Listed so they are not forgotten; `NOT_A_REFUSAL` says no action is called inside, or that the error is not a refusal.
 NOT_A_REFUSAL = "not a refusal"
 OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
+    ("abstraction/_bound.py", "declared_bounds", ("ItemError", "ValueError"), NOT_A_REFUSAL, "`_item_of` of a bare state that no item has: no declared bound, the floors start at pbar 1 (#1073); no action is called"),
     ("abstraction/_pattern.py", "Pattern._ok", ("ValueError", "ItemError"), NOT_A_REFUSAL, "`_item_of` of a state that no item has (two slots of a family, more slots than families): the member is not an item; no action is called"),
     ("actions/socket_colours.py", "BenchSocketColours.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
     ("actions/socket_orbs.py", "BenchSocketCount.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
