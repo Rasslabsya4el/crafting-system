@@ -26,7 +26,7 @@ from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
 UNVEIL_KIND = "unveil"  # the catalog kind whose offer a bench craft can block (ADR-0026)
-LOCK_KIND = "hinekora-lock"  # the name the run's methods setting gives Hinekora's Lock, on by default (`_foresight`, ticket #296)
+LOCK_KIND = "hinekora-lock"  # the name the run's methods setting gives Hinekora's Lock; off unless the setting names it (OR-37, #1125; `_foresight`)
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 # What the draw of a bought item's mods costs (ADR-0064), as a share of the cheapest offer that costs something. It is not free like an unveil
 # because it lies on every cycle of a restart: the certified error of a component is about (m + 2) * epsilon * value / g for its smallest constant
@@ -443,7 +443,9 @@ def offers_for(
       Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
       (a metamod craft counts toward no requirement and would be left out), and only the actions named that way are
       listed of a kind that is not named as a whole. An `opt_in` kind (since #886 only the deferred ones: the
-      recombinator, the Foulborn Exalted Orb) is offered only when named, as a kind or by its label (ticket #70).
+      recombinator, the Foulborn Exalted Orb, the Vaal Orb and the Locus of Corruption, #1125) is offered only when named, as a kind or by
+      its label (ticket #70). Without `kinds_named`, a target that takes no corrupted item still lists the opt-in corrupting kinds, so that
+      the corruption filter below drops them and says so in the words it uses for every such target (they could never be used there).
     * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
       offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
       It is left out and reported like a craft that counts for nothing.
@@ -482,6 +484,10 @@ def offers_for(
     left_out_unwanted: list[str] = []
     listing_gaps: list[ListingGap] = []
     kind_of = _listed(data, start_item, kind_names, label_names, listing_gaps)
+    if kind_names is None and not goal.takes_corrupted:  # dropped by the corruption filter below with its limit, as for every such target
+        corrupting = frozenset(entry.name for entry in kinds(planner_only=True) if entry.corrupting and entry.opt_in)
+        for action, kind in _listed(data, start_item, corrupting, frozenset(), listing_gaps).items():
+            kind_of.setdefault(action, kind)
     if kind_names is not None and RECOMBINATOR_KIND in kind_names:
         kind_of = _with_feeder_donors(data, goal, start_item, kind_of)
         # a donor is made from a normal item of the base (the recombinator's `inputs`): the actions that apply to one are offered too, but
@@ -701,16 +707,19 @@ def _kind_limits(
     and what the listed kinds left out because the model has no rule for the start item (`listing_gaps`, #511).
 
     A kind that only corrupts is the corrupting limit's when the target takes no corrupted item, and a kind that needs Memory
-    Strands, while the start item has none, is the strands limit's (`make_plan`): neither is named here.
+    Strands, while the start item has none, is the strands limit's (`make_plan`): neither is named here. Hinekora's Lock is no kind of the
+    catalog but a method of the run's setting all the same (`LOCK_KIND`, off unless named, OR-37, #1125): it is named with the kinds not named
+    or offered only when named, unless the start item is corrupted (it takes no Lock, `hinekora_lock.refused_on`).
     """
     strands = _strand_kinds_absent(start_item)
+    lock = () if start_item.corrupted else (kind_title(LOCK_KIND),)
     found: tuple[Limit, ...] = ()
     if kinds_named is not None:
         not_named = tuple(
             kind_title(entry.name)
             for entry in kinds(planner_only=True)
             if entry.name not in (kind_names or ()) and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in strands
-        )
+        ) + (lock if LOCK_KIND not in kinds_named else ())
         if not_named:
             found += (
                 Limit(
@@ -722,7 +731,11 @@ def _kind_limits(
                 ),
             )
     else:
-        opt_in = tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.opt_in and entry.name not in strands)
+        opt_in = tuple(
+            kind_title(entry.name)
+            for entry in kinds(planner_only=True)
+            if entry.opt_in and entry.name not in strands and not (entry.corrupting and not goal.takes_corrupted)
+        ) + lock
         if opt_in:
             found += (
                 Limit(

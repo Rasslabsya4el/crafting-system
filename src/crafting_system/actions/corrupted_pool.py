@@ -51,7 +51,8 @@ POOL_DOMAINS = CORRUPTED_POOL_DOMAINS  # the same set `items` uses to accept a c
 # (ADR-0036, ADR-0038): the Vaal Orb and a fossil set holding the Bloodstained Fossil give one, the Locus of Corruption
 # two. The run's methods setting names kinds (#405), so a plan is checked against these names.
 CORRUPTING_KINDS: Mapping[str, int] = MappingProxyType({"vaal": 1, "fossil-set": 1, "locus": 2})
-# the corrupting kinds a run that names no methods may use: all of them, since #886 offers the fossil sets by default (OR-41)
+# the corrupting kinds a target is checked against (`targets.corrupted`): all of them. Since #1125 the Vaal Orb and the Locus are deferred (B4,
+# OR-37) and offered only when the run's methods setting names them, which it may: a run that does not finds no plan and says so (#405)
 DEFAULT_CORRUPTING_KINDS: Mapping[str, int] = CORRUPTING_KINDS
 
 

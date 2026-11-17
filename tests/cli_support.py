@@ -51,6 +51,8 @@ def classic_offers(patch) -> None:
     for name, entry in list(catalog._KINDS.items()):
         if entry.planner and name not in CLASSIC_KINDS and not entry.opt_in:
             patch.setitem(catalog._KINDS, name, dataclasses.replace(entry, opt_in=True))
+        elif entry.planner and name in CLASSIC_KINDS and entry.opt_in:  # the Vaal Orb and the Locus, deferred since #1125 (OR-37), were classic
+            patch.setitem(catalog._KINDS, name, dataclasses.replace(entry, opt_in=False))
     patch.setattr(_offers, "BLOCKING_CRAFTS", False)
     patch.setattr(_offers, "ELDRITCH_GATE", True)
     patch.setattr(corrupted, "DEFAULT_CORRUPTING_KINDS", dict(CLASSIC_CORRUPTING_KINDS))
