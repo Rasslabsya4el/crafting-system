@@ -57,6 +57,7 @@ from crafting_system.planner._offer_kinds import (
     _Entry,
     _kind_of,
     best_first_rho,
+    finishes,
     goal_set,
     necessary_leaves,
 )
@@ -104,16 +105,31 @@ def test_the_goal_set_leaves_out_a_leaf_that_passes_at_the_start():
     goal = Goal((leaf("a"), leaf("b"), leaf("c")))
     start = SimpleNamespace(status=(Status.PASSING, Status.BELOW, Status.ABSENT))
 
-    assert goal_set(goal, start, frozenset()) == (1, 2)
+    assert goal_set(goal, start, ()) == (1, 2)
 
 
 def test_the_goal_set_leaves_out_a_leaf_a_bench_craft_can_finish_unless_nothing_would_remain():
     goal = Goal((leaf("a"), leaf("b")))
     start = SimpleNamespace(status=(Status.ABSENT, Status.ABSENT))
 
-    assert goal_set(goal, start, frozenset({"a"})) == (1,)
-    assert goal_set(goal, start, frozenset({"a", "b"})) == (0, 1)  # all would go: keep them all
-    assert goal_set(goal, start, frozenset({"z"})) == (0, 1)
+    assert goal_set(goal, start, [(frozenset({"a"}), True)]) == (1,)
+    assert goal_set(goal, start, [(frozenset({"a"}), True), (frozenset({"b"}), True)]) == (0, 1)  # all would go: keep them all
+    assert goal_set(goal, start, [(frozenset({"z"}), True)]) == (0, 1)
+
+
+def test_a_craft_finishes_only_a_leaf_its_mod_can_pass():
+    """#1112: a leaf that refuses crafted mods, or whose tier limit accepts none of the craft's mods, stays in U (R05: the bench Life and tier 1 Life)."""
+    refuses = Wanted(frozenset({"a", "a_crafted"}), not_crafted=True)
+    tiered = Wanted(frozenset({"b1", "b2", "b_crafted"}), min_tier=1, tier_ok=frozenset({"b1"}))
+    plain = leaf("c")
+    goal = Goal((refuses, tiered, plain))
+    start = SimpleNamespace(status=(Status.ABSENT, Status.ABSENT, Status.ABSENT))
+
+    assert not finishes(refuses, frozenset({"a_crafted"}), True)
+    assert finishes(refuses, frozenset({"a"}), False)  # a mod added by name and not crafted (an essence's forced mod) may pass it
+    assert not finishes(tiered, frozenset({"b_crafted", "b2"}), True)
+    assert finishes(tiered, frozenset({"b1"}), True)
+    assert goal_set(goal, start, [(frozenset({"a_crafted"}), True), (frozenset({"b_crafted"}), True), (frozenset({"c"}), True)]) == (0, 1)
 
 
 def _stub_entry(index: int, cost: float, kind=REROLL) -> _Entry:
@@ -377,10 +393,12 @@ def test_with_bench_crafts_offered_the_search_gives_the_plan_of_the_whole_walk(b
 def test_the_leaf_a_craft_can_finish_is_dropped_from_the_set_the_bound_is_read_on(bench):
     abstraction = Abstraction(bench.data, Goal.from_target(bench.target), BASE, LEVEL, [BenchCraft(LIFE_CRAFT), RemoveCraftedMods()])
     start = abstraction.compress(bench.item)
-    crafted = frozenset(BenchCraft(LIFE_CRAFT).adds(bench.data, bench.item).named)
+    adds = BenchCraft(LIFE_CRAFT).adds(bench.data, bench.item)
+    crafted = [(frozenset(adds.named), adds.crafted)]
 
-    assert goal_set(abstraction.goal, start, crafted) == (1,)  # life is leaf 0: the craft finishes it
-    assert goal_set(abstraction.goal, start, frozenset()) == (0, 1)
+    assert adds.crafted
+    assert goal_set(abstraction.goal, start, crafted) == (1,)  # life is leaf 0, with no tier and crafted mods allowed: the craft finishes it
+    assert goal_set(abstraction.goal, start, ()) == (0, 1)
 
 
 # --- the kind of an offer -----------------------------------------------------------------------------------

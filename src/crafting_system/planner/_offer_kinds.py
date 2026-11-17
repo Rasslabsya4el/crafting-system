@@ -154,14 +154,24 @@ def necessary_leaves(goal) -> tuple[int, ...]:
     return tuple(found)
 
 
-def goal_set(goal, start: CompressedState, finished_by_crafts: frozenset[str]) -> tuple[int, ...]:
+def goal_set(goal, start: CompressedState, crafts: Sequence[tuple[frozenset[str], bool]]) -> tuple[int, ...]:
     """U: the necessary leaves not PASSING at the start, less those a bench craft can finish (if any remain).
 
-    `finished_by_crafts` are the mod ids that offered crafts add by name.
+    `crafts` are, for each offered craft, the mod ids it adds by name and whether it adds them crafted (`Adds.crafted`). A craft finishes a leaf
+    only when a mod it adds can pass it (`finishes`): a leaf that refuses crafted mods, or whose tier limit accepts none of them, stays in U (#1112:
+    R05's tier 1 Life left U for the bench Life, so the Wald floor of the bound fell from the essence's chance of tier 1 Life to the essence's price).
     """
     open_leaves = [index for index in necessary_leaves(goal) if start.status[index] is not Status.PASSING]
-    kept = [index for index in open_leaves if not goal.leaves[index].mod_ids & finished_by_crafts]
+    kept = [index for index in open_leaves if not any(finishes(goal.leaves[index], named, crafted) for named, crafted in crafts)]
     return tuple(kept or open_leaves)
+
+
+def finishes(leaf, named: frozenset[str], crafted: bool) -> bool:
+    """Whether a mod of `named`, added (as a crafted mod when `crafted`), can make `leaf` PASSING (`status_of`): one of the leaf's mods that its
+    tier limit accepts (`tier_ok`), and not a crafted one where the leaf refuses crafted mods. A roll limit is not read: such a mod may pass it."""
+    if crafted and leaf.not_crafted:
+        return False
+    return bool(named & (leaf.mod_ids if leaf.tier_ok is None else leaf.tier_ok))
 
 
 def merge_twins(
