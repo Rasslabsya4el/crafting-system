@@ -155,7 +155,7 @@ def main(
     parser.add_argument(
         "--methods", type=_methods, metavar="NAME[,NAME...]",
         help="use only these methods: kinds such as chaos-orb,essence,bench-craft or labels of single actions such as \"Essence of Insanity\" "
-        "(default: every beta method the planner offers; the answer names the methods a run leaves out). A target file names none (#405)",
+        "(default: every beta method the planner offers; the answer names the methods a run leaves out). A target file names none",
     )
     parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (or set it in the planner settings; default both)")
     parser.add_argument(
