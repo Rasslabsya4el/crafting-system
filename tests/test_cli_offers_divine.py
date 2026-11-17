@@ -57,13 +57,12 @@ def test_a_roll_limit_that_asks_for_no_value_is_no_roll_limit():
 
 
 def test_a_roll_limit_on_a_mod_that_cannot_occur_on_the_item_does_not_offer_it():
-    # no spawn weight and no essence forces it: since #973 a Rare start is offered the Whispering essences of the Normal item a Scouring
-    # leaves, and their forced mods (`ColdDamagePercentEssence1`) can occur
-    forced = {entry.mod_id for essence in DATA.essences.values() for entry in essence.mods}
     nowhere = next(mod.id for mod in DATA.mods.values() if mod.generation_type in ("prefix", "suffix") and mod.stats
-                   and not any(weight.weight > 0 for weight in mod.spawn_weights) and mod.domain == "item" and mod.id not in forced)
+                   and not any(weight.weight > 0 for weight in mod.spawn_weights) and mod.domain == "item")
     goal = Goal((Wanted(frozenset({nowhere}), min_roll=(1,)),))
-    offers, offered = divine_offers(goal, amulet(roll(RESIST)))
+    # the resistance is fractured: a Scouring leaves the amulet Magic, never Normal, so no Whispering essence (whose forced mod is this one,
+    # `ColdDamagePercentEssence1`) is offered for it (#973)
+    offers, offered = divine_offers(goal, amulet(roll(RESIST, fractured=True)))
 
     assert offers == []
     assert [limit.labels for limit in of_kind(offered.limits, "rolls")] == [("Divine Orb",)]  # a limit was asked for, so the report says why

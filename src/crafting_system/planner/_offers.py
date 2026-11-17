@@ -904,7 +904,7 @@ def reached_items(data: GameData, start_item: Item, kind_names: frozenset[str] |
     rarity (an influence: `harvest-reforge-influence`, the Awakener's Orb) is listed for that item's influences, and an edge that this item
     refuses while another item of its rarity takes it is not followed. Neither changes a reference route today; #1219 closes it.
     An action the item refuses (`NotApplicableError`), the model has no rule for (`OutOfScopeError`) or the data cannot build there
-    (`ItemError`: a game data without the veiled placeholders) leaves nothing: at plan time it is refused at that item too, so it reaches
+    (`ItemError`, or another `ValueError` of the data: a game data without the veiled placeholders, or cut down for a test) leaves nothing: at plan time it is refused at that item too, so it reaches
     no item the plan could use.
     """
     found = {start_item.rarity: start_item}
@@ -918,7 +918,7 @@ def reached_items(data: GameData, start_item: Item, kind_names: frozenset[str] |
                 if not action.rarities(data, item) - found.keys():  # cheap for every action (a fossil set answers from its rules)
                     continue
                 parts = action.outcomes(data, item).components
-            except (ItemError, NotApplicableError, OutOfScopeError):  # it leaves nothing here, so it is no way to another rarity
+            except (ItemError, NotApplicableError, OutOfScopeError, ValueError):  # it leaves nothing here, so it is no way to another rarity
                 continue
             for _, part in parts:
                 made = part.retained
