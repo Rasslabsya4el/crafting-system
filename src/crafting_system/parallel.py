@@ -199,7 +199,17 @@ class WorkerPool:
         """Kill the workers and drop the pool without waiting on them (a worker that does not return must not hold the caller, #535)."""
         executor, self._executor = self._executor, None
         if executor is not None:
+            results = executor._result_queue  # (the shutdown below drops it)
+            workers = list((executor._processes or {}).values())
             executor.kill_workers()  # kills the live workers and shuts the executor down without waiting (Python 3.14)
+            # A worker killed while it was sending a result leaves part of a message in the result pipe: the executor's thread reads on for the rest
+            # and never ends, and the interpreter waits for that thread at exit (#1179: R14 stopped at its memory net, wrote its answer, and did not
+            # exit). The workers are dead, so closing this process's own end for writing gives that read an end of file: the thread sees a broken
+            # pool and ends.
+            for worker in workers:
+                worker.join()
+            if results is not None:
+                results._writer.close()
 
     def _start(self) -> ProcessPoolExecutor:
         if self._executor is None:
