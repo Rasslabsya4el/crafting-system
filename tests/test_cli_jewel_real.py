@@ -40,13 +40,13 @@ LIFE, ATTACK_SPEED, WAND_SPEED = "MaximumLifeIncreasePercent", "IncreasedAttackS
 MAGIC_ROUTE = """\
 base: Cobalt Jewel
 item_level: 84
-actions: [transmutation-orb, alteration-orb]
 requirements:
   - family: MaximumLifeIncreasePercent
 start_item:
   rarity: normal
 start: given
 """
+MAGIC_METHODS = ("transmutation-orb", "alteration-orb")  # the run's methods setting of the magic route (#405: a target names none)
 
 
 @pytest.fixture(scope="module")
@@ -92,7 +92,7 @@ def test_the_magic_route_costs_what_the_hand_formula_says(data, prices, table, t
     room = {PREFIX: 1, SUFFIX: 1}
     q = (chance_of_families(table, room, 1, (LIFE,)) + chance_of_families(table, room, 2, (LIFE,))) / 2
 
-    plan = make_plan(data, load_target(target_file, data), prices)
+    plan = make_plan(data, load_target(target_file, data), prices, methods=MAGIC_METHODS)
 
     assert plan.risk.success_probability.value == pytest.approx(1.0)
     assert plan.risk.mean.value == pytest.approx(transmutation + float(1 - q) * alteration / float(q), rel=1e-9)
@@ -106,7 +106,7 @@ def test_the_magic_route_for_a_family_on_both_sides_costs_what_the_hand_formula_
     room = {PREFIX: 1, SUFFIX: 1}
     q = (chance_of_families(table, room, 1, ("DamageForm",)) + chance_of_families(table, room, 2, ("DamageForm",))) / 2
 
-    plan = make_plan(data, load_target(target_file, data), prices)
+    plan = make_plan(data, load_target(target_file, data), prices, methods=MAGIC_METHODS)
 
     assert set(table["DamageForm"]) == {PREFIX, SUFFIX}  # the family has weight on both sides of the Cobalt pool
     assert plan.risk.mean.value == pytest.approx(transmutation + float(1 - q) * alteration / float(q), rel=1e-9)

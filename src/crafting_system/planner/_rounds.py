@@ -31,10 +31,12 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   needs no room kept in its share for its search to make one, so its bound's build may take the whole share, not the quarter a search
   with no plan keeps it to (`RoundCall.held`, `_plan.search_net`, #1099): a short share otherwise cut the build before it was complete,
   and the round stopped on a weak lower figure (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s, where the
-  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged. A build that the share ends
-  nearly done (by the offers its model holds) finishes, to at most twice the share, and its search makes its first plan (#1135,
-  `abstraction._pattern.Growth`): R11's Exalted round builds in 24 to 28 s on a runner against a share of 26 to 27 s, and cut there it kept
-  617.28 c on 3 of 4 runners. The time past the share comes off the rounds after it; a build far from done stops at the share as before.
+  complete bound's first plan costs 188.03 c against the 617.28 c in hand). A plan a stopped search walked to (#1142) is not held so: it is
+  proved near nothing, and a build that took the whole share left the round's search no time to find a better one (R13). The share itself
+  is unchanged. A build that the share ends nearly done (by the offers its model holds) finishes, to at most twice the share, and its
+  search makes its first plan (#1135, `abstraction._pattern.Growth`): R11's Exalted round builds in 24 to 28 s on a runner against a share
+  of 26 to 27 s, and cut there it kept 617.28 c on 3 of 4 runners. The time past the share comes off the rounds after it; a build far from
+  done stops at the share as before.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
   less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
@@ -99,7 +101,9 @@ class RoundCall:
     watched: bool
     give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
     states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
-    held: bool = False  # a plan in hand when the round began: its bound's build may take the round's whole share (`_plan.search_net`, #1099)
+    # a plan in hand when the round began, other than one a stopped search walked to (`walked`, #1142): its bound's build may take the
+    # round's whole share (`_plan.search_net`, #1099)
+    held: bool = False
     floors: bool = False  # only the figure of the group's offers' floors is asked (`Floor`, raised by `_make_plan`): the order of the rounds (#1135)
 
 
@@ -139,7 +143,7 @@ def kind_of(offer) -> str:
 
 
 def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object], frozenset[str]]) -> tuple[Group, ...]:
-    """The groups of `offers` in the order the rounds add them (see the module text). `named` are the target's `actions:`; `added(offer)` the
+    """The groups of `offers` in the order the rounds add them (see the module text). `named` are the run's methods (`PlanSettings.methods`, #405); `added(offer)` the
     features the offer adds to the target's own model. An offer is named by its label, or by its kind when no rule offered it unasked
     (`Offer.blocks`).
 
@@ -319,7 +323,11 @@ def widen(
         began = clock_now()
         counted = began if meter is None else measure()
         plan, status, reason, lower, upper, within, touched = None, REFUSED, "", None, None, None, None
-        held, improved = best is not None, False  # a plan in hand when the round began; the round's own plan became it
+        # a plan in hand when the round began; the round's own plan became it. A plan a stopped search walked to (#1142) is executable but proved
+        # near nothing: it does not count as held, so the round's build keeps the room for its search a round with no plan keeps (#1099), as
+        # before the walk (R13: a walked plan in hand gave the metamod round's build its whole share and its search 0 seconds, 32,813 c for 11,246)
+        held, improved = best is not None and not walked(best), False
+        first = best is None  # no plan at all in hand: a plan this round makes is the run's first (#1135), a walked one included
         unit = "seconds" if meter is None else meter.unit
         give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, counted, measure, unit, gap)  # the last round has all the time left
         searches = rest if best is not None else 1
@@ -378,13 +386,13 @@ def widen(
             # built each until the runner died
             records[place] = replace(records[place], carried=False)
             set_aside.append((place, group))
-        elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) or (not held and improved):
+        elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) or (first and improved):
             # the first round is the base whatever its end, a refused one too: every later round widens it. So is the round that made the
             # first plan, whatever its end (#1135): the plan in hand is made of its offers, and a later round that cannot hold them cannot
             # widen that plan (R11: the essence round gave way at 52 s, its plan 597.28 c, on 2 of 9 runners, and the Exalted round, without
             # the essences, reached no plan: the answer kept 617.28 c where essences then an Exalted Orb cost 188.03 c)
             base = positions
-        if floor is not None and improved and not held and len(queue) - k - 1 >= 2 and not ((still := left()) is not None and still <= 0.0):
+        if floor is not None and improved and first and len(queue) - k - 1 >= 2 and not ((still := left()) is not None and still <= 0.0):
             # the first plan is in hand: the rounds left (two or more) go by the cheapest a plan of their offers with the base can be, lowest first (#1135)
             searches = len(queue) - k - 1
             call = RoundCall(searches, best_upper, False, None, None if meter is None else meter.net(searches), True, floors=True)
@@ -520,6 +528,11 @@ def _round_line(n: int, record: RoundRecord) -> str:
     if record.status == REFUSED:
         return f"{head}: no plan ({record.reason})"
     return f"{head}: not tried, {record.reason}"
+
+
+def walked(plan) -> bool:
+    """Whether a round's plan is one its stopped search walked to toward the goal (a `REACHED` limit, `_envelope_plan.reached_limits`, #1142)."""
+    return any(getattr(limit, "kind", None) == _limits.REACHED for limit in getattr(plan, "limits", ()))
 
 
 def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | None) -> tuple[Limit, ...]:

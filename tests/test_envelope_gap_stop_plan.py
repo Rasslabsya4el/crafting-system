@@ -18,7 +18,6 @@ measured on runners (`.github/scripts/family_bench.py`).
 """
 
 import dataclasses
-import json
 import re
 from html import escape
 
@@ -27,7 +26,7 @@ import pytest
 from cli_support import R12, price_file, r12_named
 from coarse_support import CRAFTS, REMOVE, abstraction
 from coarse_support import DATA as COARSE
-from targets_support import DATA
+from targets_support import DATA, with_methods
 from test_cli_approximate import PRICES as APPROX_PRICES
 from test_cli_approximate import TARGET as APPROX_TARGET
 from test_packed_walk_light import START_ITEM, make_offers
@@ -205,9 +204,9 @@ def coarse():
     for action in (*CRAFTS, REMOVE):
         names |= set(offer_of(action, action.label(COARSE), COARSE).resources)
     prices = dataclasses.replace(APPROX_PRICES, prices={name: PriceEntry(2.0, "test") for name in names})
-    keys = json.dumps(["chaos-orb", "remove-crafted-mods", *(craft.label(COARSE) for craft in CRAFTS)])
-    text = APPROX_TARGET.replace("start: given", "start: bought") + f"actions: {keys}\n"
-    target = parse_target(text, COARSE, source="t.yaml")
+    methods = ("chaos-orb", "remove-crafted-mods", *(craft.label(COARSE) for craft in CRAFTS))  # the run's methods setting (#405)
+    text = APPROX_TARGET.replace("start: given", "start: bought")
+    target = with_methods(parse_target(text, COARSE, source="t.yaml"), methods)
     return target, prices, make_plan(COARSE, target, prices, start_price=5.0, solver="packed", with_risk=False).mean_remaining
 
 

@@ -22,6 +22,7 @@ from pathlib import Path
 import pytest
 import yaml
 from abstraction_support import real_game_data
+from former_keys import former_methods
 
 from crafting_system.cli._route import REFUSED_KEYS, RESTART, RULE_KEYS, TOP_KEYS, WHEN_KEYS
 from crafting_system.prices.trade_query import load_buy_spec
@@ -203,7 +204,7 @@ def test_each_test_target_asks_what_the_base_target_asks_and_the_start_strands_m
         assert "strand" not in yaml.safe_dump(target["requirements"]).lower()
         if not strands:
             assert target["start_item"] == {"rarity": "normal"} and target["start_price"] and base["start"] == "bought"  # a plain item since #545 wrote it down; the research file keeps its typed price name; the example target computes its own
-            assert "remembrance-orb" in target["actions"]
+            assert "actions" not in target and "remembrance-orb" in former_methods(S_TARGETS / f"{stem}.yaml")  # #405: the suite plans it with its former methods
             continue
         assert target["start_item"]["memory_strands"] == strands
         assert plain(read(S_BUYS / BUY_SPECS[stem]))["memory_strands"] == strands

@@ -668,6 +668,20 @@ class Abstraction:
             return False
         return self.meets_requirements(state)
 
+    def unmet(self, state: CompressedState) -> int:
+        """How many parts of the goal `state` does not meet: the requirements' leaves (`Goal.unmet`), each implicit wanted that no implicit passes,
+        the quality, and a corruption the goal refuses or asks for (one each). Zero exactly when `is_goal`. A count, not a cost (#1142)."""
+        missing = self.goal.unmet(state.status)
+        missing += sum(
+            1 for index in range(len(self.goal.implicits)) if not any(side.contribution[index] is Status.PASSING for side in state.implicits)
+        )
+        missing += 0 if self.quality_is_met(state) else 1
+        if state.flags.corrupted:
+            missing += 0 if self.goal.takes_corrupted else 1
+        elif self.goal.asks_corrupted:
+            missing += 1
+        return missing
+
     def meets_requirements(self, state: CompressedState) -> bool:
         """Whether `state` meets every requirement but the corruption: the explicit mods, the implicits wanted and the quality wanted (ticket #158)."""
         return self.meets_all_but_quality(state) and self.quality_is_met(state)

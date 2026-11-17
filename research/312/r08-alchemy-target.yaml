@@ -44,10 +44,6 @@ start_item:
 # examples/buy/r08-start-boots.yaml. The planner buys it again whenever the route restarts.
 start_price: R08 start boots
 
-# The kinds of actions the planner may use: the guide's fossils (with their resonators) and the bench. The kinds not named are not offered, and the report says so: the
-# plan is the cheapest among the named kinds. `fossil-set` is offered only when named.
-actions: [alchemy-orb, fossil-set, bench-craft]
-
 # Everything below must be present on the finished item.
 requirements:
   # High Energy Shield: the top tier of "#% increased Energy Shield", rolled.

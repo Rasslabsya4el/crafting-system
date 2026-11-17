@@ -312,6 +312,7 @@ def test_the_planner_answers_a_target_that_only_allows_corruption_at_the_wiki_re
 
     from targets_corrupted_support import DATA as RING_DATA
     from targets_corrupted_support import parse
+    from targets_support import with_methods
 
     from crafting_system.cli import make_plan
     from crafting_system.prices import PriceEntry, PriceFile
@@ -320,11 +321,11 @@ def test_the_planner_answers_a_target_that_only_allows_corruption_at_the_wiki_re
     prices = PriceFile("Test", datetime.datetime(2026, 11, 12, tzinfo=datetime.UTC), 300.0, {"Vaal Orb": PriceEntry(1.0, "test")})
     # a bought normal ring: the pool's only explicit mod is the cold resistance, so a brick holds it (the fill ends when the pool is empty), a
     # quarter of the uses; any other outcome buys the ring again. Each try costs the orb and a ring: V = 4 * (1 + 2) - 2 = 10 from the ring in hand
-    plan = make_plan(RING_DATA, parse("allow_corrupted: true\nactions: [vaal]\n", start="bought"), prices, start_price=2.0)
+    plan = make_plan(RING_DATA, with_methods(parse("allow_corrupted: true\n", start="bought"), ("vaal",)), prices, start_price=2.0)
     offered = [priced.offer.action for priced in plan.offers if priced.label == "Vaal Orb"]
     assert offered == [FILL]
     assert plan.abstraction.reading is None  # the plan's reading: the wiki
     assert plan.solution.values[plan.start] == pytest.approx(10.0)
-    asking = parse("implicits:\n  - stat: '+#% to all Elemental Resistances'\n    corrupted: true\nactions: [vaal]\n", start="bought")
+    asking = with_methods(parse("implicits:\n  - stat: '+#% to all Elemental Resistances'\n    corrupted: true\n", start="bought"), ("vaal",))
     found = offers_for(RING_DATA, Goal.from_target(asking), asking.base_id, asking.start_item, asking.actions).offers
     assert [offer.action for offer in found if offer.label == "Vaal Orb"] == [VaalOrb()]  # the planner refuses it today (implicits), the filter keeps the dead brick

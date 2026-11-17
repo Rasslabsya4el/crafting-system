@@ -428,6 +428,7 @@ def make_plan(
     judges_route: bool = False,
     watch: Callable[[Standing], None] | None = None,
     route_actions: tuple[str, ...] | None = None,
+    methods: tuple[str, ...] | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy, under one budget of time and memory (`crafting_system.budget`, #825).
 
@@ -445,8 +446,11 @@ def make_plan(
     stage that a limit stopped is listed in one limit of the answer (`_limits.budget_limit`, #378). A stop before any plan closed is a `PlanError`
     that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. A judged route is evaluated on its own
     reach (`cli._route.evaluate_route`, #986); `route_actions` are the labels it names (`cli._route.route_actions`), which lead the first round
-    of the offers (#1110), and `judges_route` alone, with no labels, searches every offer at once (`_make_plan`). The rest is `_make_plan`'s text.
+    of the offers (#1110), and `judges_route` alone, with no labels, searches every offer at once (`_make_plan`). `methods` are the run's
+    methods setting (`PlanSettings.methods`, #405): the plan is made with those alone (`with_methods`); None leaves the target's as they are,
+    which for a target read from a file is every beta method. The rest is `_make_plan`'s text.
     """
+    target = with_methods(target, methods)
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
     with running(plan_budget.start() if plan_budget is not None else None) as clock:
@@ -461,6 +465,16 @@ def make_plan(
                 clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
             raise PlanError(stopped_refusal(clock, stop.binding)) from None
     return with_bindings(plan, clock) if owns else plan
+
+
+def with_methods(target: Target, methods: tuple[str, ...] | None) -> Target:
+    """`target` planned with the run's methods setting (#405): the planner reads the methods a run may use from `Target.actions`, which a
+    target file never sets; None leaves `target` as it is (every beta method for a target read from a file)."""
+    if methods is None:
+        return target
+    if isinstance(methods, str) or not methods or not all(isinstance(name, str) and name.strip() for name in methods):
+        raise PlanError(f"the methods setting must name at least one method (a kind such as chaos-orb, or the label of one action), got {methods!r}")
+    return replace(target, actions=tuple(dict.fromkeys(name.strip() for name in methods)))
 
 
 def as_budget(budget: float | Budget | None, net: Net | None = None) -> Budget | None:
@@ -975,7 +989,7 @@ def _make_plan(
     if with_lock is not None and readings is not None:
         raise PlanError(
             "the cheapest plan takes Hinekora's Lock, and a plan made once for each reading of a rule the sources leave open "
-            "cannot take the Lock yet. To see the best plan without the Lock, name the kinds to use in the target's `actions:` without `hinekora-lock`"
+            "cannot take the Lock yet. To see the best plan without the Lock, name the methods to use in the run's setting (`--methods`) without `hinekora-lock`"
         )
     if with_lock is not None:  # the plan takes the Lock: its policy is the second solve's, on the object solver (ADR-0054)
         solution, packed = with_lock, None

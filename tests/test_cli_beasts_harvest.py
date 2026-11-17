@@ -74,11 +74,11 @@ def test_a_swap_target_is_planned_end_to_end_with_the_hand_figure(tmp_path):
         lines.append(f"    - mod: {mod_id}\n      values: {list(entry.values)}")
     path.write_text(
         "base: Paua Amulet\nitem_level: 84\ninfluence: []\nrequirements:\n  - family: " + WORLD.mods[COLD_RESIST].families[0] + "\n    mod: " + COLD_RESIST + "\n"
-        "start_item:\n  rarity: rare\n  mods:\n" + "\n".join(lines) + "\nactions: [harvest-resistance-swap]\nstart: given\n",
+        "start_item:\n  rarity: rare\n  mods:\n" + "\n".join(lines) + "\nstart: given\n",
         encoding="utf-8",
     )
     target = load_target(path, WORLD)
-    plan = make_plan(WORLD, target, price_file(Vivid_Crystallised_Lifeforce=0.02))
+    plan = make_plan(WORLD, target, price_file(Vivid_Crystallised_Lifeforce=0.02), methods=("harvest-resistance-swap",))
     uses = 1.5
     assert plan.mean_remaining == pytest.approx(uses * 500 * 0.02, rel=1e-12)
     assert {priced.label for priced in plan.offers} == {"Harvest Swap Resistance Fire to Cold", "Harvest Swap Resistance Fire to Lightning",
@@ -93,10 +93,10 @@ def test_an_aspect_target_is_planned_end_to_end_and_costs_the_beasts_once(tmp_pa
     mod = BEAST_DATA.mods[CAT_30]
     path.write_text(
         "base: Paua Amulet\nitem_level: 84\ninfluence: []\nrequirements:\n  - family: " + mod.families[0] + "\n    mod: " + CAT_30 + "\n"
-        "start_item:\n  rarity: rare\n  mods:\n    - mod: " + FIRE_RESIST + "\n      values: [6]\nactions: [aspect-beast]\nstart: given\n",
+        "start_item:\n  rarity: rare\n  mods:\n    - mod: " + FIRE_RESIST + "\n      values: [6]\nstart: given\n",
         encoding="utf-8",
     )
-    target = load_target(path, BEAST_DATA)
+    target = dataclasses.replace(load_target(path, BEAST_DATA), actions=("aspect-beast",))  # the run's methods setting (#405)
     resources = dict(AspectBeast("cat", 30).resources(BEAST_DATA))
     prices = {name: PriceEntry(7.0 + number, "test") for number, name in enumerate(sorted(n for n in resources if n != "Chaos Orb"))}
     plan = make_plan(BEAST_DATA, target, PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, prices))

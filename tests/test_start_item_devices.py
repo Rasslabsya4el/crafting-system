@@ -18,7 +18,7 @@ The condition of keeping them is that none of them reaches the route page or the
 import ast
 from pathlib import Path
 
-from vendor_starts_support import BOOTS_TARGET, TOY, prices, toy_target
+from vendor_starts_support import BOOTS_TARGET, TOY, TOY_METHODS, prices, toy_target
 
 from crafting_system.cli import build_report, plan_with_starts, render_text
 from crafting_system.cli._route_card import ANY_OR_EMPTY, card_of_item
@@ -108,22 +108,21 @@ def test_a_plan_from_a_vendor_recipe_prints_the_base_it_takes_as_the_start_item_
     assert row.after.properties == ("Magic", "item level 86")  # what the vendor hands back, shown as the product of the step
 
 
-NORMAL_START = BOOTS_TARGET.replace("rarity: rare\n  mods: []", "rarity: normal").replace(
-    "actions: [chaos-orb, regal-orb, exalted-orb]", "actions: [transmutation-orb, augmentation-orb, regal-orb, chaos-orb, exalted-orb]"
-)
+NORMAL_START = BOOTS_TARGET.replace("rarity: rare\n  mods: []", "rarity: normal")
+NORMAL_METHODS = ("transmutation-orb", "augmentation-orb", "regal-orb", "chaos-orb", "exalted-orb")  # the run's methods for a Normal start
 FRACTURED_START = BOOTS_TARGET.replace(
     "rarity: rare\n  mods: []",
     "rarity: rare\n  mods:\n    - mod: MovementVelocity5\n      values: [30]\n      fractured: true",
 )
 
 
-def plain_plan(text: str):
-    return plan_with_starts(TOY, toy_target(text), prices(Orb_of_Transmutation=0.2), recipe_starts=False)
+def plain_plan(text: str, methods: tuple[str, ...] = TOY_METHODS):
+    return plan_with_starts(TOY, toy_target(text, methods=methods), prices(Orb_of_Transmutation=0.2), recipe_starts=False)
 
 
 def test_the_empty_rare_probe_and_the_representative_items_do_not_make_a_normal_start_rare_on_the_page_or_in_the_text():
     """I11 and I12: the abstraction probes the pool with an empty rare and describes a state by a representative item; a Normal start stays Normal."""
-    plan = plain_plan(NORMAL_START)
+    plan = plain_plan(NORMAL_START, NORMAL_METHODS)
 
     assert plan.target.start_item.rarity.value == "normal"
     row = build_section(route_input(plan), TOY).rows[0]

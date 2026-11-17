@@ -80,7 +80,7 @@ class Status(StrEnum):
     NOT_WORTH = "not worth it"  # the Lock is offered and priced, and no plan step takes it
     NO_OPTION = "no previewable action"  # no state the plan visits has a previewable option
     REFUSED = "refused"  # the start item takes no Lock (corrupted)
-    SWITCHED_OFF = "switched off by the target"  # the target's `actions:` does not name it
+    SWITCHED_OFF = "switched off by the run's methods setting"  # the run's methods (`PlanSettings.methods`) do not name it
     WITH_SECOND_ITEMS = "not offered in a plan that makes second items"  # the target allows it, but a plan with donors has no Lock solve yet (#225, #796)
     NO_PRICE = "no price"  # the price file has none: the Lock is dropped, N is still found
     COARSE = "coarse"  # an approximate answer whose pruning removed the Lock everywhere: no N (the exact values it needs do not exist)
@@ -387,8 +387,8 @@ def coarse_check(values: Mapping[Hashable, float], lock: float | None, c_min: fl
     if kept:
         raise CoarseLockError(
             f"no approximate answer: Hinekora's Lock could pay at {kept:,} of the coarse states (one Lock costs {lock:,.0f} Chaos, less than the "
-            "pessimistic cost still to pay there), and an approximate answer cannot weigh a Lock. Drop the Lock with the target's `actions:` "
-            "(name the kinds to use, without `hinekora-lock`) to get an approximate answer without it, or let the exact search run"
+            "pessimistic cost still to pay there), and an approximate answer cannot weigh a Lock. Drop the Lock with the run's methods setting "
+            "(`--methods`: name the methods to use, without `hinekora-lock`) to get an approximate answer without it, or let the exact search run"
         )
     return Foresight(Status.COARSE, lock, pruned=len(values))
 

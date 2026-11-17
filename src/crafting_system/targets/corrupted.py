@@ -9,8 +9,9 @@ item level) and the nearest mods the pool does hold.
 the way #141 does for impossible implicits.
 
 * A corrupted start item under a target that neither asks for a corrupted implicit nor sets `allow_corrupted` could never be a goal.
-* More corrupted implicits than the corrupting kinds the target may use give (`actions.CORRUPTING_KINDS`: one for the Vaal Orb and the
-  Bloodstained resonator, two for the Locus of Corruption). A target that buys its item is not checked (`buys`).
+* More corrupted implicits than the corrupting kinds offered by default give (`actions.DEFAULT_CORRUPTING_KINDS`: one for the Vaal Orb
+  and the Bloodstained resonator, two for the Locus of Corruption). A target that buys its item is not checked (`buys`). A target names
+  no methods (#405): a run whose methods setting leaves the corrupting kinds out finds no plan, and says so when it plans.
 * Two corrupted implicits of one mod group, which the Locus never draws together (its second implicit comes from another group).
 * More implicits wanted in all than the item holds after the corrupting action: a corrupting action replaces implicits instead of
   adding to them, so a base implicit asked together with a corrupted one on a base that has only that implicit cannot both stay.
@@ -205,9 +206,8 @@ def corruption_problem(
     allow_corrupted: bool,
     start_item: Item,
     buys: bool,
-    actions: tuple[str, ...] | None,
 ) -> CorruptionProblem | None:
-    """The first impossibility among the corrupted implicits, the corrupted start item and `actions:`, or None.
+    """The first impossibility among the corrupted implicits and the corrupted start item, or None.
 
     `buys` is true when the target buys its item (it names a price for the start item, or the start item is itself corrupted):
     a bought item brings its corrupted implicits with it, so the counts of what the planner can draw are not checked and every
@@ -226,10 +226,10 @@ def corruption_problem(
         return None
     base = data.base_items[base_id]
     wanted = _distinct(asked)
-    kinds = dict(CORRUPTING_KINDS) if buys else _usable_kinds(actions)
+    kinds = dict(CORRUPTING_KINDS) if buys else dict(DEFAULT_CORRUPTING_KINDS)
     best = max(kinds.values(), default=0)
     if not buys and len(wanted) > best:
-        return _too_many(implicits, wanted, kinds, best, actions)
+        return _too_many(wanted, best)
     if not buys and len(wanted) == 2:
         problem = _same_group(data, base_id, item_level, implicits, wanted)
         if problem is not None:
@@ -251,43 +251,18 @@ def _distinct(entries: list[tuple[int, ImplicitRequirement]]) -> list[tuple[int,
     return sorted(kept)
 
 
-def _usable_kinds(actions: tuple[str, ...] | None) -> dict[str, int]:
-    """The corrupting kinds the target may use and how many corrupted implicits one use gives."""
-    if actions is None:
-        return dict(DEFAULT_CORRUPTING_KINDS)
-    return {name: CORRUPTING_KINDS[name] for name in actions if name in CORRUPTING_KINDS}
-
-
 def _asked_text(wish: ImplicitRequirement) -> str:
     return f"`{wish.family}`" if wish.stat is None else f'"{one_line(normalise_stat_text(wish.stat))}"'
 
 
-def _too_many(
-    implicits: tuple[ImplicitRequirement, ...],
-    wanted: list[tuple[int, ImplicitRequirement]],
-    kinds: Mapping[str, int],
-    best: int,
-    actions: tuple[str, ...] | None,
-) -> CorruptionProblem:
+def _too_many(wanted: list[tuple[int, ImplicitRequirement]], best: int) -> CorruptionProblem:
     index, wish = wanted[best]  # the first entry beyond what one corrupting action can give
-    if actions is None:
-        gives = "the Vaal Orb gives one corrupted implicit and the Locus of Corruption two, and no action gives more"
-        fix = "ask for at most two, or buy the item and name its corrupted implicits in the buy spec"
-    elif not kinds:
-        gives = (
-            f"`actions:` names no corrupting kind ({quoted(CORRUPTING_KINDS)}), so no action gives the item a corrupted implicit"
-        )
-        fix = "name a corrupting kind in `actions:`, or buy the item and name its corrupted implicits in the buy spec"
-    else:
-        gives = f"the corrupting kinds in `actions:` ({quoted(kinds)}) give at most {best} at a time"
-        fix = (
-            "add `locus` to `actions:`, " if best < 2 and len(wanted) == 2 and "locus" not in kinds else "ask for fewer, "
-        ) + "or buy the item and name its corrupted implicits in the buy spec"
     return CorruptionProblem(
         IMPLICITS_KEY,
         index,
-        f"the target asks for {len(wanted)} corrupted implicit{'' if len(wanted) == 1 else 's'}, but {gives};"
-        f" {_asked_text(wish)} is the one too many ({fix})",
+        f"the target asks for {len(wanted)} corrupted implicit{'' if len(wanted) == 1 else 's'}, but the Vaal Orb gives one corrupted"
+        f" implicit and the Locus of Corruption two, and no action gives more; {_asked_text(wish)} is the one too many (ask for at most"
+        " two, or buy the item and name its corrupted implicits in the buy spec)",
     )
 
 

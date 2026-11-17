@@ -13,15 +13,16 @@ import json
 import pytest
 from cli_support import R12, TODAY, price_file, r12_named, read_json
 from cli_support import run as run_command
+from limits_support import labels_of, of_kind, only
 from targets_support import DATA
 
 import crafting_system.planner as planner
 from crafting_system.budget import Budget
 from crafting_system.cli import build_report, policy_document, render_text
 from crafting_system.config import load_config
-from crafting_system.planner import BUDGET_SECONDS, Plan, PlanSettings, make_plan, plan_target, plan_with_starts
+from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, make_plan, plan_target, plan_with_starts
 from crafting_system.planner import _presenter
-from crafting_system.targets import load_target
+from crafting_system.targets import TargetError, load_target
 
 RUN_TIME = "Run time: "  # the one line of the text that holds seconds
 TIMINGS = "timings_seconds"  # the one object of the JSON that holds seconds
@@ -129,3 +130,57 @@ def test_a_caller_that_presents_nothing_says_so_and_gets_the_other_limits(monkey
     bare = plan_target(DATA, target, price_file())
 
     assert set(bare.limits) <= set(shown.limits) and bare.mean_remaining == shown.mean_remaining
+
+
+# -- the methods a run may use are its setting, not the target's (#405, OR-5, OR-13, OR-41) ------------------------------------------------
+
+NAMED = ("chaos-orb", "harvest-reforge")  # the methods a file of R12 once named (#405: a target names none)
+
+
+def test_a_target_is_planned_with_every_beta_method_and_a_methods_setting_restricts_the_run_to_its_methods(tmp_path):
+    """Done when of #405: a target whose file named only some kinds (`NAMED`) is refused with its key, planned with every beta method
+    without it, and planned with those kinds alone when the run's setting names them; the answer says which methods it left out."""
+    keyed = tmp_path / R12.name
+    keyed.write_text(R12.read_text(encoding="utf-8") + f"\nactions: [{', '.join(NAMED)}]\n", encoding="utf-8")
+    with pytest.raises(TargetError, match="a target no longer names the methods the planner may use"):
+        load_target(keyed, DATA)
+
+    target = load_target(R12, DATA)
+    states = Budget.in_states(100_000)  # counted in states: with every method R12 is searched in rounds (see the first test)
+    every = plan_target(DATA, target, price_file(), PlanSettings(recipe_starts=False, budget=states))
+    named = plan_target(DATA, target, price_file(), PlanSettings(recipe_starts=False, budget=states, methods=NAMED))
+
+    assert target.actions is None and every.target.actions is None and named.target.actions == NAMED
+    # what each run considered: the offers it priced, and those it had to leave out for want of a price (the fixture prices few)
+    offered, restricted = (labels_of(plan.limits, "unpriced") | {priced.label for priced in plan.offers} for plan in (every, named))
+    assert restricted < offered  # the setting takes methods away and adds none
+    assert {"Exalted Orb", "Orb of Annulment", "Essence of Hysteria"} <= offered - restricted  # beta methods a key used to hide (OR-41)
+    assert not of_kind(every.limits, "kinds-not-named")  # every beta method: nothing is said to be left out by the setting
+    left_out = only(named.limits, "kinds-not-named")
+    assert "Exalted Orb" in left_out.labels and "Chaos Orb" not in left_out.labels
+    assert left_out.why == "kinds the run's methods setting does not name"
+    assert named.mean_remaining >= every.mean_remaining - 1e-9  # fewer methods never make the plan cheaper
+
+
+def test_the_command_passes_its_methods_option_to_the_planner_and_says_what_the_run_left_out(tmp_path, capsys, monkeypatch):
+    from crafting_system.cli import _main
+
+    monkeypatch.setattr(_main, "run_budget", lambda *args, **kwargs: Budget.in_states(100_000))
+    code, out = run_command(tmp_path, "--methods", " chaos-orb, harvest-reforge ,chaos-orb", prices=price_file())
+    printed = capsys.readouterr().out
+
+    assert code == 0
+    named = plan_target(DATA, load_target(R12, DATA), price_file(), dataclasses.replace(settings_of_the_command(), budget=Budget.in_states(100_000), methods=NAMED))
+    assert read_json(out)["offered_actions"] == [priced.label for priced in named.offers]  # the command planned what the setting allows
+    assert render_text(build_report(named, DATA), None, target_name=R12.name).splitlines()[:5] == printed.splitlines()[:5]
+    assert "kinds the run's methods setting does not name" in printed  # the text says the run allowed fewer than every beta method
+
+
+def test_a_methods_setting_that_names_an_unknown_method_or_none_is_refused_in_the_planners_words(tmp_path, capsys):
+    with pytest.raises(ValueError, match="unknown action kind"):
+        plan_target(DATA, load_target(R12, DATA), price_file(), PlanSettings(recipe_starts=False, methods=("no-such-orb",)))
+    with pytest.raises(PlanError, match="the methods setting must name at least one method"):
+        plan_target(DATA, load_target(R12, DATA), price_file(), PlanSettings(recipe_starts=False, methods=()))
+    with pytest.raises(SystemExit):
+        run_command(tmp_path, "--methods", " , ")
+    assert "name at least one method" in capsys.readouterr().err

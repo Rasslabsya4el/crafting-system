@@ -100,7 +100,6 @@ item_level: 86
 start_item:
   rarity: rare
   mods: []
-actions: [chaos-orb, regal-orb, exalted-orb]
 requirements:
   - family: MovementVelocity
     min_tier: 2
@@ -116,7 +115,6 @@ item_level: 86
 start_item:
   rarity: rare
   mods: []
-actions: [chaos-orb, regal-orb, exalted-orb]
 requirements:
   - family: LocalAddedFireDamage
     min_tier: 2
@@ -127,9 +125,15 @@ requirements:
 """
 
 
-def toy_target(text: str = BOOTS_TARGET, data: GameData = TOY) -> Target:
-    """A target on the toy items (default: 30% or better movement speed boots with life and chaos resistance, from a free rare start)."""
-    return parse_target(with_start(textwrap.dedent(text)), data, source="toy.yaml")
+# the methods the toy targets are planned with (the run's methods setting, #405: a target names none)
+TOY_METHODS = ("chaos-orb", "regal-orb", "exalted-orb")
+
+
+def toy_target(text: str = BOOTS_TARGET, data: GameData = TOY, methods: tuple[str, ...] | None = TOY_METHODS) -> Target:
+    """A target on the toy items (default: 30% or better movement speed boots with life and chaos resistance, from a free rare start),
+    planned with `methods` (the run's methods setting, `Target.actions` as the planner's entry sets it; None: every method)."""
+    target = parse_target(with_start(textwrap.dedent(text)), data, source="toy.yaml")
+    return target if methods is None else dataclasses.replace(target, actions=methods)
 
 
 def prices(*, base: float | None = BASE_PRICE, flask: float | None = FLASK_PRICE, divine: float = 300.0, **lines: float) -> PriceFile:

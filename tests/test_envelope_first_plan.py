@@ -12,6 +12,7 @@ On seven large generated targets the plan in hand cost 1e7 to 1e13 Chaos against
 
 import math
 import random
+from dataclasses import replace
 
 import pytest
 from coarse_support import abstraction
@@ -21,9 +22,9 @@ from test_cli_envelope_build import counting_stop, world  # noqa: F401  (`world`
 from test_envelope_gap_stop import Hand
 from test_packed_walk_light import START_ITEM
 
-from crafting_system.planner import _envelope, _envelope_plan
+from crafting_system.planner import _envelope, _envelope_plan, _limits
 from crafting_system.planner._envelope import FAKE, Net, Search
-from crafting_system.planner._envelope_plan import CraftingProblem, certified_upper, envelope_limits, envelope_result
+from crafting_system.planner._envelope_plan import CraftingProblem, certificate_figures, certified_upper, envelope_limits, envelope_result, reached_limits
 from crafting_system.planner._limits import limit_text
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.solver import ConvergenceError
@@ -275,3 +276,134 @@ def test_the_crafting_plan_of_a_search_a_refused_round_ended_says_so_with_its_ga
     assert info.lower <= full.solution.values[start] <= certified_upper(info)  # the gap stated holds the cheapest plan
     text = limit_text(envelope_limits(info)[0])
     assert "The search was stopped" in text and "the search could not go further" in text and "costs at most" in text
+
+
+# ---- a first plan that reaches no goal, and the walk toward the goal (#1142) -------------------------------------------------------------
+#
+# Start 0, the start item bought (offer 0, the restart, costs 3, offered everywhere but at the start), goal 9. A blind bound: every state 0, every
+# offer at its price.
+#   state 0: offer 1, a reroll for 0.1: state 1; offer 2, a craft for 10: state 1 or state 2, half each.
+#   state 1: offer 1, the reroll: state 0 back; offer 3, a finish for 10: the goal; the restart.
+#   state 2: offer 1, the reroll: state 0; the restart.
+# The least `la` takes the reroll at 0 and at 1: a chain of two states that never meets the goal, so no policy of what it realized reaches it and
+# the plan in hand costs infinity (R04, R14, R20, R24 on the heavy benchmark's records: 352 to 750,477 states and no goal). The distance to the
+# goal (the requirements a state lacks) is 2 at 0 and 2, 1 at 1. The walk pops state 1 first (nearest) and realizes what it has left: the finish
+# reaches the goal. The plan in hand: reroll at 0 (0.1), finish at 1 (10): U = 10.1, the optimum itself; one offer realized by the walk.
+
+def looping(**changes) -> Hand:
+    world = Hand(
+        goal={9},
+        costs={0: 3.0, 1: 0.1, 2: 10.0, 3: 10.0},
+        actions={0: {1: {1: 1}, 2: {1: 1, 2: 1}}, 1: {1: {0: 1}, 3: {9: 1}, 0: {0: 1}}, 2: {1: {0: 1}, 0: {0: 1}}, 9: {}},
+        la={(0, 1): 0.1, (0, 2): 10.0, (1, 1): 0.1, (1, 3): 10.0, (1, 0): 3.0, (2, 1): 0.1, (2, 0): 3.0},
+        lb={0: 0.0, 1: 0.0, 2: 0.0, 9: 0.0},
+        restart=0,
+    )
+    for name, value in changes.items():
+        setattr(world, name, value)
+    return world
+
+
+DISTANCE = {0: 2, 1: 1, 2: 2, 9: 0}.__getitem__
+
+
+def test_a_chain_that_reaches_no_goal_has_no_plan_in_hand():
+    result = Search(looping()).run()
+    assert result.stats.first_upper is None and result.stats.seeded == 2 and result.stats.reached == 0  # the reroll at 0 and at 1, nothing more
+    assert result.exact and answer(result)[0] == pytest.approx(10.1, rel=1e-9)  # the proof is not at fault: with no net it ends on the optimum
+
+
+def test_the_walk_toward_the_goal_realizes_a_path_to_it_when_the_chain_reaches_none():
+    world = looping()
+    world.distance = DISTANCE
+    result = Search(world).run()
+    assert world.asked[:3] == [(0, 1), (1, 1), (1, 3)]  # the chain's two rerolls, then the finish at state 1, the nearest state
+    assert result.stats.seeded == 2 and result.stats.reached == 1
+    assert result.stats.first_upper == pytest.approx(10.1, rel=1e-9)
+    assert result.exact and answer(result) == (pytest.approx(10.1, rel=1e-9), {0: 1, 1: 3})  # the same answer as without the walk
+
+
+def test_a_net_that_ends_the_search_after_the_walk_returns_its_plan():
+    world = looping()
+    world.distance = DISTANCE
+    result = Search(world, net=Net(give_way=lambda standing: "the caller's rule")).run()  # the first stop there is: right after the first plan
+    assert not result.exact and result.stopped == "the caller's rule"
+    assert answer(result)[0] == pytest.approx(10.1, rel=1e-9)
+
+
+def test_on_a_stopped_build_with_no_order_the_walk_replaces_the_chain():
+    world = looping()
+    world.distance = DISTANCE
+    world.reach_first = True  # the problem's bound was stopped and gives no order: the least-`la` chain is not walked
+    result = Search(world).run()
+    # state 0 is the only one known: its offers are realized (reroll, craft), then state 1 (nearest) and its offers until the finish meets the goal
+    assert world.asked[:4] == [(0, 1), (0, 2), (1, 1), (1, 3)]
+    assert result.stats.seeded == 0 and result.stats.reached == 4
+    assert result.stats.first_upper == pytest.approx(10.1, rel=1e-9)
+    assert result.exact and answer(result)[0] == pytest.approx(10.1, rel=1e-9)
+
+
+def test_with_no_restart_the_walk_is_not_taken():
+    world = looping(restart=None, actions={0: {1: {1: 1}, 2: {1: 1, 2: 1}}, 1: {1: {0: 1}, 3: {9: 1}}, 2: {1: {0: 1}}, 9: {}})
+    world.distance = DISTANCE
+    world.reach_first = True  # a given start: a path to the goal is no executable plan (a tip has no action), so the chain stays
+    result = Search(world).run()
+    assert result.stats.reached == 0 and result.stats.seeded == 2
+
+
+def test_the_crafting_problem_measures_the_distance_by_the_parts_of_the_goal_a_state_lacks(world, monkeypatch):  # noqa: F811
+    ab, start, offers, full, _, bound = world
+    problem = CraftingProblem(ab, start, offers, bound)
+    assert problem.distance == ab.unmet and not problem.reach_first  # a finished build: the chain is walked first
+    states = list(full.solution.values)
+    assert states and all((problem.distance(state) == 0) == ab.is_goal(state) for state in states)
+    assert any(problem.distance(state) > 0 for state in states)
+    monkeypatch.setattr(_envelope_plan.CraftingProblem, "_closed", lambda self, model, bound: None)  # a stopped build whose model gives no order
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    stopped = pattern_lower_bound(fresh, begin, offers, stop=counting_stop(12))
+    assert CraftingProblem(fresh, begin, offers, stopped).reach_first  # the walk replaces the least-`la` chain
+    result = envelope_result(fresh, begin, offers, bound=stopped)
+    info = result.info["envelope"]
+    assert info.exact and result.solution.values[begin] == pytest.approx(full.solution.values[begin], rel=1e-9)  # the same exact mean
+    assert info.first_upper is not None and math.isfinite(info.first_upper)
+
+
+def test_a_stopped_search_whose_plan_the_walk_found_says_it_is_not_shown_near_the_best(world, monkeypatch):  # noqa: F811
+    # OR-33, OR-40: a stop says what is proved and what is not; a walk's plan is found by nearness to the target, not by cost (#1142)
+    ab, start, offers, full, _, bound = world
+    monkeypatch.setattr(_envelope_plan.CraftingProblem, "_closed", lambda self, model, bound: None)
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    stopped = pattern_lower_bound(fresh, begin, offers, stop=counting_stop(12))
+    result = envelope_result(fresh, begin, offers, bound=stopped, net=Net(give_way=lambda standing: "the caller's rule"))
+    info = result.info["envelope"]
+    assert not info.exact and info.within is None and info.stopped == "the caller's rule" and info.reached > 0
+    limits = envelope_limits(info)
+    reached = [limit for limit in limits if limit.kind == _limits.REACHED]
+    assert len(reached) == 1 and limits[0] is reached[0] and limits[1].kind == _limits.SOLVE
+    text = limit_text(reached[0])
+    assert "heading for the target, not by its cost" in text and "count of the best possible cost was stopped" in text
+    assert f"{info.reached:,} steps built this way" in text
+    low, high = certificate_figures(min(max(info.lower, 0.0), certified_upper(info)), certified_upper(info))
+    assert f"Proved: the plan reaches the target, and it costs {high} Chaos" in text
+    assert "Not proved: that it is anywhere near the best possible cost" in text and f"costs less than {low} Chaos" in text
+    assert "the search was stopped before it looked for cheaper steps (the caller's rule)" in text  # no round ran
+    # the same search's answer when it ends by itself, or a stopped search that did not walk: no such limit
+    assert not [limit for limit in envelope_limits(replace(info, reached=0)) if limit.kind == _limits.REACHED]
+    closed = envelope_result(fresh, begin, offers, bound=stopped).info["envelope"]
+    assert closed.exact and closed.reached > 0 and not [limit for limit in envelope_limits(closed) if limit.kind == _limits.REACHED]
+
+
+def test_the_walk_limit_names_how_many_times_the_plan_may_cost_the_best_and_the_chain_that_failed():
+    info = _envelope_plan.EnvelopeInfo(
+        exact=False, stopped="the time limit of 450 seconds was reached", lower=0.5, upper=696_680.0, rounds=3, touched=10, expanded=5, realized=7,
+        candidates=9, keys_missing=0, incumbent=False, first_upper=2_766_961.0, bound_keys=246, bound_seconds=150.0, seconds=450.0, peak_mb=None,
+        first_plan=352, reached=2_744,
+    )  # fmt: skip
+    text = limit_text(reached_limits(info)[0])
+    assert "the search's first order of steps led only back among items that do not meet the target" in text
+    assert "for 3 rounds until it was stopped (the time limit of 450 seconds was reached)" in text
+    assert "2,744 steps built this way" in text and "may cost up to 1,393,360 times the best one" in text
+    assert "times the best" not in limit_text(reached_limits(replace(info, lower=500_000.0))[0])  # under twice: no multiple is named
+    assert reached_limits(replace(info, reached=0)) == ()

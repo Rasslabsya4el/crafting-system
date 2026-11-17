@@ -251,15 +251,16 @@ class _Reader:
             self.check_enchantment_reachable(root["enchantment"], enchantment, base_id, start_item)
         price_file = self.read_price_file(root)
         start = self.read_start(root)
-        actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
+        if "actions" in root:
+            self.refuse_actions(root.key_lines["actions"])
         allow_corrupted = self.read_allow_corrupted(root) if "allow_corrupted" in root else False
-        self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, start, actions)
+        self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, start)
         item_level_floor = self.read_item_level_floor(root, item_level) if "item_level_floor" in root else None
         if sockets is not None:
             self.check_socket_scope(root, requirements, start_item)
         return Target(
             base_id, item_level, influences, requirements, start_item, start, price_file, implicits, quality,
-            actions, enchantment, allow_corrupted, sockets, item_level_floor,
+            None, enchantment, allow_corrupted, sockets, item_level_floor,
         )  # fmt: skip
 
     def read_item_level_floor(self, root: LineMap, item_level: int) -> int:
@@ -302,15 +303,14 @@ class _Reader:
         allow_corrupted: bool,
         start_item: Item,
         start: StartKind,
-        actions: tuple[str, ...] | None,
     ) -> None:
-        """Refuse a target whose corrupted implicits, corrupted start item or `actions:` make the goal impossible (ADR-0036).
+        """Refuse a target whose corrupted implicits or corrupted start item make the goal impossible (ADR-0036).
 
         A target buys its item when it says `start: bought` or the start item is corrupted itself; a given, uncorrupted one is checked.
         """
         buys = start is StartKind.BOUGHT or start_item.corrupted
         problem = corruption_problem(
-            self.data, base_id, item_level, implicits, allow_corrupted, start_item, buys, actions
+            self.data, base_id, item_level, implicits, allow_corrupted, start_item, buys
         )
         if problem is None:
             return
@@ -319,18 +319,14 @@ class _Reader:
         start = root["start_item"]
         self.fail(start.key_lines["corrupted"], problem.key, problem.message)
 
-    def read_actions(self, names: object, line: int) -> tuple[str, ...]:
-        if not isinstance(names, LineList) or not len(names):
-            self.fail(line, "actions", f"must be a non-empty list of action kinds such as [chaos-orb] (or action labels), got {describe(names)}")
-        found: dict[str, int] = {}
-        for index, name in enumerate(names):
-            path = f"actions[{index}]"
-            if not isinstance(name, str) or not name.strip():
-                self.fail(names.item_lines[index], path, f"must be the name of an action kind or the label of an action (non-empty text), got {describe(name)}")
-            if name.strip() in found:
-                self.fail(names.item_lines[index], path, f"{describe(name)} is listed twice (first at actions[{found[name.strip()]}])")
-            found[name.strip()] = index
-        return tuple(found)
+    def refuse_actions(self, line: int) -> NoReturn:
+        """A target file no longer says which methods the planner may use (#405, OR-5, OR-13, OR-41): that is the run's setting."""
+        self.fail(
+            line,
+            "actions",
+            "a target no longer names the methods the planner may use: every beta method is offered, and a run that wants fewer says so in "
+            "its own setting (`--methods` on the command line, `PlanSettings.methods` for a caller of the planner); delete this key (#405)",
+        )
 
     def read_base(self, root: LineMap) -> str:
         name = self.text(root, "base", "base")

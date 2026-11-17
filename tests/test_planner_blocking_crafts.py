@@ -82,15 +82,20 @@ start_item:
     - mod: ColdResist1
       values: [6]
 start: bought
-actions: [exalted-orb, bench-craft]
 """
+METHODS = ("exalted-orb", "bench-craft")  # the run's methods setting the belt is planned with (#405: a target names none)
+
+
+def belt(path, data, methods=METHODS):
+    """The belt at `path`, planned with `methods` (`Target.actions`, as the planner's entry sets it from `PlanSettings.methods`)."""
+    return dataclasses.replace(load_target(path, data), actions=methods)
 
 
 @pytest.fixture
 def target(tmp_path, data):
     path = tmp_path / "belt.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    return load_target(path, data)
+    return belt(path, data)
 
 
 @pytest.fixture(autouse=True)
@@ -509,7 +514,7 @@ def test_on_an_item_that_takes_a_second_craft_two_fillers_are_told_apart_and_bot
     held = TARGET.replace("    - mod: ColdResist1\n      values: [6]\n", "    - mod: StrIntMasterItemGenerationCanHaveMultipleCraftedMods\n      values: [1]\n      crafted: true\n")
     path = tmp_path / "multimod.yaml"
     path.write_text(held, encoding="utf-8")
-    multimod = load_target(path, data)
+    multimod = belt(path, data)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     plan = plan_target(data, multimod, _prices(), PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
     assert {entry.label for entry in plan.offers if _fills(entry.label)} == {"Bench craft +1 to Filling [TestMasterFiller]", "Bench craft +1 to Filling [TestMasterFillerTwo]"}
@@ -583,8 +588,8 @@ def test_through_the_entry_the_lock_gains_of_a_plan_of_rounds_build_only_the_pla
     # peek and the second solve still read every offer, and N's line says the largest gain is not proved. The belt names the Lock here; the
     # price file has no Lock price, so the Lock is dropped and N is still found (ADR-0056).
     path = tmp_path / "belt-lock.yaml"
-    path.write_text(TARGET.replace("actions: [exalted-orb, bench-craft]", "actions: [exalted-orb, bench-craft, hinekora-lock]"), encoding="utf-8")
-    target = load_target(path, data)
+    path.write_text(TARGET, encoding="utf-8")
+    target = belt(path, data, (*METHODS, "hinekora-lock"))
     seen = []
     real = planner_plan.plan_foresight
 
@@ -647,7 +652,7 @@ def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_
     untried = next(limit for limit in plan.limits if limit.what == "Not finished")
     assert untried.labels == ("bench-craft",) and "stopped" in untried.names[0]
     assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
-    assert plan.foresight.status == "switched off by the target"  # the target names no Lock
+    assert plan.foresight.status == "switched off by the run's methods setting"  # the run names no Lock
     assert plan.risk is not None
 
 
@@ -860,7 +865,7 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
     # work per state, the offers' floors on), so no clock moves anything. Round 1 (the Exalted Orb alone) closes at 16e/3 + 2S = 153.33 having
     # known 12 states; round 2 (the fillers) begins with that plan in hand, and its share is the 28 states left over the 2 rounds left: 14.
     # Its bound's build needs 51 pieces of work. Given a quarter's worth (one piece per state, 14), the old rule, it stops while offers join
-    # (growth) on a lower figure of 30, and the round stops with no cheaper plan: the answer is 153.33. Given the round's whole share (four
+    # (growth) on a lower figure of 34 (the walk toward the goal raises it, #1142), and the round stops; the walk's plan is the filler's all the same, 133, which the answer takes, saying it is not shown near the best. Given the round's whole share (four
     # times that, 56: the build keeps no room for the search to make a plan, the answer holds one) it completes, and the round closes on
     # the filler's plan, 3(c + e) + 2S = 133.
     from crafting_system.budget import Budget
@@ -899,8 +904,13 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
         assert _fills(plan.solution.policy[plan.start].label)
     else:
         assert builds[1] == (14, 14, "growth")
-        assert second.status == "stopped" and second.lower == pytest.approx(30.0, abs=1e-6)
-        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        # its bound stopped with no order, so the search walks toward the goal (#1142) and realizes more offers than the least-`la` chain did:
+        # the lower figure they raise is 34 (30 before the walk), still below the closed plan's 133
+        assert second.status == "stopped" and second.lower == pytest.approx(34.0, abs=1e-6)
+        # the walk's plan is the filler's, cheaper than round 1's: the answer takes it, and its limits say it is not shown near the best (OR-33, OR-40)
+        assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
+        (walked,) = [limit for limit in plan.limits if limit.kind == "plan-reached"]
+        assert "Not proved: that it is anywhere near the best possible cost" in walked.guarantee
 
 
 def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_and_stops_only_at_its_net(monkeypatch):
@@ -1035,7 +1045,7 @@ def test_the_judged_route_limit_says_nothing_is_proved_against_the_route_when_th
 def test_a_given_start_has_no_restart_so_no_round_cuts_and_with_no_plan_in_any_round_the_refusal_stands(tmp_path, data, monkeypatch):
     path = tmp_path / "given.yaml"
     path.write_text(TARGET.replace("start: bought", "start: given"), encoding="utf-8")
-    given = load_target(path, data)
+    given = belt(path, data)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     cut = []
     real = planner_plan.restart_dominated
@@ -1376,3 +1386,32 @@ def test_once_the_first_plan_is_in_hand_the_rounds_left_go_by_their_offers_floor
     assert _rounds.figure_of(floor, ("a", "b"), widened_call := _rounds.RoundCall(4, 100.0, False, held=True, floors=True), lambda: 0.0) is None
     assert asked[-1] == ("a", "e")  # with the run's time used up nothing is asked
     assert _rounds.figure_of(floor, ("a", "b"), widened_call, lambda: None) == 75.0
+
+
+def test_a_plan_in_hand_that_a_stopped_search_walked_to_is_not_held_by_the_next_round():
+    # #1142 (R13 on the heavy benchmark: 11,246 c on main, 32,813 c once the walk gave round 1 a plan): a round that begins with a plan in hand
+    # lets its bound's build take its whole share (`RoundCall.held`, #1099). A plan its search walked to (a `REACHED` limit) is proved near
+    # nothing, so the round after it keeps the room for its search a round with no plan keeps; a plan of any other search is held as before
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _limits, _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abc"))
+    walk = _limits.Limit(_limits.REACHED, "walked", "why", "Not proved: near the best.")
+
+    def rounds(limits):
+        held = []
+
+        def run(chosen, call):
+            held.append(call.held)
+            return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=100.0 - len(chosen), limits=limits if len(chosen) == 1 else ())
+
+        _rounds.widen(
+            groups, tuple("abc"), run, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.STOPPED, "stopped"), left=lambda: 600.0, clock_now=lambda: 0.0,
+        )  # fmt: skip
+        return held
+
+    assert rounds((walk,)) == [False, False, True]  # round 2 begins with round 1's walked plan: not held; round 3 with round 2's own plan: held
+    assert rounds(()) == [False, True, True]
+    assert _rounds.walked(SimpleNamespace(limits=(walk,))) and not _rounds.walked(SimpleNamespace(limits=())) and not _rounds.walked(object())

@@ -92,6 +92,17 @@ a few percent of the bound). A problem can then give its own order (`Problem.fir
 solved on what its build finished, every tip and floor a dead end (`_envelope_plan`). Where that order takes no offer, the state is left to the
 restart; with no restart, the least `la` follows. The plan is still solved exactly, so this changes which plan is in hand, never a figure's proof.
 
+*A chain that reaches no goal (#1142).* Either order can close on itself: every state the chain meets takes an offer that leads back among them,
+and none of them is a goal. The restart then helps nothing (it leads back to the start), no policy of what was realized reaches the goal, and the
+plan in hand costs infinity; on a bound built that far from the goal the rounds do not close either, and the search met its net with no plan at
+all (the heavy benchmark's records of R04, R14, R20 and R24: chains of 352 to 750,477 states, no goal, 450 s, no plan; OR-33 asks for a plan). A
+problem that can say how far a state is from the goal (`Problem.distance`; the crafting problem: how many parts of the goal the item lacks) then
+has the search walk toward it (`_reach`): the known state nearest the goal first, every offer it has left realized, until a realized offer meets
+a goal and the upper graph's plan has a certified cost (a goal met with a chance the solver cannot carry, a plan of 10^12 steps, does not end the
+walk). Where the build was stopped and gave no order at all (`Problem.reach_first`), the walk replaces the least-`la` chain, which on R20 and R24
+was the cheapest offer at hundreds of thousands of states. Only with a restart: with a given start, a path to the goal is no executable plan.
+The walk realizes real actions: it changes which plan is in hand and how much is built, never a figure's proof.
+
 **The stop at a proved gap (OR-32).** With `gap = eps > 0`, once `gap_after` seconds have passed, the search ends at the first round where
 `U <= (1 + eps) L(root)`: the answer is the upper graph's best policy, `exact` is False and `within` is `eps`. The stop is sound because of two
 facts and nothing else. (1) *The lower side is admissible*: `L(root) <= V*(root)` ("The lower graph", above), and the figure compared is
@@ -124,6 +135,7 @@ not the limit of the arithmetic.
 """
 
 import bisect
+import heapq
 import itertools
 import math
 import time
@@ -205,6 +217,8 @@ class Problem[S](Protocol):
     # optional: `prime(state, positions)` makes, side by side, what the kernels of these offers at the state will cost most (a process pool); it changes no answer
     # optional: `first_choice(state)` is the offers the first plan tries at the state, best first, or None for the least `la` (see "The first plan"); a
     # problem whose bound is blind at some states (a build a net stopped) gives one; it changes what the first plan realizes, never what the search proves
+    # optional: `distance(state)` is a whole number, 0 at a goal, that orders the walk toward the goal when the first plan reaches none, and
+    # `reach_first` (True) has that walk replace the chain (see "A chain that reaches no goal", #1142); it changes what is realized, never a proof
     # optional: `tighten(state, position, best)` is a higher lower bound of the offer's `Q*` at the state than its `la`, worked out from the offer alone and
     # kept for every state of the same class (an offer's own floor, #829), or None; asked before an offer is realized for its `la` being below `best`
     # (`realize`). The search re-files the offer under the higher bound and realizes it only if that is still below `best`: a cut, never a change of
@@ -224,8 +238,8 @@ class Net:
     # a run counted in states (`Budget.in_states`, #1101): the pieces of work the bound's build of this search may do (`_pattern_bound`), its
     # share of the search's states net; None for a build on the clock (`_envelope_plan.build_stop`)
     pieces: int | None = None
-    # a plan in hand when the search began (a round of the planner's widening after the first plan, `_rounds`, #1099): the answer already
-    # holds a plan (OR-33), so the bound's build keeps no room for the search to make one and may take the search's whole net
+    # a plan in hand when the search began (a round of the planner's widening after the first plan, `_rounds`, #1099; not a walked one, #1142):
+    # the answer already holds a plan (OR-33), so the bound's build keeps no room for the search to make one and may take the search's whole net
     # (`_envelope_plan.build_stop`, `_plan.search_net`)
     held: bool = False
     # the seconds the first plan's chain may take when they are more than `seconds`: a round whose bound's build, nearly done, went past the
@@ -248,6 +262,7 @@ class SearchStats:
     largest_fall: float = 0.0  # the largest relative fall of `L(root)` from one round to the next: 0 for a consistent bound (it only rises)
     first_upper: float | None = None  # the certified upper figure of the first plan (the least-`la` chain, the problem's `first_choice` or the incumbent's, the restart at the rest); None when not finite or not certified
     seeded: int = 0  # (state, offer) pairs realized along the first plan's chain, before the first round
+    reached: int = 0  # (state, offer) pairs realized toward the goal because the first plan's chain reached none (`Search._reach`, #1142)
     tightened: int = 0  # (state, offer) pairs whose `la` the problem raised above the best realized lower cost, so they were not realized (`tighten`, #829)
     lower_refused: int = 0  # a round whose lower solve the solver could not certify, which ended a search that held a plan (#948): 0 or 1
     upper_solves: int = 0  # solves of the upper graph
@@ -669,6 +684,88 @@ class Search[S]:
             self.p.release()
         return None
 
+    def _reach(self, began: float) -> str | None:
+        """Realize offers until the upper graph holds a plan whose cost the solver certifies (the reach of the first plan, see the module text): a
+        greedy best-first walk over the states the search knows, the state that the problem's `distance` puts nearest the goal first (the order
+        they became known breaks a tie), each state popped with every offer it has left realized but the restart (the upper graph holds it at every
+        state). After a state whose offers reached a goal, the upper graph is solved: a policy that reaches the goal with a positive chance and
+        restarts everywhere else is executable, and the walk ends once its cost is certified (a goal met with a chance of 1e-12 is a plan of 10^12
+        steps that float64 cannot certify, #769: the walk then goes on). Returns the reason when a net ended it (as `_seed`), None when a plan is
+        in hand or no state is left (no realized path then reaches the goal)."""
+        distance = self.p.distance
+        queue: list[tuple[int, int]] = []
+        pushed = bytearray(len(self.states))
+        for i in range(len(self.states)):
+            if not self.goal[i]:
+                pushed[i] = 1
+                heapq.heappush(queue, (distance(self.states[i]), i))
+        self.p.release()
+        polled = -math.inf
+        popped = tried = 0  # the states popped, and how many had been popped at the last solve of the upper graph (0: none yet)
+        while queue:
+            _, i = heapq.heappop(queue)
+            poll = time.perf_counter() - polled >= POLL_SECONDS
+            if poll:
+                polled = time.perf_counter()
+            stopped = self._net(began, memory=poll, states=self.net.pieces is not None)
+            if stopped is not None:
+                return stopped
+            if not self.expanded[i]:
+                self.expand(i)
+            rows, cands = self.rows[i], self.cands[i]
+            restart = [c for c in cands if c[1] == self.p.restart]  # the upper graph holds the restart at every state already: it is left open
+            for c in restart:
+                cands.remove(c)
+            met = False
+            while cands:
+                if time.perf_counter() - polled >= POLL_SECONDS:  # a state of many offers, each a heavy kernel: the net is asked between them too
+                    polled = time.perf_counter()
+                    stopped = self._net(began, states=False)
+                    if stopped is not None:
+                        self._refile(cands, restart)
+                        self.p.release()
+                        return stopped
+                la, position = cands.pop()
+                try:
+                    kid = self._kernel(i, position)
+                except Refused:
+                    continue
+                except _Cut as cut:
+                    self._refile(cands, [(la, position), *restart])
+                    self.p.release()
+                    return cut.reason
+                rows.append((position, self.p.cost(position), kid, self._self_mass(i, kid)))
+                self.stats.realized += 1
+                self.stats.reached += 1
+                successors = self.kernels.succ[self.kernels.span(kid)].tolist()
+                if len(pushed) < len(self.states):
+                    pushed.extend(bytes(len(self.states) - len(pushed)))
+                for j in successors:
+                    if self.goal[j]:
+                        met = True
+                    elif not pushed[j]:
+                        pushed[j] = 1
+                        heapq.heappush(queue, (distance(self.states[j]), j))
+            self._refile(cands, restart)
+            self.p.release()
+            popped += 1
+            # a goal met by this state's offers, or, once one was met with a cost the solver could not certify, after twice as many states as at the
+            # last try: a later offer can make the plan certifiable without meeting a goal itself, and a solve at every state would cost more than the walk
+            if met or (tried and popped >= 2 * tried):
+                tried = popped
+                try:
+                    if math.isfinite(self._upper()[2]):
+                        return None
+                except ConvergenceError:
+                    pass
+        return None
+
+    @staticmethod
+    def _refile(cands: list[tuple[float, int]], entries: Iterable[tuple[float, int]]) -> None:
+        """Put offers back among a state's offers not realized yet, which hold the least `la` last."""
+        for entry in entries:
+            bisect.insort(cands, entry, key=lambda c: -c[0])
+
     def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> Iterable[int]:
         """The offers the first plan tries at node `i`, in order (the first the game allows is realized): the incumbent's; else the problem's
         `first_choice` where it gives one, then, where no restart can stand in for it, the rest by least `la`; else every offer by least `la`."""
@@ -917,8 +1014,10 @@ class Search[S]:
             if math.isfinite(self.lb[0]):
                 self._last_root = float(self.lb[0])  # the lower graph before the first plan is the start alone, a tip, and its value the start's bound: the first round must not fall below it (the guard)
             mark = time.perf_counter()
+            distance = getattr(self.p, "distance", None) if self.p.restart is not None and self.incumbent is None else None
+            reach_first = distance is not None and bool(getattr(self.p, "reach_first", False))
             try:
-                stopped = self._seed(began)
+                stopped = self._reach(began) if reach_first else self._seed(began)
             except MemoryNet as stop:
                 stopped = str(stop)
                 self.kernels.room = None  # the stop's own plan is solved over what the search holds
@@ -927,15 +1026,31 @@ class Search[S]:
                 upper = self._upper()[2]
             except ConvergenceError:  # the first plan is beyond what the solver certifies (#769): the search goes on without an upper figure
                 upper = math.inf
+            if stopped is None and distance is not None and not reach_first and not math.isfinite(upper) and not any(self.goal):
+                # the chain reaches no goal at all (a blind bound's order, #1142): realize toward the goal until a path to it is realized
+                mark = time.perf_counter()
+                try:
+                    stopped = self._reach(began)
+                except MemoryNet as stop:
+                    stopped = str(stop)
+                    self.kernels.room = None
+                self.stats.expand_seconds += time.perf_counter() - mark
+                try:
+                    upper = self._upper()[2]
+                except ConvergenceError:
+                    upper = math.inf
             self.stats.first_upper = upper if math.isfinite(upper) else None
             how = (
                 "the given route" if self.incumbent is not None
+                else "the offers realized toward the goal" if reach_first
                 else "the problem's own choice at each state" if getattr(self.p, "first_choice", None) is not None
                 else "the least lower cost at each state"
             )  # fmt: skip
             self.say(
                 f"first plan ({how}): {self.stats.seeded:,} actions "
-                f"realized along its chain over {len(self.states):,} states, costs at most {upper!r} ({time.perf_counter() - began:.0f} s)"
+                f"realized along its chain"
+                + (f" and {self.stats.reached:,} toward the goal" if self.stats.reached else "")
+                + f" over {len(self.states):,} states, costs at most {upper!r} ({time.perf_counter() - began:.0f} s)"
                 + (f"; its chain was cut short: {stopped}" if stopped is not None else "")
             )
             self._stand(float(self.lb[0]), began)  # the bound of the start is a lower figure before any round

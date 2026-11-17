@@ -8,7 +8,7 @@ the mods: every plan that reaches the goal pays it once, so the plan of the mods
 (`Plan.total_mean`).
 
 The finish actions are the socket kinds of the catalog (`FINISH_KINDS`, kinds the mods never offer) and, below 20% quality, the Whetstone or the Scrap
-(`QUALITY_KIND`, ADR-0049). A target's `actions:` names them like any kind: when it is given, only the finish kinds it names (by kind or by label) are
+(`QUALITY_KIND`, ADR-0049). The run's methods setting (`PlanSettings.methods`, #405) names them like any kind: when it is given, only the finish kinds it names (by kind or by label) are
 offered. Each is priced by `price_offers`; one without a price is left out and said, as a mod action is.
 
 Refused here, with the reason (`FinishRefused`, which `make_plan` turns into its `PlanError`): a start item that does not state its sockets
@@ -60,7 +60,7 @@ class PlanFinish:
 
 
 def split_names(data: GameData, start_item, names: Collection[str] | None) -> tuple[list[str] | None, frozenset[str] | None]:
-    """A target's `actions:` split into the names the mods read and the names of the finish (a finish kind, or the label of one finish action).
+    """The run's methods (`Target.actions`, set from `PlanSettings.methods`) split into the names the mods read and the names of the finish (a finish kind, or the label of one finish action).
 
     None stays None for both: every kind is offered."""
     if names is None:
@@ -106,7 +106,7 @@ def plan_finish(
     if changing:
         raise FinishRefused(
             f"the target asks for sockets and {', '.join(changing)} can change them while the mods are made, which the planner cannot plan yet; "
-            "leave it out with the target's `actions:`"
+            "leave it out with the run's methods setting (`--methods`)"
         )
     socket_offers, quality_offers = finish_offers(data, start, names)
     priced, dropped = price_offers(socket_offers, prices, price_source)

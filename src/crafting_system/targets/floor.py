@@ -9,8 +9,9 @@ down the planner may go and which levels are one plan; it builds no start option
   what a requirement asks for fixes the lowest level of the mods that give it: for each requirement the lowest `required_level` among
   the mods that pass its tier, its roll limit and `not_crafted`, from the sources the planner has: the pool of a random draw, the bench
   (the mod's own required level, the crafted mod at its lowest roll, judged as crafted) and a fixed mod an action forces (an essence, a fossil; it ignores the item
-  level, `essence.forced_mod_ignores_item_level`). They are those of the actions the target offers: the planner's catalog
-  that its `actions:` names (a kind, or the label of one action; none is every default kind, corrupted essences left out). `at_least` groups take
+  level, `essence.forced_mod_ignores_item_level`). They are those of the actions the run offers: the planner's catalog
+  that the run's methods setting names (#405; a kind, or the label of one action; none is every default kind, corrupted essences left
+  out). `at_least` groups take
   the k-th lowest of their members. A requirement the start item already meets asks nothing, but a mod the start item holds needs its
   own level. A requirement no source can give has no level; the target is then met at no level and the floor stays at the file's.
 * **The author can say more.** `item_level_floor: N` raises the floor to N, never lowers it below the derived one. (The key
@@ -138,9 +139,10 @@ def _label(node: Node) -> str:
 
 
 def _offered(data: GameData, target: Target) -> list[Action]:
-    """The actions the planner could use on the target's start item, as `actions:` names them (the catalog the planner reads).
+    """The actions the planner could use on the target's start item, as the run's methods name them (`Target.actions`, set from
+    `PlanSettings.methods`, #405; the catalog the planner reads).
 
-    No `actions:` is every kind offered by default (corrupted essences are opt-in, so they are not among them). A name is a kind of
+    No methods named is every kind offered by default (corrupted essences are opt-in, so they are not among them). A name is a kind of
     the catalog, else the label of one action (an essence by its name, a bench craft by its text). A name that is neither is not
     checked here: the planner refuses the file.
     """

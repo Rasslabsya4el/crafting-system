@@ -9,9 +9,6 @@
 base: Leather Belt
 item_level: 86
 
-# R13's kinds plus the Orb of Unravelling (kind name proposed here; B5-8, #281, fixes it).
-actions: [unravelling-orb, transmutation-orb, alteration-orb, augmentation-orb, regal-orb, bench-craft, remove-crafted-mods]
-
 # Everything below must be present on the finished item.
 requirements:
   # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.

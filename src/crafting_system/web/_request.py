@@ -3,7 +3,8 @@
 The body of `POST /api/v1/<game>/jobs` is a JSON object:
 
     {"target": {...},                                   # the target as a JSON object, with the keys of a target file (`targets`)
-     "methods": {"recipe_starts": true, "strands": false},   # optional: the method switches the planner has today
+     "methods": {"recipe_starts": true, "strands": false,    # optional: the method switches the planner has today, and
+                 "allowed": ["chaos-orb", "essence"]},      # the methods the plan may use (#405; null or missing: every beta method)
      "settings": {"start_price": null, "price_source": "both"}}  # optional: the user's settings
 
 A missing switch or setting is the machine's planner setting (`crafting.toml`, `Config`). Unknown keys are refused, so a key added later
@@ -32,7 +33,7 @@ from crafting_system.targets import EnchantmentRequirement, ImplicitRequirement,
 from ._world import World
 
 _TOP_KEYS = ("target", "methods", "settings")
-_METHOD_KEYS = ("recipe_starts", "strands")
+_METHOD_KEYS = ("recipe_starts", "strands", "allowed")
 _SETTING_KEYS = ("start_price", "price_source")
 
 
@@ -114,6 +115,16 @@ def _switch(value: object, where: str, default: bool) -> bool:
     return value
 
 
+def _allowed(value: object, where: str) -> list[str] | None:
+    """The methods a user allows (`PlanSettings.methods`, #405): None for every beta method, else a list of names, kept sorted and once each
+    (their order says nothing). The names are checked by the planner, which refuses an unknown one in its own words."""
+    if value is None:
+        return None
+    if not isinstance(value, list) or not value or not all(isinstance(name, str) and name.strip() for name in value):
+        raise RequestError(f"{where} must be a non-empty list of method names (such as \"chaos-orb\"), or null for every method")
+    return sorted({name.strip() for name in value})
+
+
 def _chaos_or_none(value: object, where: str) -> float | None:
     """A price the user gives: a finite number of Chaos above zero (a price of 0 is never "free", #505), or None to read the snapshot."""
     if value is None:
@@ -150,6 +161,7 @@ def parse_request(body: object, game: str, world: World) -> Request:
         "methods": {
             "recipe_starts": _switch(methods.get("recipe_starts"), "methods.recipe_starts", config.recipe_starts),
             "strands": _switch(methods.get("strands"), "methods.strands", config.memory_strands),
+            "allowed": _allowed(methods.get("allowed"), "methods.allowed"),
         },
         "settings": {"start_price": start_price, "price_source": price_source},
     }

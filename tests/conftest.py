@@ -72,6 +72,13 @@ _MACHINE_SHARE: list[float] = []  # the undivided `budget.MEMORY_SHARE`, kept fo
 def pytest_configure(config):
     from crafting_system import budget as budget_module
 
+    try:
+        import former_keys  # the target files that named methods before #405 are read with them in the suite (`former_keys`)
+    except ModuleNotFoundError:  # the tests that copy this conftest into a bare project have no such module
+        pass
+    else:
+        former_keys.install()
+
     _MACHINE_SHARE.append(budget_module.MEMORY_SHARE)
     budget_module.MEMORY_SHARE = budget_module.MEMORY_SHARE / SLOTS_PER_RUNNER
 

@@ -115,8 +115,8 @@ TARGET_OF = {
 ROLL_TARGET_OF = {"essence-r10-boots": "r10-fractured-boots-70-life"}
 # the cases whose record holds the rolled values of each Life mod (the histogram cells, the control of the roll law)
 HISTOGRAM_CASES = ("essence-r10-boots", "essence-r11-helmet")
-# #627: the cases whose action the target's `actions:` key leaves out; their one use is the planner's on the target with the key removed (`actions`
-# None, every kind not opt-in), as `.github/scripts/actions_key.py` plans the `removed` variant
+# #627: the cases whose action the target's former `actions:` key left out; their one use is the planner's on the target with every method
+# (`actions` None, every kind not opt-in), the default since #405
 KEY_HIDES = {"essence-r08-fear", "essence-r09-spite", "essence-r13-hatred"}
 # the label of the case's action, for the cases recorded with a `target`: the planner's own numbers of one use of it on the start item
 PRICES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
@@ -372,7 +372,7 @@ EXALT_BY_HAND = {
 
 
 def exalt_use(data, case: dict) -> dict:
-    """The planner's numbers of one Exalted Orb on the case's item, on its target with the orb added to the key (as `actions_key.py plus=exalted-orb`)."""
+    """The planner's numbers of one Exalted Orb on the case's item, on its target with the orb added to its methods."""
     from crafting_system.cli._benchmark_use import per_use_of
     from crafting_system.planner._plan import make_plan
     from crafting_system.prices import load_price_file

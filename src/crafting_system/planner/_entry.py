@@ -41,6 +41,10 @@ class PlanSettings:
     * `route_actions`: the labels the judged route names (`cli._route.route_actions`, read without a plan), or None when they are not known.
       Known, they lead the first round of the offers, so a target whose offers are searched in rounds is searched so for a judged route too, and
       the plan holds every action the route takes (#1110); not known, a judged route may name any offer and the offers are searched at once.
+    * `methods`: the methods the run may use (the user's setting, #405, OR-5, OR-13, OR-41): kinds of the catalog (`chaos-orb`, `essence`)
+      or labels of single actions ("Essence of Insanity"), as `kinds()` and the offers name them; None is every beta method the planner
+      offers by default (OR-37). A target never names them (its file's `actions:` key is refused); a run with fewer says so in its answer
+      ("Methods this run's setting leaves out").
     """
 
     recipe_starts: bool = True
@@ -54,6 +58,7 @@ class PlanSettings:
     judges_route: bool = False
     watch: Callable[[Standing], None] | None = None
     route_actions: tuple[str, ...] | None = None
+    methods: tuple[str, ...] | None = None
 
 
 def plan_target(data: GameData, target: Target, prices: PriceFile, settings: PlanSettings = PlanSettings()) -> Plan:
@@ -62,7 +67,7 @@ def plan_target(data: GameData, target: Target, prices: PriceFile, settings: Pla
         data, target, prices, recipe_starts=settings.recipe_starts, start_price=settings.start_price, price_source=settings.price_source,
         price_gap_percent=settings.price_gap_percent, today=settings.today, budget=settings.budget, strands=settings.strands,
         solver=settings.solver, judges_route=settings.judges_route, watch=settings.watch,
-        route_actions=settings.route_actions,
+        route_actions=settings.route_actions, methods=settings.methods,
     )  # fmt: skip
 
 

@@ -117,8 +117,9 @@ def test_the_net_of_a_plan_binds_inside_the_build_and_the_plan_says_the_count_wa
     info = result.info["envelope"]
     assert not info.exact and info.bound_stopped == "the test net"
     assert info.lower <= exact * (1 + TOLERANCE) <= info.upper * (1 + 2 * TOLERANCE)
-    (limit,) = envelope_limits(info)
+    *walked, limit = envelope_limits(info)  # a stopped build with no order: the walk toward the goal gave the first plan, and says so (#1142)
     assert "The search was stopped" in limit_text(limit)
+    assert [w.kind for w in walked] == (["plan-reached"] if info.reached else [])
     assert "count itself was stopped before it was finished" in certificate_text(info)
 
 

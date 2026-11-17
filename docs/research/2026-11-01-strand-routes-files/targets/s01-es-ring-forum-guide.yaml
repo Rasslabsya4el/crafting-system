@@ -14,10 +14,6 @@ base: Amethyst Ring
 item_level: 84
 influence: [crusader, warlord]
 
-# The kinds of actions the planner may use: the guide's own (Remembrance and Unravelling are B5-5 and B5-8; the kind names
-# `remembrance-orb` and `unravelling-orb` are this file's proposal). The fossil set is opt-in, so it is named here.
-actions: [remembrance-orb, transmutation-orb, regal-orb, fossil-set, harvest-reforge, bench-craft, unravelling-orb]
-
 # The start item (#545: the parser no longer makes one up). The forum guide names no rarity for the bought ring. It is the start the planner always used for this research
 # route: a plain (Normal) item of the base above, with no mod.
 start_item:
