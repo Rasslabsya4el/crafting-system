@@ -66,7 +66,7 @@ from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 from crafting_system.targets import plain_base_names
-from crafting_system.planner import GIVEN_SOURCE, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
+from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
 from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
@@ -82,6 +82,13 @@ from ._route_trade import BuyStep, buy_step
 from ._start_step import ROLE_GEMS, FirstStep, first_step
 
 PLANNER_LABEL = "Cheapest policy of the planner"
+# beside the mean when the plan began as a walk toward the target and a net stopped its search (#1142, OR-33, OR-40): the reader sees at the top
+# that this is a plan that works, not one shown near the best, before he reads the label above or the limit at the end of the card
+NOT_NEAR_BEST = (
+    "This route reaches the target, but the search was stopped before it found one close to the cheapest: its first plan was found by heading "
+    "for the target, not by cost. Treat it as a fallback, not a recommendation; a crafter's own route may cost far less (the reason is under "
+    "\"What this answer leaves out\")."
+)
 
 
 class PageError(ValueError):
@@ -752,6 +759,10 @@ class _View:
             lines.append(f"{head}: {candidate.label}: {money(row.total)} in all (start {start} + crafting {money(row.mean_remaining or 0.0)}{proved})")
         return _plain("Start", *lines)
 
+    def walked(self) -> bool:
+        """Whether the planner's own plan is one its search walked to and was stopped on (a `REACHED` limit, #1142); a given route never is."""
+        return self.inp.label == PLANNER_LABEL and any(limit.kind == REACHED for limit in self.plan.limits)
+
     def goal_card(self) -> GoalCard:
         plan, risk = self.plan, self.inp.risk
         shift, divine = plan.start_price.chaos, plan.prices.chaos_per_divine
@@ -776,6 +787,7 @@ class _View:
             _plain("Route", self.inp.label) if self.route_field else None,
             self.start_field(),
             _plain("Mean", mean),
+            _plain("Not shown near the best", NOT_NEAR_BEST, tone="warn") if self.walked() else None,
             _plain("9 runs in 10", p90),
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
             *rule,

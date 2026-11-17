@@ -134,3 +134,24 @@ def test_from_target_reads_attributes_only_so_any_object_with_the_right_shape_wo
     expected_leaf = Wanted(frozenset({GEM}), min_tier=1, min_roll=(None, 3), not_crafted=True)
     assert goal == Goal((AtLeast(2, (expected_leaf, Wanted(RESISTS))), expected_leaf))
 
+
+
+# `Goal.unmet` (#1142): how many leaves a state still lacks, the order of the search's walk toward the goal on a blind bound. Worked by hand:
+# a goal of the gem leaf and "two of three" (gem, damage, resist). Nothing passing: 1 + 2 = 3; the gem alone: 0 + 1 (it counts in both); the gem and
+# the resist: 0 + 0, met; a leaf BELOW its tier is not met.
+
+
+@pytest.mark.parametrize(
+    ("statuses", "missing"),
+    [
+        ((ABSENT, ABSENT, ABSENT, ABSENT), 3),
+        ((PASSING, PASSING, ABSENT, ABSENT), 1),
+        ((PASSING, PASSING, ABSENT, PASSING), 0),
+        ((PASSING, PASSING, BELOW, BELOW), 1),
+        ((ABSENT, ABSENT, PASSING, PASSING), 1),
+    ],
+)
+def test_unmet_counts_the_leaves_a_state_still_lacks(statuses, missing):
+    goal = Goal((GEM_LEAF, AtLeast(2, (GEM_LEAF, DAMAGE_LEAF, RESIST_LEAF))))
+    assert goal.unmet(statuses) == missing
+    assert (missing == 0) == goal.is_met(statuses)

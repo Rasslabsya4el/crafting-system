@@ -859,7 +859,7 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
     # work per state, the offers' floors on), so no clock moves anything. Round 1 (the Exalted Orb alone) closes at 16e/3 + 2S = 153.33 having
     # known 12 states; round 2 (the fillers) begins with that plan in hand, and its share is the 28 states left over the 2 rounds left: 14.
     # Its bound's build needs 51 pieces of work. Given a quarter's worth (one piece per state, 14), the old rule, it stops while offers join
-    # (growth) on a lower figure of 30, and the round stops with no cheaper plan: the answer is 153.33. Given the round's whole share (four
+    # (growth) on a lower figure of 34 (the walk toward the goal raises it, #1142), and the round stops; the walk's plan is the filler's all the same, 133, which the answer takes, saying it is not shown near the best. Given the round's whole share (four
     # times that, 56: the build keeps no room for the search to make a plan, the answer holds one) it completes, and the round closes on
     # the filler's plan, 3(c + e) + 2S = 133.
     from crafting_system.budget import Budget
@@ -898,8 +898,13 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
         assert _fills(plan.solution.policy[plan.start].label)
     else:
         assert builds[1] == (14, 14, "growth")
-        assert second.status == "stopped" and second.lower == pytest.approx(30.0, abs=1e-6)
-        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        # its bound stopped with no order, so the search walks toward the goal (#1142) and realizes more offers than the least-`la` chain did:
+        # the lower figure they raise is 34 (30 before the walk), still below the closed plan's 133
+        assert second.status == "stopped" and second.lower == pytest.approx(34.0, abs=1e-6)
+        # the walk's plan is the filler's, cheaper than round 1's: the answer takes it, and its limits say it is not shown near the best (OR-33, OR-40)
+        assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
+        (walked,) = [limit for limit in plan.limits if limit.kind == "plan-reached"]
+        assert "Not proved: that it is anywhere near the best possible cost" in walked.guarantee
 
 
 def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_and_stops_only_at_its_net(monkeypatch):
@@ -1214,3 +1219,32 @@ def test_a_round_that_proves_no_plan_with_a_plan_in_hand_is_set_aside_like_a_bea
     assert seen == [("a",), ("a", "b"), ("a", "c"), ("a", "b", "c")]
     assert [record.status for record in widened.records] == ["closed", "no plan", "beaten", "beaten"] and _rounds.all_closed(widened.records)
     assert widened.records[1].reason.endswith("the last round held them again, with every method")
+
+
+def test_a_plan_in_hand_that_a_stopped_search_walked_to_is_not_held_by_the_next_round():
+    # #1142 (R13 on the heavy benchmark: 11,246 c on main, 32,813 c once the walk gave round 1 a plan): a round that begins with a plan in hand
+    # lets its bound's build take its whole share (`RoundCall.held`, #1099). A plan its search walked to (a `REACHED` limit) is proved near
+    # nothing, so the round after it keeps the room for its search a round with no plan keeps; a plan of any other search is held as before
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _limits, _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abc"))
+    walk = _limits.Limit(_limits.REACHED, "walked", "why", "Not proved: near the best.")
+
+    def rounds(limits):
+        held = []
+
+        def run(chosen, call):
+            held.append(call.held)
+            return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=100.0 - len(chosen), limits=limits if len(chosen) == 1 else ())
+
+        _rounds.widen(
+            groups, tuple("abc"), run, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.STOPPED, "stopped"), left=lambda: 600.0, clock_now=lambda: 0.0,
+        )  # fmt: skip
+        return held
+
+    assert rounds((walk,)) == [False, False, True]  # round 2 begins with round 1's walked plan: not held; round 3 with round 2's own plan: held
+    assert rounds(()) == [False, True, True]
+    assert _rounds.walked(SimpleNamespace(limits=(walk,))) and not _rounds.walked(SimpleNamespace(limits=())) and not _rounds.walked(object())

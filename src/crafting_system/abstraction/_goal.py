@@ -112,6 +112,19 @@ def _met(node: Node, statuses: Sequence[Status], start: int) -> tuple[bool, int]
     return met >= node.k, position
 
 
+def _lacking(node: Node, statuses: Sequence[Status], start: int) -> tuple[int, int]:
+    """How many leaves `node` still lacks in `statuses[start:]` (0 when met), and the index after the leaves of `node`."""
+    if isinstance(node, Wanted):
+        return (0 if statuses[start] is Status.PASSING else 1), start + 1
+    lacks = []
+    position = start
+    for member in node.members:
+        lacking, position = _lacking(member, statuses, position)
+        lacks.append(lacking)
+    lacks.sort()
+    return sum(lacks[: node.k]), position
+
+
 @dataclass(frozen=True)
 class Goal:
     """Every requirement must hold; the leaves, depth-first in file order, are the positions of a status tuple.
@@ -153,6 +166,17 @@ class Goal:
             if not met:
                 return False
         return True
+
+    def unmet(self, statuses: Sequence[Status]) -> int:
+        """How many requirements `statuses` leave unmet: one for each leaf of a top-level requirement that is not PASSING, and for an `AtLeast`
+        the members it still lacks (each counted the same way). Zero exactly when `is_met`. A count of what is missing, not a cost: the order in
+        which the search realizes offers toward the goal when its bound is blind (#1142)."""
+        position = 0
+        missing = 0
+        for node in self.requirements:
+            lacking, position = _lacking(node, statuses, position)
+            missing += lacking
+        return missing
 
     @classmethod
     def from_target(cls, target) -> "Goal":

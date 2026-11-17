@@ -105,8 +105,13 @@ class CraftingProblem:
         self.bound_error = float(bound.error_bound)  # what the values below are lowered by: the search's consistency guard allows for it above 1e-6 (#867)
         self._last_key: tuple[CompressedState, int | None] | None = None
         self.closed_start: float | None = None  # the closed model's value of the start key, when the first plan follows it (#948)
+        if goal is None:  # the search's walk toward the goal reads the target's own goal; a donor's want has none of its own (#1142)
+            self.distance = abstraction.unmet
         if not bound.complete:
             self._closed(model, bound)
+        # a build a net stopped with no closed order (its model reaches the goal from no start): the least-`la` chain is the cheapest offer at every
+        # state and reaches no goal (R20: 577,074 states, R24: 750,477 and the whole time net, #1142), so the search walks toward the goal instead
+        self.reach_first = not bound.complete and getattr(self, "first_choice", None) is None
 
     def _closed(self, model, bound: PatternBound) -> None:
         """The first plan's order on a bound whose build a net stopped (#948, `_envelope`, "A blind bound"): the model solved on what the build
@@ -260,7 +265,8 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     R08 at the prices of 2026-11-10 a build that left the search 103 s gave a plan of 33,755 Chaos where a search given 266 s gave 2,236, on the same
     lower figure (heavy runs 43358114571, 43358085172).
 
-    A search that begins with a plan in hand (`Net.held`, a round of `_rounds` after the first plan, #1099) needs no room kept: the room is for
+    A search that begins with a plan in hand (`Net.held`, a round of `_rounds` after the first plan, #1099; a plan a stopped search walked to is
+    not held, `_rounds.walked`, #1142) needs no room kept: the room is for
     the search to make a plan, and the answer holds one already. Its build stops only at the search's net, so a round's short share does not
     cut it at a quarter before it is complete (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s). On the clock its
     time still comes off the round's search (`envelope_result`): a build that takes the whole share leaves that search no time, and the
@@ -349,6 +355,7 @@ class EnvelopeInfo:
     widening: tuple = ()  # the rounds the offers were searched in (`_rounds.RoundRecord`, #1069); empty for one search over every offer
     bound_pieces: int = 0  # a run counted in states (#1101): the pieces of work the bound's build did (`_pattern_bound.PatternBound.pieces`)
     bound_share: int | None = None  # and the pieces it was given; None for a build on the clock
+    reached: int = 0  # actions built walking toward the goal because the first plan's chain reached none (`Search._reach`, #1142)
 
 
 def envelope_result(
@@ -448,7 +455,7 @@ def _envelope_run(
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), stats.tightened,
         result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
-        None if result.exact else result.upper, bound.rounds, (), bound.pieces, bound.share,
+        None if result.exact else result.upper, bound.rounds, (), bound.pieces, bound.share, stats.reached,
     )  # fmt: skip
     return packed
 
@@ -512,6 +519,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             ),
         )
     return (
+        *reached_limits(info),
         Limit(
             _limits.SOLVE,
             "The search was stopped",
@@ -521,6 +529,41 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, the average of the plan shown itself. "
             + mean_error_text(info)
             + certificate_text(info),
+        ),
+    )
+
+
+def reached_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
+    """What a stopped search says when its plan came from the walk toward the goal (`Search._reach`, #1142, OR-33, OR-40): the plan reaches the
+    target and its cost is its own, but it was found by nearness to the target, not by cost, and nothing proves it near the best possible cost.
+    Empty when the search did not walk. Its own kind (not `SOLVE`), so the rounds' answer keeps it (`_plan.widened_plan`)."""
+    if not info.reached:
+        return ()
+    lower = max(info.lower, 0.0)
+    upper = certified_upper(info)
+    low, high = certificate_figures(min(lower, upper), upper)
+    times = upper / lower if lower > 0.0 and math.isfinite(upper) else None
+    return (
+        Limit(
+            _limits.REACHED,
+            "The plan began as one found by heading for the target, not by its cost",
+            (
+                "the search's first order of steps led only back among items that do not meet the target"
+                if info.first_plan
+                else "the count of the best possible cost was stopped before it could order the steps"
+            )
+            + f", so its first plan took instead, item by item, the steps that bring the item closest to the target ({info.reached:,} steps built this way) until it "
+            "reached the target; "
+            + (
+                f"the search then looked for cheaper steps for {info.rounds:,} rounds until it was stopped ({info.stopped})"
+                if info.rounds
+                else f"the search was stopped before it looked for cheaper steps ({info.stopped})"
+            ),
+            f"Proved: the plan reaches the target, and it costs {high} Chaos on average after the start item, the average of the plan shown itself. "
+            f"Not proved: that it is anywhere near the best possible cost. The search proved only that no plan made of the methods this search held (when the methods were searched in rounds, those of "
+            f"this plan's round) costs less than {low} Chaos"
+            + (f", so this plan may cost up to {times:,.0f} times the best one" if times is not None and times >= 2.0 else "")
+            + ", and nothing shows where between the two the best one lies.",
         ),
     )
 
@@ -617,5 +660,5 @@ def certificate_text(info: EnvelopeInfo) -> str:
 
 __all__ = [
     "BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "Standing", "certificate_figures", "certificate_gap", "certificate_gap_text",
-    "certificate_text", "certified_upper", "envelope_limits", "envelope_result", "route_incumbent",
+    "certificate_text", "certified_upper", "envelope_limits", "reached_limits", "envelope_result", "route_incumbent",
 ]  # fmt: skip

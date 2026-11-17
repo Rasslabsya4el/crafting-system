@@ -62,6 +62,7 @@ UNTRIED = "kinds-not-tried"
 ROUNDS = "rounds"
 START = "start-item"
 SOLVE = "how-solved"
+REACHED = "plan-reached"  # a plan the search walked to when its first plan reached no goal, and a net stopped it there (#1142)
 BUDGET = "time-and-memory"
 DISPLAY = "display"
 STEPS = "step-numbers"
@@ -92,6 +93,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (START, "The start item"),
     (FINISH, "The sockets"),
     (SOLVE, "How the answer was found"),
+    (REACHED, "A plan that reaches the target, not one shown near the best"),
     (BUDGET, "Time and memory limits that stopped a stage"),
     (DISPLAY, "What is shown"),
     (STEPS, "What the steps show"),
