@@ -120,7 +120,6 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
 
 Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
 TYPES_KEPT = 65_536  # the families of pool tables whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
-ITEMS_KEPT = 64  # the items of the latest views (`Abstraction._item_of_view`): the actions of one state are prepared one after the other
 SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
 # families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
@@ -309,6 +308,7 @@ class Abstraction:
         self._prepared_by: dict[Hashable, _Prepared] = {}  # (action, view) -> the pair, for a view that holds the whole state: dropped after each state
         self._shared_by: dict[Hashable, _Prepared] = {}  # the same for a view smaller than its state (many states have it): kept, the latest used last
         self._items_by: dict[tuple[_View, bool], tuple[Item, Origins] | ValueError] = {}  # (view, erasing) -> `_item_of` of it, or what it raised (`_item_of_view`)
+        self._enabled_checked: set[Action] = set()  # the actions `_check_enabled` passed
         self._free_lock: bool | None = None  # whether the game data has a lock outside the crafted domain (`_holds_lock`)
         self._lock_mods: dict[str, bool] = {}  # mod id -> whether it is a lock (Prefixes or Suffixes Cannot Be Changed)
         self.share_items = True  # False: every prepared pair builds its own item and asks validated results (the reference of ticket #935)
@@ -880,6 +880,14 @@ class Abstraction:
             raise ValueError("a rerolled result cannot fracture a mod")
 
     def _check_enabled(self, action: Action) -> None:
+        """Refuse an action that reads the item's mods, implicits, quality or offer and was not enabled (`ValueError`); an action passed is not
+        checked again (the answer reads the action and the enabled ones alone, and every kernel and key asks it: #1170)."""
+        if action in self._enabled_checked:
+            return
+        self._check_enabled_once(action)
+        self._enabled_checked.add(action)
+
+    def _check_enabled_once(self, action: Action) -> None:
         reads = action.reads(self.data)
         if not (reads.junk or reads.item_state) or action in self._kinds.actions:
             return
@@ -1534,8 +1542,12 @@ class Abstraction:
 
         Every action that reads the ordinary mods has the whole state as its view, so at one state they were each given an item built and
         validated anew, the same item: `_item_of` reads only the view and `erasing`, and returns a frozen item and origins that no caller
-        changes. What it raised (a state that is no item: `ItemError`, `ValueError`) is kept and raised again. They are dropped with the pairs of a
-        state (`release_prepared`) and at most `ITEMS_KEPT` are kept, the oldest leaving first, for a caller that does not drop them.
+        changes. What it raised (a state that is no item: `ItemError`, `ValueError`) is kept and raised again. They are dropped with the pairs
+        (`release_prepared`), and only then: the pairs of the views hold their items anyway, so keeping them as long costs no memory of its own.
+
+        Kept fewer, they were built again and again: the bound's build asks every offer of a key at every member of it, offer after offer
+        (`PatternBuilder._offers_of_key`), so a key of more members than the items kept went through them in a cycle, each found gone, and
+        every pair built its item anew (#1170: R05 at N = 10,000, 1,000,318 items for 1,000,535 keys asked, 64 kept).
         """
         if not self.share_items:
             return self._item_of(view, erasing)
@@ -1547,8 +1559,6 @@ class Abstraction:
             except ValueError as error:  # `ItemError` is a `ValueError`
                 found = error
             self._items_by[key] = found
-            if len(self._items_by) > ITEMS_KEPT:
-                del self._items_by[next(iter(self._items_by))]
         if isinstance(found, ValueError):
             raise found.with_traceback(None)
         return found

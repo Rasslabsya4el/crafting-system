@@ -196,6 +196,7 @@ class Kinds:
         self._listed: set[str] | None = None
         self._by_mod: set[str] | None = None
         self._by_family: dict[str, list[Mod]] | None = None
+        self._mods_found: dict[tuple[str, Side, frozenset[str], bool], Mod | ValueError] = {}  # `_mod_of` of its arguments, or what it raised
         self._types: dict[str, str] | None = None
         self._places: dict[str, int] = {}  # mod id -> its place in its family type (with `classed`)
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
@@ -422,7 +423,23 @@ class Kinds:
 
         An ordinary kind never finds a mod unveiled from the pool; `unveiled` finds one of the unveiled domain. Of the
         placeholders of a family it finds the generic one (`VeiledPrefix`, `VeiledSuffix`), the one the orbs put on an item.
+
+        The answer is a function of the arguments and of what the kinds were made with, so it is found once (`_mods_found`): every item a
+        kernel is given is built from these mods, one for each slot, and the build of the bound builds an item for each member (#1170).
         """
+        found = self._mods_found.get((key, side, tags, unveiled))
+        if found is None:
+            try:
+                found = self._find_mod(key, side, tags, unveiled)
+            except ValueError as error:
+                found = error
+            self._mods_found[(key, side, tags, unveiled)] = found
+        if isinstance(found, ValueError):
+            raise found.with_traceback(None)
+        return found
+
+    def _find_mod(self, key: str, side: Side, tags: frozenset[str], unveiled: bool) -> Mod:
+        """`_mod_of`, searched in the data."""
         if self._by_family is None:
             grouped: dict[str, list[Mod]] = {}
             for mod in self.data.mods.values():
