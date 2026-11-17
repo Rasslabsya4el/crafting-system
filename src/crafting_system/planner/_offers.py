@@ -176,6 +176,14 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
 AWAKENER_KIND = "awakeners-orb"
 # The Embers and Ichors, the three Eldritch orbs and the Orb of Conflict (ADR-0025): offered to every target whose item can take them (#886, #919)
 ELDRITCH_KINDS = frozenset({"eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict"})
+# Whether the Eldritch currencies are offered only to a target that asks for an Eldritch implicit (`asks_eldritch`), as before #886 (#835):
+# off since #886 lifted that gate (#919); the tests' classic offers (`tests/cli_support.py`, `CLASSIC_KINDS`) turn it on again.
+ELDRITCH_GATE = False
+
+
+def asks_eldritch(data: GameData, goal: Goal) -> bool:
+    """Whether the goal wants an Eldritch implicit: an implicit wish that selects a Searing Exarch or an Eater of Worlds mod (ADR-0025)."""
+    return any(eldritch_side(data.mods[mod_id]) is not None for wish in goal.implicits for mod_id in wish.mod_ids if mod_id in data.mods)
 
 
 EMBER_KIND, CONFLICT_KIND = "eldritch-implicit-currency", "orb-of-conflict"
@@ -495,6 +503,10 @@ def offers_for(
         label = action.label(data)
         return label if label_count[label] == 1 or not action.variant else f"{label} [{action.variant}]"
 
+    left_out_eldritch: list[str] = []  # with the gate (`ELDRITCH_GATE`), a target that asks for no Eldritch implicit: left out before anything asks them of the base
+    if ELDRITCH_GATE and not asks_eldritch(data, goal):
+        left_out_eldritch = [told_apart(action) for action in listed if kind_of.get(action) in ELDRITCH_KINDS]
+        listed = [action for action in listed if kind_of.get(action) not in ELDRITCH_KINDS]
     refused = base_refused(data, start_item, listed)  # the kind-level relevance test (#848): no item of this base can take these
     listing_gaps.extend(refusal_gaps(refused, kind_of, listed, told_apart))
     listed = [action for action in listed if action not in refused]
@@ -571,6 +583,20 @@ def offers_for(
                 "each of these corrupts the item, and it is offered only to a target that asks for a corrupted implicit; this target allows a corrupted item but asks for none",
                 labels=tuple(left_out_asked),
                 **claim("the kinds offered"),
+            ),
+        )
+    if left_out_eldritch:
+        limits += (
+            Limit(
+                _limits.ELDRITCH_ASKED,
+                "Not offered",
+                "the Eldritch currencies are not tried as tools on a target that names no Eldritch implicit, and this one names none",
+                labels=tuple(left_out_eldritch),
+                **claim(
+                    "the kinds offered",
+                    "The route may cost more because of it: a player can put an Ember or an Ichor on the item and then reroll, remove or add"
+                    " on one side alone with an Eldritch orb.",
+                ),  # lifted by #886 with every default-off (#919)
             ),
         )
     if left_out_crafts and ruled is not None:  # `blocking_crafts` left them out: no offered action's outcome depends on them

@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import pytest
-from cli_support import R12, TODAY, price_file
+from cli_support import R12, TODAY, classic_offers, price_file
 from cli_support import START as START_KEY
 from items_support import DATA, roll
 from route_view_support import (
@@ -142,9 +142,20 @@ INPUTS = {
 }
 
 
+def classic_plan(target, prices):
+    """The plan that judges a given route on `target`, with the CLASSIC offers (`cli_support.CLASSIC_KINDS`), not the default ones.
+
+    These pages show a given route's rows (a gap, a restart, a trade link): a plan that judges a route searches every offer at once (no
+    rounds, `_plan.py`), and with every method on (#886) the toy R12's ran past the suite's 300 s on a CI runner (#ISSUE).
+    """
+    with pytest.MonkeyPatch.context() as patch:
+        classic_offers(patch)
+        return make_plan(DATA, target, prices, judges_route=True)
+
+
 @pytest.fixture(scope="module")
 def r12_plan():
-    return make_plan(DATA, load_target(R12, DATA), price_file(), judges_route=True)
+    return classic_plan(load_target(R12, DATA), price_file())
 
 
 TWO_LEAVES = f"""\
@@ -186,7 +197,7 @@ def two_leaf_plan():
     target = parse_target(TWO_LEAVES, DATA, source="two.yaml")
     prices = price_file(start=None)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")  # the start item is priced under the key computed from the target
-    return make_plan(DATA, target, prices, judges_route=True)
+    return classic_plan(target, prices)
 
 
 def given(plan, text: str) -> RouteInput:
@@ -266,11 +277,13 @@ def stats_cache(tmp_path) -> Path:
 
 # The fixture world's R12 splits its offers into rounds with every method on (#886), so its golden pages plan counted in states
 # (`Budget.in_states`, docs/ci.md): no round's seconds on the page, the same page on every runner. 100,000 states: each round of the toy R12
-# closes in a handful (the page names them), so the figure never binds.
+# closes in a handful (the page names them), so the figure never binds. Every run of the command here is counted so: a run with the
+# default budget has the memory net of its share of the machine, which a process that loaded the real game data for an earlier module
+# already holds (PR CI 44024487664: "the process held 4,675 MB, the limit is 3,197 MB" before the toy plan began).
 GOLDEN_STATES = 100_000
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def counted_in_states(monkeypatch):
     from crafting_system.budget import Budget
     from crafting_system.cli import _main
@@ -637,7 +650,7 @@ def fractured_start_plan():
     target = parse_target(FRACTURED_START, DATA, source="fractured.yaml")
     prices = price_file(start=None)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")
-    return make_plan(DATA, target, prices, judges_route=True)
+    return classic_plan(target, prices)
 
 
 def test_golden_a_restart_that_buys_a_rare_item_with_a_fractured_mod_draws_it_as_the_first_card_does(fractured_start_plan):
@@ -905,7 +918,7 @@ def plan_with_a_wider_price():
     del body["query"]["filters"]["misc_filters"]["filters"]["ilvl"]  # the stored search had no item level at all
     prices = price_file(start=None)
     prices.prices[spec.name] = PriceEntry(4.0, "trade-api", "a note", {"query": body})
-    return make_plan(DATA, target, prices, judges_route=True)
+    return classic_plan(target, prices)
 
 
 def test_the_buy_step_prints_the_line_next_to_the_price_and_a_price_for_the_same_item_prints_none(r12_plan):
