@@ -99,7 +99,7 @@ def test_a_target_that_only_allows_gets_the_filling_brick_and_one_that_asks_keep
         (Goal((Wanted(RESISTS),), asks_corrupted=True), VaalOrb()),
         (Goal((Wanted(RESISTS),), asks_corrupted=True, allow_corrupted=True), VaalOrb()),  # it asks: the brick can never be its goal
     ):
-        found = [offer.action for offer in offers_for(DATA, goal, start.base_id, start).offers if offer.label == "Vaal Orb"]
+        found = [offer.action for offer in offers_for(DATA, goal, start.base_id, start, kinds_named=("vaal",)).offers if offer.label == "Vaal Orb"]
         assert found == [wanted], goal
     assert VaalOrb() in catalog(DATA, start) and FILL not in catalog(DATA, start)  # the catalog lists the Orb of #259
     assert FILL.label(DATA) == VaalOrb().label(DATA) == "Vaal Orb"
@@ -250,7 +250,7 @@ def test_the_answer_lists_the_brick_claim_among_its_approximate_inputs():
             return SimpleNamespace(offer=SimpleNamespace(action=action))
 
     start = STARTS["none"]
-    offered = next(offer.action for offer in offers_for(DATA, GOAL, start.base_id, start).offers if offer.label == "Vaal Orb")
+    offered = next(offer.action for offer in offers_for(DATA, GOAL, start.base_id, start, kinds_named=("vaal",)).offers if offer.label == "Vaal Orb")
     listed = {entry.claim: entry for entry in approximate_inputs_of(Plan(), [offered], DATA)}
     assert "corruption.vaal_brick_rare_six_mods" in listed
     assert "Craft of Exile" in listed["corruption.vaal_brick_rare_six_mods"].reason

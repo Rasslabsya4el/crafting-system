@@ -1248,9 +1248,15 @@ class PatternBuilder:
         last = polled = time.perf_counter()
         i = 0
 
-        def tick(oi: int) -> None:
-            """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step)."""
+        def tick(oi: int, inner: bool = False) -> None:
+            """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step).
+
+            `inner`: asked inside one offer's work too, between two members of the key and between two pairs that `_prime` prepares (#1179: one
+            chunk of R14's Harvest swaps over a key's members ran past the run's net for minutes). Only on the clock: a run counted in pieces asks
+            at every offer, as before, so that where it stops stays the same on every machine."""
             nonlocal last, polled
+            if inner and self.tally is not None:
+                return
             now = time.perf_counter()
             if self.tally is None:  # counted in pieces of work, the net is asked at every offer: where it stops must not depend on the machine's speed
                 if now - polled < POLL_SECONDS:
@@ -1295,12 +1301,13 @@ class PatternBuilder:
         if self.pattern._twin is not None:
             self.pattern._twin.release_prepared(keep_erased=True)
 
-    def _prime(self, key: PatternKey, lo: int, hi: int, by_mode: dict) -> None:
+    def _prime(self, key: PatternKey, lo: int, hi: int, by_mode: dict, ask: Callable[[], None] | None = None) -> None:
         """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
 
         The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
         one after the other. Nothing is built here and nothing changes in the answer; with one worker, or no `fork`, this does nothing. A chunk is
         at most `PRIME_CHUNK` offers so that the net is asked between chunks; the pool's `map` cannot be interrupted, so a net is overshot by at most one chunk.
+        `ask` (the build's tick) is called between two pairs the chunk prepares before the pool starts, and raises when the net is reached (#1179).
         """
         requests = []
         for offer in self.offers[lo:hi]:
@@ -1312,7 +1319,7 @@ class PatternBuilder:
                 members = by_mode[policy] = self.pattern.members(key, *policy)
                 self.stats.members += len(members)
             requests.extend((member, offer.action) for member in members if not (LUMP_ERASING and self.ab.lumps(member, offer.action)))
-        self.ab.prime(requests)
+        self.ab.prime(requests, ask=ask)
 
     def _offers_of_key(self, i: int, first: int, tick) -> None:
         """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
@@ -1324,7 +1331,7 @@ class PatternBuilder:
             offer = offers[oi]
             tick(oi)
             if (oi - first) % PRIME_CHUNK == 0 and len(offers) - first >= PRIME_FROM:
-                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), by_mode)
+                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), by_mode, lambda: tick(oi, True))
             if offer.action is None:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
@@ -1346,6 +1353,7 @@ class PatternBuilder:
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             seen: set[int] = set()
             for member in members:
+                tick(oi, True)
                 stats.pairs += 1
                 if self.tally is not None:
                     self.tally.done += 1

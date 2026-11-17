@@ -45,6 +45,9 @@ QUARTER = Fraction(1, 4)
 LOCUS = LocusOfCorruption()
 
 
+CORRUPTING = ("vaal", "locus")  # B4 is deferred (OR-37): the corrupting kinds are offered only when the run's methods name them (#1125)
+
+
 def item_on(base_id: str, *mods, implicits=(), rarity=Rarity.RARE, **fields) -> Item:
     return Item.build(DATA, base_id=base_id, item_level=fields.pop("item_level", LEVEL), rarity=rarity, mods=mods, implicits=implicits, **fields)
 
@@ -287,7 +290,7 @@ def test_the_use_is_priced_by_its_entry_and_an_override_changes_the_cost():
     default = standing_defaults()[PRICE_NAME]
     assert (default.chaos, default.source) == (0.0, "default")
     start = STARTS["none"]
-    offers = [o for o in offers_for(DATA, Goal((Wanted(RESISTS),), asks_corrupted=True), start.base_id, start).offers if o.label in ("Locus of Corruption", "Vaal Orb")]
+    offers = [o for o in offers_for(DATA, Goal((Wanted(RESISTS),), asks_corrupted=True), start.base_id, start, kinds_named=CORRUPTING).offers if o.label in ("Locus of Corruption", "Vaal Orb")]
     assert {o.label for o in offers} == {"Locus of Corruption", "Vaal Orb"}
 
     priced, dropped = price_offers(offers, _prices())  # a price file that does not name it: the standing default, 0 Chaos
@@ -307,13 +310,13 @@ def test_a_target_that_leaves_locus_out_of_its_actions_gets_no_locus():
     start = STARTS["none"]
     goal = Goal((Wanted(RESISTS),), asks_corrupted=True)
     by_default = [o.label for o in offers_for(DATA, goal, start.base_id, start).offers]
-    assert "Locus of Corruption" in by_default  # on by default, as `DEFAULT_CORRUPTING_KINDS` says
+    assert "Locus of Corruption" not in by_default and "Vaal Orb" not in by_default  # B4 is deferred: off unless named (OR-37, #1125)
     named = [o.label for o in offers_for(DATA, goal, start.base_id, start, kinds_named=("vaal", "chaos-orb")).offers]
     assert "Locus of Corruption" not in named and "Vaal Orb" in named
     with_it = [o.label for o in offers_for(DATA, goal, start.base_id, start, kinds_named=("locus",)).offers]
     assert "Locus of Corruption" in with_it
     for goal, offered in ((Goal((Wanted(RESISTS),), allow_corrupted=True), True), (Goal((Wanted(RESISTS),)), False)):
-        assert ("Locus of Corruption" in [o.label for o in offers_for(DATA, goal, start.base_id, start).offers]) is offered
+        assert ("Locus of Corruption" in [o.label for o in offers_for(DATA, goal, start.base_id, start, kinds_named=CORRUPTING).offers]) is offered
 
 
 # --- the declarations and the claims -------------------------------------------------------------------------
@@ -359,7 +362,7 @@ def test_the_report_names_the_free_share_of_a_locus_use_as_the_planner_charged_i
     from crafting_system.cli._report import free_action_price
 
     start = STARTS["none"]
-    offers = [o for o in offers_for(DATA, Goal((Wanted(RESISTS),), asks_corrupted=True), start.base_id, start).offers if o.label in ("Locus of Corruption", "Vaal Orb")]
+    offers = [o for o in offers_for(DATA, Goal((Wanted(RESISTS),), asks_corrupted=True), start.base_id, start, kinds_named=CORRUPTING).offers if o.label in ("Locus of Corruption", "Vaal Orb")]
     priced, _ = price_offers(offers, _prices())
     charged = {entry.label: entry.cost for entry in priced}["Locus of Corruption"]
     assert free_action_price(SimpleNamespace(offers=priced)) == charged > 0

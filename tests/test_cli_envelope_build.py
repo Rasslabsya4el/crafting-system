@@ -73,7 +73,7 @@ def assert_lower_bound(bound, ab, exact) -> None:
 def test_a_net_asked_between_two_offers_ends_the_build_inside_a_key(world, monkeypatch):
     ab, start, offers, _, exact, _ = world
     monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
-    # the 1st question is at the start key, the 2nd to 4th between its offers: the build stops with the first key half expanded
+    # the 1st question is at the start key, the next between its offers and its members: the build stops with the first key half expanded
     bound = pattern_lower_bound(ab, start, offers, stop=counting_stop(4))
     assert bound.stopped == "the test net" and not bound.complete
     model = bound.model
@@ -85,7 +85,27 @@ def test_a_net_asked_between_two_offers_ends_the_build_inside_a_key(world, monke
     assert_lower_bound(bound, ab, exact)
 
 
-@pytest.mark.parametrize("calls", [10, 30, 90])
+def test_the_build_asks_its_net_between_every_two_members_of_a_key(world, monkeypatch):
+    """#1179: the net was asked between two offers of a key only, and one offer over the members of a key (R14's Harvest swaps) ran minutes past
+    the run's net. On the clock, a question now comes between every two (member, offer) pairs the build looks at."""
+    _, _, offers, _, _, _ = world
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
+    fresh = abstraction()
+    events: list[str] = []
+    real = fresh.kernel_key
+
+    def kernel_key(state, action):
+        events.append("pair")
+        return real(state, action)
+
+    monkeypatch.setattr(fresh, "kernel_key", kernel_key)
+    build_pattern_model(fresh, fresh.compress(START_ITEM), pattern_offers(offers), stop=lambda: events.append("asked") or None)
+    pairs = events.count("pair")
+    assert pairs > len(offers)  # keys of more than one member were met
+    assert "pair,pair" not in ",".join(events)
+
+
+@pytest.mark.parametrize("calls", [40, 150, 600])  # the net is asked between two members of a key too (#1179): 30 questions for the start key
 def test_a_build_stopped_after_some_keys_is_still_a_lower_bound_and_weaker_than_the_whole(world, monkeypatch, calls):
     ab, start, offers, _, exact, whole = world
     monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
@@ -93,7 +113,7 @@ def test_a_build_stopped_after_some_keys_is_still_a_lower_bound_and_weaker_than_
     if bound.complete:  # the world is small: a late stop may not be reached
         assert bound.start_value == pytest.approx(whole.start_value, rel=TOLERANCE)
         return
-    assert any(bound.model.expanded)  # 8 questions are the start key's (one at its start, seven between its offers)
+    assert any(bound.model.expanded)  # about 30 questions are the start key's (at its start, between its offers and between its members)
     assert not all(bound.model.expanded)
     assert bound.start_value <= whole.start_value * (1 + TOLERANCE)
     assert_lower_bound(bound, ab, exact)
@@ -103,7 +123,7 @@ def test_the_net_of_a_plan_binds_inside_the_build_and_the_plan_says_the_count_wa
     ab, start, offers, full, _, _ = world
     exact = full.solution.values[start]
     monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
-    monkeypatch.setattr(_envelope_plan, "build_stop", lambda net, began: counting_stop(12))  # the plan's net, reached inside the build
+    monkeypatch.setattr(_envelope_plan, "build_stop", lambda net, began: counting_stop(40))  # the plan's net, reached inside the build
     fresh = abstraction()
     result = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(seconds=600.0))
     info = result.info["envelope"]
@@ -113,7 +133,7 @@ def test_the_net_of_a_plan_binds_inside_the_build_and_the_plan_says_the_count_wa
     assert info.lower <= exact * (1 + TOLERANCE) and info.upper >= exact * (1 - TOLERANCE)
     # the search stopped too: [LB, U] around the exact cost, a limit that says so and one that says the count was stopped
     fresh = abstraction()
-    result = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100), bound=pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, stop=counting_stop(12)))
+    result = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100), bound=pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, stop=counting_stop(40)))
     info = result.info["envelope"]
     assert not info.exact and info.bound_stopped == "the test net"
     assert info.lower <= exact * (1 + TOLERANCE) <= info.upper * (1 + 2 * TOLERANCE)

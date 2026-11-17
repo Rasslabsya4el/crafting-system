@@ -652,7 +652,7 @@ def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_
     untried = next(limit for limit in plan.limits if limit.what == "Not finished")
     assert untried.labels == ("bench-craft",) and "stopped" in untried.names[0]
     assert any(limit.kind == "crafts" and limit.what == "Not offered" for limit in plan.limits)  # what the choice of offers said is kept
-    assert plan.foresight.status == "switched off by the run's methods setting"  # the run names no Lock
+    assert plan.foresight.status == "off: the run's methods setting does not name it"  # the run names no Lock
     assert plan.risk is not None
 
 

@@ -105,6 +105,30 @@ def test_prime_computes_each_uncached_pool_once_and_says_how_many(pool):
     assert pool.mapped == [(POOLS, 1)]  # one piece per pool, handed one at a time
 
 
+class Reached(Exception):
+    """The net of a test, reached."""
+
+
+def test_prime_asks_its_caller_before_each_request_and_a_stop_ends_it_before_any_pool(pool):
+    # #1179: preparing a chunk of requests in this process took R14's build minutes past its net; the caller's `ask` is now called before each
+    ab = abstraction()
+    requests = [(state, CHAOS) for state in states_of(ab)]
+    asked = []
+
+    def ask():
+        asked.append(1)
+        if len(asked) == 5:
+            raise Reached
+
+    with pytest.raises(Reached):
+        _prime.prime(ab, requests, workers=4, ask=ask)
+    assert len(asked) == 5 and pool.made == [] and not ab._cache  # four prepared, no pool forked, nothing stored
+
+    asked.clear()
+    assert _prime.prime(abstraction(), requests, workers=4, ask=lambda: asked.append(1)) == POOLS
+    assert len(asked) == len(requests)  # one question for each request, and the same pools as with no question
+
+
 def test_the_pool_is_no_larger_than_the_number_of_pools_to_compute(pool):
     ab = abstraction()
 

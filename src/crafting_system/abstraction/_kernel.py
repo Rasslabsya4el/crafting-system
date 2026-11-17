@@ -816,7 +816,7 @@ class Abstraction:
         held.append(bare)
         return {replace(state, imprints=tuple(sorted(held, key=lambda entry: entry.order_key))): Fraction(1)}
 
-    def prime(self, requests: Iterable[tuple[CompressedState, Action]], *, workers: int | None = None) -> int:
+    def prime(self, requests: Iterable[tuple[CompressedState, Action]], *, workers: int | None = None, ask: Callable[[], None] | None = None) -> int:
         """Compute ahead, in a process pool, the label distributions that `kernel` of these (state, action) pairs would compute.
 
         Changes no result, only when the work is done (ticket #250; `_prime.py`). Returns the number of distributions it made;
@@ -824,7 +824,7 @@ class Abstraction:
         """
         from ._prime import prime
 
-        return prime(self, requests, workers=workers)
+        return prime(self, requests, workers=workers, ask=ask)
 
     def kernel_key(self, state: CompressedState, action: Action) -> Hashable:
         """A key of the kernel of `action` on `state`, cheaper than the kernel: equal keys, equal kernels.
