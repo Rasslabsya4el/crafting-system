@@ -262,3 +262,15 @@ def test_the_benchmark_lists_its_reference_crafts_and_the_v01_smoke_test_with_th
         assert (bench.route is None) == (bench.id == "V01")  # only the route that starts from a vendor recipe has no guide to compare with
     assert {bench.id: bench.waits.rsplit("(", 1)[-1].split(")")[0] for bench in benchmark_module.BENCHMARKS if bench.waits is not None} == {"R06": "#516"}
     assert [bench.id for bench in benchmark_module.REFERENCES] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R20", "R06", "R24"]
+
+
+def test_the_plan_a_guide_s_route_is_judged_against_is_given_the_route_s_actions(tmp_path, monkeypatch):
+    # #1110: they lead the first round of the offers, so the plan holds every action the guide's route takes
+    good = benchmark_module.BENCHMARKS[0]
+    monkeypatch.setattr(benchmark_module, "BENCHMARKS", (good,))
+    seen = []
+    real = benchmark_module.plan_target
+    monkeypatch.setattr(benchmark_module, "plan_target", lambda data, target, prices, settings: seen.append(settings) or real(data, target, prices, settings))
+    code, _ = run_benchmark(tmp_path)
+    assert code == 0 and good.route == "examples/routes/r12-lightning-amulet.yaml"
+    assert [(settings.judges_route, settings.route_actions) for settings in seen] == [(True, ("Harvest Reforge Lightning",))]

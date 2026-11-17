@@ -222,18 +222,40 @@ class RouteResult:
 # --- reading -------------------------------------------------------------------------------------
 
 
-def load_route(path: Path, plan: Plan, data: GameData) -> Route:
-    """Read the UTF-8 route file at `path` for `plan`; every problem is a `RouteError`."""
+def _route_text(path: Path) -> str:
     source = str(path)
     try:
-        text = path.read_bytes().decode("utf-8-sig")
+        return path.read_bytes().decode("utf-8-sig")
     except FileNotFoundError:
         raise RouteError(f"{source}: the route file does not exist") from None
     except UnicodeDecodeError:
         raise RouteError(f"{source}: the route file is not UTF-8 text") from None
     except OSError as problem:
         raise RouteError(f"{source}: the route file cannot be read ({problem.strerror or problem})") from None
-    return parse_route(text, plan, data, source)
+
+
+def load_route(path: Path, plan: Plan, data: GameData) -> Route:
+    """Read the UTF-8 route file at `path` for `plan`; every problem is a `RouteError`."""
+    return parse_route(_route_text(path), plan, data, str(path))
+
+
+def route_actions(path: Path) -> tuple[str, ...]:
+    """The labels the rules of the route file at `path` name in `do:` (`restart` left out), read before any plan exists: the planner offers
+    them from the first round of its offers, so the plan the route is judged against holds every action it takes (`PlanSettings.route_actions`,
+    #1110). It refuses nothing: a file that cannot be read or is not valid names what it holds that can be read (none, for a file that cannot
+    be read or is not YAML), and `load_route` says its problem once the plan is made, as it did before the labels were read first."""
+    try:
+        root = load_with_lines(_route_text(path), str(path))
+    except (RouteError, TargetError, RecursionError):  # the problem `load_route` says after the plan
+        return ()
+    entries = root.get("rules") if isinstance(root, LineMap) else None
+    found: dict[str, None] = {}
+    for entry in entries if isinstance(entries, LineList) else ():
+        label = entry.get("do") if isinstance(entry, LineMap) else None
+        label = label.strip() if isinstance(label, str) else ""  # as `_Reader.text` reads it
+        if label and label != RESTART:
+            found[label] = None
+    return tuple(found)
 
 
 def parse_route(text: str, plan: Plan, data: GameData, source: str = "<route>") -> Route:
