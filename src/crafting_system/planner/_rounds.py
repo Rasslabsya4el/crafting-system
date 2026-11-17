@@ -131,7 +131,7 @@ def kind_of(offer) -> str:
 
 
 def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object], frozenset[str]]) -> tuple[Group, ...]:
-    """The groups of `offers` in the order the rounds add them (see the module text). `named` are the target's `actions:`; `added(offer)` the
+    """The groups of `offers` in the order the rounds add them (see the module text). `named` are the run's methods (`PlanSettings.methods`, #405); `added(offer)` the
     features the offer adds to the target's own model. An offer is named by its label, or by its kind when no rule offered it unasked
     (`Offer.blocks`).
 

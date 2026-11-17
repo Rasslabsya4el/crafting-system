@@ -11,7 +11,7 @@ Pick). Done when (#848), and the test of each:
    `test_on_generated_jewel_targets_*`; on J01 the left-out set holds the 17 kinds the probe of #637 found inert:
    `test_on_j01_every_kind_named_*`.
 2. The answer lists the kinds left out with what it still guarantees (OR-13): the same test and `test_the_answer_of_j01_*`.
-3. The counts on a runner: the PR's measurement (`.github/scripts/actions_key.py`), not a test.
+3. The counts on a runner: the PR's measurement (its script `.github/scripts/actions_key.py` retired with the key, #405), not a test.
 
 The hand number: J01's Chaos Orb plan costs `chaos / p`, `p` the chance that one reroll holds the three families (65% 3 mods, 35% 4,
 `jewel.reroll_mod_count`), from `jewel_oracle`, which reads the raw mods and shares no code with the engine (as `test_cli_jewel_real.py`).

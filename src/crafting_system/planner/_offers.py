@@ -438,7 +438,7 @@ def offers_for(
       no requirement, because explicit mods, crafts included, take their families out of the next offer. Crafts of one family give one
       kernel, so the solver keeps the cheapest of them at each state (ADR-0031, equal kernels).
     * With `kinds_named` (the run's methods, `PlanSettings.methods`, #405) only the kinds of those names are listed at all and the filters
-      below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
+      below see only them. That is the run's choice, not a proof: the plan is the cheapest among the named kinds,
       and the kinds not named are a `Limit` of the answer (`_limits`). A name may also be the label of ONE action (`Essence of
       Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
       (a metamod craft counts toward no requirement and would be left out), and only the actions named that way are

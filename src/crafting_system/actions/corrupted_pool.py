@@ -49,9 +49,9 @@ CORRUPTED = CORRUPTED_IMPLICIT
 POOL_DOMAINS = CORRUPTED_POOL_DOMAINS  # the same set `items` uses to accept a corrupted implicit on an item
 # The kinds of action that corrupt an item and add a corrupted implicit, with the number one use adds and so replaces
 # (ADR-0036, ADR-0038): the Vaal Orb and a fossil set holding the Bloodstained Fossil give one, the Locus of Corruption
-# two. A target's `actions:` list names kinds, so a target is checked against these names.
+# two. The run's methods setting names kinds (#405), so a plan is checked against these names.
 CORRUPTING_KINDS: Mapping[str, int] = MappingProxyType({"vaal": 1, "fossil-set": 1, "locus": 2})
-# the corrupting kinds a target that leaves out `actions:` may use: all of them, since #886 offers the fossil sets by default (OR-41)
+# the corrupting kinds a run that names no methods may use: all of them, since #886 offers the fossil sets by default (OR-41)
 DEFAULT_CORRUPTING_KINDS: Mapping[str, int] = CORRUPTING_KINDS
 
 
