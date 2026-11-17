@@ -245,11 +245,14 @@ class Abstraction:
         reading: Reading | None = None,
         allow_inputs: bool = True,
         weights: WeightReading = PLAN_READING,
+        alike: bool = False,
     ):
         if not isinstance(weights, WeightReading):
             raise ValueError(f"the reading of the kept tiers is a WeightReading, got {weights!r}")
         self.data = data
         self._weights = weights
+        self._alike = alike  # a twin of `alike_twin`: the ordinary slots are told apart by side and protected tags alone (#1146)
+        self._fracturing: dict[Action, bool] = {}  # an action -> whether it may fracture a mod it draws (`lumps`)
         self.gaps = ModelGaps()  # the actions the model had no rule for, written by whoever walks this abstraction (ticket #506)
         self.prunings = Prunings()  # the offers left out of the states that cannot use them (K13)
         self._reading = reading
@@ -262,6 +265,7 @@ class Abstraction:
         if enchantment is not None:  # a mod id that does not fit the base is the caller's error, raised here and not at the first kernel
             Item.build(data, base_id=base_id, item_level=item_level, rarity=Rarity.RARE, enchantment=enchantment)
         actions = tuple(actions)
+        self._made_with = (actions, metamods, enchantment, reading, allow_inputs, weights)  # what `alike_twin` builds its twin with
         self._metamods = metamods or any(adds_metamod(data, action) for action in actions)
         self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
         self._has_laws = bool(self._roll_leaves)
@@ -494,6 +498,48 @@ class Abstraction:
         """How many label distributions were computed and how many requests reused one."""
         return CacheStats(self._kernels, self._hits)
 
+    def alike_twin(self) -> "Abstraction":
+        """A new twin of this abstraction whose ordinary slots are told apart by side and protected tags alone (`Kinds.slot_kind`; #1146, ADR-0065).
+
+        The same goal, item, enabled actions and readings, and the same numbers of the family types (a fractured mod keeps the kind it has
+        here). Only the kernel of an action that erases the ordinary slots (`lumps`) is asked of it, on a state of this abstraction: that
+        kernel reads no ordinary slot of the state, and its outcomes differ from this one's only in the kinds of their ordinary slots, so they
+        fall on the same pattern keys (`Pattern.key`) with the same chances, from far fewer outcomes. Its states are not states of this one.
+        Each call makes a new twin (one for each `Pattern`), so what a twin lumped (`lumped_mods`) is what that build drew, whatever ran before.
+        """
+        actions, metamods, enchantment, reading, allow_inputs, weights = self._made_with
+        twin = Abstraction(
+            self.data, self.goal, self.base_id, self.item_level, actions, metamods=metamods, enchantment=enchantment, reading=reading,
+            allow_inputs=allow_inputs, weights=weights, alike=True,
+        )
+        twin._numbers = self._numbers  # before any context of the twin numbers a type: the kinds of the types are this one's
+        twin._contexts.clear()
+        twin._kinds = twin._new_context(frozenset()).kinds
+        twin.share_items, twin.project = self.share_items, self.project
+        return twin
+
+    def lumps(self, state: CompressedState, action: Action) -> bool:
+        """Whether the bound's build may take the kernel of `action` at `state` from the alike twin (#1146, ADR-0065): the action erases the
+        ordinary slots (`_erases`) and fractures no mod it draws (a Fractured Fossil: the fractured mod is in the key, and the twin's labels lump
+        the mods a fine label tells apart, so the mod it fractures could be another). Never in a world that tracks no junk (`Kinds.tracked`
+        False): there the labels keep no kind, the twin's kernel is the fine one, and the search would make it a second time in its own cache."""
+        if not self._kinds.tracked or not self._erases(state, action):
+            return False
+        found = self._fracturing.get(action)
+        if found is None:
+            found = self._fracturing[action] = bool(action.adds(self.data).fractures)
+        return not found
+
+    def lumped_mods(self, read: dict[frozenset[Influence], int]) -> list[tuple[frozenset[Influence], Mod]]:
+        """The ordinary mods this abstraction lumped into a slot (`Kinds.slot_kind` with `alike`) that the reader has not read, with their
+        influences; `read` (influences -> how many of that context's it has read) is brought up to date."""
+        found = []
+        for influences, context in self._contexts.items():
+            lumped = context.kinds.lumped
+            found.extend((influences, mod) for mod in lumped[read.get(influences, 0) :])
+            read[influences] = len(lumped)
+        return found
+
     @property
     def enabled(self) -> tuple[Action, ...]:
         """The enabled actions that read the ordinary mods (the ones `actions` of the constructor named)."""
@@ -520,6 +566,7 @@ class Abstraction:
             influences=influences,
             numbers=self._numbers,
             rollable=lambda: self._rollable_mods(influences),
+            alike=self._alike,
         )
         context = self._contexts[influences] = _Context(influences, kinds)
         return context
@@ -1206,7 +1253,7 @@ class Abstraction:
                 ints = RollLaw(cells) if is_rollable(cells) else cells[0][0]
             else:
                 ints = tuple(int(status) for status in self._drawn_contribution(mod, False, influences))
-            label = (ints, mod.generation_type, context.kinds.of(mod)) if context.kinds.tracked else ints
+            label = (ints, mod.generation_type, context.kinds.slot_kind(mod)) if context.kinds.tracked else ints
             labels[mod.id] = label
         return label
 
@@ -1220,7 +1267,7 @@ class Abstraction:
         side, contribution = Side(mod.generation_type), self._contribution(entry)
         if entry.crafted:
             return Slot(side, self._canonical_id(entry, influences), contribution, True)
-        return Slot(side, self._context(influences).kinds.of(mod), contribution)
+        return Slot(side, self._context(influences).kinds.slot_kind(mod), contribution)
 
     def _canonical_id(self, entry: ExplicitMod, influences: frozenset[Influence]) -> str:
         """The canonical id of a mod of a concrete item (see `_canonical_for`)."""
@@ -1796,7 +1843,7 @@ class Abstraction:
                 elif entry.crafted:
                     new.append(Slot(Side(mod.generation_type), self._canonical_id(entry, influences), contribution, True))
                 elif self._kinds.tracked:
-                    new.append(Slot(Side(mod.generation_type), self._context(influences).kinds.of(mod), contribution))
+                    new.append(Slot(Side(mod.generation_type), self._context(influences).kinds.slot_kind(mod), contribution))
         fractured.sort(key=lambda entry: (entry.mod_id, entry.contribution))
         status = best_of(len(self.goal.leaves), contributions)
         held = self._held_by(retained, influences, given)
