@@ -403,3 +403,15 @@ def test_a_burn_is_a_fallback_that_leads_back_to_the_state_and_a_plan_with_it_so
     loop = next(action for action in site.fallback if action.label == burn.label)
     assert [(state, weight) for state, weight in loop.outcomes] == [(plan.start, 1)]
     assert plan.foresight.status is Status.USED and plan.mean_remaining < lock_free.mean_remaining
+
+
+def test_a_corrupted_start_item_names_no_lock_among_the_methods_left_out():
+    # a corrupted item takes no Lock (`hinekora_lock.refused_on`), so the answer does not offer it as a method left out (OR-13, #1125)
+    from crafting_system.abstraction import Goal
+    from crafting_system.planner._offers import offers_for
+
+    target = load_target(R12, DATA)
+    for start, named in ((target.start_item, True), (dataclasses.replace(target.start_item, corrupted=True), False)):
+        for methods in (None, ("chaos-orb",)):
+            limits = offers_for(DATA, Goal.from_target(target), target.base_id, start, methods).limits
+            assert any(LOCK in limit.labels for limit in limits) is named, (start.corrupted, methods)
