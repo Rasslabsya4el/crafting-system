@@ -354,6 +354,7 @@ class EnvelopeInfo:
     widening: tuple = ()  # the rounds the offers were searched in (`_rounds.RoundRecord`, #1069); empty for one search over every offer
     bound_pieces: int = 0  # a run counted in states (#1101): the pieces of work the bound's build did (`_pattern_bound.PatternBound.pieces`)
     bound_share: int | None = None  # and the pieces it was given; None for a build on the clock
+    reached: int = 0  # actions built walking toward the goal because the first plan's chain reached none (`Search._reach`, #1142)
 
 
 def envelope_result(
@@ -453,7 +454,7 @@ def _envelope_run(
         problem.keys_missing, incumbent is not None, stats.first_upper, bound.model.stats.keys, bound.build_seconds + bound.solve_seconds,
         time.perf_counter() - began, stats.peak_mb, bound.stopped, expanded, len(bound.positions), stats.tightened,
         result.within, result.restarts, stats.seeded, stats.upper_refused, stats.upper_seconds, result.held, float(packed.solution.error_bound),
-        None if result.exact else result.upper, bound.rounds, (), bound.pieces, bound.share,
+        None if result.exact else result.upper, bound.rounds, (), bound.pieces, bound.share, stats.reached,
     )  # fmt: skip
     return packed
 
@@ -517,6 +518,7 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             ),
         )
     return (
+        *reached_limits(info),
         Limit(
             _limits.SOLVE,
             "The search was stopped",
@@ -526,6 +528,36 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
             f"The plan is not shown to be the best: it costs {info.upper:,.2f} Chaos on average after the start item, the average of the plan shown itself. "
             + mean_error_text(info)
             + certificate_text(info),
+        ),
+    )
+
+
+def reached_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
+    """What a stopped search says when its plan came from the walk toward the goal (`Search._reach`, #1142, OR-33, OR-40): the plan reaches the
+    target and its cost is its own, but it was found by nearness to the target, not by cost, and nothing proves it near the best possible cost.
+    Empty when the search did not walk. Its own kind (not `SOLVE`), so the rounds' answer keeps it (`_plan.widened_plan`)."""
+    if not info.reached:
+        return ()
+    lower = max(info.lower, 0.0)
+    upper = certified_upper(info)
+    low, high = certificate_figures(min(lower, upper), upper)
+    times = upper / lower if lower > 0.0 and math.isfinite(upper) else None
+    return (
+        Limit(
+            _limits.REACHED,
+            "The plan began as one found by heading for the target, not by its cost",
+            (
+                "the search's first order of steps led only back among items that do not meet the target"
+                if info.first_plan
+                else "the count of the best possible cost was stopped before it could order the steps"
+            )
+            + f", so its first plan took instead, item by item, the steps that bring the item closest to the target ({info.reached:,} steps built this way) until it "
+            "reached the target; the search then looked for cheaper steps until a time or memory limit stopped it",
+            f"Proved: the plan reaches the target, and it costs {high} Chaos on average after the start item, the average of the plan shown itself. "
+            f"Not proved: that it is anywhere near the best possible cost. The search proved only that no plan of its methods costs less than {low} "
+            "Chaos"
+            + (f", so this plan may cost up to {times:,.0f} times the best one" if times is not None and times >= 2.0 else "")
+            + ", and nothing shows where between the two the best one lies.",
         ),
     )
 
@@ -622,5 +654,5 @@ def certificate_text(info: EnvelopeInfo) -> str:
 
 __all__ = [
     "BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "Standing", "certificate_figures", "certificate_gap", "certificate_gap_text",
-    "certificate_text", "certified_upper", "envelope_limits", "envelope_result", "route_incumbent",
+    "certificate_text", "certified_upper", "envelope_limits", "reached_limits", "envelope_result", "route_incumbent",
 ]  # fmt: skip

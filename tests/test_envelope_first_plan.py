@@ -12,6 +12,7 @@ On seven large generated targets the plan in hand cost 1e7 to 1e13 Chaos against
 
 import math
 import random
+from dataclasses import replace
 
 import pytest
 from coarse_support import abstraction
@@ -21,9 +22,9 @@ from test_cli_envelope_build import counting_stop, world  # noqa: F401  (`world`
 from test_envelope_gap_stop import Hand
 from test_packed_walk_light import START_ITEM
 
-from crafting_system.planner import _envelope, _envelope_plan
+from crafting_system.planner import _envelope, _envelope_plan, _limits
 from crafting_system.planner._envelope import FAKE, Net, Search
-from crafting_system.planner._envelope_plan import CraftingProblem, certified_upper, envelope_limits, envelope_result
+from crafting_system.planner._envelope_plan import CraftingProblem, certificate_figures, certified_upper, envelope_limits, envelope_result, reached_limits
 from crafting_system.planner._limits import limit_text
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.solver import ConvergenceError
@@ -366,3 +367,41 @@ def test_the_crafting_problem_measures_the_distance_by_the_parts_of_the_goal_a_s
     info = result.info["envelope"]
     assert info.exact and result.solution.values[begin] == pytest.approx(full.solution.values[begin], rel=1e-9)  # the same exact mean
     assert info.first_upper is not None and math.isfinite(info.first_upper)
+
+
+def test_a_stopped_search_whose_plan_the_walk_found_says_it_is_not_shown_near_the_best(world, monkeypatch):  # noqa: F811
+    # OR-33, OR-40: a stop says what is proved and what is not; a walk's plan is found by nearness to the target, not by cost (#1142)
+    ab, start, offers, full, _, bound = world
+    monkeypatch.setattr(_envelope_plan.CraftingProblem, "_closed", lambda self, model, bound: None)
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    stopped = pattern_lower_bound(fresh, begin, offers, stop=counting_stop(12))
+    result = envelope_result(fresh, begin, offers, bound=stopped, net=Net(give_way=lambda standing: "the caller's rule"))
+    info = result.info["envelope"]
+    assert not info.exact and info.within is None and info.stopped == "the caller's rule" and info.reached > 0
+    limits = envelope_limits(info)
+    reached = [limit for limit in limits if limit.kind == _limits.REACHED]
+    assert len(reached) == 1 and limits[0] is reached[0] and limits[1].kind == _limits.SOLVE
+    text = limit_text(reached[0])
+    assert "heading for the target, not by its cost" in text and "count of the best possible cost was stopped" in text
+    assert f"{info.reached:,} steps built this way" in text
+    low, high = certificate_figures(min(max(info.lower, 0.0), certified_upper(info)), certified_upper(info))
+    assert f"Proved: the plan reaches the target, and it costs {high} Chaos" in text
+    assert "Not proved: that it is anywhere near the best possible cost" in text and f"costs less than {low} Chaos" in text
+    # the same search's answer when it ends by itself, or a stopped search that did not walk: no such limit
+    assert not [limit for limit in envelope_limits(replace(info, reached=0)) if limit.kind == _limits.REACHED]
+    closed = envelope_result(fresh, begin, offers, bound=stopped).info["envelope"]
+    assert closed.exact and closed.reached > 0 and not [limit for limit in envelope_limits(closed) if limit.kind == _limits.REACHED]
+
+
+def test_the_walk_limit_names_how_many_times_the_plan_may_cost_the_best_and_the_chain_that_failed():
+    info = _envelope_plan.EnvelopeInfo(
+        exact=False, stopped="the time limit of 450 seconds was reached", lower=0.5, upper=696_680.0, rounds=3, touched=10, expanded=5, realized=7,
+        candidates=9, keys_missing=0, incumbent=False, first_upper=2_766_961.0, bound_keys=246, bound_seconds=150.0, seconds=450.0, peak_mb=None,
+        first_plan=352, reached=2_744,
+    )  # fmt: skip
+    text = limit_text(reached_limits(info)[0])
+    assert "the search's first order of steps led only back among items that do not meet the target" in text
+    assert "2,744 steps built this way" in text and "may cost up to 1,393,360 times the best one" in text
+    assert "times the best" not in limit_text(reached_limits(replace(info, lower=500_000.0))[0])  # under twice: no multiple is named
+    assert reached_limits(replace(info, reached=0)) == ()
