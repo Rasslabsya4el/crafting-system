@@ -241,6 +241,20 @@ def test_the_goal_card_gives_route_mean_p90_and_prices(r12_plan):
     assert fields["Prices"] == "league Test, fetched 2026-10-30"
 
 
+def test_a_plan_the_search_walked_to_says_beside_its_mean_that_it_is_not_shown_near_the_best(r12_plan):
+    # #1142, OR-33, OR-40: a stopped search whose plan began as a walk toward the target (a `REACHED` limit) is a fallback, said at the top
+    from dataclasses import replace as replaced
+
+    from crafting_system.planner import REACHED, Limit
+
+    walked = Limit(REACHED, "The plan began as one found by heading for the target, not by its cost", "why", "Not proved: near the best.")
+    fields = {field.label: field for field in build_section(route_input(replaced(r12_plan, limits=(*r12_plan.limits, walked))), DATA).goal.fields}
+    assert list(fields)[:3] == ["Route", "Mean", "Not shown near the best"]
+    warning = fields["Not shown near the best"]
+    assert warning.tone == "warn" and "fallback, not a recommendation" in warning.lines[0].text
+    assert "Not shown near the best" not in {field.label for field in build_section(route_input(r12_plan), DATA).goal.fields}
+
+
 def test_the_target_card_of_the_goal_row_is_the_target_item(r12_plan):
     card = build_section(route_input(r12_plan), DATA).goal.target
 
