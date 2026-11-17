@@ -9,7 +9,7 @@ item level) and the nearest mods the pool does hold.
 the way #141 does for impossible implicits.
 
 * A corrupted start item under a target that neither asks for a corrupted implicit nor sets `allow_corrupted` could never be a goal.
-* More corrupted implicits than the corrupting kinds offered by default give (`actions.DEFAULT_CORRUPTING_KINDS`: one for the Vaal Orb
+* More corrupted implicits than the corrupting kinds a run may name give (`actions.DEFAULT_CORRUPTING_KINDS`: one for the Vaal Orb
   and the Bloodstained resonator, two for the Locus of Corruption). A target that buys its item is not checked (`buys`). A target names
   no methods (#405): a run whose methods setting leaves the corrupting kinds out finds no plan, and says so when it plans.
 * Two corrupted implicits of one mod group, which the Locus never draws together (its second implicit comes from another group).

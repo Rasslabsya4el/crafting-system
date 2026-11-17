@@ -18,6 +18,7 @@ TURNED_ON_BY_886 = {
 }
 TURNED_ON_LATER = {"influenced-exalted-orb"}  # a beta method made a planner kind after #886, on by default (#818, OR-41)
 DEFERRED = {"recombinator", "foulborn-exalted-orb"}  # opt-in with or without the classic offers (OR-37)
+CLASSIC_DEFERRED = {"vaal", "locus"}  # B4: classic kinds, opt-in since #1125 (OR-37) and on again under the classic offers
 
 
 def test_every_planner_kind_is_classic_turned_on_by_886_or_deferred():
@@ -26,7 +27,8 @@ def test_every_planner_kind_is_classic_turned_on_by_886_or_deferred():
     assert len(set(CLASSIC_KINDS)) == len(CLASSIC_KINDS) == 23
     assert set(planner) == set(CLASSIC_KINDS) | TURNED_ON_BY_886 | TURNED_ON_LATER | DEFERRED
     assert [name for name in planner if name in CLASSIC_KINDS] == list(CLASSIC_KINDS)  # the catalog's order
-    assert {entry.name for entry in kinds(planner_only=True) if entry.opt_in} == DEFERRED  # the default is every beta method (#886)
+    assert {entry.name for entry in kinds(planner_only=True) if entry.opt_in} == DEFERRED | CLASSIC_DEFERRED  # every beta method (#886, OR-37)
+    assert CLASSIC_DEFERRED <= set(CLASSIC_KINDS)
 
 
 def test_with_the_classic_offers_the_default_is_the_classic_kinds_and_it_is_undone_after():
@@ -37,5 +39,5 @@ def test_with_the_classic_offers_the_default_is_the_classic_kinds_and_it_is_undo
         assert _offers.BLOCKING_CRAFTS is False and _offers.ELDRITCH_GATE is True
         assert dict(corrupted.DEFAULT_CORRUPTING_KINDS) == CLASSIC_CORRUPTING_KINDS == {"vaal": 1, "locus": 2}
 
-    assert {entry.name for entry in kinds(planner_only=True) if entry.opt_in} == DEFERRED
+    assert {entry.name for entry in kinds(planner_only=True) if entry.opt_in} == DEFERRED | CLASSIC_DEFERRED
     assert _offers.BLOCKING_CRAFTS is True and _offers.ELDRITCH_GATE is False

@@ -255,6 +255,7 @@ class LocusOfCorruption(Action):
     "locus",
     order=108,
     corrupting=True,
+    opt_in=True,  # B4, deferred (OR-37): offered only when the run's methods setting names it (#1125)
     applies_only_to="an item whose class has a corrupted implicit pool",
 )
 def _locus(data: GameData, item: Item):

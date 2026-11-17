@@ -157,6 +157,23 @@ def test_a_worker_that_never_comes_back_is_killed_at_the_timeout():
         assert pool.map(add_offset, [1, 2]) == [(1, 7), (2, 14)]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="the result pipe is written by its file descriptor")
+def test_a_pool_abandoned_while_a_result_was_half_sent_lets_the_process_exit():
+    """#1179: a worker killed while it sent a result (R14's pool at the memory net) left part of a message in the result pipe; the executor's thread
+    read on for the rest forever, and the interpreter waits for that thread at exit, so the plan's process never ended after its answer. Here
+    the half message is a length with no bytes after it; once the pool is abandoned, the thread ends."""
+    import struct
+
+    with WorkerPool(make_base, (0,), workers=2) as pool:
+        assert pool.map(add_offset, [1, 2], chunk=1) == [(1, 7), (2, 14)]
+        executor = pool._executor
+        thread = executor._executor_manager_thread
+        os.write(executor._result_queue._writer.fileno(), struct.pack("!i", 1000))  # a header that promises 1,000 bytes, and none follow
+        pool.abandon()
+        thread.join(60.0)  # (a bound on a hang, not a measure of speed: before #1179 it never ended)
+        assert not thread.is_alive()
+
+
 def sleeps(piece: int) -> int:
     threading.Event().wait(30)  # a worker that is still at work when the memory net is read
     return piece

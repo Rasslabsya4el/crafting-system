@@ -334,6 +334,7 @@ class VaalOrb(Action):
     "vaal",
     order=104,
     corrupting=True,
+    opt_in=True,  # B4, deferred (OR-37): offered only when the run's methods setting names it (#1125)
     # it works on an item whose class has a corrupted pool; the amulet of the contract suite's fixture has none (the family's own fixture
     # items, `tests/contract_fixtures_corruption.py`, carry it)
     applies_only_to="an item whose class has a corrupted implicit pool",

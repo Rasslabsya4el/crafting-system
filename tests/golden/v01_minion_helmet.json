@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds the run's methods setting does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 33,
+      "count": 34,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -202,7 +202,8 @@
         "Eldritch Annulment Orb",
         "Orb of Conflict",
         "Imprint",
-        "Restore"
+        "Restore",
+        "Hinekora's Lock"
       ],
       "names": []
     },
