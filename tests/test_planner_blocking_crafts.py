@@ -192,7 +192,9 @@ def test_a_refused_round_joins_the_next_and_a_round_with_no_plan_in_hand_has_all
         groups[1:], tuple("abcd"), planned, upper_of=lambda plan: 5.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
         left=lambda: 600.0, clock_now=lambda: 0.0,
     )  # fmt: skip
-    assert shares == [1, 2, 1]  # round 1 has no plan in hand; then the plan is, and the two rounds left share the time
+    # round 1 has no plan in hand; then the plan is, and the two rounds left share the time. Round 2 closed at the plan in hand's cost, so it
+    # was not carried and one last round holds it again with every offer (#1080), alone in its share
+    assert shares == [1, 2, 1, 1]
 
 
 def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share_and_a_later_round_finds_the_saving():
@@ -308,6 +310,22 @@ def test_a_group_beaten_before_the_last_round_is_not_carried_and_the_answer_does
     for last_round in (stops, cheaper_unfinished):  # the last round did not close: b stays set aside, the proof is not claimed
         records = rounds_with(last_round)
         assert [record.carried for record in records] == [True, False, True, True] and not _rounds.all_closed(records)
+
+    def closes(cost):
+        def round_of(chosen, call):
+            seen.append(chosen)
+            return SimpleNamespace(search=SimpleNamespace(lower=cost if "b" in chosen else 10.0), mean_remaining=cost if "b" in chosen else 10.0)
+
+        return round_of
+
+    for cost, carried in ((10.0, False), (8.0, True)):  # b closes at the plan in hand's cost: set aside; b closes cheaper: it is the plan, carried
+        seen.clear()
+        closed_b = _rounds.widen(
+            groups, tuple("abc"), closes(cost), upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: None, clock_now=lambda: 0.0,
+        )  # fmt: skip
+        assert seen[2] == (("a", "b", "c") if carried else ("a", "c")) and closed_b.records[1].carried
+        assert len(closed_b.records) == (3 if carried else 4) and _rounds.all_closed(closed_b.records)
 
     def c_refused(chosen, call):
         if chosen == ("a", "c"):
@@ -454,13 +472,11 @@ def test_through_the_entry_a_beaten_lock_round_is_not_carried_into_a_round_after
     monkeypatch.setattr(planner_plan, "offer_groups", lambda *args: (*real(*args), _rounds.Group((), ("again",), frozenset())))
     plan = _plan_at(data, target, monkeypatch, divine=divine)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    first, lock, again, *last = _rounds_of(plan)
-    assert lock.carried and plan.search.exact
-    if lock.status == "beaten":
-        (closing,) = last
-        assert again.offers == first.offers and closing.offers == first.offers + 1 and closing.status == "beaten" and closing.kinds == lock.kinds
-    else:
-        assert again.offers == first.offers + 1 and not last
+    first, lock, again, closing = _rounds_of(plan)
+    # the lock's round, beaten or closed at the same cost, could not beat the plan in hand: round 3 does not hold it, the last round does
+    assert lock.status in ("beaten", "closed") and again.offers == first.offers and closing.offers == first.offers + 1
+    assert closing.kinds == lock.kinds and closing.status in ("beaten", "closed")
+    assert lock.carried and plan.search.exact  # the last round held every offer and closed: the plan is the cheapest of every method
 
 
 def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_finish(data, target, monkeypatch):
