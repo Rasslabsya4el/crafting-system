@@ -62,6 +62,7 @@ from crafting_system.planner._offer_kinds import (
     necessary_leaves,
 )
 from crafting_system.planner._offers import BuyStartItem, PricedOffer, offer_of, price_offers
+from crafting_system.planner._offer_floor import OfferFloors
 from crafting_system.planner._pattern_bound import MIN_OFFERS
 from crafting_system.planner._prune import solver_actions
 from crafting_system.items import Item, Rarity
@@ -415,6 +416,24 @@ def test_the_bench_life_does_not_finish_a_life_leaf_that_asks_a_tier_or_refuses_
 
         assert goal_set(abstraction.goal, abstraction.compress(bench.item), crafted) == (0, 1), limits
         assert not finishes(abstraction.goal.leaves[0], frozenset(adds.named), True), limits
+
+
+def test_the_floors_give_the_bench_life_no_chance_of_a_life_leaf_it_cannot_pass(bench):
+    """#1112, through `OfferFloors` itself (the line where R05's floor fell), on a target of Life alone (U keeps a leaf a craft can finish when no
+    other would remain): against any Life the craft can land in E (pbar 1); against tier 1 Life it cannot (pbar 0)."""
+    actions = [ChaosOrb(), BenchCraft(LIFE_CRAFT), RemoveCraftedMods()]
+    offers = [offer_of(action, action.label(bench.data), bench.data, bench.item) for action in actions]
+    priced, _ = price_offers(offers, bench.prices)
+    craft = next(p for p, offer in enumerate(priced) if isinstance(offer.offer.action, BenchCraft))
+    found = {}
+    for name, life in (("any", requirement(bench.data, "IncreasedLife")), ("tier 1", requirement(bench.data, "IncreasedLife", min_tier=1))):
+        target = Target(BASE, LEVEL, frozenset(), (life,), bench.item, start=StartKind.GIVEN)
+        abstraction = Abstraction(bench.data, Goal.from_target(target), BASE, LEVEL, actions)
+        floors = OfferFloors(abstraction, abstraction.compress(bench.item), priced, bench.item)
+        found[name] = (floors.chosen, floors.entries[craft].pbar)
+
+    assert found["any"] == ((0,), 1)
+    assert found["tier 1"] == ((0,), 0)
 
 
 # --- the kind of an offer -----------------------------------------------------------------------------------
