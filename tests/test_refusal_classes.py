@@ -179,6 +179,14 @@ def test_the_build_of_the_hand_worked_world_is_the_build_before(tags):
     assert none == 0 and shared > 0
 
 
+def test_the_alike_twin_asks_as_its_abstraction_asks():
+    """The twin the build lumps with (`alike_twin`) keeps its abstraction's choice: a reference build asks every pair in the twin too."""
+    ab = Abstraction(pattern_data(), GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+    assert ab.alike_twin().share_refusals
+    with each_pair_asked(ab):
+        assert not ab.alike_twin().share_refusals
+
+
 @pytest.mark.parametrize(("route", "tags"), [case for case in CASES if case.id == "r13-auto"])
 def test_the_bound_of_a_real_route_is_the_bound_before(route, tags):
     real_game_data()  # skips without the dump
