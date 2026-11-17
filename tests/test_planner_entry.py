@@ -101,8 +101,10 @@ def test_the_defaults_of_the_settings_are_the_planners_own():
 def test_with_recipe_starts_off_the_entry_is_the_plan_of_the_targets_own_item():
     target = load_target(R12, DATA)
 
-    plan = plan_target(DATA, target, price_file(), PlanSettings(recipe_starts=False))
-    direct = make_plan(DATA, target, price_file())
+    # counted in states on both sides, as above: under a net of time the rounds' limit states each round's seconds, which two runs do not share
+    states = Budget.in_states(100_000)
+    plan = plan_target(DATA, target, price_file(), PlanSettings(recipe_starts=False, budget=states))
+    direct = make_plan(DATA, target, price_file(), budget=states)
 
     assert plan.starts is None and direct.starts is None
     assert plan.mean_remaining == direct.mean_remaining and plan.limits == direct.limits
