@@ -47,15 +47,17 @@ def progress_sink_restored(monkeypatch):
     monkeypatch.setattr(_packed, "PROGRESS", _packed.PROGRESS)
 
 
-# The net of the suite's machine (#886, OR-39: a planner limit is a setting of the machine a run is on). CI runs `SLOTS_PER_RUNNER` slots
-# at once on a runner (`run_shard.py`), so:
-# * a run that has a budget (the command's default, `Budget.default()`) takes `budget.MEMORY_SHARE` of the machine divided among the slots;
-# * on a machine that has them (Linux, the CI runners), a test that runs past `SUITE_TEST_SECONDS` fails at that point (`SIGALRM`), and a
-#   test process holds at most `SUITE_DATA_MB` of data (`RLIMIT_DATA`), so a test that asks for more fails with a MemoryError instead of
-#   taking the runner down. The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes
-#   its own budget keeps it. A module of the budget itself (`OWN_NET = True`) sees `MEMORY_SHARE` as it is.
+# The net of the suite's machine (#886, OR-39: a planner limit is a setting of the machine a run is on; docs/ci.md, "The suite's machine
+# net"). It never changes what a test that passes computes: it turns a hang or a runner killed for memory into a named test failure.
+# * A run that has a budget (the command's default, `Budget.default()`) takes `budget.MEMORY_SHARE` of the machine divided among the
+#   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run).
+#   A module of the budget itself (`OWN_NET = True`) sees `MEMORY_SHARE` as it is.
+# * Where the machine has them (Linux, the CI runners): a test's setup or call that runs past `SUITE_TEST_SECONDS` fails at that point
+#   (`SIGALRM`, no clock read), and a test process holds at most `SUITE_DATA_MB` of data (`RLIMIT_DATA`), so a test that asks for more
+#   fails with a MemoryError instead of taking the runner down.
+# The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes its own budget keeps it.
 # `CRAFTING_TEST_SECONDS` and `CRAFTING_TEST_DATA_MB` set other figures; 0 turns that net off.
-SLOTS_PER_RUNNER = 4
+SLOTS_PER_RUNNER = max(1, int(os.environ.get("CRAFTING_TEST_SLOTS", "1")))
 SUITE_TEST_SECONDS = int(os.environ.get("CRAFTING_TEST_SECONDS", "300"))
 SUITE_DATA_MB = int(os.environ.get("CRAFTING_TEST_DATA_MB", "3500"))
 

@@ -14,12 +14,14 @@ Standard library only.
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+SLOTS_VARIABLE = "CRAFTING_TEST_SLOTS"  # the pytest processes sharing this runner, read by tests/conftest.py
 NO_TESTS = 5  # pytest's exit code for "no tests were collected"
 
 
@@ -89,7 +91,9 @@ def main(argv: list[str] | None = None) -> int:
             "--record-durations", str(folder / "durations.json"),
         ]  # fmt: skip
         log = (folder / "pytest.log").open("w", encoding="utf-8")
-        running.append((slot, folder, log, subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)))
+        # each pytest process holds one slot of the runner, so a budgeted run in it takes its part of the memory net (tests/conftest.py)
+        env = {**os.environ, SLOTS_VARIABLE: str(args.procs)}
+        running.append((slot, folder, log, subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, env=env)))
 
     deadline = time.monotonic() + args.timeout * 60
     codes = {}

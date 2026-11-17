@@ -85,6 +85,22 @@ the clock is added to `CLOCK_READERS`. `CRAFTING_TEST_REAL_CLOCK=1` turns the fi
 pinned on the committed price files in `tests/test_price_age_rule.py`. To check that the suite does not depend on the date, run it
 under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime '2026-12-01 12:00:00' <the shard command>`.
 
+### The suite's machine net (#886)
+
+A planner limit is a setting of the machine a run is on (OR-39), and a CI runner is shared by the 4 pytest processes of its job.
+`tests/conftest.py` sets three nets, none of which changes what a passing test computes; each turns a hang or a runner killed for memory
+into one named failing test:
+
+- **Memory share.** A run with a budget (the command's default) takes `budget.MEMORY_SHARE` of the machine divided among the processes
+  sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). A test that passes no
+  budget still runs its exact proof; a test that passes its own budget keeps it.
+- **Time per phase** (Linux only, `SIGALRM`, no clock read): a test's setup (its module fixtures included) or its call that runs past
+  `CRAFTING_TEST_SECONDS` (300) fails there, so a hung test fails by name instead of the job hitting `timeout-minutes`.
+- **Data per process** (Linux only, `RLIMIT_DATA`): a test process holds at most `CRAFTING_TEST_DATA_MB` (3,500 MB), so a test that asks
+  for more fails with a MemoryError instead of the runner shutting down (exit 143) and losing the whole shard.
+
+0 turns the time or data net off.
+
 ## Heavy runs on GitHub: the runner budget (#249)
 
 **Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite goes to CI and benchmarks, profiling, sweeps, solves and measurements go to a heavy run, because a local multi-process sweep pins his machine at 100%. `.github/workflows/run.yml`
