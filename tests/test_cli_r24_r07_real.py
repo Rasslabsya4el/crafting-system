@@ -4,6 +4,10 @@ R24 is the fractured-Mana Avoid Shock / Spell Suppression boots with an unveiled
 Convoking Wand read for 3.29 (bench Trigger, unveiled minion speed). These check the targets, the start prices, the offers (the
 unveil blocks among them), the given routes and the route conditions on the veil and the offer. The policies (CLI, `--verify`, the
 solver's mean against the given route's) are a heavy run: `tests/test_cli_r24_r07_heavy.py`. These skip without the cached dump.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import dataclasses
@@ -19,6 +23,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 # Each target's own price file: R24's is the week-one file plus its hand-set start boots since #901 (OR-44); R07, no longer a reference
 # craft (#901, OR-45: its guide rests on the old Veiled Chaos Orb), keeps the 2026-11-10 file of #146 and stays here as a test of the
 # unveil conditions, not of a cost.
