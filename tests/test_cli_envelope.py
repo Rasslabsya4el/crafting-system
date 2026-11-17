@@ -174,7 +174,7 @@ def test_a_given_start_item_has_no_restart_so_a_search_stopped_before_its_first_
     problem = ExplicitProblem(graph, value, 0.5, restart=None)
     with pytest.raises(NoPolicy, match="no restart"):
         Search(problem, net=Net(seconds=0.0)).run()  # the time net ends the first plan's chain at the start
-    closed = Search(ExplicitProblem(graph, value, 0.5, restart=None), net=Net(states=8)).run()  # the state net waits for the first round: the first plan closed (#826)
+    closed = Search(ExplicitProblem(graph, value, 0.5, restart=None), net=Net(states=8)).run()  # beside the clock's rule the state net waits for the first round: the first plan closed (#826)
     assert not closed.exact and "limit is 8" in closed.stopped and not closed.restarts
     assert answer(closed)[0] >= value[0] * (1 - 1e-9) and closed.lower <= value[0] * (1 + 1e-9)
 
@@ -198,6 +198,28 @@ def test_a_run_counted_in_states_asks_its_count_at_every_state_of_the_first_plan
         assert "limit is 8" in said and 8 <= counted <= whole
         shorter += counted < whole
     assert shorter >= 3, shorter  # the chain over a blind bound is cut where the count reaches the net
+
+
+def test_a_run_counted_in_states_stops_inside_a_round_where_its_count_reaches_the_net():
+    """#1101: past the first plan, a round under a count alone is cut at the state where the states known reach the net (asked at every state,
+    not when the clock polls); on the clock's rule the round would run to its end and know more."""
+
+    def known(net: Net) -> tuple[int, int, str]:
+        try:
+            result = Search(ExplicitProblem(graph, value, 0.5), net=net).run()
+        except NoPolicy as error:
+            return error.states, -1, str(error)
+        return result.stats.touched, result.stats.rounds, result.stopped or ""
+
+    cut = 0
+    for seed in SEEDS:
+        graph = random_graph(seed, 400)
+        value, _ = dense_optimum(graph)
+        for states in (20, 40, 80):
+            (whole, rounds, _), (counted, counted_rounds, said) = known(Net(states=states)), known(Net(states=states, pieces=100 * states))
+            assert counted <= whole and (f"limit is {states}" in said or counted < states)
+            cut += counted_rounds >= 1 and counted < whole and counted_rounds < rounds  # a round, after the first plan, ended inside
+    assert cut >= 5, cut
 
 
 def test_a_net_of_seconds_and_of_memory_stops_between_rounds():

@@ -1012,8 +1012,8 @@ class Search[S]:
                         break
                     if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
                         polled = time.perf_counter()
-                        # a states net alone is asked between rounds only (`Budget.in_states`): inside one, where the clock polls, its count would
-                        # depend on the machine's speed; with a time or memory net the run is on the clock anyway, and the states are asked here too
+                        # here, where the clock polls, a states net is asked only beside a time or memory net (the run is on the clock anyway): a
+                        # count alone (`Budget.in_states`) is asked above, at every state, so that it does not depend on the machine's speed
                         stopped = self._net(began, states=self.net.seconds is not None or self.net.memory_mb is not None)
                         if stopped is not None:
                             break
