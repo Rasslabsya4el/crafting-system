@@ -122,3 +122,21 @@ def test_an_entry_with_an_error_and_no_record_counts_as_no_plan():
     document = {"routes": [{"id": "R05", "error": "a bad price", "record": None}]}
     assert RouteRecord(planned(1.0), planned(1.0)).state == PLANNED
     assert verdict_of(document, "R05").why.startswith("no plan (a bad price)")
+
+
+def test_the_committed_record_holds_two_runs_of_every_reference_route():
+    """Done when of #1109: `tests/fixtures/heavy_benchmark/records.json` holds every route of `REFERENCES`, from two runs, with its spread
+    stated (None only where a run gave no plan)."""
+    import json
+    from pathlib import Path
+
+    from crafting_system.benchmark_record import FORMAT
+    from crafting_system.cli._benchmark import REFERENCES
+
+    record = json.loads((Path(__file__).parent / "fixtures" / "heavy_benchmark" / "records.json").read_text(encoding="utf-8"))
+    assert record["format"] == FORMAT and len(record["runs"]) == 2
+    assert sorted(record["routes"]) == sorted(bench.id for bench in REFERENCES)
+    for name, route in record["routes"].items():
+        held = RouteRecord(*route["runs"])
+        assert len(route["runs"]) == 2 and route["state"] == held.state, name
+        assert (route["spread"] is None) == (held.state != PLANNED), name
