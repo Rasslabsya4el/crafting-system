@@ -3,7 +3,8 @@
 The build asks every offer of a key at every member of it, offer after offer (`PatternBuilder._offers_of_key`). The items of the views
 (`Abstraction._item_of_view`) were kept 64 at most, the oldest leaving first, so a key of more members went through them in a cycle and built
 every item anew for each offer (R05 at N = 10,000: 1,000,318 items for 1,000,535 keys asked). They are now kept as long as the pairs, the
-mod a slot stands for is found once (`Kinds._mod_of`), and an action passed by the enabled check is not checked again.
+mod a slot stands for is found once (`Kinds._mod_of`), an action passed by the enabled check is not checked again, and an item validated
+against the data is not validated again against it (each bench craft validated the item it was given).
 
 * Asked offer after offer at more states than the old cache held, without a release, each state's item is built once.
 * The model the build makes is the model of the code before the ticket (every pair its own item, every mod and enabled check searched
@@ -21,6 +22,7 @@ from test_abstraction_pattern_real import CASES, E
 from crafting_system.abstraction import Abstraction
 from crafting_system.abstraction._kinds import Kinds
 from crafting_system.abstraction._pattern import build_pattern_model
+from crafting_system.items import Item, ItemError
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 
 OLD_ITEMS_KEPT = 64
@@ -28,15 +30,23 @@ OLD_ITEMS_KEPT = 64
 
 @contextlib.contextmanager
 def as_before(ab: Abstraction):
-    """The code before #1170 on `ab`: every prepared pair builds its own item, every mod of a slot and every enabled check is searched anew."""
-    find = Kinds._mod_of
+    """The code before #1170 on `ab`: every prepared pair builds its own item, every mod of a slot and every enabled check is searched anew,
+    and an item is checked each time it is validated."""
+    find, validate = Kinds._mod_of, Item.validate
+
+    def every_time(item, data):
+        with contextlib.suppress(AttributeError):
+            object.__delattr__(item, "_valid_in")
+        validate(item, data)
+
     ab.share_items = False
     Kinds._mod_of = lambda self, key, side, tags=frozenset(), *, unveiled=False: self._find_mod(key, side, tags, unveiled)
+    Item.validate = every_time
     ab._check_enabled = ab._check_enabled_once
     try:
         yield ab
     finally:
-        Kinds._mod_of = find
+        Kinds._mod_of, Item.validate = find, validate
 
 
 def same_model(old, new) -> None:
@@ -62,6 +72,31 @@ def test_offers_asked_one_after_the_other_at_many_states_build_each_item_once(na
         for state in states:
             answer(lambda: ab.kernel_key(state, action))
     assert calls["_item_of"] <= len(states)  # one item for each state, whatever the number of offers
+
+
+def test_an_item_validated_against_the_data_is_not_checked_again_against_it(monkeypatch):
+    data, ab, states = generated("bow", 4, steps=20)
+    item = ab._item_of(states[0], False)[0]
+    assert getattr(item, "_valid_in", None) is data
+    checked = []
+    monkeypatch.setattr(Item, "_check_capacity", lambda self, data: checked.append(data))
+    item.validate(data)
+    assert checked == []  # passed against this data: not checked again
+    other = type(data)(**{name: getattr(data, name) for name in data.__slots__})
+    item.validate(other)
+    assert checked == [other]  # other data: checked
+    raw = Item(item.base_id, item.item_level, item.rarity, item.mods)
+    raw.validate(data)
+    assert checked == [other, data]  # an equal item never validated: checked
+
+
+def test_an_item_that_failed_is_checked_and_fails_again():
+    data, ab, states = generated("bow", 4, steps=20)
+    item = ab._item_of(states[0], False)[0]
+    wrong = Item(item.base_id, item.item_level, item.rarity, (*item.mods, item.mods[0].__class__("no such mod", ())))
+    for _ in range(2):
+        with pytest.raises(ItemError):
+            wrong.validate(data)
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
