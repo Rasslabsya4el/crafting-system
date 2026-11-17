@@ -655,6 +655,46 @@ def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_
     assert plan.risk is not None
 
 
+@pytest.mark.parametrize("lock_stopped", [True, False])
+def test_a_round_proved_within_the_gap_proves_the_plan_within_it_only_when_every_round_closed(data, target, monkeypatch, lock_stopped):
+    # #1182, #1186: round 1 (Exalted Orb and the filler) ends proved within 1% of the cheapest of its own methods, at 3 (c + e) + 2 S = 133 c
+    # after the start item (183 c with it). When the lock's round is then stopped by the net, the plan is proved only against round 1's methods: the search
+    # reads as stopped, never "within 1% of the cheapest" (R17 and R20 were recorded so, over a lower figure of 0 after the start item); the
+    # rounds' limit still says round 1's gap. When the lock's round closes too, the last round held every offer and the gap is the whole proof.
+    from crafting_system.budget import Binding, BudgetExceeded
+    from crafting_system.cli._benchmark import _record
+    from crafting_system.web._work import _search_document
+
+    real = planner_plan._make_plan
+
+    def first_within(*args, round_call=None, **kwargs):
+        if round_call is not None and not round_call.watched and lock_stopped:  # the lock's round
+            raise BudgetExceeded(Binding("the search", "time", 600.0, 600.0, "no plan found yet"))
+        plan = real(*args, round_call=round_call, **kwargs)
+        if round_call is not None and round_call.watched:  # round 1 ends at the gap, as a search past its aim does
+            info = plan.packed.info["envelope"]
+            plan.packed.info["envelope"] = dataclasses.replace(info, exact=False, within=0.01, stopped=None)
+        return plan
+
+    monkeypatch.setattr(planner_plan, "_make_plan", first_within)
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) == pytest.approx(133.0)
+    first, *_ = _rounds_of(plan)
+    assert first.status == "within" and first.within == 0.01
+    record = _record(plan, plan.mean_remaining + S, S)
+    if lock_stopped:
+        assert [record.status for record in _rounds_of(plan)] == ["within", "stopped"]
+        assert plan.search.within is None and plan.search.stopped == "not every round of the methods finished" and not plan.search.exact
+        assert record["stop"] == "stopped: not every round of the methods finished" and record["lower"] == S  # no plan proved within the gap of 0
+        assert _search_document(plan)["within"] is None  # the site's JSON says no gap either
+        rounds = next(limit for limit in plan.limits if limit.kind == "rounds" and "not every round finished" in limit.what)
+        assert ", to within 1.00%" in rounds.guarantee  # round 1's gap, said of the methods of the rounds that finished only
+    else:
+        assert all(record.closed for record in _rounds_of(plan))
+        assert plan.search.within == 0.01 and plan.search.stopped is None and not plan.search.exact
+        assert record["stop"] == "proved within 1.00% of the cheapest"
+
+
 def test_a_round_whose_search_a_net_stops_before_any_plan_is_stopped_not_refused(data, target, monkeypatch):
     # the search of the lock's round meets its share of the net before a plan closes (`NoPolicy` with the net's words): the round is stopped,
     # with the figure it reached, and the plan of round 1 is the answer
