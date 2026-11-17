@@ -27,7 +27,7 @@ def traced(*a, round_call=None, **k):
     if round_call is None:
         return real(*a, round_call=round_call, **k)
     n = len(k["offers"])
-    print(f"[{time.perf_counter()-T0:6.1f} s] round: {n} offers, searches {round_call.searches}, upper in hand {round_call.upper}", flush=True)
+    print(f"[{time.perf_counter()-T0:6.1f} s] round: {n} offers, peak {PEAK[0]:.0f} MB, searches {round_call.searches}, upper in hand {round_call.upper}", flush=True)
     try:
         plan = real(*a, round_call=round_call, **k)
         s = plan.search
@@ -39,6 +39,18 @@ def traced(*a, round_call=None, **k):
         print(f"[{time.perf_counter()-T0:6.1f} s]   {type(e).__name__}: {str(e)[:200]}", flush=True)
         raise
 pp._make_plan = traced
+def timed(mod, name):
+    f = getattr(mod, name)
+    def g(*a, **k):
+        print(f"[{time.perf_counter()-T0:6.1f} s] >> {name} start, now {process_mb() or 0:.0f} MB, peak {PEAK[0]:.0f} MB", flush=True)
+        try:
+            return f(*a, **k)
+        finally:
+            print(f"[{time.perf_counter()-T0:6.1f} s] << {name} end, now {process_mb() or 0:.0f} MB, peak {PEAK[0]:.0f} MB", flush=True)
+    setattr(mod, name, g)
+for _n in ("lock_foresight", "add_risk", "plan_foresight", "widened_plan"):
+    timed(pp, _n)
+timed(pp._rounds, "widen")
 from crafting_system.planner import _envelope as ev
 _st = ev.Search._stand
 def stand(self, lower, began):
