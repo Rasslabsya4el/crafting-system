@@ -35,6 +35,7 @@ from crafting_system import budget
 
 WORKERS_ENV = "CRAFTING_WORKERS"
 MIN_CHUNK = 1  # a chunk is never smaller than this many pieces
+ABANDON_SECONDS = 30.0  # the most an abandoned pool waits for its executor's thread to end (it ends at once once its workers are dead; a bound, not a measure)
 WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory while a memory net is set
 
 _memory_net: float | None = None  # the limit in MB of the run's memory net (`memory_net`), None when no net is set
@@ -201,15 +202,19 @@ class WorkerPool:
         if executor is not None:
             results = executor._result_queue  # (the shutdown below drops it)
             workers = list((executor._processes or {}).values())
+            manager = executor._executor_manager_thread
             executor.kill_workers()  # kills the live workers and shuts the executor down without waiting (Python 3.14)
             # A worker killed while it was sending a result leaves part of a message in the result pipe: the executor's thread reads on for the rest
             # and never ends, and the interpreter waits for that thread at exit (#1179: R14 stopped at its memory net, wrote its answer, and did not
             # exit). The workers are dead, so closing this process's own end for writing gives that read an end of file: the thread sees a broken
-            # pool and ends.
+            # pool and ends. It is waited for here: a thread still winding down holds its own lock, and a pool forked next would copy that lock held,
+            # so its workers would hang at their own exit and the next pool's thread with them (seen in `tests/test_parallel.py`, one run in two).
             for worker in workers:
                 worker.join()
             if results is not None:
                 results._writer.close()
+            if manager is not None:
+                manager.join(ABANDON_SECONDS)
 
     def _start(self) -> ProcessPoolExecutor:
         if self._executor is None:
