@@ -759,7 +759,7 @@ def test_through_the_entry_the_bound_s_build_and_its_binding_count_their_work_an
         assert [record.status for record in slow.search.widening] == ["closed", "closed"]
         assert slow.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     if stopped is not None:  # the answer names the build's count where round 1 stopped (OR-13)
-        assert stopped.startswith(f"it had done {pieces:,} pieces of work, its share of the run's states net being {share:,}")
+        assert stopped.startswith(f"it had done {pieces:,} pieces of work, its allowance being {share:,} pieces of work, set from the run's states net")
         assert f"was stopped too: {stopped}" in slow.search.widening[0].reason
 
 

@@ -111,7 +111,7 @@ class Budget:
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
-        - the Lock's check after the plan counts the states its second solve walks, up to `states` of its own: under the time net it takes what
+        - the Lock's check after the plan counts every state its walks meet (one per `checkpoint` of its stage), up to `states` of its own: under the time net it takes what
           the search left, and a count has nothing left once the search used its net.
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
         net, OR-39, OR-40). It is the setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose
