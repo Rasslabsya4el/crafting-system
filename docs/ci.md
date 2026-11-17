@@ -94,7 +94,7 @@ into one named failing test:
 - **Memory share.** A run with a budget (the command's default) takes `budget.MEMORY_SHARE` of the machine divided among the processes
   sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). A test that passes no
   budget still runs its exact proof; a test that passes its own budget keeps it.
-- **Time per phase** (Linux only, `SIGALRM`, no clock read): a test's setup (its module fixtures included) or its call that runs past
+- **Time per phase** (Linux only, `SIGALRM`, no clock read): a test's setup (its module fixtures included), call or teardown that runs past
   `CRAFTING_TEST_SECONDS` (300) fails there, so a hung test fails by name instead of the job hitting `timeout-minutes`.
 - **Data per process** (Linux only, `RLIMIT_DATA`): a test process holds at most `CRAFTING_TEST_DATA_MB` (3,500 MB), so a test that asks
   for more fails with a MemoryError instead of the runner shutting down (exit 143) and losing the whole shard. The MemoryError is

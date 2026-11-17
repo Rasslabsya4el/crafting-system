@@ -177,7 +177,7 @@ def test_the_kind_lists_every_rarity_and_is_a_planner_kind_offered_by_default():
     assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE), rarity=Rarity.MAGIC))
     assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE)))
     assert AnnulmentOrb() in catalog(DATA, amulet(rarity=Rarity.NORMAL))  # a normal item gets mods on the way (ticket #70)
-    assert AnnulmentOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)  # not offered by default
+    assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE)), planner_only=True)  # offered by default (#886)
     assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE)), planner_only=True, names={"annulment-orb"})
     registered = {entry.name: entry for entry in kinds()}["annulment-orb"]
     assert registered.planner is True and registered.opt_in is False  # offered by default since #886 (OR-41)
