@@ -943,8 +943,11 @@ def plan_fallback(solution: Solution, offered: Sequence[PricedOffer]) -> tuple[P
     of up to `GAIN_STATES` states (R05: 85 offers, about 100 s and 8 GB after the net, #1091). Over the plan's own crafts each gain is still what
     one Lock saves there (a peek, then the option or one of the plan's own crafts or the burn), so each is a true "would pay below"; only the
     largest over every craft is not proved, and the Lock line's `n_exact` says so. The options of a peek, the exact pruning and the second solve
-    still read every offer: the Lock's status and a plan with the Lock are as before."""
-    used = {action.label for action in solution.policy.values()}
+    still read every offer: the Lock's status and a plan with the Lock are as before. A packed policy names its offers without building an
+    action at each of its states (`PackedPolicy.offers`): building them would cost what this saves."""
+    policy = solution.policy
+    taken = getattr(policy, "offers", None)
+    used = {priced.label for _, priced in taken()} if taken is not None else {action.label for action in policy.values()}
     return tuple(priced for priced in offered if priced.label in used)
 
 
