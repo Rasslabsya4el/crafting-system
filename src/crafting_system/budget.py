@@ -67,7 +67,8 @@ class Budget:
     there the net is asked at every state of the first plan's chain and of each round, so the search knows at most the figure plus the outcomes
     of the state that crossed it.
     `build_per_state` is read only by a run counted in states: the bound's build of each search may do that many pieces of work (`PIECES`) per
-    state of the search's own states net, as under the time net it may take a quarter of the search's seconds (`_envelope_plan.build_stop`).
+    state of the search's own states net, as under the time net it may take a quarter of the search's seconds (`_envelope_plan.build_stop`);
+    a search that begins with a plan in hand (a round of offers after the first plan) may take the whole: `1 + SEARCH_PER_BUILD` times that (#1099).
     `gap` is the proof the run owes once the plan has passed its aim (OR-32 as narrowed by OR-39, #925): the envelope search then stops by itself
     at the first round whose plan is proved to cost at most this share more than the cheapest; 0 keeps the proof exact. A craft whose proof
     closes inside the aim is proved the cheapest; a longer one ends at the gap it proved. Every figure is a setting of the machine and the user the run is for, never a constant sized
@@ -114,6 +115,8 @@ class Budget:
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
+          a search that begins with a plan in hand (a round after the first plan) keeps no room for its search and has `1 + SEARCH_PER_BUILD`
+          times that (#1099);
         - the Lock's check after the plan counts every state its walks meet (one per `checkpoint` of its stage), up to `states` of its own: under the time net it takes what
           the search left, and a count has nothing left once the search used its net.
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time

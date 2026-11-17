@@ -262,8 +262,10 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
 
     A search that begins with a plan in hand (`Net.held`, a round of `_rounds` after the first plan, #1099) needs no room kept: the room is for
     the search to make a plan, and the answer holds one already. Its build stops only at the search's net, so a round's short share does not
-    cut it at a quarter before it is complete (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s). Its time still
-    comes off the search's (`envelope_result`), and the round's share is unchanged: the rounds after it lose nothing.
+    cut it at a quarter before it is complete (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s). On the clock its
+    time still comes off the round's search (`envelope_result`): a build that takes the whole share leaves that search only its first plan,
+    with the plan in hand kept. The round's share is unchanged, so the rounds after it lose nothing. A run counted in states gives the build
+    the pieces of the whole share (`_plan.search_net`), and pieces are not states: the round's search keeps its whole states net.
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
