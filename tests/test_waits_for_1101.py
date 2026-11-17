@@ -1,33 +1,38 @@
-"""The lists of tests that wait for #1101 (`conftest.WAITS_FOR_1101`, `conftest.RERECORD_FOR_1101`, #886) name tests that exist.
+"""The lists of tests that wait for #1101 (`conftest.WAITS_FOR_1101`, `conftest.RERECORD_FOR_1101`, #886) match tests that exist.
 
-A pattern of `WAITS_FOR_1101` is an xfail that is not run, so nothing else would notice one that names a test renamed or moved away. Each
-pattern names its file, and its test function and its parameter where it gives them; the file must exist, the function must be defined in
-it, and the parameter must be written in it.
+A pattern of `WAITS_FOR_1101` is an xfail that is not run, so nothing else would notice one that names a test renamed or moved away. The
+files the patterns name are collected (`pytest --collect-only`, in a process of its own: collection runs no test and plans nothing), and each
+pattern must match at least one collected node id, exactly as `conftest._mark_waits_for_1101` matches them.
 """
 
-import ast
-import re
+import subprocess
+import sys
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 import pytest
 from conftest import RERECORD_FOR_1101, WAITS_FOR_1101
 
 ROOT = Path(__file__).resolve().parents[1]
+PATTERNS = (*WAITS_FOR_1101, *RERECORD_FOR_1101)
 
 
-def _parts(pattern: str) -> tuple[str, str, str | None]:
-    path, _, rest = pattern.partition("::")
-    match = re.fullmatch(r"([^[]*?)(?:\[\[\](.*)\[\]\])?", rest)
-    assert match, pattern
-    return path, match.group(1), match.group(2)
+@pytest.fixture(scope="module")
+def collected() -> list[str]:
+    files = sorted({pattern.partition("::")[0] for pattern in PATTERNS})
+    for file in files:
+        assert (ROOT / file).is_file(), file
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", *files],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-4000:]
+    return [line.strip() for line in result.stdout.splitlines() if "::" in line]
 
 
-@pytest.mark.parametrize("pattern", [*WAITS_FOR_1101, *RERECORD_FOR_1101])
-def test_each_pattern_names_a_file_a_test_and_a_parameter_that_exist(pattern):
-    path, name, parameter = _parts(pattern)
-    source = (ROOT / path).read_text(encoding="utf-8")
-    tests = [node.name for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef) and node.name.startswith("test_")]
-    prefix = name.rstrip("*")
-    assert any(test == name or (name.endswith("*") and test.startswith(prefix)) for test in tests), pattern
-    if parameter is not None:
-        assert all(part in source for part in parameter.split("*") if part), pattern
+@pytest.mark.parametrize("pattern", PATTERNS)
+def test_each_pattern_matches_a_collected_test(pattern, collected):
+    assert any(fnmatchcase(node, pattern) for node in collected), pattern

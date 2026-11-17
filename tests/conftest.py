@@ -224,7 +224,7 @@ WAITS_FOR_1101 = (
     "tests/test_measure_actions_key.py::test_a_small_real_route_is_measured_in_each_variant[[]removed[]]",
     "tests/test_naive_crafter_routes.py::*[[]R12[]]",
     "tests/test_packed_plan_real.py::*[[]R10[]]",
-    "tests/test_planner_declared_bounds.py::*",
+    "tests/test_planner_declared_bounds.py::*",  # R05 past the net; R12 also counts the sets in the winning round's offers (#1103)
     "tests/test_prune_bound.py::*[[]r05-strength-ring[]]",
     "tests/test_prune_bound.py::*[[]r10-fractured-boots[]]",
     "tests/test_prune_bound.py::*[[]r11-reservation-helmet[]]",
