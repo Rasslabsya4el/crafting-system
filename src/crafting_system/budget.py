@@ -12,6 +12,7 @@ pruning, the search) may take the whole net: until a plan closes there is nothin
 Lock's check, the percentiles, which OR-34 adds after the route) take what is left, and when nothing is left they say so and the answer is kept
 (the plan without the Lock; the percentiles of a coarser step, or of the slower method). Inside the search, the bound's build takes at most
 a quarter of the time it is given (`planner._envelope_plan.build_stop`), a hand-set share set from the search/build ratio on R04 (3.7) and R14 (6.2).
+A run counted in states (`Budget.in_states`) has no time net: each stage counts its own work instead, as `in_states` says (#1101).
 
 **What bound.** A stage that a limit stopped records it on the clock (`Clock.bind`), with the stage, the limit and its figures; the plan lists
 them all in one limit of its answer (`planner._limits.budget_limit`, #378). A stop never passes silently (OR-12): a stage either finishes, or stops at a
@@ -42,12 +43,14 @@ NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every met
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
 MEMORY_POLL_SECONDS = 0.5  # a checkpoint reads the memory at most this often (the clock it reads every time)
+BUILD_PER_STATE = 100.0  # a run counted in states (`Budget.in_states`): the bound's build of a search may do this many pieces of work per state of that search's net (#1101; `Budget.build_per_state`)
 
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
 
 TIME = "time"
 MEMORY = "memory"
 STATES = "states"
+PIECES = "pieces of work"  # the unit of the bound's build in a run counted in states: a (member, offer) pair it looks at, or one offer's floor worked out (#1101)
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,8 @@ class Budget:
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: the search's first plan is built whole before the first round, so its reach can pass the figure. A run with a states net and
     no time net counts its work in states (`in_states`), and its plan then does not depend on the machine's speed.
+    `build_per_state` is read only by a run counted in states: the bound's build of each search may do that many pieces of work (`PIECES`) per
+    state of the search's own states net, as under the time net it may take a quarter of the search's seconds (`_envelope_plan.build_stop`).
     `gap` is the proof the run owes once the plan has passed its aim (OR-32 as narrowed by OR-39, #925): the envelope search then stops by itself
     at the first round whose plan is proved to cost at most this share more than the cheapest; 0 keeps the proof exact. A craft whose proof
     closes inside the aim is proved the cheapest; a longer one ends at the gap it proved. Every figure is a setting of the machine and the user the run is for, never a constant sized
@@ -71,10 +76,13 @@ class Budget:
     memory_mb: float | None = None
     states: int | None = None
     gap: float = PROOF_GAP
+    build_per_state: float = BUILD_PER_STATE
 
     def __post_init__(self) -> None:
         if not (self.gap >= 0 and math.isfinite(self.gap)):
             raise ValueError(f"the budget's gap is a share, zero or more (0.01 is 1%); got {self.gap!r}")
+        if not (self.build_per_state > 0 and math.isfinite(self.build_per_state)):
+            raise ValueError(f"the budget's build_per_state is a number of pieces of work per state, above zero; got {self.build_per_state!r}")
         for name in ("aim_seconds", "seconds", "memory_mb"):
             value = getattr(self, name)
             if value is not None and not (value >= 0 and math.isfinite(value)):
@@ -85,20 +93,32 @@ class Budget:
         """No aim, no net and no gap: every stage runs to its end and every proof is exact (a library call, a measurement, a test of the exact answer)."""
         return cls(None, None, None, None, 0.0)
 
+    @property
+    def counted(self) -> bool:
+        """Whether the run counts its work in states (`in_states`): a states net and no time net."""
+        return self.seconds is None and self.states is not None
+
     @classmethod
-    def in_states(cls, states: int, gap: float = 0.0) -> "Budget":
-        """A run counted in work, not seconds: a net of `states` states known (summed over the planner's rounds of offers, `_rounds.StatesMeter`),
-        no aim, no time net and no memory net, and the proof `gap` from the first round (0: exact). Nothing in the search or its rounds then
-        reads the clock, so the same target under the same figure gives the same plan and the same answer on every machine (#886); the cost
-        figures' ladder has no time net either (`risk._regen.ladder_net`). The figure is not shared out beyond the rounds: each other search of
-        the run (the plan without the metamod crafts, an Awakener's Orb's donors, each start option) has the whole of it, and the bound's build
-        and the Lock's check have none, so a record states its figure and what it held. It is the
-        setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose offers split into rounds;
-        its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
-        net, OR-39, OR-40)."""
+    def in_states(cls, states: int, gap: float = 0.0, build_per_state: float = BUILD_PER_STATE) -> "Budget":
+        """A run counted in work, not seconds: a net of `states` states known, no aim, no time net and no memory net, and the proof `gap` from
+        the first round (0: exact). Nothing that decides anything in the run then reads the clock, so the same target under the same figure gives
+        the same plan and the same answer on every machine (#886); the cost figures' ladder has no time net either (`risk._regen.ladder_net`).
+
+        Every stage counts its work in a unit of its own and stops by it, saying so (OR-12, OR-13; #1101):
+        - every envelope search of the run (each round of offers, the plan without the metamod crafts, an Awakener's Orb's donors, each start
+          option) counts the states it knows on one account of the run (`Clock.spend`): a search's net is the states left (a donor's, an equal
+          share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`);
+        - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
+          the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
+          search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
+        - the Lock's check after the plan counts the states its second solve walks, up to `states` of its own: under the time net it takes what
+          the search left, and a count has nothing left once the search used its net.
+        Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
+        net, OR-39, OR-40). It is the setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose
+        offers split into rounds."""
         if isinstance(states, bool) or not (isinstance(states, int) and states >= 1):
             raise ValueError(f"the budget's states net is a whole number of states, one or more; got {states!r}")
-        return cls(None, None, None, states, gap)
+        return cls(None, None, None, states, gap, build_per_state)
 
     @classmethod
     def default(cls) -> "Budget":
@@ -167,6 +187,9 @@ class Clock:
     stage: str = "the plan"  # the stage running now (`stage`), named in a binding a checkpoint meets
     what: str = NO_PLAN  # what a stop of that stage leaves, as the answer says it (OR-13)
     stops: bool = True  # whether a checkpoint stops the stage; False for a stage that stops itself at its own net and keeps what it found (the search)
+    spent: int = 0  # a run counted in states: the states its envelope searches knew, on one account (`spend`, `states_left`)
+    cap: int | None = None  # a run counted in states: the checkpoints the running stage's walk may pass, one per state (`stage(states=)`)
+    walked: int = 0  # the checkpoints met under `cap`
     _memory_read: float = field(default=-math.inf, repr=False)
     _memory: float | None = field(default=None, repr=False)
 
@@ -179,6 +202,16 @@ class Clock:
         if given.seconds is None:
             return None
         return max(given.seconds - self.elapsed(), 0.0)
+
+    def states_left(self) -> int | None:
+        """The states left on the run's account (`spend`), never below 0; None with no states net."""
+        given: Budget = self.budget
+        return None if given.states is None else max(given.states - self.spent, 0)
+
+    def spend(self, states: int | None) -> None:
+        """Count on the run's account the states an envelope search knew (a run counted in states; nothing otherwise)."""
+        if self.budget.counted and states:
+            self.spent += int(states)
 
     def memory(self, fresh: bool = False) -> float | None:
         """The memory this process holds, in MB, read at most every `MEMORY_POLL_SECONDS` unless `fresh`."""
@@ -244,25 +277,36 @@ def checkpoint() -> None:
     it reads the clock every time and the memory at most every `MEMORY_POLL_SECONDS`."""
     clock = _active.get()
     if clock is not None and clock.stops:
+        if clock.cap is not None:  # a stage of a run counted in states: one state of its walk (`stage(states=)`), never the clock
+            clock.walked += 1
+            if clock.walked > clock.cap:
+                raise BudgetExceeded(clock.bind(Binding(clock.stage, STATES, clock.cap, clock.walked, clock.what)))
         clock.check(clock.stage, clock.what)
 
 
 @contextlib.contextmanager
-def stage(name: str, what: str = NO_PLAN, *, stops: bool = True) -> Iterator[Clock | None]:
+def stage(name: str, what: str = NO_PLAN, *, stops: bool = True, states: int | None = None) -> Iterator[Clock | None]:
     """Name the stage that runs in the block and what a stop inside it leaves (a binding met there says both); nothing outside a run.
 
     With `stops` False the checkpoints inside the block do nothing: the stage is given the net (`Clock.left`) and stops itself between two of its
-    rounds, keeping the best it found (the envelope search), where a checkpoint deep inside a round would throw that away."""
+    rounds, keeping the best it found (the envelope search), where a checkpoint deep inside a round would throw that away. `states` (a run
+    counted in states) is the number of checkpoints, one per state its walk meets, the stage may pass: the next one stops it with a binding in
+    states; None keeps the cap of the stage around it."""
     clock = _active.get()
     if clock is None:
         yield None
         return
     saved = clock.stage, clock.what, clock.stops
+    counted = clock.cap, clock.walked
     clock.stage, clock.what, clock.stops = name, what, stops
+    if states is not None:
+        clock.cap, clock.walked = states, 0
     try:
         yield clock
     finally:
         clock.stage, clock.what, clock.stops = saved
+        if states is not None:  # a stage inside it with no cap of its own counts on its cap, and keeps the count
+            clock.cap, clock.walked = counted
 
 
 # ---- memory --------------------------------------------------------------------------------------------------------------------------

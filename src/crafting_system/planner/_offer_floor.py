@@ -36,6 +36,7 @@ from collections.abc import Callable
 from dataclasses import replace
 
 from crafting_system.abstraction import Abstraction, CompressedState, Status
+from crafting_system.abstraction._pattern import Tally
 
 from ._offer_kinds import (
     CRAFT,
@@ -73,8 +74,15 @@ class OfferFloors:
     """The floors of a list of priced offers, from the start `start` of a plan and its start item `item` (the item an unopened `start` opens into)."""
 
     def __init__(
-        self, abstraction: Abstraction, start: CompressedState, priced: list[PricedOffer] | tuple[PricedOffer, ...], item, stop: Callable[[], str | None] | None = None
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        priced: list[PricedOffer] | tuple[PricedOffer, ...],
+        item,
+        stop: Callable[[], str | None] | None = None,
+        tally: Tally | None = None,
     ) -> None:
+        self.tally = tally  # a build counted in pieces of work (`abstraction._pattern.Tally`): each floor raised for the build adds one
         self.ab = abstraction
         self.start = start
         self.item = item
@@ -117,6 +125,8 @@ class OfferFloors:
 
     def _raise(self, entry: _Entry, level: int) -> None:
         self.ask()
+        if self.tally is not None:
+            self.tally.done += 1
         entry.kind, entry.pbar, entry.level = _raised(
             self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level
         )

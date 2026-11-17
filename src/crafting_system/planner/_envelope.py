@@ -211,6 +211,9 @@ class Net:
     # the caller's word on where the search stands, asked after each round (a round of the planner's widening, `_rounds.Share`): the reason it
     # gives the rest of its time back, or None to go on. The search stops there as at any net: it keeps its plan in hand, or says it had none
     give_way: "Callable[[Standing], str | None] | None" = None
+    # a run counted in states (`Budget.in_states`, #1101): the pieces of work the bound's build of this search may do (`_pattern_bound`), its
+    # share of the search's states net; None for a build on the clock (`_envelope_plan.build_stop`)
+    pieces: int | None = None
 
 
 @dataclass
@@ -943,7 +946,7 @@ class Search[S]:
             self._last_root, self._last_error = root, core.certificate.bound
             self.stats.lower_history.append(lower)
             if not math.isfinite(root):
-                raise NoPolicy("no policy of the offers reaches the goal from the start")
+                raise NoPolicy("no policy of the offers reaches the goal from the start", states=len(self.states))
             self._beaten(lower, began)
             reach = policy_reach(graph, core.action, 0)
             acting = reach[core.action[reach] >= 0]
@@ -1029,19 +1032,19 @@ class Search[S]:
             raise NoPolicy(
                 f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
                 f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)",
-                stopped=stopped, lower=lower,
+                stopped=stopped, lower=lower, states=len(self.states),
             ) from error
         if not math.isfinite(upper):
             if self.p.restart is None:
                 raise NoPolicy(
                     f"the search stopped ({stopped}) before any policy closed, and the start item is given, so there is no restart to fall back on; "
                     f"it had looked at {self.stats.expanded:,} of {len(self.states):,} states and no plan costs less than {lower:,.6g}",
-                    stopped=stopped, lower=lower,
+                    stopped=stopped, lower=lower, states=len(self.states),
                 )
             raise NoPolicy(
                 f"the search stopped ({stopped}) before any policy that can be executed was found: it had looked at {self.stats.expanded:,} of {len(self.states):,} states "
                 f"and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)",
-                stopped=stopped, lower=lower,
+                stopped=stopped, lower=lower, states=len(self.states),
             )
         self._stand(lower, began)
         return SearchResult(self.states, self.index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None)
@@ -1062,12 +1065,14 @@ def figure_error(gap: float, gap_after: float | None) -> float:
 
 class NoPolicy(ValueError):
     """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it). `stopped` is the
-    net's words when a net stopped it (it found none yet, it did not prove there is none), with `lower`, the figure no plan costs less than."""
+    net's words when a net stopped it (it found none yet, it did not prove there is none), with `lower`, the figure no plan costs less than.
+    `states` is the states the search knew when it ended, which a run counted in states counts (`_rounds.StatesMeter`, `Clock.spend`, #1101)."""
 
-    def __init__(self, message: str, *, stopped: str | None = None, lower: float | None = None) -> None:
+    def __init__(self, message: str, *, stopped: str | None = None, lower: float | None = None, states: int = 0) -> None:
         super().__init__(message)
         self.stopped = stopped
         self.lower = lower
+        self.states = states
 
 
 class MemoryNet(Exception):

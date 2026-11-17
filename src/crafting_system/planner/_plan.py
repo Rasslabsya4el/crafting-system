@@ -23,7 +23,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
-from crafting_system.budget import NO_PLAN, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
+from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
@@ -490,6 +490,8 @@ APPROXIMATE_STAGE = "the search for a plan within the stated gap of the cheapest
 WALK_STAGE = "the walk of every item the actions can reach"
 READINGS_STAGE = "the plan made once for each reading of a rule the sources leave open"
 LOCK_STAGE = "the check of Hinekora's Lock"
+BUILD_STAGE = "the count of the cheapest possible cost"  # the bound's build, as `build_note` says it
+BUILD_KEPT = "the cheapest possible cost was worked out only in part, so the search had a weaker bound to cut with"
 LOCK_KEPT = "the plan is the best one without the Lock; whether the Lock saves anything was not checked"
 SEARCH_KEPT = "the best plan found so far is kept, with the figure below which no plan can cost"
 RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs in 10 stay under)"
@@ -499,14 +501,27 @@ RISK_KEPT = "the figures of the coarser step already worked out are kept, or non
 def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
     Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net. `states`, when
-    given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`)."""
+    given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`).
+
+    A run counted in states (`Budget.in_states`, #1101) shares its states as the time net shares its seconds: a search's net is the states left
+    on the run's account (`Clock.spend`), an equal share of them when `searches` are still to run, and at least one (a search given one state
+    makes its first plan and stops, as one given no time left does); its bound's build may do `Budget.build_per_state` pieces of work per state
+    of that net (`Net.pieces`)."""
     if clock is None:
         return None
     given: Budget = clock.budget
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
     left = clock.left()
-    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb, give_way=give_way)
+    pieces = None
+    if given.counted:
+        if states is None:
+            states = max(int(clock.states_left() or 0) // max(searches, 1), 1)
+        pieces = max(int(given.build_per_state * states), 1)
+    return Net(
+        seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
+        give_way=give_way, pieces=pieces,
+    )  # fmt: skip
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
@@ -521,10 +536,11 @@ def search_gap(clock: Clock | None) -> tuple[float, float | None]:
     return clock.budget.gap, 0.0 if aim is None else max(aim - clock.elapsed(), 0.0)
 
 
-def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
+def bind_search(clock: Clock | None, info: EnvelopeInfo, given_states: int | None = None) -> None:
     """Record on the clock the limit that stopped the envelope search or its bound's build, when one did (OR-13: the plan says which bound).
 
-    A search that ended at a proved gap met no limit: its own limit says how it ended (`envelope_limits`)."""
+    A search that ended at a proved gap met no limit: its own limit says how it ended (`envelope_limits`). In a run counted in states the build
+    that its pieces of work stopped and the search that its states net (`given_states`) stopped are each bound in their own unit."""
     ended = info.exact or info.within is not None  # the search ended by itself, not at a net
     if clock is None or (ended and info.bound_stopped is None):
         return
@@ -534,6 +550,12 @@ def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
         what = "the cheapest possible cost was worked out only in part; the plan is still the cheapest"
     else:
         what = "the cheapest possible cost was worked out only in part; the plan is still proved within the stated gap of the cheapest"
+    if clock.budget.counted:  # each stage names its own count, never seconds (#1101)
+        if info.bound_stopped is not None and info.bound_share is not None and info.bound_pieces >= info.bound_share:
+            clock.bind(Binding(BUILD_STAGE, PIECES, info.bound_share, info.bound_pieces, BUILD_KEPT if not ended else what))
+        if not ended:
+            clock.bind(Binding(SEARCH_STAGE, STATES, given_states if given_states is not None else clock.budget.states or 0, info.touched, what))
+        return
     found = clock.over(SEARCH_STAGE, what)
     if found is None:  # the net the search met is no longer met now (the memory fell when its graph was let go): say the one it names
         given = clock.budget
@@ -549,8 +571,9 @@ def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
 
 
 def stopped_refusal(clock: Clock | None, binding: Binding) -> str:
-    """The `PlanError` of a run its net stopped before any plan closed (OR-33): how long it ran and where it stopped."""
-    spent = f" after {clock.elapsed():,.0f} s" if clock is not None else ""
+    """The `PlanError` of a run its net stopped before any plan closed (OR-33): how long it ran and where it stopped (a run counted in states
+    names no seconds: its binding names its count, #1101)."""
+    spent = f" after {clock.elapsed():,.0f} s" if clock is not None and not clock.budget.counted else ""
     return f"stopped{spent}: {binding.words()}"
 
 
@@ -784,7 +807,10 @@ def _make_plan(
     unfolded = priced
     if awakened:  # each donor first, by the same search (#832): the orb is then an ordinary offer whatever solver takes the target
         # a donor stops as the target does (past the aim, at a proved gap) on its share of the net; its [lower, upper] goes into `whole_lower`
-        donors, left_out = solve_donors(abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), stop=lambda: search_gap(clock))
+        donors, left_out = solve_donors(
+            abstraction, awakened, priced, net=lambda searches: search_net(clock, searches), stop=lambda: search_gap(clock),
+            spend=None if clock is None else clock.spend,
+        )  # fmt: skip
         kept_orbs = {d.action for d in donors}
         priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
         limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
@@ -855,21 +881,26 @@ def _make_plan(
         if twins:
             limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
         if envelope:
+            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states) if round_call is not None else search_net(clock)
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
                     gap, gap_after = search_gap(clock)
                     packed = envelope_result(
                         abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
-                        net=search_net(clock, round_call.searches, round_call.give_way, round_call.states) if round_call is not None else search_net(clock), item=target.start_item if many else None, gap=gap,
+                        net=net, item=target.start_item if many else None, gap=gap,
                         gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
                         beaten_at=round_call.upper if round_call is not None else None,
                     )  # fmt: skip
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
+                if round_call is None and clock is not None:  # a round's states are counted by the rounds (`_rounds.StatesMeter`)
+                    clock.spend(getattr(error, "states", 0))
                 raise PlanError(envelope_refusal(solver, error)) from error
             packed.info["envelope"] = whole_info(packed.info["envelope"], unfolded, donors)  # the target and its donors together (`_awakener`)
             limits += envelope_limits(packed.info["envelope"])
-            if round_call is None:  # a round's stop is said by the rounds (`widened_plan`)
-                bind_search(clock, packed.info["envelope"])
+            if round_call is None:  # a round's stop is said by the rounds (`widened_plan`), and its states counted there
+                bind_search(clock, packed.info["envelope"], None if net is None else net.states)
+                if clock is not None:
+                    clock.spend(packed.info["envelope"].touched)
         else:
             with stage(WALK_STAGE, walk_stop(walks_because)):
                 packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
@@ -928,9 +959,11 @@ def _make_plan(
 
 def lock_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, clock, fallback=None):
     """What the plan finds about Hinekora's Lock (`plan_foresight`), and the plan with the Lock when it takes it; a stop of the run's net keeps
-    the plan without the Lock and the clock lists the stop (OR-33)."""
+    the plan without the Lock and the clock lists the stop (OR-33). In a run counted in states the check walks at most the run's states net
+    (`Budget.states`) of states of its own, one per checkpoint, and a stop there names that count (#1101): the search before it may have used
+    the whole net, and under the time net the check takes what the search left."""
     try:
-        with stage(LOCK_STAGE, LOCK_KEPT):
+        with stage(LOCK_STAGE, LOCK_KEPT, states=clock.budget.states if clock is not None and clock.budget.counted else None):
             return plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, fallback=fallback)
     except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
         if clock is not None:
@@ -1007,7 +1040,10 @@ def round_end(plan: Plan) -> tuple[str, str]:
         return _rounds.CLOSED, ""
     if info.within is not None:
         return _rounds.WITHIN, f"proved within {info.within:.2%} of the cheapest of its methods"
-    return _rounds.STOPPED, info.stopped or "the search was stopped"
+    reason = info.stopped or "the search was stopped"
+    if info.bound_share is not None and info.bound_stopped is not None:  # a run counted in states names its build's count too (#1101, OR-13)
+        reason += f"; {BUILD_STAGE} it cut with was stopped too: {info.bound_stopped}"
+    return _rounds.STOPPED, reason
 
 
 def widened_plan(
@@ -1037,10 +1073,13 @@ def widened_plan(
                 raise _rounds.NoPlan(str(error)) from error
             raise
 
+    meter = states_meter(clock)
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
-        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=states_meter(clock),
+        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=meter,
     )  # fmt: skip
+    if meter is not None and clock is not None:
+        clock.spend(meter.spent)  # the rounds' states, on the run's account (a start option after this one shares what is left)
     if widened.plan is None:
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
     plan, records = widened.plan, widened.records
@@ -1073,10 +1112,11 @@ def widened_plan(
 
 def states_meter(clock: Clock | None) -> _rounds.StatesMeter | None:
     """The rounds' meter in states when the run counts its work in states (`Budget.in_states`: a states net and no time net), so that no round
-    reads the clock and the plan is the same on every machine (#886); None for a run on the clock (a user's run: the site and the command)."""
-    if clock is None or clock.budget.seconds is not None or clock.budget.states is None:
+    reads the clock and the plan is the same on every machine (#886); None for a run on the clock (a user's run: the site and the command). The
+    rounds share the states left on the run's account (`Clock.spend`), what an earlier search of the run (a start option's) did not use (#1101)."""
+    if clock is None or not clock.budget.counted:
         return None
-    return _rounds.StatesMeter(clock.budget.states)
+    return _rounds.StatesMeter(int(clock.states_left() or 0))
 
 
 def price_cut_applies(data: GameData, target: Target, priced: Sequence[PricedOffer], start: StartPrice, *, solve_it: bool, judged: bool) -> bool:
