@@ -188,11 +188,12 @@ class BenchCraft(Action):
         return {entry.currency: entry.count for entry in self.cost(data)}
 
     def reads(self, data: GameData) -> Reads:
-        """A craft is refused when its mod shares a family with a mod on the item, so it tells those families apart."""
+        """A craft is refused when its mod shares a family with a mod on the item, so it tells those families apart; its refusal reads of the junk
+        only those families and the count per side (a full side), the crafted mods and the flags (`Reads.refusal_by_families`)."""
         mod = data.mods.get(self.mod_id)
         if mod is None:
             raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
-        return Reads(junk=True, families=frozenset(mod.families), block_invariant=True)
+        return Reads(junk=True, families=frozenset(mod.families), block_invariant=True, refusal_by_families=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset({self.mod_id}), crafted=True, draws=False)
@@ -269,8 +270,8 @@ class RemoveCraftedMods(Action):
         return {entry.currency: entry.count for entry in self.cost(data)}
 
     def reads(self, data: GameData) -> Reads:
-        """It reads how many mods are left, not which: the count of the junk, no family."""
-        return Reads(junk=True, families=frozenset(), needs_crafted=True, block_invariant=True)
+        """It reads how many mods are left, not which: the count of the junk, no family; it is refused on an item with no crafted mod."""
+        return Reads(junk=True, families=frozenset(), needs_crafted=True, block_invariant=True, refusal_by_families=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds.removal(keeps_crafted=False)

@@ -47,7 +47,7 @@ is always the generic placeholder the orbs put on an item.
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable
 
-from crafting_system.actions import BLOCKED_TAG, Action, build_pool, influence_spawn_test
+from crafting_system.actions import BLOCKED_TAG, Action, Reads, build_pool, influence_spawn_test
 from crafting_system.data import GameData, Mod
 from crafting_system.items import GENERIC_PLACEHOLDERS, Item, Rarity, Side
 from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, UNVEILED_DOMAIN, VEILED_DOMAIN
@@ -205,10 +205,18 @@ class Kinds:
         self._places: dict[str, int] = {}  # mod id -> its place in its family type (with `classed`)
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
         self._pooled = None
+        self._reads: dict[Action, Reads] = {}  # `reads`
+
+    def reads(self, action: Action) -> Reads:
+        """`action.reads(self.data)`, asked once per action (every pair asks it, `Abstraction._erases`: 2.4 million times on R05, #1178)."""
+        found = self._reads.get(action)
+        if found is None:
+            found = self._reads[action] = action.reads(self.data)
+        return found
 
     def reads_junk(self, action: Action) -> bool:
         """Whether `action` can see the mods that a Chaos Orb would erase (their number or their families)."""
-        return action.reads(self.data).junk
+        return self.reads(action).junk
 
     def is_influenced(self, mod: Mod) -> bool:
         """Whether `mod` is an influence mod of these kinds' influences that an enabled action tells apart (`Reads.influenced`); never for an item with no influence.
