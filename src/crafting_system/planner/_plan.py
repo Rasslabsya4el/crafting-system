@@ -31,7 +31,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
-from crafting_system.risk import IntervalReport, RiskReport, _regen, evaluate, has_inputs, is_free_cost, solve_readings
+from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
 from crafting_system.solver import MAIN, Acquisition, Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
@@ -894,14 +894,20 @@ def _make_plan(
         search = None if donated or solver == "object" else reading_search(
             abstraction, start, priced, clock, watch, searches, solver, readings_count(axes), item=target.start_item if many else None
         )  # fmt: skip
-        with stage(READINGS_STAGE):
-            readings, others, product = solve_each_reading(abstraction, model, start, priced, axes, donors=donated, search=search)
+        # each search stops at its own share of the net and keeps its plan, and the routes are then compared on what they reach, which a stop
+        # there would throw away (OR-33); the whole walk stops at the net as it always did
+        with stage(READINGS_STAGE, SEARCH_KEPT, stops=search is None):
+            try:
+                readings, others, product = solve_each_reading(abstraction, model, start, priced, axes, donors=donated, search=search)
+            except Uncovered:  # a reading's outcomes reach what another reading's search never held: every reading is solved whole (#1111)
+                search = None
+                with stage(READINGS_STAGE):
+                    readings, others, product = solve_each_reading(abstraction, model, start, priced, axes, donors=donated)
         solution = readings.solution
         if search is not None:  # the plan is the plan reading's search from the start (the first search made), its risk the packed one
             packed = searches[0]
             solution = packed.solution
-            for found in searches:
-                limits += tuple(limit for limit in envelope_limits(found.info["envelope"]) if limit not in limits)
+            limits += envelope_limits(packed.info["envelope"]) + _packed.evaluation_limits(packed.info)
         if product is not None:  # the solve was over the product of the target and its donors: the plan's own process is read off it
             donor_plan = DonorPlan(product, product.start(start), readings.solution)
             solution = main_view(readings.solution)
@@ -1242,11 +1248,11 @@ def solve_each_reading(
     product states. Returns the driver's report, the abstractions of the other readings and the plan reading's product (None without donors).
 
     With `search` (no donors) each reading is solved by the envelope search instead of whole (#1111): `search(reading, abstraction, state)` is
-    the search of that reading's model from `state`, and a reading is searched from each start the driver asks for (the start, then a state a
-    candidate reaches under another reading and does not cover), each at most once; a later start's policy fills in only the states the
-    earlier ones did not hold. A reading costs its search, not its whole graph: the readings share nothing but the offers and the start, and
-    the routes are compared on the states the candidates reach (`risk.solve_readings`, `solve_one`). The search's own gap and stop hold for
-    each reading: its value is a lower figure to the gap the search closed within (`reading_solution`).
+    the search of that reading's model from `state`, made once per reading from the start. A reading costs its search, not its whole graph, and
+    the routes are compared on the states the candidates reach (`risk.solve_readings`, `solve_one`); each reading's lower figure is the one its
+    search proved (`reading_solution`). When a candidate reaches under another reading a state its own search never held (the outcomes of an
+    action that reads the axis have another support there), `Uncovered` is raised: a search from that state would restart at it and not at
+    the start item, so the caller solves the readings whole instead.
     """
     names = [axis.name for axis in axes]
     plan = Reading.of({axis.name: axis.plan for axis in axes})
@@ -1270,17 +1276,14 @@ def solve_each_reading(
         root, without = start, None
     solve_one = None
     if search is not None and not donors:
-        searched: dict[tuple[Reading, CompressedState], PackedResult] = {}
+        searched: dict[Reading, PackedResult] = {}
 
         def solve_one(reading: Reading, starts: list[CompressedState]) -> Solution:
-            found: list[PackedResult] = []
-            for state in starts:
-                if any(state in each.solution.policy for each in found):
-                    continue  # an earlier search of this reading holds it already
-                if (reading, state) not in searched:
-                    searched[(reading, state)] = search(reading, abstractions[reading], state)
-                found.append(searched[(reading, state)])
-            return reading_solution(found, start)
+            if len(starts) > 1:  # a candidate reaches under another reading a state its own search never held (`Uncovered`)
+                raise Uncovered(starts[1:])
+            if reading not in searched:
+                searched[reading] = search(reading, abstractions[reading], start)
+            return reading_solution(searched[reading], start)
 
     try:
         report = solve_readings(models, root, plan=plan, without=without, solve_one=solve_one)
@@ -1300,12 +1303,12 @@ def reading_search(
     solver: str, count: int, *, item=None,
 ) -> Callable[[Reading, Abstraction, CompressedState], PackedResult]:
     """The envelope search of one reading's model from one state, for `solve_each_reading` (#1111). Each search has an equal share of what the
-    run has left over the readings not yet searched (`search_net`), stops at the run's gap as the plan's own search does (`search_gap`), and
+    run has left over the readings not yet searched and the comparison of their routes (`search_net`), stops at the run's gap as the plan's own search does (`search_gap`), and
     counts its states on the run's clock; each is appended to `searches`, the plan reading's search from the start first (the driver searches
     the plan reading first). The run's watcher sees that one only. A search that cannot answer is the plan's refusal (`envelope_refusal`)."""
 
     def search(reading: Reading, model: Abstraction, state: CompressedState) -> PackedResult:
-        net = search_net(clock, max(count - len(searches), 1))
+        net = search_net(clock, count - len(searches) + 1)  # a share for each reading left and one for comparing the routes after them
         gap, gap_after = search_gap(clock)
         first = model is abstraction and state == start
         try:
@@ -1328,27 +1331,22 @@ def reading_search(
     return search
 
 
-def reading_solution(found: Sequence[PackedResult], start: CompressedState) -> Solution:
-    """One reading's solution for the interval driver from its envelope searches (#1111): the first search's (from the start) as it is, or with
-    the later ones' states it does not hold added. Its error is relative, as the solver's, and covers what the search proved: the gap it closed
-    within, or how far its lower figure lies below its plan when a net stopped it, so the value at the start less that error is a lower figure."""
-    first = found[0].solution
-    info = found[0].info.get("envelope")
-    error = float(first.error_bound)
-    if info is not None and not info.exact:
-        mean = float(first.values[start])
-        error = max(error, (mean - info.lower) / mean if mean > 0 and math.isfinite(mean) else math.inf)
-    if len(found) == 1:
-        return Solution(first.values, first.policy, error)
-    policy: dict = {}
-    values: dict = {}
-    for each in found:
-        for state, action in each.solution.policy.items():
-            if state not in policy:
-                policy[state] = action
-                values[state] = each.solution.values[state]
-    values[start] = first.values[start]
-    return Solution(values, policy, error)
+class Uncovered(Exception):
+    """A candidate of one reading reaches, under another reading, states its own envelope search never held (`solve_each_reading`)."""
+
+    def __init__(self, states: Sequence[CompressedState]) -> None:
+        super().__init__(f"{len(states)} states a candidate reaches under another reading were not searched")
+        self.states = tuple(states)
+
+
+def reading_solution(found: PackedResult, start: CompressedState) -> Searched:
+    """One reading's solution for the interval driver from its envelope search from the start (#1111), with the lower figure the search proved:
+    its plan's own mean when it closed exactly, else its lower figure (a search stopped at the gap or at a net, OR-13)."""
+    solution = found.solution
+    info = found.info.get("envelope")
+    value = float(solution.values[start])
+    lower = value if info is None or info.exact else min(float(info.lower), value)
+    return Searched(solution.values, solution.policy, solution.error_bound, lower)
 
 
 def reading_limits(abstraction: Abstraction, others: Iterable[Abstraction], budgeted: bool) -> tuple[Limit, ...]:

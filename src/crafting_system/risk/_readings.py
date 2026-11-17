@@ -286,6 +286,14 @@ def _node_action(node: PeekNode, memo: _Memo, values: Mapping) -> Action | None:
     return min(offered, key=lambda action: action_value(action, values))
 
 
+@dataclass(frozen=True, slots=True)
+class Searched[S](Solution[S]):
+    """A reading solved by the caller's search (`solve_readings(solve_one=...)`): `lower` is the figure no plan of that reading costs less than
+    from the start, as the search proved it (below the value when the search stopped at a gap or a net, #1111)."""
+
+    lower: float = math.nan
+
+
 def _as_peek[S](found: Solution[S]) -> PeekSolution[S]:
     """A solution without the Lock as the driver holds every reading's: no reactions, no rounds of them."""
     return found if isinstance(found, PeekSolution) else PeekSolution(found.values, found.policy, found.error_bound, {}, 0)
@@ -328,8 +336,8 @@ def solve_readings[S, R: Hashable](
     solved on the plan reading's model (`has_inputs` for "no recombinators"). The remaining options are those of `solve`.
 
     `solve_one`, when given, solves one reading from its starts in place of `solve_peek` on the whole model (`solve_one(reading, starts)`): the
-    planner's envelope search (#1111), whose policy covers the states it reaches from each start and whose `error_bound` (relative) covers the
-    gap it closed within, so that the value at the start is a lower figure of that reading to that error. The models are then walked only along
+    planner's envelope search (#1111), whose policy covers the states it reaches from each start; a `Searched` solution says the lower figure its
+    search proved (below its value when it stopped at a gap or a net), and the bracket's lower end is taken from those. The models are then walked only along
     the candidates (`_walk`) and evaluated on what those reach (`policy_mean`); the whole model is never solved. It takes no Lock (`Peek`).
     """
     order = list(models)
@@ -366,7 +374,9 @@ def solve_readings[S, R: Hashable](
         if solve_one is None:
             solutions = {r: solve_peek(memos[r], list(starts), **options) for r in order}
         else:
-            solutions = {r: _as_peek(solve_one(r, list(starts))) for r in order}
+            found = {r: solve_one(r, list(starts)) for r in order}
+            proved = {r: each.lower for r, each in found.items() if isinstance(each, Searched) and not math.isnan(each.lower)}
+            solutions = {r: _as_peek(each) for r, each in found.items()}
         keys = {r: _key(solutions[r].policy, solutions[r].reactions) for r in order}
         walks.clear()
         views.clear()
@@ -408,6 +418,9 @@ def solve_readings[S, R: Hashable](
     lower = Estimate(
         max(v.value for v in values.values()), max(v.low for v in values.values()), max(v.high for v in values.values())
     )
+    if solve_one is not None and proved:  # a search that stopped short proved only its lower figure: the bracket's lower end is that (OR-13)
+        floors = [min(proved.get(r, v.value), v.value) for r, v in values.items()]
+        lower = Estimate(max(floors), min(lower.low, max(floors)), max(floors))
     baseline = None
     if without is not None:
         kept = _Without(memos[plan], without)

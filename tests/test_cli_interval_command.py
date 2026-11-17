@@ -227,3 +227,49 @@ def test_a_gap_of_another_reading_is_said_in_the_limits(lucky):
     assert not plan.abstraction.gaps.entries()  # the plan reading has a rule everywhere
     said = [limit for limit in plan.limits if any(text.startswith(SHAKY) for text in limit.labels)]
     assert said, [limit.what for limit in plan.limits]
+
+
+WIDE = Axis("toy.wide", (Fraction(1, 2), Fraction(1)), Fraction(1))
+WIDER = "Toy Wider Craft"
+
+
+@dataclasses.dataclass(frozen=True)
+class WiderCraft(LuckyCraft):
+    """Sure at the plan reading; at the other, a failure adds Life instead, an item the plan reading never reaches (another support)."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return WIDER
+
+    def resources(self, data: GameData | None = None) -> dict[str, int]:
+        return {WIDER: 1}
+
+    def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
+        return (WIDE,)
+
+    def outcomes(self, data: GameData, item: Item, reading: Reading | None = None) -> Finite:
+        if item.rarity is not Rarity.RARE or any(entry.mod_id in (GEM, "IncreasedLife1") for entry in item.mods):
+            raise NotApplicableError("the toy craft works on a rare item without the gem mod or Life")
+        luck = (reading or Reading()).get(WIDE.name, WIDE.plan)
+        try:
+            crafted = item.changed(data, mods=(*item.mods, roll(GEM)))
+            missed = item.changed(data, mods=(*item.mods, roll("IncreasedLife1")))
+        except ItemError as error:
+            raise NotApplicableError("the mod does not fit on the item") from error
+        return Finite(data, item, ((Fraction(1), crafted),) if luck == 1 else ((luck, crafted), (1 - luck, missed)))
+
+
+def test_a_reading_whose_outcomes_reach_what_the_plan_reading_never_searched_is_planned_as_by_the_whole_walk(monkeypatch):
+    # #1111 (the checker's case): a search from the state the plan's route reaches only under the other reading would restart at that state, not
+    # at the start item, so the readings are then solved whole, and the costs are the whole walk's
+    monkeypatch.setitem(AXIS_WORDS, WIDE.name, AxisWords("width", "the chance of the toy craft"))
+    kind = Kind("toy-wider-craft", lambda data, item: (WiderCraft(),) if item.rarity is Rarity.RARE else (), order=905)
+    prices = dataclasses.replace(price_file(), prices={**price_file().prices, WIDER: PriceEntry(PRICE, "test")})
+    with registered(kind):
+        target = dataclasses.replace(load_target(R12, DATA), actions=("chaos-orb", "harvest-reforge", kind.name))
+        plans = [make_plan(DATA, target, prices, solver=solver) for solver in ("envelope", "object")]
+
+    tables = [
+        {(c[WIDE.name], r[WIDE.name]): cost.value for c, route in plan.readings.routes.items() for r, cost in route.costs.items()} for plan in plans
+    ]
+    assert tables[0] == pytest.approx(tables[1])
+    assert plans[0].readings.robust_differs == plans[1].readings.robust_differs
