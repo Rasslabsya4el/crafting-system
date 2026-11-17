@@ -112,7 +112,8 @@ whose proof closes inside the aim is proved the cheapest; `_plan.search_gap`); `
 
 **The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
 round and inside the first plan's chain (the state net waits for the first round, so the first plan's reach can pass it, except in a run counted
-in states, where it is the only net and is asked at every state of the chain and of a round, #1101); the answer is then the
+in states, where it is the only net and is asked at every state of the chain and of a round, #1101, and inside the making of each kernel, #1105:
+`Search._counted_kernel`, so such a search never knows more states than its net); the answer is then the
 best executable policy and `exact` is False, with `stopped` saying which net. When the plan in hand at the stop cannot be solved to a certified cost
 (#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal. A given start whose plan has not closed has no answer
 (`NoPolicy`). A round whose *lower* solve cannot be certified (a plan of 10^9 steps or more, #867, #948) ends a search that holds such a plan the
@@ -132,7 +133,7 @@ from typing import Protocol
 
 import numpy as np
 
-from crafting_system import parallel
+from crafting_system import budget, parallel
 from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
 from crafting_system.solver._packed import BIG_TOTAL
 from crafting_system.solver._packed_solve import ACCEPT_BOUND, solve_graph
@@ -153,6 +154,14 @@ POLL_SECONDS = 0.5  # how often a round that expands many states, or the first p
 # worlds (`tests/test_planner_blocking_crafts.py`: an Exalted Orb with bench crafts; R12 with its essences and Harvest reforges), where it compares
 # every shared kernel instead of a sample (it replaced the first 20 and 1 in 4,096 of #374).
 CHECK_SHARED = False
+
+
+class _Cut(Exception):
+    """A kernel of a search counted in states that would take the search past its states net (#1105): `reason` is the net's words."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 class Refused(Exception):
@@ -242,6 +251,7 @@ class SearchStats:
     build_seconds: float = 0.0
     expand_seconds: float = 0.0
     verified: int = 0  # shared kernels built again and compared (`CHECK_SHARED`): 0 in a run
+    cut: int = 0  # a search counted in states: the outcomes the kernel it was making when its net stopped it had made, or its new states (#1105); 0 when none was cut
     peak_mb: float | None = None
     solve_info: dict = field(default_factory=dict)  # the solver's counts and seconds, summed over the rounds
 
@@ -484,11 +494,35 @@ class Search[S]:
                 if not self._fresh_equal(state, position, kid):
                     raise ValueError(f"two states share the kernel key {key!r} but not its kernel (checked at {state!r})")
             return kid
-        weights = self.p.kernel(state, position)
+        weights = self._counted_kernel(state, position) if self.counted else self.p.kernel(state, position)
         kid = self._store([self.intern(s) for s in weights], list(weights.values()))
         if key is not None:
             self.shared[key] = kid
         return kid
+
+    @property
+    def counted(self) -> bool:
+        """Whether the search counts its work in states (`Budget.in_states`: a states net and the build's pieces, #1101)."""
+        return self.net.pieces is not None and self.net.states is not None
+
+    def _counted_kernel(self, state: S, position: int) -> dict[S, int]:
+        """The kernel of offer `position` at `state` in a search counted in states, made on an allowance of the states the search may still know
+        (#1105): the making counts its outcomes as it makes them (`budget.Allowance`) and stops past the allowance, and a kernel made whole is
+        still refused when its new states would take the search past its net. Either way the kernel is left unmade and `_Cut` says so: the
+        search ends there as at its states net, so it never knows more than its net of states. Raises `Refused` as `kernel` does."""
+        left = self.net.states - len(self.states)
+        known = f"{len(self.states):,} states were known, the limit is {self.net.states:,}"
+        try:
+            with budget.counting(left):
+                weights = self.p.kernel(state, position)
+        except budget.OutcomesCut as cut:
+            self.stats.cut = cut.made
+            raise _Cut(f"{known}, and the next action's outcomes would pass it (its making was stopped at {cut.stage} {cut.made:,}): it was left unmade") from None
+        fresh = sum(1 for s in weights if s not in self.index)
+        if fresh > left:
+            self.stats.cut = fresh
+            raise _Cut(f"{known}, and the next action's {fresh:,} new states would pass it: it was left unmade")
+        return weights
 
     # ---- expanding and realizing --------------------------------------------------------------------------------
 
@@ -543,7 +577,7 @@ class Search[S]:
         rows, cands = self.rows[i], self.cands[i]
         best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
-        prime = getattr(self.p, "prime", None)
+        prime = getattr(self.p, "prime", None) if not self.counted else None  # a count makes every kernel in the process, counted (`_prime`, #1105)
         tighten = getattr(self.p, "tighten", None)
         primed = 0  # how many of the offers at the end of `cands` have been primed
         self.prime_skip = max(self.prime_skip - 1, 0)
@@ -572,6 +606,9 @@ class Search[S]:
                 kid = self._kernel(i, position)
             except Refused:
                 continue
+            except _Cut:
+                bisect.insort(cands, (la, position), key=lambda c: -c[0])  # left open: the offer is still to be realized
+                raise
             cost = self.p.cost(position)
             rows.append((position, cost, kid, self._self_mass(i, kid)))
             self.stats.realized += 1
@@ -610,6 +647,9 @@ class Search[S]:
                     kid = self._kernel(i, position)
                 except Refused:
                     continue
+                except _Cut as cut:  # the count's net, met inside the making of a kernel (#1105): the chain ends here, the offer left open
+                    bisect.insort(cands, held[0], key=lambda c: -c[0])
+                    return cut.reason
                 rows.append((position, self.p.cost(position), kid, self._self_mass(i, kid)))
                 self.stats.realized += 1
                 self.stats.seeded += 1
@@ -1024,6 +1064,9 @@ class Search[S]:
             except MemoryNet as stop:
                 stopped = str(stop)
                 self.kernels.room = None  # the stop's own plan is solved over what the search holds
+            except _Cut as cut:  # the count's net, met inside the making of a kernel (#1105): the round ends as at the net, its plan in hand
+                stopped = cut.reason
+                self.p.release()
             self.stats.expand_seconds += time.perf_counter() - mark
             if stopped is not None:
                 break

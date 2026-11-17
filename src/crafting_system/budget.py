@@ -64,8 +64,8 @@ class Budget:
     net that stops the run and says so; `states` is a net on the states the envelope search knows (for tests and measurements), asked between
     its rounds: beside a time or memory net the search's first plan is built whole before the first round, so its reach can pass the figure. A
     run with a states net and no time net counts its work in states (`in_states`), and its plan then does not depend on the machine's speed:
-    there the net is asked at every state of the first plan's chain and of each round, so the search knows at most the figure plus the outcomes
-    of the state that crossed it.
+    there the net is asked at every state of the first plan's chain and of each round, and inside the making of each kernel (`Allowance`, #1105),
+    so the search knows at most the figure.
     `build_per_state` is read only by a run counted in states: the bound's build of each search may do that many pieces of work (`PIECES`) per
     state of the search's own states net, as under the time net it may take a quarter of the search's seconds (`_envelope_plan.build_stop`);
     a search that begins with a plan in hand (a round of offers after the first plan) may take the whole: `1 + SEARCH_PER_BUILD` times that (#1099).
@@ -111,7 +111,10 @@ class Budget:
         Every stage counts its work in a unit of its own and stops by it, saying so (OR-12, OR-13; #1101):
         - every envelope search of the run (each round of offers, the plan without the metamod crafts, an Awakener's Orb's donors, each start
           option) counts the states it knows on one account of the run (`Clock.spend`): a search's net is the states left (a donor's, an equal
-          share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`);
+          share of them, as the time net shares its seconds), and the rounds share theirs (`_rounds.StatesMeter`). A search knows at most its
+          net: each kernel is made on an allowance of the states it may still know, what it makes counted as it is made, each stage of the
+          making (an end state of the draws, a group, a way, an outcome merged, a state added) on its own count held to that allowance
+          (`Allowance`, #1105), and a kernel that would pass it is left unmade and the search stops there with its plan in hand;
         - the bound's build of a search counts pieces of work (`PIECES`: a (member, offer) pair it looks at, or one offer's floor worked out,
           the binding step's included), at most `build_per_state` per state of its search's net: the time net's build takes a quarter of its
           search's seconds, and a share of a count in another unit is a ratio of the two (a planner setting, not a constant sized for a runner);
@@ -119,18 +122,16 @@ class Budget:
           times that (#1099);
         - the Lock's check after the plan counts every state its walks meet (one per `checkpoint` of its stage), up to `states` of its own: under the time net it takes what
           the search left, and a count has nothing left once the search used its net.
-        **What the count does not bound: one kernel** (#1104). Each unit above counts a kernel asked for (a piece of the build, a state known,
-        a state the Lock's walk meets), never the work inside it: the kernel of an action that draws mods is made whole from its pool's
-        distribution (`abstraction.Abstraction._distribution`, `actions.draw.exact_distributions`), cached for the run, and its size and the
-        memory it takes are set by the pool and by what the kinds keep of the junk, not by `states`. Where an enabled action reads the junk (a
-        bench craft, with every method on), a pool draw's outcomes are the family types it adds, and one kernel can take gigabytes. R12 at
-        `in_states(1000)` with every method on (#1104, on the owner's server): the build stopped at 101,511 of 100,000 pieces with one key
-        expanded, its 7 distributions holding 3,160,130 outcomes (the process held 2.6 GB); the first plan's chain met one kernel of 468,779 outcomes (468,781
-        states known, the limit 1,000); then the Lock's gains (`_foresight.PlanSites`, the kernel of every option at a state) grew one exact
-        distribution by about 12 GB in a single kernel, and the process was killed at 16 GB. So memory (and time) do not follow `states`, and a
-        smaller figure does not make such a run fit. A run under the time net has the same kernels, and its memory net is never read inside
-        the making of one, so it does not see them either. Bounding it means
-        counting the outcomes a kernel makes as it makes them (#1105).
+        **One kernel** (#1104, #1105). The kernel of an action that draws mods is made whole from its pool's distribution
+        (`abstraction.Abstraction._distribution`, `actions.draw.exact_distributions`), cached for the run, and its size is set by the pool and
+        by what the kinds keep of the junk, not by `states`: where an enabled action reads the junk (a bench craft, with every method on), one
+        kernel can take gigabytes. R12 at `in_states(1000)` with every method on (#1104, on the owner's server): the build stopped at 101,511 of
+        100,000 pieces with its 7 distributions holding 3,160,130 outcomes (2.6 GB), the first plan's chain met one kernel of 468,779 outcomes
+        (468,781 states known, the limit 1,000), and the Lock's gains grew one distribution by about 12 GB until the process was killed at 16 GB.
+        The search's kernels are now counted inside their making (above, #1105): a search knows at most `states`, and the work of one of its
+        kernels is bounded by about six times the states it has left (one allowance per stage). The kernels the bound's build makes (#1126) and
+        the Lock's gains (#1125) are not counted inside: each counts a kernel asked for, never the work inside it, so their memory and time do
+        not follow `states` yet. A run under the time net has the same kernels, and its memory net is never read inside the making of one.
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
         net, OR-39, OR-40). It is the setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose
         offers split into rounds."""
@@ -300,6 +301,62 @@ def checkpoint() -> None:
             if clock.walked > clock.cap:
                 raise BudgetExceeded(clock.bind(Binding(clock.stage, STATES, clock.cap, clock.walked, clock.what)))
         clock.check(clock.stage, clock.what)
+
+
+class OutcomesCut(BaseException):
+    """The making of one kernel made more outcomes than its `Allowance` (a run counted in states, #1105): the kernel is left unmade.
+
+    A `BaseException`, like `BudgetExceeded`, so that no `except Exception` (or `except ValueError`, a refusal) inside the making swallows it; the
+    envelope search that opened the allowance catches it and ends there as at its states net, keeping the plan in hand (`_envelope.Search._kernel`).
+    """
+
+    def __init__(self, allowance: "Allowance", stage: str) -> None:
+        made = allowance.made[stage]
+        super().__init__(f"the making of one kernel made {made:,} {stage}s, {allowance.given:,} were allowed")
+        self.given = allowance.given
+        self.made = made
+        self.stage = stage
+
+
+@dataclass
+class Allowance:
+    """The outcomes the kernel being made may still make (#1105): the states its search may still know under a count.
+
+    One kernel of a drawing action is made whole from its pool's distribution (`actions.draw.exact_distributions`), hundreds of thousands of
+    outcomes for a pool whose junk is tracked, and the count between two kernels never sees them: one expansion took R05 at a net of 1,000
+    states to 303,950 (#1101). The engine and the kernel's assembly count here what they make as they make it, each stage of the making on its
+    own count (`stage`: an end state of the draws, a group of them, a way of drawing grown, an outcome of concrete rolls merged, a state of the
+    kernel added; `made`), and the first stage to pass `given` raises `OutcomesCut`. Each stage is held to `given` apart, because one outcome is
+    met once at each stage: a sum over the stages would cut a kernel of a few new states at a fraction of the net (#1137). So every structure of
+    the making holds at most `given` entries, and a kernel made whole still has its new states checked against the net by its search. Only a
+    search counted in states opens one; elsewhere `allowed()` is None and the making counts nothing."""
+
+    given: int
+    made: dict[str, int] = field(default_factory=dict)
+
+    def add(self, stage: str = "state", count: int = 1) -> None:
+        made = self.made[stage] = self.made.get(stage, 0) + count
+        if made > self.given:
+            raise OutcomesCut(self, stage)
+
+
+_allowance: contextvars.ContextVar[Allowance | None] = contextvars.ContextVar("crafting_system_budget_allowance", default=None)
+
+
+def allowed() -> Allowance | None:
+    """The allowance of the kernel being made now (`counting`), or None: read once by a maker, which then counts on it as it makes."""
+    return _allowance.get()
+
+
+@contextlib.contextmanager
+def counting(given: int) -> Iterator[Allowance]:
+    """Count the outcomes made inside the block on a fresh allowance of `given` (`Allowance`); the block's maker raises `OutcomesCut` past it."""
+    allowance = Allowance(max(int(given), 0))
+    token = _allowance.set(allowance)
+    try:
+        yield allowance
+    finally:
+        _allowance.reset(token)
 
 
 @contextlib.contextmanager

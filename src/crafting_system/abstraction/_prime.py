@@ -13,11 +13,15 @@ are killed, nothing is stored, and `abstraction.prime_stopped` keeps the reason 
 
 Workers are forked, one pool per call, so they inherit the abstraction as it is (its caches warm) and the jobs without
 pickling anything that goes out; only the distributions come back. Where there is no fork (Windows) `prime` does nothing.
+
+In a run counted in states (`Budget.in_states`) `prime` does nothing either (#1105): the search counts the outcomes a kernel makes as they are
+made (`budget.Allowance`), and a distribution made ahead in a worker would be made uncounted, and only where there are workers to make it, so
+the same run would stop at different points on two machines.
 """
 
 from collections.abc import Iterable
 
-from crafting_system import parallel
+from crafting_system import budget, parallel
 from crafting_system.actions import Action, Fixed, Rerolled
 
 MIN_JOBS = 2  # fewer uncached pools than this are computed by the kernel call itself
@@ -41,6 +45,9 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
     A request that `kernel` would refuse is left to `kernel`, which raises it in its own order.
     """
     workers = parallel.worker_count() if workers is None else workers
+    clock = budget.active()
+    if (clock is not None and clock.budget.counted) or budget.allowed() is not None:  # a count: every distribution is made, and counted, in the process
+        return 0
     if workers < 2 or not parallel.can_inherit() or getattr(abstraction, "prime_stopped", None) is not None:
         return 0
     jobs: dict[tuple, tuple] = {}
