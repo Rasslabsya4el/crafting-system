@@ -859,7 +859,7 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
     # work per state, the offers' floors on), so no clock moves anything. Round 1 (the Exalted Orb alone) closes at 16e/3 + 2S = 153.33 having
     # known 12 states; round 2 (the fillers) begins with that plan in hand, and its share is the 28 states left over the 2 rounds left: 14.
     # Its bound's build needs 51 pieces of work. Given a quarter's worth (one piece per state, 14), the old rule, it stops while offers join
-    # (growth) on a lower figure of 30, and the round stops with no cheaper plan: the answer is 153.33. Given the round's whole share (four
+    # (growth) on a lower figure of 34 (the walk toward the goal raises it, #1142), and the round stops; the walk's plan is the filler's all the same, 133, which the answer takes, saying it is not shown near the best. Given the round's whole share (four
     # times that, 56: the build keeps no room for the search to make a plan, the answer holds one) it completes, and the round closes on
     # the filler's plan, 3(c + e) + 2S = 133.
     from crafting_system.budget import Budget
@@ -898,8 +898,13 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
         assert _fills(plan.solution.policy[plan.start].label)
     else:
         assert builds[1] == (14, 14, "growth")
-        assert second.status == "stopped" and second.lower == pytest.approx(30.0, abs=1e-6)
-        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        # its bound stopped with no order, so the search walks toward the goal (#1142) and realizes more offers than the least-`la` chain did:
+        # the lower figure they raise is 34 (30 before the walk), still below the closed plan's 133
+        assert second.status == "stopped" and second.lower == pytest.approx(34.0, abs=1e-6)
+        # the walk's plan is the filler's, cheaper than round 1's: the answer takes it, and its limits say it is not shown near the best (OR-33, OR-40)
+        assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
+        (walked,) = [limit for limit in plan.limits if limit.kind == "plan-reached"]
+        assert "Not proved: that it is anywhere near the best possible cost" in walked.guarantee
 
 
 def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_and_stops_only_at_its_net(monkeypatch):
