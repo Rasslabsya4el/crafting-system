@@ -640,15 +640,15 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     # #886: the belt's offers split into two rounds (the lock's is the second). Under `Budget.in_states` the plan and every line of the answer are
     # the same whether every reading of the clock moves it by 1,000 s or by nothing; the test drives the clock itself and never reads it. With 3
     # states, round 1 uses the net and the lock's round is not tried; with 10, both rounds close.
-    import time
-
+    from crafting_system import budget as budget_module
     from crafting_system.budget import Budget
 
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
 
     step, readings = [0.0], iter(range(10**9))
-    monkeypatch.setattr(time, "perf_counter", lambda: step[0] * next(readings))  # the clock as the test drives it
+    # the clock as the test drives it, for every module of the run: `budget_module.time` is the one clock module they all read
+    monkeypatch.setattr(budget_module.time, "perf_counter", lambda: step[0] * next(readings))
 
     def planned(seconds_per_reading: float):
         step[0] = seconds_per_reading
