@@ -87,7 +87,9 @@ def test_every_planner_kind_of_the_beta_is_offered_by_default():
     in_scope = set(kinds_in_scope())
     off = [entry.name for entry in kinds(planner_only=True) if entry.name in in_scope and entry.opt_in]
     assert not off, f"in-scope kinds off by default (OR-41): {off}"
-    assert all(name not in in_scope for name in DEFERRED_KINDS)
+    still_opt_in = {entry.name for entry in kinds(planner_only=True) if entry.opt_in}
+    assert still_opt_in == {"recombinator", "foulborn-exalted-orb"}, still_opt_in  # the deferred planner kinds only (OR-37)
+    assert still_opt_in <= set(DEFERRED_KINDS), still_opt_in
 
 
 def test_blocking_and_filler_crafts_are_offered_by_default():

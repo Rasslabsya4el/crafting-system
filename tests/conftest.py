@@ -212,32 +212,7 @@ def _wide_params(item) -> dict[str, int]:
     }
 
 
-# Tests that every beta method on by default (#886) sends past the suite's machine net or to other numbers, and that wait for #1101 (a
-# run counted in states, so that a real route plans in CI's time and memory, then its records taken again). fnmatch patterns on the node id.
-# * `WAITS_FOR_1101`: real routes planned with the default offers. An xfail that is not run: run, each would hold its slot up to the
-#   time net (300 s a phase) and leave memory that fails the next tests of its process. #1101 empties this list and runs them again.
-# * `RERECORD_FOR_1101`: goldens whose numbers move with the defaults. A strict xfail that is run, so it shows the moment the golden is
-#   recorded again (it then passes and turns red until its pattern leaves the list). Never edit a golden by hand.
-# Both are empty since the real routes' modules plan with the classic offers (`CLASSIC_OFFERS = True`, `cli_support.CLASSIC_KINDS`):
-# their records of before #886 hold, and the default plans of the real routes are recorded by the heavy benchmark, not in CI.
-WAITS_FOR_1101: tuple[str, ...] = ()
-RERECORD_FOR_1101: tuple[str, ...] = ()
-
-
-def _mark_waits_for_1101(items) -> None:
-    from fnmatch import fnmatchcase
-
-    waits = pytest.mark.xfail(run=False, reason="#1101: a real route with every beta method on waits for the run counted in states")
-    rerecord = pytest.mark.xfail(strict=True, raises=AssertionError, reason="#1101: the golden moves with every beta method on and waits for its re-record")
-    for item in items:
-        if any(fnmatchcase(item.nodeid, pattern) for pattern in WAITS_FOR_1101):
-            item.add_marker(waits)
-        elif any(fnmatchcase(item.nodeid, pattern) for pattern in RERECORD_FOR_1101):
-            item.add_marker(rerecord)
-
-
 def pytest_collection_modifyitems(config, items):
-    _mark_waits_for_1101(items)
     option = config.getoption("shard")
     if config.getoption("record_durations"):
         GROUPS.update({item.nodeid: shard_support.group_name(item.nodeid, _wide_params(item)) for item in items})

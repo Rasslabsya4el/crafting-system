@@ -110,6 +110,11 @@ once; and "the call grew its process by more than 1,000 MB while the machine had
 loads real data in its own body while the others hold theirs. A runner shut down for memory (exit 143, the whole shard lost) is fixed at
 its root, in the test that plans too much (it names its offers, or runs counted in states), never by a guard.
 
+**The real routes plan with the classic offers in CI (#886).** With every beta method on, most real routes give no plan within CI's
+time and memory, so a test module that plans a real route sets `CLASSIC_OFFERS = True` and plans with the offers of before #886
+(`tests/cli_support.py`, `CLASSIC_KINDS`, pinned by `tests/test_classic_offers.py`); its records of before #886 hold byte for byte. No CI
+test plans a real route with the default offers: the heavy benchmark records those plans (#1109).
+
 ## Heavy runs on GitHub: the runner budget (#249)
 
 **Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite goes to CI and benchmarks, profiling, sweeps, solves and measurements go to a heavy run, because a local multi-process sweep pins his machine at 100%. `.github/workflows/run.yml`
