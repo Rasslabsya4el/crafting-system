@@ -49,9 +49,9 @@ from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit,
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
-from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, certified_upper, envelope_limits, envelope_result
+from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, build_stop, certified_upper, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
-from ._pattern_bound import MIN_OFFERS
+from ._pattern_bound import MIN_OFFERS, offers_floor
 from ._presenter import presenter_limits
 from ._price_cut import price_cut_limit, restart_dominated
 from . import _rounds
@@ -823,6 +823,9 @@ def _make_plan(
 
     abstraction = model()
     start = abstraction.compress(listing or target.start_item)
+    if round_call is not None and round_call.floors:  # only the figure the rounds order the groups by (`_rounds.by_floor`, #1135)
+        net = search_net(clock, round_call.searches, states=round_call.states, held=True)
+        raise _rounds.Floor(offers_floor(abstraction, start, priced, target.start_item, build_stop(net, time.perf_counter()), None if net is None else net.pieces))
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
@@ -1124,11 +1127,20 @@ def widened_plan(
                 raise _rounds.NoPlan(str(error)) from error
             raise
 
+    def floor(chosen: tuple[Offer, ...], call: RoundCall) -> float | None:
+        try:
+            run(chosen, call)
+        except _rounds.Floor as figure:
+            return figure.figure
+        except (PlanError, BudgetExceeded, _rounds.NoPlan, _rounds.Stopped):  # the round itself will say why (a refusal or a net before the floors)
+            return None
+        return None
+
     meter = states_meter(clock)
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
         left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=meter,
-        gap=0.0 if clock is None else clock.budget.gap,
+        gap=0.0 if clock is None else clock.budget.gap, floor=floor,
     )  # fmt: skip
     if widened.plan is None:
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")

@@ -10,7 +10,8 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   join the first group (so do the actions of a route judged against the plan, #1110: `judged_route_limit`); the groups go by the features they add beyond `FIRST_ROUND` (the junk count every reroll needs is no refinement here,
   as in the test for one group), then by their number of offers, then by their kinds' names. So the rounds grow from the offers that refine the
   model least and are fewest, and a kind of thousands of offers (the fossil sets) comes after the small kinds that refine the model as little:
-  the plan of the cheap rounds is in hand in seconds. The order decides only when a group is tried and with
+  the plan of the cheap rounds is in hand in seconds. Once the first plan is in hand, the rounds left go by the cheapest a plan of their
+  offers with the base can be, from the offers' floors alone, lowest first (`by_floor`, #1135). The order decides only when a group is tried and with
   what share of the time; it drops no offer and no group, and changes nothing the answer proves: a group a run did not reach is listed as not
   tried, with what the plan is proved against without it (OR-13). No kind is named and no count is a cut.
 * **Rounds.** Round 1 is the first group. Each later round is the offers of every round that closed before it, plus its own group. It is cut
@@ -99,6 +100,7 @@ class RoundCall:
     give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
     states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
     held: bool = False  # a plan in hand when the round began: its bound's build may take the round's whole share (`_plan.search_net`, #1099)
+    floors: bool = False  # only the figure of the group's offers' floors is asked (`Floor`, raised by `_make_plan`): the order of the rounds (#1135)
 
 
 @dataclass(frozen=True)
@@ -162,6 +164,15 @@ def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object
         positions = tuple(sorted({*first, *head.positions}))
         groups.insert(0, Group(positions, tuple(sorted({kind_of(offers[i]) for i in positions})), frozenset().union(*(features[i] for i in positions))))
     return tuple(groups)
+
+
+class Floor(Exception):
+    """Raised by `_make_plan` for a `RoundCall.floors` call: the figure no plan of the round's offers costs less than, from their floors alone
+    (`_pattern_bound.offers_floor`), None when a net ended it."""
+
+    def __init__(self, figure: float | None) -> None:
+        super().__init__(figure)
+        self.figure = figure
 
 
 class NoPlan(Exception):
@@ -272,12 +283,15 @@ def widen(
     clock_now: Callable[[], float],
     meter: StatesMeter | None = None,
     gap: float = 0.0,
+    floor: Callable[[tuple, RoundCall], float | None] | None = None,
 ) -> Widened:
     """Run the rounds of `groups` over `offers` (see the module text). `run(round_offers, call)` makes a round's plan (raising what `_make_plan`
     raises, or `Beaten`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and reason;
     `left()` the run's seconds left (None: no net), `clock_now()` the time. With `meter` the run counts in states (`StatesMeter`): the rounds'
     shares, `Share` and the rounds not tried read it, never `left` or the clock (the clock only times each round for the JSON). `gap` is the
-    run's proof gap (`Budget.gap`, OR-39), the fall of a plan `Share` still counts as falling."""
+    run's proof gap (`Budget.gap`, OR-39), the fall of a plan `Share` still counts as falling. `floor(round_offers, call)`, when given, is the
+    figure no plan of those offers costs less than from their floors alone (`Floor`), or None: once the first plan is in hand, the rounds left go
+    by it (`by_floor`)."""
     if meter is not None:
         left, measure = meter.left, meter.now
     else:
@@ -370,6 +384,11 @@ def widen(
             # widen that plan (R11: the essence round gave way at 52 s, its plan 597.28 c, on 2 of 9 runners, and the Exalted round, without
             # the essences, reached no plan: the answer kept 617.28 c where essences then an Exalted Orb cost 188.03 c)
             base = positions
+        if floor is not None and improved and not held and len(queue) - k - 1 >= 2 and not ((still := left()) is not None and still <= 0.0):
+            # the first plan is in hand: the rounds left (two or more) go by the cheapest a plan of their offers with the base can be, lowest first (#1135)
+            searches = len(queue) - k - 1
+            call = RoundCall(searches, best_upper, False, None, None if meter is None else meter.net(searches), True, floors=True)
+            queue[k + 1 :] = by_floor(queue[k + 1 :], lambda g: floor(tuple(offers[i] for i in sorted({*base, *g.positions})), call))
         if k == len(queue) - 1 and closing is None and set_aside and _all_ended(records):
             # every round closed, some groups were set aside: one last round holds them with the base, which is then every offer, so
             # the last round again holds every offer and its proof is the whole one (a plan joining a set-aside group with a later one is in it)
@@ -382,6 +401,20 @@ def widen(
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error)
+
+
+def by_floor(groups: Sequence[Group], figure: Callable[[Group], float | None]) -> list[Group]:
+    """`groups` ordered by `figure` (the cheapest a plan of the group's offers with the base can be, from their floors alone), lowest first; a
+    group with no figure (a net ended its floors) after those with one, and ties in their order (#1135).
+
+    Once a plan is in hand, a round can only matter by a cheaper plan, and the group whose floors allow the cheapest one is the likeliest to hold
+    it; a round run after the rounds that cannot beat the plan in hand keeps a share they did not take. R11 without the guide: the Exalted Orb's
+    round (its floor 9.64 c over the essences) was the tenth after the essences', behind rounds whose floors were the essences' own (75.2 c):
+    those took their whole share and more, and the Exalted round's share fell from 40 s to 20 s, too short for its bound (probe 44104520931,
+    runner 5: 617.28 c where its first plan costs 188.03 c). The order changes when a group is tried, never what the answer proves (OR-13)."""
+    figures = [figure(group) for group in groups]
+    order = sorted(range(len(groups)), key=lambda n: (figures[n] is None, figures[n] if figures[n] is not None else 0.0, n))
+    return [groups[n] for n in order]
 
 
 def _all_ended(records: Sequence[RoundRecord]) -> bool:

@@ -260,6 +260,22 @@ def _bound(model, value, error, phases, began, order, floors, rounds, stopped, p
     )  # fmt: skip
 
 
+def offers_floor(
+    abstraction: Abstraction, start: CompressedState, priced: Sequence[PricedOffer], item, stop: Callable[[], str | None] | None = None,
+    pieces: int | None = None,
+) -> float | None:
+    """The figure no plan of `priced` from `start` costs less than (after the start item), from the offers' floors alone (`OfferFloors`: the Wald
+    floor `rho` when the start is outside the goal's set E, else 0), with no model built: what the rounds order the groups by once a plan is in
+    hand (`_rounds.widen`, #1135). Its net is `stop` (the clock), and `pieces` (a run counted in states) its cap in pieces of work; None when a
+    net ended it before the floors were worked out."""
+    tally = None if pieces is None else Tally(pieces, _pieces_words, stop)
+    try:
+        floors = OfferFloors(abstraction, start, priced, item, stop if tally is None else tally, tally)
+    except FloorsStopped:
+        return None
+    return floors.rho if floors.klass(start.flags, start.fractured, start.status, start.imprints) == OUTSIDE else 0.0
+
+
 def _pieces_words(done: int, cap: int) -> str:
     """Why a build counted in pieces of work stopped (OR-13)."""
     return (
