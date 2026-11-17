@@ -318,10 +318,12 @@ def test_a_group_beaten_before_the_last_round_is_not_carried_and_the_answer_does
 
         return round_of
 
-    for cost, carried in ((10.0, False), (8.0, True)):  # b closes at the plan in hand's cost: set aside; b closes cheaper: it is the plan, carried
+    # b closes at the plan in hand's cost: set aside, also when its solve says 1e-7 less (each figure is certified to 1e-6 only, OR-32); b
+    # closes cheaper: it is the plan, carried
+    for cost, carried in ((10.0, False), (10.0 - 1e-7, False), (8.0, True)):
         seen.clear()
         closed_b = _rounds.widen(
-            groups, tuple("abc"), closes(cost), upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            groups, tuple("abc"), closes(cost), upper_of=lambda plan: plan.mean_remaining * (1.0 + 1e-6), mean_of=lambda plan: plan.mean_remaining,
             ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: None, clock_now=lambda: 0.0,
         )  # fmt: skip
         assert seen[2] == (("a", "b", "c") if carried else ("a", "c")) and closed_b.records[1].carried
