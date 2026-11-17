@@ -137,10 +137,13 @@ def make_record(first: Mapping, second: Mapping, routes: Iterable[str] | None = 
     A route of `killed` (named by the caller, who saw its runner die: a plan that does not stop at its net, #1156) that a run holds no entry
     for is recorded there with no plan, its stop `KILLED`; any other route missing from a run is refused, so that no route drops out unsaid."""
     one, two = dict(runs_of(_site(first))), dict(runs_of(_site(second)))
-    wanted = list(routes) if routes is not None else [name for name in one if name in two]
     for name in killed:
         for found in (one, two):
             found.setdefault(name, record_of_plan(None, None, None, None, KILLED))
+    wanted = list(routes) if routes is not None else [name for name in one if name in two]
+    stray = [name for name in killed if name not in wanted]
+    if stray:
+        raise ValueError(f"{', '.join(stray)} is named as killed but is not a route of the record")
     missing = [name for name in wanted if name not in one or name not in two]
     if missing:
         raise ValueError(f"a record needs two runs of every route; {', '.join(missing)} is not in both runs")

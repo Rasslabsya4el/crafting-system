@@ -141,6 +141,9 @@ def test_a_route_whose_runner_was_killed_is_recorded_with_no_plan_only_when_name
     assert record["routes"]["R24"]["state"] == NO_PLAN
     verdicts = {verdict.route: verdict.outcome for verdict in check_run(record, run())}
     assert verdicts == {"R05": NOT_RUN, "R24": PASS}
+    assert sorted(make_record(run(R05=planned(1.0)), run(R05=planned(1.0)), killed=["R24"])["routes"]) == ["R05", "R24"]
+    with pytest.raises(ValueError, match="R99 is named as killed but is not a route of the record"):
+        make_record(run(R05=planned(1.0)), run(R05=planned(1.0)), routes=["R05"], killed=["R99"])
 
 
 def test_a_split_run_is_merged_and_a_route_in_two_parts_is_refused():
