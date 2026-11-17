@@ -228,6 +228,9 @@ class Net:
     # holds a plan (OR-33), so the bound's build keeps no room for the search to make one and may take the search's whole net
     # (`_envelope_plan.build_stop`, `_plan.search_net`)
     held: bool = False
+    # the seconds the first plan's chain may take when they are more than `seconds`: a round whose bound's build, nearly done, went past the
+    # round's share (`_envelope_plan.BuildStop`, #1135) still makes its first plan, in what is left of twice the share; None: `seconds` holds
+    first: float | None = None
 
 
 @dataclass
@@ -631,7 +634,7 @@ class Search[S]:
                 polled = time.perf_counter()
             # the clock at every state; the state net waits for the first round, so the chain is whole, except in a run counted in states (#1101):
             # there it is the only net, and a chain over a blind bound walks tens of thousands of states, so the count is asked at every state
-            stopped = self._net(began, memory=poll, states=self.net.pieces is not None)
+            stopped = self._net(began, memory=poll, states=self.net.pieces is not None, seconds=self.net.first)
             if stopped is not None:
                 return stopped
             if not self.expanded[i]:
@@ -855,13 +858,15 @@ class Search[S]:
 
     # ---- the rounds ---------------------------------------------------------------------------------------------
 
-    def _net(self, began: float, memory: bool = True, states: bool = True) -> str | None:
+    def _net(self, began: float, memory: bool = True, states: bool = True, seconds: float | None = None) -> str | None:
         """The reason a net is reached now, or None; `memory` False leaves the memory unread (reading it costs too much to do at every state),
         `states` False leaves the count of states unasked (the first plan's chain and inside a round: the state net is asked between rounds, except
-        in a run counted in states, `Net.pieces` set, where it is asked at every state of the chain and of a round)."""
+        in a run counted in states, `Net.pieces` set, where it is asked at every state of the chain and of a round). `seconds`, when given, is
+        the time limit in place of the net's (`Net.first`, the first plan's chain)."""
         net = self.net
-        if net.seconds is not None and time.perf_counter() - began >= net.seconds:
-            return f"the time limit of {net.seconds:g} seconds was reached"
+        limit = net.seconds if seconds is None else seconds
+        if limit is not None and time.perf_counter() - began >= limit:
+            return f"the time limit of {limit:g} seconds was reached"
         if states and net.states is not None and len(self.states) >= net.states:
             return f"{len(self.states):,} states were known, the limit is {net.states:,}"
         if memory and net.memory_mb is not None:

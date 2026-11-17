@@ -19,7 +19,8 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   cheaper than the plan in hand (beyond the error of either figure), or with no plan in hand when it began, or as the last round, joins
   the base of the next rounds (one that closes with no cheaper plan is set aside: below), and so does one a refusal ended (a solve that failed proves nothing against its offers and took no time from the
   others: a wider round may solve them); one that its share of the time or the memory net stopped is set aside, and its plan is kept if it is
-  cheaper. Until a plan is in hand, a round may take all the time left: the answer must hold a plan (OR-33), and a later round cannot
+  cheaper. The round that made the first plan joins the base whatever its end (#1135): the plan in hand is made of its offers, and a round
+  that cannot hold them cannot widen it (R11's essence round gave way on 2 of 9 runners, and its Exalted round then reached no plan). Until a plan is in hand, a round may take all the time left: the answer must hold a plan (OR-33), and a later round cannot
   give one sooner than the rounds before it. Once a plan is in hand, the share of a round is the run's time left over the rounds left
   (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
   share too once its own search holds a plan: it gives way there, with its plan, unless its last search round still lowered that plan by more
@@ -29,7 +30,10 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   needs no room kept in its share for its search to make one, so its bound's build may take the whole share, not the quarter a search
   with no plan keeps it to (`RoundCall.held`, `_plan.search_net`, #1099): a short share otherwise cut the build before it was complete,
   and the round stopped on a weak lower figure (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s, where the
-  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged, so the rounds after it lose nothing.
+  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged. A build that the share ends
+  nearly done (by the offers its model holds) finishes, to at most twice the share, and its search makes its first plan (#1135,
+  `abstraction._pattern.Growth`): R11's Exalted round builds in 24 to 28 s on a runner against a share of 26 to 27 s, and cut there it kept
+  617.28 c on 3 of 4 runners. The time past the share comes off the rounds after it; a build far from done stops at the share as before.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
   less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
@@ -360,8 +364,12 @@ def widen(
             # built each until the runner died
             records[place] = replace(records[place], carried=False)
             set_aside.append((place, group))
-        elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED):
-            base = positions  # the first round is the base whatever its end, a refused one too: every later round widens it
+        elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) or (not held and improved):
+            # the first round is the base whatever its end, a refused one too: every later round widens it. So is the round that made the
+            # first plan, whatever its end (#1135): the plan in hand is made of its offers, and a later round that cannot hold them cannot
+            # widen that plan (R11: the essence round gave way at 52 s, its plan 597.28 c, on 2 of 9 runners, and the Exalted round, without
+            # the essences, reached no plan: the answer kept 617.28 c where essences then an Exalted Orb cost 188.03 c)
+            base = positions
         if k == len(queue) - 1 and closing is None and set_aside and _all_ended(records):
             # every round closed, some groups were set aside: one last round holds them with the base, which is then every offer, so
             # the last round again holds every offer and its proof is the whole one (a plan joining a set-aside group with a later one is in it)

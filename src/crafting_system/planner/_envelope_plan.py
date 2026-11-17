@@ -36,7 +36,7 @@ import numpy as np
 
 from crafting_system import parallel
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
-from crafting_system.abstraction._pattern import SINK, Pattern
+from crafting_system.abstraction._pattern import LATE, SINK, Growth, Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
@@ -267,18 +267,40 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     round ends stopped with the build's lower figure and the plan in hand kept (heavy run 44058430778: R11's and R05's rounds whose build
     did not complete in a whole share, where a search on the quarter's bound had made no cheaper plan either). The round's share is unchanged, so the rounds after it lose nothing. A run counted in states gives the build
     the pieces of the whole share (`_plan.search_net`), and pieces are not states: the round's search keeps its whole states net.
+
+    Such a build that is nearly done when the share ends finishes, to at most twice the share (`BuildStop`, `abstraction._pattern.Growth`,
+    #1135): cut there, R11's Exalted round kept 617.28 c on 3 of 4 runners where its finished bound's first plan costs 188.03 c. Its search
+    then makes its first plan in what is left of that (`Net.first`) and stops: the time past the share comes off the rounds after it.
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
+    return BuildStop(net, began)
 
-    def stop() -> str | None:
-        now = time.perf_counter()
+
+class BuildStop:
+    """The net of the bound's build on the clock (`build_stop`); called, the reason once one is reached, else None.
+
+    A build that begins with a plan in hand (`Net.held`) and is nearly done when its seconds are used (`growth`, set by the build once its
+    first model is solved: `abstraction._pattern.Growth`, #1135) goes on past them, to at most `1 + LATE` times its seconds: it finishes,
+    and the search after it makes its first plan (`Net.first`, `_envelope_run`). `late` says it went past."""
+
+    def __init__(self, net: Net, began: float) -> None:
+        self.net, self.began = net, began
+        self.growth: Growth | None = None
+        self.late = False
+
+    def __call__(self) -> str | None:
+        net, now = self.net, time.perf_counter()
         if net.seconds is not None:
-            spent = now - began
+            spent = now - self.began
             left = net.seconds - spent
             if left <= 0.0:
-                return f"the time limit of {net.seconds:g} seconds was reached"
-            if not net.held and left <= SEARCH_PER_BUILD * spent:
+                if not (net.held and self.growth is not None and self.growth.nearly_done(spent, net.seconds)):
+                    return f"the time limit of {net.seconds:g} seconds was reached" + (
+                        f", the build having gone on past it to {spent:.0f} s, nearly done" if self.late else ""
+                    )
+                self.late = True
+            elif not net.held and left <= SEARCH_PER_BUILD * spent:
                 return (
                     f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan, "
                     f"which takes several times as long as this count"
@@ -288,8 +310,6 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
             if used is not None and used >= net.memory_mb:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None
-
-    return stop
 
 
 def route_incumbent(route, data) -> Callable[[CompressedState], list[str]]:
@@ -407,7 +427,7 @@ def _envelope_run(
     if bound is None:
         bound = pattern_lower_bound(
             abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after),
-            pieces=None if net is None else net.pieces,
+            pieces=None if net is None else net.pieces, finish=net is not None and net.held,
         )  # fmt: skip
     built = time.perf_counter()
     expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)
@@ -423,7 +443,8 @@ def _envelope_run(
     # the search has what the build and the problem left of the time (OR-40), and the aim is of the whole plan (OR-33): both count, the closed solve
     # of a stopped build (#948) included, which is one more solve of the model the build already solved and so of the same order as its own
     if net is not None and net.seconds is not None:
-        net = dataclasses.replace(net, seconds=max(net.seconds - (ready - began), 0.0))
+        late = (1.0 + LATE) * net.seconds - (ready - began)  # a nearly done build went past the share (`BuildStop`): the first plan has what is left of twice it
+        net = dataclasses.replace(net, seconds=max(net.seconds - (ready - began), 0.0), first=max(late, 0.0) if bound.late and bound.complete else net.first)
     if gap_after is not None:
         gap_after = max(gap_after - (ready - began), 0.0)
     where = {priced.label: position for position, priced in enumerate(offers)}

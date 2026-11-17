@@ -851,3 +851,16 @@ def test_through_the_envelope_entry_a_bound_that_begins_again_gives_the_full_wal
     assert any(builder.restarts for builder in builders)
     assert len(made) == sum(len(builder.computed) for builder in builders)  # no kernel made twice by the builds (the search makes its own)
     assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)
+
+
+def test_a_search_given_its_first_plan_past_a_used_net_makes_it_and_stops_there(world):
+    """#1135: a round whose bound's build, nearly done, went past its share has no seconds left for its search (`Net.seconds` 0), and still
+    makes its first plan (`Net.first`): the chain is not asked the used net, then the search stops at it with that plan. A net of 0 s alone
+    makes no plan. Neither reads a clock that moves anything: a limit of 0 s is reached at once, and one of 10^9 s never."""
+    ab, start, offers, full, exact, bound = world
+    planned = envelope_result(ab, start, offers, net=Net(seconds=0.0, first=1e9), bound=bound)
+    info = planned.info["envelope"]
+    assert not info.exact and info.stopped.startswith("the time limit of 0 seconds") and math.isfinite(planned.solution.values[start])
+    assert info.first_upper is not None and planned.solution.values[start] >= full.solution.values[start] - 1e-6
+    with pytest.raises(NoPolicy, match="the time limit of 0 seconds"):
+        envelope_result(ab, start, offers, net=Net(seconds=0.0), bound=bound)
