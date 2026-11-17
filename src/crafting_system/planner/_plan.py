@@ -426,6 +426,7 @@ def make_plan(
     net: Net | None = None,
     judges_route: bool = False,
     watch: Callable[[Standing], None] | None = None,
+    route_actions: tuple[str, ...] | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy, under one budget of time and memory (`crafting_system.budget`, #825).
 
@@ -441,8 +442,9 @@ def make_plan(
     exact answer or a measurement needs). `net` is the older way to give the net (its time, memory and states), and is folded into the budget.
     Every stage runs on the one clock of the run (a plan inside a run that already has a clock, a start option or a reading, shares it), and a
     stage that a limit stopped is listed in one limit of the answer (`_limits.budget_limit`, #378). A stop before any plan closed is a `PlanError`
-    that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. `judges_route` changes nothing since #986
-    (a judged route is evaluated on its own reach, `cli._route.evaluate_route`). The rest is `_make_plan`'s text.
+    that says where it stopped ("no plan found yet", OR-33); a stop after one did keeps it and says so. A judged route is evaluated on its own
+    reach (`cli._route.evaluate_route`, #986); `route_actions` are the labels it names (`cli._route.route_actions`), which lead the first round
+    of the offers (#1110), and `judges_route` alone, with no labels, searches every offer at once (`_make_plan`). The rest is `_make_plan`'s text.
     """
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
@@ -451,7 +453,7 @@ def make_plan(
             plan = _make_plan(
                 data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
                 strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
-                incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route,
+                incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
             )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
             if clock is not None:
@@ -575,6 +577,7 @@ def _make_plan(
     judges_route: bool = False,
     foresee: bool = True,
     round_call: RoundCall | None = None,
+    route_actions: tuple[str, ...] | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -637,7 +640,12 @@ def _make_plan(
 
     When the offers fall in more than one group of the features they add to the model (`_rounds`, #1069), the envelope search widens them in
     rounds and keeps the cheapest plan of every round (`widened_plan`); `round_call` is set on the plan of one round (its share of the time, the
-    plan in hand to cut against), which widens nothing itself.
+    plan in hand to cut against), which widens nothing itself. A plan a given route is judged against takes the rounds too once the route's
+    actions are known (`route_actions`, the labels its rules name, #1110): they lead the first round, as the target's named actions do, so
+    every round holds them (the first round is the base of every later one), no round's price cut leaves them out, and the plan's offers and
+    model hold every action the route takes. The route is then read on that plan as before, and the answer says whether the first round,
+    which held the route's methods, finished (`_rounds.judged_route_limit`): only then is the plan proved no dearer than the route. A judged
+    route whose actions are not given (`judges_route` alone) may name any offer, and the offers are searched at once, as before #1110.
     """
     if solver not in SOLVERS:
         raise ValueError(f"solver must be one of {', '.join(SOLVERS)}, got {solver!r}")
@@ -696,18 +704,23 @@ def _make_plan(
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
         marks = ((bought, price_of_start.mark),) if price_of_start.mark else ()
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
-    judged = incumbent is not None or judges_route
-    if round_call is None and chosen_here and rounds_apply(data, target, priced, solve_it=solve_it, judged=judged, solver=solver):
+    # a route judged against the plan: no price cut, since the route may name the offer it would leave out; a round of the rounds is cut, and its
+    # cut keeps the route's offers (`route_actions`)
+    judged = incumbent is not None or judges_route or (route_actions is not None and round_call is None)
+    # a route whose actions are not known may name any offer, and an incumbent is a policy over every offer: those are searched at once
+    unknown_route = incumbent is not None or (judges_route and route_actions is None)
+    if round_call is None and chosen_here and rounds_apply(data, target, priced, solve_it=solve_it, judged=unknown_route, solver=solver):
         own = {id(offer) for offer in offers}
         grouped = tuple(p.offer for p in priced if id(p.offer) in own)
-        groups = offer_groups(data, goal, target, grouped)
+        groups = offer_groups(data, goal, target, grouped, route_actions or ())
         if len(groups) > 1:  # the offers refine the model in more than one way: they are searched in rounds (#1069)
             return widened_plan(
                 data, target, prices, groups, grouped, limits, aim=aim, rates=rates, strands=strands, price_of_start=price_of_start,
-                price_source=price_source, solver=solver, with_risk=with_risk, clock=clock, watch=watch, foresee=foresee,
+                price_source=price_source, solver=solver, with_risk=with_risk, clock=clock, watch=watch, foresee=foresee, route_actions=route_actions,
             )  # fmt: skip
     if round_call is not None and round_call.upper is not None and price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=judged):
-        priced, cut = restart_dominated(priced, price_of_start.chaos, round_call.upper)  # cut against the plan in hand (`_rounds`)
+        # cut against the plan in hand (`_rounds`); a judged route's offers are kept, since the route is read on the plan's offers (#1110)
+        priced, cut = restart_dominated(priced, price_of_start.chaos, round_call.upper, keep=frozenset(route_actions or ()))
         if cut:
             limits += (price_cut_limit(cut, price_of_start.chaos, round_call.upper),)
     # a metamod craft the target did not ask for, offered by the rule of blocking crafts (#886), makes the model track every mod's protected tags on
@@ -965,9 +978,10 @@ def rounds_apply(data: GameData, target: Target, priced: Sequence[PricedOffer], 
     return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem))
 
 
-def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Offer]) -> tuple[_rounds.Group, ...]:
+def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Offer], route: Sequence[str] = ()) -> tuple[_rounds.Group, ...]:
     """The groups of `offers` by the features each adds to the target's own model (`Abstraction.features`, `_rounds.round_groups`). An offer
-    that reads neither the junk nor the item's state is never in the model (`_make_plan`'s `enabled`) and adds nothing."""
+    that reads neither the junk nor the item's state is never in the model (`_make_plan`'s `enabled`) and adds nothing. `route` are the
+    labels a judged route names (#1110): they lead the first group with the target's named actions."""
     holds = bool(target.start_item.metamods(data) & BLOCKING)
 
     def model(actions) -> Abstraction:
@@ -997,7 +1011,7 @@ def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Of
             known[key] = found
         return found
 
-    return _rounds.round_groups(offers, target.actions, added)
+    return _rounds.round_groups(offers, (*(target.actions or ()), *route), added)
 
 
 def round_end(plan: Plan) -> tuple[str, str]:
@@ -1012,17 +1026,18 @@ def round_end(plan: Plan) -> tuple[str, str]:
 
 def widened_plan(
     data: GameData, target: Target, prices: PriceFile, groups: Sequence[_rounds.Group], grouped: tuple[Offer, ...], limits: tuple[Limit, ...], *,
-    price_of_start: StartPrice, clock: Clock | None, with_risk: bool, watch, foresee: bool, **kwargs,
+    price_of_start: StartPrice, clock: Clock | None, with_risk: bool, watch, foresee: bool, route_actions: tuple[str, ...] | None = None, **kwargs,
 ) -> Plan:
     """The plan of `groups` of `grouped` searched in rounds (`_rounds`, #1069): the cheapest plan of every round, with the Lock foreseen and its
     risk, and the answer says over which methods it is proved and which rounds were set aside or not tried (OR-13). `limits` are what the choice
-    of the offers said; `kwargs` go to each round's `_make_plan`."""
+    of the offers said; `kwargs` go to each round's `_make_plan`. `route_actions` are the labels of a route judged against the plan (#1110):
+    the first group holds them, each round's price cut keeps them, and the answer says what the first round proved against the route."""
 
     def run(chosen: tuple[Offer, ...], call: RoundCall) -> Plan:
         try:
             return _make_plan(
                 data, target, prices, start_price=None, offers=chosen, solve_it=True, start_price_of=price_of_start, with_risk=False,
-                incumbent=None, clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, **kwargs,
+                incumbent=None, clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, route_actions=route_actions, **kwargs,
             )  # fmt: skip
         except PlanError as error:  # the search's `NoPolicy`: a net stopped it before a plan closed (a stop), or no plan of the offers exists
             cause = error.__cause__
@@ -1058,7 +1073,8 @@ def widened_plan(
         plan.packed.info["envelope"] = replace(
             info, exact=exact, within=within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records
         )  # fmt: skip
-    plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within)))
+    judged = () if route_actions is None else (_rounds.judged_route_limit(sorted({o.label for o in grouped} & set(route_actions)), records[0]),)
+    plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within), *judged))
     if foresee:
         offered = merge_twins(data, target.start_item, plan.offers)[0] if PRUNE_BOUND and len(plan.offers) >= MIN_OFFERS else plan.offers
         fallback = plan_fallback(plan.solution, offered)

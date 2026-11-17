@@ -33,15 +33,18 @@ from ._limits import Limit
 from ._offers import BuyStartItem, PricedOffer
 
 
-def restart_dominated(priced: Sequence[PricedOffer], start_price: float, upper: float) -> tuple[tuple[PricedOffer, ...], tuple[PricedOffer, ...]]:
+def restart_dominated(
+    priced: Sequence[PricedOffer], start_price: float, upper: float, keep: frozenset[str] = frozenset()
+) -> tuple[tuple[PricedOffer, ...], tuple[PricedOffer, ...]]:
     """(`priced` without the offers whose price is at least `start_price + upper`, those offers), the restart always kept (the module text).
 
     `upper` is a certified upper figure of the cheapest cost from the start after the start item (at least the mean of an executable plan, its error
-    added); a figure that is not finite cuts nothing."""
+    added); a figure that is not finite cuts nothing. The offers labelled in `keep` are never cut: a route judged against the plan names them,
+    and it is read on the plan's offers (#1110); keeping an offer changes no cost of the plan."""
     if not math.isfinite(upper) or not math.isfinite(start_price):
         return tuple(priced), ()
     ceiling = start_price + upper
-    kept = tuple(each for each in priced if isinstance(each.offer.action, BuyStartItem) or each.cost < ceiling)
+    kept = tuple(each for each in priced if isinstance(each.offer.action, BuyStartItem) or each.cost < ceiling or each.label in keep)
     held = {id(each) for each in kept}  # by identity: a test of membership in `kept` compared every pair (9,000 fossil sets: 12 s, #1073)
     cut = tuple(each for each in priced if id(each) not in held)
     return kept, cut

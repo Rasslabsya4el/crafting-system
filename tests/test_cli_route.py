@@ -669,3 +669,17 @@ def test_open_prefixes_and_suffixes_count_what_is_free_on_the_item():
     assert [rule.when.matches(empty, DATA) for rule in route.rules] == [True, True, True]
     assert [rule.when.matches(two_held, DATA) for rule in route.rules] == [False, True, True]
     assert [rule.when.matches(crowded, DATA) for rule in route.rules] == [False, False, True]
+
+
+def test_the_actions_a_route_names_are_read_before_any_plan_and_a_file_that_cannot_be_read_names_none(tmp_path):
+    # #1110: the planner offers them from the first round of its offers; a bad file is said by `load_route` after the plan, as before
+    from crafting_system.cli._route import route_actions
+
+    path = tmp_path / "route.yaml"
+    path.write_text("rules:\n  - do: '  Chaos Orb '\n  - do: restart\n  - when: {rarity: magic}\n    do: Regal Orb\n  - do: Chaos Orb\n  - do: [x]\n  - when: {}\n", encoding="utf-8")
+    assert route_actions(path) == ("Chaos Orb", "Regal Orb")
+    assert route_actions(tmp_path / "missing.yaml") == ()
+    path.write_text("rules: [\n", encoding="utf-8")
+    assert route_actions(path) == ()
+    path.write_text("- do: Chaos Orb\n", encoding="utf-8")
+    assert route_actions(path) == ()

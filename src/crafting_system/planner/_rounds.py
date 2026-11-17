@@ -7,7 +7,7 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
 * **Groups.** An offer adds to the model the features beyond the target's own that a model of that offer alone has (`Abstraction.features`).
   When no offer adds more than the junk count (`FIRST_ROUND`), the offers are one group and one search, as before the rounds (every benchmark
   route on main's default methods). Otherwise each offer is in the group of its kind and the features it adds, and the target's named offers
-  join the first group; the groups go by the features they add beyond `FIRST_ROUND` (the junk count every reroll needs is no refinement here,
+  join the first group (so do the actions of a route judged against the plan, #1110: `judged_route_limit`); the groups go by the features they add beyond `FIRST_ROUND` (the junk count every reroll needs is no refinement here,
   as in the test for one group), then by their number of offers, then by their kinds' names. So the rounds grow from the offers that refine the
   model least and are fewest, and a kind of thousands of offers (the fossil sets) comes after the small kinds that refine the model as little:
   the plan of the cheap rounds is in hand in seconds. The order decides only when a group is tried and with
@@ -461,7 +461,31 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     )
 
 
+def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
+    """What the rounds prove against a route judged against their plan (#1110, OR-13). The route's actions (`labels`) lead the first round and
+    every round holds them, so the route is a plan of the first round's methods (with the restart and the listing's draw, which every round
+    has). When that round finished, no plan of its methods costs less than its own plan, and the plan shown costs no more than that one: the
+    route costs no less than the plan shown (to within the gap the round closed within). When it did not finish, nothing is proved between
+    the two: the route may cost less than the plan."""
+    why = "the given route's actions were offered from the first round on, and every round held them: {names}"
+    if first.status == CLOSED:
+        guarantee = "The first round finished: no plan made only of its methods, the route's among them, costs less than the plan shown, so the route costs no less than it."
+    elif first.status == WITHIN:
+        guarantee = (
+            f"The first round finished within {first.within or 0.0:.2%}: no plan made only of its methods, the route's among them, costs less "
+            f"than the plan shown by more than that, so the route costs no less than it, to within {first.within or 0.0:.2%}."
+        )
+    elif first.status == NONE:
+        guarantee = "The first round finished with no plan of its methods alone reaching the target: the route, made of them, does not finish from every item it reaches."
+    else:
+        guarantee = (
+            "The first round did not finish, so the plan shown is not proved to cost no more than the route: the route may cost less, and its "
+            "cost is its own, read on its own actions."
+        )
+    return Limit(_limits.ROUNDS, "The given route's methods were searched from the first round", why, guarantee, labels=tuple(labels), names=tuple(labels) or ("restart only",))
+
+
 __all__ = [
     "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "StatesMeter", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
-    "round_groups", "round_line", "rounds_limits", "widen",
+    "judged_route_limit", "round_groups", "round_line", "rounds_limits", "widen",
 ]  # fmt: skip

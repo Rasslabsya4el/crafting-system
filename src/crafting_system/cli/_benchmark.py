@@ -43,7 +43,7 @@ from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
 from ._report import interval_answer_of, money, name_states, number_states, percent
-from ._route import RouteResult, evaluate_route, load_route
+from ._route import RouteResult, evaluate_route, load_route, route_actions
 from ._shares import weight_share
 from ._start_report import first_step_document
 from ._start_step import first_step
@@ -455,7 +455,10 @@ def run_route(
         if missing is not None:
             raise ValueError(_missing_message(missing))
         judged = bench.route is not None  # the guide's route is judged against the plan, on the route's own reach (#829, #986): `auto` searches
-        plan = plan_target(data, target, loaded, PlanSettings(recipe_starts=bench.start is not None, judges_route=judged))  # a route with no start entry plans from the target's own item
+        # the actions of the guide's route and of its completed one lead the first round of the offers, so the plan holds them (#1110)
+        named = None if bench.route is None else _route_labels(root, bench)
+        settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=judged, route_actions=named)
+        plan = plan_target(data, target, loaded, settings)  # a route with no start entry plans from the target's own item
         entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos
         risk = plan.risk
@@ -622,6 +625,12 @@ def _given_route(
         first_action = None if divergence is None else divergence.solver_action
         found["mean_ratio"] = review_of(ratio, review_line, None if reviewing is None else reviewing.judge(ratio, first_action))
     return found
+
+
+def _route_labels(root: Path, bench: BenchmarkRoute) -> tuple[str, ...]:
+    """The actions the guide's route and its completed one name (`route_actions`, #1110); a file that cannot be read names none, and
+    `load_route` records its problem in the entry after the plan."""
+    return tuple(dict.fromkeys(label for path in (bench.route, bench.completed) if path is not None for label in route_actions(root / path)))
 
 
 def _not_dearer(solver_mean: float | None, given_mean: float | None) -> bool:

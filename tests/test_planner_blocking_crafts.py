@@ -730,11 +730,75 @@ def test_the_cut_and_the_craft_classes_split_the_offers_by_identity_never_by_com
     assert kept == (twin,) and kept[0] is twin and others == ("craft",)
 
 
-def test_a_judged_route_is_judged_against_every_offer_in_one_search(data, target, monkeypatch):
+def test_a_judged_route_whose_actions_are_not_known_is_judged_against_every_offer_in_one_search(data, target, monkeypatch):
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
     plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", judges_route=True))
     assert LOCK in {entry.label for entry in plan.offers} and not plan.search.widening  # a route may name the lock: it is a fixed policy
+
+
+# #1110: the route of the module text that exalts until a prefix, and buys the belt again when that prefix is a lower Life tier: `16e/3 + 2S`.
+EXALTING_ROUTE = """\
+name: exalt until a prefix
+rules:
+  - when:
+      requirements:
+        - family: IncreasedLife
+          status: below
+    do: restart
+  - do: Exalted Orb
+"""
+
+
+def _judged(data, target, tmp_path, text: str):
+    """The plan judged against the route `text` through the planner's entry, with the route's actions read from its file first (as the
+    command and `benchmark` do), and the route read and evaluated on that plan."""
+    from crafting_system.cli._route import evaluate_route, load_route, route_actions
+
+    path = tmp_path / "route.yaml"
+    path.write_text(text, encoding="utf-8")
+    named = route_actions(path)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", judges_route=True, route_actions=named))
+    return named, plan, evaluate_route(plan, load_route(path, plan, data), data)
+
+
+def test_a_judged_route_is_judged_against_the_plan_of_the_rounds_and_the_answer_says_the_first_round_held_it(data, target, tmp_path, monkeypatch):
+    # #1110: the belt's offers split into two rounds (the Lock's is the second). The route's action leads the first round, which finishes; the
+    # plan is the rounds' plan, the same as with no route (fill, then exalt: 3(c + e) + 2S = 133), proved over every method; the route costs
+    # 16e/3 + 2S = 153.33 on its own actions, and the answer says that no plan of the first round's methods, the route's among them, costs less.
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    named, plan, given = _judged(data, target, tmp_path, EXALTING_ROUTE)
+    assert named == ("Exalted Orb",)
+    unjudged = plan_target(data, target, dataclasses.replace(_prices(), chaos_per_divine=92.0), PlanSettings(recipe_starts=False, start_price=S, solver="envelope"))
+    assert plan.mean_remaining == unjudged.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert [record.status for record in plan.search.widening] == [record.status for record in unjudged.search.widening]
+    assert len(plan.search.widening) == 2 and plan.search.exact  # searched in rounds, not every offer at once
+    assert given.risk.mean.value == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9) and not given.gaps
+    limit = next(limit for limit in plan.limits if limit.what == "The given route's methods were searched from the first round")
+    assert limit.labels == ("Exalted Orb",) and limit.guarantee.startswith("The first round finished: no plan made only of its methods")
+    assert not any(limit.what.startswith("The given route") for limit in unjudged.limits)
+
+
+def test_a_judged_route_that_names_the_lock_holds_it_from_the_first_round(data, target, tmp_path, monkeypatch):
+    # #1110: a route that takes the Lock, an offer of the second round: the Lock leads the first round with the target's named actions, so the
+    # plan holds it and the route is read on that plan. Its group is then empty: the offers are one group, one search (no round of its own).
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    route = EXALTING_ROUTE.replace("  - do: Exalted Orb\n", f"  - when:\n      crafted_mods: false\n    do: {LOCK}\n  - do: Exalted Orb\n")
+    named, plan, given = _judged(data, target, tmp_path, route)
+    assert named == (LOCK, "Exalted Orb") and LOCK in {entry.label for entry in plan.offers}
+    assert not plan.search.widening and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert given.risk.mean.value >= plan.mean_remaining * (1 - 1e-9)  # the plan of one search over every offer, the Lock included, is proved the cheapest
+
+
+def test_the_judged_route_limit_says_nothing_is_proved_against_the_route_when_the_first_round_did_not_finish():
+    from crafting_system.planner import _rounds
+
+    record = _rounds.RoundRecord(("exalted-orb",), 3, _rounds.GAVE_WAY, "its share", 100.0, 140.0, 1.0)
+    limit = _rounds.judged_route_limit(("Exalted Orb",), record)
+    assert limit.guarantee.startswith("The first round did not finish, so the plan shown is not proved to cost no more than the route")
+    within = _rounds.judged_route_limit(("Exalted Orb",), dataclasses.replace(record, status=_rounds.WITHIN, within=0.01))
+    assert "to within 1.00%" in within.guarantee
 
 
 def test_a_given_start_has_no_restart_so_no_round_cuts_and_with_no_plan_in_any_round_the_refusal_stands(tmp_path, data, monkeypatch):
