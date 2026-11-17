@@ -285,7 +285,7 @@ def test_the_crafting_plan_of_a_search_a_refused_round_ended_says_so_with_its_ga
 #   state 1: offer 1, the reroll: state 0 back; offer 3, a finish for 10: the goal; the restart.
 #   state 2: offer 1, the reroll: state 0; the restart.
 # The least `la` takes the reroll at 0 and at 1: a chain of two states that never meets the goal, so no policy of what it realized reaches it and
-# the plan in hand costs infinity (R04, R14, R20, R24 on the heavy benchmark's records: 10,603 to 750,477 states and no goal). The distance to the
+# the plan in hand costs infinity (R04, R14, R20, R24 on the heavy benchmark's records: 352 to 750,477 states and no goal). The distance to the
 # goal (the requirements a state lacks) is 2 at 0 and 2, 1 at 1. The walk pops state 1 first (nearest) and realizes what it has left: the finish
 # reaches the goal. The plan in hand: reroll at 0 (0.1), finish at 1 (10): U = 10.1, the optimum itself; one offer realized by the walk.
 
@@ -348,3 +348,21 @@ def test_with_no_restart_the_walk_is_not_taken():
     world.reach_first = True  # a given start: a path to the goal is no executable plan (a tip has no action), so the chain stays
     result = Search(world).run()
     assert result.stats.reached == 0 and result.stats.seeded == 2
+
+
+def test_the_crafting_problem_measures_the_distance_by_the_parts_of_the_goal_a_state_lacks(world, monkeypatch):  # noqa: F811
+    ab, start, offers, full, _, bound = world
+    problem = CraftingProblem(ab, start, offers, bound)
+    assert problem.distance == ab.unmet and not problem.reach_first  # a finished build: the chain is walked first
+    states = list(full.solution.values)
+    assert states and all((problem.distance(state) == 0) == ab.is_goal(state) for state in states)
+    assert any(problem.distance(state) > 0 for state in states)
+    monkeypatch.setattr(_envelope_plan.CraftingProblem, "_closed", lambda self, model, bound: None)  # a stopped build whose model gives no order
+    fresh = abstraction()
+    begin = fresh.compress(START_ITEM)
+    stopped = pattern_lower_bound(fresh, begin, offers, stop=counting_stop(12))
+    assert CraftingProblem(fresh, begin, offers, stopped).reach_first  # the walk replaces the least-`la` chain
+    result = envelope_result(fresh, begin, offers, bound=stopped)
+    info = result.info["envelope"]
+    assert info.exact and result.solution.values[begin] == pytest.approx(full.solution.values[begin], rel=1e-9)  # the same exact mean
+    assert info.first_upper is not None and math.isfinite(info.first_upper)

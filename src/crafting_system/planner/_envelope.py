@@ -695,6 +695,7 @@ class Search[S]:
                 heapq.heappush(queue, (distance(self.states[i]), i))
         self.p.release()
         polled = -math.inf
+        popped = tried = 0  # the states popped, and how many had been popped at the last solve of the upper graph (0: none yet)
         while queue:
             _, i = heapq.heappop(queue)
             poll = time.perf_counter() - polled >= POLL_SECONDS
@@ -711,6 +712,13 @@ class Search[S]:
                 cands.remove(c)
             met = False
             while cands:
+                if time.perf_counter() - polled >= POLL_SECONDS:  # a state of many offers, each a heavy kernel: the net is asked between them too
+                    polled = time.perf_counter()
+                    stopped = self._net(began, states=False)
+                    if stopped is not None:
+                        self._refile(cands, restart)
+                        self.p.release()
+                        return stopped
                 la, position = cands.pop()
                 try:
                     kid = self._kernel(i, position)
@@ -734,7 +742,11 @@ class Search[S]:
                         heapq.heappush(queue, (distance(self.states[j]), j))
             self._refile(cands, restart)
             self.p.release()
-            if met:
+            popped += 1
+            # a goal met by this state's offers, or, once one was met with a cost the solver could not certify, after twice as many states as at the
+            # last try: a later offer can make the plan certifiable without meeting a goal itself, and a solve at every state would cost more than the walk
+            if met or (tried and popped >= 2 * tried):
+                tried = popped
                 try:
                     if math.isfinite(self._upper()[2]):
                         return None
