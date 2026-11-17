@@ -121,10 +121,11 @@ class Budget:
         memory it takes are set by the pool and by what the kinds keep of the junk, not by `states`. Where an enabled action reads the junk (a
         bench craft, with every method on), a pool draw's outcomes are the family types it adds, and one kernel can take gigabytes. R12 at
         `in_states(1000)` with every method on (#1104, on the owner's server): the build stopped at 101,511 of 100,000 pieces with one key
-        expanded and held 7 distributions of 3,160,130 outcomes (2.6 GB); the first plan's chain met one kernel of 468,779 outcomes (468,781
+        expanded, its 7 distributions holding 3,160,130 outcomes (the process held 2.6 GB); the first plan's chain met one kernel of 468,779 outcomes (468,781
         states known, the limit 1,000); then the Lock's gains (`_foresight.PlanSites`, the kernel of every option at a state) grew one exact
-        distribution past 13 GB in a single kernel, and the process was killed at 16 GB. So memory does not follow `states`, a smaller figure
-        does not make such a run fit, and the time net's memory net, read only between two states, does not see it either. Bounding it means
+        distribution by about 12 GB in a single kernel, and the process was killed at 16 GB. So memory (and time) do not follow `states`, and a
+        smaller figure does not make such a run fit. A run under the time net has the same kernels, and its memory net is never read inside
+        the making of one, so it does not see them either. Bounding it means
         counting the outcomes a kernel makes as it makes them (#1105).
         Its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
         net, OR-39, OR-40). It is the setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose
