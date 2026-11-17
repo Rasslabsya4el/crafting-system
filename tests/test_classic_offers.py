@@ -16,6 +16,7 @@ TURNED_ON_BY_886 = {
     "veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick", "annulment-orb", "fracturing-orb", "talisman-fracture", "aspect-beast",
     "beast-side-swap", "wild-bristle-matron", "imprint", "restore",
 }
+TURNED_ON_LATER = {"influenced-exalted-orb"}  # a beta method made a planner kind after #886, on by default (#818, OR-41)
 DEFERRED = {"recombinator", "foulborn-exalted-orb"}  # opt-in with or without the classic offers (OR-37)
 
 
@@ -23,7 +24,7 @@ def test_every_planner_kind_is_classic_turned_on_by_886_or_deferred():
     planner = [entry.name for entry in kinds(planner_only=True)]
 
     assert len(set(CLASSIC_KINDS)) == len(CLASSIC_KINDS) == 23
-    assert set(planner) == set(CLASSIC_KINDS) | TURNED_ON_BY_886 | DEFERRED
+    assert set(planner) == set(CLASSIC_KINDS) | TURNED_ON_BY_886 | TURNED_ON_LATER | DEFERRED
     assert [name for name in planner if name in CLASSIC_KINDS] == list(CLASSIC_KINDS)  # the catalog's order
     assert {entry.name for entry in kinds(planner_only=True) if entry.opt_in} == DEFERRED  # the default is every beta method (#886)
 
