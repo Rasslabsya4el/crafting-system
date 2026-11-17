@@ -67,7 +67,10 @@ def no_full_walk(monkeypatch):
 
 
 def judged(target, prices):
-    plan = plan_target(DATA, target, prices, PlanSettings(recipe_starts=False, judges_route=True))
+    # The labels the module's routes name lead the first round, as `--route` gives them (#1110): with every method on (#886) and no labels,
+    # the judged plan searched every offer at once and ran a CI runner out of memory on "two leaves".
+    settings = PlanSettings(recipe_starts=False, judges_route=True, route_actions=(CHAOS, REFORGE))
+    plan = plan_target(DATA, target, prices, settings)
     assert plan.search is not None  # the plan is the envelope search's
     return plan
 
