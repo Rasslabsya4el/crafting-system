@@ -39,7 +39,7 @@ from crafting_system.abstraction import Abstraction, CompressedState, Status
 from crafting_system.abstraction._pattern import Tally
 
 from ._offer_kinds import (
-    CRAFT,
+    NAMING,
     REROLL,
     RESTART_KIND,
     SLACK,
@@ -95,8 +95,8 @@ class OfferFloors:
             if index % 256 == 0:
                 self.ask()
             kinds.append(_kind_of(data, item, offer))
-        crafted = [bool(kind == CRAFT and offer.offer.action.adds(data, item).crafted) for offer, (kind, _named) in zip(priced, kinds)]
-        crafts = {(named, made) for (kind, named), made in zip(kinds, crafted) if kind == CRAFT}  # the mods each craft adds by name, and whether crafted
+        crafted = [bool(kind in NAMING and offer.offer.action.adds(data, item).crafted) for offer, (kind, _named) in zip(priced, kinds)]
+        crafts = {(named, made) for (kind, named), made in zip(kinds, crafted) if kind in NAMING}  # the mods each craft or veiled choice may add, and whether crafted
         # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
         # as the retired bound pruning's were (`shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
         # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
@@ -110,8 +110,8 @@ class OfferFloors:
             pbar = ONE
             if kind == RESTART_KIND:
                 pbar = ZERO
-            elif kind == CRAFT:
-                pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft lands in E only by passing a leaf of U
+            elif kind in NAMING:
+                pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft or a veiled choice lands in E only by passing a leaf of U
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
@@ -165,8 +165,9 @@ class OfferFloors:
         return min((self.lower(position, klass) for position in positions), default=math.inf)
 
     def initial(self) -> list[int]:
-        """The offers the model starts with: the restart, the crafts and the `SMALL_START` rerolls of least cost / pbar (the cheapest offers if none)."""
-        inside = {entry.index for entry in self.entries if entry.kind in (RESTART_KIND, CRAFT)}
+        """The offers the model starts with: the restart, the crafts, the veiled choices and the `SMALL_START` rerolls of least cost / pbar (the cheapest
+        offers if none)."""
+        inside = {entry.index for entry in self.entries if entry.kind in (RESTART_KIND, *NAMING)}
         rerolls = sorted((entry for entry in self.entries if entry.kind == REROLL), key=lambda entry: (entry.ratio, entry.index))
         inside.update(entry.index for entry in rerolls[:SMALL_START])
         if not inside:

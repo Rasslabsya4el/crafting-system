@@ -10,8 +10,8 @@ cheaper one in any policy lowers or keeps its cost and changes nothing else.
 
 THE NUMBER pbar. Let U be a set of NECESSARY goal leaves (a leaf is necessary when it sits directly under
 the requirements, or only under `AtLeast` nodes with k equal to the number of members; U is the necessary
-leaves that are not PASSING at the start, less the ones a bench craft can finish when something is left: one a mod
-it adds can pass, by the leaf's tier limit and its refusal of crafted mods, `finishes`, #1112).
+leaves that are not PASSING at the start, less the ones a bench craft or a veiled choice can finish when something is left: one a mod
+it adds can pass, by the leaf's tier limit and its refusal of crafted mods, `finishes`, #1112, #1074).
 Let E be "every leaf of U is PASSING". The goal implies E, and the start is outside E. For an offer x,
 pbar(x) is a number such that one use of x, from ANY state outside E that has the flags and the fractured
 mods of the start, lands in E with chance at most pbar(x):
@@ -40,6 +40,16 @@ mods of the start, lands in E with chance at most pbar(x):
     mod, so it makes a leaf of U PASSING only if the mod can pass that leaf (`finishes`: one of its mods the
     tier limit accepts, and not crafted where the leaf refuses crafted mods): pbar = 1 if one of its named
     mods can pass a leaf of U, else 0. It stays in the model.
+  * a veiled choice (#1074: an action that needs the veiled placeholder, `Reads.needs_veiled`, an Unveil or a Pick, offered to a start item
+    that holds no placeholder; it draws no mod, fractures nothing and changes no implicit, quality, corruption, imprint or veil): it acts only
+    on the placeholder, and the mod it may put on the item is one it names, or (a pick, which names none) a mod of the unveiled pool of the base
+    (`unveil_pool_mods`): the placeholder gives way to that mod, and a mod the action removes passes no leaf. So, like a craft, pbar = 1 if
+    one of those mods can pass a leaf of U (`finishes`), else 0; the Unveil names no mod (it only draws the offer): pbar = 0. Before #1074 they
+    were TERMINAL (they read the offer, `Reads.item_state`), and as free actions (ADR-0026, a price of about 1e-8) they set rho to their price
+    in every search that offered them: the floor of every key outside the model was then about 0 (#1112's single search over R05's offers).
+    Its use keeps the shape: the placeholder of a state of the start's shape is never fractured (the start holds none, and only a terminal
+    offer fractures), so the picked mod is not, and the flags stay (that an action that needs the placeholder changes no flag but by what
+    `Adds` declares is the contract of `Reads.needs_veiled`, not a check). A start item that holds a placeholder keeps them TERMINAL.
   * an addition (#1072): it keeps the mods and adds one mod drawn from the pool less the families on the item
     (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Eldritch Exalted Orb, an Orb of Augmentation;
     it draws, names no mod, fractures nothing, reads no roll, input or influence). A Regal Orb (it changes the rarity, so it
@@ -64,7 +74,7 @@ ratios only grow, and the one that stops the loop is the least ratio of all. Cla
 every state s outside E with the flags and the fractured mods of the start, in the FULL model.
 Proof. A policy from s that reaches the goal almost surely enters E (the goal implies E) at a first time T.
 Let tau be the first use of a terminal action and N = min(T, tau). Until N every action used is one of
-`restart`, a bench craft, an erasing reroll or an addition, none of which moves the flags and the fractured mods, so
+`restart`, a bench craft, a veiled choice, an erasing reroll or an addition, none of which moves the flags and the fractured mods, so
 the state keeps the shape of the start and, given the history, the chance of entering E at step t is at
 most pbar(a_t). With probability 1 either E is entered at a step before tau, or a terminal action is used
 (and the first one is at step tau). So 1 <= sum over t <= N of E[w(a_t)] with w = pbar for the others and
@@ -96,7 +106,7 @@ from crafting_system.abstraction import (
     declared_bounds,
     reach_bound,
 )
-from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.actions import NotApplicableError, OutOfScopeError, holds_placeholder, unveil_pool_mods
 from crafting_system.data import GameData
 from crafting_system.items import Item
 
@@ -108,7 +118,8 @@ SMALL_START = 8  # the rerolls of least cost / pbar that the bound's model start
 SLACK = 1e-12  # float slack on rho and on the floors' test
 HUGE = 1e300  # stands for an infinite rho (nothing can reach E): keeps 0 * rho at 0
 
-RESTART_KIND, CRAFT, REROLL, ADD, TERMINAL, REFUSED = "restart", "craft", "reroll", "add", "terminal", "refused"
+RESTART_KIND, CRAFT, VEILED, REROLL, ADD, TERMINAL, REFUSED = "restart", "craft", "veiled", "reroll", "add", "terminal", "refused"
+NAMING = (CRAFT, VEILED)  # the kinds whose pbar is read from the mods they may add (`finishes`), and which make the goal set U
 TOP_LEVEL = {REROLL: 2, ADD: 1}  # the highest level of the bound of each kind that has levels (see THE NUMBER pbar); every other kind has none
 
 
@@ -157,9 +168,9 @@ def necessary_leaves(goal) -> tuple[int, ...]:
 
 
 def goal_set(goal, start: CompressedState, crafts: Sequence[tuple[frozenset[str], bool]]) -> tuple[int, ...]:
-    """U: the necessary leaves not PASSING at the start, less those a bench craft can finish (if any remain).
+    """U: the necessary leaves not PASSING at the start, less those a bench craft or a veiled choice can finish (if any remain).
 
-    `crafts` are, for each offered craft, the mod ids it adds by name and whether it adds them crafted (`Adds.crafted`). A craft finishes a leaf
+    `crafts` are, for each offered craft or veiled choice, the mod ids it may add and whether it adds them crafted (`Adds.crafted`). A craft finishes a leaf
     only when a mod it adds can pass it (`finishes`): a leaf that refuses crafted mods, or whose tier limit accepts none of them, stays in U (#1112:
     R05's tier 1 Life left U for the bench Life, so the Wald floor of the bound fell from the essence's chance of tier 1 Life to the essence's price).
     """
@@ -343,7 +354,7 @@ def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int
 
 
 def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]:
-    """The kind of an offer from what its action declares, and (for a craft) the mods it adds by name.
+    """The kind of an offer from what its action declares, and (for a craft or a veiled choice) the mods it may add.
 
     An action that does not read the junk starts as a reroll; whether it is refused, terminal or bounded
     is found when its bound is first needed (`raise_level`), because that needs the bare item.
@@ -352,6 +363,10 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     if isinstance(action, BuyStartItem) or getattr(action, "opens_listing", False):  # both are always in the solve: the draw is the one action of the unopened start (ADR-0064)
         return RESTART_KIND, frozenset()
     reads = action.reads(data)
+    if reads.needs_veiled and not holds_placeholder(data, item):  # a veiled choice (see THE NUMBER pbar, #1074)
+        adds = action.adds(data, item)
+        if not (adds.draws or adds.fractures or adds.implicits or adds.quality or adds.corrupts or adds.imprints or adds.veils or adds.enchantment):
+            return VEILED, frozenset(adds.named) if adds.named is not None else unveil_pool_mods(data, item.base_id)
     if reads.item_state:
         return TERMINAL, frozenset()  # its result depends on the implicits, the quality or the offer, which the bound read at one state does not hold fixed
     if not reads.junk:
