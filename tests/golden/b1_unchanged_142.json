@@ -48,7 +48,7 @@
   "kernels": 5,
   "kernels_sha": "013936a0d1f013f688aff5b798aa064d53873582d5ac9a17a05bb19e15487a15",
   "limits": 5,
-  "limits_sha": "03b0553d7c98983ea952c9e6fcf0dc16c642ec2ee7f92d34188d522c988b5c37",
+  "limits_sha": "f932b0bf0f432b4b21932c373480732022582014043947f0a7c5b27c4c6e8a2d",
   "offers": 5,
   "offers_sha": "8572297300c4983fcfde55894e1c697c90ea9fd71c7e89d5718a7fef57e69918",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.MAGIC: 'magic'>, corrupted=False, influences=frozenset()), fractured=(), status=(<Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
