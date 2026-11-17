@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import pytest
-from cli_support import R12, TODAY, classic_offers, price_file
+from cli_support import R12, TODAY, price_file
 from cli_support import START as START_KEY
 from items_support import DATA, roll
 from route_view_support import (
@@ -39,6 +39,7 @@ from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, pa
 from crafting_system.planner._limits import STRANDS
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._report import build_report, render_text
+from crafting_system.cli._route import route_actions
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
@@ -142,20 +143,15 @@ INPUTS = {
 }
 
 
-def classic_plan(target, prices):
-    """The plan that judges a given route on `target`, with the CLASSIC offers (`cli_support.CLASSIC_KINDS`), not the default ones.
-
-    These pages show a given route's rows (a gap, a restart, a trade link): a plan that judges a route searches every offer at once (no
-    rounds, `_plan.py`), and with every method on (#886) the toy R12's ran past the suite's 300 s on a CI runner (#1110).
-    """
-    with pytest.MonkeyPatch.context() as patch:
-        classic_offers(patch)
-        return make_plan(DATA, target, prices, judges_route=True)
+def judged_plan(target, prices, route_actions: tuple[str, ...] = ("Chaos Orb",)):
+    """The plan that judges a given route on `target`, with the default offers: the labels the judged routes name lead the first round
+    of its search (`route_actions`, as `--route` gives them, #1110), so it holds every action they take."""
+    return make_plan(DATA, target, prices, judges_route=True, route_actions=route_actions)
 
 
 @pytest.fixture(scope="module")
 def r12_plan():
-    return classic_plan(load_target(R12, DATA), price_file())
+    return judged_plan(load_target(R12, DATA), price_file(), route_actions(ROUTE))
 
 
 TWO_LEAVES = f"""\
@@ -197,7 +193,7 @@ def two_leaf_plan():
     target = parse_target(TWO_LEAVES, DATA, source="two.yaml")
     prices = price_file(start=None)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")  # the start item is priced under the key computed from the target
-    return classic_plan(target, prices)
+    return judged_plan(target, prices)
 
 
 def given(plan, text: str) -> RouteInput:
@@ -650,7 +646,7 @@ def fractured_start_plan():
     target = parse_target(FRACTURED_START, DATA, source="fractured.yaml")
     prices = price_file(start=None)
     prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")
-    return classic_plan(target, prices)
+    return judged_plan(target, prices)
 
 
 def test_golden_a_restart_that_buys_a_rare_item_with_a_fractured_mod_draws_it_as_the_first_card_does(fractured_start_plan):
@@ -918,7 +914,7 @@ def plan_with_a_wider_price():
     del body["query"]["filters"]["misc_filters"]["filters"]["ilvl"]  # the stored search had no item level at all
     prices = price_file(start=None)
     prices.prices[spec.name] = PriceEntry(4.0, "trade-api", "a note", {"query": body})
-    return classic_plan(target, prices)
+    return judged_plan(target, prices, ())  # no route is judged here
 
 
 def test_the_buy_step_prints_the_line_next_to_the_price_and_a_price_for_the_same_item_prints_none(r12_plan):

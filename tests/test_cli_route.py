@@ -309,10 +309,9 @@ requirements:
 start_item:
   rarity: rare
 start: bought
-actions: [chaos-orb, harvest-reforge]
-"""  # the module's methods (`target`): a judged plan of every method is #1110
+"""
     two = parse_target(text, DATA, source="two.yaml")
-    plan = make_plan(DATA, two, priced_for(two), judges_route=True)
+    plan = make_plan(DATA, two, priced_for(two), judges_route=True, route_actions=("Chaos Orb",))  # the route's label leads the first round, as `--route` gives it (#1110)
     outcomes = ChaosOrb().outcomes(DATA, two.start_item)
     resists = [mod_id for mod_id, mod in DATA.mods.items() if "LightningResistance" in mod.families]
     gem_chance = float(outcomes.chance_all([GEM]))
@@ -517,11 +516,11 @@ def test_an_unknown_requirement_selector_lists_the_selectors_of_the_target(plan)
 def test_a_selector_that_names_two_leaves_is_ambiguous():
     twice = parse_target(
         f"base: Paua Amulet\nitem_level: 84\nrequirements:\n  - stat: \"{GEM_TEXT}\"\n  - stat: \"{GEM_TEXT}\"\n"
-        "start_item:\n  rarity: rare\nstart: bought\nactions: [chaos-orb, harvest-reforge]\n",  # the module's methods (`target`): a judged plan of every method is #1110
+        "start_item:\n  rarity: rare\nstart: bought\n",
         DATA,
         source="twice.yaml",
     )
-    plan = make_plan(DATA, twice, priced_for(twice), judges_route=True)
+    plan = make_plan(DATA, twice, priced_for(twice), judges_route=True, route_actions=("Chaos Orb",))  # the route's label leads the first round (#1110)
 
     message = error_of(
         f'rules:\n  - when:\n      requirements:\n        - stat: "{GEM_TEXT}"\n          status: absent\n    do: Chaos Orb\n',
