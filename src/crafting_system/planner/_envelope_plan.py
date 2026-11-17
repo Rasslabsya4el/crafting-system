@@ -264,8 +264,8 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     the search to make a plan, and the answer holds one already. Its build stops only at the search's net, so a round's short share does not
     cut it at a quarter before it is complete (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s). On the clock its
     time still comes off the round's search (`envelope_result`): a build that takes the whole share leaves that search no time, and the
-    round ends stopped with the build's lower figure and the plan in hand kept (heavy run 44058430778: R11's and R05's rounds whose build
-    did not complete in a whole share, where a search on the quarter's bound had made no cheaper plan either). The round's share is unchanged, so the rounds after it lose nothing. A run counted in states gives the build
+    round ends stopped with the build's lower figure and the plan in hand kept, and is tried again after the other rounds (`_rounds.widen`, #1135) (heavy run 44058430778: R11's and R05's rounds whose build
+    did not complete in a whole share, where a search on the quarter's bound had made no cheaper plan either). The round's share is unchanged. A run counted in states gives the build
     the pieces of the whole share (`_plan.search_net`), and pieces are not states: the round's search keeps its whole states net.
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
@@ -434,7 +434,7 @@ def _envelope_run(
     except NoPolicy as refusal:
         if bound.complete:
             raise
-        raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}", states=refusal.states) from refusal
+        raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}", states=refusal.states, build=bound.stopped) from refusal
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
     # the mean shown: of an exact answer to the solver's 1e-6; of a plan proved within a gap, or one a net stopped, to the error the search took its
     # figures at, and the limit says so when it is above 1e-6 (`mean_error_text`, #867): OR-33 asks for a plan with its gap, not a refusal
