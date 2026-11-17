@@ -859,19 +859,27 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
     ids = short_ids(stems)
     probes: list[Probe] = []
 
-    def members_of(start) -> tuple[dict, dict]:
-        """Each kind's actions for every item the planner lists offers for (`reached_items`, #973: the start item and the items of the other
-        rarities its actions reach), as the planner lists them."""
-        by_kind, owner = {entry.name: [] for entry in kinds(planner_only=True)}, {}
-        for item in reached_items(data, start, None, frozenset()):
-            for entry in kinds(planner_only=True):
+    def members_of(start, plan) -> tuple[dict, dict]:
+        """Each kind's actions for the start item, and for a kind that lists none there, for the items of the other rarities its actions reach
+        (`reached_items`, #973: a Transmutation or an Alchemy on the Normal item a Scouring leaves); each offered action's kind as the plan
+        names it. A kind already listing for the start item is not listed again (a fossil set's listing alone takes seconds)."""
+        by_kind, owner = {}, {}
+        reached = reached_items(data, start, None, frozenset())
+        for entry in kinds(planner_only=True):
+            found = []
+            for item in reached:
                 try:
                     found = list(entry.members(data, item))
                 except Exception:  # noqa: BLE001  (a kind that cannot list for this item offers nothing)
                     found = []
-                by_kind[entry.name].extend(action for action in found if action not in by_kind[entry.name])
-                for action in found:
-                    owner.setdefault(action, entry.name)
+                if found:
+                    break
+            by_kind[entry.name] = found
+            for action in found:
+                owner.setdefault(action, entry.name)
+        for priced in plan.offers:
+            if priced.offer.kind:
+                owner[priced.offer.action] = priced.offer.kind
         return by_kind, owner
 
     def plan_one(label: str, option: str, target, prices, **kwargs) -> Probe:
@@ -882,7 +890,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
             return Probe(label, option, "refused", str(result), target=target)
         if isinstance(result, BaseException):
             return Probe(label, option, "refused", f"{type(result).__name__}: {result}", target=target)
-        members, owner = members_of(target.start_item)
+        members, owner = members_of(target.start_item, result)
         return Probe(label, option, "plans", plan=result, target=target, members=members, owner=owner)
 
     for stem in stems:
