@@ -48,6 +48,26 @@ union bound over the ways to give every X its own draw is `_joint_hits`. The bou
 is the smallest of the single bounds and the joint bound of a greedily chosen disjoint subset,
 taken per total T, and averaged over `totals`.
 
+One added mod (`add_bound`, #1072). An action that keeps the mods and adds one drawn mod (an Exalted Orb; `Reads.pool_weight`: the families on
+the item leave the pool, so the draw depends on them only through the weight they take out) cannot be read at one state for all: its chance
+depends on which families the item holds. What the floors of the planner need (`planner/_offer_kinds`, pbar) is a number that is never below
+its chance, from ANY state of one shape (the flags and the fractured mods of the bare item `s0`) at which a leaf L is not PASSING, of putting
+on the item a mod of X (the mods that pass L at some roll). At such a state `s`, the mod is drawn from the mods of the pool of `s0` (less
+the mods of the tags an Attack or Caster metamod of `s` keeps out, and only those of the tag the action names, `Adds.tag`) whose family `s`
+does not hold, on the sides where `s` has room, in proportion to weight; so its chance of X is `(X weight left) / (weight left)` over the open
+sides. `s` holds on each side at most its free slots of `s0`, and at most that many families of the pool; a side is open when what it holds is
+below its room. So that chance is at most the largest, over the numbers `a` and `b` of families taken out of each side (below the room of an
+open side) and over which families they are, of that ratio: Dinkelbach's iteration (`_scenario_chance`) finds it exactly over every set of
+families of each count, the families of X included. The pool of `s0`, its free slots and the draw's tag are read from the action's own result
+at `s0` (one part, one draw); the blocked tags are every set the two metamods make when the abstraction models them. Nothing here tracks
+which families a state holds: it is the most favourable weight share of the free families, the same at every state of the shape. What is
+taken on the contract of `Reads.pool_weight` and not checked: that the action draws the same way at every state of the shape (from the pool
+of `s0` less the held families and the blocked tags, one mod, on a side with room) as it does at `s0`. Where it is known not to hold, no
+bound is given (None): a draw cut by Memory Strands on an item that holds some (each use spends a number that follows the mods held, so the
+states of the shape hold other counts and draw from other cuts). The tests compare the bound with the
+exact chance at every member state of hand-worked pools (`tests/test_add_bound.py`), including the members whose chance is above the
+chance at `s0`, the one a bound read at `s0` alone would give.
+
 The bound of an action is the mean over its parts (`components`) by their shares. Where a step could
 be loose it is loose upwards: a drawn family is assumed to be the worst one, a hit is assumed to end
 nothing. None of it is below the exact value; the tests compare it with the brute force and with the
@@ -57,10 +77,10 @@ exact engine on random pools.
 from collections.abc import Hashable, Mapping, Sequence
 from fractions import Fraction
 
-from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, guaranteed_candidates, partners
+from crafting_system.actions import BLOCKED_TAG, Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, allowed_by_tags, guaranteed_candidates, partners
 from crafting_system.budget import checkpoint
 from crafting_system.data import Mod
-from crafting_system.items import Side
+from crafting_system.items import ItemError, Side
 
 from ._goal import Status
 from ._kernel import Abstraction
@@ -355,6 +375,120 @@ def reach_bound(
         return min(ONE, total)
     except OutOfScopeError:
         return None
+
+
+def declared_bounds(abstraction: Abstraction, state: CompressedState, actions: Sequence[Action], leaves: Sequence[int]) -> list[Fraction | None]:
+    """For each action of `actions` (all of one class), an upper bound on the chance that one use on `state` makes every leaf of `leaves`
+    PASSING, from what the class declares without building an outcome (`Action.reach_batch`, #1073); None where it declares no bound or that the
+    action may leave the shape (`ReachDeclared.keeps_shape`).
+
+    `state` is the bare item of a shape (its fractured mods and nothing else). X of a leaf is what `reach_bound` reads (`_may_pass`: some roll of
+    the mod makes the leaf PASSING), and P(every leaf) <= P(each one), so the bound is the least of the declared chances. The declared bound is the
+    class's argument (`actions/fossil_reach.py` for the fossil sets), checked by its tests against the exact chance.
+    """
+    checkpoint()
+    leaves = tuple(leaves)
+    if not leaves or not actions:
+        return [None] * len(actions)
+    if len(state.status) != len(abstraction.goal.leaves):
+        raise ValueError("the state comes from another abstraction")
+    try:
+        item = abstraction._item_of(state, True)[0]
+    except (ItemError, ValueError):
+        return [None] * len(actions)
+    influences = state.flags.influences
+
+    def passes(mod: Mod) -> tuple[bool, ...]:
+        return tuple(any(flags[0] for flags, _ in _roll_cells(abstraction, mod, (leaf,), influences, False)) for leaf in leaves)
+
+    answers = type(actions[0]).reach_batch(abstraction.data, item, tuple(actions), passes)
+    if answers is None:
+        return [None] * len(actions)
+    found: list[Fraction | None] = []
+    for answer in answers:
+        if answer is None or not answer.keeps_shape or answer.chances is None:
+            found.append(None)
+        else:
+            least = min(answer.chances) if answer.together is None else min(*answer.chances, answer.together)
+            found.append(min(ONE, Fraction(least)))
+    return found
+
+
+def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, leaves: Sequence[int]) -> Fraction | None:
+    """An upper bound, over EVERY state with the flags and the fractured mods of `state` (whatever else it holds) at which one leaf of `leaves`
+    is not PASSING, on the chance that one use of the adding action `action` puts on the item a mod that makes that leaf PASSING (#1072).
+
+    `state` is the bare item of the shape (its fractured mods and nothing else). The action is one that keeps the junk and draws ONE mod from the
+    pool of the item less the families it holds, on a side with room (`Reads.pool_weight`; an Exalted Orb, an Orb of Augmentation; not a Harvest
+    add/remove craft, which also removes a mod, so its result is not one drawn mod: None; see "One added mod" in the module text for the argument and what it takes on the contract). Returns None when the
+    action at `state` is not one such draw: a part that is not a pool draw, a draw count other than one, or a fracture; and when the item holds
+    Memory Strands and the action's draw is cut by them (the count, and so the cut, differs between the states of the shape). Raises what the action
+    raises at `state` (`NotApplicableError`, `OutOfScopeError`): a refusal at the bare item says nothing of the states that hold more mods.
+    """
+    checkpoint()
+    leaves = tuple(leaves)
+    if not leaves:
+        raise ValueError("leaves must not be empty")
+    if len(state.status) != len(abstraction.goal.leaves):
+        raise ValueError("the state comes from another abstraction")
+    use = action.strand_use(abstraction.data)
+    if state.strands and use is not None and use.cuts:
+        return None  # the cut follows the Memory Strand count, which the uses before it spend: not the same draw at every state of the shape
+    prepared = abstraction._prepared(state, action)
+    outcomes = prepared.outcomes
+    if outcomes.fractures:  # `components` and `fractures` are on the `ActionOutcomes` contract
+        return None
+    components = outcomes.components
+    tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
+    memo: dict = {}
+    best = ZERO
+    for _share, part in components:
+        if isinstance(part, (Fixed, Rerolled)) or not hasattr(part, "pool"):
+            return None
+        if set(_draw_counts(part.totals, len(part.retained.mods), part.tag).values()) != {1}:
+            return None
+        _guard(part.pool)
+        for leaf in leaves:
+            passing = _may_pass(abstraction, part.pool, leaf, part.retained.influences, memo)
+            for blocked in tag_sets:
+                best = max(best, _added_chance(part.pool, part.free, part.tag, blocked, passing))
+    return min(ONE, best)
+
+
+def _blocked_sets() -> tuple[frozenset[str], ...]:
+    """Every set of tags the Attack and Caster metamods can keep out of a draw (none, either, both)."""
+    tags = sorted(set(BLOCKED_TAG.values()))
+    return tuple(frozenset(tag for bit, tag in enumerate(tags) if mask >> bit & 1) for mask in range(1 << len(tags)))
+
+
+def _added_chance(pool: Sequence[PoolFamily], free: Mapping[Side, int], tag: str | None, blocked: frozenset[str], passing: Mapping[str, bool]) -> Fraction:
+    """The largest chance that the one added mod is in X, over every set of families held besides the bare item's and every room left.
+
+    The draw picks from the mods of `pool` that carry `tag` (all when None) and none of `blocked`, on the sides with room. A state holds `a` more
+    mods on the prefix side and `b` on the suffix side (`0 <= a <= free prefix`, and the same for `b`), whose families (at most `a` and `b` of them:
+    a crafted mod of no family takes a slot and no weight) left the pool. A side is open when its `a` is below its free slots. For each `(a, b)` and
+    each number `k` of families taken out of an open side (`k <= a`), the largest ratio over which families is `_scenario_chance`'s, which ranges
+    over every set of `k` families, X families included. A closed side takes nothing out of the draw, and every way a side closes is a `k` of the
+    loop: `k` at its room (whatever filled the slots: families, a crafted mod of none) or at its number of families (nothing left to draw there).
+    """
+    kept: dict[Side, list[tuple[Fraction, Fraction]]] = {side: [] for side in Side}
+    for family in pool:
+        mods = [entry for entry in family.mods if allowed_by_tags(entry.mod, blocked) and (tag is None or tag in entry.mod.implicit_tags)]
+        weight = sum((entry.weight for entry in mods), ZERO)
+        if weight > 0:
+            kept[family.side].append((weight, sum((entry.weight for entry in mods if passing[entry.mod.id]), ZERO)))
+    # a family with no mod left in the draw still leaves the pool when held, but takes no weight from it: dropping it from the sides changes no ratio
+    sides = {side: _Side(kept[side]) for side in Side}
+    room = {side: max(0, free[side]) for side in Side}
+    best = ZERO
+    taken = {side: range(0, min(room[side], sides[side].count) + 1) for side in Side}
+    for a in taken[Side.PREFIX]:
+        for b in taken[Side.SUFFIX]:
+            live = [(sides[side], k) for side, k in ((Side.PREFIX, a), (Side.SUFFIX, b)) if k < room[side] and k < sides[side].count]
+            if not live or sum(side.wanted for side, _ in live) == 0:
+                continue
+            best = max(best, _scenario_chance(live))
+    return best
 
 
 def _exact_part(abstraction: Abstraction, part, leaves: Sequence[int], retained: Sequence[Status]) -> Fraction:

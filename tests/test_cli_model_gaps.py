@@ -53,6 +53,9 @@ GAME, GAP, RECORDS, EITHER, LISTS = "game", "gap", "records", "either", "lists"
 # model gap said with `listing_gap` (a limit of the kinds), the game refusal silent. EITHER: both families, named, and why.
 CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_bound.py", "reach_bound", ("OutOfScopeError",), GAP, "no bound is given for a pool the model cannot build"),
+    ("actions/fossil_reach.py", "declared", ("NotApplicableError", "OutOfScopeError"), EITHER, "the item takes no resonator (the game) or no rule covers it (a gap): no set declares anything, and the floors start at pbar 1 (#1073)"),
+    ("actions/fossil_reach.py", "declared", ("NotApplicableError", "OutOfScopeError", "ValueError"), EITHER, "the set is refused (the game) or out of scope (a gap) on the bare item: it declares nothing, and its floor is raised as before (#1073)"),
+    ("actions/fossil_reach.py", "declared", ("OutOfScopeError",), GAP, "no rule for the pool of the added mods: those sets declare nothing (#1073)"),
     ("abstraction/_coarse.py", "Coarsening._run_members", ("NotApplicableError", "OutOfScopeError"), EITHER, "the first refusal is kept and raised again by `variants`; a model gap wins over a game refusal"),
     ("abstraction/_coarse.py", "Coarsening.reachable", ("NotApplicableError", "OutOfScopeError"), EITHER, "a helper for tests, no caller in src: the blocks reachable by what can be applied"),
     ("abstraction/_estimate.py", "_Pilot.kernel_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the forecast only counts the graph; the build writes the gap"),
@@ -94,6 +97,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_benchmark_use.py", "one_step_short", ("NotApplicableError", "OutOfScopeError"), EITHER, "a bench craft that cannot be used on this state is not a sure step to the target; nothing is left out of a plan and nothing is written"),
     ("planner/_offer_kinds.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
     ("planner/_offer_kinds.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
+    ("planner/_offer_kinds.py", "_raised_add", ("NotApplicableError", "OutOfScopeError"), EITHER, "a refusal of an addition at the bare item, by the game or by a gap, proves nothing for a state holding more mods: the offer stays in the search as a terminal one"),
     ("planner/_offer_kinds.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
     ("planner/_offer_kinds.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
     ("planner/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
@@ -114,6 +118,12 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
     ("planner/_plan.py", "_make_plan", ("FinishRefused", "OutOfScopeError", "ArithmeticError"), GAP, "the socket finish cannot be planned (#231): its start sockets are not stated, the goal is corrupted, a mod action changes sockets, no offered action completes it, the base has no colour weights, or it did not settle; the text becomes the `PlanError`"),
     ("planner/_plan.py", "_make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
+    ("planner/_plan.py", "offer_groups.added", ("ValueError", "OutOfScopeError"), EITHER, "a model of one offer alone is refused (an unveil offer needs a junk reader): the offer is a group of its own and its round says what the full model makes of it (#1069)"),
+    ("planner/_rounds.py", "widen", ("ValueError",), EITHER, "a round's `PlanError` (a model gap or a game refusal raised as one) is that round's refusal: it is recorded with its text and the round is not counted as closed, so the answer proves nothing over its methods (#1069)"),
+    ("planner/_plan.py", "widened_plan.run", ("PlanError",), EITHER, "a round's plan was refused, whichever family or error it was: a net that stopped the search becomes the round's stop, a search that proved no plan of its offers becomes the round's `NoPlan`, and any other refusal goes on as the round's refusal, recorded with its text (#1069)"),
+    ("planner/_plan.py", "plan_without", ("PlanError",), EITHER, "the plan of the cheap offers alone (the price cut's premise) was refused, whichever family or error it was: nothing is cut and the full search answers, saying any refusal it meets itself (#1069)"),
+    ("planner/_starts.py", "plain_candidate", ("PlanError",), EITHER, "the start item's price could not be resolved: the row of the start option says the error's text as its source and has no price"),
+    ("planner/_starts.py", "_plan_candidate", ("PlanError",), EITHER, "a start option's plan was refused, whichever family or error it was: its row has no plan and shows the error's text"),
     ("planner/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
     ("planner/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
@@ -138,6 +148,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
 # packages that walk, solve and plan. Listed so they are not forgotten; `NOT_A_REFUSAL` says no action is called inside, or that the error is not a refusal.
 NOT_A_REFUSAL = "not a refusal"
 OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
+    ("abstraction/_bound.py", "declared_bounds", ("ItemError", "ValueError"), NOT_A_REFUSAL, "`_item_of` of a bare state that no item has: no declared bound, the floors start at pbar 1 (#1073); no action is called"),
     ("abstraction/_pattern.py", "Pattern._ok", ("ValueError", "ItemError"), NOT_A_REFUSAL, "`_item_of` of a state that no item has (two slots of a family, more slots than families): the member is not an item; no action is called"),
     ("actions/socket_colours.py", "BenchSocketColours.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
     ("actions/socket_orbs.py", "BenchSocketCount.socket_rule", ("ValueError",), NOT_A_REFUSAL, "the bench data has no option for this socket craft: it gives no rule, so the socket finish does not offer it (#231); no action is called"),
@@ -208,8 +219,14 @@ def handlers_in(path: pathlib.Path) -> list[tuple[str, tuple[str, ...], ast.Exce
     return [(function, constants.get(caught[0], caught) if len(caught) == 1 else caught, node) for function, caught, node in finder.found]
 
 
+# `ValueError` (the families' parent) and `PlanError`, which `_make_plan` raises a refusal as (its text, the refusal its cause): a clause that catches
+# one catches a refusal of either family (#1069). The other errors of `src` that come from `ValueError` are not read yet (#1078).
+VALUE_ERRORS = {"ValueError", "PlanError"}
+
+
 def clauses_found() -> list[tuple[str, str, tuple[str, ...], ast.ExceptHandler]]:
-    """Every `except` clause of `src` that names a refusal family, or `ValueError` (their parent) in the packages that walk, solve and plan.
+    """Every `except` clause of `src` that names a refusal family, or `ValueError` (their parent) or `PlanError` (a refusal raised as one), in the
+    packages that walk, solve and plan.
 
     A clause that names a tuple constant (`except ROUTE_ERRORS`) is read through it.
     """
@@ -217,7 +234,7 @@ def clauses_found() -> list[tuple[str, str, tuple[str, ...], ast.ExceptHandler]]
     for path in sorted(SRC.rglob("*.py")):
         relative = path.relative_to(SRC).as_posix()
         for function, caught, node in handlers_in(path):
-            if FAMILY & set(caught) or ("ValueError" in caught and relative.split("/")[0] in SCOPE):
+            if FAMILY & set(caught) or (VALUE_ERRORS & set(caught) and relative.split("/")[0] in SCOPE):
                 found.append((relative, function, caught, node))
     return found
 

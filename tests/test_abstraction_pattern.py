@@ -42,7 +42,7 @@ from abstraction_removals_support import (
 from pattern_support import all_members, check_dominates, exact_values, pushed
 
 from crafting_system.abstraction import Abstraction, Goal
-from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
+from crafting_system.abstraction._pattern import Mode, Pattern, PatternBuilder, PatternOffer, build_pattern_model
 from crafting_system.actions import (
     ActionError,
     AlterationOrb,
@@ -253,6 +253,84 @@ def test_the_model_is_a_lower_bound_at_every_concrete_state(world, tags):
         assert bound <= value * (1 + 1e-9) + 1e-9, (state, bound, value)
     assert 0 < solved.value[0] <= exact[start] * (1 + 1e-9)
     assert model.stats.kernels > 0 and model.stats.universe_growth == 0
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_an_essence_that_joins_with_a_mod_outside_the_pool_begins_the_build_again_on_its_kernels_and_ends_on_the_whole_model(world, tags):
+    """#1086: the essence forces a mod the pool does not list; joining a model built without it, it grows the universe and the build begins again.
+    The keys and kernels made before are kept (no kernel is made twice), and the model is the one built at once on every offer: the same keys and
+    the same value at each."""
+    data, ab, _ = world
+    start = ab.compress(build(data, BOW, STARTS[0]))
+    offers = [*offers_of(), PatternOffer("essence-outside-pool", ACTIONS["essence-outside-pool"], 4.0)]
+    whole = build_pattern_model(ab, start, offers, tags=tags)
+    made = []
+    real = ab.kernel
+    builder = PatternBuilder(ab, start, tags=tags, grow=True)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(ab, "kernel", lambda state, action: (made.append(1), real(state, action))[1])
+        builder.extend(offers[:-1])
+        before = len(made)
+        grown = builder.extend(offers[-1:])
+    assert builder.restarts == 1 and len(made) == len(builder.computed) > before
+    assert set(grown.index) == set(whole.index)
+    by_whole = solve_packed(pack_pattern_model(whole, offers)).value
+    by_grown = solve_packed(pack_pattern_model(grown, offers)).value
+    for key, k in whole.index.items():
+        assert float(by_grown[grown.index[key]]) == pytest.approx(float(by_whole[k]), rel=1e-9), key
+    assert 0 < grown.stats.restarted_keys < len(grown.keys)  # only the keys the essence's slot fits began again
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_a_key_no_grown_slot_fits_has_the_same_members_on_the_grown_universe(world, tags):
+    """#1086, `Pattern.may_hold`: at every key the exact walk meets, a key where the essence's forced mod (outside the pool) may not be has the same
+    members, in every mode, with and without the essence's name in the universe; the keys where it may be are some, not all."""
+    _, ab, states = world
+    before = Pattern(ab, tags, [ACTIONS[name] for name in MODEL_ACTIONS])
+    after = Pattern(ab, tags, [*(ACTIONS[name] for name in MODEL_ACTIONS), ACTIONS["essence-outside-pool"]])
+    for state in states:
+        if not any(ESSENCE_ONLY in slot.kind for slot in state.slots):  # the essence's slot comes by its name alone
+            before.note(state)
+            after.note(state)
+    grown = [
+        (influences, slot)
+        for influences, universe in after._universes.items()
+        for side in universe.relevant
+        for slot in universe.relevant[side]
+        if slot not in before.universe(influences).relevant[side]
+    ]
+    assert grown
+    fits = {True: 0, False: 0}
+    for key in dict.fromkeys(after.key(state) for state in states):
+        held = any(after.may_hold(key, influences, slot) for influences, slot in grown)
+        fits[held] += 1
+        if not held:
+            for mode in (Mode.ALL, Mode.EXTREMES, Mode.ANY):
+                assert set(before.members(key, mode)) == set(after.members(key, mode)), (key, mode)
+    assert fits[True] and fits[False]
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_a_key_a_new_pure_junk_kind_does_not_fit_has_the_same_members(world, tags):
+    """#1086, `Pattern.may_hold` for the other way a universe grows: a kind of pure junk a kernel finds (`_Universe.note` adds it to its class).
+    One pure kind is taken out of a universe and given back; a key it may not be in has the same members in every mode either way."""
+    _, ab, states = world
+    full = Pattern(ab, tags, [ACTIONS[name] for name in MODEL_ACTIONS])
+    less = Pattern(ab, tags, [ACTIONS[name] for name in MODEL_ACTIONS])
+    influences = frozenset()
+    side, tagset, kinds = next(
+        (side, tagset, kinds) for side in (Side.PREFIX, Side.SUFFIX) for tagset, kinds in less.universe(influences).classes[side].items() if len(kinds) > 1
+    )
+    gone = kinds.pop()  # `less` lacks it, as a universe before a kernel found it
+    assert full.universe(influences).note(gone.slot) is False  # `full` has it
+    fits = {True: 0, False: 0}
+    for key in dict.fromkeys(full.key(state) for state in states if state.flags.influences == influences):
+        held = full.may_hold(key, influences, gone.slot)
+        fits[held] += 1
+        if not held:
+            for mode in (Mode.ALL, Mode.EXTREMES, Mode.ANY):
+                assert set(less.members(key, mode)) == set(full.members(key, mode)), (key, mode)
+    assert fits[True] and fits[False]
 
 
 def test_a_key_without_tags_is_not_stronger_than_one_with_them(world):

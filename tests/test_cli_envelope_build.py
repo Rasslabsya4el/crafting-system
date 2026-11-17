@@ -695,3 +695,103 @@ def test_the_net_ends_the_offers_floors_and_the_bound_is_the_cheapest_offer_at_e
     with pytest.raises(NoPolicy, match="while working out the cheapest possible cost of each action"):
         fresh = abstraction()
         envelope_result(fresh, fresh.compress(START_ITEM), build_world_offers(offers), net=Net(states=12), bound=bound)
+
+
+def new_names_gain(monkeypatch):
+    """`_seed_named` counts every action new to a universe as a slot gained, as an essence's forced mod is (R11: four of its essences joined the model
+    of the bound with a mod the pool does not list, each beginning the build again, #1086); the slots themselves are seeded as they are."""
+    real = _pattern._Universe._seed_named
+    seen: dict[int, set] = {}
+
+    def gaining(self, pattern, actions):
+        real(self, pattern, actions)
+        known = seen.setdefault(id(self), set())
+        new = [action for action in actions if action not in known]
+        known.update(new)
+        return len(new)
+
+    monkeypatch.setattr(_pattern._Universe, "_seed_named", gaining)
+
+
+def count_kernels_made(monkeypatch, ab):
+    """Count the kernels the abstraction `ab` is asked to make."""
+    made = []
+    real = ab.kernel
+
+    def counted(state, action):
+        made.append(1)
+        return real(state, action)
+
+    monkeypatch.setattr(ab, "kernel", counted)
+    return made
+
+
+def test_a_build_that_begins_again_makes_no_kernel_twice_and_ends_on_the_model_built_at_once(world, monkeypatch):
+    """#1086: an offer that joins the model adds its forced mod to the universe, and a universe that grows begins the build again (R11: four times,
+    27.6 s for a model that takes 7.7 s built at once). The keys and the kernels do not depend on the universe and are kept: the build that began
+    again makes no kernel it made before, and it ends on the model built at once on every offer, with as many kernels made."""
+    _, start, offers, _, _, _ = world
+    all_offers = pattern_offers(offers)
+    new_names_gain(monkeypatch)
+    once = abstraction()
+    once_made = count_kernels_made(monkeypatch, once)
+    whole = build_pattern_model(once, start, all_offers)
+    grown_ab = abstraction()
+    grown_made = count_kernels_made(monkeypatch, grown_ab)
+    builder = PatternBuilder(grown_ab, start, grow=True)
+    builder.extend(all_offers[:2])
+    builder.extend(all_offers[2:5])
+    grown = builder.extend(all_offers[5:])
+    assert builder.restarts > 0  # the names of the offers that join began the build again
+    assert canonical(grown) == canonical(whole)
+    assert len(grown_made) == len(builder.computed) == len(once_made) == grown.stats.kernels == whole.stats.kernels
+
+
+def test_the_bound_whose_build_begins_again_is_the_model_of_every_offer_and_a_lower_bound(world, floors_on, monkeypatch):
+    """#1086: with the offers' floors, offers join the bound's model round after round; each brings a name, so each round begins the build again.
+    The start value is the model of every offer's, no kernel is made twice, and every key stays at most the exact value of each state that has it."""
+    ab, _, offers, _, exact, whole = world
+    new_names_gain(monkeypatch)
+    fresh = abstraction()
+    made = count_kernels_made(monkeypatch, fresh)
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
+    assert bound.complete and bound.rounds > 1 and bound.model.stats.universe_growth > 0
+    assert len(made) == bound.model.stats.kernels <= whole.model.stats.kernels
+    assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)
+    assert_lower_bound(bound, ab, exact)
+
+
+def test_through_the_envelope_entry_a_bound_that_begins_again_gives_the_full_walks_plan(world, floors_on, monkeypatch):
+    """#1086 through the search's entry: every name counted as a slot gained, the bound's rounds begin the build again, keep their kernels, and
+    the plan is the full walk's mean."""
+    _, start, offers, full, _, _ = world
+    new_names_gain(monkeypatch)
+    builders = []
+    real_init = PatternBuilder.__init__
+
+    def keep(self, *args, **kwargs):
+        real_init(self, *args, **kwargs)
+        builders.append(self)
+
+    monkeypatch.setattr(PatternBuilder, "__init__", keep)
+    fresh = abstraction()
+    building = []
+    real_pass = PatternBuilder._pass
+
+    def passing(self):
+        building.append(self)
+        try:
+            return real_pass(self)
+        finally:
+            building.pop()
+
+    monkeypatch.setattr(PatternBuilder, "_pass", passing)
+    made = []
+    real_kernel = fresh.kernel
+    monkeypatch.setattr(fresh, "kernel", lambda state, action: (made.append(1) if building else None, real_kernel(state, action))[1])
+    result = envelope_result(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
+    info = result.info["envelope"]
+    assert info.exact and info.bound_stopped is None and info.bound_rounds > 1
+    assert any(builder.restarts for builder in builders)
+    assert len(made) == sum(len(builder.computed) for builder in builders)  # no kernel made twice by the builds (the search makes its own)
+    assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)

@@ -338,6 +338,7 @@ class EnvelopeInfo:
     mean_error: float = 0.0  # the certified relative error of `upper`, the mean shown (the final solve's bound): above 1e-6 only for a plan of very many steps (#867)
     proved_upper: float | None = None  # the search's own certified upper figure of the plan returned (its solve's value with its error added), when it is not exact: what its stop compared
     bound_rounds: int = 1  # models the bound's build solved (more than one when offers joined the model, `_pattern_bound`, #988)
+    widening: tuple = ()  # the rounds the offers were searched in (`_rounds.RoundRecord`, #1069); empty for one search over every offer
 
 
 def envelope_result(
@@ -357,6 +358,7 @@ def envelope_result(
     gap_after: float | None = None,
     watch: Callable[[Standing], None] | None = None,
     goal: Callable[[CompressedState], bool] | None = None,
+    beaten_at: float | None = None,
 ) -> PackedResult:
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
 
@@ -365,7 +367,8 @@ def envelope_result(
     cheapest; `gap` 0 or `gap_after` None is the exact search.
     `watch` is told where the search stands after the first plan and after each round (`_envelope.Standing`: the best plan's cost so far and the
     figure no plan can cost less than). `goal`, when given, is the set of states that end the search in place of the abstraction's goal, a subset of
-    it (a donor's want, `_awakener`, #832).
+    it (a donor's want, `_awakener`, #832). `beaten_at` is the certified upper figure of a plan the caller holds (`_rounds`): the search raises
+    `Beaten` once no plan of `offers` can cost less (`Search`).
 
     Raises `OutOfScopeError` when the bound cannot be built for this abstraction (`pattern_refusal`: none since #833, which
     gave the imprints members; a roll limit and a Divine Orb since #830, an unveil offer since #828), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
@@ -378,13 +381,17 @@ def envelope_result(
     say = progress or _packed.PROGRESS or (lambda _text: None)
     try:
         with parallel.memory_net(net.memory_mb if net is not None else None):  # the pool's workers are watched by the memory net too (#626, OR-12)
-            return _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal)
+            return _envelope_run(
+                abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal, beaten_at
+            )  # fmt: skip
     finally:  # said on a refusal too
         if (reason := getattr(abstraction, "prime_stopped", None)) is not None:
             say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
 
 
-def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal=None) -> PackedResult:
+def _envelope_run(
+    abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal=None, beaten_at=None
+) -> PackedResult:
     """The body of `envelope_result`, under the run's memory net."""
     began = time.perf_counter()
     if bound is None:
@@ -409,7 +416,7 @@ def _envelope_run(abstraction, start, offers, prune_corrupting, incumbent, net, 
         gap_after = max(gap_after - (ready - began), 0.0)
     where = {priced.label: position for position, priced in enumerate(offers)}
     positions = None if incumbent is None else (lambda state: [where[label] for label in incumbent(state) if label in where])
-    search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance, guard=guard, gap=gap, gap_after=gap_after, watch=watch)
+    search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance, guard=guard, gap=gap, gap_after=gap_after, watch=watch, beaten_at=beaten_at)
     try:
         result = search.run()
     except NoPolicy as refusal:

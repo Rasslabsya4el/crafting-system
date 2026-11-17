@@ -47,6 +47,8 @@ from ._offer_kinds import (
     _kind_of,
     _raised,
     best_first_rho,
+    declared_pbars,
+    raisable,
     goal_set,
     through_listing,
     ONE,
@@ -104,6 +106,8 @@ class OfferFloors:
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
+        if self.chosen:
+            declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
 
     def ask(self) -> None:
@@ -172,7 +176,7 @@ class OfferFloors:
                 return low
         found: list[tuple[float, int]] = []
         for level in (0, 1, 2):
-            if level and entry.kind == REROLL and entry.level < level:
+            if level and raisable(entry.kind, entry.level) and entry.level < level:
                 self._raise(entry, level)
             found = [
                 (low, klass)
@@ -181,7 +185,7 @@ class OfferFloors:
             ]
             if not found:
                 return None
-            if entry.kind != REROLL or entry.level >= 2:
+            if not raisable(entry.kind, entry.level):
                 break
         return min(low for low, _ in found)
 
@@ -194,7 +198,7 @@ class OfferFloors:
         of the size of the kernel it may spare (#829).
         """
         entry = self.entries[position]
-        while entry.kind == REROLL and entry.level < 2 and klass in (INSIDE, OUTSIDE) and self.lower(position, klass) * (1 - SLACK) <= above:
+        while raisable(entry.kind, entry.level) and klass in (INSIDE, OUTSIDE) and self.lower(position, klass) * (1 - SLACK) <= above:
             entry.kind, entry.pbar, entry.level = _raised(
                 self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, entry.level + 1
             )

@@ -2,7 +2,7 @@
 
 The bound pruning that used to solve the plan on a few offers and certify the rest (`solve_pruned`, retired with the 40-offer switch, #829)
 was built on these pieces; the offers' floors of the bound and of the envelope search (`_offer_floor`) are what is left of it. Everything is a
-filter over what an action declares (`reads`, `adds`, `twin_key`) and over `reach_bound`; no action class is named here.
+filter over what an action declares (`reads`, `adds`, `twin_key`, `reach_batch`) and over `reach_bound`; no action class is named here.
 
 TWINS. Offers with an equal, non-None `Action.twin_key(data, item)` give equal outcomes in every state:
 only the cheapest of a group (the earliest on a tie) is kept. Exact: swapping a dearer twin for the
@@ -22,25 +22,47 @@ mods of the start, lands in E with chance at most pbar(x):
   * an erasing reroll (it does not read the junk, erases the crafted mods, does not fracture, keeps the
     flags and the fractured mods of the item): its result does not depend on the state but through the
     flags and the fractured mods, so the exact chance at one state is the chance at every such state.
-    Level 0 is pbar = 1, level 1 is `reach_bound` (an upper bound from the pool), level 2 is the exact
-    chance (`reach_bound(..., exact=True)`). All are read on the BARE item of the start's shape (no mods
+    Level 0 is pbar = 1, or the bound its class declares without building an outcome when it declares one
+    (`declared_pbars`, #1073: `Action.reach_batch` for every offer of the class at once, through
+    `declared_bounds`; only for an action that declares it keeps the flags and the fractured mods, and that
+    declares no fracture, no kept crafted mod and no need of one, the conditions of level 1 that `adds` and
+    `reads` answer); level 1 is `reach_bound` (an upper bound from the pool), kept at the declared bound when
+    that is lower, level 2 is the exact chance (`reach_bound(..., exact=True)`). Each level is an upper bound
+    on the same chance, so a level reached lowers pbar or keeps it, and the least of two is one. A declared
+    bound of 0 (no mod that can pass a leaf of U has weight in the set's pool, and none is forced: R05's
+    `StrengthEssence7_`, an essence-only mod) is exact, so the offer's ratio is infinite and it is never raised.
+    That the action keeps the shape is then the class's declaration, not `keeps_shape`'s check; the contract
+    tests of the class compare the two. All are read on the BARE item of the start's shape (no mods
     but the fractured ones): a reroll refused there is refused wherever the shape holds (it reads
     nothing else), so it is set aside as inapplicable.
   * a bench craft (reads the junk, adds a named mod, draws nothing, does not fracture): it only adds a
     mod, so it makes a leaf of U PASSING only if the mod is one of that leaf's: pbar = 1 if its named
     mods meet the mods of a leaf of U, else 0. It stays in the model.
-  * anything else (it fractures, changes the flags, draws and reads the junk, has no bound, is unknown):
+  * an addition (#1072): it keeps the mods and adds one mod drawn from the pool less the families on the item
+    (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Eldritch Exalted Orb, an Orb of Augmentation;
+    it draws, names no mod, fractures nothing, reads no roll, input or influence). A Regal Orb (it changes the rarity, so it
+    leaves the shape) and a Harvest add/remove (it also removes a mod: not one drawn mod added to the mods kept) are of this
+    kind but get no bound, so they stay TERMINAL (#1084). Its
+    chance depends on the families the item holds, so it cannot be read at one state: pbar is the largest chance,
+    over every state of the start's shape at which a leaf of U is not PASSING, that the one added mod passes that
+    leaf (`add_bound`: the most favourable weight share of the free families, every set of families held and
+    every room left; the argument is in `abstraction/_bound.py`, "One added mod"). From a state outside E, E is
+    entered only if a leaf of U that is not PASSING becomes PASSING, which only the added mod can do (a mod the
+    action removes passes no leaf), so the chance is at most pbar. Level 0 is pbar = 1, level 1 that bound. It is
+    raised only where the bare item of the shape takes it, keeps the shape, and gives one draw; anywhere else
+    (refused there, which proves nothing for a state holding more mods; another shape; not one draw) it is TERMINAL.
+  * anything else (it fractures, changes the flags, draws and reads the junk otherwise, has no bound, is unknown):
     TERMINAL, pbar = 1, and the argument below is cut at its first use.
 
 THE LOWER BOUND rho. rho = min over the offers of cost / pbar (an offer with pbar = 0 counts for infinity);
 it is found best first, so that the dear bounds are computed only where they matter: a heap on cost / pbar
 with every reroll at level 0; pop the smallest; if it is a reroll below level 2, raise its level and push
-it back; stop when the smallest is at level 2 or is not a reroll. Raising a level only lowers pbar, so the
+it back (an addition is brought from level 0 to level 1 the same way); stop when the smallest has no higher level. Raising a level only lowers pbar, so the
 ratios only grow, and the one that stops the loop is the least ratio of all. Claim (Wald): V*(s) >= rho for
 every state s outside E with the flags and the fractured mods of the start, in the FULL model.
 Proof. A policy from s that reaches the goal almost surely enters E (the goal implies E) at a first time T.
 Let tau be the first use of a terminal action and N = min(T, tau). Until N every action used is one of
-`restart`, a bench craft or an erasing reroll, none of which moves the flags and the fractured mods, so
+`restart`, a bench craft, an erasing reroll or an addition, none of which moves the flags and the fractured mods, so
 the state keeps the shape of the start and, given the history, the chance of entering E at step t is at
 most pbar(a_t). With probability 1 either E is entered at a step before tau, or a terminal action is used
 (and the first one is at step tau). So 1 <= sum over t <= N of E[w(a_t)] with w = pbar for the others and
@@ -50,7 +72,10 @@ rho * E[sum w(a_t)] >= rho, since cost(a) >= rho * w(a) for every offer a.
 WHAT THE CLAIM NEEDS, and what is checked. (1) An offer that the game refuses on the bare item of the start's shape never applies at a state
 of that shape (a reroll reads nothing of the item that the shape does not hold; a crafted mod can only add refusals). This is an assumption on
 the contract of `Reads`, not a check. (2) An erasing reroll keeps the shape, which `keeps_shape` checks at the bare item. (3) The bound of
-`reach_bound` is a proof by its own tests. Floats: rho is lowered by 1e-12 of itself.
+`reach_bound` is a proof by its own tests. (4) An addition draws at every state of the shape as it does at the bare item (one mod from the
+pool less the families held and the tags a metamod blocks, on a side with room): the contract of `Reads.pool_weight`, not a check; its shape
+and its single draw are checked at the bare item, and `add_bound` against every member of hand-worked pools by its tests. Floats: rho is
+lowered by 1e-12 of itself.
 """
 
 import heapq
@@ -61,10 +86,12 @@ from fractions import Fraction
 
 from crafting_system.abstraction import (
     Abstraction,
+    add_bound,
     CompressedState,
     Status,
     Wanted,
     keeps_shape,
+    declared_bounds,
     reach_bound,
 )
 from crafting_system.actions import NotApplicableError, OutOfScopeError
@@ -79,7 +106,8 @@ SMALL_START = 8  # the rerolls of least cost / pbar that the bound's model start
 SLACK = 1e-12  # float slack on rho and on the floors' test
 HUGE = 1e300  # stands for an infinite rho (nothing can reach E): keeps 0 * rho at 0
 
-RESTART_KIND, CRAFT, REROLL, TERMINAL, REFUSED = "restart", "craft", "reroll", "terminal", "refused"
+RESTART_KIND, CRAFT, REROLL, ADD, TERMINAL, REFUSED = "restart", "craft", "reroll", "add", "terminal", "refused"
+TOP_LEVEL = {REROLL: 2, ADD: 1}  # the highest level of the bound of each kind that has levels (see THE NUMBER pbar); every other kind has none
 
 
 @dataclass
@@ -203,9 +231,40 @@ def through_listing(abstraction: Abstraction, start: CompressedState, shape: Com
             entry.pbar, entry.extra = landing, cheapest
 
 
-def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:
-    """The `(kind, pbar, level)` of a reroll brought to `target` (see `raise_level`); a function of its arguments alone."""
+def declared_pbars(abstraction: Abstraction, bare: CompressedState, item: Item, chosen: Sequence[int], entries: Sequence[_Entry], ask: Callable[[], None]) -> None:
+    """Lower the pbar of every reroll at level 0 to the bound its class declares, for all the offers of a class at once (see THE NUMBER pbar, #1073).
+
+    Only a reroll whose action declares no fracture, no kept crafted mod and no need of one (what level 1 asks of `adds` and `reads`); the class
+    answers for the rest (`declared_bounds`: None for an action that may leave the shape or that it gives no bound). `ask` is the net, asked once
+    per class. The offers are grouped by their action's class, which the planner does not name: a class answers for its own actions.
+    """
     data = abstraction.data
+    groups: dict[type, list[_Entry]] = {}
+    for entry in entries:
+        if entry.kind != REROLL or entry.level != 0:
+            continue
+        action = entry.priced.offer.action
+        adds = action.adds(data, item)
+        if adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
+            continue
+        groups.setdefault(type(action), []).append(entry)
+    for members in groups.values():
+        ask()
+        for entry, bound in zip(members, declared_bounds(abstraction, bare, [entry.priced.offer.action for entry in members], chosen)):
+            if bound is not None and bound < entry.pbar:
+                entry.pbar = bound
+
+
+def raisable(kind: str, level: int) -> bool:
+    """Whether an offer of `kind` whose bound is at `level` has a higher level to be brought to."""
+    return level < TOP_LEVEL.get(kind, 0)
+
+
+def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:
+    """The `(kind, pbar, level)` of a reroll or an addition brought to `target` (see `raise_level`); a function of its arguments alone."""
+    data = abstraction.data
+    if kind == ADD:
+        return _raised_add(abstraction, bare, chosen, action, level, pbar)
     if level == 0:
         try:
             same_shape = keeps_shape(abstraction, bare, action)
@@ -220,13 +279,32 @@ def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar
         found = reach_bound(abstraction, bare, action, chosen) if chosen else ZERO
         if found is None:
             return TERMINAL, ONE, level
-        pbar = found
+        pbar = min(pbar, found)  # pbar at level 0 is 1 or the declared bound (`declared_pbars`): both bound the same chance
     if target >= 2 and level < 2 and kind == REROLL:
         level = 2
         exact = reach_bound(abstraction, bare, action, chosen, exact=True) if chosen else ZERO
         if exact is not None and exact < pbar:
             pbar = exact
     return kind, pbar, level
+
+
+def _raised_add(abstraction, bare, chosen, action, level: int, pbar: Fraction) -> tuple[str, Fraction, int]:
+    """The `(kind, pbar, level)` of an addition brought to level 1: its chance of landing in E from any state of the shape (see THE NUMBER pbar).
+
+    Unlike a reroll's, a refusal at the bare item proves nothing (the addition reads the mods the item holds: an Exalted Orb on a full side,
+    a Harvest add/remove with nothing to remove), so the offer stays in the argument as a terminal one, and so does one whose result at the bare
+    item leaves the shape or is not one drawn mod (`add_bound` None).
+    """
+    if level >= 1:
+        return ADD, pbar, level
+    try:
+        same_shape = keeps_shape(abstraction, bare, action)
+        found = add_bound(abstraction, bare, action, chosen) if same_shape and chosen else (ZERO if same_shape else None)
+    except (NotApplicableError, OutOfScopeError):
+        return TERMINAL, ONE, 1
+    if found is None:
+        return TERMINAL, ONE, 1
+    return ADD, found, 1
 
 
 def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int], None]) -> float:
@@ -245,7 +323,7 @@ def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int
         entry = entries[index]
         if entry.kind == REFUSED:
             continue
-        if entry.kind != REROLL or entry.level >= 2:
+        if not raisable(entry.kind, entry.level):
             return min(ratio, HUGE) * (1 - SLACK)
         raise_level(entry, entry.level + 1)
         heapq.heappush(heap, (entry.ratio, index))
@@ -269,4 +347,13 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     adds = action.adds(data, item)
     if not adds.fractures and not adds.draws and adds.named is not None:
         return CRAFT, frozenset(adds.named)
+    if (
+        reads.pool_weight
+        and (reads.variants or reads.draw_tags)
+        and not (reads.fractures or reads.draw_levels or reads.rerolls_values or reads.input_mods or reads.input_classes or reads.influenced)
+        and adds.draws
+        and not adds.named
+        and not (adds.fractures or adds.corrupts or adds.veils or adds.imprints)
+    ):
+        return ADD, frozenset()  # one drawn mod added to the mods kept (see THE NUMBER pbar); what it does at the bare item is checked when it is raised
     return TERMINAL, frozenset()

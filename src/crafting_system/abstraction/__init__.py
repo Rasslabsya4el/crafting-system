@@ -46,6 +46,11 @@ is imported or tested for here.
 * `reach_bound(abstraction, state, action, leaves, exact=False)`: an upper bound, from the pool alone, on the
   chance that one use of an erasing reroll makes every leaf of `leaves` PASSING (the exact chance with
   `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
+* `add_bound(abstraction, state, action, leaves)`: an upper bound, from the pool alone, on the chance that one use of an action that
+  adds one drawn mod (an Exalted Orb) makes a leaf of `leaves` PASSING, from any state of the shape of the bare item `state` (#1072).
+* `declared_bounds(abstraction, state, actions, leaves)`: for many actions of one class at once, an upper bound on the chance that one use
+  on the bare item `state` makes every leaf PASSING, from what the class declares without building an outcome (`Action.reach_batch`; None
+  where it declares none or that the action may leave the shape; #1073).
 * `keeps_shape(abstraction, state, action)`: whether every outcome of the action keeps the flags and the
   fractured mods of the state (what a bound read at one state needs to hold at the next; #118).
 * `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Junk families that no requirement
@@ -215,13 +220,13 @@ No mechanic is decided here: this module only recombines the results of `actions
 claim of the rules registry.
 """
 
-from ._bound import keeps_shape, reach_bound
+from ._bound import add_bound, declared_bounds, keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._finish import Finish, FinishModel, FinishStep, FinishValues, SocketWanted, solve_finish
 from ._gaps import PRUNED_CORRUPTING, PRUNED_QUALITY, Gap, ModelGaps, Prunings
 from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
-from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
+from ._kernel import Abstraction, CacheStats, FamilyType, adds_metamod, integer_weights
 from ._pattern import Pattern, PatternKey, PatternModel, PatternOffer, PatternStats, build_pattern_model, pattern_refusal, refusal_causes
 from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot, status_of
 
@@ -236,6 +241,7 @@ __all__ = [
     "CacheStats",
     "Coarsening",
     "CompressedState",
+    "adds_metamod",
     "Estimate",
     "EstimateRefused",
     "FamilyType",
@@ -263,6 +269,8 @@ __all__ = [
     "Status",
     "Wanted",
     "integer_weights",
+    "add_bound",
+    "declared_bounds",
     "keeps_shape",
     "reach_bound",
     "solve_finish",

@@ -74,4 +74,6 @@ def test_a_roll_inside_a_tier_makes_the_goal_dearer_and_verify_still_agrees(plan
 
 
 def test_a_divine_orb_is_offered_for_a_roll_requirement(plan_75):
-    assert any(priced.label == "Divine Orb" for priced in plan_75.offers)
+    # it adds the rolls to the model, so the offers are searched in rounds (#1069): it is in the plan's offers or a round of its own
+    rounds = {kind for record in (plan_75.search.widening if plan_75.search else ()) for kind in record.kinds}
+    assert any(priced.label == "Divine Orb" for priced in plan_75.offers) or "divine-orb" in rounds

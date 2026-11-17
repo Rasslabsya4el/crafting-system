@@ -398,11 +398,12 @@ def test_the_planner_offers_the_toy_to_a_target_that_allows_corruption_and_not_t
     prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(5.0, "test")})
     allowing = tmp_path / "allowing.yaml"
     allowing.write_text(R12.read_text(encoding="utf-8") + "\nallow_corrupted: true\n", encoding="utf-8")
-    labels = {
-        name: [priced.label for priced in make_plan(data, load_target(path, data), prices).offers]
-        for name, path in (("allowing", allowing), ("plain", R12))
-    }
-    assert "Toy Corruption" in labels["allowing"] and "Toy Corruption" not in labels["plain"]
+    plans = {name: make_plan(data, load_target(path, data), prices) for name, path in (("allowing", allowing), ("plain", R12))}
+    labels = {name: [priced.label for priced in plan.offers] for name, plan in plans.items()}
+    # the toy adds to the model, so the offers are searched in rounds (#1069): it is offered in a round of its own, which says so
+    rounds = {name: {kind for record in (plan.search.widening if plan.search else ()) for kind in record.kinds} for name, plan in plans.items()}
+    assert ("Toy Corruption" in labels["allowing"] or KIND in rounds["allowing"]) and "Toy Corruption" not in labels["plain"]
+    assert KIND not in rounds["plain"]
     assert "Chaos Orb" in labels["plain"]
 
 
