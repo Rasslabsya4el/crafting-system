@@ -264,7 +264,21 @@ def stats_cache(tmp_path) -> Path:
     return cache
 
 
-def test_golden_r12_through_the_command_the_buy_spec_is_computed_from_the_target(tmp_path, stats_cache, capsys):
+# The fixture world's R12 splits its offers into rounds with every method on (#886), so its golden pages plan counted in states
+# (`Budget.in_states`, docs/ci.md): no round's seconds on the page, the same page on every runner. 100,000 states: each round of the toy R12
+# closes in a handful (the page names them), so the figure never binds.
+GOLDEN_STATES = 100_000
+
+
+@pytest.fixture
+def counted_in_states(monkeypatch):
+    from crafting_system.budget import Budget
+    from crafting_system.cli import _main
+
+    monkeypatch.setattr(_main, "run_budget", lambda *args, **kwargs: Budget.in_states(GOLDEN_STATES))
+
+
+def test_golden_r12_through_the_command_the_buy_spec_is_computed_from_the_target(tmp_path, stats_cache, capsys, counted_in_states):
     code, out = run_command(tmp_path, cache=stats_cache)
 
     assert code == 0
@@ -273,7 +287,7 @@ def test_golden_r12_through_the_command_the_buy_spec_is_computed_from_the_target
     assert_golden("r12_fixture", page.read_text(encoding="utf-8"))
 
 
-def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_path, capsys):
+def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_path, capsys, counted_in_states):
     code, out = run_command(tmp_path, "--route", str(ROUTE))
 
     assert code == 0

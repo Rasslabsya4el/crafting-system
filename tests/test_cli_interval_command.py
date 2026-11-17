@@ -71,6 +71,13 @@ MEANS = {Fraction(1, 5): PRICE * 5, Fraction(1, 2): PRICE * 2, Fraction(4, 5): P
 START = 4.0  # the start amulet's price in `price_file`
 
 
+def r12(*extra: str):
+    """R12 with its reforges named and the toy's (#886: with every method on, and the blocking crafts that bench crafts bring, the axis is
+    solved at every reading in every round, which held 3.5 GB and 48 s a test on CI; a test here reads the interval, not the rounds). Loaded
+    once the toy kinds are registered."""
+    return dataclasses.replace(load_target(R12, DATA), actions=("chaos-orb", "harvest-reforge", LUCKY_KIND.name, *extra))
+
+
 def route_labels(plan) -> set[str]:
     """The actions the plan takes in the states its route reaches from the start."""
     return {plan.policy[state].label for state in policy_states(plan.start, plan.policy, plan.is_goal) if not plan.is_goal(state)}
@@ -84,7 +91,7 @@ def lucky(monkeypatch):
 
 
 def test_a_plan_that_reads_an_axis_is_solved_at_every_reading_not_refused(lucky):
-    plan = make_plan(DATA, load_target(R12, DATA), lucky)
+    plan = make_plan(DATA, r12(), lucky)
 
     assert plan.readings is not None
     assert route_labels(plan) == {LUCKY}
@@ -94,7 +101,7 @@ def test_a_plan_that_reads_an_axis_is_solved_at_every_reading_not_refused(lucky)
 
 
 def test_the_report_carries_the_interval_of_the_plan_over_the_grid(lucky):
-    report = build_report(make_plan(DATA, load_target(R12, DATA), lucky), DATA)
+    report = build_report(make_plan(DATA, r12(), lucky), DATA)
 
     assert report.interval is not None and report.interval.axes == (LUCK.name,)
     assert report.interval.plan_reading == "luck = 0.5"
@@ -105,8 +112,10 @@ def test_the_report_carries_the_interval_of_the_plan_over_the_grid(lucky):
 
 def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky, tmp_path, capsys):
     out = tmp_path / "policy.json"
+    named = tmp_path / R12.name  # R12's file with the methods of `r12` named in it
+    named.write_text(R12.read_text(encoding="utf-8") + f"\nactions: [{', '.join(r12().actions)}]\n", encoding="utf-8")
 
-    code = main([str(R12), "--json", str(out)], data=DATA, prices=lucky, env={}, today=TODAY)
+    code = main([str(named), "--json", str(out)], data=DATA, prices=lucky, env={}, today=TODAY)
 
     shown = capsys.readouterr().out
     assert code == 0, shown
@@ -122,20 +131,20 @@ def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky,
 def test_a_solver_that_takes_no_reading_is_refused_with_the_rule_in_words(lucky):
     for solver in ("packed", "envelope"):
         with pytest.raises(PlanError, match="the chance of the toy craft"):
-            make_plan(DATA, load_target(R12, DATA), lucky, solver=solver)
+            make_plan(DATA, r12(), lucky, solver=solver)
 
 
 def test_a_plan_whose_route_reads_no_axis_has_no_interval_block(lucky):
     dear = dataclasses.replace(lucky, prices={**lucky.prices, LUCKY: PriceEntry(1e6, "test")})  # the reforge wins: the plan never crafts
 
-    plan = make_plan(DATA, load_target(R12, DATA), dear)
+    plan = make_plan(DATA, r12(), dear)
 
     assert plan.readings is not None and LUCKY not in route_labels(plan)
     assert build_report(plan, DATA).interval is None
 
 
 def test_a_time_budget_is_said_not_to_apply_to_a_plan_solved_at_every_reading(lucky):
-    plan = make_plan(DATA, load_target(R12, DATA), lucky, budget=60.0)
+    plan = make_plan(DATA, r12(), lucky, budget=60.0)
 
     assert plan.readings is not None and plan.approximation is None
     assert "The time budget was not applied" in [limit.what for limit in plan.limits]
@@ -164,7 +173,7 @@ def test_a_gap_of_another_reading_is_said_in_the_limits(lucky):
     shaky = Kind("toy-shaky-craft", lambda data, item: (ShakyCraft(),) if item.rarity is Rarity.RARE else (), order=904)
     prices = dataclasses.replace(lucky, prices={**lucky.prices, SHAKY: PriceEntry(PRICE, "test")})
     with registered(shaky):
-        plan = make_plan(DATA, load_target(R12, DATA), prices)
+        plan = make_plan(DATA, r12("toy-shaky-craft"), prices)
 
     assert not plan.abstraction.gaps.entries()  # the plan reading has a rule everywhere
     said = [limit for limit in plan.limits if any(text.startswith(SHAKY) for text in limit.labels)]

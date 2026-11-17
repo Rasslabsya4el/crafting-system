@@ -49,7 +49,8 @@ def test_the_unveiled_pool_families_of_the_boots_are_those_with_weight_on_the_ba
 
 
 def test_a_craft_of_a_family_in_the_unveiled_pool_is_offered_as_a_block_when_the_target_unveils(data):
-    found = offers_for(data, goal(), BOOTS, boots(data), VEILED)
+    # the rule of an unveil's blocks alone: the blocking crafts, on by default since #886, offer the fire craft too (`test_planner_blocking_crafts.py`)
+    found = offers_for(data, goal(), BOOTS, boots(data), VEILED, blocking=False)
     assert LIFE_CRAFT in labels(found)
     assert FIRE_CRAFT not in labels(found)
     assert FIRE_CRAFT in labels_of(found.limits, "crafts")  # still left out, and said so

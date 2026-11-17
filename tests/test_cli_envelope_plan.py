@@ -16,7 +16,7 @@ import re
 from html import escape
 
 import pytest
-from cli_support import R12, price_file
+from cli_support import R12, price_file, r12_named
 from coarse_support import CRAFTS, REMOVE
 from coarse_support import DATA as COARSE
 from targets_support import DATA
@@ -168,9 +168,13 @@ def test_a_net_that_stops_before_any_plan_exists_is_an_error_that_says_so(coarse
 
 
 def test_a_time_budget_never_makes_the_envelope_search_answer_by_the_ladder_of_coarse_levels():
-    target = load_target(R12, DATA)
-    plan = make_plan(DATA, target, price_file(), solver="envelope", budget=0.0, with_risk=False)
-    assert plan.approximation is None and plan.packed.info["envelope"].exact  # R12's first plan is proved the cheapest in its first round, whatever the budget
+    # R12's methods named: one search, whose first plan is proved the cheapest in its first round, whatever the budget
+    plan = make_plan(DATA, r12_named(), price_file(), solver="envelope", budget=0.0, with_risk=False)
+    assert plan.approximation is None and plan.packed.info["envelope"].exact
+    # every method on (#886): searched in rounds, past its aim of 0 seconds from the first, so the run's gap stops each round; still no ladder
+    plan = make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", budget=0.0, with_risk=False)
+    found = plan.packed.info["envelope"]
+    assert plan.approximation is None and (found.exact or (found.within is not None and found.upper <= found.lower * (1 + found.within)))
 
 
 def test_an_unknown_solver_is_still_refused():

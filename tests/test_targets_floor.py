@@ -121,17 +121,19 @@ def test_an_essence_gives_its_mod_when_the_target_offers_it_and_no_other_does():
     assert left_out.nodes[0].level is None
 
 
-def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_only_when_named():
+def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_by_default_or_when_named():
     hatred = "family: ColdDamagePercentage\n  mod: ColdDamagePercentEssence1"
     hysteria = "family: IncreasedLifeLeechRate\n  mod: IncreasedLifeLeechRateEssence1"  # the mod needs level 63 as a drawn mod
 
     other_essence = floor(hatred, tail="actions: ['Essence of Hysteria']\n")
     unnamed = floor(hysteria)
+    plain_only = floor(hysteria, tail="actions: [essence]\n")
     by_kind = floor(hysteria, tail="actions: [corrupted-essence]\n")
     by_label = floor(hysteria, tail="actions: ['Essence of Hysteria']\n")
 
     assert other_essence.nodes[0].level is None  # Hatred is not offered
-    assert unnamed.nodes[0].level is None and unnamed.kind == "at target"  # corrupted essences are opt-in
+    assert (unnamed.nodes[0].source, unnamed.nodes[0].level) == ("forced mod", 1)  # corrupted essences are on by default (#886, OR-41)
+    assert plain_only.nodes[0].level is None and plain_only.kind == "at target"  # a list without them leaves them out
     assert (by_kind.nodes[0].source, by_kind.nodes[0].level) == ("forced mod", 1)  # the essence ignores the item level
     assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("forced mod", 1)
     assert by_label.level == 1

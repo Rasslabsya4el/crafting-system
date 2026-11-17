@@ -11,7 +11,7 @@ import inspect
 import json
 
 import pytest
-from cli_support import R12, TODAY, price_file, read_json
+from cli_support import R12, TODAY, price_file, r12_named, read_json
 from cli_support import run as run_command
 from targets_support import DATA
 
@@ -112,7 +112,8 @@ def test_a_plan_is_not_finished_when_no_presenter_is_named(monkeypatch):
 
 
 def test_a_caller_that_presents_nothing_says_so_and_gets_the_other_limits(monkeypatch):
-    target = load_target(R12, DATA)
+    # R12's methods named: one search (#886: with every method on, the rounds' limit states each round's seconds, which two runs do not share)
+    target = r12_named()
     shown = plan_target(DATA, target, price_file())
     monkeypatch.setattr(_presenter, "_SOURCE", None)
     planner.present_with(lambda plan: ())
