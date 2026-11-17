@@ -451,7 +451,7 @@ def test_a_guarantee_that_claims_the_cheapest_plan_must_have_its_form_for_an_app
 
 
 def test_the_text_and_the_json_name_every_withheld_kind_and_the_page_holds_the_rest_in_a_closed_details(plan):
-    opt_in = of_kind(plan.limits, "kinds-not-built")[0]  # a limit with more labels than the page shows (the second: Alchemy and Scouring)
+    opt_in = of_kind(plan.limits, "kinds-not-built")[0]  # a limit with more labels than the page shows: the methods the planner cannot use yet (since #886 no beta kind is opt-in)
     assert len(opt_in.labels) > SHOWN_LABELS
     report = build_report(plan, DATA)
     text = render_text(report)

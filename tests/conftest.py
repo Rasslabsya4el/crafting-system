@@ -48,14 +48,17 @@ def progress_sink_restored(monkeypatch):
 
 
 # The net of the suite's machine (#886, OR-39: a planner limit is a setting of the machine a run is on; docs/ci.md, "The suite's machine
-# net"). It never changes what a test that passes computes: it turns a hang or a runner killed for memory into a named test failure.
+# net").
 # * A run that has a budget (the command's default, `Budget.default()`) takes `budget.MEMORY_SHARE` of the machine divided among the
 #   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). It
 #   is set once for the whole process, module fixtures included; a module of the budget itself (`OWN_NET = True`) sees the undivided share.
+#   This share is the planner's own memory net and does move a plan: a run with the default budget in a process that already holds the
+#   real game data of an earlier module (4.4 GB, over a share of about 3.2 GB) stops at once, so a test of a page or a plan that runs
+#   the command with its default budget is counted in states (`Budget.in_states`, no memory net), as `test_cli_route_view.py` is.
 # * Where the machine has `SIGALRM` (Linux, the CI runners), a watchdog wakes every `WATCH_SECONDS` during a test's setup, call and
 #   teardown, and past `SUITE_TEST_SECONDS` of wake-ups the phase fails by name (`pytest.fail`, a `BaseException` no `except Exception`
 #   of the planner catches). It reads no clock (it counts its wake-ups) and puts no cap on the process.
-# There is no memory net: three rules in three PR CI runs (a fixed 3,500 MB a process, 44021960386; a share of the machine, 44024487664;
+# There is no memory watchdog (nothing fails a test for the memory held): three rules in three PR CI runs (a fixed 3,500 MB a process, 44021960386; a share of the machine, 44024487664;
 # growth of the call while the machine was short, 44027659418) each could fail a passing test, since four processes each holding 4.4 GB
 # of loaded game data on a 16 GB runner is this suite's normal state. A runner killed for memory is fixed in the tests that plan too much.
 # The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes its own budget keeps it.

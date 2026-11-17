@@ -88,19 +88,22 @@ under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime 
 ### The suite's machine net (#886)
 
 A planner limit is a setting of the machine a run is on (OR-39), and a CI runner is shared by the 4 pytest processes of its job.
-`tests/conftest.py` sets two nets, neither of which changes what a passing test computes; each turns a hang or a runner killed for memory
-into one named failing test:
+`tests/conftest.py` sets two nets:
 
 - **Memory share.** A run with a budget (the command's default) takes `budget.MEMORY_SHARE` of the machine divided among the processes
   sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run); it is set once per
   process, module fixtures included. A test that passes no budget still runs its exact proof; a test that passes its own budget keeps it.
+  This share is the planner's own memory net, so it does move a plan: a run with the default budget in a process that already holds
+  the real game data of an earlier module (4.4 GB, over a share of about 3.2 GB on a 16 GB runner) stops at once (PR CI 44024487664,
+  `test_cli_route_view.py`). A test that runs the command with its default budget is therefore counted in states (`Budget.in_states`,
+  which has no memory net), never left to the order its shard runs modules in.
 - **A time net per phase** (Linux only, `SIGALRM` every second): during a test's setup (its module fixtures included), call or teardown,
   past `CRAFTING_TEST_SECONDS` (300) of wake-ups the phase fails by name instead of hanging the job until `timeout-minutes`. It is a hang
   guard, not a timing assertion (ADR-0014): it reads no clock and puts no cap on the process. Its failure is `pytest.fail`, a
   `BaseException`, which no `except Exception` of the planner catches. The figure is a cap of the CI suite, not a planner limit. A native
   call (a HiGHS solve) is not interrupted until it returns. It is not run on Windows (no `SIGALRM`). 0 turns it off.
 
-There is **no memory net**, by decision (#886). Three rules were tried and each could fail a passing test, because four processes each
+There is **no memory watchdog**, by decision (#886): nothing fails a test for the memory its process or the machine holds. Three rules were tried and each could fail a passing test, because four processes each
 holding 4.4 GB of loaded game data on a 16 GB runner is this suite's normal state: a fixed 3,500 MB a process (PR CI 44021960386) failed
 hundreds of passing real-data tests; a share of the machine (PR CI 44024487664) failed about 700 setups of modules that load that data at
 once; and "the call grew its process by more than 1,000 MB while the machine had under 1,000 MB left" still fails any passing test that
