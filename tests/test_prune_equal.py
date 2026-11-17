@@ -5,6 +5,10 @@ exactly; the converse is not required. `planner._prune.solver_actions` keeps, of
 state, the cheapest (the earliest on a tie). Exact means the optimal values and the policy are those of the
 plan without the merge: the fixture R12 plan has numbers written from the run before the change, and R10 on
 the real dump (it skips without the cache) is planned twice, with and without the merge, and compared.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import dataclasses
@@ -35,6 +39,8 @@ from crafting_system.planner._offers import price_offers
 from crafting_system.planner._prune import solver_actions
 from crafting_system.prices import PriceEntry, load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"

@@ -3,12 +3,18 @@
 The free-action grid of #349 is taken only when the caller names a free cost and the policy holds an action of that cost. Everything else, the
 ordinary grid, the coarse grid, the policies with inputs and the ones that can fail, must give the same reports digit for digit as before it:
 `tests/golden/risk_unchanged_349.json` holds their `repr`, made on main by `tests/risk_unchanged_support.py`.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import json
 
 import golden_diff
 from risk_unchanged_support import GOLDEN, snapshot
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 
 def test_the_risk_reports_of_policies_without_a_free_action_are_the_ones_main_gave():

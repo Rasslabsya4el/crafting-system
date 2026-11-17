@@ -1,7 +1,7 @@
 """Implicits on an item (ADR-0027, ADR-0025): base and Eldritch implicits, grades, sides and values."""
 
 import pytest
-from implicits_support import BELT, BOOTS, EXTENDED, implicit, make, on_body
+from implicits_support import BELT, BOOTS, EXTENDED, MALFORMED_ELDRITCH, implicit, make, on_body
 from items_support import BODY, DATA, roll
 from repoe_support import no_network  # noqa: F401
 
@@ -232,7 +232,7 @@ def test_eldritch_grade_is_none_for_other_mods():
 
 def test_an_eldritch_mod_without_a_grade_digit_is_refused():
     with pytest.raises(ImplicitError, match="ChanceToShockEldritchImplicitX.*grade 1 to 6"):
-        eldritch_grade(EXTENDED.mods["ChanceToShockEldritchImplicitX"])
+        eldritch_grade(MALFORMED_ELDRITCH)
 
 
 def test_eldritch_side_maps_the_two_generation_types():

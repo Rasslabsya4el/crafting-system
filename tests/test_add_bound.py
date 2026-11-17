@@ -8,6 +8,10 @@ Attack and Caster metamods, which take tagged mods out of the draw and so raise 
 every state of the shape (a draw cut by Memory Strands), or the action is not one drawn mod, no bound is given and the offer stays terminal;
 (4) through the planner's entry on R12 with the Exalted Orb offered: the orb's round ends on a lower figure at the plan's cost, and the plan is
 as cheap as without the orb (it cannot help R12).
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import dataclasses
@@ -44,6 +48,8 @@ from crafting_system.abstraction._bound import _added_chance
 from crafting_system.actions import ExaltedOrb, HarvestAddRemove, NotApplicableError, PoolFamily, PoolMod
 from crafting_system.items import Rarity, Side
 from crafting_system.planner import _offer_kinds
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 EXALTED = ExaltedOrb()
 GEM_LEAF = 0  # GOALS["r12"] is (gem, resist); the fractured Lightning Resistance passes the second

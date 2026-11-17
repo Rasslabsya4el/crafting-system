@@ -671,7 +671,10 @@ def test_the_setting_must_be_true_or_false(tmp_path, capsys):
 
 
 def without_timings(document: dict) -> dict:
-    return {key: value for key, value in document.items() if key != "timings_seconds"}
+    """A policy document without what was measured: its timings, and the seconds a round of the search spent (`_rounds.round_line`
+    names them in the answer's limits; two runs of one plan can round them to 0 s and 1 s)."""
+    kept = {key: value for key, value in document.items() if key != "timings_seconds"}
+    return json.loads(re.sub(r"actions offered, [\d,]+ s\)", "actions offered, <measured> s)", json.dumps(kept)))
 
 
 def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(tmp_path, capsys):

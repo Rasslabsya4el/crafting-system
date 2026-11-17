@@ -5,6 +5,10 @@ it) and skip cleanly without it; CI fetches it (ticket #165). The guide (PoE Vau
 Lightning amulet") quotes single-draw weight shares; the pool builder reproduces them on the 3.29
 weights, ADR-0020. The solver's chance that the finished item holds the mod is reported next to them
 and is NOT compared with the guide: later draws of the same click feed it too.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 from fractions import Fraction
@@ -18,6 +22,8 @@ from crafting_system.actions import HarvestReforge
 from crafting_system.cli import make_plan, verify, weight_share
 from crafting_system.items import ExplicitMod, Item, Rarity, tier_table
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 AMULET = "Metadata/Items/Amulets/Amulet1"
 RESIST = "LightningResist1"

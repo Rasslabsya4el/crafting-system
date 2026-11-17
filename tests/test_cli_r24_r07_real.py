@@ -4,8 +4,14 @@ R24 is the fractured-Mana Avoid Shock / Spell Suppression boots with an unveiled
 Convoking Wand read for 3.29 (bench Trigger, unveiled minion speed). These check the targets, the start prices, the offers (the
 unveil blocks among them), the given routes and the route conditions on the veil and the offer. The policies (CLI, `--verify`, the
 solver's mean against the given route's) are a heavy run: `tests/test_cli_r24_r07_heavy.py`. These skip without the cached dump.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route's model (built here with nothing solved) outgrows CI's time and memory, and the heavy
+benchmark records those plans.
 """
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -18,6 +24,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 # Each target's own price file: R24's is the week-one file plus its hand-set start boots since #901 (OR-44); R07, no longer a reference
 # craft (#901, OR-45: its guide rests on the old Veiled Chaos Orb), keeps the 2026-11-10 file of #146 and stays here as a test of the
 # unveil conditions, not of a cost.
@@ -173,7 +180,8 @@ def test_a_wrong_veil_or_offer_condition_is_refused_with_its_line(r24, data, whe
 
 
 def test_a_plan_without_an_unveil_refuses_the_conditions(data):
-    target = load_target(ROOT / "examples/targets/r10-fractured-boots.yaml", data)
+    # R10's own methods, named: every beta method on by default offers the unveil too (#886, OR-41), and this plan must have none.
+    target = dataclasses.replace(load_target(ROOT / "examples/targets/r10-fractured-boots.yaml", data), actions=("essence", "bench-craft"))
     plan = make_plan(data, target, load_price_file(ROOT / "tests/fixtures/prices/routes-allflame-2026-07-31.json"), solve_it=False)
     with pytest.raises(RouteError, match="hold no veil and no offer"):
         parse_route("rules:\n  - when: {veil: none}\n    do: restart\n", plan, data)

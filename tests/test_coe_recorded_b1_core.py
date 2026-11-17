@@ -33,6 +33,10 @@ what OUR GOAL says is that mod: the target file of the route is loaded, and each
 requirement's own `tier_ok` set (`accepted_by_tier`), not by a tier number written here.
 
 Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it, so these run there.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import json
@@ -65,6 +69,8 @@ from coe_recorded_support import (
 
 from crafting_system.targets import load_target
 from crafting_system.targets.model import KOfN
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 TARGETS = Path(__file__).resolve().parents[1] / "examples" / "targets"
 FIXED_TARGETS = Path(__file__).resolve().parent / "real_targets"  # R08 and R09 as they were recorded, before #901 named their tiers

@@ -296,7 +296,9 @@ def test_a_route_that_failed_is_a_row_with_its_error_and_the_summary_reads_the_f
 # --- one fixture route end to end ----------------------------------------------------------------
 
 
-@pytest.mark.parametrize("solver", ["auto", "packed", "object"])
+# Not the object solver: the full graph walk is retired (direction of 2026-11-13: no test is written against it), and with every method on
+# (#886) its walk of the fixture R12 ran past the suite's 300 s on CI
+@pytest.mark.parametrize("solver", ["auto", "packed"])
 def test_the_counts_of_a_fixture_route_are_self_consistent(solver):
     bench = next(b for b in BENCHMARKS if b.id == "R12")
 

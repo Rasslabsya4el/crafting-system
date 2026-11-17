@@ -11,7 +11,7 @@ import inspect
 import json
 
 import pytest
-from cli_support import R12, TODAY, price_file, read_json
+from cli_support import R12, TODAY, price_file, r12_named, read_json
 from cli_support import run as run_command
 from targets_support import DATA
 
@@ -44,12 +44,18 @@ def settings_of_the_command() -> PlanSettings:
     )
 
 
-def test_the_entry_gives_the_plan_the_command_prints_on_r12(tmp_path, capsys):
+def test_the_entry_gives_the_plan_the_command_prints_on_r12(tmp_path, capsys, monkeypatch):
+    # counted in states on both sides (#886: with every method on R12 is searched in rounds, whose limit states each round's seconds
+    # otherwise; `Budget.in_states`, docs/ci.md). 100,000 states never bind: the fixture R12's rounds close in under 100 states each.
+    from crafting_system.cli import _main
+
+    monkeypatch.setattr(_main, "run_budget", lambda *args, **kwargs: Budget.in_states(100_000))
     code, out = run_command(tmp_path, prices=price_file())
     printed = capsys.readouterr().out
     assert code == 0
 
-    plan = plan_target(DATA, load_target(R12, DATA), price_file(), settings_of_the_command())
+    settings = dataclasses.replace(settings_of_the_command(), budget=Budget.in_states(100_000))
+    plan = plan_target(DATA, load_target(R12, DATA), price_file(), settings)
 
     assert isinstance(plan, Plan)
     report = build_report(plan, DATA)
@@ -95,8 +101,10 @@ def test_the_defaults_of_the_settings_are_the_planners_own():
 def test_with_recipe_starts_off_the_entry_is_the_plan_of_the_targets_own_item():
     target = load_target(R12, DATA)
 
-    plan = plan_target(DATA, target, price_file(), PlanSettings(recipe_starts=False))
-    direct = make_plan(DATA, target, price_file())
+    # counted in states on both sides, as above: under a net of time the rounds' limit states each round's seconds, which two runs do not share
+    states = Budget.in_states(100_000)
+    plan = plan_target(DATA, target, price_file(), PlanSettings(recipe_starts=False, budget=states))
+    direct = make_plan(DATA, target, price_file(), budget=states)
 
     assert plan.starts is None and direct.starts is None
     assert plan.mean_remaining == direct.mean_remaining and plan.limits == direct.limits
@@ -112,7 +120,8 @@ def test_a_plan_is_not_finished_when_no_presenter_is_named(monkeypatch):
 
 
 def test_a_caller_that_presents_nothing_says_so_and_gets_the_other_limits(monkeypatch):
-    target = load_target(R12, DATA)
+    # R12's methods named: one search (#886: with every method on, the rounds' limit states each round's seconds, which two runs do not share)
+    target = r12_named()
     shown = plan_target(DATA, target, price_file())
     monkeypatch.setattr(_presenter, "_SOURCE", None)
     planner.present_with(lambda plan: ())

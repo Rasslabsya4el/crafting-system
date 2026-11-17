@@ -22,7 +22,7 @@ from html import escape
 from types import SimpleNamespace
 
 import pytest
-from cli_support import R12, price_file
+from cli_support import R12, price_file, r12_named
 from coarse_support import CRAFTS, REMOVE
 from coarse_support import DATA as COARSE
 from limits_support import of_kind, only
@@ -330,7 +330,7 @@ def refusing(monkeypatch):
 
 
 def plan_of(**options):
-    return make_plan(DATA, load_target(R12, DATA), price_file(), **options)
+    return make_plan(DATA, r12_named(), price_file(), **options)  # the methods of this mechanism, named (#886)
 
 
 def gaps_of(plan):

@@ -449,4 +449,4 @@ def test_the_corrupting_kind_names_are_the_ones_the_catalog_registers():
 
     assert "fossil-set" in registered  # the Bloodstained Fossil is a fossil set; `vaal` and `locus` are registered by C5 and C7
     assert dict(CORRUPTING_KINDS) == {"vaal": 1, "fossil-set": 1, "locus": 2}
-    assert dict(DEFAULT_CORRUPTING_KINDS) == {"vaal": 1, "locus": 2}  # `fossil-set` is opt-in, so a target that names no kinds has none
+    assert dict(DEFAULT_CORRUPTING_KINDS) == dict(CORRUPTING_KINDS)  # the fossil sets are offered by default since #886 (OR-41)

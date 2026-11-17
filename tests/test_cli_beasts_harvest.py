@@ -1,7 +1,7 @@
-"""The beast and Harvest crafts as planner kinds: offered only when a target names them, priced, and planned end to end (ticket #149).
+"""The beast and Harvest crafts as planner kinds: offered by default, priced, and planned end to end (ticket #149).
 
-The kinds are `opt_in` (a target that is not about them must not pay for their states), so `offers_for` lists them only for a target that names them
-in `actions:`; an aspect is offered as well only for a target that wants it (`Adds.wanted_only`). Two small targets are solved with a hand figure:
+Until #886 the kinds were `opt_in` and `offers_for` listed them only for a target that named them in `actions:`; since #886 every beta method is
+offered by default (OR-41), and a named list still narrows the offers; an aspect is offered as well only for a target that wants it (`Adds.wanted_only`). Two small targets are solved with a hand figure:
 
 * a resistance swap: the item holds a Fire Resistance and a maximum Fire Resistance, the goal is the Cold Resistance, the craft is Fire to Cold. It
   swaps one of the two with chance 1/2 each: the Fire Resistance becomes the goal, the maximum becomes a maximum Cold Resistance, after which the only
@@ -27,8 +27,10 @@ from crafting_system.targets import load_target
 
 AMULET = "Metadata/Items/Amulets/Amulet1"
 VIVID = "Vivid Crystallised Lifeforce"
-WORLD = dataclasses.replace(  # the bench crafts of mods the small pool lacks are left out
-    SWAP_WORLD, bench_options=tuple(option for option in SWAP_WORLD.bench_options if option.actions.add_explicit_mod in (None, *SWAP_WORLD.mods))
+WORLD = dataclasses.replace(  # the bench crafts and the essences of mods the small pool lacks are left out
+    SWAP_WORLD,
+    bench_options=tuple(option for option in SWAP_WORLD.bench_options if option.actions.add_explicit_mod in (None, *SWAP_WORLD.mods)),
+    essences={key: record for key, record in SWAP_WORLD.essences.items() if all(entry.mod_id in (None, *SWAP_WORLD.mods) for entry in record.mods)},
 )
 BEAST_DATA = beast_data(data=WORLD)
 CAT_30 = ASPECT_IDS["cat", 30]
@@ -43,11 +45,11 @@ def start_item() -> Item:
     return Item.build(WORLD, base_id=AMULET, item_level=84, rarity=Rarity.RARE, mods=(world_mod(FIRE_RESIST), world_mod(MAX_FIRE)))
 
 
-def test_the_beast_and_harvest_kinds_are_offered_only_when_a_target_names_them():
+def test_the_beast_and_harvest_kinds_are_offered_by_default_and_a_named_list_narrows_them():
     goal = Goal((Wanted(frozenset({COLD_RESIST})),))
     start = start_item()
     default = {offer.label for offer in offers_for(WORLD, goal, AMULET, start, None).offers}
-    assert not any(label.startswith(("Harvest Swap", "Harvest Add", "Beastcraft")) for label in default)
+    assert "Harvest Swap Resistance Fire to Cold" in default and "Harvest Add Remove Fire" in default  # on by default since #886 (OR-41)
     named = offers_for(WORLD, goal, AMULET, start, ["harvest-resistance-swap", "harvest-add-remove"])
     labels = {offer.label for offer in named.offers}
     assert "Harvest Swap Resistance Fire to Cold" in labels and "Harvest Add Remove Fire" in labels
@@ -61,7 +63,7 @@ def test_an_aspect_is_offered_for_a_target_that_names_the_kind_and_wants_the_asp
     assert [offer.action for offer in offers_for(BEAST_DATA, wanted, AMULET, start, ["aspect-beast"]).offers] == [AspectBeast("cat", 30)]
     unwanted = offers_for(BEAST_DATA, other, AMULET, start, ["aspect-beast"])
     assert unwanted.offers == () and any("fixed mod" in limit.why for limit in of_kind(unwanted.limits, "fixed-mod"))
-    assert not [offer for offer in offers_for(BEAST_DATA, wanted, AMULET, start, None).offers if isinstance(offer.action, AspectBeast)]  # the kind is not named
+    assert AspectBeast("cat", 30) in [offer.action for offer in offers_for(BEAST_DATA, wanted, AMULET, start, None).offers]  # on by default (#886)
 
 
 def test_a_swap_target_is_planned_end_to_end_with_the_hand_figure(tmp_path):

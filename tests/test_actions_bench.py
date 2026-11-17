@@ -6,7 +6,7 @@ from fractions import Fraction
 
 import pytest
 from items_support import DATA, item, roll
-from repoe_support import no_network  # noqa: F401
+from repoe_support import fixture_game_data, no_network  # noqa: F401
 
 from crafting_system.actions import (
     ActionError,
@@ -321,7 +321,7 @@ def test_the_cost_is_the_options_price_as_currency_names_and_counts(action, expe
 
 def test_a_cost_currency_missing_from_the_base_items_is_a_value_error():
     with pytest.raises(ValueError, match="CurrencyRerollRare, which is not a base item"):
-        BenchCraft(DAMAGE_1).cost(DATA)
+        BenchCraft(DAMAGE_1).cost(fixture_game_data())  # the excerpt itself, before items_support adds its currency base items
 
 
 def test_bench_crafts_lists_one_craft_per_option_that_adds_a_mod_in_data_order():

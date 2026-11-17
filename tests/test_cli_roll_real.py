@@ -7,6 +7,10 @@ the requirement and a Divine Orb is worth offering. Both are planned at the comm
 the policy with rolled values.
 
 Needs the cached dump (`CRAFTING_CACHE_DIR`, CI fetches it) and skips cleanly without it.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 from pathlib import Path
@@ -17,6 +21,8 @@ from abstraction_support import real_game_data
 from crafting_system.cli import make_plan, verify
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 # the roll mechanics, not the prices, are under test: at the 2026-11-10 snapshot the two plans take twice as long and the Windows CI slot

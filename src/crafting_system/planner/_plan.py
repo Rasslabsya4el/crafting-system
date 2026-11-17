@@ -721,6 +721,8 @@ def _make_plan(
     if unreachable:
         raise PlanError(unreachable)  # an exact refusal: the search would only run to its net (#835)
     limits += start_limits(price_of_start)
+    if target.sockets is not None and solve_it:  # the finish uses the socket kinds: they are not "methods the planner cannot use yet", in a
+        limits = without_finish_kinds(limits)  # plan searched in rounds too (#886: the rounds keep the limits given here)
     if price_of_start.bought:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(listing or target.start_item), {bought: 1}, shares=False)
@@ -782,7 +784,6 @@ def _make_plan(
             )  # fmt: skip
         except (FinishRefused, OutOfScopeError, ArithmeticError) as error:  # ArithmeticError: the finish did not converge
             raise PlanError(str(error)) from error
-        limits = without_finish_kinds(limits)
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
     # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
     # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading

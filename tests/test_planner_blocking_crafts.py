@@ -12,8 +12,10 @@ The bought start item costs `S`, an Exalted Orb `e`, an Orb of Alteration `c`.
 * With the filler crafted first the suffixes are full at once: `V = c + e + (2/3)(S + V)`, that is `V = 3(c + e) + 2S`, cheaper exactly
   when `c < 7e/9`.
 
-At S = 50, e = 10, c = 1: 153.33 without the craft and 133 with it. The target names the kinds it uses (an Exalted Orb is opt-in until
-#886's second part) and names no craft.
+At S = 50, e = 10, c = 1: 153.33 without the craft and 133 with it. The target names the two kinds the figures are
+worked for and no craft: every method is on by default since #886, and with all of them another priced method of the fixture reaches
+Life far cheaper (about 3.3 c), so the figures above would not be what the plan is held to. The rule itself is on by default
+(`_offers.BLOCKING_CRAFTS`, `tests/test_actions_opt_in.py`).
 """
 
 import dataclasses

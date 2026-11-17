@@ -16,6 +16,10 @@ prices the solver's mean is no more than the guide's given route's. The odds and
 by the ordinary budget grid (the cheapest action, 0.0058 Chaos, is far below the cost scale); the coarse grid of
 ticket #190 resolves it with a certified interval, and the p90 `--verify` simulates is labelled as not certified. Eight simulated crafts cannot reject a wrong mean (the detectable error is about
 the mean itself); the PR records the 20-run check.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import contextlib
@@ -35,6 +39,8 @@ from crafting_system.cli._report import unresolved
 from crafting_system.items import Rarity
 from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 # R13's risk takes many minutes at the 2026-07-31 prices (#878): this file keeps the 2026-11-10 prices meanwhile

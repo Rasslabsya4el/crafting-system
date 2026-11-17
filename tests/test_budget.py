@@ -28,6 +28,8 @@ from crafting_system.planner._limits import BUDGET, budget_limit
 from crafting_system.planner._plan import SEARCH_STAGE, WALK_STAGE, LOCK_STAGE, PlanError
 from crafting_system.config import TIME_LIMIT_SECONDS, Config, load_config
 
+OWN_NET = True  # the suite's memory share (`conftest.suite_net`) is left off: these tests read `budget.MEMORY_SHARE` as it is
+
 
 class FakeTime:
     """A clock that only moves when the test says so (it stands in for `budget.time`)."""

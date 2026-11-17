@@ -17,6 +17,10 @@ search to scale (#702: R08 and R09 are not planned at the new prices; #703: thei
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees; at the same prices the
 solver's mean is no more than the given route's, within the gap the search proved (OR-32, OR-39: since #829 the plan is the envelope
 search's, which stops once its plan is proved within the gap of the cheapest). Times and state counts are in the PR, not asserted (ADR-0014).
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import datetime
@@ -32,6 +36,8 @@ from crafting_system.cli import RESTART, build_report, evaluate_route, load_rout
 from crafting_system.planner._decide import Rates
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"

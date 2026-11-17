@@ -14,7 +14,7 @@ import math
 from fractions import Fraction
 
 import pytest
-from cli_support import R12, price_file
+from cli_support import R12, R12_KINDS, price_file, r12_named
 from peek_oracles import product_spec, random_peek_spec
 from ssp_oracles import to_model
 from targets_support import DATA
@@ -325,9 +325,13 @@ def test_equal_kernels_and_offers_pruned_from_the_plain_solve_stay_options(lock_
     assert site.fallback and all(not action.label.startswith(("Chaos", "Twin")) for action in site.fallback)  # the Harvest reforge (no restart at the start)
 
 
-def test_a_toy_option_of_the_catalog_reaches_the_plan(r12, lock_free):
+def test_a_toy_option_of_the_catalog_reaches_the_plan():
+    # R12's methods, the Lock and the toy, named (#886: with every method offered, the toy's preview adds nothing to the others')
+    named = dataclasses.replace(r12_named(), actions=(*R12_KINDS, LOCK_KIND))
+    lock_free = make_plan(DATA, named, price_file())
     with registered(Kind("toy-preview", lambda data, item: iter([ToyPreview()]), order=901)):
-        plan = make_plan(DATA, r12, dataclasses.replace(with_lock(price_file(), 0.05), prices={**with_lock(price_file(), 0.05).prices, "Toy Orb": PriceEntry(1.0, "test")}))
+        with_toy = dataclasses.replace(named, actions=(*named.actions, "toy-preview"))
+        plan = make_plan(DATA, with_toy, dataclasses.replace(with_lock(price_file(), 0.05), prices={**with_lock(price_file(), 0.05).prices, "Toy Orb": PriceEntry(1.0, "test")}))
     assert plan.foresight.status is Status.USED and plan.foresight.n > lock_free.foresight.n  # two independent previews are worth more than one
     assert plan.foresight.by_item_text == ("Toy",)
 
