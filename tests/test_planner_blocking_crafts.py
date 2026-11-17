@@ -292,6 +292,39 @@ def test_a_group_beaten_before_the_last_round_is_not_carried_and_the_answer_does
     not_finished = _rounds.rounds_limits(stopped.records, True, None)[1]
     assert [name.split(" (")[0] for name in not_finished.names] == ["round 2", "round 3"] and not_finished.labels == ("b", "c")
 
+    def rounds_with(last_round):
+        return _rounds.widen(
+            groups, tuple("abc"), lambda chosen, call: last_round(chosen) if chosen == ("a", "b", "c") else run(chosen, call), upper_of=lambda plan: 10.0,
+            mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.STOPPED, "stopped") if plan.mean_remaining < 10.0 else (_rounds.CLOSED, ""),
+            left=lambda: None, clock_now=lambda: 0.0,
+        ).records  # fmt: skip
+
+    def stops(chosen):
+        raise _rounds.Stopped("the time limit was reached", 3.0)
+
+    def cheaper_unfinished(chosen):
+        return SimpleNamespace(search=SimpleNamespace(lower=2.0), mean_remaining=2.0)
+
+    for last_round in (stops, cheaper_unfinished):  # the last round did not close: b stays set aside, the proof is not claimed
+        records = rounds_with(last_round)
+        assert [record.carried for record in records] == [True, False, True, True] and not _rounds.all_closed(records)
+
+    def c_refused(chosen, call):
+        if chosen == ("a", "c"):
+            raise ValueError("the policy is improper")
+        return run(chosen, call)
+
+    refused = _rounds.widen(
+        groups, tuple("abc"), c_refused, upper_of=lambda plan: 10.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: None, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert [record.status for record in refused.records] == ["closed", "beaten", "refused"]  # a refused round: the proof is out of reach, no last round
+    out = _rounds.widen(
+        groups, tuple("abc"), run, upper_of=lambda plan: 10.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=iter([600.0, 300.0, 100.0, 0.0]).__next__, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    assert [record.status for record in out.records] == ["closed", "beaten", "beaten", "not tried"] and not out.records[1].carried  # no time left for it
+
 
 def test_a_refused_group_is_set_aside_when_the_round_after_it_is_refused_too():
     # #1080 point 2: a refused round's group stays in the base (a wider round may solve it, R10's essences); when the next round is refused too, the
