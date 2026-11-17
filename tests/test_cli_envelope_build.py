@@ -746,3 +746,24 @@ def test_the_bound_grown_on_a_universe_seeded_with_every_offer_is_the_model_of_e
     assert bound.complete and bound.rounds > 1 and bound.model.stats.universe_growth == 0
     assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)
     assert_lower_bound(bound, ab, exact)
+
+
+def test_through_the_envelope_entry_the_seeded_bound_begins_no_build_again_and_the_plan_is_the_full_walks(world, floors_on, monkeypatch):
+    """#1086 through the search's entry: with every new name counted as a slot gained, the bound's rounds begin no build again (each builder made ends
+    with no restart) and the plan is the full walk's mean, as with the model of every offer."""
+    _, start, offers, full, _, _ = world
+    new_names_gain(monkeypatch)
+    builders = []
+    real_init = PatternBuilder.__init__
+
+    def keep(self, *args, **kwargs):
+        real_init(self, *args, **kwargs)
+        builders.append(self)
+
+    monkeypatch.setattr(PatternBuilder, "__init__", keep)
+    fresh = abstraction()
+    result = envelope_result(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
+    info = result.info["envelope"]
+    assert info.exact and info.bound_stopped is None and info.bound_rounds > 1
+    assert builders and all(builder.restarts == 0 for builder in builders)
+    assert result.solution.values[start] == pytest.approx(full.solution.values[start], rel=TOLERANCE)
