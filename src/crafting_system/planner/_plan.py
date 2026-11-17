@@ -1167,6 +1167,12 @@ def widened_plan(
     withins = [record.within for record in records if record.within is not None]
     within = max(withins) if withins else None  # a finished round proved within the gap: what the rounds prove is proved only to that gap
     exact = closed and not withins
+    # the plan is proved within that gap of the cheapest of every method only when every round closed (the last then held every offer); when one
+    # did not, a round's gap proves the plan only against the methods of the rounds that finished (the rounds' limit says so), never against
+    # the cheapest, so the search reads as stopped, not "within" (#1182, #1186: R17 82,832.74 c and R20 35,058,370.98 c were recorded "proved
+    # within 1%" over a lower figure of 0 after the start item, from a first round of chaos and essences that closed within 1% while the
+    # rounds of the methods the guides use were stopped)
+    proved_within = within if closed else None
     # the winner's own word on how its search ended holds over the whole only when every round closed exactly; otherwise the rounds say it (OR-13)
     own = (*limits, *(limit for limit in plan.limits if limit not in limits and (exact or limit.kind != _limits.SOLVE)))
     info = plan.search
@@ -1175,7 +1181,7 @@ def widened_plan(
         upper = certified_upper(info)
         lower = min(last.lower if last.lower is not None else 0.0, upper) if closed else 0.0  # the last round held every offer when all closed
         plan.packed.info["envelope"] = replace(
-            info, exact=exact, within=within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records
+            info, exact=exact, within=proved_within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records
         )  # fmt: skip
     judged = () if route_actions is None else (_rounds.judged_route_limit(sorted({o.label for o in grouped} & set(route_actions)), records[0]),)
     plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within), *judged))
