@@ -20,8 +20,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
-| Settings and flags the planner accepts | 34 |
-| - read by some code | 34 |
+| Settings and flags the planner accepts | 35 |
+| - read by some code | 35 |
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
@@ -131,7 +131,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 | `any((wish.corrupted or not any((mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids)) for wish in target.implicits))` | the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet; it plans the Searing Exarch and Eater of Worlds implicits | no benchmark target |
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `unreachable` | {unreachable} | no benchmark target |
-| `axes and solver not in ('auto', 'object')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that | no benchmark target |
+| `axes and solver not in ('auto', 'object', 'envelope')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the envelope search (or by the walk of every item, `--solver object`); `--solver {solver}` does not do that | no benchmark target |
 
 - `Abstraction(..., allow_inputs=bool(donated) or bool(awakened)) in make_plan`: an action that consumes other items is planned only when it reads a rule axis, with the second items the planner offers (the recombinator: the target's isolated feeders); one without an axis is refused by the kernel.
 - `memory_strands` on (`--strands`, or the setting): `make_plan` says "Memory Strands are on (asked for by `--strands` or in the planner settings), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them"
@@ -152,7 +152,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `recombinator_junk_craft` | [planner] | `false` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path) |
 | `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_benchmark.py: render_summary (used as an index or container; on the planning path); and 2 more |
 | `price_source` | [planner] | `both` | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
-| `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 12 more |
+| `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 7 more |
 | `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 6 more |
 | `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 5 more |
@@ -165,6 +165,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
 | `--memory-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
+| `--net` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path) |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
 | `--price-source` | command `plan` |  | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
