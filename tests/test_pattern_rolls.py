@@ -230,7 +230,7 @@ def test_the_draw_of_a_bought_listing_makes_no_member_at_an_opened_key(monkeypat
     makes no member for either where the flag refuses it, nor asks the process pool for their distributions there (#830)."""
     monkeypatch.setattr(_pattern, "PRIME_FROM", 1)  # every key primes its offers (the product does from 16)
     primed: list = []
-    monkeypatch.setattr(Abstraction, "prime", lambda self, requests: primed.extend(requests))
+    monkeypatch.setattr(Abstraction, "prime", lambda self, requests, **options: primed.extend(requests))
     draw = OpenListing(Rarity.RARE)
     ab = Abstraction(TINY, GOALS["life"], AMULET, LEVEL, (CHAOS, DIVINE, draw))
     start = ab.compress(unopened_listing(TINY, tiny_item()))

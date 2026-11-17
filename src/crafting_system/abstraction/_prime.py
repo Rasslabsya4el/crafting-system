@@ -19,7 +19,7 @@ made (`budget.Allowance`), and a distribution made ahead in a worker would be ma
 the same run would stop at different points on two machines.
 """
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from crafting_system import budget, parallel
 from crafting_system.actions import Action, Fixed, Rerolled
@@ -39,10 +39,11 @@ def _compute(index: int):
     return abstraction._fracture_entries(part, signature)
 
 
-def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: int | None = None) -> int:
+def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: int | None = None, ask: Callable[[], None] | None = None) -> int:
     """Compute in the pool the distributions that `kernel(state, action)` of these requests needs; return how many.
 
-    A request that `kernel` would refuse is left to `kernel`, which raises it in its own order.
+    A request that `kernel` would refuse is left to `kernel`, which raises it in its own order. `ask` is called before each request is prepared
+    (the caller's net: it raises to stop, #1179); preparing a chunk of requests in this process can take minutes.
     """
     workers = parallel.worker_count() if workers is None else workers
     clock = budget.active()
@@ -52,6 +53,8 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
         return 0
     jobs: dict[tuple, tuple] = {}
     for state, action in requests:
+        if ask is not None:
+            ask()
         try:
             abstraction._check_enabled(action)
             prepared = abstraction._prepared(state, action)
