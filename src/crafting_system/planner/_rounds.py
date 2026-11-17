@@ -23,19 +23,20 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
   share too once its own search holds a plan: it gives way there, with its plan (`Share`, #1080), so every group is tried once a plan exists.
   Two refusals in a row set the first refused group aside (it would refuse every round after it).
-* **A beaten group is not carried** (#1080, #1091). A round beaten before the last proved only that no plan of its offers with the base
-  costs less than the plan in hand; no exact rule lets a later round leave it out and keep the optimum. A plan in hand of 10 that adds mods A
+* **A group that cannot beat the plan in hand is not carried** (#1080, #1091). A round before the last that began with a plan in hand and
+  ended beaten, or closed (exactly or within the gap) with no cheaper plan, proved only that no plan of its offers with the base costs less
+  than the plan in hand ("beaten" below covers both); no exact rule lets a later round leave it out and keep the optimum. A plan in hand of 10 that adds mods A
   and B together; group G adds A for 1, group H adds B for 1, the base has no other way to either: G with the base costs 11 and H with the
   base costs 11, both beaten, while G and H together cost 2. "Beaten" says nothing of the plans that join a later group, and no test of
   whether a later group's offers change what its offers do is exact on an item whose every action reads and changes the same affixes. Carrying
-  it keeps the proof, at the cost of every later round holding it and of the plan's offers holding it: R05's 1,192 fossil sets, beaten at
-  once, then grew the solve after the net by about 1 GB a minute until the runner died (#1091). So a group beaten before the last round is
+  it keeps the proof, at the cost of every later round holding it and of the plan's offers holding it: R05's 1,192 fossil sets, whose round
+  closed at the cost of the plan in hand in 2 s, then grew the solve after the net by about 1 GB a minute until the runner died (#1091). So a group beaten before the last round is
   set aside like a stopped one: the rounds after it do not hold it, and the answer names it, with its lower figure over the base it was
   searched with, among the rounds that do not make the plan the cheapest of every method (`RoundRecord.closed`). A beaten last round has no
   round after it and still closes. The proof comes back in one place: when every round closed and groups were set aside so, one last round
-  holds them with the base, that is every offer; if it closes (beaten at once, as a rule) the set-aside groups count as closed again and the
-  plan is the cheapest of every method, as when they were carried. That round runs only when the whole proof is in reach, and a beaten round
-  makes no plan, so its offers never become the plan's.
+  holds them with the base, that is every offer; if it closes the set-aside groups count as closed again and the plan is the cheapest of
+  every method, as when they were carried. That round runs only when the whole proof is in reach; its offers become the plan's only when it
+  makes a cheaper plan, which then needs them.
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
   figure no plan of its offers costs less than (OR-13). A main tree whose every benchmark route has one group never enters the rounds.
@@ -96,7 +97,7 @@ class RoundRecord:
     seconds: float
     within: float | None = None  # the gap it closed within, when it closed only within one (the run's gap, OR-32)
     features: tuple[str, ...] = ()  # what its group's offers add to the model (`Abstraction.features`): with the kinds, what names the group
-    carried: bool = True  # False: a round beaten before the last, whose group the rounds after it did not hold (`widen`, #1080)
+    carried: bool = True  # False: a round before the last that could not beat the plan in hand, whose group later rounds did not hold (`widen`)
 
     @property
     def closed(self) -> bool:
@@ -218,7 +219,7 @@ def widen(
     records: list[RoundRecord] = []
     refused_last: tuple[int, tuple[int, ...]] | None = None  # the last round, when a refusal ended it: its record's place and its group's offers
     queue = list(groups)
-    set_aside: list[tuple[int, Group]] = []  # the groups beaten before the last round (not carried): their record's place and the group
+    set_aside: list[tuple[int, Group]] = []  # the groups not carried (could not beat the plan in hand): their record's place and the group
     for k, group in _growing(queue):
         rest = len(queue) - k
         out_of_time = (time_left := left()) is not None and time_left <= 0.0
@@ -229,6 +230,7 @@ def widen(
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
         plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
+        held, improved = best is not None, False  # a plan in hand when the round began; the round's own plan became it
         give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, began, clock_now)  # the last round has all the time left
         try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
             plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0, give_way))
@@ -258,7 +260,7 @@ def widen(
             lower, upper = getattr(search, "lower", None), mean_of(plan)
             within = getattr(search, "within", None) if status == WITHIN else None
             if best is None or upper < best_mean:
-                best, best_upper, best_mean = plan, upper_of(plan), upper
+                best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
         if lower is not None and best_upper is not None and k > 0:
             lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
         if lower is not None and not math.isfinite(lower):
@@ -272,16 +274,17 @@ def widen(
             positions = sorted({*base, *group.positions})
             records[place] = replace(records[place], reason=records[place].reason + "; set aside, since the round after it was refused too")
         refused_last = (len(records) - 1, group.positions) if status == REFUSED and k > 0 else None
-        if status == BEATEN and rest > 1:
-            # beaten: its group is not carried into the rounds after it (#1080, #1091). Its proof covers its offers with the base only, not with a
-            # later group's, so the answer no longer counts it as closed (`RoundRecord.closed`) and names it with its lower figure. Carrying it kept
-            # R05's 1,192 fossil sets in every later round and in the plan's offers, and the solve after the net built each until the runner died
+        if held and not improved and status in (CLOSED, WITHIN, BEATEN) and rest > 1:
+            # proved unable to beat the plan in hand (beaten, or closed with no cheaper plan): its group is not carried into the rounds after it
+            # (#1080, #1091). Its proof covers its offers with the base only, not with a later group's, so the answer no longer counts it as
+            # closed (`RoundRecord.closed`) and names it with its lower figure. Carrying it kept R05's 1,192 fossil sets (their round closed at
+            # the plan in hand's cost) in every later round and in the plan's offers, and the solve after the net built each until the runner died
             records[-1] = replace(records[-1], carried=False)
             set_aside.append((len(records) - 1, group))
         elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED):
             base = positions  # the first round is the base whatever its end, a refused one too: every later round widens it
         if k == len(groups) - 1 and set_aside and all(record.status in (CLOSED, WITHIN, BEATEN, NONE) for record in records):
-            # every round closed, some beaten groups were set aside: one last round holds them with the base, which is then every offer, so
+            # every round closed, some groups were set aside: one last round holds them with the base, which is then every offer, so
             # the last round again holds every offer and its proof is the whole one (a plan joining a set-aside group with a later one is in it)
             queue.append(Group(tuple(sorted({i for _, g in set_aside for i in g.positions})), tuple(sorted({kind for _, g in set_aside for kind in g.kinds})),
                                frozenset().union(*(g.features for _, g in set_aside))))  # fmt: skip
@@ -318,14 +321,18 @@ def group_name(record: RoundRecord) -> str:
 
 def round_line(n: int, record: RoundRecord) -> str:
     """One round as the answer says it."""
+    line = _round_line(n, record)
+    return line if record.carried else line + " (with the methods of the rounds before it; the rounds after it did not hold them)"
+
+
+def _round_line(n: int, record: RoundRecord) -> str:
     head = f"round {n} ({group_name(record)}; {record.offers:,} actions offered, {record.seconds:,.0f} s)"
     if record.status == CLOSED:
         return f"{head}: finished, its best plan costs {_figure(record.upper)}"
     if record.status == WITHIN:
         return f"{head}: finished within the gap, its plan costs {_figure(record.upper)}"
     if record.status == BEATEN:
-        line = f"{head}: ended at once: {record.reason}; no plan with them costs less than {_figure(record.lower)}"
-        return line if record.carried else line + " (with the methods of the rounds before it; the rounds after it did not hold them)"
+        return f"{head}: ended at once: {record.reason}; no plan with them costs less than {_figure(record.lower)}"
     if record.status == NONE:
         return f"{head}: finished, no plan with them alone reaches the target"
     if record.status == STOPPED:
