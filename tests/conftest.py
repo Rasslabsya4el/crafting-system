@@ -237,7 +237,7 @@ def _mark_waits_for_1101(items) -> None:
     from fnmatch import fnmatchcase
 
     waits = pytest.mark.xfail(run=False, reason="#1101: a real route with every beta method on waits for the run counted in states")
-    rerecord = pytest.mark.xfail(strict=True, reason="#1101: the golden moves with every beta method on and waits for its re-record")
+    rerecord = pytest.mark.xfail(strict=True, raises=AssertionError, reason="#1101: the golden moves with every beta method on and waits for its re-record")
     for item in items:
         if any(fnmatchcase(item.nodeid, pattern) for pattern in WAITS_FOR_1101):
             item.add_marker(waits)

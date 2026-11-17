@@ -100,6 +100,10 @@ into one named failing test:
   otherwise hang the job until `timeout-minutes` or have the runner shut down (exit 143) and lose the whole shard, and it puts no cap on
   the process, so no allocation fails and the solver's own fallbacks on a MemoryError (`solver/_packed_linear.py`, `cli/_route_flow.py`)
   are never taken because of it. Its failure is `pytest.fail`, a `BaseException`, which no `except Exception` of the planner catches.
+  Both figures are caps of the CI suite, not planner limits. What it does not cover: it wakes once a second, so a spike of several GB
+  inside one second can still take the runner down; it reads the whole process's resident memory, so memory an earlier test of the
+  process left counts against the next one (once past 3,500 MB, every later phase over a second fails too); a native call (a HiGHS
+  solve) is not interrupted until it returns. It is not run on Windows (no `SIGALRM`).
 
 0 turns the time or data net off.
 
