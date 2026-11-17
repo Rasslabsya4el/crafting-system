@@ -15,14 +15,16 @@ Dropping `a` from every state therefore leaves `V*` unchanged at every state: th
 Nothing here depends on what `a` is, so every offer is judged, not only the blocking crafts that motivated it; the restart itself is never cut.
 
 **Where the premise fails, nothing is cut.** A given start (`StartPrice.given`, OR-6) has no restart: an item it cannot buy again may be worth an
-offer dearer than any plan from the start, so no offer is dropped. A plan made once per reading of a rule axis has a different `U` per reading, so the
-planner does not cut there either. An Awakener's Orb's donor and an offer that takes donors search a second item whose restart is not this
+offer dearer than any plan from the start, so no offer is dropped. A plan made once per reading of a rule axis has a different `V*` per reading, and
+the cut holds at every reading only for a `U` that holds at each: the planner takes it from a plan of the offers that read no axis (#1111), whose
+kernels and so whose mean are the same at every reading, so `U >= V*_r(s0)` at each reading `r` and the argument holds reading by reading. An Awakener's Orb's donor and an offer that takes donors search a second item whose restart is not this
 start item's, and a route judged against the plan is a fixed policy that may name the offer: no cut there either (`_plan.price_cut_applies`).
 Hinekora's Lock: `U` is the mean of a plan without the Lock, so `U >= V*` without it `>= V*` with it (`V` below). A peek at `a` from a state `s`
 costs the Lock's price `L` and then `min(c(a) + V(s'), V(s))` for the outcome `s'` seen, and `c(a) >= p + U >= V(s)` at every `s` but the start
 (and above `V(s0)` there), so the minimum is `V(s)` and the peek costs `L + V(s) >= V(s)`: never better either. `U` must be the mean of a plan of the same game: the planner takes it from a plan of a subset of the
 offers, which is a plan of the whole set too: today the offers without the metamod crafts that the rule of blocking crafts offers unasked (#886),
-which make the model track every mod's protected tags on every state (`_plan.known_upper`).
+which make the model track every mod's protected tags on every state, and without the offers that read a rule axis (#1111), which make the plan
+one search per reading (`_plan.known_upper`, `_plan.reads_open_rule`).
 """
 
 import math

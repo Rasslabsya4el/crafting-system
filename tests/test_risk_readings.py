@@ -449,3 +449,20 @@ def test_fuzz_against_brute_force(seed):
     assert report.plan.interval == (min(row), max(row))
     for a, b in itertools.combinations(names, 2):
         assert report.table[a][b].low <= report.table[a][b].value <= report.table[a][b].high
+
+
+def test_a_reading_searched_only_to_a_lower_figure_leaves_the_bracket_open():
+    """#1111: a reading solved by the caller's search (`solve_one`) that stopped short says the lower figure it proved (`Searched.lower`); the
+    bracket's lower end is that figure, never the value of the plan the search kept, so a gap the search left is not called closed."""
+    from crafting_system.risk import Searched
+
+    models = {"one": TabularModel({"goal"}, {"a": [Action("go", 2.0, (("goal", 1),))]})}
+
+    def searched(lower):
+        return lambda reading, starts: Searched({"a": 2.0, "goal": 0.0}, {"a": models[reading].actions("a")[0]}, 1e-12, lower)
+
+    closed = solve_readings(models, "a", solve_one=searched(2.0))
+    open_ = solve_readings(models, "a", solve_one=searched(1.5))
+
+    assert closed.proven_optimal and closed.gap == 0.0
+    assert not open_.proven_optimal and open_.lower.value == 1.5 and open_.gap == pytest.approx(0.5)

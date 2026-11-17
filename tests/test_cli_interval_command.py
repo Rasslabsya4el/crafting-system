@@ -12,11 +12,13 @@ from collections.abc import Iterator
 from fractions import Fraction
 
 import pytest
-from cli_support import R12, TODAY, price_file
+from cli_support import R12, R12_KINDS, TODAY, price_file
 from items_support import DATA, roll
 
 from crafting_system.actions import Action, Adds, Axis, Finite, Kind, NotApplicableError, OutOfScopeError, Reading, Reads, registered
+from crafting_system.budget import Budget
 from crafting_system.cli import PlanError, build_report, make_plan
+from crafting_system.planner import PlanSettings, plan_target
 from crafting_system.planner._axes import AXIS_WORDS, AxisWords
 from crafting_system.cli._main import main
 from crafting_system.cli._reach import policy_states
@@ -111,7 +113,6 @@ def test_the_report_carries_the_interval_of_the_plan_over_the_grid(lucky):
 
 
 def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky, tmp_path, capsys, monkeypatch):
-    from crafting_system.budget import Budget
     from crafting_system.cli import _main
 
     # counted in states, not in the default budget's memory share: a process that already holds real game data stops at once (tests/conftest.py)
@@ -134,9 +135,19 @@ def test_the_command_shows_the_interval_in_the_text_the_json_and_the_page(lucky,
 
 
 def test_a_solver_that_takes_no_reading_is_refused_with_the_rule_in_words(lucky):
-    for solver in ("packed", "envelope"):
-        with pytest.raises(PlanError, match="the chance of the toy craft"):
-            make_plan(DATA, r12(), lucky, solver=solver)
+    with pytest.raises(PlanError, match="the chance of the toy craft"):
+        make_plan(DATA, r12(), lucky, solver="packed")
+
+
+def test_the_envelope_search_plans_every_reading_as_the_whole_walk_does(lucky):
+    # each reading is searched by the envelope search (#1111): the same plan and the same costs at every reading as the walk of every item
+    searched, walked = make_plan(DATA, r12(), lucky, solver="envelope"), make_plan(DATA, r12(), lucky, solver="object")
+
+    assert searched.search is not None and walked.search is None
+    for plan in (searched, walked):
+        assert route_labels(plan) == {LUCKY}
+        costs = {reading[LUCK.name]: cost.value for reading, cost in plan.readings.plan.costs.items()}
+        assert costs == pytest.approx(MEANS)
 
 
 def test_a_plan_whose_route_reads_no_axis_has_no_interval_block(lucky):
@@ -144,15 +155,48 @@ def test_a_plan_whose_route_reads_no_axis_has_no_interval_block(lucky):
 
     plan = make_plan(DATA, r12(), dear)
 
-    assert plan.readings is not None and LUCKY not in route_labels(plan)
+    # dearer than buying the amulet again and following the plan made without it, at every reading: cut before any reading is searched (#1111)
+    assert plan.readings is None and LUCKY not in route_labels(plan)
+    assert any(LUCKY in limit.labels for limit in plan.limits if limit.what == "Not searched")
     assert build_report(plan, DATA).interval is None
 
 
-def test_a_time_budget_is_said_not_to_apply_to_a_plan_solved_at_every_reading(lucky):
+def test_a_time_budget_applies_to_a_plan_searched_at_every_reading(lucky):
     plan = make_plan(DATA, r12(), lucky, budget=60.0)
 
-    assert plan.readings is not None and plan.approximation is None
-    assert "The time budget was not applied" in [limit.what for limit in plan.limits]
+    assert plan.readings is not None and plan.approximation is None and plan.search is not None
+    assert "The time budget was not applied" not in [limit.what for limit in plan.limits]
+
+
+# R12's five methods and the lucky craft, through the planner's entry, counted in states (#1111). On main before #1111 each reading was solved
+# whole (three walks of every item; over 100 s and 2 GB on the cheap case, past 160 s on the dear one): a net of this many states is the
+# whole run's here, and it never binds: the dear craft is cut before any reading is searched, and the cheap one is searched once per reading.
+NAMED_STATES = 1_000
+
+
+def r12_named_and_lucky():
+    """R12 with `R12_KINDS` named and the toy's: the case of #1111."""
+    return dataclasses.replace(load_target(R12, DATA), actions=(*R12_KINDS, LUCKY_KIND.name))
+
+
+def test_a_dear_craft_that_reads_an_axis_is_cut_before_any_reading_is_searched(lucky):
+    dear = dataclasses.replace(lucky, prices={**lucky.prices, LUCKY: PriceEntry(1e6, "test")})
+
+    plan = plan_target(DATA, r12_named_and_lucky(), dear, PlanSettings(recipe_starts=False, budget=Budget.in_states(NAMED_STATES)))
+
+    assert plan.readings is None and LUCKY not in route_labels(plan)
+    assert plan.search is not None and plan.search.exact and plan.search.touched <= NAMED_STATES
+    assert any(LUCKY in limit.labels for limit in plan.limits if limit.what == "Not searched")
+
+
+def test_a_cheap_craft_that_reads_an_axis_is_searched_once_per_reading(lucky):
+    plan = plan_target(DATA, r12_named_and_lucky(), lucky, PlanSettings(recipe_starts=False, budget=Budget.in_states(NAMED_STATES)))
+
+    assert plan.readings is not None and route_labels(plan) == {LUCKY}
+    assert plan.search is not None and plan.search.exact
+    costs = {reading[LUCK.name]: cost.value for reading, cost in plan.readings.plan.costs.items()}
+    assert costs == pytest.approx(MEANS)
+    assert plan.readings.proven_optimal
 
 
 SHAKY = "Toy Shaky Craft"
@@ -183,3 +227,49 @@ def test_a_gap_of_another_reading_is_said_in_the_limits(lucky):
     assert not plan.abstraction.gaps.entries()  # the plan reading has a rule everywhere
     said = [limit for limit in plan.limits if any(text.startswith(SHAKY) for text in limit.labels)]
     assert said, [limit.what for limit in plan.limits]
+
+
+WIDE = Axis("toy.wide", (Fraction(1, 2), Fraction(1)), Fraction(1))
+WIDER = "Toy Wider Craft"
+
+
+@dataclasses.dataclass(frozen=True)
+class WiderCraft(LuckyCraft):
+    """Sure at the plan reading; at the other, a failure adds Life instead, an item the plan reading never reaches (another support)."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return WIDER
+
+    def resources(self, data: GameData | None = None) -> dict[str, int]:
+        return {WIDER: 1}
+
+    def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
+        return (WIDE,)
+
+    def outcomes(self, data: GameData, item: Item, reading: Reading | None = None) -> Finite:
+        if item.rarity is not Rarity.RARE or any(entry.mod_id in (GEM, "IncreasedLife1") for entry in item.mods):
+            raise NotApplicableError("the toy craft works on a rare item without the gem mod or Life")
+        luck = (reading or Reading()).get(WIDE.name, WIDE.plan)
+        try:
+            crafted = item.changed(data, mods=(*item.mods, roll(GEM)))
+            missed = item.changed(data, mods=(*item.mods, roll("IncreasedLife1")))
+        except ItemError as error:
+            raise NotApplicableError("the mod does not fit on the item") from error
+        return Finite(data, item, ((Fraction(1), crafted),) if luck == 1 else ((luck, crafted), (1 - luck, missed)))
+
+
+def test_a_reading_whose_outcomes_reach_what_the_plan_reading_never_searched_is_planned_as_by_the_whole_walk(monkeypatch):
+    # #1111 (the checker's case): a search from the state the plan's route reaches only under the other reading would restart at that state, not
+    # at the start item, so the readings are then solved whole, and the costs are the whole walk's
+    monkeypatch.setitem(AXIS_WORDS, WIDE.name, AxisWords("width", "the chance of the toy craft"))
+    kind = Kind("toy-wider-craft", lambda data, item: (WiderCraft(),) if item.rarity is Rarity.RARE else (), order=905)
+    prices = dataclasses.replace(price_file(), prices={**price_file().prices, WIDER: PriceEntry(PRICE, "test")})
+    with registered(kind):
+        target = dataclasses.replace(load_target(R12, DATA), actions=("chaos-orb", "harvest-reforge", kind.name))
+        plans = [make_plan(DATA, target, prices, solver=solver) for solver in ("envelope", "object")]
+
+    tables = [
+        {(c[WIDE.name], r[WIDE.name]): cost.value for c, route in plan.readings.routes.items() for r, cost in route.costs.items()} for plan in plans
+    ]
+    assert tables[0] == pytest.approx(tables[1])
+    assert plans[0].readings.robust_differs == plans[1].readings.robust_differs
