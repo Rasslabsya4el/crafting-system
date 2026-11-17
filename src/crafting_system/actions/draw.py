@@ -232,9 +232,9 @@ def exact_distributions(
     whose label tells those values apart from the rest gets whole. A Fractured Fossil reads one view per family type out of one walk
     (`Abstraction._fracture_entries`, #934).
 
-    Under a search counted in states (`budget.counting`, #1105) the walk counts what it makes as it makes it, each stage on its own count: each end state of
-    a draw met for the first time, each group of end states and each way of spreading a group's labels; past the allowance it raises
-    `budget.OutcomesCut`.
+    Under a search counted in states (`budget.counting`, #1105) the walk counts what it makes as it makes it, each stage on its own count:
+    each state of the walk met for the first time at a step of the draws (the "end state" count, intermediate steps included), each group of
+    end states and each way of spreading a group's labels; past the allowance it raises `budget.OutcomesCut`.
     """
     number = NUMBER
     allowance = budget.allowed()  # None outside a counted search: nothing is counted
