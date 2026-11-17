@@ -552,10 +552,15 @@ def reached_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
                 else "the count of the best possible cost was stopped before it could order the steps"
             )
             + f", so its first plan took instead, item by item, the steps that bring the item closest to the target ({info.reached:,} steps built this way) until it "
-            "reached the target; the search then looked for cheaper steps until a time or memory limit stopped it",
+            "reached the target; "
+            + (
+                f"the search then looked for cheaper steps for {info.rounds:,} rounds until it was stopped ({info.stopped})"
+                if info.rounds
+                else f"the search was stopped before it looked for cheaper steps ({info.stopped})"
+            ),
             f"Proved: the plan reaches the target, and it costs {high} Chaos on average after the start item, the average of the plan shown itself. "
-            f"Not proved: that it is anywhere near the best possible cost. The search proved only that no plan of its methods costs less than {low} "
-            "Chaos"
+            f"Not proved: that it is anywhere near the best possible cost. The search proved only that no plan made of the methods this search held (when the methods were searched in rounds, those of "
+            f"this plan's round) costs less than {low} Chaos"
             + (f", so this plan may cost up to {times:,.0f} times the best one" if times is not None and times >= 2.0 else "")
             + ", and nothing shows where between the two the best one lies.",
         ),

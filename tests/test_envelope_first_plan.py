@@ -388,6 +388,7 @@ def test_a_stopped_search_whose_plan_the_walk_found_says_it_is_not_shown_near_th
     low, high = certificate_figures(min(max(info.lower, 0.0), certified_upper(info)), certified_upper(info))
     assert f"Proved: the plan reaches the target, and it costs {high} Chaos" in text
     assert "Not proved: that it is anywhere near the best possible cost" in text and f"costs less than {low} Chaos" in text
+    assert "the search was stopped before it looked for cheaper steps (the caller's rule)" in text  # no round ran
     # the same search's answer when it ends by itself, or a stopped search that did not walk: no such limit
     assert not [limit for limit in envelope_limits(replace(info, reached=0)) if limit.kind == _limits.REACHED]
     closed = envelope_result(fresh, begin, offers, bound=stopped).info["envelope"]
@@ -402,6 +403,7 @@ def test_the_walk_limit_names_how_many_times_the_plan_may_cost_the_best_and_the_
     )  # fmt: skip
     text = limit_text(reached_limits(info)[0])
     assert "the search's first order of steps led only back among items that do not meet the target" in text
+    assert "for 3 rounds until it was stopped (the time limit of 450 seconds was reached)" in text
     assert "2,744 steps built this way" in text and "may cost up to 1,393,360 times the best one" in text
     assert "times the best" not in limit_text(reached_limits(replace(info, lower=500_000.0))[0])  # under twice: no multiple is named
     assert reached_limits(replace(info, reached=0)) == ()
