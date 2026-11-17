@@ -310,6 +310,29 @@ def test_a_key_no_grown_slot_fits_has_the_same_members_on_the_grown_universe(wor
     assert fits[True] and fits[False]
 
 
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_a_key_a_new_pure_junk_kind_does_not_fit_has_the_same_members(world, tags):
+    """#1086, `Pattern.may_hold` for the other way a universe grows: a kind of pure junk a kernel finds (`_Universe.note` adds it to its class).
+    One pure kind is taken out of a universe and given back; a key it may not be in has the same members in every mode either way."""
+    _, ab, states = world
+    full = Pattern(ab, tags, [ACTIONS[name] for name in MODEL_ACTIONS])
+    less = Pattern(ab, tags, [ACTIONS[name] for name in MODEL_ACTIONS])
+    influences = frozenset()
+    side, tagset, kinds = next(
+        (side, tagset, kinds) for side in (Side.PREFIX, Side.SUFFIX) for tagset, kinds in less.universe(influences).classes[side].items() if len(kinds) > 1
+    )
+    gone = kinds.pop()  # `less` lacks it, as a universe before a kernel found it
+    assert full.universe(influences).note(gone.slot) is False  # `full` has it
+    fits = {True: 0, False: 0}
+    for key in dict.fromkeys(full.key(state) for state in states if state.flags.influences == influences):
+        held = full.may_hold(key, influences, gone.slot)
+        fits[held] += 1
+        if not held:
+            for mode in (Mode.ALL, Mode.EXTREMES, Mode.ANY):
+                assert set(less.members(key, mode)) == set(full.members(key, mode)), (key, mode)
+    assert fits[True] and fits[False]
+
+
 def test_a_key_without_tags_is_not_stronger_than_one_with_them(world):
     data, ab, _ = world
     start = ab.compress(build(data, BOW, STARTS[1]))

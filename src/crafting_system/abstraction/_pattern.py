@@ -1023,9 +1023,10 @@ class PatternBuilder:
     What a universe decides is which states are members of a key; the keys (read off states, `Pattern.key`) and the kernels (the abstraction's, at
     a member, their successors' keys read off states) do not depend on it. So a build that begins again (#1086) keeps the keys and the kernels, and
     makes again the members and the row of each key a grown slot may be in (`Pattern.may_hold`); the other keys have the same members on the grown
-    universe, so the same kernel keys and the same row. The model it ends on is the one a build from scratch on the grown universe makes, and a
-    kernel met again is not made again. The keys a build from scratch would not reach are none: the members of a key on a grown universe are more,
-    so the keys they reach are more. Before, every key began again: on R11 with the Exalted Orb four essences joined the bound's model with a forced
+    universe, so the same kernel keys and the same row. Every key a build from scratch on the grown universe reaches is reached, with the same row,
+    and a kernel met again is not made again. A key may stay that it would not reach: a member that the grown universe replaced (the lightest or
+    the first member of a key, where a new kind sorts before it) reached it. Such a key is read off a real state and has the row of its own
+    members, so its value is a lower bound all the same, and no key reached leads to it: it changes no value reached. Before, every key began again: on R11 with the Exalted Orb four essences joined the bound's model with a forced
     mod the pool does not list, and the bound took 17.9 s on a runner where the model takes 5.6 s built at once.
     """
 
