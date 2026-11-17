@@ -340,10 +340,11 @@ class Allowance:
     states to 303,950 (#1101). The engine and the kernel's assembly count here what they make as they make it, each stage of the making on its
     own count (`stage`, one of `STAGES`: an end state of the draws, a group of them, a spread built, a way of drawing grown, a roll spread, an
     outcome of concrete rolls, a state of the kernel added, a spread state; `made`), each as it is built, and the first stage to pass `given`
-    raises `OutcomesCut`. Each stage is held to `given` apart, because one outcome is
-    met once at each stage: a sum over the stages would cut a kernel of a few new states at a fraction of the net (#1137). So every structure of
-    the making holds at most `given` entries, and a kernel made whole still has its new states checked against the net by its search. Only a
-    search counted in states opens one; elsewhere `allowed()` is None and the making counts nothing."""
+    raises `OutcomesCut`. Each stage is held to `given` apart, because one outcome is met once at each stage: a sum over the stages would cut
+    a kernel of a few new states at a fraction of the net (#1137). So every structure of the making holds at most `given` entries (the
+    multinomial table of one roll law, `_rolls.multinomial`, is the one left uncounted: its size is set by the law's values, not by the
+    pool), and a kernel made whole still has its new states checked against the net by its search. Only a search counted in states opens
+    one; elsewhere `allowed()` is None and the making counts nothing."""
 
     given: int
     made: dict[str, int] = field(default_factory=dict)

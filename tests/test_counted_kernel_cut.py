@@ -11,6 +11,8 @@ Worked by hand below (`Counted`, a world written out by hand whose kernels count
 planner's entry on the coarse world, where the start's Chaos Orb has 94 outcomes.
 """
 
+from fractions import Fraction
+
 import pytest
 from abstraction_pool import RESISTS, fractured_item
 from abstraction_support import ACTIONS, abstraction
@@ -22,6 +24,7 @@ from test_envelope_gap_stop import Hand
 
 from crafting_system import budget
 from crafting_system.abstraction import Goal, Wanted
+from crafting_system.abstraction._rolls import RollLaw
 from crafting_system.actions import ChaosOrb, draw
 from crafting_system.budget import Budget
 from crafting_system.items import Side
@@ -233,7 +236,7 @@ def test_a_cut_roll_law_spread_leaves_the_abstraction_clean():
     goal = Goal((Wanted(RESISTS, min_roll=(10,)),))
     for action in ACTIONS.values():
         whole = check_cuts(lambda: abstraction(goal), abstraction(goal).compress(fractured_item()), action)
-        assert "outcome" in whole and whole["outcome"] >= whole["state"]
+        assert "outcome" in whole and whole["outcome"] >= whole["state"]  # one law per outcome here: two laws are below
 
 
 def test_a_cut_walk_with_views_is_made_again_whole():
@@ -250,3 +253,22 @@ def test_a_cut_walk_with_views_is_made_again_whole():
         with pytest.raises(budget.OutcomesCut), budget.counting(given):
             draw.exact_distributions(pool, free, None, draws(3), 0, lambda mod: mod.id, views)
         assert draw.exact_distributions(pool, free, None, draws(3), 0, lambda mod: mod.id, views) == fresh
+
+
+def test_an_outcome_over_two_roll_laws_counts_each_entry_as_it_is_built():
+    # two mods of two laws (2 and 3 values): the first law's spread makes 2 entries ("roll"), the last's 2 x 3 = 6 outcomes ("outcome")
+    first = RollLaw((((1,), Fraction(1, 2)), ((2,), Fraction(1, 2))))
+    last = RollLaw((((10,), Fraction(1, 3)), ((20,), Fraction(1, 3)), ((30,), Fraction(1, 3))))
+    outcome = frozenset({(first, 1), (last, 1)})
+    model = abstraction(Goal((Wanted(RESISTS, min_roll=(10,)),)))
+    assert not model._kinds.tracked
+    whole = model._concrete(outcome)
+    assert len(whole) == 6 and sum(chance for _, chance in whole) == 1
+    with budget.counting(10**9) as allowance:
+        assert model._concrete(outcome, allowance) == whole
+    assert allowance.made == {"roll": 2, "outcome": 6}
+    for given, stage in ((0, "roll"), (1, "roll"), (2, "outcome"), (5, "outcome")):
+        with pytest.raises(budget.OutcomesCut) as cut, budget.counting(given) as allowance:
+            model._concrete(outcome, allowance)
+        assert (cut.value.stage, cut.value.made) == (stage, given + 1)
+    assert model._concrete(outcome) == whole  # the law's spreads it keeps are whole: a cut leaves nothing behind
