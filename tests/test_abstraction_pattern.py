@@ -42,7 +42,7 @@ from abstraction_removals_support import (
 from pattern_support import all_members, check_dominates, exact_values, pushed
 
 from crafting_system.abstraction import Abstraction, Goal
-from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
+from crafting_system.abstraction._pattern import Mode, Pattern, PatternBuilder, PatternOffer, build_pattern_model
 from crafting_system.actions import (
     ActionError,
     AlterationOrb,
@@ -253,6 +253,32 @@ def test_the_model_is_a_lower_bound_at_every_concrete_state(world, tags):
         assert bound <= value * (1 + 1e-9) + 1e-9, (state, bound, value)
     assert 0 < solved.value[0] <= exact[start] * (1 + 1e-9)
     assert model.stats.kernels > 0 and model.stats.universe_growth == 0
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_a_universe_seeded_with_an_offer_that_never_joins_keeps_the_model_a_lower_bound(world, tags):
+    """#1086: the bound seeds the universe with what every offer that may join adds by name. Here the essence whose forced mod the pool does not list
+    is seeded and never joins: its slot is one more member of the keys it fits, the model built in steps on that universe is still at most the exact
+    value at every state of the exact graph of the offers it holds, and at most the model on the universe of its own offers (more members can only
+    lower a key's least backup)."""
+    data, ab, _ = world
+    start = ab.compress(build(data, BOW, STARTS[0]))
+    offers = offers_of()
+    exact = exact_values(ab, start, offers)
+    plain = solve_packed(pack_pattern_model(build_pattern_model(ab, start, offers, tags=tags), offers))
+    builder = PatternBuilder(ab, start, tags=tags, grow=True, joining=[ACTIONS["essence-outside-pool"]])
+    slots = lambda pattern: {slot for side in pattern.universe(frozenset()).relevant.values() for slot in side}
+    assert slots(builder.pattern) > slots(PatternBuilder(ab, start, tags=tags).pattern)  # the essence's slot is in the universe and its offer is not
+    builder.extend(offers[:2])
+    model = builder.extend(offers[2:])
+    assert builder.restarts == 0
+    solved = solve_packed(pack_pattern_model(model, offers))
+    pattern = Pattern(ab, tags, [ACTIONS["essence-outside-pool"], *(offer.action for offer in offers if offer.action is not None)])
+    for state, value in exact.items():
+        key = pattern.key(state)
+        assert key in model.index, "a state of the exact graph has a key the model never reached"
+        assert float(solved.value[model.index[key]]) <= value * (1 + 1e-9) + 1e-9, (state, value)
+    assert 0 < float(solved.value[0]) <= float(plain.value[0]) * (1 + 1e-9)
 
 
 def test_a_key_without_tags_is_not_stronger_than_one_with_them(world):
