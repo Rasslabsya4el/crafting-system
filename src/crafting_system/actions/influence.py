@@ -60,7 +60,7 @@ from crafting_system.rules import Rule, get_rule
 from . import add, metamods, outcomes, pool
 from .add import refuse_if_nothing_to_draw
 from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
-from .catalog import kind
+from .catalog import kind, listing_gap
 from .contract import Action, Adds, Reads
 from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
@@ -256,6 +256,11 @@ def _influenced_exalted_orbs(data: GameData, item: Item):
     # not offered where they can never act: an influence, a fractured mod, corruption and an item level under 68 stay for good (an Eldritch
     # implicit and the rarity can change, and are `outcomes`'s refusals).
     if item.influences or item.fractured_mods or item.corrupted or item.item_level < EXALT_MIN_ITEM_LEVEL.value:
+        return
+    try:  # an item class with no influence class key (a jewel, a flask) has no influence pool in the model: a model gap, said (#511)
+        influence_tag(data, item, Influence.SHAPER)
+    except OutOfScopeError as error:
+        listing_gap(error)
         return
     for influence in Influence:
         yield InfluencedExaltedOrb(influence)

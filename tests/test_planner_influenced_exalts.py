@@ -128,6 +128,17 @@ def test_the_orbs_are_not_listed_where_they_can_never_act(tmp_path):
         assert catalog(DATA, never, planner_only=True, names=METHODS) == ()
 
 
+def test_a_class_with_no_influence_key_lists_no_orb_and_says_it_is_a_model_gap(tmp_path):
+    from crafting_system.actions.catalog import catalog_kinds
+
+    start = _target(tmp_path, "ContractHelmetShaperP", P3).start_item
+    jewel = dataclasses.replace(DATA.base_items[HELMET], item_class="Jewel")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, HELMET: jewel})
+    gaps: list = []
+    assert tuple(catalog_kinds(data, start, planner_only=True, names=METHODS, gaps=gaps)) == ()
+    assert [gap.kind for gap in gaps] == ["influenced-exalted-orb"]
+
+
 def test_the_orb_is_terminal_for_the_offers_floors_so_its_floor_is_its_price(tmp_path):
     start = _target(tmp_path, "ContractHelmetShaperP", P3).start_item
     orbs = catalog(DATA, start, planner_only=True, names=METHODS)
