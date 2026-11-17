@@ -9,7 +9,7 @@ price file from the project root, to put two snapshots side by side, #616) and a
 vendor recipe (V01) reads the price file its target names; the latter is written to `OUT_DIR/start/benchmark.json`. A route whose target
 names its own price file (`price_file:`, R17: the beasts of its imprint, #223) reads that file too, and is written to `OUT_DIR/own/benchmark.json`.
 
-With `--net` each route is planned as a user's run is, under the limits of the planner settings (`benchmark --net`), and its entry carries
+With `--net` each route is planned as the site plans it (no guide's actions, #1156), under the limits of the planner settings (`benchmark --net`), and its entry carries
 its record of the heavy benchmark (#1109; `.github/scripts/heavy_benchmark.py` makes the record of two such runs and checks a new run).
 
 Since #901 R08 and R09 run at the default snapshot too (their verdicts of #591 and #592 were measured at the prices of 2026-10-31, #703).

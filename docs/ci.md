@@ -114,7 +114,7 @@ its root, in the test that plans too much (it names its offers, or runs counted 
 time and memory, so a test module that plans a real route sets `CLASSIC_OFFERS = True` and plans with the offers of before #886
 (`tests/cli_support.py`, `CLASSIC_KINDS`, pinned by `tests/test_classic_offers.py`); its records of before #886 hold byte for byte. No CI
 test plans a real route with the default offers: the heavy benchmark records those plans (#1109; "The heavy benchmark: the record of the
-default-on plans", below).
+site's plans", below).
 
 ## Heavy runs on the server (owner, 2026-11-17)
 
@@ -141,7 +141,7 @@ and writes the output under `.claude/scratch/`:
   only (under a minute, one process).
 
 GitHub keeps what the server does not give: a PR's own CI, the integration run that lands a PR, a run that needs Windows, and the heavy
-benchmark's record of the default-on plans, which needs a quiet machine per route ("The heavy benchmark", below; #1109).
+benchmark's record of the site's plans, which needs a quiet machine per route ("The heavy benchmark", below; #1109).
 The lines "never on a PC" further down mean the owner's PC: the server or a runner is where those scripts run.
 
 ## Heavy runs on GitHub: the runner budget (#249)
@@ -290,15 +290,29 @@ and with `--skip-refused` a rule whose action the game refuses is skipped (for t
 
     $D --runners 9 --timeout-minutes 60 --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; 3) R=R13;; 4) R=R08;; 5) R=R09;; 6) R=R17;; 7) R=R24;; 8) R=R12,R10,R11,R05,V01,R06;; 9) R=R20;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part'
 
-### The heavy benchmark: the record of the default-on plans (#1109)
+### The heavy benchmark: the record of the site's plans (#1109, #1156)
 
 No CI test plans a real route with every beta method on (above, "The suite's machine net"); the heavy benchmark records those plans, the
-ones the site gives. `benchmark --net` plans every route as a user's run does: the default offers (a route judged against its guide has
-the guide's actions leading the first round, #1110), under the time and memory limits of the
+ones the site gives. `benchmark --net` plans every route as the site does: the target alone, with the default offers (every beta method on,
+OR-41), the vendor-recipe starts of the planner settings (`recipe_starts`, on by default, as on the site) and **no guide's actions**, under the time and memory limits of the
 planner settings of the machine (OR-40; by default `Budget.default()`: an aim of a minute, the 10-minute net, 80% of the machine's memory).
 Each route's entry then carries its `record` (`src/crafting_system/benchmark_record.py`): the plan's mean cost and its lower bound (the
 start item included), the seconds of the plan, the peak memory the search read, and how the search ended (exact, proved within the gap, or
 stopped by a net); a route with no plan has no cost, and its stop is its error.
+
+**Which plan is recorded, and why (#1156).** The site's plan, and only it. A plain `benchmark` (no net) judges each guide's route against a
+*guided* plan: the actions the route file names lead the first round of the offers (#1110), so that plan holds every action the guide takes.
+No user gets that plan, since the site plans a target with no guide; and a guided round can hide a change that makes the site's plan worse
+(R11, probe run 44086633901: without the guide a branch of #1135 planned 617.28 c where `main` plans 188.03 c, while the guided plan, one
+round, stayed at 188.03 c and the record of #1109 passed it).
+So `--net` plans with no guide's actions. The guide's route is then evaluated against that plan (`solver_not_dearer`, the comparison a
+player makes) only when the plan offers every action the route takes and starts where it does; otherwise the route's entry carries the
+error (the route file names an action the plan does not offer) and no verdict, and the record is unaffected: the renewal names such routes.
+The guided plan is not kept as a second record: the record is to guard the plans users get, and the ticket asked for those. The cost is
+that the guided path (#1110: the guide's actions leading the first round) has no regular check under the net any more; a plain
+`benchmark` (no net) still plans it. Each `benchmark.json` names its plan
+(`"plan": "site"` with `--net`, `"guided"` without), and `heavy_benchmark.py` records and checks only runs of the site's plan (a record of
+format `/1`, the guided plans of #1109, is refused).
 
 **What is recorded.** `tests/fixtures/heavy_benchmark/records.json`: every reference route (`REFERENCES`) from **two** runs, with each
 run's figures, the spread of the two costs and the ceiling a new run may reach: the higher recorded cost plus the larger of the spread and
@@ -307,7 +321,7 @@ at its proved 1%). `tests/test_benchmark_record.py` checks that the file covers 
 
 **The check: no worse than the record.** A new run fails a route when its cost is above the ceiling, or when it gives no plan where both
 recorded runs gave one, or when the run holds no entry for it (a runner killed for its memory or its timeout writes none; a check of some
-routes only names them as a third argument). A route that planned in neither recorded run passes whatever it gives (a new plan is told); a route that planned in
+routes only names them as a third argument). A route with no plan in either recorded run has no plan to lose: no entry there passes. A route that planned in neither recorded run passes whatever it gives (a new plan is told); a route that planned in
 one recorded run only has no spread to check against and passes until the record is renewed. The lower bound, the seconds, the memory and
 the stop are readings beside the cost, not verdicts.
 
@@ -333,7 +347,9 @@ then `gh run download RUN_ID -D DIR` and `python .github/scripts/heavy_benchmark
 **Renewing the record.** A change that makes a route's plan better (or a new price snapshot, or a new reference route) renews the record:
 two runs of the command above, dispatched one after the other, then
 `python .github/scripts/heavy_benchmark.py record DIR1 DIR2 tests/fixtures/heavy_benchmark/records.json`, which prints each route's two
-costs, spread and ceiling (it refuses two runs that do not both hold every reference route). The PR that renews it says why, names both
+costs, spread and ceiling (it refuses two runs that do not both hold every reference route, except those named as a fourth argument,
+`R24,...`, whose runners the renewer saw killed: a plan that does not stop at its net; they are recorded with no plan and their stop says
+so, and each is an open issue). The PR that renews it says why, names both
 run ids, and states each route's state and spread; a spread above 10% of the lower cost, an unstable route and a route with no plan are
 each said so there, and a route with no plan in both runs is an open issue (the site gives no plan there). Renewals of the record share the route queue of `CLAUDE.md` with every reference route.
 

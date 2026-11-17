@@ -290,11 +290,28 @@ def test_with_the_net_each_route_carries_its_record_and_the_run_names_its_budget
     assert isinstance(record["stop"], str) and record["stop"]
 
 
+def test_with_the_net_the_plan_is_the_site_s_with_no_guide_s_actions(tmp_path, monkeypatch):
+    # #1156: the heavy benchmark records the plan a user gets (the target alone); the guide's route is still judged against that plan
+    good = benchmark_module.BENCHMARKS[0]
+    monkeypatch.setattr(benchmark_module, "BENCHMARKS", (good,))
+    seen = []
+    real = benchmark_module.plan_target
+    monkeypatch.setattr(benchmark_module, "plan_target", lambda data, target, prices, settings: seen.append(settings) or real(data, target, prices, settings))
+    code, path = run_benchmark(tmp_path, "--net")
+    assert code == 0 and good.route is not None
+    assert [(settings.judges_route, settings.route_actions, settings.budget is not None) for settings in seen] == [(False, None, True)]
+    assert [settings.recipe_starts for settings in seen] == [load_config({}).recipe_starts]  # the site's setting, not the route's own start
+    document = read_json(path)
+    assert document["plan"] == "site"
+    entry = entry_of(document)
+    assert entry["given_route"] is not None and entry["solver_not_dearer"] is not None
+
+
 def test_without_the_net_no_route_carries_a_record(tmp_path):
     _, path = run_benchmark(tmp_path)
 
     document = read_json(path)
-    assert document["budget"] is None and entry_of(document)["record"] is None
+    assert document["budget"] is None and entry_of(document)["record"] is None and document["plan"] == "guided"
 
 
 def test_with_the_net_a_route_that_waits_has_a_record_with_no_cost_whose_stop_is_its_error(tmp_path, monkeypatch):

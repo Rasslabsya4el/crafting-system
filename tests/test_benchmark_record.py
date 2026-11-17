@@ -11,7 +11,10 @@ from crafting_system.benchmark_record import (
     NOT_RECORDED,
     NOT_RUN,
     PASS,
+    GUIDED_PLAN,
+    KILLED,
     PLANNED,
+    SITE_PLAN,
     TOLERANCE_FLOOR,
     UNSTABLE,
     RouteRecord,
@@ -34,7 +37,7 @@ def unplanned(stop: str = "stopped after 600 s: no plan found yet") -> dict:
 
 def run(**routes: dict) -> dict:
     """A `benchmark.json` of a run with --net, holding only what the record reads."""
-    return {"machine": {"cpu": "x"}, "ran_at": "2026-11-17T10:00:00+00:00", "prices": None, "budget": None,
+    return {"machine": {"cpu": "x"}, "ran_at": "2026-11-17T10:00:00+00:00", "prices": None, "budget": None, "plan": SITE_PLAN,
             "routes": [{"id": name, "error": record["stop"] if record["mean"] is None else None, "record": record} for name, record in routes.items()]}
 
 
@@ -84,10 +87,11 @@ def test_a_route_with_no_recorded_plan_or_an_unstable_one_passes_whatever_it_giv
 
 
 def test_a_route_missing_from_the_run_fails_and_a_route_not_recorded_is_told():
-    """A runner killed for its memory or its timeout writes no entry: its routes fail, they do not pass by being absent."""
+    """A runner killed for its memory or its timeout writes no entry: its routes fail, they do not pass by being absent; a route with no plan in
+    either recorded run (R11) has no plan to lose and passes (#1156)."""
     verdicts = check_run(RECORD, run(R05=planned(95.0), R99=planned(1.0)))
     outcomes = {verdict.route: verdict.outcome for verdict in verdicts}
-    assert outcomes == {"R05": PASS, "R10": NOT_RUN, "R11": NOT_RUN, "R12": NOT_RUN, "R99": NOT_RECORDED}
+    assert outcomes == {"R05": PASS, "R10": NOT_RUN, "R11": PASS, "R12": NOT_RUN, "R99": NOT_RECORDED}
     assert failed(verdicts)
     assert render_check(verdicts).splitlines()[0] == "R05: PASS: 95.00 c, within the ceiling of 110.00 c"
 
@@ -103,12 +107,43 @@ def test_a_file_that_is_not_a_record_or_a_run_without_the_net_is_refused():
     with pytest.raises(ValueError, match="not a record of the heavy benchmark"):
         check_run({"routes": {}}, run())
     with pytest.raises(ValueError, match="R05 has no record: the run was not made with --net"):
-        check_run(RECORD, {"routes": [{"id": "R05", "error": None, "record": None}]})
+        check_run(RECORD, {"plan": SITE_PLAN, "routes": [{"id": "R05", "error": None, "record": None}]})
+
+
+def test_only_runs_of_the_site_s_plan_are_recorded_and_checked():
+    """#1156: the record guards the plan the site gives (the target alone); a run of the guided plan (a guide's actions leading its first
+    round, #1110) or of no stated plan (a run made before #1156) is refused, by the record and by the check alone."""
+    guided = {**run(R05=planned(90.0)), "plan": GUIDED_PLAN}
+    unstated = {key: value for key, value in run(R05=planned(90.0)).items() if key != "plan"}
+    assert RECORD["plan"] == SITE_PLAN
+    for document in (guided, unstated):
+        with pytest.raises(ValueError, match="not the site's"):
+            make_record(document, run(R05=planned(90.0)))
+        with pytest.raises(ValueError, match="not the site's"):
+            check_run(RECORD, document)
+    with pytest.raises(ValueError, match="different plans"):
+        merge_documents([run(R05=planned(1.0)), {**run(R10=planned(2.0)), "plan": GUIDED_PLAN}])
+    assert merge_documents([run(R05=planned(1.0)), run(R10=planned(2.0))])["plan"] == SITE_PLAN
 
 
 def test_a_record_needs_both_runs_of_every_route_asked_for():
     with pytest.raises(ValueError, match="R12 is not in both runs"):
         make_record(run(R05=planned(1.0)), run(R05=planned(1.0), R12=planned(1.0)), routes=["R05", "R12"])
+
+
+def test_a_route_whose_runner_was_killed_is_recorded_with_no_plan_only_when_named():
+    """#1156: R24's runner was killed at its timeout in both runs; named, it is recorded with no plan, and a new run that dies there too
+    passes (no plan to lose), while a route with a recorded plan that is missing from a new run still fails."""
+    with pytest.raises(ValueError, match="R24 is not in both runs"):
+        make_record(run(R05=planned(1.0)), run(R05=planned(1.0)), routes=["R05", "R24"])
+    record = make_record(run(R05=planned(1.0)), run(R05=planned(1.0), R24=unplanned()), routes=["R05", "R24"], killed=["R24"])
+    assert [held["stop"] for held in record["routes"]["R24"]["runs"]] == [KILLED, "stopped after 600 s: no plan found yet"]
+    assert record["routes"]["R24"]["state"] == NO_PLAN
+    verdicts = {verdict.route: verdict.outcome for verdict in check_run(record, run())}
+    assert verdicts == {"R05": NOT_RUN, "R24": PASS}
+    assert sorted(make_record(run(R05=planned(1.0)), run(R05=planned(1.0)), killed=["R24"])["routes"]) == ["R05", "R24"]
+    with pytest.raises(ValueError, match="R99 is named as killed but is not a route of the record"):
+        make_record(run(R05=planned(1.0)), run(R05=planned(1.0)), routes=["R05"], killed=["R99"])
 
 
 def test_a_split_run_is_merged_and_a_route_in_two_parts_is_refused():
@@ -119,7 +154,7 @@ def test_a_split_run_is_merged_and_a_route_in_two_parts_is_refused():
 
 
 def test_an_entry_with_an_error_and_no_record_counts_as_no_plan():
-    document = {"routes": [{"id": "R05", "error": "a bad price", "record": None}]}
+    document = {"plan": SITE_PLAN, "routes": [{"id": "R05", "error": "a bad price", "record": None}]}
     assert RouteRecord(planned(1.0), planned(1.0)).state == PLANNED
     assert verdict_of(document, "R05").why.startswith("no plan (a bad price)")
 
@@ -134,7 +169,7 @@ def test_the_committed_record_holds_two_runs_of_every_reference_route():
     from crafting_system.cli._benchmark import REFERENCES
 
     record = json.loads((Path(__file__).parent / "fixtures" / "heavy_benchmark" / "records.json").read_text(encoding="utf-8"))
-    assert record["format"] == FORMAT and len(record["runs"]) == 2
+    assert record["format"] == FORMAT and record["plan"] == "site" and len(record["runs"]) == 2
     assert sorted(record["routes"]) == sorted(bench.id for bench in REFERENCES)
     for name, route in record["routes"].items():
         held = RouteRecord(*route["runs"])
