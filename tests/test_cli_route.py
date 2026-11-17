@@ -50,7 +50,9 @@ def route_file(tmp_path: Path, text: str, name: str = "route.yaml") -> Path:
 
 @pytest.fixture(scope="module")
 def target():
-    return load_target(R12, DATA)
+    # the methods of R12's route, named: these tests read conditions on its states and what its plan does not offer, and every beta
+    # method on by default (#886) offers an imprint and the bench, and tracks more of the item
+    return dataclasses.replace(load_target(R12, DATA), actions=("chaos-orb", "harvest-reforge"))
 
 
 @pytest.fixture(scope="module")

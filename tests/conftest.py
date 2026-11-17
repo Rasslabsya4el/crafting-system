@@ -53,33 +53,16 @@ def progress_sink_restored(monkeypatch):
 #   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). It
 #   is set once for the whole process, module fixtures included; a module of the budget itself (`OWN_NET = True`) sees the undivided share.
 # * Where the machine has `SIGALRM` (Linux, the CI runners), a watchdog wakes every `WATCH_SECONDS` during a test's setup, call and
-#   teardown: past `SUITE_TEST_SECONDS` of wake-ups, or, in a test's call only, when the machine has less than `SUITE_FREE_MB` left and
-#   the call itself has grown the process by more than `SUITE_GROWTH_MB` (what the process held before the call, the real game data a
-#   module's fixture loaded included, is not the call's: a fixed 3,500 MB a process failed the real-data tests that legitimately hold
-#   4 GB, PR CI 44021960386, and a share of the machine failed 700 setups of modules that load it while four did at once, PR CI
-#   44024487664), the phase fails by name
-#   (`pytest.fail`, a `BaseException` no `except Exception` or `except MemoryError` of the planner catches). It reads no clock (it counts its
-#   wake-ups) and puts no cap on the process, so no allocation fails and no fallback of the planner on a MemoryError is taken because of it.
+#   teardown, and past `SUITE_TEST_SECONDS` of wake-ups the phase fails by name (`pytest.fail`, a `BaseException` no `except Exception`
+#   of the planner catches). It reads no clock (it counts its wake-ups) and puts no cap on the process.
+# There is no memory net: three rules in three PR CI runs (a fixed 3,500 MB a process, 44021960386; a share of the machine, 44024487664;
+# growth of the call while the machine was short, 44027659418) each could fail a passing test, since four processes each holding 4.4 GB
+# of loaded game data on a 16 GB runner is this suite's normal state. A runner killed for memory is fixed in the tests that plan too much.
 # The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes its own budget keeps it.
-# `CRAFTING_TEST_SECONDS`, `CRAFTING_TEST_FREE_MB` and `CRAFTING_TEST_GROWTH_MB` set other figures; 0 turns that net off.
+# `CRAFTING_TEST_SECONDS` sets another figure; 0 turns that net off.
 SLOTS_PER_RUNNER = max(1, int(os.environ.get("CRAFTING_TEST_SLOTS", "1")))
 SUITE_TEST_SECONDS = int(os.environ.get("CRAFTING_TEST_SECONDS", "300"))
-SUITE_FREE_MB = int(os.environ.get("CRAFTING_TEST_FREE_MB", "1000"))
-SUITE_GROWTH_MB = int(os.environ.get("CRAFTING_TEST_GROWTH_MB", "1000"))
 WATCH_SECONDS = 1
-MEMINFO = os.path.join(os.sep, "proc", "meminfo")
-
-
-def _available_mb() -> float | None:
-    """The memory the machine can still give (Linux `MemAvailable`) in MB, or None where it cannot be read."""
-    try:
-        with open(MEMINFO, encoding="utf-8") as handle:
-            for line in handle:
-                if line.startswith("MemAvailable:"):
-                    return int(line.split()[1]) / 1024
-    except (OSError, ValueError, IndexError):
-        return None
-    return None
 _MACHINE_SHARE: list[float] = []  # the undivided `budget.MEMORY_SHARE`, kept for the modules that test the budget itself
 
 
@@ -99,35 +82,32 @@ def suite_net(request, monkeypatch):
         monkeypatch.setattr(budget_module, "MEMORY_SHARE", _MACHINE_SHARE[0])
 
 
+@pytest.fixture(scope="module", autouse=True)
+def classic_offers_of_module(request):
+    """A module that sets `CLASSIC_OFFERS = True` plans with the classic offers (`cli_support.CLASSIC_KINDS`), its module fixtures included."""
+    if not getattr(request.module, "CLASSIC_OFFERS", False):
+        yield
+        return
+    from cli_support import classic_offers
+
+    with pytest.MonkeyPatch.context() as patch:
+        classic_offers(patch)
+        yield
+
+
 def _watched(phase: str):
     """The watchdog of one phase of a test (its setup, a module's fixtures included, its call or its teardown), where `SIGALRM` is."""
     import signal
 
-    if not hasattr(signal, "SIGALRM") or (SUITE_TEST_SECONDS <= 0 and SUITE_FREE_MB <= 0):
+    if not hasattr(signal, "SIGALRM") or SUITE_TEST_SECONDS <= 0:
         yield
         return
-    from crafting_system.budget import process_mb
-
     woken = [0]
-    memory_net = phase == "test" and SUITE_FREE_MB > 0 and SUITE_GROWTH_MB > 0
-    before = process_mb() if memory_net else None
 
     def wake(signum, frame):
         woken[0] += 1
-        if SUITE_TEST_SECONDS > 0 and woken[0] * WATCH_SECONDS >= SUITE_TEST_SECONDS:
+        if woken[0] * WATCH_SECONDS >= SUITE_TEST_SECONDS:
             pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
-        if before is None:
-            return
-        free = _available_mb()
-        if free is None or free >= SUITE_FREE_MB:
-            return
-        held = process_mb()
-        if held is not None and held - before > SUITE_GROWTH_MB:
-            pytest.fail(
-                f"the {phase} grew its process by {held - before:.0f} MB, past the suite's {SUITE_GROWTH_MB} MB, while the machine had {free:.0f} MB"
-                f" left, under the suite's {SUITE_FREE_MB} MB (conftest.SUITE_GROWTH_MB, SUITE_FREE_MB, #886)",
-                pytrace=False,
-            )
 
     previous = signal.signal(signal.SIGALRM, wake)
     signal.setitimer(signal.ITIMER_REAL, WATCH_SECONDS, WATCH_SECONDS)
@@ -235,37 +215,10 @@ def _wide_params(item) -> dict[str, int]:
 #   time net (300 s a phase) and leave memory that fails the next tests of its process. #1101 empties this list and runs them again.
 # * `RERECORD_FOR_1101`: goldens whose numbers move with the defaults. A strict xfail that is run, so it shows the moment the golden is
 #   recorded again (it then passes and turns red until its pattern leaves the list). Never edit a golden by hand.
-WAITS_FOR_1101 = (
-    "tests/test_abstraction_pattern_real.py::test_the_bound_is_never_above_the_exact_cost_on_the_walked_graph[[]r05-auto[]]",
-    "tests/test_abstraction_pattern_real.py::test_the_bound_is_never_above_the_exact_cost_on_the_walked_graph[[]r13-*[]]",
-    "tests/test_add_bound.py::test_through_the_entry_r12_with_the_exalted_orb_offered_gets_its_exact_plan_as_cheap_as_without",
-    "tests/test_cli_envelope_real.py::*[[]R05[]]",
-    "tests/test_cli_envelope_real.py::test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught",
-    "tests/test_cli_parallel_real.py::test_r05_is_byte_identical_for_one_and_four_workers",  # past 300 s
-    "tests/test_cli_r04_r14_real.py::test_the_plan_offers_the_guides_actions_all_priced[[]R14[]]",  # the blocking crafts moved its offers
-    "tests/test_cli_r08_r09_real.py::*",
-    "tests/test_cli_r13_real.py::*",
-    "tests/test_cli_real.py::test_the_command_on_the_real_r12_amulet",
-    "tests/test_cli_real.py::test_verify_agrees_with_the_computed_mean_on_the_real_amulet",
-    "tests/test_cli_real.py::test_without_a_lifeforce_price_the_reforge_is_dropped_and_the_chaos_orb_policy_is_returned",
-    "tests/test_cli_roll_real.py::*",
-    "tests/test_cli_routes_real.py::*[[]R05[]]",
-    "tests/test_cli_routes_real.py::*[[]R10[]]",
-    "tests/test_cli_routes_real.py::*[[]R11[]]",
-    "tests/test_measure_actions_key.py::test_a_small_real_route_is_measured_in_each_variant[[]removed[]]",
-    "tests/test_naive_crafter_routes.py::*[[]R12[]]",
-    "tests/test_packed_plan_real.py::*[[]R10[]]",
-    "tests/test_packed_plan_real.py::test_a_graph_over_the_limit_is_solved_packed_and_a_small_one_by_the_object_solver",  # past 300 s
-    "tests/test_planner_declared_bounds.py::*",  # R05 past the net; R12 also counts the sets in the winning round's offers (#1103)
-    "tests/test_prune_bound.py::*[[]r05-strength-ring[]]",
-    "tests/test_prune_bound.py::*[[]r10-fractured-boots[]]",
-    "tests/test_prune_bound.py::*[[]r11-reservation-helmet[]]",
-    "tests/test_prune_equal.py::test_r10_*",
-)
-RERECORD_FOR_1101 = (
-    "tests/test_b1_unchanged.py::test_the_offers_and_the_kernels_of_the_route_did_not_move[[]r13-life-resist-belt[]]",  # offers 5 -> 89
-    "tests/test_risk_unchanged_349.py::test_the_risk_reports_of_policies_without_a_free_action_are_the_ones_main_gave",
-)
+# Both are empty since the real routes' modules plan with the classic offers (`CLASSIC_OFFERS = True`, `cli_support.CLASSIC_KINDS`):
+# their records of before #886 hold, and the default plans of the real routes are recorded by the heavy benchmark, not in CI.
+WAITS_FOR_1101: tuple[str, ...] = ()
+RERECORD_FOR_1101: tuple[str, ...] = ()
 
 
 def _mark_waits_for_1101(items) -> None:

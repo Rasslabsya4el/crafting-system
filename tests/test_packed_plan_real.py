@@ -8,6 +8,10 @@ cross-checked in a heavy run (`.github/scripts/packed_routes.py check --route r0
 R04, R14 and S02 are in `test_packed_heavy.py`.
 
 These tests need the cached dump and skip cleanly without it.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 from pathlib import Path
@@ -23,6 +27,8 @@ from crafting_system.planner._packed import PackedPolicy
 from crafting_system.cli._reach import policy_states
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"

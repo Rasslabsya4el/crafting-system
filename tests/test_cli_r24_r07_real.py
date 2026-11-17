@@ -6,6 +6,7 @@ unveil blocks among them), the given routes and the route conditions on the veil
 solver's mean against the given route's) are a heavy run: `tests/test_cli_r24_r07_heavy.py`. These skip without the cached dump.
 """
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -173,7 +174,8 @@ def test_a_wrong_veil_or_offer_condition_is_refused_with_its_line(r24, data, whe
 
 
 def test_a_plan_without_an_unveil_refuses_the_conditions(data):
-    target = load_target(ROOT / "examples/targets/r10-fractured-boots.yaml", data)
+    # R10's own methods, named: every beta method on by default offers the unveil too (#886, OR-41), and this plan must have none.
+    target = dataclasses.replace(load_target(ROOT / "examples/targets/r10-fractured-boots.yaml", data), actions=("essence", "bench-craft"))
     plan = make_plan(data, target, load_price_file(ROOT / "tests/fixtures/prices/routes-allflame-2026-07-31.json"), solve_it=False)
     with pytest.raises(RouteError, match="hold no veil and no offer"):
         parse_route("rules:\n  - when: {veil: none}\n    do: restart\n", plan, data)

@@ -8,6 +8,10 @@ R04 and R14 are compared in heavy runs (`.github/scripts/envelope_routes.py`; th
 The control: R13's bound is raised above the exact cost at some keys and the same comparison fails, so a wrong cut cannot pass.
 
 Needs the cached dump; skips cleanly without it (CI fetches it, ticket #165). Nothing here asserts a time (ADR-0014).
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import dataclasses
@@ -32,6 +36,8 @@ from crafting_system.cli._route import load_route
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"

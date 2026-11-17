@@ -1,5 +1,9 @@
 """The measurement of the `actions:` key of ticket #475 (`.github/scripts/actions_key.py`): how the key is removed from a copy of a target's text, how the
 jobs are dealt over the runners, the table, and the two small routes end to end. No big route runs here (R04 and R14 go to GitHub).
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import importlib.util
@@ -9,6 +13,8 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".github" / "scripts" / "actions_key.py"

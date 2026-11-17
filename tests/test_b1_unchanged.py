@@ -5,6 +5,10 @@ state (every state by its `repr`, with its integer weight) are byte-identical to
 golden file `tests/golden/b1_unchanged_142.json` was written by `b1_unchanged_support.py` run on the code of main without this ticket (6d0714e; the route R13 was re-made there because #247 made the fossil sets an opt-in kind, which now shows in its left-out kinds; #70 did the same for the Exalted, Annulment, Fracturing and corrupted-essence kinds: only the R13 left-out digest moved, its offers and kernels are byte-identical; the left-out digests of all six routes were re-made for ticket #262, whose new corrupting kind `locus` is now named beside the Vaal Orb as not offered to a target that takes no corrupted item (offers and kernels byte-identical); the kernels digest of the route R12 was re-made for ticket #310, because the Battle Royale cast speed suffix `IncreasedCastSpeed2Royale` left the amulet pool and its kernels' weights moved: with the rule off the old digest comes back, and the offers, the left-out reasons and the start state did not move; the left-out digests were re-made again for ticket #225, whose recombinator moved from the kinds the planner cannot use to the opt-in ones (offers and kernels byte-identical), and for ticket #223, which moved the imprint and the restore from the kinds the planner cannot use to the opt-in ones: offers and kernels byte-identical; and for ticket #943, which names the Orb of Scouring and the Orb of Alchemy apart from the other kinds the planner cannot use, with their reason: offers and kernels byte-identical; and for ticket #832, which made the Awakener's Orb a planner kind, so it left the kinds the planner cannot use: offers and kernels byte-identical; and the limits digests of R05, R10, R10 with 70 life, R11 and R12 for ticket #991, whose bench-craft labels in the left-out crafts write a negative range low-high: the limits are the same once their ranges are read low-high, offers and kernels byte-identical); the policies and
 means of R05, R10 and R11 are pinned the same way by `plans_118.json` (`test_prune_bound.py`), and the routes by the
 golden pages of the CLI tests. The fingerprints need the cached dump and skip cleanly without it, as in CI.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import json
@@ -14,6 +18,8 @@ import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from b1_unchanged_support import TARGETS, route_fingerprint
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 GOLDEN = json.loads((Path(__file__).parent / "golden" / "b1_unchanged_142.json").read_text(encoding="utf-8"))
 

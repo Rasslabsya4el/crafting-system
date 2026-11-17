@@ -94,23 +94,18 @@ into one named failing test:
 - **Memory share.** A run with a budget (the command's default) takes `budget.MEMORY_SHARE` of the machine divided among the processes
   sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run); it is set once per
   process, module fixtures included. A test that passes no budget still runs its exact proof; a test that passes its own budget keeps it.
-- **A watchdog per phase** (Linux only, `SIGALRM` every second): during a test's setup (its module fixtures included), call or teardown,
-  past `CRAFTING_TEST_SECONDS` (300) of wake-ups the phase fails by name; and during a test's call only, when the machine has less than
-  `CRAFTING_TEST_FREE_MB` (1,000 MB, Linux `MemAvailable`) left and the call itself has grown its process by more than
-  `CRAFTING_TEST_GROWTH_MB` (1,000 MB over what the process held when the call began), the call fails by name. What a process held
-  before the call (the real game data a module's fixture loaded, 3.5 to 4.4 GB) is not the call's: a fixed 3,500 MB a process (PR CI
-  44021960386) failed hundreds of passing real-data tests, and a share of the machine (physical memory over `CRAFTING_TEST_SLOTS`, PR CI
-  44024487664) failed about 700 setups of modules that load that data while four processes did so at once. It is a hang and memory guard, not a timing assertion (ADR-0014): it reads no clock, it fails only a test that would
-  otherwise hang the job until `timeout-minutes` or have the runner shut down (exit 143) and lose the whole shard, and it puts no cap on
-  the process, so no allocation fails and the solver's own fallbacks on a MemoryError (`solver/_packed_linear.py`, `cli/_route_flow.py`)
-  are never taken because of it. Its failure is `pytest.fail`, a `BaseException`, which no `except Exception` of the planner catches.
-  The figures are caps of the CI suite, not planner limits. What it does not cover: it wakes once a second, so a spike of several GB
-  inside one second can still take the runner down; a setup or teardown that grows the process (a module fixture's own search) has the
-  300 s net only; memory a call frees is not seen, so a call that grows less than 1,000 MB while another process takes the machine is
-  not failed (the runner may then still be shut down); a native call (a HiGHS
-  solve) is not interrupted until it returns. It is not run on Windows (no `SIGALRM`).
+- **A time net per phase** (Linux only, `SIGALRM` every second): during a test's setup (its module fixtures included), call or teardown,
+  past `CRAFTING_TEST_SECONDS` (300) of wake-ups the phase fails by name instead of hanging the job until `timeout-minutes`. It is a hang
+  guard, not a timing assertion (ADR-0014): it reads no clock and puts no cap on the process. Its failure is `pytest.fail`, a
+  `BaseException`, which no `except Exception` of the planner catches. The figure is a cap of the CI suite, not a planner limit. A native
+  call (a HiGHS solve) is not interrupted until it returns. It is not run on Windows (no `SIGALRM`). 0 turns it off.
 
-0 turns the time or memory net off.
+There is **no memory net**, by decision (#886). Three rules were tried and each could fail a passing test, because four processes each
+holding 4.4 GB of loaded game data on a 16 GB runner is this suite's normal state: a fixed 3,500 MB a process (PR CI 44021960386) failed
+hundreds of passing real-data tests; a share of the machine (PR CI 44024487664) failed about 700 setups of modules that load that data at
+once; and "the call grew its process by more than 1,000 MB while the machine had under 1,000 MB left" still fails any passing test that
+loads real data in its own body while the others hold theirs. A runner shut down for memory (exit 143, the whole shard lost) is fixed at
+its root, in the test that plans too much (it names its offers, or runs counted in states), never by a guard.
 
 ## Heavy runs on GitHub: the runner budget (#249)
 

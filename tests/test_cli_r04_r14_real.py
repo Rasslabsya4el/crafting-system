@@ -8,6 +8,10 @@ route is solved by the packed solver (ticket #374; R04's exact graph holds 177,2
 default budget run goes on to the packed solver instead of refusing, which `test_the_decision_finds_no_approximate_level...`
 pins. The policies themselves (CLI, `--verify`, `benchmark`) are in `test_cli_r04_r14_heavy.py`, a heavy run.
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; CI fetches it) and skip cleanly without it.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import math
@@ -27,6 +31,8 @@ from crafting_system.cli._route_sim import route_policy, simulate_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"

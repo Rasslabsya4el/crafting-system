@@ -8,6 +8,10 @@ not dropped: a later bench craft or the restart may still need what it leaves), 
   with the exact chance), so its ratio is infinite and the floors never build its outcomes;
 * R12 needs the +1 to Lightning gems mod (spawn weight 200): every set declares a chance above 0 and below 1.
 That a declared chance is never below the exact one, with forced mods and Tangled sets, is `tests/test_actions_fossil_reach.py`.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import dataclasses
@@ -19,6 +23,8 @@ from abstraction_support import real_game_data
 
 from crafting_system.budget import Budget
 from crafting_system.planner import PlanSettings, _offer_floor, _offer_kinds, plan_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"

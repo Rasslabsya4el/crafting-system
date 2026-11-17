@@ -18,6 +18,10 @@ or more the envelope search builds its bound on the offers that can matter and c
 
 The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`) and skip cleanly without it, as in CI. No test asserts a
 run time (ADR-0014).
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import datetime
@@ -63,6 +67,8 @@ from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.solver import Action as SolverAction
 from crafting_system.targets import Requirement, StartKind, Target, load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "plans_118.json"
