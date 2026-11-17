@@ -154,9 +154,11 @@ class Kinds:
         influences: frozenset = frozenset(),
         numbers: TypeNumbers | None = None,
         rollable: Callable[[], Iterable[Mod]] = lambda: (),
+        alike: bool = False,
     ):
         self.data = data
         self.profile = profile
+        self.alike = alike  # the slots of the ordinary mods drawn or held are told apart by side and protected tags alone (`slot_kind`, #1146)
         self.base_id = base_id
         self.item_level = item_level
         self.metamods = metamods
@@ -240,6 +242,22 @@ class Kinds:
                 kind = f"{kind}{POSITION_MARK}{place}" if place is not None else MOD_PREFIX + mod.id  # a mod the pool of its family lacks stands for itself
         else:
             kind = ALIKE
+        if self.metamods:
+            tags = protected_tags(mod)
+            if tags:
+                kind += TAG_MARK + "+".join(sorted(tags))
+        return kind
+
+    def slot_kind(self, mod: Mod) -> str:
+        """The kind of the slot an ordinary (not crafted) mod fills: `of(mod)`, or with `alike` (the twin of `Abstraction.alike_twin`, #1146) `ALIKE`
+        with the mod's protected tags under `metamods`, whatever the enabled actions read; a veiled placeholder or a mod unveiled from the pool keeps
+        its own kind (the key holds it exactly, `Pattern.is_veiled`).
+
+        The kinds a fractured mod keeps are `of`'s in both cases (`Abstraction._fractured_id`): only the ordinary slots are lumped.
+        """
+        if not self.alike or mod.domain in (UNVEILED_DOMAIN, VEILED_DOMAIN):
+            return self.of(mod)
+        kind = ALIKE
         if self.metamods:
             tags = protected_tags(mod)
             if tags:

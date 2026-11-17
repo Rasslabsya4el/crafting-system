@@ -265,10 +265,12 @@ def test_an_essence_that_joins_with_a_mod_outside_the_pool_begins_the_build_agai
     offers = [*offers_of(), PatternOffer("essence-outside-pool", ACTIONS["essence-outside-pool"], 4.0)]
     whole = build_pattern_model(ab, start, offers, tags=tags)
     made = []
-    real = ab.kernel
+    real, twin = ab.kernel, ab.alike_twin()
+    lumped = twin.kernel  # an erasing kernel is the alike twin's (#1146): both count
     builder = PatternBuilder(ab, start, tags=tags, grow=True)
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(ab, "kernel", lambda state, action: (made.append(1), real(state, action))[1])
+        patch.setattr(twin, "kernel", lambda state, action: (made.append(1), lumped(state, action))[1])
         builder.extend(offers[:-1])
         before = len(made)
         grown = builder.extend(offers[-1:])

@@ -219,6 +219,7 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
 
@@ -331,10 +332,11 @@ class _Universe:
                 mod = ab.data.mods.get(mod_id)
                 if mod is None or mod.domain == "crafted" or mod.generation_type not in (side.value for side in SIDES):
                     continue
-                slot = Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences))
-                if self.note(slot):
-                    gained += 1
-                    pattern.grown.append((influences, slot))
+                for contribution in _rolled_contributions(ab, mod, influences):  # each roll's, as the pool's slots (#1146: no kernel teaches a lumped draw's)
+                    slot = Slot(Side(mod.generation_type), kinds.of(mod), contribution)
+                    if self.note(slot):
+                        gained += 1
+                        pattern.grown.append((influences, slot))
         return gained
 
     def note(self, slot: Slot) -> bool:
@@ -1236,7 +1238,7 @@ class PatternBuilder:
             if members is None:
                 members = by_mode[policy] = self.pattern.members(key, *policy)
                 self.stats.members += len(members)
-            requests.extend((member, offer.action) for member in members)
+            requests.extend((member, offer.action) for member in members if not (LUMP_ERASING and self.ab._erases(member, offer.action)))
         self.ab.prime(requests)
 
     def _offers_of_key(self, i: int, first: int, tick) -> None:
@@ -1286,8 +1288,9 @@ class PatternBuilder:
                     raise _gap(offer, key, gap) from gap
                 kid = self.computed.get(ck)
                 if kid is None:
+                    lumped = LUMP_ERASING and ab._erases(member, offer.action)  # its outcomes from the twin, pushed onto the same keys (#1146)
                     try:
-                        exact = ab.kernel(member, offer.action)
+                        exact = (ab.alike_twin() if lumped else ab).kernel(member, offer.action)
                     except NotApplicableError:
                         stats.refused_pairs += 1
                         continue
@@ -1299,7 +1302,8 @@ class PatternBuilder:
                     stats.kernels += 1
                     pushed: dict[int, Fraction] = defaultdict(Fraction)
                     for successor, chance in exact.items():
-                        pattern.note(successor)
+                        if not lumped:  # a lumped outcome holds no slot the universe lacks (`LUMP_ERASING`), and its kinds are the twin's
+                            pattern.note(successor)
                         pushed[self._intern(successor)] += chance
                     if self.approximate:
                         pushed = _lowered(pushed)
