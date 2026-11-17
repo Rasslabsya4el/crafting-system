@@ -51,7 +51,7 @@ from crafting_system.planner import BUDGET_SECONDS, SOLVERS, PlanError, PlanSett
 from ._benchmark import benchmark_main
 from ._inputs import load_target_prices, write_json
 from ._report import build_report, policy_document, render_text
-from ._route import evaluate_route, load_route
+from ._route import evaluate_route, load_route, route_actions
 from ._route_report import render_route_text, route_document
 from ._route_view import write_route_page
 from ._trade import trade_main
@@ -200,6 +200,7 @@ def main(
             start_price=args.start_price, price_source=args.price_source or config.price_source,
             price_gap_percent=config.price_gap_percent, today=run_day, budget=run_budget(config, None if args.exact else args.budget, args.time_limit, args.memory_limit, 0.0 if args.exact else args.gap / 100.0),
             strands=args.strands or config.memory_strands, solver=args.solver, judges_route=bool(args.route),
+            route_actions=route_actions(Path(args.route)) if args.route else None,  # they lead the first round of the offers (#1110)
         )  # fmt: skip
         plan = plan_target(game, target, price_file, settings)
         if plan.approximation is not None and args.route:

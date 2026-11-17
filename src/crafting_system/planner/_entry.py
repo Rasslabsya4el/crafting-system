@@ -38,6 +38,9 @@ class PlanSettings:
     * `judges_route`: the caller will judge a given route against the plan. It changes nothing since #986: the route is evaluated on its own
       reach (as objects, or on packed arrays when that reach is big), so `auto` takes the envelope search for it as for any plan, and nothing
       walks the whole graph for it.
+    * `route_actions`: the labels the judged route names (`cli._route.route_actions`, read without a plan), or None when they are not known.
+      Known, they lead the first round of the offers, so a target whose offers are searched in rounds is searched so for a judged route too, and
+      the plan holds every action the route takes (#1110); not known, a judged route may name any offer and the offers are searched at once.
     """
 
     recipe_starts: bool = True
@@ -50,6 +53,7 @@ class PlanSettings:
     solver: str = "auto"
     judges_route: bool = False
     watch: Callable[[Standing], None] | None = None
+    route_actions: tuple[str, ...] | None = None
 
 
 def plan_target(data: GameData, target: Target, prices: PriceFile, settings: PlanSettings = PlanSettings()) -> Plan:
@@ -58,6 +62,7 @@ def plan_target(data: GameData, target: Target, prices: PriceFile, settings: Pla
         data, target, prices, recipe_starts=settings.recipe_starts, start_price=settings.start_price, price_source=settings.price_source,
         price_gap_percent=settings.price_gap_percent, today=settings.today, budget=settings.budget, strands=settings.strands,
         solver=settings.solver, judges_route=settings.judges_route, watch=settings.watch,
+        route_actions=settings.route_actions,
     )  # fmt: skip
 
 
