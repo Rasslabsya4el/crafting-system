@@ -154,9 +154,13 @@ class Kinds:
         influences: frozenset = frozenset(),
         numbers: TypeNumbers | None = None,
         rollable: Callable[[], Iterable[Mod]] = lambda: (),
+        alike: bool = False,
     ):
         self.data = data
         self.profile = profile
+        self.alike = alike  # the slots of the ordinary mods drawn or held are told apart by side and protected tags alone (`slot_kind`, #1146)
+        self.lumped: list[Mod] = []  # the mods `slot_kind` lumped, each once, in the order met (only appended to)
+        self._lumped_seen: set[str] = set()
         self.base_id = base_id
         self.item_level = item_level
         self.metamods = metamods
@@ -196,6 +200,7 @@ class Kinds:
         self._listed: set[str] | None = None
         self._by_mod: set[str] | None = None
         self._by_family: dict[str, list[Mod]] | None = None
+        self._mods_found: dict[tuple[str, Side, frozenset[str], bool], Mod | ValueError] = {}  # `_mod_of` of its arguments, or what it raised
         self._types: dict[str, str] | None = None
         self._places: dict[str, int] = {}  # mod id -> its place in its family type (with `classed`)
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
@@ -240,6 +245,25 @@ class Kinds:
                 kind = f"{kind}{POSITION_MARK}{place}" if place is not None else MOD_PREFIX + mod.id  # a mod the pool of its family lacks stands for itself
         else:
             kind = ALIKE
+        if self.metamods:
+            tags = protected_tags(mod)
+            if tags:
+                kind += TAG_MARK + "+".join(sorted(tags))
+        return kind
+
+    def slot_kind(self, mod: Mod) -> str:
+        """The kind of the slot an ordinary (not crafted) mod fills: `of(mod)`, or with `alike` (the twin of `Abstraction.alike_twin`, #1146) `ALIKE`
+        with the mod's protected tags under `metamods`, whatever the enabled actions read; a veiled placeholder or a mod unveiled from the pool keeps
+        its own kind (the key holds it exactly, `Pattern.is_veiled`).
+
+        The kinds a fractured mod keeps are `of`'s in both cases (`Abstraction._fractured_id`): only the ordinary slots are lumped.
+        """
+        if not self.alike or mod.domain in (UNVEILED_DOMAIN, VEILED_DOMAIN):
+            return self.of(mod)
+        if mod.id not in self._lumped_seen:  # what the bound's build teaches the slot universe (`Pattern.note_lumped`)
+            self._lumped_seen.add(mod.id)
+            self.lumped.append(mod)
+        kind = ALIKE
         if self.metamods:
             tags = protected_tags(mod)
             if tags:
@@ -422,7 +446,23 @@ class Kinds:
 
         An ordinary kind never finds a mod unveiled from the pool; `unveiled` finds one of the unveiled domain. Of the
         placeholders of a family it finds the generic one (`VeiledPrefix`, `VeiledSuffix`), the one the orbs put on an item.
+
+        The answer is a function of the arguments and of what the kinds were made with, so it is found once (`_mods_found`): every item a
+        kernel is given is built from these mods, one for each slot, and the build of the bound builds an item for each member (#1170).
         """
+        found = self._mods_found.get((key, side, tags, unveiled))
+        if found is None:
+            try:
+                found = self._find_mod(key, side, tags, unveiled)
+            except ValueError as error:
+                found = error
+            self._mods_found[(key, side, tags, unveiled)] = found
+        if isinstance(found, ValueError):
+            raise found.with_traceback(None)
+        return found
+
+    def _find_mod(self, key: str, side: Side, tags: frozenset[str], unveiled: bool) -> Mod:
+        """`_mod_of`, searched in the data."""
         if self._by_family is None:
             grouped: dict[str, list[Mod]] = {}
             for mod in self.data.mods.values():
