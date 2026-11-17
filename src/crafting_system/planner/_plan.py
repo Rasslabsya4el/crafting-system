@@ -496,7 +496,7 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None, searches: int = 1) -> Net | None:
+def search_net(clock: Clock | None, searches: int = 1, give_way=None) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
     Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net."""
     if clock is None:
@@ -505,7 +505,7 @@ def search_net(clock: Clock | None, searches: int = 1) -> Net | None:
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
     left = clock.left()
-    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb)
+    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb, give_way=give_way)
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
@@ -857,7 +857,7 @@ def _make_plan(
                     gap, gap_after = search_gap(clock)
                     packed = envelope_result(
                         abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
-                        net=search_net(clock, round_call.searches if round_call is not None else 1), item=target.start_item if many else None, gap=gap,
+                        net=search_net(clock, round_call.searches, round_call.give_way) if round_call is not None else search_net(clock), item=target.start_item if many else None, gap=gap,
                         gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
                         beaten_at=round_call.upper if round_call is not None else None,
                     )  # fmt: skip
@@ -923,16 +923,32 @@ def _make_plan(
     ))
 
 
-def lock_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, clock):
+def lock_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, clock, fallback=None):
     """What the plan finds about Hinekora's Lock (`plan_foresight`), and the plan with the Lock when it takes it; a stop of the run's net keeps
     the plan without the Lock and the clock lists the stop (OR-33)."""
     try:
         with stage(LOCK_STAGE, LOCK_KEPT):
-            return plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source)
+            return plan_foresight(data, target, prices, abstraction, start, solution, priced, offered, price_source, fallback=fallback)
     except BudgetExceeded as stop:  # a plan has closed: it is kept, without the Lock, and the clock lists the stop (OR-33)
         if clock is not None:
             clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
         return Foresight(LockStatus.STOPPED, lock_price(prices, price_source)), None
+
+
+def plan_fallback(solution: Solution, offered: Sequence[PricedOffer]) -> tuple[PricedOffer, ...]:
+    """The offers of `offered` the plan's policy takes somewhere: the fallback of the Lock's gains for N of a plan searched in rounds (#1080).
+
+    The plan is chosen before its Lock is foreseen. The gains of N read the Lock-free values at the states the plan visits, and their fallback
+    is what the player does after a peek he does not take; built over every offer of the plan's round, it made the kernel of each offer at each
+    of up to `GAIN_STATES` states (R05: 85 offers, about 100 s and 8 GB after the net, #1091). Over the plan's own crafts each gain is still what
+    one Lock saves there (a peek, then the option or one of the plan's own crafts or the burn), so each is a true "would pay below"; only the
+    largest over every craft is not proved, and the Lock line's `n_exact` says so. The options of a peek, the exact pruning and the second solve
+    still read every offer: the Lock's status and a plan with the Lock are as before. A packed policy names its offers without building an
+    action at each of its states (`PackedPolicy.offers`): building them would cost what this saves."""
+    policy = solution.policy
+    taken = getattr(policy, "offers", None)
+    used = {priced.label for _, priced in taken()} if taken is not None else {action.label for action in policy.values()}
+    return tuple(priced for priced in offered if priced.label in used)
 
 
 def rounds_apply(data: GameData, target: Target, priced: Sequence[PricedOffer], *, solve_it: bool, judged: bool, solver: str) -> bool:
@@ -1020,7 +1036,7 @@ def widened_plan(
 
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
-        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter,
+        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed,
     )  # fmt: skip
     if widened.plan is None:
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
@@ -1042,9 +1058,12 @@ def widened_plan(
     plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within)))
     if foresee:
         offered = merge_twins(data, target.start_item, plan.offers)[0] if PRUNE_BOUND and len(plan.offers) >= MIN_OFFERS else plan.offers
+        fallback = plan_fallback(plan.solution, offered)
         foresight, with_lock = lock_foresight(
-            data, target, prices, plan.abstraction, plan.start, plan.solution, plan.offers, tuple(offered), kwargs["price_source"], clock
+            data, target, prices, plan.abstraction, plan.start, plan.solution, plan.offers, tuple(offered), kwargs["price_source"], clock, fallback
         )  # fmt: skip
+        if foresight.n is not None and len(fallback) < len(offered):
+            foresight = replace(foresight, n_exact=False)  # N's gains read only the plan's own crafts after a peek: each is true, the largest unproved
         plan = replace(plan, foresight=foresight) if with_lock is None else replace(plan, foresight=foresight, solution=with_lock, packed=None)
     return add_risk(plan) if with_risk else plan
 
@@ -1198,18 +1217,21 @@ def plan_foresight(
     priced: Sequence[PricedOffer],
     offered: Sequence[PricedOffer] | None,
     price_source: str = DEFAULT_PRICE_SOURCE,
+    *,
+    fallback: Sequence[PricedOffer] | None = None,
 ) -> tuple[Foresight, Solution | None]:
     """Hinekora's Lock of an exact plan (`_foresight.foresee`): its status, N and, when the plan takes it, the solution with the Lock.
 
-    The options come from the full list `priced`; the fallback of the gains for N reads the offers the Lock-free solve used (`offered`, or `priced`);
-    the second solve and the fallback of its Peeks read the offers after the twins (`offered`, or the twins merged from `priced`). Nothing is built for a Lock the target switched off.
+    The options come from the full list `priced`; the fallback of the gains for N reads `fallback` when given, else the offers the Lock-free solve
+    used (`offered`, or `priced`); the second solve and the fallback of its Peeks read the offers after the twins (`offered`, or the twins merged
+    from `priced`). Nothing is built for a Lock the target switched off.
     """
     lock = lock_price(prices, price_source)
     if not lock_wanted(target.actions):  # switched off: nothing is built
         return Foresight(LockStatus.SWITCHED_OFF, lock), None
     burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
     cache: dict = {}
-    plain = offered if offered is not None else priced
+    plain = fallback if fallback is not None else offered if offered is not None else priced
     sites = PlanSites(abstraction, priced, plain, start, burn, prune_corrupting=PRUNE_CORRUPTING, cache=cache)
 
     def second_solve():

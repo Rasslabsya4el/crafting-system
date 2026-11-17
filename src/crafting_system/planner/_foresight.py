@@ -92,7 +92,9 @@ class Foresight:
     """What a plan found about Hinekora's Lock; the report's Lock line and the `foresight` JSON object read it (ticket #298).
 
     `price` is one Lock in Chaos (None: no price). `n` is the Lock line's N in Chaos (None where it is not found: switched off, refused, coarse, or no
-    option on any visited state); `n_exact` is False when the plan visits more states than `GAIN_STATES` and the search stopped before it closed.
+    option on any visited state); `n_exact` is False when the plan visits more states than `GAIN_STATES` and the search stopped before it closed,
+    or when the gains' fallback held only the plan's own crafts (a plan searched in rounds, `_plan.plan_fallback`): each gain is true, the largest
+    is not proved.
     `best_state` is the state of the largest gain and `by_item_text` the options there that preview by the Lock's item text only. `kept` and `pruned`
     count the states with a Lock-free value where the Lock survives the exact pruning and where it is removed. `lock_free_mean` and `saving` are the mean
     still to pay from the start without the Lock and what the Lock saves of it (None when the Lock is not used). `seconds` is the time this stage took
