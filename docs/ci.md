@@ -500,7 +500,7 @@ setting chosen per record by measurement (each record says its figure and why it
 time net (OR-39, OR-40). Every stage counts its work and stops by it (#1101): every envelope search of the run (the rounds, the plan
 without the metamod crafts, an Awakener's Orb's donors, each start option) shares one account of N states; the bound's build of a search
 counts pieces of work (a member tried with an offer, or an offer's floor worked out) up to `Budget.build_per_state` per state of its
-search's net; the Lock's check counts the states its walk meets, up to N. A stage that stops says so in its own unit. Time and memory then
+search's net (four times that, `1 + SEARCH_PER_BUILD`, in a round that begins with a plan in hand, #1099); the Lock's check counts the states its walk meets, up to N. A stage that stops says so in its own unit. Time and memory then
 grow with N, so a record that runs out of memory or time needs a smaller N.
 
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
