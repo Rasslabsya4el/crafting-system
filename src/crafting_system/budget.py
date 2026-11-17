@@ -89,11 +89,14 @@ class Budget:
     def in_states(cls, states: int, gap: float = 0.0) -> "Budget":
         """A run counted in work, not seconds: a net of `states` states known (summed over the planner's rounds of offers, `_rounds.StatesMeter`),
         no aim, no time net and no memory net, and the proof `gap` from the first round (0: exact). Nothing in the search or its rounds then
-        reads the clock, so the same target under the same figure gives the same plan and the same answer on every machine (#886). It is the
+        reads the clock, so the same target under the same figure gives the same plan and the same answer on every machine (#886); the cost
+        figures' ladder has no time net either (`risk._regen.ladder_net`). The figure is not shared out beyond the rounds: each other search of
+        the run (the plan without the metamod crafts, an Awakener's Orb's donors, each start option) has the whole of it, and the bound's build
+        and the Lock's check have none, so a record states its figure and what it held. It is the
         setting of every golden, fixture, benchmark record and test that checks a cost or a page of a target whose offers split into rounds;
         its figure is a test setting, chosen per record by measurement, never a limit of a user's run (the site and the command keep the time
         net, OR-39, OR-40)."""
-        if not (isinstance(states, int) and states >= 1):
+        if isinstance(states, bool) or not (isinstance(states, int) and states >= 1):
             raise ValueError(f"the budget's states net is a whole number of states, one or more; got {states!r}")
         return cls(None, None, None, states, gap)
 

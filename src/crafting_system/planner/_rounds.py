@@ -117,7 +117,7 @@ class RoundRecord:
         return {
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
             "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
-            "carried": self.carried, "states": self.states,
+            "carried": self.carried, **({} if self.states is None else {"states": self.states}),
         }  # fmt: skip
 
 
@@ -275,8 +275,9 @@ def widen(
             break
         positions = sorted({*base, *group.positions})
         chosen = tuple(offers[i] for i in positions)
-        began, counted = clock_now(), measure()
-        plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
+        began = clock_now()
+        counted = began if meter is None else measure()
+        plan, status, reason, lower, upper, within, touched = None, REFUSED, "", None, None, None, None
         held, improved = best is not None, False  # a plan in hand when the round began; the round's own plan became it
         unit = "seconds" if meter is None else meter.unit
         give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, counted, measure, unit)  # the last round has all the time left
@@ -286,6 +287,7 @@ def widen(
             plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches)))
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
+            touched = getattr(beaten, "states", None)
             reason = (
                 "no plan with these methods costs less than the plan in hand"
                 + (f" (to within the gap of {beaten.within:.2%} this run allows)" if beaten.within is not None else "")
@@ -315,7 +317,8 @@ def widen(
             lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
         if lower is not None and not math.isfinite(lower):
             lower = None  # a round with no plan states no figure (the JSON holds no infinity)
-        known = None if meter is None else meter.ended(getattr(getattr(plan, "search", None), "touched", None))
+        touched = getattr(getattr(plan, "search", None), "touched", None) if plan is not None else touched
+        known = None if meter is None else meter.ended(touched)  # a round that raised is counted where its search last stood
         records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known))
         if status == REFUSED and k > 0 and refused_last is not None:
             # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
@@ -435,6 +438,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
         )
         return (Limit(_limits.ROUNDS, "The methods were searched in rounds", "the search widened its methods round by round: {names}", **guarantee, names=lines),)
     open_rounds = [(n, record) for n, record in enumerate(records, start=1) if not record.closed]
+    net = "the states or the memory" if any(record.states is not None for record in records) else "the time or memory"  # `StatesMeter`
     proved = "; ".join(closed) if closed else "no method"
     return (
         Limit(
@@ -449,7 +453,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
         Limit(
             _limits.UNTRIED,
             "Not finished",
-            "these rounds did not finish before their share of the time, the states or the memory, ended at once but were not held by the rounds after them, or were not reached: {names}",
+            f"these rounds did not finish before their share of {net}, ended at once but were not held by the rounds after them, or were not reached: {{names}}",
             "The plan shown is the best the finished rounds found; these methods may still give a cheaper one, at no less than the figure stated for each.",
             labels=tuple(sorted({kind for _, record in open_rounds for kind in record.kinds})),
             names=tuple(round_line(n, record) for n, record in open_rounds),

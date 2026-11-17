@@ -656,7 +656,8 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
 
     slow, fast = planned(1000.0), planned(0.0)
     assert slow.mean_remaining == fast.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    assert slow.solution.policy == fast.solution.policy and slow.limits == fast.limits
+    assert slow.solution.policy == fast.solution.policy and slow.limits == fast.limits  # every line of the answer
+    assert slow.risk is not None and slow.risk == fast.risk  # the cost figures too (their ladder has no time net in such a run)
     assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
     assert [record.status for record in slow.search.widening] == (["closed", "not tried"] if states == 3 else ["closed", "closed"])
     assert all(record.states is not None for record in slow.search.widening)

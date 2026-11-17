@@ -323,15 +323,18 @@ def test_the_net_of_the_search_is_asked_inside_a_round_that_expands_many_states(
     ab, start, offers, full, _, _ = world
     exact = full.solution.values[start]
     outcomes = {}
-    for poll in (1e9, 0.0):  # never inside a round (the net is asked between two rounds), and after every state
-        monkeypatch.setattr(_envelope, "POLL_SECONDS", poll)
-        fresh = abstraction()
-        outcomes[poll] = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=Net(states=100)).info["envelope"]
-    between, inside = outcomes[1e9], outcomes[0.0]
+    for net in (Net(seconds=1e9, states=100), Net(states=100)):  # a run on the clock; a run counted in states alone (`Budget.in_states`, #886)
+        for poll in (1e9, 0.0):  # never inside a round (the net is asked between two rounds), and after every state
+            monkeypatch.setattr(_envelope, "POLL_SECONDS", poll)
+            fresh = abstraction()
+            outcomes[net.seconds, poll] = envelope_result(fresh, fresh.compress(START_ITEM), offers, net=net).info["envelope"]
+    between, inside = outcomes[1e9, 1e9], outcomes[1e9, 0.0]
     assert not between.exact and not inside.exact and "limit is 100" in inside.stopped
     assert inside.expanded < between.expanded  # the round that went over the limit was cut where the limit was passed, not at its end
     for info in (between, inside):
         assert info.lower <= exact * (1 + TOLERANCE) <= info.upper * (1 + 2 * TOLERANCE)
+    # a states net alone is asked between rounds only: where the clock polls inside a round never changes where the search stops
+    assert outcomes[None, 0.0].expanded == outcomes[None, 1e9].expanded == between.expanded
 
 
 def test_a_search_stopped_before_a_plan_exists_says_the_lower_bound_it_reached(world):

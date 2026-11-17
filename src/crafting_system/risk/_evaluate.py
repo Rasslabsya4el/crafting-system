@@ -458,7 +458,7 @@ def _regen_report(
         low_bins, high_bins = _bin_costs(chain, step)
         _regen.trace(f"attempt by attempt: step {step:.4g} ({'the unit of every cost' if parts == 0 else f'the restart cost over {parts}'})")
         found = _regen.regenerative_runs(
-            chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins, deadline=net.deadline, step=step
+            chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins, deadline=net.deadline if math.isfinite(net.deadline) else None, step=step
         )
         if found is _regen.TIMED_OUT:  # a finer step would take longer still: none is tried
             note(_regen.ladder_stopped(net, coarser=best is not None))

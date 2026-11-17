@@ -842,7 +842,9 @@ class Search[S]:
         within = self.gap if applies else 0.0
         if self.beaten_at <= (1.0 + within) * (1.0 + ACCEPT_BOUND) * lower:
             self.say(f"stop: no plan of these offers costs less than {lower!r}, and the plan in hand costs at most {self.beaten_at!r}")
-            raise Beaten(lower, within if within > 0.0 and self.beaten_at > lower else None)
+            beaten = Beaten(lower, within if within > 0.0 and self.beaten_at > lower else None)
+            beaten.states = len(self.states)  # what the search knew when it ended (`_rounds.StatesMeter`)
+            raise beaten
 
     def run(self) -> SearchResult[S]:
         began = time.perf_counter()
@@ -1000,7 +1002,9 @@ class Search[S]:
                     self.p.release()
                     if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
                         polled = time.perf_counter()
-                        stopped = self._net(began, states=False)  # the state net is asked between rounds only: inside one, when the clock polls, its count would depend on the machine's speed
+                        # a states net alone is asked between rounds only (`Budget.in_states`): inside one, where the clock polls, its count would
+                        # depend on the machine's speed; with a time or memory net the run is on the clock anyway, and the states are asked here too
+                        stopped = self._net(began, states=self.net.seconds is not None or self.net.memory_mb is not None)
                         if stopped is not None:
                             break
             except MemoryNet as stop:
@@ -1078,6 +1082,7 @@ class Beaten(Exception):
         super().__init__(f"no plan costs less than {lower!r}")
         self.lower = lower
         self.within = within
+        self.states: int | None = None  # the states the search knew when it ended, set where it is raised
 
 
 __all__ = [

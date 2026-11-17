@@ -541,6 +541,8 @@ def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
             found = Binding(SEARCH_STAGE, STATES, given.states, info.touched, what)
         elif given.memory_mb is not None and info.peak_mb is not None and info.peak_mb >= given.memory_mb:
             found = Binding(SEARCH_STAGE, "memory", given.memory_mb, info.peak_mb, what)
+        elif given.seconds is None and given.states is not None:  # a run counted in states names no seconds (`Budget.in_states`)
+            found = Binding(SEARCH_STAGE, STATES, given.states, info.touched, what)
         else:
             found = Binding(SEARCH_STAGE, "time", given.seconds if given.seconds is not None else 0.0, clock.elapsed(), what)
     clock.bind(found)
@@ -1116,7 +1118,7 @@ def untried_limit(labels: tuple[str, ...]) -> Limit:
     return Limit(
         _limits.UNTRIED,
         "Not tried",
-        "the run's time or memory limit was reached by the plan made without them first, to price them against",
+        "the run's time, states or memory limit was reached by the plan made without them first, to price them against",
         "The plan is the one without these crafts; one of them might make it cheaper.",
         labels,
     )
