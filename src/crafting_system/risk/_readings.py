@@ -62,7 +62,7 @@ import math
 from collections.abc import Callable, Hashable, Mapping
 from dataclasses import dataclass, field
 
-from ..solver import GIVE_UP, Action, ExpandedModel, Model, Peek, PeekNode, Reaction, Solution, action_value, solve_peek
+from ..solver import GIVE_UP, Action, ExpandedModel, Model, Peek, PeekNode, PeekSolution, Reaction, Solution, action_value, solve_peek
 from ._mean import INFINITE, policy_mean
 from ._moments import interval
 from ._report import Estimate, Expected
@@ -286,6 +286,11 @@ def _node_action(node: PeekNode, memo: _Memo, values: Mapping) -> Action | None:
     return min(offered, key=lambda action: action_value(action, values))
 
 
+def _as_peek[S](found: Solution[S]) -> PeekSolution[S]:
+    """A solution without the Lock as the driver holds every reading's: no reactions, no rounds of them."""
+    return found if isinstance(found, PeekSolution) else PeekSolution(found.values, found.policy, found.error_bound, {}, 0)
+
+
 def _key(policy: Mapping, reactions: Mapping) -> tuple[frozenset, frozenset]:
     return frozenset((state, action.label) for state, action in policy.items()), frozenset(reactions.items())
 
@@ -312,6 +317,7 @@ def solve_readings[S, R: Hashable](
     direct_solve_limit: int = 64,
     max_sweeps: int = 100_000,
     value_ceiling: float = 1e12,
+    solve_one: Callable[[R, list[S]], Solution[S]] | None = None,
 ) -> IntervalReport[S, R]:
     """Solve one model per reading, cross-evaluate the optimal policies and report the plan, its interval and the bracket.
 
@@ -320,6 +326,11 @@ def solve_readings[S, R: Hashable](
     `plan` is the reading the plan is made at (default the first); the others follow in the order of `models`.
     `without`, when given, is a predicate on an `Action`: the actions it accepts are not offered in the comparison route,
     solved on the plan reading's model (`has_inputs` for "no recombinators"). The remaining options are those of `solve`.
+
+    `solve_one`, when given, solves one reading from its starts in place of `solve_peek` on the whole model (`solve_one(reading, starts)`): the
+    planner's envelope search (#1111), whose policy covers the states it reaches from each start and whose `error_bound` (relative) covers the
+    gap it closed within, so that the value at the start is a lower figure of that reading to that error. The models are then walked only along
+    the candidates (`_walk`) and evaluated on what those reach (`policy_mean`); the whole model is never solved. It takes no Lock (`Peek`).
     """
     order = list(models)
     if not order:
@@ -352,7 +363,10 @@ def solve_readings[S, R: Hashable](
     starts: dict[S, None] = {start: None}
     walks: dict[tuple, tuple[dict[S, Action[S]], list[S]]] = {}
     while True:
-        solutions = {r: solve_peek(memos[r], list(starts), **options) for r in order}
+        if solve_one is None:
+            solutions = {r: solve_peek(memos[r], list(starts), **options) for r in order}
+        else:
+            solutions = {r: _as_peek(solve_one(r, list(starts))) for r in order}
         keys = {r: _key(solutions[r].policy, solutions[r].reactions) for r in order}
         walks.clear()
         views.clear()

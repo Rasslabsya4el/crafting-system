@@ -749,8 +749,10 @@ def _make_plan(
         if cut:
             limits += (price_cut_limit(cut, price_of_start.chaos, round_call.upper),)
     # a metamod craft the target did not ask for, offered by the rule of blocking crafts (#886), makes the model track every mod's protected tags on
-    # every state (#1069): a plan without those crafts is made first, and each offer that a restart and that plan beat is left out (`_price_cut`)
-    speculative = lambda offer: offer.blocks is not None and adds_metamod(data, offer.action)  # noqa: E731
+    # every state (#1069), and an offer that reads a rule the sources leave open makes the plan one search per reading of it (#1111): a plan
+    # without those offers is made first, and each offer that a restart and that plan beat is left out (`_price_cut`); a plan without the offers
+    # that read an axis costs the same at every reading, so its figure holds at each
+    speculative = lambda offer: (offer.blocks is not None and adds_metamod(data, offer.action)) or reads_open_rule(data, offer)  # noqa: E731
     if round_call is None and price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=judged) and any(
         speculative(p.offer) for p in priced
     ):
@@ -790,10 +792,10 @@ def _make_plan(
     axes = interval_axes(data, priced)
     if not axes:  # donors are planned by the interval driver only (#225); an action with inputs and no axis stays a gap of its own (G6)
         donated = ()
-    if axes and solver not in ("auto", "object"):
+    if axes and solver not in ("auto", "object", "envelope"):
         raise PlanError(
             f"an offered action reads a rule the sources leave open ({', '.join(axis_what(axis.name) for axis in axes)}), so the plan is "
-            f"made once for each reading of that rule by the search that holds every item it reaches; `--solver {solver}` does not do that"
+            f"made once for each reading of that rule by the envelope search (or by the walk of every item, `--solver object`); `--solver {solver}` does not do that"
         )
     def model(reading: Reading | None = None) -> Abstraction:
         """The abstraction of the target at `reading` of the rule axes (None: the plan reading, ADR-0033)."""
@@ -833,7 +835,7 @@ def _make_plan(
         kept_orbs = {d.action for d in donors}
         priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
         limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
-    refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # solved per reading by the object solver (#589)
+    refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # searched per reading below (#589, #1111)
     # "auto" is the envelope search wherever its bound can be built (#535), a plan a given route is judged against included: the route is evaluated on
     # its own reach, as objects or packed (#829, #986). The number of offers decides nothing (#829): the fossil sets take the envelope search with or
     # without a budget.
@@ -886,14 +888,25 @@ def _make_plan(
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS
     # every stage below stops at the run's net (#825): `make_plan` says a stop before a plan closed, "no plan found yet", with where (OR-33)
     if axes:
+        # each reading is searched by the envelope search (#1111): a reading costs its search, never the whole graph; the offers that take donors
+        # (the recombinator, a deferred method, OR-37) and the object solver asked by name still solve every reading whole
+        searches: list[PackedResult] = []
+        search = None if donated or solver == "object" else reading_search(
+            abstraction, start, priced, clock, watch, searches, solver, readings_count(axes), item=target.start_item if many else None
+        )  # fmt: skip
         with stage(READINGS_STAGE):
-            readings, others, product = solve_each_reading(abstraction, model, start, priced, axes, donors=donated)
+            readings, others, product = solve_each_reading(abstraction, model, start, priced, axes, donors=donated, search=search)
         solution = readings.solution
+        if search is not None:  # the plan is the plan reading's search from the start (the first search made), its risk the packed one
+            packed = searches[0]
+            solution = packed.solution
+            for found in searches:
+                limits += tuple(limit for limit in envelope_limits(found.info["envelope"]) if limit not in limits)
         if product is not None:  # the solve was over the product of the target and its donors: the plan's own process is read off it
             donor_plan = DonorPlan(product, product.start(start), readings.solution)
             solution = main_view(readings.solution)
             limits += (_limits.feeder_donors_limit(), _limits.free_donor_base_limit(), _limits.second_items_shown_limit())
-        limits += reading_limits(abstraction, others, aim is not None)
+        limits += reading_limits(abstraction, others, aim is not None and search is None)
         offered = None  # the second solve of a Lock takes the offers after the twins, without the bound pruning (`_foresight`)
     else:
         offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
@@ -1142,12 +1155,14 @@ def states_meter(clock: Clock | None) -> _rounds.StatesMeter | None:
 
 def price_cut_applies(data: GameData, target: Target, priced: Sequence[PricedOffer], start: StartPrice, *, solve_it: bool, judged: bool) -> bool:
     """Whether the premise of the price cut holds for this plan (`_price_cut`, #1069): a bought start item (a restart at every state but the
-    start), one plan for the target (no rule axis read at several readings), no offer that searches a second item with a restart of its own (an
+    start), no offer that searches a second item with a restart of its own (an
     Awakener's Orb's donor, an offer that takes donors: there the restart is not the start item's), no route judged against the plan (a route is a
-    fixed policy and may name the offer), and a start item that holds no metamod (its model tracks the protected tags anyway)."""
+    fixed policy and may name the offer), and a start item that holds no metamod (its model tracks the protected tags anyway). Offers that read a
+    rule axis do not stop it (#1111): the figure cut against is then of a plan without them (`reads_open_rule`), which costs the same at every
+    reading, so the cut holds at each."""
     if not (solve_it and start.bought and not judged) or target.start_item.metamods(data) & BLOCKING:
         return False
-    if interval_axes(data, priced) or awakener_offers(priced):
+    if awakener_offers(priced):
         return False
     return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem))
 
@@ -1195,6 +1210,11 @@ def interval_axes(data: GameData, priced: Iterable[PricedOffer]) -> tuple[Axis, 
     return tuple(found[name] for name in sorted(found))
 
 
+def reads_open_rule(data: GameData, offer: Offer) -> bool:
+    """Whether `offer`'s action reads a rule axis the plan is made at every reading of (one not `planned`, `interval_axes`)."""
+    return any(not axis.planned for axis in offer.action.rule_axes(data))
+
+
 def solve_each_reading(
     abstraction: Abstraction,
     model: Callable[[Reading], Abstraction],
@@ -1203,13 +1223,14 @@ def solve_each_reading(
     axes: Sequence[Axis],
     *,
     donors: Sequence[PricedOffer] = (),
+    search: Callable[[Reading, Abstraction, CompressedState], PackedResult] | None = None,
 ) -> tuple[IntervalReport, tuple[Abstraction, ...], Acquisition | None]:
     """Solve the plan once for each reading of `axes` and cross-evaluate the routes (`risk.solve_readings`, ADR-0012, ADR-0022; #589).
 
     A reading is one value of each axis (their product, the plan reading first); an axis that is `planned` stays at its plan value in every
     one (OR-11). `abstraction` is the model of the plan reading (its `reading` None); each other reading gets its own, `model(reading)`, of the
-    same target and enabled actions, so every kernel is taken at that reading. Each model is solved whole by the object solver: the envelope search
-    and the packed walk take no reading. The solve is exact; no comparison route is asked, since the planner offers no action with inputs.
+    same target and enabled actions, so every kernel is taken at that reading. Without `search` each model is solved whole by the object solver
+    (the offers that take donors, and `--solver object`); the solve is exact; no comparison route is asked, since the planner offers no action with inputs.
     Offers with an equal kernel are not merged (`merge_equal`): the routes are compared across readings by their offers' labels, and an offer
     merged away at one reading could leave a route with no action there.
 
@@ -1219,6 +1240,13 @@ def solve_each_reading(
     an acquisition ends at the first state with the donor's key (`Abstraction.reaches_donor`), the driver starts from the target's own process,
     and the best route without the actions that take donors is solved beside the plan (ADR-0012's comparison route). The report is then over
     product states. Returns the driver's report, the abstractions of the other readings and the plan reading's product (None without donors).
+
+    With `search` (no donors) each reading is solved by the envelope search instead of whole (#1111): `search(reading, abstraction, state)` is
+    the search of that reading's model from `state`, and a reading is searched from each start the driver asks for (the start, then a state a
+    candidate reaches under another reading and does not cover), each at most once; a later start's policy fills in only the states the
+    earlier ones did not hold. A reading costs its search, not its whole graph: the readings share nothing but the offers and the start, and
+    the routes are compared on the states the candidates reach (`risk.solve_readings`, `solve_one`). The search's own gap and stop hold for
+    each reading: its value is a lower figure to the gap the search closed within (`reading_solution`).
     """
     names = [axis.name for axis in axes]
     plan = Reading.of({axis.name: axis.plan for axis in axes})
@@ -1240,12 +1268,87 @@ def solve_each_reading(
     else:
         models = {reading: _Model(each, start, priced, merge_equal=False) for reading, each in abstractions.items()}
         root, without = start, None
+    solve_one = None
+    if search is not None and not donors:
+        searched: dict[tuple[Reading, CompressedState], PackedResult] = {}
+
+        def solve_one(reading: Reading, starts: list[CompressedState]) -> Solution:
+            found: list[PackedResult] = []
+            for state in starts:
+                if any(state in each.solution.policy for each in found):
+                    continue  # an earlier search of this reading holds it already
+                if (reading, state) not in searched:
+                    searched[(reading, state)] = search(reading, abstractions[reading], state)
+                found.append(searched[(reading, state)])
+            return reading_solution(found, start)
+
     try:
-        report = solve_readings(models, root, plan=plan, without=without)
+        report = solve_readings(models, root, plan=plan, without=without, solve_one=solve_one)
     except (OutOfScopeError, ConvergenceError) as error:
         raise PlanError(f"the plan could not be made at every reading of the rule axis {', '.join(names)}: {error}") from error
     others = tuple(each for reading, each in abstractions.items() if reading != plan)
     return report, others, (models[plan] if donors else None)
+
+
+def readings_count(axes: Sequence[Axis]) -> int:
+    """How many readings the rule axes have (the product of their grids)."""
+    return math.prod(len(axis.readings) for axis in axes)
+
+
+def reading_search(
+    abstraction: Abstraction, start: CompressedState, priced: Sequence[PricedOffer], clock: Clock | None, watch, searches: list[PackedResult],
+    solver: str, count: int, *, item=None,
+) -> Callable[[Reading, Abstraction, CompressedState], PackedResult]:
+    """The envelope search of one reading's model from one state, for `solve_each_reading` (#1111). Each search has an equal share of what the
+    run has left over the readings not yet searched (`search_net`), stops at the run's gap as the plan's own search does (`search_gap`), and
+    counts its states on the run's clock; each is appended to `searches`, the plan reading's search from the start first (the driver searches
+    the plan reading first). The run's watcher sees that one only. A search that cannot answer is the plan's refusal (`envelope_refusal`)."""
+
+    def search(reading: Reading, model: Abstraction, state: CompressedState) -> PackedResult:
+        net = search_net(clock, max(count - len(searches), 1))
+        gap, gap_after = search_gap(clock)
+        first = model is abstraction and state == start
+        try:
+            with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):
+                found = envelope_result(
+                    model, state, priced, prune_corrupting=PRUNE_CORRUPTING, net=net, item=item if state == start else None, gap=gap,
+                    gap_after=gap_after, watch=watch if first else None,
+                )  # fmt: skip
+        except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
+            if clock is not None:
+                clock.spend(getattr(error, "states", 0))
+            raise PlanError(envelope_refusal(solver, error)) from error
+        info = found.info["envelope"]
+        bind_search(clock, info, None if net is None else net.states)
+        if clock is not None:
+            clock.spend(info.touched)
+        searches.append(found)
+        return found
+
+    return search
+
+
+def reading_solution(found: Sequence[PackedResult], start: CompressedState) -> Solution:
+    """One reading's solution for the interval driver from its envelope searches (#1111): the first search's (from the start) as it is, or with
+    the later ones' states it does not hold added. Its error is relative, as the solver's, and covers what the search proved: the gap it closed
+    within, or how far its lower figure lies below its plan when a net stopped it, so the value at the start less that error is a lower figure."""
+    first = found[0].solution
+    info = found[0].info.get("envelope")
+    error = float(first.error_bound)
+    if info is not None and not info.exact:
+        mean = float(first.values[start])
+        error = max(error, (mean - info.lower) / mean if mean > 0 and math.isfinite(mean) else math.inf)
+    if len(found) == 1:
+        return Solution(first.values, first.policy, error)
+    policy: dict = {}
+    values: dict = {}
+    for each in found:
+        for state, action in each.solution.policy.items():
+            if state not in policy:
+                policy[state] = action
+                values[state] = each.solution.values[state]
+    values[start] = first.values[start]
+    return Solution(values, policy, error)
 
 
 def reading_limits(abstraction: Abstraction, others: Iterable[Abstraction], budgeted: bool) -> tuple[Limit, ...]:
