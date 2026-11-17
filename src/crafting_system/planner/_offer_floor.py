@@ -50,6 +50,7 @@ from ._offer_kinds import (
     best_first_rho,
     declared_pbars,
     raisable,
+    finishes,
     goal_set,
     through_listing,
     ONE,
@@ -94,22 +95,23 @@ class OfferFloors:
             if index % 256 == 0:
                 self.ask()
             kinds.append(_kind_of(data, item, offer))
-        crafts = frozenset().union(*(named for kind, named in kinds if kind == CRAFT)) if kinds else frozenset()
+        crafted = [bool(kind == CRAFT and offer.offer.action.adds(data, item).crafted) for offer, (kind, _named) in zip(priced, kinds)]
+        crafts = {(named, made) for (kind, named), made in zip(kinds, crafted) if kind == CRAFT}  # the mods each craft adds by name, and whether crafted
         # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
         # as the retired bound pruning's were (`shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
         # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
         shape = abstraction.compress(item) if start.flags.unopened else start
-        self.chosen = goal_set(goal, shape, crafts)
-        u_mods = frozenset().union(*(goal.leaves[index].mod_ids for index in self.chosen)) if self.chosen else frozenset()
+        self.chosen = goal_set(goal, shape, sorted(crafts, key=lambda craft: (sorted(craft[0]), craft[1])))
+        chosen_leaves = [goal.leaves[index] for index in self.chosen]
         self.entries: list[_Entry] = []
-        for index, (offer, (kind, named)) in enumerate(zip(priced, kinds)):
+        for index, (offer, (kind, named), made) in enumerate(zip(priced, kinds, crafted)):
             if index % 256 == 0:
                 self.ask()
             pbar = ONE
             if kind == RESTART_KIND:
                 pbar = ZERO
             elif kind == CRAFT:
-                pbar = ONE if named & u_mods else ZERO
+                pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft lands in E only by passing a leaf of U
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
         through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())

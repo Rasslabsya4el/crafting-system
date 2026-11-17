@@ -10,7 +10,8 @@ cheaper one in any policy lowers or keeps its cost and changes nothing else.
 
 THE NUMBER pbar. Let U be a set of NECESSARY goal leaves (a leaf is necessary when it sits directly under
 the requirements, or only under `AtLeast` nodes with k equal to the number of members; U is the necessary
-leaves that are not PASSING at the start, less the ones a bench craft can finish when something is left).
+leaves that are not PASSING at the start, less the ones a bench craft can finish when something is left: one a mod
+it adds can pass, by the leaf's tier limit and its refusal of crafted mods, `finishes`, #1112).
 Let E be "every leaf of U is PASSING". The goal implies E, and the start is outside E. For an offer x,
 pbar(x) is a number such that one use of x, from ANY state outside E that has the flags and the fractured
 mods of the start, lands in E with chance at most pbar(x):
@@ -36,8 +37,9 @@ mods of the start, lands in E with chance at most pbar(x):
     but the fractured ones): a reroll refused there is refused wherever the shape holds (it reads
     nothing else), so it is set aside as inapplicable.
   * a bench craft (reads the junk, adds a named mod, draws nothing, does not fracture): it only adds a
-    mod, so it makes a leaf of U PASSING only if the mod is one of that leaf's: pbar = 1 if its named
-    mods meet the mods of a leaf of U, else 0. It stays in the model.
+    mod, so it makes a leaf of U PASSING only if the mod can pass that leaf (`finishes`: one of its mods the
+    tier limit accepts, and not crafted where the leaf refuses crafted mods): pbar = 1 if one of its named
+    mods can pass a leaf of U, else 0. It stays in the model.
   * an addition (#1072): it keeps the mods and adds one mod drawn from the pool less the families on the item
     (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Eldritch Exalted Orb, an Orb of Augmentation;
     it draws, names no mod, fractures nothing, reads no roll, input or influence). A Regal Orb (it changes the rarity, so it
@@ -154,14 +156,24 @@ def necessary_leaves(goal) -> tuple[int, ...]:
     return tuple(found)
 
 
-def goal_set(goal, start: CompressedState, finished_by_crafts: frozenset[str]) -> tuple[int, ...]:
+def goal_set(goal, start: CompressedState, crafts: Sequence[tuple[frozenset[str], bool]]) -> tuple[int, ...]:
     """U: the necessary leaves not PASSING at the start, less those a bench craft can finish (if any remain).
 
-    `finished_by_crafts` are the mod ids that offered crafts add by name.
+    `crafts` are, for each offered craft, the mod ids it adds by name and whether it adds them crafted (`Adds.crafted`). A craft finishes a leaf
+    only when a mod it adds can pass it (`finishes`): a leaf that refuses crafted mods, or whose tier limit accepts none of them, stays in U (#1112:
+    R05's tier 1 Life left U for the bench Life, so the Wald floor of the bound fell from the essence's chance of tier 1 Life to the essence's price).
     """
     open_leaves = [index for index in necessary_leaves(goal) if start.status[index] is not Status.PASSING]
-    kept = [index for index in open_leaves if not goal.leaves[index].mod_ids & finished_by_crafts]
+    kept = [index for index in open_leaves if not any(finishes(goal.leaves[index], named, crafted) for named, crafted in crafts)]
     return tuple(kept or open_leaves)
+
+
+def finishes(leaf, named: frozenset[str], crafted: bool) -> bool:
+    """Whether a mod of `named`, added (as a crafted mod when `crafted`), can make `leaf` PASSING (`status_of`): one of the leaf's mods that its
+    tier limit accepts (`tier_ok`), and not a crafted one where the leaf refuses crafted mods. A roll limit is not read: such a mod may pass it."""
+    if crafted and leaf.not_crafted:
+        return False
+    return bool(named & (leaf.mod_ids if leaf.tier_ok is None else leaf.tier_ok))
 
 
 def merge_twins(
