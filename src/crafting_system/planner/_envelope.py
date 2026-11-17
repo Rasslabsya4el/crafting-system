@@ -215,6 +215,10 @@ class Net:
     # a run counted in states (`Budget.in_states`, #1101): the pieces of work the bound's build of this search may do (`_pattern_bound`), its
     # share of the search's states net; None for a build on the clock (`_envelope_plan.build_stop`)
     pieces: int | None = None
+    # a plan in hand when the search began (a round of the planner's widening after the first plan, `_rounds`, #1099): the answer already
+    # holds a plan (OR-33), so the bound's build keeps no room for the search to make one and may take the search's whole net
+    # (`_envelope_plan.build_stop`, `_plan.search_net`)
+    held: bool = False
 
 
 @dataclass

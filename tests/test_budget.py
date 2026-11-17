@@ -586,6 +586,9 @@ def test_a_run_counted_in_states_keeps_one_account_of_its_searches_and_gives_eac
     assert clock.states_left() == 400 and _plan.search_net(clock).states == 400 and _plan.search_net(clock, 2).pieces == 2_000
     clock.spend(900)
     assert clock.states_left() == 0 and (_plan.search_net(clock).states, _plan.search_net(clock).pieces) == (1, 10)
+    # a search that begins with a plan in hand (a round after the first plan, #1099): its build keeps no room for the search, so it has the
+    # pieces of the whole net, `1 + SEARCH_PER_BUILD` times the quarter `build_per_state` stands for
+    assert (_plan.search_net(clock, held=True).pieces, _plan.search_net(clock, held=True).held, _plan.search_net(clock).held) == (40, True, False)
     assert _plan.states_meter(clock).given == 0
     timed = Budget(seconds=600.0, memory_mb=None, states=96).start()
     timed.spend(50)

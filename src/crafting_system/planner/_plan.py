@@ -48,7 +48,7 @@ from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit,
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
-from ._envelope_plan import BoundError, EnvelopeInfo, certified_upper, envelope_limits, envelope_result
+from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, certified_upper, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._pattern_bound import MIN_OFFERS
 from ._presenter import presenter_limits
@@ -500,7 +500,7 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None) -> Net | None:
+def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
     Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net. `states`, when
     given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`).
@@ -508,7 +508,13 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     A run counted in states (`Budget.in_states`, #1101) shares its states as the time net shares its seconds: a search's net is the states left
     on the run's account (`Clock.spend`), an equal share of them when `searches` are still to run, and at least one (a search given one state
     makes its first plan and stops, as one given no time left does); its bound's build may do `Budget.build_per_state` pieces of work per state
-    of that net (`Net.pieces`)."""
+    of that net (`Net.pieces`).
+
+    `held` (#1099): the search begins with a plan in hand (a round of `_rounds` after the first plan), so the answer already holds a plan
+    (OR-33) and its bound's build keeps no room for the search to make one: on the clock it may take the search's whole net
+    (`_envelope_plan.build_stop`), and counted in states it is given the pieces of that whole net, `1 + SEARCH_PER_BUILD` times the quarter
+    `build_per_state` stands for. Without it a round's short share cut its build at a quarter: R11's Exalted round had about 20 s, its build
+    needs about 6 s, and the round stopped on a weak lower figure with no plan, where the complete bound's first plan costs 188.03 c (#1086)."""
     if clock is None:
         return None
     given: Budget = clock.budget
@@ -519,10 +525,10 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     if given.counted:
         if states is None:
             states = max(int(clock.states_left() or 0) // max(searches, 1), 1)
-        pieces = max(int(given.build_per_state * states), 1)
+        pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if held else 1.0) * states), 1)
     return Net(
         seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
-        give_way=give_way, pieces=pieces,
+        give_way=give_way, pieces=pieces, held=held,
     )  # fmt: skip
 
 
@@ -900,7 +906,7 @@ def _make_plan(
         if twins:
             limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
         if envelope:
-            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states) if round_call is not None else search_net(clock)
+            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held) if round_call is not None else search_net(clock)
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
                     gap, gap_after = search_gap(clock)

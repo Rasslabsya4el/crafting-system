@@ -300,9 +300,9 @@ def test_in_a_round_of_a_counted_run_the_donors_share_the_round_s_states_and_its
     clock = Budget.in_states(100_000).start()
     share, asked, real_net = 600, [], _plan.search_net
 
-    def search_net(clock_, searches=1, give_way=None, states=None):
+    def search_net(clock_, searches=1, give_way=None, states=None, held=False):
         asked.append((states, clock_.spent))
-        return real_net(clock_, searches, give_way, states)
+        return real_net(clock_, searches, give_way, states, held)
 
     monkeypatch.setattr(_plan, "search_net", search_net)
     _plan._make_plan(
