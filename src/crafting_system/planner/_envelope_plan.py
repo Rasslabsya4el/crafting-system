@@ -259,6 +259,11 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     of this build. A build that ends earlier leaves the search all the rest. This replaced `BUILD_SHARE = 0.5` (#825): on
     R08 at the prices of 2026-11-10 a build that left the search 103 s gave a plan of 33,755 Chaos where a search given 266 s gave 2,236, on the same
     lower figure (heavy runs 43358114571, 43358085172).
+
+    A search that begins with a plan in hand (`Net.held`, a round of `_rounds` after the first plan, #1099) needs no room kept: the room is for
+    the search to make a plan, and the answer holds one already. Its build stops only at the search's net, so a round's short share does not
+    cut it at a quarter before it is complete (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s). Its time still
+    comes off the search's (`envelope_result`), and the round's share is unchanged: the rounds after it lose nothing.
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
@@ -270,7 +275,7 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
             left = net.seconds - spent
             if left <= 0.0:
                 return f"the time limit of {net.seconds:g} seconds was reached"
-            if left <= SEARCH_PER_BUILD * spent:
+            if not net.held and left <= SEARCH_PER_BUILD * spent:
                 return (
                     f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan, "
                     f"which takes several times as long as this count"

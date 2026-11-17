@@ -793,6 +793,71 @@ def test_a_later_round_that_finds_a_cheaper_plan_replaces_the_plan_in_hand(data,
     assert all(record.closed for record in records) and plan.search.exact
 
 
+@pytest.mark.parametrize("held", [True, False])
+def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_build_within_its_share_and_finds_the_cheaper_plan(data, target, monkeypatch, held):
+    # #1099 (R11's and R05's Exalted rounds, #1086): the rounds of the test above, counted in states (`Budget.in_states(40)`, one piece of
+    # work per state, the offers' floors on), so no clock moves anything. Round 1 (the Exalted Orb alone) closes at 16e/3 + 2S = 153.33 having
+    # known 12 states; round 2 (the fillers) begins with that plan in hand, and its share is the 28 states left over the 2 rounds left: 14.
+    # Its bound's build needs 51 pieces of work. Given a quarter's worth (one piece per state, 14), the old rule, it stops while offers join
+    # (growth) on a lower figure of 30, and the round stops with no cheaper plan: the answer is 153.33. Given the round's whole share (four
+    # times that, 56: the build keeps no room for the search to make a plan, the answer holds one) it completes, and the round closes on
+    # the filler's plan, 3(c + e) + 2S = 133.
+    from crafting_system.budget import Budget
+    from crafting_system.planner import _pattern_bound, _rounds
+
+    real_groups, real_net, real_bound = _rounds.round_groups, planner_plan.search_net, _envelope_plan.pattern_lower_bound
+
+    def named_alone(offers, named, added):
+        head, *rest = real_groups(offers, named, added)
+        asked = tuple(i for i in head.positions if offers[i].blocks is None)
+        fillers = tuple(i for i in head.positions if i not in asked)
+        return (_rounds.Group(asked, (), frozenset()), _rounds.Group(fillers, ("bench-craft",), head.features), *rest)
+
+    builds = []
+
+    def counted(*args, **kwargs):
+        bound = real_bound(*args, **kwargs)
+        builds.append((bound.pieces, bound.share, bound.phase))
+        return bound
+
+    monkeypatch.setattr(_rounds, "round_groups", named_alone)
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", counted)
+    if not held:  # the rule before #1099: a round's build had a quarter's worth of its share, a plan in hand or not
+        monkeypatch.setattr(planner_plan, "search_net", lambda clock, searches=1, give_way=None, states=None, held=False: real_net(clock, searches, give_way, states))
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
+    monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=Budget.in_states(40, build_per_state=1.0)))
+    first, second = _rounds_of(plan)[:2]
+    assert (first.status, first.states, first.upper) == ("closed", 12, pytest.approx(16 * E / 3 + 2 * S, rel=1e-9))
+    assert builds[0] == (8, 40, "complete")  # round 1 began with no plan in hand: one piece per state of all the states left, as before
+    if held:
+        assert builds[1] == (51, 4 * 14, "complete")
+        assert second.status == "closed" and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+        assert _fills(plan.solution.policy[plan.start].label)
+    else:
+        assert builds[1] == (14, 14, "growth")
+        assert second.status == "stopped" and second.lower == pytest.approx(30.0, abs=1e-6)
+        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+
+
+def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_and_stops_only_at_its_net(monkeypatch):
+    # #1099, on the clock: a build keeps three times its time for the search (`SEARCH_PER_BUILD`), so of a 20 s net it stops at 5 s; with a
+    # plan in hand (`Net.held`) only the net itself stops it. The clock is a figure set here (no real clock is read).
+    now = [0.0]
+    monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
+    fresh, held = _envelope_plan.build_stop(_envelope.Net(seconds=20.0), 0.0), _envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=True), 0.0)
+    now[0] = 4.9
+    assert fresh() is None and held() is None
+    now[0] = 5.0
+    assert fresh().startswith("stopped after 5 of the 20 seconds") and held() is None
+    now[0] = 19.9
+    assert held() is None
+    now[0] = 20.0
+    assert held() == "the time limit of 20 seconds was reached"
+
+
 def test_the_cut_keeps_the_restart_cuts_at_a_tie_and_cuts_nothing_without_a_finite_figure():
     from crafting_system.planner._offers import RESTART, BuyStartItem, Offer, PricedOffer
     from crafting_system.planner._price_cut import restart_dominated

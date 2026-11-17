@@ -11,7 +11,8 @@ time left, #745), the start options (one clock across them). No stage has a fixe
 pruning, the search) may take the whole net: until a plan closes there is nothing to show. The stages that refine an answer already in hand (the
 Lock's check, the percentiles, which OR-34 adds after the route) take what is left, and when nothing is left they say so and the answer is kept
 (the plan without the Lock; the percentiles of a coarser step, or of the slower method). Inside the search, the bound's build takes at most
-a quarter of the time it is given (`planner._envelope_plan.build_stop`), a hand-set share set from the search/build ratio on R04 (3.7) and R14 (6.2).
+a quarter of the time it is given (`planner._envelope_plan.build_stop`), a hand-set share set from the search/build ratio on R04 (3.7) and R14 (6.2);
+a search that begins with a plan in hand (a round of offers after the first plan) keeps no room for its search and its build may take it all (#1099).
 A run counted in states (`Budget.in_states`) has no time net: each stage counts its own work instead, as `in_states` says (#1101).
 
 **What bound.** A stage that a limit stopped records it on the clock (`Clock.bind`), with the stage, the limit and its figures; the plan lists

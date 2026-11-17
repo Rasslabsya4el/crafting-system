@@ -23,7 +23,11 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   give one sooner than the rounds before it. Once a plan is in hand, the share of a round is the run's time left over the rounds left
   (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
   share too once its own search holds a plan: it gives way there, with its plan (`Share`, #1080), so every group is tried once a plan exists.
-  Two refusals in a row set the first refused group aside (it would refuse every round after it).
+  Two refusals in a row set the first refused group aside (it would refuse every round after it). A round that begins with a plan in hand
+  needs no room kept in its share for its search to make one, so its bound's build may take the whole share, not the quarter a search
+  with no plan keeps it to (`RoundCall.held`, `_plan.search_net`, #1099): a short share otherwise cut the build before it was complete,
+  and the round stopped on a weak lower figure (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s, where the
+  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged, so the rounds after it lose nothing.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
   less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
@@ -88,6 +92,7 @@ class RoundCall:
     watched: bool
     give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
     states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
+    held: bool = False  # a plan in hand when the round began: its bound's build may take the round's whole share (`_plan.search_net`, #1099)
 
 
 @dataclass(frozen=True)
@@ -290,7 +295,7 @@ def widen(
         searches = rest if best is not None else 1
         asked = give_way if meter is None else _seen_by(meter, give_way)  # counted in states: every round's search reports the states it knows
         try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
-            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches)))
+            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches), held))
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
             touched = getattr(beaten, "states", None)
