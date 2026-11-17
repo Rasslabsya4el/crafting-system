@@ -31,7 +31,7 @@ One chat does one task, start to end, and starts no other session for it: an ide
 - `crafter` (Sonnet 5.5): reads one route page against its target as an experienced Path of Exile player does, with the written checklist of its file, and answers with what a player would call wrong, step by step, or that the route is what a player would do (#888). Tests do not see these faults and the owner does not read route pages himself.
 
 A helper prompt names its ticket (`#N`) and the files, branch or worktree. A chat does one ticket at a time, within two limits (retro #712):
-- At most five tickets with heavy runs at once. A ticket counts from the start of its code (or from its first heavy run, when the need shows late) until it lands; a sixth waits.
+- At most five tickets with heavy runs at once (on the server the load rule of "Heavy runs" decides when each run starts). A ticket counts from the start of its code (or from its first heavy run, when the need shows late) until it lands; a sixth waits.
 - PRs that change the recorded numbers of one route (goldens, fixtures, packed values) share a queue: the later one may build its code, but its heavy runs and re-records start after the earlier one has landed. The main chat names the route when it cuts the ticket.
 
 A root fix that also changes data lands as two PRs: first the mechanism, with tests on hand-worked numbers; then the data (a new snapshot) and its re-records.
