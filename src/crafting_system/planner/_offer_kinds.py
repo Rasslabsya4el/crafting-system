@@ -2,7 +2,7 @@
 
 The bound pruning that used to solve the plan on a few offers and certify the rest (`solve_pruned`, retired with the 40-offer switch, #829)
 was built on these pieces; the offers' floors of the bound and of the envelope search (`_offer_floor`) are what is left of it. Everything is a
-filter over what an action declares (`reads`, `adds`, `twin_key`) and over `reach_bound`; no action class is named here.
+filter over what an action declares (`reads`, `adds`, `twin_key`, `reach_batch`) and over `reach_bound`; no action class is named here.
 
 TWINS. Offers with an equal, non-None `Action.twin_key(data, item)` give equal outcomes in every state:
 only the cheapest of a group (the earliest on a tie) is kept. Exact: swapping a dearer twin for the
@@ -22,8 +22,17 @@ mods of the start, lands in E with chance at most pbar(x):
   * an erasing reroll (it does not read the junk, erases the crafted mods, does not fracture, keeps the
     flags and the fractured mods of the item): its result does not depend on the state but through the
     flags and the fractured mods, so the exact chance at one state is the chance at every such state.
-    Level 0 is pbar = 1, level 1 is `reach_bound` (an upper bound from the pool), level 2 is the exact
-    chance (`reach_bound(..., exact=True)`). All are read on the BARE item of the start's shape (no mods
+    Level 0 is pbar = 1, or the bound its class declares without building an outcome when it declares one
+    (`declared_pbars`, #1073: `Action.reach_batch` for every offer of the class at once, through
+    `declared_bounds`; only for an action that declares it keeps the flags and the fractured mods, and that
+    declares no fracture, no kept crafted mod and no need of one, the conditions of level 1 that `adds` and
+    `reads` answer); level 1 is `reach_bound` (an upper bound from the pool), kept at the declared bound when
+    that is lower, level 2 is the exact chance (`reach_bound(..., exact=True)`). Each level is an upper bound
+    on the same chance, so a level reached lowers pbar or keeps it, and the least of two is one. A declared
+    bound of 0 (no mod that can pass a leaf of U has weight in the set's pool, and none is forced: R05's
+    `StrengthEssence7_`, an essence-only mod) is exact, so the offer's ratio is infinite and it is never raised.
+    That the action keeps the shape is then the class's declaration, not `keeps_shape`'s check; the contract
+    tests of the class compare the two. All are read on the BARE item of the start's shape (no mods
     but the fractured ones): a reroll refused there is refused wherever the shape holds (it reads
     nothing else), so it is set aside as inapplicable.
   * a bench craft (reads the junk, adds a named mod, draws nothing, does not fracture): it only adds a
@@ -82,6 +91,7 @@ from crafting_system.abstraction import (
     Status,
     Wanted,
     keeps_shape,
+    declared_bounds,
     reach_bound,
 )
 from crafting_system.actions import NotApplicableError, OutOfScopeError
@@ -221,6 +231,30 @@ def through_listing(abstraction: Abstraction, start: CompressedState, shape: Com
             entry.pbar, entry.extra = landing, cheapest
 
 
+def declared_pbars(abstraction: Abstraction, bare: CompressedState, item: Item, chosen: Sequence[int], entries: Sequence[_Entry], ask: Callable[[], None]) -> None:
+    """Lower the pbar of every reroll at level 0 to the bound its class declares, for all the offers of a class at once (see THE NUMBER pbar, #1073).
+
+    Only a reroll whose action declares no fracture, no kept crafted mod and no need of one (what level 1 asks of `adds` and `reads`); the class
+    answers for the rest (`declared_bounds`: None for an action that may leave the shape or that it gives no bound). `ask` is the net, asked once
+    per class. The offers are grouped by their action's class, which the planner does not name: a class answers for its own actions.
+    """
+    data = abstraction.data
+    groups: dict[type, list[_Entry]] = {}
+    for entry in entries:
+        if entry.kind != REROLL or entry.level != 0:
+            continue
+        action = entry.priced.offer.action
+        adds = action.adds(data, item)
+        if adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
+            continue
+        groups.setdefault(type(action), []).append(entry)
+    for members in groups.values():
+        ask()
+        for entry, bound in zip(members, declared_bounds(abstraction, bare, [entry.priced.offer.action for entry in members], chosen)):
+            if bound is not None and bound < entry.pbar:
+                entry.pbar = bound
+
+
 def raisable(kind: str, level: int) -> bool:
     """Whether an offer of `kind` whose bound is at `level` has a higher level to be brought to."""
     return level < TOP_LEVEL.get(kind, 0)
@@ -245,7 +279,7 @@ def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar
         found = reach_bound(abstraction, bare, action, chosen) if chosen else ZERO
         if found is None:
             return TERMINAL, ONE, level
-        pbar = found
+        pbar = min(pbar, found)  # pbar at level 0 is 1 or the declared bound (`declared_pbars`): both bound the same chance
     if target >= 2 and level < 2 and kind == REROLL:
         level = 2
         exact = reach_bound(abstraction, bare, action, chosen, exact=True) if chosen else ZERO

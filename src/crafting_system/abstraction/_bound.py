@@ -80,7 +80,7 @@ from fractions import Fraction
 from crafting_system.actions import BLOCKED_TAG, Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, allowed_by_tags, guaranteed_candidates, partners
 from crafting_system.budget import checkpoint
 from crafting_system.data import Mod
-from crafting_system.items import Side
+from crafting_system.items import ItemError, Side
 
 from ._goal import Status
 from ._kernel import Abstraction
@@ -375,6 +375,43 @@ def reach_bound(
         return min(ONE, total)
     except OutOfScopeError:
         return None
+
+
+def declared_bounds(abstraction: Abstraction, state: CompressedState, actions: Sequence[Action], leaves: Sequence[int]) -> list[Fraction | None]:
+    """For each action of `actions` (all of one class), an upper bound on the chance that one use on `state` makes every leaf of `leaves`
+    PASSING, from what the class declares without building an outcome (`Action.reach_batch`, #1073); None where it declares no bound or that the
+    action may leave the shape (`ReachDeclared.keeps_shape`).
+
+    `state` is the bare item of a shape (its fractured mods and nothing else). X of a leaf is what `reach_bound` reads (`_may_pass`: some roll of
+    the mod makes the leaf PASSING), and P(every leaf) <= P(each one), so the bound is the least of the declared chances. The declared bound is the
+    class's argument (`actions/fossil_reach.py` for the fossil sets), checked by its tests against the exact chance.
+    """
+    checkpoint()
+    leaves = tuple(leaves)
+    if not leaves or not actions:
+        return [None] * len(actions)
+    if len(state.status) != len(abstraction.goal.leaves):
+        raise ValueError("the state comes from another abstraction")
+    try:
+        item = abstraction._item_of(state, True)[0]
+    except (ItemError, ValueError):
+        return [None] * len(actions)
+    influences = state.flags.influences
+
+    def passes(mod: Mod) -> tuple[bool, ...]:
+        return tuple(any(flags[0] for flags, _ in _roll_cells(abstraction, mod, (leaf,), influences, False)) for leaf in leaves)
+
+    answers = type(actions[0]).reach_batch(abstraction.data, item, tuple(actions), passes)
+    if answers is None:
+        return [None] * len(actions)
+    found: list[Fraction | None] = []
+    for answer in answers:
+        if answer is None or not answer.keeps_shape or answer.chances is None:
+            found.append(None)
+        else:
+            least = min(answer.chances) if answer.together is None else min(*answer.chances, answer.together)
+            found.append(min(ONE, Fraction(least)))
+    return found
 
 
 def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, leaves: Sequence[int]) -> Fraction | None:

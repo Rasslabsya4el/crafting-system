@@ -204,6 +204,13 @@ class ApplyFossils(Action):
         reroll = _build(data, item, records)
         return reroll if draw is None else BloodstainedOutcomes(data, item, reroll, draw)
 
+    @classmethod
+    def reach_batch(cls, data: GameData, item: Item, actions, passes) -> tuple:
+        """Whether each set keeps the shape, and a bound per leaf on its chance, for every set at once and without a pool (`fossil_reach.py`, #1073)."""
+        from .fossil_reach import declared
+
+        return declared(data, item, actions, passes)
+
     def twin_key(self, data: GameData, item: Item) -> Hashable:
         """The key of the sets that give the same pools on the base of `item`, found without building one (#118).
 
