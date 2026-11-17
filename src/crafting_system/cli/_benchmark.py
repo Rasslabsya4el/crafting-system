@@ -29,7 +29,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from crafting_system.actions import imprints_held_at_most
-from crafting_system.benchmark_record import record_of_plan
+from crafting_system.benchmark_record import GUIDED_PLAN, SITE_PLAN, record_of_plan
 from crafting_system.budget import Budget
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
@@ -348,7 +348,7 @@ def benchmark_main(
     parser.add_argument("--heavy", action="store_true", help="also solve the routes that take the planner hours (R04, R14); without it only their published odds are checked")
     parser.add_argument(
         "--net", action="store_true",
-        help="plan each route as a user's run does, under the time and memory limits of the planner settings (10 minutes by default), and write each route's record of the heavy benchmark (#1109); without it the plans have no limit",
+        help="plan each route as the site does (the target alone, with no guide's actions, #1156), under the time and memory limits of the planner settings (10 minutes by default), and write each route's record of the heavy benchmark (#1109); without it the plans have no limit and a guide's actions lead their first round (#1110)",
     )  # fmt: skip
     args = parser.parse_args(list(argv))
 
@@ -373,6 +373,7 @@ def benchmark_main(
             if used_prices is None
             else {"league": used_prices.league, "fetched_at": used_prices.fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ")},
             "budget": None if budget is None else {"aim_seconds": budget.aim_seconds, "seconds": budget.seconds, "memory_mb": budget.memory_mb},
+            "plan": GUIDED_PLAN if budget is None else SITE_PLAN,
             "routes": entries,
         }
         write_json(out_dir / FILE_NAME, document)
@@ -431,7 +432,8 @@ def run_route(
     """The entry of one benchmark route, and the price file it was run on (None when none was loaded).
 
     A failure is written to `entry["error"]`; what was done before it stays in the entry. With a `budget` (`benchmark --net`) the plan runs
-    under it and the entry carries the route's `record` of the heavy benchmark (`benchmark_record`, #1109); a route that waits or that the
+    under it, as the site plans (no guide's actions lead it, #1156), and the entry carries the route's `record` of the heavy benchmark
+    (`benchmark_record`, #1109); a route that waits or that the
     run could not plan then has a record with no cost, whose stop is its error.
     """
     entry: dict = {
@@ -473,9 +475,13 @@ def run_route(
         entry["missing_price"] = missing
         if missing is not None:
             raise ValueError(_missing_message(missing))
-        judged = bench.route is not None  # the guide's route is judged against the plan, on the route's own reach (#829, #986): `auto` searches
-        # the actions of the guide's route and of its completed one lead the first round of the offers, so the plan holds them (#1110)
-        named = None if bench.route is None else _route_labels(root, bench)
+        # Without a net the guide's route is judged against the plan, on the route's own reach (#829, #986): the actions of the guide's route
+        # and of its completed one lead the first round of the offers, so the plan holds them (#1110). With the net (`--net`, the heavy
+        # benchmark) the plan is the site's: the target alone, with no guide's actions, as a user's run plans it (#1156); the guide's route is
+        # still evaluated and judged against that plan on its own reach.
+        site = budget is not None
+        judged = bench.route is not None and not site
+        named = None if not judged else _route_labels(root, bench)
         settings = PlanSettings(recipe_starts=bench.start is not None, judges_route=judged, route_actions=named, budget=budget)
         plan = plan_target(data, target, loaded, settings)  # a route with no start entry plans from the target's own item
         entry["start"] = _start_entry(plan, data, bench.start)

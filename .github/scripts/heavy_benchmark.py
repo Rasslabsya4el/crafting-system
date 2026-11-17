@@ -1,4 +1,4 @@
-"""The heavy benchmark's record of the default-on plans, and the check of a new run against it (#1109).
+"""The heavy benchmark's record of the site's plans (no guide's actions, #1156), and the check of a new run against it (#1109).
 
     python .github/scripts/heavy_benchmark.py record FIRST_DIR SECOND_DIR RECORD.json
     python .github/scripts/heavy_benchmark.py check RECORD.json RUN_DIR [R05,R10,...]

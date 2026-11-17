@@ -1,7 +1,9 @@
-"""The heavy benchmark's record of the default-on plans of the reference routes, and the check of a new run against it (#1109).
+"""The heavy benchmark's record of the site's plans of the reference routes (every beta method on, no guide's actions), and the check of a new run against it (#1109).
 
-`benchmark --net` plans every benchmark route the way a user's run does: the default offers (every beta method on; a route judged against its
-guide has the guide's actions leading the first round of offers, #1110) under the run's budget from the planner settings of the machine (OR-40; with the default settings `Budget.default()`, the 10-minute net). Each route's entry then carries
+`benchmark --net` plans every benchmark route the way the site does (`SITE_PLAN`, #1156): the target alone with the default offers (every beta
+method on, OR-41), no guide's actions leading the first round of offers (those lead only the guided plan of a plain `benchmark`, #1110, which
+no user gets), under the run's budget from the planner settings of the machine (OR-40; with the default settings `Budget.default()`, the
+10-minute net). A record and a check take only runs of the site's plan, so a record of the guided plan cannot guard the site's. Each route's entry then carries
 a `record` (`record_of_plan`): the plan's cost (its mean, the start item included), the figure no plan can cost less than (`lower`, the start
 item included), the seconds of the plan, the peak memory the search read, and how the search ended (`stop`). A route the run could not plan
 carries no cost and its error is its stop.
@@ -23,7 +25,9 @@ from dataclasses import dataclass
 
 from crafting_system.budget import PROOF_GAP
 
-FORMAT = "crafting-system-heavy-benchmark-record/1"
+FORMAT = "crafting-system-heavy-benchmark-record/2"  # /2: the site's plan, with no guide's actions (#1156); /1 recorded the guided plan
+SITE_PLAN = "site"  # the plan a `benchmark.json` of `--net` holds: the target alone, as the site plans it (#1156)
+GUIDED_PLAN = "guided"  # the plan of a `benchmark` with no net: a guide's actions lead its first round (#1110)
 TOLERANCE_FLOOR = PROOF_GAP  # the least tolerance of a route, as a share of its higher recorded cost (see the module text)
 
 PLANNED = "planned"  # both recorded runs gave a plan: the route is checked against its ceiling
@@ -43,7 +47,8 @@ def record_of_plan(mean: float | None, lower: float | None, seconds: float | Non
 
 def merge_documents(documents: Iterable[Mapping]) -> dict:
     """One run made of the `benchmark.json` parts a split run wrote (one per runner, and the `start` and `own` folders of
-    `benchmark_routes.py`): every part's routes, the distinct machines they ran on, and the first part's prices and budget."""
+    `benchmark_routes.py`): every part's routes, the distinct machines they ran on, and the first part's prices and budget; the parts
+    must hold one plan (`SITE_PLAN` or `GUIDED_PLAN`)."""
     parts = list(documents)
     if not parts:
         raise ValueError("no benchmark.json to read")
@@ -56,11 +61,15 @@ def merge_documents(documents: Iterable[Mapping]) -> dict:
     twice = sorted({name for name in names if names.count(name) > 1})
     if twice:
         raise ValueError(f"route {', '.join(twice)} is in more than one part of the run")
+    plans = sorted({str(part.get("plan")) for part in parts})
+    if len(plans) > 1:
+        raise ValueError(f"the parts of the run hold different plans ({', '.join(plans)})")
     return {
         "machine": machines,
         "ran_at": min((part.get("ran_at") or "" for part in parts), default=None),
         "prices": parts[0].get("prices"),
         "budget": parts[0].get("budget"),
+        "plan": parts[0].get("plan"),
         "routes": routes,
     }
 
@@ -121,16 +130,25 @@ class RouteRecord:
 def make_record(first: Mapping, second: Mapping, routes: Iterable[str] | None = None) -> dict:
     """The record made of two `benchmark.json` documents of `--net` runs: every route of both (or of `routes`), with both runs' figures,
     the spread and the ceiling; and the machine, commit, time and budget of each run."""
-    one, two = runs_of(first), runs_of(second)
+    one, two = runs_of(_site(first)), runs_of(_site(second))
     wanted = list(routes) if routes is not None else [name for name in one if name in two]
     missing = [name for name in wanted if name not in one or name not in two]
     if missing:
         raise ValueError(f"a record needs two runs of every route; {', '.join(missing)} is not in both runs")
     return {
         "format": FORMAT,
+        "plan": SITE_PLAN,
         "runs": [_run_heading(first), _run_heading(second)],
         "routes": {name: RouteRecord(one[name], two[name]).document() for name in wanted},
     }
+
+
+def _site(document: Mapping) -> Mapping:
+    """`document`, when it holds the site's plans (`SITE_PLAN`); a run of the guided plan or of no stated plan is refused (#1156)."""
+    plan = document.get("plan")
+    if plan != SITE_PLAN:
+        raise ValueError(f"the run holds the {plan or 'unstated'} plan, not the site's: the heavy benchmark records and checks `benchmark --net` runs only")
+    return document
 
 
 def _run_heading(document: Mapping) -> dict:
@@ -152,7 +170,7 @@ def check_run(record: Mapping, document: Mapping, routes: Iterable[str] | None =
     its timeout writes no `benchmark.json`, and its routes must not pass by being absent."""
     if record.get("format") != FORMAT:
         raise ValueError(f"not a record of the heavy benchmark (format {record.get('format')!r}, not {FORMAT!r})")
-    new = runs_of(document)
+    new = runs_of(_site(document))
     wanted = list(record["routes"]) if routes is None else list(routes)
     unknown = [name for name in wanted if name not in record["routes"]]
     if unknown:
