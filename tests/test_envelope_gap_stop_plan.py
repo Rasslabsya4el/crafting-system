@@ -31,6 +31,7 @@ from targets_support import DATA
 from test_cli_approximate import PRICES as APPROX_PRICES
 from test_cli_approximate import TARGET as APPROX_TARGET
 from test_packed_walk_light import START_ITEM, make_offers
+from test_cli_envelope_plan import fine_build  # noqa: F401 (the fixture: a net of 96 states stops the search with a plan, #1146)
 
 from crafting_system.budget import PROOF_GAP, Budget
 from crafting_system.cli import _main, build_report, make_plan, policy_document, render_text
@@ -256,7 +257,7 @@ def test_no_budget_and_a_gap_of_zero_are_exact_with_the_walks_mean(coarse, budge
     assert any("The plan is the cheapest among" in limit.guarantee for limit in plan.limits)
 
 
-def test_a_search_a_net_stopped_claims_no_cheapest_plan_either(coarse):
+def test_a_search_a_net_stopped_claims_no_cheapest_plan_either(coarse, fine_build):  # noqa: F811
     from crafting_system.planner._envelope import Net
 
     plan = planned(coarse, net=Net(states=96))
