@@ -521,8 +521,9 @@ class Abstraction:
     def lumps(self, state: CompressedState, action: Action) -> bool:
         """Whether the bound's build may take the kernel of `action` at `state` from the alike twin (#1146, ADR-0065): the action erases the
         ordinary slots (`_erases`) and fractures no mod it draws (a Fractured Fossil: the fractured mod is in the key, and the twin's labels lump
-        the mods a fine label tells apart, so the mod it fractures could be another)."""
-        if not self._erases(state, action):
+        the mods a fine label tells apart, so the mod it fractures could be another). Never in a world that tracks no junk (`Kinds.tracked`
+        False): there the labels keep no kind, the twin's kernel is the fine one, and the search would make it a second time in its own cache."""
+        if not self._kinds.tracked or not self._erases(state, action):
             return False
         found = self._fracturing.get(action)
         if found is None:

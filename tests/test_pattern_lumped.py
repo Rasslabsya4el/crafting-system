@@ -229,12 +229,33 @@ def test_a_fractured_fossil_is_never_lumped():
     from abstraction_support import real_game_data
 
     from crafting_system.abstraction import Goal, Wanted
-    from crafting_system.actions import ApplyFossils, ChaosOrb
+    from crafting_system.actions import ApplyFossils, ChaosOrb, ExaltedOrb
+    from crafting_system.items import Item, Rarity
+
+    data = real_game_data()
+    goal = Goal((Wanted(frozenset({"DelveStrengthGemLevel1"})),))
+    ab = Abstraction(data, goal, REAL_BOW, 86, (ChaosOrb(), ExaltedOrb()))
+    start = ab.compress(Item.build(data, base_id=REAL_BOW, item_level=86, rarity=Rarity.RARE))
+    assert ab.lumps(start, ChaosOrb())
+    assert not ab.lumps(start, ApplyFossils(("Fractured Fossil",)))
+
+
+def test_a_world_that_tracks_no_junk_lumps_nothing_and_its_build_leaves_the_fine_kernels_for_the_search(monkeypatch):
+    """With only a Chaos Orb no action reads the junk (`Kinds.tracked` False): the labels keep no kind, so the twin would make the fine kernel
+    again in a second cache. The build makes no twin and its kernels stay in the abstraction's cache, where the search finds them (checker
+    round 2 of #1146)."""
+    from abstraction_support import real_game_data
+
+    from crafting_system.abstraction import Goal, Wanted
+    from crafting_system.actions import ChaosOrb
     from crafting_system.items import Item, Rarity
 
     data = real_game_data()
     goal = Goal((Wanted(frozenset({"DelveStrengthGemLevel1"})),))
     ab = Abstraction(data, goal, REAL_BOW, 86, (ChaosOrb(),))
     start = ab.compress(Item.build(data, base_id=REAL_BOW, item_level=86, rarity=Rarity.RARE))
-    assert ab.lumps(start, ChaosOrb())
-    assert not ab.lumps(start, ApplyFossils(("Fractured Fossil",)))
+    assert not ab._kinds.tracked
+    assert not ab.lumps(start, ChaosOrb())
+    monkeypatch.setattr(Abstraction, "alike_twin", lambda self: pytest.fail("a world that tracks no junk made the alike twin"))
+    build_pattern_model(ab, start, [PatternOffer("chaos", ChaosOrb(), 1.0), PatternOffer("restart", None, 5.0)], tags=False)
+    assert ab._cache
