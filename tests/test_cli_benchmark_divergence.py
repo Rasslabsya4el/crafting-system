@@ -5,6 +5,10 @@ printed, and a route whose planner is far cheaper than the guide gets a "needs a
 
 The expected chances are computed here by hand on small chains and, for the visit chance itself, by `reach_probabilities` (the older
 dense solve of the text report) on random chains. No test asserts a run time.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import random
@@ -27,6 +31,8 @@ from crafting_system.solver import _packed_chain as packed_chain
 from crafting_system.solver import Action, Outcome
 from crafting_system.targets import parse_target, start_price_key
 from test_cli_benchmark import entry_of
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 GEM_TEXT = "+1 to Level of all Lightning Skill Gems"
 REFORGE = "Harvest Reforge Lightning"

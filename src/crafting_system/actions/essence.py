@@ -161,13 +161,13 @@ def forced_mod_id(data: GameData, essence: Essence, base_id: str) -> str | None:
     return None if base is None else _forced_mod_id(essence, base.item_class)
 
 
-@kind("corrupted-essence", order=31, opt_in=True)
+@kind("corrupted-essence", order=31)
 def _corrupted_essences(data: GameData, item: Item):
-    """The four corrupted essences (Hysteria, Insanity, Horror, Delirium) the item class takes, for a target that names them.
+    """The four corrupted essences (Hysteria, Insanity, Horror, Delirium) the item class takes.
 
     They work on a normal and on a rare item (claim `essence`, `is_corruption_only` in the record) and have a price like any
-    essence; a target must name them, as a kind or by label, because they are rare and dear and a plan that tried every one
-    on every item would change what the routes already measured are offered (ticket #70, R04's Essence of Insanity).
+    essence. Until #886 a target had to name them (ticket #70, R04's Essence of Insanity); since #886 they are offered by default
+    like every method of the beta (OR-41).
     """
     for record in data.essences.values():
         if not record.is_corruption_only or record.name == DESOLATION_IS_NOT_A_B1_ACTION.value:

@@ -24,7 +24,7 @@ from html import escape
 
 import numpy as np
 import pytest
-from cli_support import R12, price_file
+from cli_support import R12, price_file, r12_named
 from coarse_support import CRAFTS, REMOVE, abstraction
 from coarse_support import DATA as COARSE
 from targets_support import DATA
@@ -275,9 +275,14 @@ def test_a_watcher_is_told_the_first_plan_and_then_each_round(coarse):
 
 
 def test_the_planners_entry_passes_the_watcher_on():
+    # R12's methods named: one search, whose last standing is the plan's (#886: every method on by default searches in rounds)
     seen: list[Standing] = []
-    plan = plan_target(DATA, load_target(R12, DATA), price_file(), PlanSettings(recipe_starts=False, solver="envelope", watch=seen.append))
+    plan = plan_target(DATA, r12_named(), price_file(), PlanSettings(recipe_starts=False, solver="envelope", watch=seen.append))
     assert seen and seen[-1].upper == pytest.approx(plan.mean_remaining, rel=1e-6) and plan.search.exact
+    # every method on: the watcher sees the first round only (`_rounds.RoundCall.watched`), whose plan in hand a later round may beat
+    seen.clear()
+    plan = plan_target(DATA, load_target(R12, DATA), price_file(), PlanSettings(recipe_starts=False, solver="envelope", watch=seen.append))
+    assert seen and all(standing.upper >= plan.mean_remaining * (1 - 1e-6) for standing in seen)
 
 
 # ---- the settings -----------------------------------------------------------------------------------------------------------------------

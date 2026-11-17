@@ -85,6 +85,36 @@ the clock is added to `CLOCK_READERS`. `CRAFTING_TEST_REAL_CLOCK=1` turns the fi
 pinned on the committed price files in `tests/test_price_age_rule.py`. To check that the suite does not depend on the date, run it
 under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime '2026-12-01 12:00:00' <the shard command>`.
 
+### The suite's machine net (#886)
+
+A planner limit is a setting of the machine a run is on (OR-39), and a CI runner is shared by the 4 pytest processes of its job.
+`tests/conftest.py` sets two nets:
+
+- **Memory share.** A run with a budget (the command's default) takes `budget.MEMORY_SHARE` of the machine divided among the processes
+  sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run); it is set once per
+  process, module fixtures included. A test that passes no budget still runs its exact proof; a test that passes its own budget keeps it.
+  This share is the planner's own memory net, so it does move a plan: a run with the default budget in a process that already holds
+  the real game data of an earlier module (4.4 GB, over a share of about 3.2 GB on a 16 GB runner) stops at once (PR CI 44024487664,
+  `test_cli_route_view.py`). A test that runs the command with its default budget is therefore counted in states (`Budget.in_states`,
+  which has no memory net), never left to the order its shard runs modules in.
+- **A time net per phase** (Linux only, `SIGALRM` every second): during a test's setup (its module fixtures included), call or teardown,
+  past `CRAFTING_TEST_SECONDS` (300) of wake-ups the phase fails by name instead of hanging the job until `timeout-minutes`. It is a hang
+  guard, not a timing assertion (ADR-0014): it reads no clock and puts no cap on the process. Its failure is `pytest.fail`, a
+  `BaseException`, which no `except Exception` of the planner catches. The figure is a cap of the CI suite, not a planner limit. A native
+  call (a HiGHS solve) is not interrupted until it returns. It is not run on Windows (no `SIGALRM`). 0 turns it off.
+
+There is **no memory watchdog**, by decision (#886): nothing fails a test for the memory its process or the machine holds. Three rules were tried and each could fail a passing test, because four processes each
+holding 4.4 GB of loaded game data on a 16 GB runner is this suite's normal state: a fixed 3,500 MB a process (PR CI 44021960386) failed
+hundreds of passing real-data tests; a share of the machine (PR CI 44024487664) failed about 700 setups of modules that load that data at
+once; and "the call grew its process by more than 1,000 MB while the machine had under 1,000 MB left" still fails any passing test that
+loads real data in its own body while the others hold theirs. A runner shut down for memory (exit 143, the whole shard lost) is fixed at
+its root, in the test that plans too much (it names its offers, or runs counted in states), never by a guard.
+
+**The real routes plan with the classic offers in CI (#886).** With every beta method on, most real routes give no plan within CI's
+time and memory, so a test module that plans a real route sets `CLASSIC_OFFERS = True` and plans with the offers of before #886
+(`tests/cli_support.py`, `CLASSIC_KINDS`, pinned by `tests/test_classic_offers.py`); its records of before #886 hold byte for byte. No CI
+test plans a real route with the default offers: the heavy benchmark records those plans (#1109).
+
 ## Heavy runs on the server (owner, 2026-11-17)
 
 The chats work on the owner's server (Ubuntu 24.04, 24 cores, 60 GB, the repo at `/root/projects/crafting system`), and heavy work

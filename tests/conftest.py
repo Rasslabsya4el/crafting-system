@@ -47,6 +47,98 @@ def progress_sink_restored(monkeypatch):
     monkeypatch.setattr(_packed, "PROGRESS", _packed.PROGRESS)
 
 
+# The net of the suite's machine (#886, OR-39: a planner limit is a setting of the machine a run is on; docs/ci.md, "The suite's machine
+# net").
+# * A run that has a budget (the command's default, `Budget.default()`) takes `budget.MEMORY_SHARE` of the machine divided among the
+#   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). It
+#   is set once for the whole process, module fixtures included; a module of the budget itself (`OWN_NET = True`) sees the undivided share.
+#   This share is the planner's own memory net and does move a plan: a run with the default budget in a process that already holds the
+#   real game data of an earlier module (4.4 GB, over a share of about 3.2 GB) stops at once, so a test of a page or a plan that runs
+#   the command with its default budget is counted in states (`Budget.in_states`, no memory net), as `test_cli_route_view.py` is.
+# * Where the machine has `SIGALRM` (Linux, the CI runners), a watchdog wakes every `WATCH_SECONDS` during a test's setup, call and
+#   teardown, and past `SUITE_TEST_SECONDS` of wake-ups the phase fails by name (`pytest.fail`, a `BaseException` no `except Exception`
+#   of the planner catches). It reads no clock (it counts its wake-ups) and puts no cap on the process.
+# There is no memory watchdog (nothing fails a test for the memory held): three rules in three PR CI runs (a fixed 3,500 MB a process, 44021960386; a share of the machine, 44024487664;
+# growth of the call while the machine was short, 44027659418) each could fail a passing test, since four processes each holding 4.4 GB
+# of loaded game data on a 16 GB runner is this suite's normal state. A runner killed for memory is fixed in the tests that plan too much.
+# The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes its own budget keeps it.
+# `CRAFTING_TEST_SECONDS` sets another figure; 0 turns that net off.
+SLOTS_PER_RUNNER = max(1, int(os.environ.get("CRAFTING_TEST_SLOTS", "1")))
+SUITE_TEST_SECONDS = int(os.environ.get("CRAFTING_TEST_SECONDS", "300"))
+WATCH_SECONDS = 1
+_MACHINE_SHARE: list[float] = []  # the undivided `budget.MEMORY_SHARE`, kept for the modules that test the budget itself
+
+
+def pytest_configure(config):
+    from crafting_system import budget as budget_module
+
+    _MACHINE_SHARE.append(budget_module.MEMORY_SHARE)
+    budget_module.MEMORY_SHARE = budget_module.MEMORY_SHARE / SLOTS_PER_RUNNER
+
+
+@pytest.fixture(autouse=True)
+def suite_net(request, monkeypatch):
+    """A module of the budget itself (`OWN_NET = True`) sees the machine's share undivided (see `SLOTS_PER_RUNNER`)."""
+    if getattr(request.module, "OWN_NET", False):
+        from crafting_system import budget as budget_module
+
+        monkeypatch.setattr(budget_module, "MEMORY_SHARE", _MACHINE_SHARE[0])
+
+
+@pytest.fixture(scope="module", autouse=True)
+def classic_offers_of_module(request):
+    """A module that sets `CLASSIC_OFFERS = True` plans with the classic offers (`cli_support.CLASSIC_KINDS`), its module fixtures included."""
+    if not getattr(request.module, "CLASSIC_OFFERS", False):
+        yield
+        return
+    from cli_support import classic_offers
+
+    with pytest.MonkeyPatch.context() as patch:
+        classic_offers(patch)
+        yield
+
+
+def _watched(phase: str):
+    """The watchdog of one phase of a test (its setup, a module's fixtures included, its call or its teardown), where `SIGALRM` is."""
+    import signal
+
+    if not hasattr(signal, "SIGALRM") or SUITE_TEST_SECONDS <= 0:
+        yield
+        return
+    woken = [0]
+
+    def wake(signum, frame):
+        woken[0] += 1
+        if woken[0] * WATCH_SECONDS >= SUITE_TEST_SECONDS:
+            pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
+
+    previous = signal.signal(signal.SIGALRM, wake)
+    signal.setitimer(signal.ITIMER_REAL, WATCH_SECONDS, WATCH_SECONDS)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup(item):
+    yield from _watched("setup")
+    return None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call(item):
+    yield from _watched("test")
+    return None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_teardown(item, nextitem):
+    yield from _watched("teardown")
+    return None
+
+
 @pytest.fixture(autouse=True)
 def network_guard(request, monkeypatch):
     """Any connection (or name lookup) to a host other than loopback fails with AssertionError.

@@ -34,10 +34,10 @@ FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a sha
 # solvers accept. At 0.1 it is about 1.3e-7, and a plan's mean moves by 0.1 of the cheapest orb per draw (R13: 0.0016 Chaos of 6,568, 2.4e-7 of
 # it), which is inside the tolerance the solvers accept. The start price is the listing's price and is not changed.
 DRAW_COST_SHARE = 0.1
-# Whether a bench craft whose mod counts toward no requirement is offered by the rule of `blocking_crafts` (#886, OR-41): on, a craft is offered
-# wherever it can change the outcome of another offered action, one craft for each class of crafts no offered action tells apart; off, as
-# before #886 (offered only for a requirement, a block of an unveil offer, or by label). #886 turns it on with every beta method.
-BLOCKING_CRAFTS = False
+# Whether a bench craft whose mod counts toward no requirement is offered by the rule of `blocking_crafts` (#886, OR-41): on (the default since
+# #886), a craft is offered wherever it can change the outcome of another offered action, one craft for each class of crafts no offered action
+# tells apart; off, as before #886 (offered only for a requirement, a block of an unveil offer, or by label), which tests may still ask for.
+BLOCKING_CRAFTS = True
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 
 
@@ -174,8 +174,11 @@ def _with_feeder_donors(data: GameData, goal: Goal, start_item: Item, kind_of: d
 
 
 AWAKENER_KIND = "awakeners-orb"
-# The Embers and Ichors, the three Eldritch orbs and the Orb of Conflict (ADR-0025): offered only to a target that asks for an Eldritch implicit (#835)
+# The Embers and Ichors, the three Eldritch orbs and the Orb of Conflict (ADR-0025): offered to every target whose item can take them (#886, #919)
 ELDRITCH_KINDS = frozenset({"eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict"})
+# Whether the Eldritch currencies are offered only to a target that asks for an Eldritch implicit (`asks_eldritch`), as before #886 (#835):
+# off since #886 lifted that gate (#919); the tests' classic offers (`tests/cli_support.py`, `CLASSIC_KINDS`) turn it on again.
+ELDRITCH_GATE = False
 
 
 def asks_eldritch(data: GameData, goal: Goal) -> bool:
@@ -439,8 +442,8 @@ def offers_for(
       and the kinds not named are a `Limit` of the answer (`_limits`). A name may also be the label of ONE action (`Essence of
       Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
       (a metamod craft counts toward no requirement and would be left out), and only the actions named that way are
-      listed of a kind that is not named as a whole. An `opt_in` kind (Exalted Orb, Annulment, Fracturing
-      Orb) is offered only when named, as a kind or by its label (ticket #70).
+      listed of a kind that is not named as a whole. An `opt_in` kind (since #886 only the deferred ones: the
+      recombinator, the Foulborn Exalted Orb) is offered only when named, as a kind or by its label (ticket #70).
     * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
       offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
       It is left out and reported like a craft that counts for nothing.
@@ -459,11 +462,10 @@ def offers_for(
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
     * An Eldritch currency (a kind of `ELDRITCH_KINDS`: an Ember, an Ichor, an Eldritch Chaos, Exalted or Annulment Orb, an Orb of Conflict) is
-      offered only when the goal asks for an Eldritch implicit (`asks_eldritch`, #835). For any other target it is left out, and the answer
-      carries a `Limit` that names it: the Eldritch orbs act on the dominant side only, which an Ember or an Ichor must make first, and with
-      them every state of the target would keep the pair (`Abstraction.tracks_implicits`). Such a target can gain from them (an Ember, then
-      an Eldritch Chaos Orb that rerolls the prefixes alone; an Eldritch Annulment or Exalted Orb on one side), so this is a cut that may
-      cost: the limit says so, and #886 lifts it with every other default-off (#919).
+      offered to every target whose item can take it, whether or not the goal names an Eldritch implicit (#886 lifted the gate of #835, #919):
+      a target with no implicit wish gains from them too (an Ember, then an Eldritch Chaos Orb that rerolls the prefixes alone; an Eldritch
+      Annulment or Exalted Orb on the dominant side only). Every state of such a target then keeps the pair (`Abstraction.tracks_implicits`).
+      A base that takes no Eldritch implicit refuses them by the relevance test below.
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
@@ -501,8 +503,8 @@ def offers_for(
         label = action.label(data)
         return label if label_count[label] == 1 or not action.variant else f"{label} [{action.variant}]"
 
-    left_out_eldritch: list[str] = []  # the target asks for no Eldritch implicit (#835): left out before anything asks them of the base
-    if not asks_eldritch(data, goal):
+    left_out_eldritch: list[str] = []  # with the gate (`ELDRITCH_GATE`), a target that asks for no Eldritch implicit: left out before anything asks them of the base
+    if ELDRITCH_GATE and not asks_eldritch(data, goal):
         left_out_eldritch = [told_apart(action) for action in listed if kind_of.get(action) in ELDRITCH_KINDS]
         listed = [action for action in listed if kind_of.get(action) not in ELDRITCH_KINDS]
     refused = base_refused(data, start_item, listed)  # the kind-level relevance test (#848): no item of this base can take these

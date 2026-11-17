@@ -7,6 +7,10 @@ It is the test `tests/test_research_376_bound.py` makes on random graphs, made o
 metamods are modelled) and without them. R04, R14 and the strand route S02 are too long for the suite: `research/497/pattern_bound.py --check`
 makes the same comparison on them in a heavy run (the numbers are in the pull request of #497 and `docs/research/2026-11-06-497-walk-free-bound.md`).
 Needs the cached dump; skips without it (CI fetches it, ticket #165). Nothing here asserts a time (ADR-0014).
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import sys
@@ -26,6 +30,8 @@ import prune_analysis as P  # noqa: E402
 
 from crafting_system.abstraction._pattern import Pattern  # noqa: E402
 from crafting_system.planner._pattern_bound import pattern_lower_bound  # noqa: E402
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 # (target, tags): R13 with the key the route calls for and without the tags, R05 (72 offers, no action reads the junk: a state keeps none of it) with the key it calls for.
 # R05 is the ring as it was read before #895 ("at least 1 of Life and the three resistances"): its walk has 78 states; the benchmark's R05 has 6 since #895.

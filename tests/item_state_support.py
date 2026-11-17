@@ -39,6 +39,7 @@ from crafting_system.items import (
     eldritch_side,
     tier_table,
 )
+from crafting_system.prices.spends import DEFERRED_KINDS
 
 EATER = "eater_of_worlds_implicit"
 AVOID_SHOCK = ("AvoidShockEldritchImplicit1", "AvoidShockEldritchImplicit2", "AvoidShockEldritchImplicit3")
@@ -56,7 +57,7 @@ _EXTRA = (
 )
 ITEM_DATA: GameData = dataclasses.replace(
     CONTRACT_DATA,
-    mods={**CONTRACT_DATA.mods, **{mod.id: mod for mod in (*HAND_MADE, *_EXTRA) if mod.id != "ChanceToShockEldritchImplicitX"}},
+    mods={**CONTRACT_DATA.mods, **{mod.id: mod for mod in (*HAND_MADE, *_EXTRA)}},
     base_items={**CONTRACT_DATA.base_items, BOOTS: SOME_BOOTS},
 )
 AMULET_TIERS = tier_table(ITEM_DATA, AMULET)
@@ -280,7 +281,7 @@ def check_kinds_declare_item_state() -> int:
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
             part = kind.reads_item_state_while_not_planner
             if part == "any":  # a kind that declares the item state it needs (the veiled orbs, #144; planner kinds since #145)
-                assert not kind.planner or kind.opt_in, kind.name  # a planner kind that touches the item state is offered only to a target that names it
+                assert not (kind.planner and kind.opt_in) or kind.name in DEFERRED_KINDS, kind.name  # since #886 an in-scope planner kind that touches the item state is offered by default like every other (OR-41)
             elif part:
                 assert not kind.planner and not adds.item_state, kind.name
                 assert getattr(reads, part) and not any(getattr(reads, other) for other in {"implicits", "quality", "offer"} - {part}), kind.name

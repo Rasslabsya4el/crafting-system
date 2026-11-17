@@ -27,7 +27,13 @@ from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.solver import solve
 
 # the veiled data without the ordinary mod of the Speed family: nothing a reroll draws can block the Speed mod of the pool, so the loop below has a hand figure
-DATA = dataclasses.replace(WITH_ORDINARY_SPEED, mods={mod_id: mod for mod_id, mod in WITH_ORDINARY_SPEED.mods.items() if mod_id != SPEED_ORDINARY})
+# (and without the essences whose mods the veiled pool does not hold: every essence is offered by default since #886, and offering one reads its mod)
+_MODS = {mod_id: mod for mod_id, mod in WITH_ORDINARY_SPEED.mods.items() if mod_id != SPEED_ORDINARY}
+DATA = dataclasses.replace(
+    WITH_ORDINARY_SPEED,
+    mods=_MODS,
+    essences={key: essence for key, essence in WITH_ORDINARY_SPEED.essences.items() if all(m.mod_id is None or m.mod_id in _MODS for m in essence.mods)},
+)
 VEILED_CHAOS = "Veiled Chaos Orb"
 GOAL = Goal((Wanted(frozenset({SPEED})),))
 ACTIONS = [VeiledChaosOrb(), Unveil(), Pick(1), Pick(2), Pick(3)]
@@ -76,13 +82,13 @@ def test_an_offer_with_a_missing_price_is_dropped_and_does_not_set_the_share():
     assert {entry.label: entry.cost for entry in entries}["Unveil"] == pytest.approx(5.0 * FREE_ACTION_SHARE)
 
 
-# --- the planner offers the veiled kinds only when a target names them -------------------------------------------------------------
+# --- the planner offers the veiled kinds by default (#886, OR-41) -------------------------------------------------------------
 
 
-def test_the_veiled_kinds_are_offered_only_when_a_target_names_them():
+def test_the_veiled_kinds_are_offered_by_default_and_a_target_that_names_kinds_gets_those():
     start = amulet(rolled(LIFE_1, fractured=True), rolled(DAMAGE_1, fractured=True), rolled(GEM, fractured=True), holder(SUF))
     default = {offer.label for offer in offers_for(DATA, GOAL, AMULET, start, None).offers}
-    assert not default & {VEILED_CHAOS, "Veiled Exalted Orb", "Unveil", "Pick 1", "Pick 2", "Pick 3"}
+    assert {VEILED_CHAOS, "Veiled Exalted Orb", "Unveil", "Pick 1", "Pick 2", "Pick 3"} <= default
     named = {offer.label for offer in offers_for(DATA, GOAL, AMULET, start, ["veiled-chaos-orb", "unveil", "pick"]).offers}
     assert named == {VEILED_CHAOS, "Unveil", "Pick 1", "Pick 2", "Pick 3"}
 

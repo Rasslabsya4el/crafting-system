@@ -45,6 +45,10 @@ Rules: OR-4 (a target and a route take the guide's words; the goal is judged by 
 chance, so the means are exact on the planner's side), OR-22 (the rules of the naive crafter carry their sources), OR-26 (a disagreement
 is traced to a rule, not patched per case), OR-29 (an open disagreement is a strict xfail that names its issue).
 Needs the cached dump (`CRAFTING_CACHE_DIR`); CI fetches it.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
 import json
@@ -66,6 +70,8 @@ from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import evaluate_route, load_route, make_plan
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
+
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"

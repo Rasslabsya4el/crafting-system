@@ -50,7 +50,9 @@ def route_file(tmp_path: Path, text: str, name: str = "route.yaml") -> Path:
 
 @pytest.fixture(scope="module")
 def target():
-    return load_target(R12, DATA)
+    # the methods of R12's route, named: these tests read conditions on its states and what its plan does not offer, and every beta
+    # method on by default (#886) offers an imprint and the bench, and tracks more of the item
+    return dataclasses.replace(load_target(R12, DATA), actions=("chaos-orb", "harvest-reforge"))
 
 
 @pytest.fixture(scope="module")
@@ -309,7 +311,7 @@ start_item:
 start: bought
 """
     two = parse_target(text, DATA, source="two.yaml")
-    plan = make_plan(DATA, two, priced_for(two), judges_route=True)
+    plan = make_plan(DATA, two, priced_for(two), judges_route=True, route_actions=("Chaos Orb",))  # the route's label leads the first round, as `--route` gives it (#1110)
     outcomes = ChaosOrb().outcomes(DATA, two.start_item)
     resists = [mod_id for mod_id, mod in DATA.mods.items() if "LightningResistance" in mod.families]
     gem_chance = float(outcomes.chance_all([GEM]))
@@ -518,7 +520,7 @@ def test_a_selector_that_names_two_leaves_is_ambiguous():
         DATA,
         source="twice.yaml",
     )
-    plan = make_plan(DATA, twice, priced_for(twice), judges_route=True)
+    plan = make_plan(DATA, twice, priced_for(twice), judges_route=True, route_actions=("Chaos Orb",))  # the route's label leads the first round (#1110)
 
     message = error_of(
         f'rules:\n  - when:\n      requirements:\n        - stat: "{GEM_TEXT}"\n          status: absent\n    do: Chaos Orb\n',

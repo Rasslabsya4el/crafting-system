@@ -1,7 +1,8 @@
-"""An opt-in kind is a planner kind that a target has to name (ticket #63).
+"""An opt-in kind is a planner kind that has to be named (ticket #63), and no kind of the beta's scope is one (#886, OR-41).
 
-The fossil sets (12,696 of them on boots, 14,998 with the Bloodstained ones) are `opt_in`: the planner can use them, but
-the catalog and the offers leave them out unless the target lists them in `actions:` (`names` / `kinds_named`).
+The catalog and the offers leave an `opt_in` kind out unless it is named (`names` / `kinds_named`). Since #886 every kind of the beta's
+scope (every registered kind outside `DEFERRED_KINDS`) is offered by default, and so are the blocking and filler bench crafts
+(`BLOCKING_CRAFTS`); the flag is left to the kinds outside the scope and to the user's switch (#323).
 The toy is registered for the length of a test (`registered`), over the fixture belt of `test_cli_offers`, so
 no real data is needed.
 """
@@ -15,6 +16,8 @@ from test_cli_offers import BELT, LIFE, PRICED_DATA
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import Action, Adds, Finite, Kind, Reads, catalog, kinds, registered
 from crafting_system.cli import offers_for
+from crafting_system.planner import _offers
+from crafting_system.prices.spends import DEFERRED_KINDS, kinds_in_scope
 from items_support import item
 
 TOY = "toy-opt-in"
@@ -67,7 +70,8 @@ def test_the_planner_kinds_list_an_opt_in_kind_so_a_target_may_name_it(toy_opt_i
     assert TOY in {entry.name for entry in kinds(planner_only=True)}
 
 
-def test_offers_leave_an_opt_in_kind_out_unless_the_target_names_it(toy_opt_in):
+def test_offers_leave_an_opt_in_kind_out_unless_the_target_names_it(toy_opt_in, monkeypatch):
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", False)  # the fixture world prices no bench craft; the blocking rule has its own tests
     start = item(base_id=BELT)
     goal = Goal((Wanted(frozenset({LIFE})),))
 
@@ -77,3 +81,16 @@ def test_offers_leave_an_opt_in_kind_out_unless_the_target_names_it(toy_opt_in):
     named = offers_for(PRICED_DATA, goal, BELT, start, kinds_named=[TOY])
     assert [offer.label for offer in named.offers] == [TOY_LABEL]
     assert named.offers[0].action == ToyOptIn()
+
+
+def test_every_planner_kind_of_the_beta_is_offered_by_default():
+    in_scope = set(kinds_in_scope())
+    off = [entry.name for entry in kinds(planner_only=True) if entry.name in in_scope and entry.opt_in]
+    assert not off, f"in-scope kinds off by default (OR-41): {off}"
+    still_opt_in = {entry.name for entry in kinds(planner_only=True) if entry.opt_in}
+    assert still_opt_in == {"recombinator", "foulborn-exalted-orb"}, still_opt_in  # the deferred planner kinds only (OR-37)
+    assert still_opt_in <= set(DEFERRED_KINDS), still_opt_in
+
+
+def test_blocking_and_filler_crafts_are_offered_by_default():
+    assert _offers.BLOCKING_CRAFTS is True

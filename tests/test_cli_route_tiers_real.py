@@ -5,6 +5,11 @@ A guide's "guarantee" is of a family: its two Exalted Orbs force the Maximum Lif
 how likely the top tier of each is: 2 in 15 for the first Exalted Orb (Life or Bow damage), 1 in 5 for the second (Bow damage, Life
 being on). The tier lines must give the same numbers from the same game data, and each line must sum to 100%.
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; CI fetches it) and skip cleanly without it.
+
+Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
+`actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
+with every method on, a real route's model (built here with nothing solved) outgrows CI's time and memory, and the heavy
+benchmark records those plans.
 """
 
 import dataclasses
@@ -26,6 +31,7 @@ from crafting_system.solver import Solution
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
+CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 LIFE = "+# to maximum Life"
 BOW = "#% increased Damage with Bow Skills"

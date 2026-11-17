@@ -552,8 +552,9 @@ def test_offers_hold_the_bloodstained_sets_for_a_target_that_asks_for_a_corrupte
     assert [label for label in labels if BLOODSTAINED not in label] == offered(PLAIN_TARGET)  # and every ordinary set stays, in order
 
 
-def test_offers_do_not_list_the_bloodstained_sets_unless_the_fossil_sets_are_named():
-    assert not any(BLOODSTAINED in label for label in offered(ASKING_TARGET, names=None))
+def test_offers_list_the_bloodstained_sets_by_default_and_not_when_the_names_leave_the_fossil_sets_out():
+    # since #886 (OR-41) the fossil sets are offered by default, so an asking target gets the Bloodstained ones unnamed
+    assert any(BLOODSTAINED in label for label in offered(ASKING_TARGET, names=None))
     assert not any(BLOODSTAINED in label for label in offered(ASKING_TARGET, names=("chaos-orb",)))
 
 

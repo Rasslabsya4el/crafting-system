@@ -24,7 +24,7 @@ from html import escape
 from types import SimpleNamespace
 
 import pytest
-from cli_support import R12, price_file
+from cli_support import R12, price_file, r12_named
 from limits_support import of_kind
 from targets_support import DATA
 
@@ -37,11 +37,10 @@ from crafting_system.planner._limits import GROUPS, SHOWN_LABELS, STATE_LINE, WI
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.solver import ConvergenceError
-from crafting_system.targets import load_target
 
 
 def plan_of(**options):
-    return make_plan(DATA, load_target(R12, DATA), price_file(), **options)
+    return make_plan(DATA, r12_named(), price_file(), **options)  # the methods of these limits, named (#886)
 
 
 @pytest.fixture(scope="module")
