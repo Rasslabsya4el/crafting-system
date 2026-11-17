@@ -19,6 +19,14 @@ DAY = "2026-10-30"  # the day of the fixture price file
 DEEP = 1e9  # units behind the fixture's prices: deep enough for any plan of these tests, so they are plain facts and the tests judge something else
 LIFEFORCE = "Primal Crystallised Lifeforce"
 START = start_price_key(DATA, load_target(R12, DATA))  # the price key computed from the R12 target (#474)
+# the methods a test of one mechanism on R12 names (#886): every method is offered by default since, and a test of the walk, its forecast or
+# its limits is about these, not about the rest
+R12_KINDS = ("chaos-orb", "harvest-reforge", "essence", "bench-craft", "remove-crafted-mods")
+
+
+def r12_named(data=DATA) -> Target:
+    """The R12 target with `R12_KINDS` named in its `actions:`."""
+    return dataclasses.replace(load_target(R12, data), actions=R12_KINDS)
 
 
 def given(target: Target) -> Target:
