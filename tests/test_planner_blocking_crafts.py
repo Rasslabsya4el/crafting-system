@@ -231,13 +231,66 @@ def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share
     assert not _rounds.all_closed(widened.records)  # the round that gave way did not finish: no text calls the plan the cheapest of every method
     # with no plan in its search the round goes on to the net (OR-33): the rule asks for a plan in hand
     share = _rounds.Share(600.0, 3, 0.0, lambda: 500.0)
-    assert share(SimpleNamespace(upper=None)) is None and share(SimpleNamespace(upper=float("inf"))) is None and share(SimpleNamespace(upper=10.0)) is not None
+    assert share(SimpleNamespace(upper=None)) is None and share(SimpleNamespace(upper=float("inf"))) is None
+    # past its share, a plan still falling goes on: R11's essences made 7,817 c and the next search round 597 c (a rule that gave way at the
+    # first plan answered 7,837 c on a slower runner); the first search round that makes no cheaper plan gives way
+    assert [share(SimpleNamespace(upper=upper)) is not None for upper in (7817.0, 597.0, 597.0)] == [False, False, True]
     calls = []
     _rounds.widen(
         groups[:1], tuple("abc"), lambda chosen, call: calls.append(call) or SimpleNamespace(search=SimpleNamespace(lower=7.0), mean_remaining=7.0),
         upper_of=lambda plan: 7.0, mean_of=lambda plan: 7.0, ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: 600.0, clock_now=lambda: 0.0,
     )  # fmt: skip
     assert calls[0].give_way is None  # the last round has no rounds after it to give way to: it has all the time left
+
+
+def test_a_group_beaten_before_the_last_round_is_not_carried_and_the_answer_does_not_call_the_plan_the_cheapest():
+    # #1080 / #1091: the plan in hand is 10. Round 2 (b) ends at once on its lower figure: it is not carried, so round 3 holds a and c only, and
+    # the answer names b among the rounds that do not make the plan the cheapest of every method (b with c was not searched: the module text has
+    # the counterexample). A beaten last round has no round after it: it closes, and with every round closed the plan is the cheapest.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate("abc"))
+    seen = []
+
+    def run(chosen, call):
+        seen.append(chosen)
+        if call.upper is not None:
+            raise _envelope.Beaten(10.0, None)
+        return SimpleNamespace(search=SimpleNamespace(lower=10.0), mean_remaining=10.0)
+
+    def widened(n):
+        return _rounds.widen(
+            groups[:n], tuple("abc"), run, upper_of=lambda plan: 10.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+            left=lambda: None, clock_now=lambda: 0.0,
+        )  # fmt: skip
+
+    three = widened(3)
+    # b is not in round 3; every round closed, so one last round holds b again with every offer, and its proof is the whole one
+    assert seen == [("a",), ("a", "b"), ("a", "c"), ("a", "b", "c")]
+    assert [(record.status, record.carried) for record in three.records] == [("closed", True), ("beaten", True), ("beaten", True), ("beaten", True)]
+    assert three.records[1].reason.endswith("the last round held them again, with every method") and three.records[3].kinds == ("b",)
+    assert _rounds.all_closed(three.records)
+    seen.clear()
+    two = widened(2)  # a beaten last round has no round after it: it closes, and no round is added
+    assert seen == [("a",), ("a", "b")] and [(record.status, record.carried) for record in two.records] == [("closed", True), ("beaten", True)]
+
+    def stopped_c(chosen, call):
+        if chosen == ("a", "c"):
+            raise _rounds.Stopped("the time limit was reached", 3.0)
+        return run(chosen, call)
+
+    seen.clear()
+    stopped = _rounds.widen(
+        groups, tuple("abc"), stopped_c, upper_of=lambda plan: 10.0, mean_of=lambda plan: plan.mean_remaining, ended=lambda plan: (_rounds.CLOSED, ""),
+        left=lambda: None, clock_now=lambda: 0.0,
+    )  # fmt: skip
+    # round 3 stopped: the whole proof is out of reach, so no last round is added, and b stays set aside, named with its figure
+    assert seen == [("a",), ("a", "b")] and [(record.status, record.carried) for record in stopped.records] == [("closed", True), ("beaten", False), ("stopped", True)]
+    assert "the rounds after it did not hold them" in _rounds.round_line(2, stopped.records[1])
+    not_finished = _rounds.rounds_limits(stopped.records, True, None)[1]
+    assert [name.split(" (")[0] for name in not_finished.names] == ["round 2", "round 3"] and not_finished.labels == ("b", "c")
 
 
 def test_a_refused_group_is_set_aside_when_the_round_after_it_is_refused_too():
@@ -355,6 +408,26 @@ def test_the_lock_is_a_round_of_its_own_that_ends_once_its_lower_figure_reaches_
     assert LOCK not in {entry.label for entry in plan.offers} and not plan.abstraction.models_metamods  # the plan is round 1's
     assert plan.search.exact  # every round closed, the last with every method: the plan is the cheapest over them all (OR-13)
     assert any(limit.kind == "rounds" and limit.guarantee.startswith("The plan is the cheapest among every method offered") for limit in plan.limits)
+
+
+@pytest.mark.parametrize("divine", [92.0, 91.0])
+def test_through_the_entry_a_beaten_lock_round_is_not_carried_into_a_round_after_it(data, target, monkeypatch, divine):
+    # #1080 / #1091 through `plan_target`: a third group after the lock's, whose offers round 1 already holds. When the lock's round is beaten,
+    # round 3 holds round 1's offers without the lock, and a last round holds the lock again with every offer: beaten too, so the plan is the
+    # cheapest of every method, as when the lock was carried. When the lock's round closes, it is carried and no round is added.
+    from crafting_system.planner import _rounds
+
+    real = planner_plan.offer_groups
+    monkeypatch.setattr(planner_plan, "offer_groups", lambda *args: (*real(*args), _rounds.Group((), ("again",), frozenset())))
+    plan = _plan_at(data, target, monkeypatch, divine=divine)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    first, lock, again, *last = _rounds_of(plan)
+    assert lock.carried and plan.search.exact
+    if lock.status == "beaten":
+        (closing,) = last
+        assert again.offers == first.offers and closing.offers == first.offers + 1 and closing.status == "beaten" and closing.kinds == lock.kinds
+    else:
+        assert again.offers == first.offers + 1 and not last
 
 
 def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_finish(data, target, monkeypatch):
@@ -497,18 +570,29 @@ class _HandClock:
         return self.now
 
 
-def test_through_the_entry_a_first_round_that_used_its_share_gives_way_with_its_plan_and_the_next_round_is_tried(data, target, monkeypatch):
-    # #1080 through `plan_target`: a run of 600 s and two rounds. Round 1 begins with no plan in hand; its first plan (133) is in hand when 400 s
-    # of the run have passed (the watch moves the run's clock), past its share of 300 s, so it gives way with that plan instead of keeping the
-    # rest; round 2 (the lock) is tried in the 200 s left and saves nothing. The answer keeps the plan and names what each round did.
+def _share_entry(data, target, monkeypatch, *, held_again: bool):
+    """A run of 600 s and two rounds through `plan_target`: round 1 begins with no plan in hand, and its first plan (133) is in hand when 400 s of
+    the run have passed (the watch moves the run's clock), past its share of 300 s. With `held_again` its search is asked once more holding the
+    same plan, as a search round that made no cheaper plan asks (this small search closes before it would). Returns the plan and the asks."""
     from crafting_system import budget as budget_module
     from crafting_system.budget import Budget
+    from crafting_system.planner import _rounds
 
     clock = _HandClock()
     for module in (budget_module, _envelope, _envelope_plan):
         monkeypatch.setattr(module, "time", clock)
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
-    moved = []
+    moved, asks = [], []
+    ask = _rounds.Share.__call__
+
+    def asked(share, standing):
+        said = ask(share, standing)
+        if said is None and held_again:
+            said = ask(share, standing)  # the next search round's ask, with no cheaper plan
+        asks.append((standing.upper, said))
+        return said
+
+    monkeypatch.setattr(_rounds.Share, "__call__", asked)
 
     def watch(_standing):
         if not moved:
@@ -517,7 +601,23 @@ def test_through_the_entry_a_first_round_that_used_its_share_gives_way_with_its_
 
     prices = dataclasses.replace(_prices(), chaos_per_divine=91.0)
     budget = Budget(aim_seconds=None, seconds=600.0, gap=0.0)
-    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", watch=watch, budget=budget))
+    return plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", watch=watch, budget=budget)), asks
+
+
+def test_through_the_entry_a_first_round_whose_plan_was_just_made_goes_on_past_its_share(data, target, monkeypatch):
+    # #1080: the round's search has just made its plan (133): a plan still falling is not cut, so it goes on and closes; round 2 is tried
+    plan, asks = _share_entry(data, target, monkeypatch, held_again=False)
+    assert asks[0] == (pytest.approx(133.0, rel=1e-9), None)
+    first, last = _rounds_of(plan)
+    assert first.status == "closed" and last.status in ("beaten", "closed")
+
+
+def test_through_the_entry_a_first_round_that_used_its_share_gives_way_with_its_plan_and_the_next_round_is_tried(data, target, monkeypatch):
+    # #1080 through `plan_target`: past its share of 300 s, round 1's search holds its plan (133) and a search round made none cheaper, so it gives
+    # way with that plan instead of keeping the rest; round 2 (the lock) is tried in the 200 s left and saves nothing. The answer keeps the plan
+    # and names what each round did.
+    plan, asks = _share_entry(data, target, monkeypatch, held_again=True)
+    assert asks[0][1] is not None
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # the plan of the round that gave way is kept (OR-33)
     first, last = _rounds_of(plan)
     assert first.status == "gave way" and "300 seconds" in first.reason and first.upper == pytest.approx(133.0, rel=1e-9)
