@@ -234,7 +234,9 @@ def exact_distributions(
 
     Under a search counted in states (`budget.counting`, #1105) the walk counts what it makes as it makes it, each stage on its own count:
     each state of the walk met for the first time at a step of the draws (the "end state" count, intermediate steps included), each group of
-    end states and each way of spreading a group's labels; past the allowance it raises `budget.OutcomesCut`.
+    end states, each entry of a part's spread over its labels as the spread is built (the "spread" count, #1137) and each way of spreading a
+    group's labels; past the allowance it raises `budget.OutcomesCut`. Every structure the walk holds is counted as it grows, so a cut walk
+    has made at most one piece past the allowance at each stage.
     """
     number = NUMBER
     allowance = budget.allowed()  # None outside a counted search: nothing is counted
@@ -430,6 +432,8 @@ def exact_distributions(
                 grown = []
                 for counts, chance, left in ways:
                     for k in [left] if at == len(options) - 1 else range(left + 1):
+                        if allowance is not None:
+                            allowance.add("spread")  # counted as it is built, its intermediate labels included (#1137)
                         grown.append(((*counts, (lab, k)) if k else counts, chance * share**k * comb(left, k), left - k))
                 ways = grown
             found = spreads[(part, n)] = [(counts, chance) for counts, chance, _ in ways if chance]
