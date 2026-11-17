@@ -321,7 +321,7 @@ at its proved 1%). `tests/test_benchmark_record.py` checks that the file covers 
 
 **The check: no worse than the record.** A new run fails a route when its cost is above the ceiling, or when it gives no plan where both
 recorded runs gave one, or when the run holds no entry for it (a runner killed for its memory or its timeout writes none; a check of some
-routes only names them as a third argument). A route that planned in neither recorded run passes whatever it gives (a new plan is told); a route that planned in
+routes only names them as a third argument). A route with no plan in either recorded run has no plan to lose: no entry there passes. A route that planned in neither recorded run passes whatever it gives (a new plan is told); a route that planned in
 one recorded run only has no spread to check against and passes until the record is renewed. The lower bound, the seconds, the memory and
 the stop are readings beside the cost, not verdicts.
 
@@ -347,7 +347,9 @@ then `gh run download RUN_ID -D DIR` and `python .github/scripts/heavy_benchmark
 **Renewing the record.** A change that makes a route's plan better (or a new price snapshot, or a new reference route) renews the record:
 two runs of the command above, dispatched one after the other, then
 `python .github/scripts/heavy_benchmark.py record DIR1 DIR2 tests/fixtures/heavy_benchmark/records.json`, which prints each route's two
-costs, spread and ceiling (it refuses two runs that do not both hold every reference route). The PR that renews it says why, names both
+costs, spread and ceiling (it refuses two runs that do not both hold every reference route, except those named as a fourth argument,
+`R24,...`, whose runners the renewer saw killed: a plan that does not stop at its net; they are recorded with no plan and their stop says
+so, and each is an open issue). The PR that renews it says why, names both
 run ids, and states each route's state and spread; a spread above 10% of the lower cost, an unstable route and a route with no plan are
 each said so there, and a route with no plan in both runs is an open issue (the site gives no plan there). Renewals of the record share the route queue of `CLAUDE.md` with every reference route.
 

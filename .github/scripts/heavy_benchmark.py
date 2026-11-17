@@ -1,12 +1,13 @@
 """The heavy benchmark's record of the site's plans (no guide's actions, #1156), and the check of a new run against it (#1109).
 
-    python .github/scripts/heavy_benchmark.py record FIRST_DIR SECOND_DIR RECORD.json
+    python .github/scripts/heavy_benchmark.py record FIRST_DIR SECOND_DIR RECORD.json [R24,...]
     python .github/scripts/heavy_benchmark.py check RECORD.json RUN_DIR [R05,R10,...]
 
 Each DIR holds the `benchmark.json` files of one run of `benchmark_routes.py ... --net` (any depth: one per runner, with their `start` and
 `own` folders). `record` writes the record of two runs (`crafting_system.benchmark_record.make_record`) and prints each route's two costs and
 spread; `check` prints each route's verdict against the record and exits 1 when a route fails or is missing from the run (a runner that died); the
-optional list checks a run of those routes only. `record` refuses two runs that do not both hold every reference route (`REFERENCES`). The rule is the module's text.
+optional list checks a run of those routes only. `record` refuses two runs that do not both hold every reference route (`REFERENCES`), except the routes of
+its optional fourth argument, whose runners were seen killed: a run without them records them with no plan (`benchmark_record.KILLED`). The rule is the module's text.
 """
 
 import json
@@ -29,8 +30,9 @@ def main(argv: list[str]) -> int:
     from crafting_system.benchmark_record import check_run, failed, make_record, render_check
     from crafting_system.cli._benchmark import REFERENCES
 
-    if len(argv) == 4 and argv[0] == "record":
-        record = make_record(run_of(Path(argv[1])), run_of(Path(argv[2])), routes=[bench.id for bench in REFERENCES])
+    if len(argv) in (4, 5) and argv[0] == "record":
+        killed = [name for name in argv[4].split(",") if name] if len(argv) == 5 else []
+        record = make_record(run_of(Path(argv[1])), run_of(Path(argv[2])), routes=[bench.id for bench in REFERENCES], killed=killed)
         Path(argv[3]).write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
         for name, route in record["routes"].items():
             first, second = route["runs"]

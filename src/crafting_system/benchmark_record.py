@@ -10,7 +10,7 @@ carries no cost and its error is its stop.
 
 A run under a time net depends on the machine and on the run, so a record is made of **two** runs (`make_record`): per route both runs, the
 spread between their costs, and the ceiling a new run may reach. The check (`check_run`) is "no worse than", not equality: a route fails when
-its new cost is above the ceiling, or when it gives no plan where both recorded runs gave one.
+its new cost is above the ceiling, or when it gives no plan (or no entry: its runner died) where both recorded runs gave one.
 
 The ceiling is the higher recorded cost plus the larger of the spread of the two runs and `TOLERANCE_FLOOR` of that cost. The floor is the
 proof the search owes (`budget.PROOF_GAP`, OR-39): a plan the search stopped at a proved 1% may cost up to 1% more than another run's, and two
@@ -127,11 +127,20 @@ class RouteRecord:
         }
 
 
-def make_record(first: Mapping, second: Mapping, routes: Iterable[str] | None = None) -> dict:
+KILLED = "no entry in the run: its runner was killed (its timeout or its memory) before the plan stopped"
+
+
+def make_record(first: Mapping, second: Mapping, routes: Iterable[str] | None = None, killed: Iterable[str] = ()) -> dict:
     """The record made of two `benchmark.json` documents of `--net` runs: every route of both (or of `routes`), with both runs' figures,
-    the spread and the ceiling; and the machine, commit, time and budget of each run."""
-    one, two = runs_of(_site(first)), runs_of(_site(second))
+    the spread and the ceiling; and the machine, commit, time and budget of each run.
+
+    A route of `killed` (named by the caller, who saw its runner die: a plan that does not stop at its net, #1156) that a run holds no entry
+    for is recorded there with no plan, its stop `KILLED`; any other route missing from a run is refused, so that no route drops out unsaid."""
+    one, two = dict(runs_of(_site(first))), dict(runs_of(_site(second)))
     wanted = list(routes) if routes is not None else [name for name in one if name in two]
+    for name in killed:
+        for found in (one, two):
+            found.setdefault(name, record_of_plan(None, None, None, None, KILLED))
     missing = [name for name in wanted if name not in one or name not in two]
     if missing:
         raise ValueError(f"a record needs two runs of every route; {', '.join(missing)} is not in both runs")
@@ -178,10 +187,13 @@ def check_run(record: Mapping, document: Mapping, routes: Iterable[str] | None =
     verdicts = []
     for name in wanted:
         held = record["routes"][name]
-        if name not in new:
-            verdicts.append(Verdict(name, NOT_RUN, "the run holds no entry for this route (a runner that died writes none)"))
-            continue
         first, second = held["runs"]
+        if name not in new:
+            if RouteRecord(first, second).state == NO_PLAN:  # no plan to lose: a runner that dies there gives what the record holds
+                verdicts.append(Verdict(name, PASS, "no plan in either recorded run, and no entry now (a runner that died writes none)"))
+            else:
+                verdicts.append(Verdict(name, NOT_RUN, "the run holds no entry for this route (a runner that died writes none)"))
+            continue
         verdicts.append(_verdict(name, RouteRecord(first, second), new[name]))
     verdicts.extend(Verdict(name, NOT_RECORDED, "the record does not hold this route") for name in new if name not in record["routes"])
     return verdicts
