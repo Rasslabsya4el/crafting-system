@@ -146,7 +146,7 @@ def classic_plan(target, prices):
     """The plan that judges a given route on `target`, with the CLASSIC offers (`cli_support.CLASSIC_KINDS`), not the default ones.
 
     These pages show a given route's rows (a gap, a restart, a trade link): a plan that judges a route searches every offer at once (no
-    rounds, `_plan.py`), and with every method on (#886) the toy R12's ran past the suite's 300 s on a CI runner (#ISSUE).
+    rounds, `_plan.py`), and with every method on (#886) the toy R12's ran past the suite's 300 s on a CI runner (#1110).
     """
     with pytest.MonkeyPatch.context() as patch:
         classic_offers(patch)
