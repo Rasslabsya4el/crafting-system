@@ -179,6 +179,27 @@ def test_a_given_start_item_has_no_restart_so_a_search_stopped_before_its_first_
     assert answer(closed)[0] >= value[0] * (1 - 1e-9) and closed.lower <= value[0] * (1 + 1e-9)
 
 
+def test_a_run_counted_in_states_asks_its_count_at_every_state_of_the_first_plan_and_of_a_round():
+    """#1101: under a count alone (`Net.pieces` set) the first plan's chain and a round stop once the states known reach the net, asked at every
+    state (the same on any machine): a blind bound's chain walked the whole graph whatever N was (R10: 20,791 states and 11 GB at N = 300)."""
+
+    def known(net: Net) -> tuple[int, str]:
+        try:
+            result = Search(ExplicitProblem(graph, value, 0.0), net=net).run()
+        except NoPolicy as error:  # stopped before a plan closed: it says by what
+            return error.states, str(error)
+        return result.stats.touched, result.stopped or ""
+
+    shorter = 0
+    for seed in SEEDS:
+        graph = random_graph(seed, 400)
+        value, _ = dense_optimum(graph)
+        (whole, _), (counted, said) = known(Net(states=8)), known(Net(states=8, pieces=800))  # the clock's rule: the chain is whole; a count
+        assert "limit is 8" in said and 8 <= counted <= whole
+        shorter += counted < whole
+    assert shorter >= 3, shorter  # the chain over a blind bound is cut where the count reaches the net
+
+
 def test_a_net_of_seconds_and_of_memory_stops_between_rounds():
     graph = random_graph(5, SIZE)
     value, _ = dense_optimum(graph)

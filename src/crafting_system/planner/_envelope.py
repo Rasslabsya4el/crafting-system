@@ -111,7 +111,8 @@ whose proof closes inside the aim is proved the cheapest; `_plan.search_gap`); `
 `gap_after` None, is the exact search and nothing else. The gap closes monotonically (`U` only falls, `L` only rises), so the search is anytime.
 
 **The stop-and-say-so net.** A time, memory or state net (`Net`) ends the search between rounds, and the time and memory nets also inside a
-round and inside the first plan's chain (the state net waits for the first round, so the first plan's reach can pass it); the answer is then the
+round and inside the first plan's chain (the state net waits for the first round, so the first plan's reach can pass it, except in a run counted
+in states, where it is the only net and is asked at every state of the chain and of a round, #1101); the answer is then the
 best executable policy and `exact` is False, with `stopped` saying which net. When the plan in hand at the stop cannot be solved to a certified cost
 (#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal. A given start whose plan has not closed has no answer
 (`NoPolicy`). A round whose *lower* solve cannot be certified (a plan of 10^9 steps or more, #867, #948) ends a search that holds such a plan the
@@ -587,7 +588,9 @@ class Search[S]:
             poll = time.perf_counter() - polled >= POLL_SECONDS
             if poll:
                 polled = time.perf_counter()
-            stopped = self._net(began, memory=poll, states=False)  # the clock at every state; the state net waits for the first round, so the chain is whole
+            # the clock at every state; the state net waits for the first round, so the chain is whole, except in a run counted in states (#1101):
+            # there it is the only net, and a chain over a blind bound walks tens of thousands of states, so the count is asked at every state
+            stopped = self._net(began, memory=poll, states=self.net.pieces is not None)
             if stopped is not None:
                 return stopped
             if not self.expanded[i]:
@@ -810,7 +813,8 @@ class Search[S]:
 
     def _net(self, began: float, memory: bool = True, states: bool = True) -> str | None:
         """The reason a net is reached now, or None; `memory` False leaves the memory unread (reading it costs too much to do at every state),
-        `states` False leaves the count of states unasked (the first plan's chain: the state net is asked between rounds)."""
+        `states` False leaves the count of states unasked (the first plan's chain and inside a round: the state net is asked between rounds, except
+        in a run counted in states, `Net.pieces` set, where it is asked at every state of the chain and of a round)."""
         net = self.net
         if net.seconds is not None and time.perf_counter() - began >= net.seconds:
             return f"the time limit of {net.seconds:g} seconds was reached"
@@ -1003,6 +1007,9 @@ class Search[S]:
                         self.expand(i)
                     self.realize(i, force=True)
                     self.p.release()
+                    if self.net.pieces is not None and self.net.states is not None and len(self.states) >= self.net.states:  # a count: asked at every state, the same on any machine (#1101)
+                        stopped = self._net(began, memory=False)
+                        break
                     if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
                         polled = time.perf_counter()
                         # a states net alone is asked between rounds only (`Budget.in_states`): inside one, where the clock polls, its count would
