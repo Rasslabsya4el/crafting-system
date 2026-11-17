@@ -849,6 +849,7 @@ def first_sentence(text: str) -> str:
 def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targets_dir: Path = TARGETS_DIR) -> list[Probe]:
     from crafting_system.actions import kinds
     from crafting_system.cli import StartContext, make_plan, vendor_recipe_starts
+    from crafting_system.planner._offers import reached_items
     from crafting_system.planner._plan import PlanError, StartPrice
     from crafting_system.prices import load_price_file
     from crafting_system.targets import StartKind, load_target
@@ -858,16 +859,19 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
     ids = short_ids(stems)
     probes: list[Probe] = []
 
-    def members_of(item) -> tuple[dict, dict]:
-        by_kind, owner = {}, {}
-        for entry in kinds(planner_only=True):
-            try:
-                found = list(entry.members(data, item))
-            except Exception:  # noqa: BLE001  (a kind that cannot list for this item offers nothing)
-                found = []
-            by_kind[entry.name] = found
-            for action in found:
-                owner.setdefault(action, entry.name)
+    def members_of(start) -> tuple[dict, dict]:
+        """Each kind's actions for every item the planner lists offers for (`reached_items`, #973: the start item and the items of the other
+        rarities its actions reach), as the planner lists them."""
+        by_kind, owner = {entry.name: [] for entry in kinds(planner_only=True)}, {}
+        for item in reached_items(data, start, None, frozenset()):
+            for entry in kinds(planner_only=True):
+                try:
+                    found = list(entry.members(data, item))
+                except Exception:  # noqa: BLE001  (a kind that cannot list for this item offers nothing)
+                    found = []
+                by_kind[entry.name].extend(action for action in found if action not in by_kind[entry.name])
+                for action in found:
+                    owner.setdefault(action, entry.name)
         return by_kind, owner
 
     def plan_one(label: str, option: str, target, prices, **kwargs) -> Probe:
@@ -938,7 +942,7 @@ def why_not_offered(data, kind, probe: Probe) -> str:
     if kind.opt_in and names is None:
         return "an opt-in kind and the target has no `actions:` key"
     if not members:
-        return "the kind lists no action for this start item"
+        return "the kind lists no action for this start item nor for the items of the other rarities its actions reach"
     left = {}
     for group in plan.limits:  # type: ignore[attr-defined]
         if group.kind in ACTION_LIMITS:  # the other limits list kinds by name, not actions by label

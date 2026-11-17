@@ -221,6 +221,16 @@ def test_a_rare_start_item_is_offered_the_orbs_of_magic_items_only_for_the_item_
     assert MAGIC_ORBS | {"Orb of Alchemy"} <= {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, normal).offers}
 
 
+def test_a_label_of_a_rarity_the_start_never_reaches_is_refused_and_one_it_reaches_is_offered():
+    """#973: a label is checked against the items the start can be turned into, so no named action is left out unsaid (OR-13)."""
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    fractured = item(roll(LIFE, fractured=True), base_id=BELT)  # a Scouring leaves it Magic, never Normal
+    with pytest.raises(ValueError, match=r"Whispering Essence of Hatred name an action that no item this start item can be turned into takes"):
+        offers_for(PRICED_DATA, goal, BELT, fractured, ["chaos-orb", "Whispering Essence of Hatred"])
+    plain = offers_for(PRICED_DATA, goal, BELT, item(roll(LIFE), base_id=BELT), ["scouring-orb", "Whispering Essence of Hatred"])
+    assert {offer.label for offer in plain.offers} == {"Orb of Scouring", "Whispering Essence of Hatred"}
+
+
 def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
     with pytest.raises(ValueError, match=r"blessed-orb cannot be used by the planner yet; the kinds the planner can use are"):
         offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["blessed-orb"])

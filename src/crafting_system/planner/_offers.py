@@ -482,6 +482,11 @@ def offers_for(
     left_out_unwanted: list[str] = []
     listing_gaps: list[ListingGap] = []
     kind_of = _listed(data, start_item, kind_names, label_names, listing_gaps)
+    unreached = sorted(label_names - {action.label(data) for action in kind_of})
+    if unreached:  # a label of the catalog that no item this start reaches takes (an essence of a Normal item, on a Rare start no wipe can make Normal)
+        raise ValueError(
+            f"action label(s) {', '.join(unreached)} name an action that no item this start item can be turned into takes, so it would never be offered"
+        )
     if kind_names is not None and RECOMBINATOR_KIND in kind_names:
         kind_of = _with_feeder_donors(data, goal, start_item, kind_of)
         # a donor is made from a normal item of the base (the recombinator's `inputs`): the actions that apply to one are offered too, but
@@ -892,7 +897,12 @@ def reached_items(data: GameData, start_item: Item, kind_names: frozenset[str] |
     leave a Rare start offered nothing the Normal item an Orb of Scouring leaves takes. The rarities are closed under the actions: each item
     found is asked what every action listed for it leaves (the `retained` item of each part of its outcomes: the item after a Scouring, its
     fractured mods kept; the empty Rare item an Alchemy draws on), and an uncorrupted item of a rarity not yet found is added and asked in
-    turn (`Action.rarities` first, which a fossil set answers without building its pools). Nothing names an action here: a Restore of a Magic imprint, or any new action that changes the rarity, is followed the same way.
+    turn (`Action.rarities` first, which a fossil set answers without building its pools). Nothing names an action here: any action that
+    changes the rarity is followed the same way as the Scouring and the Alchemy.
+
+    The listing is exact BY RARITY (what #973 asks), with one item kept per rarity, the first found: a kind whose listing reads more than the
+    rarity (an influence: `harvest-reforge-influence`, the Awakener's Orb) is listed for that item's influences, and an edge that this item
+    refuses while another item of its rarity takes it is not followed. Neither changes a reference route today; #1219 closes it.
     An action the item refuses (`NotApplicableError`), the model has no rule for (`OutOfScopeError`) or the data cannot build there
     (`ItemError`: a game data without the veiled placeholders) leaves nothing: at plan time it is refused at that item too, so it reaches
     no item the plan could use.

@@ -364,7 +364,7 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     check_socket_declarations(action, reads, adds, items, item, data, reading)
     check_corruption_declarations(action, reads, adds, items, item, data, goal)
     check_added_draw(action, item, items, data)
-    if not item.memory_strands:
+    if not item.memory_strands:  # the planner plans no stranded item (`_plan.make_plan` refuses strands), so it never asks `rarities` of one
         check_rarities_declared(action, item, items, data)
     if item.memory_strands:
         check_strand_declarations(action, item, outcomes, items, data, reading)
