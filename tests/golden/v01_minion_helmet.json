@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds the run's methods setting does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 34,
+      "count": 33,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -181,13 +181,11 @@
         "Bench crafts",
         "Remove Crafted Mods",
         "Fossil sets",
-        "Alchemy Orb",
         "Exalted Orb",
         "Veiled Chaos Orb",
         "Veiled Exalted Orb",
         "Unveil",
         "Pick from the unveil offer",
-        "Scouring Orb",
         "Annulment Orb",
         "Fracturing Orb",
         "Talisman fracture",
@@ -203,7 +201,8 @@
         "Eldritch Annulment Orb",
         "Orb of Conflict",
         "Imprint",
-        "Restore"
+        "Restore",
+        "Hinekora's Lock"
       ],
       "names": []
     },
@@ -231,6 +230,18 @@
         "Bench socket colours",
         "Quality currency",
         "Re-anoint"
+      ],
+      "names": []
+    },
+    {
+      "kind": "kinds-not-built",
+      "what": "Not offered",
+      "why": "not offered yet on any item, a Normal one included: a Scouring leaves the item Normal, or Magic with its fractured mod, and the planner cannot yet choose actions for that item, only for the item it starts from, so the Orb of Alchemy waits with the Scouring",
+      "guarantee": "The plan is the cheapest among the methods the planner can use.",
+      "count": 2,
+      "labels": [
+        "Alchemy Orb",
+        "Scouring Orb"
       ],
       "names": []
     },

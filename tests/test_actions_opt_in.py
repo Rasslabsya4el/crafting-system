@@ -83,13 +83,17 @@ def test_offers_leave_an_opt_in_kind_out_unless_the_target_names_it(toy_opt_in, 
     assert named.offers[0].action == ToyOptIn()
 
 
-def test_every_planner_kind_of_the_beta_is_offered_by_default():
+def test_every_planner_kind_of_the_beta_is_offered_by_default_and_every_deferred_one_is_not():
     in_scope = set(kinds_in_scope())
     off = [entry.name for entry in kinds(planner_only=True) if entry.name in in_scope and entry.opt_in]
     assert not off, f"in-scope kinds off by default (OR-41): {off}"
     still_opt_in = {entry.name for entry in kinds(planner_only=True) if entry.opt_in}
-    assert still_opt_in == {"recombinator", "foulborn-exalted-orb"}, still_opt_in  # the deferred planner kinds only (OR-37)
+    assert still_opt_in == {"recombinator", "foulborn-exalted-orb", "vaal", "locus"}, still_opt_in  # the deferred planner kinds only (OR-37)
     assert still_opt_in <= set(DEFERRED_KINDS), still_opt_in
+    # OR-37, #1125: a deferred planner kind is off unless a setting turns it on, by the methods setting (opt-in) or, for the kinds of
+    # Memory Strands, by the strands setting (`needs_strands`)
+    on_by_default = [entry.name for entry in kinds(planner_only=True) if entry.name in DEFERRED_KINDS and not (entry.opt_in or entry.needs_strands)]
+    assert not on_by_default, f"deferred kinds on by default (OR-37): {on_by_default}"
 
 
 def test_blocking_and_filler_crafts_are_offered_by_default():

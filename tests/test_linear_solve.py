@@ -340,6 +340,26 @@ def test_the_flats_of_a_run_are_read_from_its_best_residual_step_by_step(monkeyp
     assert stall_step([1.0, 0.6, 0.6, 0.6] + [0.6] * 100) == 36
 
 
+def test_a_residual_that_is_not_a_finite_positive_number_ends_the_reading_of_a_step(monkeypatch):
+    """#1179: the norm of a residual near 1e300 overflows to infinity, and halving an infinite mark never ends (R24's first round hung there for an
+    hour, past every net). An infinite residual is flat, so the run stagnates; a fall from it, or to zero, is marked at once."""
+    monkeypatch.setattr(lin, "STALL", 6)
+    assert stall_step([math.inf] * 100) == 36
+    # a fall from an infinite start to a finite residual ends the first flat (1 step); flat after it: 36 steps after step 1
+    assert stall_step([math.inf, 1.0] + [1.0] * 100) == 37
+    # a fall to zero is marked, and zero stays flat
+    assert stall_step([1.0, 0.0] + [0.0] * 100) == 37
+
+
+def test_bicgstab_from_a_start_whose_residual_overflows_ends(monkeypatch):
+    """#1179: a start of values near 1e300 gives a residual whose norm is infinite in floats; the run ends at once as a stagnation, its start
+    returned, instead of hanging (the solve then goes to the exact solve by the cycles)."""
+    n = 4
+    start = np.full(n, 1e300)
+    x, _, steps, stagnated = lin.bicgstab(lambda v: v - 0.5 * np.roll(v, 1), np.ones(n), start, 1e-13)
+    assert stagnated and steps == 0 and np.array_equal(x, start)
+
+
 # --- the solve: dense, iterate, exact ------------------------------------------------------------------------------------------------------------------
 
 

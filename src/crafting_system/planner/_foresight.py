@@ -3,7 +3,8 @@
 The design is ADR-0054 to ADR-0057; the solver's side (`solver.Peek`, `solver.solve_peek`) is ADR-0054's and ticket #293's. This module builds
 what the planner gives the solver and decides when it is worth building at all.
 
-**The Lock is a planner kind on by default** (`LOCK_KIND`): a target whose `actions:` does not name it has none (`lock_wanted`). Its price is the
+**The Lock is a planner kind off by default** (`LOCK_KIND`; OR-37 defers it to B8, #1125): a run whose methods setting (`PlanSettings.methods`, read
+as the target's `actions`) does not name it has none, and nothing of this module is built (`lock_wanted`). Its price is the
 price file's (`prices.lock_price`); with none the Lock is dropped (ADR-0056) and `N` is still found, since it does not need the price.
 
 **At a state `s` the Peek is a `Site`** (`PlanSites`):
@@ -80,7 +81,7 @@ class Status(StrEnum):
     NOT_WORTH = "not worth it"  # the Lock is offered and priced, and no plan step takes it
     NO_OPTION = "no previewable action"  # no state the plan visits has a previewable option
     REFUSED = "refused"  # the start item takes no Lock (corrupted)
-    SWITCHED_OFF = "switched off by the run's methods setting"  # the run's methods (`PlanSettings.methods`) do not name it
+    SWITCHED_OFF = "off: the run's methods setting does not name it"  # a deferred method (OR-37): on only when `PlanSettings.methods` names it
     WITH_SECOND_ITEMS = "not offered in a plan that makes second items"  # the target allows it, but a plan with donors has no Lock solve yet (#225, #796)
     NO_PRICE = "no price"  # the price file has none: the Lock is dropped, N is still found
     COARSE = "coarse"  # an approximate answer whose pruning removed the Lock everywhere: no N (the exact values it needs do not exist)
@@ -119,8 +120,8 @@ class CoarseLockError(ValueError):
 
 
 def lock_wanted(actions: Sequence[str] | None) -> bool:
-    """Whether a target's `actions:` lets the plan use the Lock: it is on by default and dropped by an `actions:` that does not name it."""
-    return actions is None or LOCK_KIND in actions
+    """Whether the run's methods setting (the target's `actions`) lets the plan use the Lock: only when it names it (OR-37, #1125)."""
+    return actions is not None and LOCK_KIND in actions
 
 
 def survives(lock: float, c_min: float, value: float) -> bool:

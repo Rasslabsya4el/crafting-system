@@ -134,6 +134,7 @@ _NAMES = {  # the kinds whose name in the catalog does not read as the game's wo
     "wild-bristle-matron": "Wild Bristle Matron",
     "beast-influence-recipe": "Beast influence recipe",
     "re-anoint": "Re-anoint",
+    "hinekora-lock": "Hinekora's Lock",
     "recombinator": "Recombinators",
     "catalyst": "Catalysts",
     "eldritch-implicit-currency": "Eldritch implicit currency",

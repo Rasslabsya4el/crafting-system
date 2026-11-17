@@ -414,8 +414,10 @@ def test_the_orb_declares_that_it_corrupts_and_keeps_the_mods_and_is_offered_to_
         (Goal((Wanted(RESISTS),), allow_corrupted=True), True),
         (Goal((Wanted(RESISTS),)), False),  # an item never arrives corrupted unasked
     ):
-        labels = [offer.label for offer in offers_for(DATA, goal, start.base_id, start).offers]
+        labels = [offer.label for offer in offers_for(DATA, goal, start.base_id, start, kinds_named=("vaal",)).offers]
         assert ("Vaal Orb" in labels) is offered, goal
+        default = [offer.label for offer in offers_for(DATA, goal, start.base_id, start).offers]
+        assert "Vaal Orb" not in default, goal  # B4 is deferred: off unless the run's methods name it (OR-37, #1125)
 
 
 def test_the_claims_are_the_orb_s_and_not_the_resonator_s():

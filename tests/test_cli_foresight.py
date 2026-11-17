@@ -20,7 +20,7 @@ from ssp_oracles import to_model
 from targets_support import DATA
 
 from crafting_system.actions import Action as GameAction
-from crafting_system.actions import ChaosOrb, Kind, Previewable, registered
+from crafting_system.actions import ChaosOrb, Kind, Previewable, kinds, registered
 from crafting_system.cli import PlanError, make_plan
 from crafting_system.planner._foresight import (
     LOCK_KIND,
@@ -33,7 +33,9 @@ from crafting_system.planner._foresight import (
     lock_gain,
     survives,
 )
+from crafting_system.planner import PlanSettings, plan_target
 from crafting_system.planner._offers import Offer, PricedOffer
+from crafting_system.planner._plan import with_methods
 from crafting_system.cli._report import build_report
 from crafting_system.prices import PriceEntry
 from crafting_system.solver import Action, Outcome, TabularModel, solve, solve_peek
@@ -167,9 +169,13 @@ def with_lock(prices, price):
     return dataclasses.replace(prices, prices={**prices.prices, LOCK: PriceEntry(price, "test")})
 
 
+# every method the planner offers by default, and the Lock: the Lock is off unless the run's methods setting names it (OR-37, #1125)
+WITH_LOCK = (*(entry.name for entry in kinds(planner_only=True) if not entry.opt_in and not entry.needs_strands), LOCK_KIND)
+
+
 @pytest.fixture(scope="module")
 def r12():
-    return load_target(R12, DATA)
+    return with_methods(load_target(R12, DATA), WITH_LOCK)
 
 
 @pytest.fixture(scope="module")
@@ -214,13 +220,22 @@ def test_a_plan_with_the_lock_has_its_risk_and_the_report_refuses_it_in_words_un
         build_report(plan, DATA)
 
 
-def test_the_lock_is_on_by_default_and_the_targets_actions_drop_it_or_name_it(r12):
-    prices = with_lock(price_file(), 0.01)
-    dropped = make_plan(DATA, dataclasses.replace(r12, actions=("chaos-orb", "harvest-reforge")), prices)
-    named = make_plan(DATA, dataclasses.replace(r12, actions=("chaos-orb", "harvest-reforge", LOCK_KIND)), prices)
+def test_the_lock_is_off_by_default_and_on_when_the_methods_setting_names_it():
+    # OR-37, #1125: Hinekora's Lock is a deferred method (B8). A run of the planner's entry with no methods setting builds nothing of it (no
+    # option, no gain, no second solve: the 13 GB kernels of R12 were the Lock's), and the answer names it as a method left out (OR-13);
+    # a setting that names it gets it, and one that names other methods only leaves it out and says so too.
+    prices = with_lock(price_file(), 0.01)  # so cheap that a plan which may take it does
+    target = load_target(R12, DATA)
+    default = plan_target(DATA, target, prices, PlanSettings(recipe_starts=False))
+    dropped = plan_target(DATA, target, prices, PlanSettings(recipe_starts=False, methods=("chaos-orb", "harvest-reforge")))
+    named = plan_target(DATA, target, prices, PlanSettings(recipe_starts=False, methods=WITH_LOCK))
 
-    assert dropped.foresight.status is Status.SWITCHED_OFF and dropped.foresight.n is None
-    assert named.foresight.status is Status.USED
+    for off in (default, dropped):
+        assert off.foresight.status is Status.SWITCHED_OFF and off.foresight.n is None and off.foresight.kept == off.foresight.pruned == 0
+        assert all(action.label != LOCK_LABEL for action in off.policy.values())
+        assert any(LOCK in limit.labels and limit.what == "Not offered" for limit in off.limits)
+    assert named.foresight.status is Status.USED and named.mean_remaining < default.mean_remaining
+    assert not any(LOCK in limit.labels for limit in named.limits)
 
 
 # --- the coarse level ---------------------------------------------------------------------------------------------
@@ -236,8 +251,10 @@ def coarse():
     pooling = approx.Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
 
+    with_the_lock = with_methods(target, WITH_LOCK)  # the Lock is off unless the run's methods name it (OR-37, #1125); the offers are given
+
     def plan(prices):
-        return make_plan(approx.DATA, target, prices, offers=approx.OFFERS, budget=budget, rates=approx.RATES, solver="object")
+        return make_plan(approx.DATA, with_the_lock, prices, offers=approx.OFFERS, budget=budget, rates=approx.RATES, solver="object")
 
     return approx.PRICES, plan
 
@@ -386,3 +403,15 @@ def test_a_burn_is_a_fallback_that_leads_back_to_the_state_and_a_plan_with_it_so
     loop = next(action for action in site.fallback if action.label == burn.label)
     assert [(state, weight) for state, weight in loop.outcomes] == [(plan.start, 1)]
     assert plan.foresight.status is Status.USED and plan.mean_remaining < lock_free.mean_remaining
+
+
+def test_a_corrupted_start_item_names_no_lock_among_the_methods_left_out():
+    # a corrupted item takes no Lock (`hinekora_lock.refused_on`), so the answer does not offer it as a method left out (OR-13, #1125)
+    from crafting_system.abstraction import Goal
+    from crafting_system.planner._offers import offers_for
+
+    target = load_target(R12, DATA)
+    for start, named in ((target.start_item, True), (dataclasses.replace(target.start_item, corrupted=True), False)):
+        for methods in (None, ("chaos-orb",)):
+            limits = offers_for(DATA, Goal.from_target(target), target.base_id, start, methods).limits
+            assert any(LOCK in limit.labels for limit in limits) is named, (start.corrupted, methods)

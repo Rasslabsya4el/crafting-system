@@ -20,8 +20,8 @@ instead of the general "methods the planner cannot use yet" (`planner/_offers.py
 
 A kind is `opt_in` when the planner can use it but offers it only when it is named (`catalog(..., names=None)` leaves an opt-in kind
 out; `names` that include it list it). Since #886 (OR-41) no kind of the beta's scope is opt-in: every one is offered by default, and
-the flag is left only to a kind outside it (the recombinator, the Foulborn Exalted Orb; `prices/spends.py`, `DEFERRED_KINDS`) and as the
-mechanism behind a user's switch that turns a method off (#323). `tests/test_actions_opt_in.py` fails on an in-scope opt-in kind.
+the flag is left only to a kind outside it (the recombinator, the Foulborn Exalted Orb, and since #1125 the corrupting Vaal Orb and Locus of
+Corruption of B4; `prices/spends.py`, `DEFERRED_KINDS`) and as the mechanism behind a user's switch that turns a method off (#323). `tests/test_actions_opt_in.py` fails on an in-scope opt-in kind.
 
 A kind is `needs_strands` when its actions exist only in a plan that considers Memory Strands (the Foulborn orbs, the Orb of Remembrance,
 the Orb of Unravelling; ADR-0040, "Strands are off unless the query has them"). `catalog(..., strands=False)` leaves such a kind out;
