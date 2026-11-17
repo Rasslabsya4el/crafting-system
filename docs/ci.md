@@ -436,6 +436,13 @@ is the **view** `tests/golden_diff.py` makes of them, and the same view is used 
   A file that differs from main only in line endings gets one line saying so, not an empty diff. The file sections of the report
   stay under 900,000 bytes (UTF-8), below the 1 MiB a job summary may hold; a file that would pass it is left out with a note.
 
+**A recorded number never depends on the runner's speed (#886).** A golden, fixture, benchmark record or test that checks a cost or a page
+of a target whose offers split into rounds plans under `Budget.in_states(N)` (`src/crafting_system/budget.py`): a net of N states and no
+time or memory net, so nothing in the search or its rounds reads the clock and every runner gives the same plan and text. N is a test
+setting chosen per record by measurement (each record says its figure and why it is enough), never a limit of a user's run, which keeps the
+time net (OR-39, OR-40). Only the rounds of offers share N out; every other search of the run has the whole of it, and the bound's build and
+the Lock's check have no cap in such a run, so a record that runs out of memory needs a smaller N, not a memory net.
+
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
 in the PR, and commit the file (a golden that needs the real game data is re-recorded on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
 real game data is taken from where it is made, since a PC without the cache cannot make it. `reachability.md` is the artifact

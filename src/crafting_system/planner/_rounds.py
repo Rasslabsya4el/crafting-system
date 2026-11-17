@@ -24,6 +24,11 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
   share too once its own search holds a plan: it gives way there, with its plan (`Share`, #1080), so every group is tried once a plan exists.
   Two refusals in a row set the first refused group aside (it would refuse every round after it).
+* **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
+  #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
+  less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
+  states its search knew where it would read the clock. Nothing in the rounds reads the clock, so the same target under the same net gives the
+  same plan and the same answer on every machine (a round's line names its states, not its seconds).
 * **A group that cannot beat the plan in hand is not carried** (#1080, #1091). A round before the last that began with a plan in hand and
   ended beaten, or closed (exactly or within the gap) with no cheaper plan, proved only that no plan of its offers with the base costs less
   than the plan in hand ("beaten" below covers both); no exact rule lets a later round leave it out and keep the optimum. A plan in hand of 10 that adds mods A
@@ -82,6 +87,7 @@ class RoundCall:
     upper: float | None
     watched: bool
     give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
+    states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
 
 
 @dataclass(frozen=True)
@@ -99,6 +105,7 @@ class RoundRecord:
     within: float | None = None  # the gap it closed within, when it closed only within one (the run's gap, OR-32)
     features: tuple[str, ...] = ()  # what its group's offers add to the model (`Abstraction.features`): with the kinds, what names the group
     carried: bool = True  # False: a round before the last that could not beat the plan in hand, whose group later rounds did not hold (`widen`)
+    states: int | None = None  # the states its search knew, when the run counts in states (`StatesMeter`): the answer names them, not the seconds
 
     @property
     def closed(self) -> bool:
@@ -110,7 +117,7 @@ class RoundRecord:
         return {
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
             "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
-            "carried": self.carried,
+            "carried": self.carried, **({} if self.states is None else {"states": self.states}),
         }  # fmt: skip
 
 
@@ -174,11 +181,12 @@ class Share:
     count or a cut: the share is the one every round with a plan in hand gets, and the clock is the run's (`left`, `clock_now`); what stays
     time-dependent is only when the share is used, as for every round."""
 
-    def __init__(self, left: float, rounds: int, began: float, clock_now: Callable[[], float]) -> None:
+    def __init__(self, left: float, rounds: int, began: float, clock_now: Callable[[], float], unit: str = "seconds") -> None:
         self.share, self.began, self.clock_now = left / max(rounds, 1), began, clock_now
         self.upper: float | None = None  # the cheapest plan its search held when it last asked
+        whole = "the time" if unit == "seconds" else f"the {unit}"  # `StatesMeter`: the run's net is in states, and so is the share
         self.said = (
-            f"its search made a plan, it had used its share of the time ({self.share:,.0f} seconds, the time left over the rounds left), and its "
+            f"its search made a plan, it had used its share of {whole} ({self.share:,.0f} {unit}, {whole} left over the rounds left), and its "
             "last search round made no cheaper plan: the rest went to the rounds after it"
         )
 
@@ -189,6 +197,37 @@ class Share:
         if lowered:
             self.upper = upper
         return self.said if upper is not None and not lowered and self.clock_now() - self.began >= self.share else None
+
+
+class StatesMeter:
+    """The rounds' clock when the run counts its work in states (`Budget.in_states`: a states net and no time net, #886): the states the rounds'
+    searches knew, never the seconds, so the rounds' shares and `Share`'s rule give the same rounds on every machine. `given` is the run's states
+    net; the states a round knows are read from its search's standing after each of its search rounds (`saw`) and, once it ends, from its plan's
+    count when it has one (`ended`). A round's net is its share of the states left (`net`); nothing here reads the clock."""
+
+    unit = "states"
+
+    def __init__(self, given: int) -> None:
+        self.given, self.spent, self.running = given, 0, 0
+
+    def left(self) -> float:
+        return float(max(self.given - self.spent - self.running, 0))
+
+    def now(self) -> float:
+        return float(self.spent + self.running)
+
+    def net(self, searches: int) -> int:
+        """The states net of a round that shares the states left with `searches` rounds (itself included); at least one state."""
+        return max(int(self.left()) // max(searches, 1), 1)
+
+    def saw(self, standing) -> None:
+        self.running = max(self.running, int(getattr(standing, "states", 0) or 0))
+
+    def ended(self, touched: int | None) -> int:
+        """Close the round: the states it knew (its plan's count, or what its search last stood at), added to the spent ones."""
+        known = max(self.running, int(touched or 0))
+        self.spent, self.running = self.spent + known, 0
+        return known
 
 
 @dataclass(frozen=True)
@@ -211,10 +250,16 @@ def widen(
     ended: Callable[[object], tuple[str, str]],
     left: Callable[[], float | None],
     clock_now: Callable[[], float],
+    meter: StatesMeter | None = None,
 ) -> Widened:
     """Run the rounds of `groups` over `offers` (see the module text). `run(round_offers, call)` makes a round's plan (raising what `_make_plan`
     raises, or `Beaten`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and reason;
-    `left()` the run's seconds left (None: no net), `clock_now()` the time."""
+    `left()` the run's seconds left (None: no net), `clock_now()` the time. With `meter` the run counts in states (`StatesMeter`): the rounds'
+    shares, `Share` and the rounds not tried read it, never `left` or the clock (the clock only times each round for the JSON)."""
+    if meter is not None:
+        left, measure = meter.left, meter.now
+    else:
+        measure = clock_now
     best, best_upper, best_mean, error = None, None, None, None
     base: list[int] = []
     records: list[RoundRecord] = []
@@ -225,18 +270,24 @@ def widen(
         rest = len(queue) - k
         out_of_time = (time_left := left()) is not None and time_left <= 0.0
         if out_of_time:
-            records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, "the run's time was used up before this round", None, None, 0.0) for g in queue[k:])
+            used = "the run's time was used up" if meter is None else "the run's states net was used up"
+            records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, f"{used} before this round", None, None, 0.0, states=None if meter is None else 0) for g in queue[k:])
             break
         positions = sorted({*base, *group.positions})
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
-        plan, status, reason, lower, upper, within = None, REFUSED, "", None, None, None
+        counted = began if meter is None else measure()
+        plan, status, reason, lower, upper, within, touched = None, REFUSED, "", None, None, None, None
         held, improved = best is not None, False  # a plan in hand when the round began; the round's own plan became it
-        give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, began, clock_now)  # the last round has all the time left
+        unit = "seconds" if meter is None else meter.unit
+        give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, counted, measure, unit)  # the last round has all the time left
+        searches = rest if best is not None else 1
+        asked = give_way if meter is None else _seen_by(meter, give_way)  # counted in states: every round's search reports the states it knows
         try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
-            plan = run(chosen, RoundCall(rest if best is not None else 1, best_upper, k == 0, give_way))
+            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches)))
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
+            touched = getattr(beaten, "states", None)
             reason = (
                 "no plan with these methods costs less than the plan in hand"
                 + (f" (to within the gap of {beaten.within:.2%} this run allows)" if beaten.within is not None else "")
@@ -266,7 +317,9 @@ def widen(
             lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
         if lower is not None and not math.isfinite(lower):
             lower = None  # a round with no plan states no figure (the JSON holds no infinity)
-        records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features))))
+        touched = getattr(getattr(plan, "search", None), "touched", None) if plan is not None else touched
+        known = None if meter is None else meter.ended(touched)  # a round that raised is counted where its search last stood
+        records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known))
         if status == REFUSED and k > 0 and refused_last is not None:
             # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
             # this one widens what the base held before it (#1080): a group whose offers make every solve refuse would refuse every round after
@@ -295,6 +348,17 @@ def widen(
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error)
+
+
+def _seen_by(meter: StatesMeter, give_way: Share | None) -> Callable[[object], str | None]:
+    """The rule a round's search asks after each of its rounds when the run counts in states: the meter first reads the states it knows, then
+    `Share` (when the round has one) decides on that count."""
+
+    def asked(standing) -> str | None:
+        meter.saw(standing)
+        return give_way(standing) if give_way is not None else None
+
+    return asked
 
 
 def _cheaper(mean: float, upper: float | None, best_mean: float, best_upper: float | None) -> bool:
@@ -338,7 +402,8 @@ def round_line(n: int, record: RoundRecord) -> str:
 
 
 def _round_line(n: int, record: RoundRecord) -> str:
-    head = f"round {n} ({group_name(record)}; {record.offers:,} actions offered, {record.seconds:,.0f} s)"
+    spent = f"{record.seconds:,.0f} s" if record.states is None else f"{record.states:,} states"  # a run counted in states names no seconds
+    head = f"round {n} ({group_name(record)}; {record.offers:,} actions offered, {spent})"
     if record.status == CLOSED:
         return f"{head}: finished, its best plan costs {_figure(record.upper)}"
     if record.status == WITHIN:
@@ -373,6 +438,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
         )
         return (Limit(_limits.ROUNDS, "The methods were searched in rounds", "the search widened its methods round by round: {names}", **guarantee, names=lines),)
     open_rounds = [(n, record) for n, record in enumerate(records, start=1) if not record.closed]
+    net = "the states or the memory" if any(record.states is not None for record in records) else "the time or memory"  # `StatesMeter`
     proved = "; ".join(closed) if closed else "no method"
     return (
         Limit(
@@ -387,7 +453,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
         Limit(
             _limits.UNTRIED,
             "Not finished",
-            "these rounds did not finish before their share of the time or memory, ended at once but were not held by the rounds after them, or were not reached: {names}",
+            f"these rounds did not finish before their share of {net}, ended at once but were not held by the rounds after them, or were not reached: {{names}}",
             "The plan shown is the best the finished rounds found; these methods may still give a cheaper one, at no less than the figure stated for each.",
             labels=tuple(sorted({kind for _, record in open_rounds for kind in record.kinds})),
             names=tuple(round_line(n, record) for n, record in open_rounds),
@@ -396,6 +462,6 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
 
 
 __all__ = [
-    "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
+    "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "StatesMeter", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
     "round_groups", "round_line", "rounds_limits", "widen",
 ]  # fmt: skip

@@ -525,3 +525,27 @@ def test_the_risk_stage_keeps_its_plan_when_the_run_is_past_its_net(coarse, fake
     finally:
         _plan.plan_foresight = real
     assert plan.mean_remaining == pytest.approx(full.mean_remaining, rel=1e-12) and plan.risk is not None
+
+
+def test_a_run_counted_in_states_names_states_and_gives_the_cost_figures_ladder_no_time_net():
+    # #886: `Budget.in_states` has no aim, no time and no memory net; the cost figures' ladder then has no deadline, and a search stopped for a
+    # reason the clock does not name is said in states, never in the seconds the run happened to take
+    import math as _math
+    from types import SimpleNamespace
+
+    from crafting_system.budget import STATES, running
+    from crafting_system.planner._plan import bind_search
+    from crafting_system.risk import _regen
+
+    given = Budget.in_states(10)
+    assert (given.aim_seconds, given.seconds, given.memory_mb, given.states, given.gap) == (None, None, None, 10, 0.0)
+    for wrong in (0, True, 2.5):
+        with pytest.raises(ValueError):
+            Budget.in_states(wrong)
+    clock = given.start()
+    with running(clock):
+        net = _regen.ladder_net(1800.0)
+    assert net.deadline == _math.inf and not net.by_run
+    bind_search(clock, SimpleNamespace(exact=False, within=None, bound_stopped=None, touched=7, peak_mb=None))
+    (found,) = clock.bindings
+    assert (found.limit, found.given, found.reached) == (STATES, 10, 7)
