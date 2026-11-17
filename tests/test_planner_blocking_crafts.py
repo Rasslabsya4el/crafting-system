@@ -1227,7 +1227,6 @@ def test_a_round_that_proves_no_plan_with_a_plan_in_hand_is_set_aside_like_a_bea
     assert widened.records[1].reason.endswith("the last round held them again, with every method")
 
 
-
 def test_a_nearly_done_build_goes_on_past_its_net_to_at_most_twice_it_and_one_far_from_done_stops(monkeypatch):
     # #1135, on a hand clock (no real clock is read): a 20 s net of a round with a plan in hand, room for one more share past it
     # (`Net.late` 1, `_plan.search_net`: three rounds or more left). Its build's model holds 80 of 84 offers (R11's
