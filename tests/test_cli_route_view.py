@@ -35,6 +35,7 @@ from route_view_support import (
 from targets_support import EXAMPLES
 
 from crafting_system.actions import DRAW_LABEL, HarvestReforge
+from crafting_system.budget import Budget
 from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
 from crafting_system.planner._limits import STRANDS
 from crafting_system.cli._reach import policy_states
@@ -145,8 +146,9 @@ INPUTS = {
 
 def judged_plan(target, prices, route_actions: tuple[str, ...] = ("Chaos Orb",)):
     """The plan that judges a given route on `target`, with the default offers: the labels the judged routes name lead the first round
-    of its search (`route_actions`, as `--route` gives them, #1110), so it holds every action they take."""
-    return make_plan(DATA, target, prices, judges_route=True, route_actions=route_actions)
+    of its search (`route_actions`, as `--route` gives them, #1110), so it holds every action they take. It runs counted in states, as the
+    command does here (`counted_in_states`): a round's line names its states, not the seconds it took (a golden holds no measured time)."""
+    return make_plan(DATA, target, prices, judges_route=True, route_actions=route_actions, budget=Budget.in_states(GOLDEN_STATES))
 
 
 @pytest.fixture(scope="module")

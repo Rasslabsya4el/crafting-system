@@ -8,7 +8,8 @@ These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; CI fetches
 
 Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLASSIC_OFFERS` below): what a target with no
 `actions:` was offered before #886 turned every beta method on, so its records of before hold. It is not a test of the default plan:
-with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
+with every method on, a real route's model (built here with nothing solved) outgrows CI's time and memory, and the heavy
+benchmark records those plans.
 """
 
 import dataclasses
