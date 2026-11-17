@@ -360,17 +360,27 @@ def widen(
         record = RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known)
         if unbuilt is not None and unbuilt not in record.reason:  # (a run counted in states names its build's count already, `_plan.round_end`)
             record = replace(record, reason=f"{record.reason}; {UNBUILT} ({unbuilt})")
-        if k in again:  # the second try of a round (#1135): its line is the first try's, with both tries' work
-            place = again.pop(k)
-            first = records[place]
+        if k in again:
+            # the second try of a round (#1135): one line with both tries' work, both reasons and the second try's lower figure (searched with the
+            # wider base). It goes last, where it ran: the last line is the round that held the most offers, which `_plan.widened_plan` reads
+            # as the whole proof's figure when every round closed
+            gone = again.pop(k)
+            first = records.pop(gone)
+
+            def shift(at: int) -> int:  # the places after the first try's move up by one
+                return at - 1 if at > gone else at
+
+            set_aside = [(shift(aside), g) for aside, g in set_aside]
+            again = {j: shift(at) for j, at in again.items()}
+            refused_last = None if refused_last is None else (shift(refused_last[0]), refused_last[1])
             record = replace(
-                record, reason=f"{record.reason}; {TRIED_AGAIN}", seconds=first.seconds + record.seconds,
-                states=None if known is None else known + (first.states or 0),
+                record, reason=f"{record.reason}; {TRIED_AGAIN} (its first try: {first.reason.replace(LEFT, '')})",
+                seconds=first.seconds + record.seconds, states=None if known is None else known + (first.states or 0),
             )  # fmt: skip
-            records[place] = record
+            records.append(record)
         else:
             records.append(record)
-            place = len(records) - 1
+        place = len(records) - 1
         if status == REFUSED and k > 0 and refused_last is not None:
             # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
             # this one widens what the base held before it (#1080): a group whose offers make every solve refuse would refuse every round after
@@ -379,16 +389,18 @@ def widen(
             positions = sorted({*base, *group.positions})
             records[earlier_place] = replace(records[earlier_place], reason=records[earlier_place].reason + "; set aside, since the round after it was refused too")
         refused_last = (place, group.positions) if status == REFUSED and k > 0 else None
-        if held and not improved and status == STOPPED and unbuilt is not None and ahead > 1 and k not in tried:
+        owed_after = closing is None and bool(set_aside) and _all_ended(records[:place], again.values())
+        if held and not improved and status == STOPPED and unbuilt is not None and (ahead > 1 or owed_after) and k not in tried:
             # a round with a plan in hand whose bound's build its share ended before it was complete, and with no cheaper plan (#1135): its
             # search had no time, or only a weak bound, to cut with (R11's Exalted round: a build of about 24 s in a share of 27 s, a search of
             # 0 s). It is tried once more after the other rounds, with the time they leave: most rounds after it end at once on the plan in
             # hand, and the time they do not use is its second share. Its first share is spent, and the cost to the rounds after it is that
-            # they share the time with one more round, its second try
+            # they share the time with one more round, its second try. The last group too, when the last round that restores the proof was
+            # owed: its share left room for that round, which cannot come once this one stopped, so its second try has that room
             queue.append(group)
             again[len(queue) - 1] = place
             tried.add(len(queue) - 1)
-            records[place] = replace(records[place], reason=records[place].reason + "; it was left to be tried again after the other rounds, with the time they leave")
+            records[place] = replace(records[place], reason=records[place].reason + LEFT)
         elif held and not improved and status in (CLOSED, WITHIN, BEATEN, NONE) and ahead > 1:
             # proved unable to beat the plan in hand (beaten, closed with no cheaper plan, or closed with no plan at all): its group is not carried
             # into the rounds after it (#1080, #1091, #1097). Its proof covers its offers with the base only, not with a later group's, so the
@@ -414,6 +426,7 @@ def widen(
 
 
 UNBUILT = "the count of the cheapest possible cost it cut with was not finished in its share"  # a round whose bound's build its net ended (#1135)
+LEFT = "; it was left to be tried again after the other rounds, with the time they leave"
 TRIED_AGAIN = "tried again after the other rounds, with the time they left, since its first share ended before that count was finished"
 
 

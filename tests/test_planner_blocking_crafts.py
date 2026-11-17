@@ -1252,14 +1252,17 @@ def test_a_round_with_a_plan_in_hand_whose_bound_was_not_finished_in_its_share_i
 
     widened, tries = rounds(200.0)
     assert tries == [(150.0, True), (225.0, True)] and widened.plan.mean_remaining == 7.0
-    assert [record.kinds for record in widened.records] == [("a",), ("b",), ("c",), ("d",), ("e",), ("c", "d", "e")]  # b's two tries are one line
-    assert [record.status for record in widened.records] == ["closed", "closed", "beaten", "beaten", "beaten", "beaten"] and _rounds.all_closed(widened.records)
-    line = _rounds.round_line(2, widened.records[1])
-    assert line.endswith(f"finished, its best plan costs 7.00 Chaos ({_rounds.TRIED_AGAIN})") and widened.records[1].seconds == pytest.approx(350.0)
+    # b's two tries are one line, where its second try ran: the last round held the most offers (the whole proof's figure is read there)
+    assert [record.kinds for record in widened.records] == [("a",), ("c",), ("d",), ("e",), ("b",), ("c", "d", "e")]
+    assert [record.status for record in widened.records] == ["closed", "beaten", "beaten", "beaten", "closed", "beaten"] and _rounds.all_closed(widened.records)
+    assert widened.records[-1].offers == 5
+    line = _rounds.round_line(5, widened.records[4])
+    assert line.endswith(f"finished, its best plan costs 7.00 Chaos ({_rounds.TRIED_AGAIN})") and widened.records[4].seconds == pytest.approx(350.0)
     unbuilt, tries = rounds(1_000.0)
     assert [share for share, _ in tries] == [150.0, 225.0] and unbuilt.plan.mean_remaining == 10.0  # (c, d and e are not proved with b: no last round)
-    second = unbuilt.records[1]
-    assert second.status == "stopped" and f"{_rounds.UNBUILT} (stopped after 225 s); {_rounds.TRIED_AGAIN}" in second.reason
+    second = unbuilt.records[-1]
+    assert second.kinds == ("b",) and second.status == "stopped" and f"{_rounds.UNBUILT} (stopped after 225 s); {_rounds.TRIED_AGAIN}" in second.reason
+    assert f"(its first try: the time limit of 0 seconds was reached; {_rounds.UNBUILT} (stopped after 150 s))" in second.reason
     assert not _rounds.all_closed(unbuilt.records)
 
 
@@ -1270,8 +1273,8 @@ def test_through_the_entry_a_round_whose_bound_was_not_finished_in_its_share_is_
     # join (growth), and the round stops with no cheaper plan. It is tried again after the lock's round (whose build, 25 of 24 pieces, is not
     # finished either, so it is left to be tried again too). The lock's round knew 6 states; round 2's second try has the 6 left over the two
     # second tries, 3 states, 12 pieces: not finished again, and the plan in hand stays. The answer's line for round 2 counts both tries'
-    # states (12 + 6), names the count its search cut with and that it was tried again; the lock's line says it was not tried again, since
-    # the states were used up. (The widening test above shows a second try that completes its build and finds the cheaper plan.)
+    # states (12 + 6), names the count its search cut with, that it was tried again and its first try, and comes after the lock's, where
+    # it ran; the lock's line says it was not tried again, since the states were used up. (The widening test above shows a second try that completes its build and finds the cheaper plan.)
     from crafting_system.budget import Budget
     from crafting_system.planner import _pattern_bound, _rounds
 
@@ -1297,9 +1300,57 @@ def test_through_the_entry_a_round_whose_bound_was_not_finished_in_its_share_is_
     monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
     prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
     plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=Budget.in_states(36, build_per_state=1.0)))
-    first, fillers, lock = _rounds_of(plan)
+    first, lock, fillers = _rounds_of(plan)
     assert builds == [(8, 36, "complete"), (48, 48, "growth"), (25, 24, "growth"), (12, 12, "growth")]
     assert (first.status, first.states) == ("closed", 12) and plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
     assert (fillers.status, fillers.states, lock.status, lock.states) == ("stopped", 18, "stopped", 6)
     assert "the count of the cheapest possible cost it cut with was stopped too: it had done 12 pieces of work" in fillers.reason
-    assert fillers.reason.endswith(_rounds.TRIED_AGAIN) and lock.reason.endswith("it was not tried again: the run's states net was used up")
+    assert f"; {_rounds.TRIED_AGAIN} (its first try: " in fillers.reason and lock.reason.endswith("it was not tried again: the run's states net was used up")
+
+
+def test_a_second_try_goes_last_the_last_group_is_tried_again_when_the_proof_s_round_was_owed_and_a_failed_second_try_claims_no_proof():
+    # #1135 with the checker's cases. Each round's outcome is set by hand by the newest group it holds (its own), the plan in hand is 10 from a.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    def rounds(kinds, outcome):
+        groups = tuple(_rounds.Group((i,), (kind,), frozenset()) for i, kind in enumerate(kinds))
+        seen = []
+
+        def run(chosen, call):
+            own = "".join(chosen)
+            seen.append((own, call.searches))
+            if call.upper is None:
+                return SimpleNamespace(search=SimpleNamespace(lower=10.0), mean_remaining=10.0)
+            kind = next(kind for kind in reversed(kinds) if kind in chosen and kind in outcome and outcome[kind])
+            what = outcome[kind].pop(0)
+            if what == "unbuilt":
+                raise _rounds.Stopped("the time limit of 0 seconds was reached", 3.0, "it had done 5 pieces")
+            if what == "beaten":
+                raise _envelope.Beaten(call.upper, None)
+            return SimpleNamespace(search=SimpleNamespace(lower=what), mean_remaining=what)
+
+        widened = _rounds.widen(
+            groups, tuple(kinds), run, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+            ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: 600.0, clock_now=lambda: 0.0,
+        )  # fmt: skip
+        return widened, seen
+
+    # nothing set aside: b's second try holds a, c and b, the most offers, and its line is last (the whole proof's figure is read there)
+    widened, seen = rounds("abc", {"b": ["unbuilt", 8.0], "c": [8.0]})
+    assert [own for own, _ in seen] == ["a", "ab", "ac", "abc"] and widened.plan.mean_remaining == 8.0
+    assert [(record.kinds, record.offers) for record in widened.records] == [(("a",), 1), (("c",), 2), (("b",), 3)]
+    # b is set aside, so the last round that restores the proof is owed: c, the last group, shares the time with it (searches 2), and when c
+    # stops on an unfinished build it is tried again in that room; it closes, and the last round holds b again with every offer
+    widened, seen = rounds("abc", {"b": ["beaten"], "c": ["unbuilt", "beaten", "beaten"]})
+    assert seen == [("a", 1), ("ab", 2), ("ac", 2), ("ac", 2), ("abc", 1)]
+    assert [record.kinds for record in widened.records] == [("a",), ("b",), ("c",), ("b",)] and _rounds.all_closed(widened.records)
+    # b waits for its second try when d, the last group, is beaten: d is set aside (a round, b's second try, comes after it); b's second try
+    # stops again, so the proof is out of reach: no last round, c and d stay set aside, and the answer claims no proof
+    widened, seen = rounds("abcd", {"b": ["unbuilt", "unbuilt"], "c": ["beaten"], "d": ["beaten"]})
+    assert [own for own, _ in seen] == ["a", "ab", "ac", "ad", "ab"]
+    assert [(record.kinds, record.status, record.carried) for record in widened.records] == [
+        (("a",), "closed", True), (("c",), "beaten", False), (("d",), "beaten", False), (("b",), "stopped", True),
+    ]  # fmt: skip
+    assert not _rounds.all_closed(widened.records) and widened.plan.mean_remaining == 10.0
