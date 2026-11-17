@@ -496,16 +496,17 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None, searches: int = 1, give_way=None) -> Net | None:
+def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
-    Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net."""
+    Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net. `states`, when
+    given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`)."""
     if clock is None:
         return None
     given: Budget = clock.budget
     if given.seconds is None and given.memory_mb is None and given.states is None:
         return None
     left = clock.left()
-    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states, memory_mb=given.memory_mb, give_way=give_way)
+    return Net(seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb, give_way=give_way)
 
 
 def search_gap(clock: Clock | None) -> tuple[float, float | None]:
@@ -540,6 +541,8 @@ def bind_search(clock: Clock | None, info: EnvelopeInfo) -> None:
             found = Binding(SEARCH_STAGE, STATES, given.states, info.touched, what)
         elif given.memory_mb is not None and info.peak_mb is not None and info.peak_mb >= given.memory_mb:
             found = Binding(SEARCH_STAGE, "memory", given.memory_mb, info.peak_mb, what)
+        elif given.seconds is None and given.states is not None:  # a run counted in states names no seconds (`Budget.in_states`)
+            found = Binding(SEARCH_STAGE, STATES, given.states, info.touched, what)
         else:
             found = Binding(SEARCH_STAGE, "time", given.seconds if given.seconds is not None else 0.0, clock.elapsed(), what)
     clock.bind(found)
@@ -857,7 +860,7 @@ def _make_plan(
                     gap, gap_after = search_gap(clock)
                     packed = envelope_result(
                         abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
-                        net=search_net(clock, round_call.searches, round_call.give_way) if round_call is not None else search_net(clock), item=target.start_item if many else None, gap=gap,
+                        net=search_net(clock, round_call.searches, round_call.give_way, round_call.states) if round_call is not None else search_net(clock), item=target.start_item if many else None, gap=gap,
                         gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
                         beaten_at=round_call.upper if round_call is not None else None,
                     )  # fmt: skip
@@ -1036,7 +1039,7 @@ def widened_plan(
 
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
-        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed,
+        left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=states_meter(clock),
     )  # fmt: skip
     if widened.plan is None:
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
@@ -1066,6 +1069,14 @@ def widened_plan(
             foresight = replace(foresight, n_exact=False)  # N's gains read only the plan's own crafts after a peek: each is true, the largest unproved
         plan = replace(plan, foresight=foresight) if with_lock is None else replace(plan, foresight=foresight, solution=with_lock, packed=None)
     return add_risk(plan) if with_risk else plan
+
+
+def states_meter(clock: Clock | None) -> _rounds.StatesMeter | None:
+    """The rounds' meter in states when the run counts its work in states (`Budget.in_states`: a states net and no time net), so that no round
+    reads the clock and the plan is the same on every machine (#886); None for a run on the clock (a user's run: the site and the command)."""
+    if clock is None or clock.budget.seconds is not None or clock.budget.states is None:
+        return None
+    return _rounds.StatesMeter(clock.budget.states)
 
 
 def price_cut_applies(data: GameData, target: Target, priced: Sequence[PricedOffer], start: StartPrice, *, solve_it: bool, judged: bool) -> bool:
@@ -1107,7 +1118,7 @@ def untried_limit(labels: tuple[str, ...]) -> Limit:
     return Limit(
         _limits.UNTRIED,
         "Not tried",
-        "the run's time or memory limit was reached by the plan made without them first, to price them against",
+        "the run's time, states or memory limit was reached by the plan made without them first, to price them against",
         "The plan is the one without these crafts; one of them might make it cheaper.",
         labels,
     )
