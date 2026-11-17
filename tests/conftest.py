@@ -50,83 +50,80 @@ def progress_sink_restored(monkeypatch):
 # The net of the suite's machine (#886, OR-39: a planner limit is a setting of the machine a run is on; docs/ci.md, "The suite's machine
 # net"). It never changes what a test that passes computes: it turns a hang or a runner killed for memory into a named test failure.
 # * A run that has a budget (the command's default, `Budget.default()`) takes `budget.MEMORY_SHARE` of the machine divided among the
-#   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run).
-#   A module of the budget itself (`OWN_NET = True`) sees `MEMORY_SHARE` as it is.
-# * Where the machine has them (Linux, the CI runners): a test's setup or call that runs past `SUITE_TEST_SECONDS` fails at that point
-#   (`SIGALRM`, no clock read), and a test process holds at most `SUITE_DATA_MB` of data (`RLIMIT_DATA`), so a test that asks for more
-#   fails with a MemoryError instead of taking the runner down.
+#   pytest processes sharing it: `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). It
+#   is set once for the whole process, module fixtures included; a module of the budget itself (`OWN_NET = True`) sees the undivided share.
+# * Where the machine has `SIGALRM` (Linux, the CI runners), a watchdog wakes every `WATCH_SECONDS` during a test's setup, call and
+#   teardown: past `SUITE_TEST_SECONDS` of wake-ups, or with the process's resident memory past `SUITE_DATA_MB`, the phase fails by name
+#   (`pytest.fail`, a `BaseException` no `except Exception` or `except MemoryError` of the planner catches). It reads no clock (it counts its
+#   wake-ups) and puts no cap on the process, so no allocation fails and no fallback of the planner on a MemoryError is taken because of it.
 # The planner itself is not touched: a plan with no budget still runs its exact proof, and a test that passes its own budget keeps it.
 # `CRAFTING_TEST_SECONDS` and `CRAFTING_TEST_DATA_MB` set other figures; 0 turns that net off.
 SLOTS_PER_RUNNER = max(1, int(os.environ.get("CRAFTING_TEST_SLOTS", "1")))
 SUITE_TEST_SECONDS = int(os.environ.get("CRAFTING_TEST_SECONDS", "300"))
 SUITE_DATA_MB = int(os.environ.get("CRAFTING_TEST_DATA_MB", "3500"))
+WATCH_SECONDS = 1
+_MACHINE_SHARE: list[float] = []  # the undivided `budget.MEMORY_SHARE`, kept for the modules that test the budget itself
 
 
 def pytest_configure(config):
-    try:
-        import resource
-    except ImportError:  # Windows: no such limit
-        return
-    if SUITE_DATA_MB > 0 and hasattr(resource, "RLIMIT_DATA"):
-        soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
-        wanted = SUITE_DATA_MB * 1024 * 1024
-        if soft == resource.RLIM_INFINITY or soft > wanted:
-            resource.setrlimit(resource.RLIMIT_DATA, (wanted, hard))
+    from crafting_system import budget as budget_module
+
+    _MACHINE_SHARE.append(budget_module.MEMORY_SHARE)
+    budget_module.MEMORY_SHARE = budget_module.MEMORY_SHARE / SLOTS_PER_RUNNER
 
 
 @pytest.fixture(autouse=True)
 def suite_net(request, monkeypatch):
-    """The memory share of a budgeted run of the suite (see `SLOTS_PER_RUNNER`)."""
-    if not getattr(request.module, "OWN_NET", False):
+    """A module of the budget itself (`OWN_NET = True`) sees the machine's share undivided (see `SLOTS_PER_RUNNER`)."""
+    if getattr(request.module, "OWN_NET", False):
         from crafting_system import budget as budget_module
 
-        monkeypatch.setattr(budget_module, "MEMORY_SHARE", budget_module.MEMORY_SHARE / SLOTS_PER_RUNNER)
+        monkeypatch.setattr(budget_module, "MEMORY_SHARE", _MACHINE_SHARE[0])
 
 
-def _alarmed(phase: str):
-    """The nets of one phase of a test (its setup, a module's fixtures included, its call or its teardown): `SUITE_TEST_SECONDS`, where `SIGALRM` is,
-    and a MemoryError (the `SUITE_DATA_MB` cap) reported as a short failure once the phase's frames are freed, since pytest cannot format
-    a traceback while they still hold the memory (an INTERNALERROR that stopped the rest of the process's tests)."""
-    import gc
+def _watched(phase: str):
+    """The watchdog of one phase of a test (its setup, a module's fixtures included, its call or its teardown), where `SIGALRM` is."""
     import signal
 
-    alarmed = SUITE_TEST_SECONDS > 0 and hasattr(signal, "SIGALRM")
+    if not hasattr(signal, "SIGALRM") or (SUITE_TEST_SECONDS <= 0 and SUITE_DATA_MB <= 0):
+        yield
+        return
+    from crafting_system.budget import process_mb
 
-    def ran_past(signum, frame):
-        pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
+    woken = [0]
 
-    if alarmed:
-        previous = signal.signal(signal.SIGALRM, ran_past)
-        signal.alarm(SUITE_TEST_SECONDS)
-    ran_out = False
+    def wake(signum, frame):
+        woken[0] += 1
+        if SUITE_TEST_SECONDS > 0 and woken[0] * WATCH_SECONDS >= SUITE_TEST_SECONDS:
+            pytest.fail(f"the {phase} ran past the suite's {SUITE_TEST_SECONDS} s (conftest.SUITE_TEST_SECONDS, #886)", pytrace=False)
+        held = process_mb() if SUITE_DATA_MB > 0 else None
+        if held is not None and held > SUITE_DATA_MB:
+            pytest.fail(f"the {phase} held {held:.0f} MB, past the suite's {SUITE_DATA_MB} MB a process (conftest.SUITE_DATA_MB, #886)", pytrace=False)
+
+    previous = signal.signal(signal.SIGALRM, wake)
+    signal.setitimer(signal.ITIMER_REAL, WATCH_SECONDS, WATCH_SECONDS)
     try:
         yield
-    except MemoryError:
-        ran_out = True  # the exception and its frames are dropped when this clause ends
     finally:
-        if alarmed:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, previous)
-    if ran_out:
-        gc.collect()
-        pytest.fail(f"the {phase} ran out of memory (MemoryError; the suite's cap is {SUITE_DATA_MB} MB a process, conftest.SUITE_DATA_MB, #886)", pytrace=False)
+        signal.setitimer(signal.ITIMER_REAL, 0, 0)
+        signal.signal(signal.SIGALRM, previous)
 
 
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_setup(item):
-    yield from _alarmed("setup")
+    yield from _watched("setup")
     return None
 
 
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_call(item):
-    yield from _alarmed("test")
+    yield from _watched("test")
     return None
 
 
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_teardown(item, nextitem):
-    yield from _alarmed("teardown")
+    yield from _watched("teardown")
     return None
 
 
@@ -231,7 +228,7 @@ WAITS_FOR_1101 = (
     "tests/test_prune_bound.py::*[[]r05-strength-ring[]]",
     "tests/test_prune_bound.py::*[[]r10-fractured-boots[]]",
     "tests/test_prune_bound.py::*[[]r11-reservation-helmet[]]",
-    "tests/test_prune_equal.py::*",
+    "tests/test_prune_equal.py::test_r10_*",
 )
 RERECORD_FOR_1101 = ("tests/test_risk_unchanged_349.py::test_the_risk_reports_of_policies_without_a_free_action_are_the_ones_main_gave",)
 

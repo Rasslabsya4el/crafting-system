@@ -88,18 +88,18 @@ under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime 
 ### The suite's machine net (#886)
 
 A planner limit is a setting of the machine a run is on (OR-39), and a CI runner is shared by the 4 pytest processes of its job.
-`tests/conftest.py` sets three nets, none of which changes what a passing test computes; each turns a hang or a runner killed for memory
+`tests/conftest.py` sets two nets, neither of which changes what a passing test computes; each turns a hang or a runner killed for memory
 into one named failing test:
 
 - **Memory share.** A run with a budget (the command's default) takes `budget.MEMORY_SHARE` of the machine divided among the processes
-  sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run). A test that passes no
-  budget still runs its exact proof; a test that passes its own budget keeps it.
-- **Time per phase** (Linux only, `SIGALRM`, no clock read): a test's setup (its module fixtures included), call or teardown that runs past
-  `CRAFTING_TEST_SECONDS` (300) fails there, so a hung test fails by name instead of the job hitting `timeout-minutes`.
-- **Data per process** (Linux only, `RLIMIT_DATA`): a test process holds at most `CRAFTING_TEST_DATA_MB` (3,500 MB), so a test that asks
-  for more fails with a MemoryError instead of the runner shutting down (exit 143) and losing the whole shard. The MemoryError is
-  reported as a one-line failure once the test's frames are freed (formatting its traceback at the cap was an INTERNALERROR that
-  stopped the process's other tests).
+  sharing it, `CRAFTING_TEST_SLOTS`, which `run_shard.py` sets to its `--procs` (1 when unset, as on a serial run); it is set once per
+  process, module fixtures included. A test that passes no budget still runs its exact proof; a test that passes its own budget keeps it.
+- **A watchdog per phase** (Linux only, `SIGALRM` every second): during a test's setup (its module fixtures included), call or teardown,
+  past `CRAFTING_TEST_SECONDS` (300) of wake-ups, or with the process's resident memory past `CRAFTING_TEST_DATA_MB` (3,500 MB), the
+  phase fails by name. It is a hang and memory guard, not a timing assertion (ADR-0014): it reads no clock, it fails only a test that would
+  otherwise hang the job until `timeout-minutes` or have the runner shut down (exit 143) and lose the whole shard, and it puts no cap on
+  the process, so no allocation fails and the solver's own fallbacks on a MemoryError (`solver/_packed_linear.py`, `cli/_route_flow.py`)
+  are never taken because of it. Its failure is `pytest.fail`, a `BaseException`, which no `except Exception` of the planner catches.
 
 0 turns the time or data net off.
 
