@@ -20,6 +20,7 @@ from catalog_lists_support import FIXTURE_WORLD
 from cli_support import R12, TODAY, price_file
 from cli_support import START as START_KEY
 from items_support import DATA, roll
+from oracle import page_lint as pl
 from route_view_support import (
     COLD_REQ,
     DAMAGE,
@@ -524,15 +525,58 @@ def hand_section(rows, prefix: str = "") -> RouteSection:
     return RouteSection("Hand", base.goal, made, "given" if prefix else "policy")
 
 
-def test_a_step_with_the_same_words_but_another_follow_up_is_not_the_planners_step():
-    policy = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Alchemy", [])])
-    given_route = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Scour", []), ("Alchemy", [])], "g-")
+def test_a_step_with_the_same_words_but_another_follow_up_is_drawn_once_and_its_follow_up_stays_linked():
+    """OR-19 (#1289): a given step whose words are the planner's is not drawn again when only what follows it differs
+    (R11: the same essence step, then another bench craft). The given section names it as the planner's step and says
+    where this route goes on from it."""
+    policy = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3), ("nothing gained (40%)", 2)]), ("Alchemy", [])])
+    given_route = hand_section(
+        [("Buy", []), ("Chaos", [("life lost (50%)", 3), ("nothing gained (40%)", 2)]), ("Scour", []), ("Alchemy", [])], "g-"
+    )
     # the given route's Chaos says the same words, but its follow-up is a Scour, not the planner's Alchemy
 
     drawn, guide = merge_sections(policy, given_route, "the guide")
 
-    assert [row.title for row in guide.rows] == ["Chaos", "Scour"]  # Chaos is not shared; Buy and Alchemy are
-    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1: the planner's step 1", "step 4: the planner's step 3"]
+    assert drawn is policy
+    assert [row.title for row in guide.rows] == ["Scour"]  # Buy, Chaos and Alchemy are the planner's
+    shared = [field for field in guide.goal.fields if field.label == "Same as the planner"][0]
+    assert [(line.text, line.href, line.anchor) for line in shared.lines] == [
+        ("step 1: the planner's step 1", "#s1", ""),
+        ("step 2: the planner's step 2", "#s2", ""),
+        ("after step 2 this route goes on to its own", "#g-s3", "step 3"),  # the link back to step 2 itself is the planner's
+        ("step 4: the planner's step 3", "#s3", ""),
+    ]
+    html = render_page(Page("x", (drawn, guide)))
+    assert len(re.findall(r"\bChaos<", html)) == 1 and 'href="#g-s3"' in html and 'id="g-s3"' in html
+    assert pl.check_route_not_twice(pl.read_page(html)) == []
+
+
+def test_a_shared_step_that_goes_on_to_another_of_the_planners_steps_says_which():
+    policy = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Alchemy", []), ("Regal", [])])
+    given_route = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Regal", []), ("Scour", [])], "g-")
+
+    drawn, guide = merge_sections(policy, given_route, "the guide")
+
+    assert [row.title for row in guide.rows] == ["Scour"]
+    shared = [field for field in guide.goal.fields if field.label == "Same as the planner"][0]
+    assert [(line.text, line.href, line.anchor) for line in shared.lines] == [
+        ("step 1: the planner's step 1", "#s1", ""),
+        ("step 2: the planner's step 2", "#s2", ""),
+        ("after step 2 this route goes on to the planner's", "#s4", "step 4"),
+        ("step 3: the planner's step 4", "#s4", ""),
+    ]
+
+
+def test_a_given_route_of_the_planners_steps_wired_another_way_keeps_its_section_with_no_row():
+    policy = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Alchemy", []), ("Regal", [])])
+    given_route = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 4)]), ("Alchemy", []), ("Regal", [])], "g-")
+
+    drawn, guide = merge_sections(policy, given_route, "the guide")
+
+    assert guide.rows == ()  # every step is one of the planner's; the routes differ by where the Chaos goes on
+    assert "after step 2 this route goes on to the planner's" in lines_of_card(guide.goal, "Same as the planner")
+    assert lines_of_card(drawn.goal, "Given route") == []  # so the page does not say "Same as the given route"
+    render_page(Page("x", (drawn, guide)))
 
 
 def test_a_shared_step_is_named_and_linked_by_the_planners_number_even_when_the_numbers_differ():
