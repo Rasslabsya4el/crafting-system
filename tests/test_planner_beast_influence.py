@@ -175,3 +175,7 @@ def test_the_declared_draw_is_what_the_recipe_does_at_every_member_of_the_shape(
             check_added_draw(recipe, item, finished(outcomes, DATA), DATA)
             checked += 1
     assert checked == 9  # the six members that hold both P and S draw nothing: refused
+    # members with a crafted metamod: the Attack block keeps its mods out of the draw, and a side lock still lets its open slots fill
+    for crafted in ("IntMasterItemGenerationCannotRollAttackAffixes", "StrMasterItemGenerationCannotChangePrefixes"):
+        item = helmet(roll(PLAIN, 1), roll(crafted, 1, crafted=True), influences=shaper)
+        check_added_draw(recipe, item, finished(recipe.outcomes(DATA, item), DATA), DATA)
