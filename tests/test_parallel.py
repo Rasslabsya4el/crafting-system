@@ -182,7 +182,7 @@ def sleeps(piece: int) -> int:
 def test_a_pool_past_the_memory_net_is_killed_and_says_so(monkeypatch):
     """#626 (OR-12): the workers hold memory the caller's net never saw; while a net is set, the wait on them reads the memory of the caller and its
     workers and kills them once it passes the limit, instead of letting the runner run out of memory."""
-    monkeypatch.setattr(parallel, "held_mb", lambda under=None: 12_000.0)
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 12_000.0)
     with parallel.memory_net(10_000):
         with WorkerPool(make_base, (0,), workers=2) as pool:
             with pytest.raises(parallel.MemoryNetReached, match="12,000 MB.*10,000 MB"):
@@ -192,7 +192,7 @@ def test_a_pool_past_the_memory_net_is_killed_and_says_so(monkeypatch):
 
 
 def test_a_pool_under_the_memory_net_gives_the_list_of_a_loop(monkeypatch):
-    monkeypatch.setattr(parallel, "held_mb", lambda under=None: 100.0)
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 100.0)
     with parallel.memory_net(10_000):
         with WorkerPool(make_base, (7,), workers=2) as pool:
             assert pool.map(add_offset, [1, 2, 3]) == [(1, 14), (2, 21), (3, 28)]
@@ -234,7 +234,7 @@ def hangs_or_fails(piece: int) -> int:
 @pytest.mark.parametrize("net", [None, 10_000])
 def test_a_failed_chunk_ends_the_wait_at_once_and_kills_the_hung_one(monkeypatch, net):
     """A chunk that raises while another hangs: the caller gets the error now, not after the hung one, and its workers are stopped (#535 kept)."""
-    monkeypatch.setattr(parallel, "held_mb", lambda under=None: 100.0)
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 100.0)
     with parallel.memory_net(net):
         with WorkerPool(make_base, (0,), workers=2) as pool:
             with pytest.raises(KeyError):
