@@ -18,13 +18,13 @@ def groups(offers, named, added):
 _rounds.round_groups = groups
 orig = _ep.pattern_lower_bound
 def wrapped(*a, **k):
-    load0 = open('/proc/loadavg').read().split()[0]
+    load0 = f'{os.getloadavg()[0]:.2f}'
     t = time.perf_counter()
     b = orig(*a, **k)
     s = time.perf_counter() - t
     m = b.model; x = m.stats; priced = a[2]
     exp = m.expanded or [True] * len(m.keys)
-    print(f"BUILD took {s:.1f}s offers {len(b.positions)} keys {len(m.keys)} expanded {sum(exp)} kernels {x.kernels} pairs {x.pairs} start value {b.start_value!r} error {b.error_bound!r} stopped {str(b.stopped)[:120]} phase {b.phase} load {load0}->{open('/proc/loadavg').read().split()[0]}", flush=True)
+    print(f"BUILD took {s:.1f}s offers {len(b.positions)} keys {len(m.keys)} expanded {sum(exp)} kernels {x.kernels} pairs {x.pairs} start value {b.start_value!r} error {b.error_bound!r} stopped {str(b.stopped)[:120]} phase {b.phase} load {load0}->{f'{os.getloadavg()[0]:.2f}'}", flush=True)
     out = {"keys": m.keys, "goal": m.goal, "actions": m.actions, "kernels": m.kernels, "expanded": exp, "value": [float(v) for v in b.value],
            "start_value": b.start_value, "stopped": b.stopped, "seconds": s, "labels": [priced[p].label for p in b.positions], "costs": [float(priced[p].cost) for p in b.positions],
            "cheapest": min(float(p.cost) for p in priced), "modes": dict(x.modes)}
