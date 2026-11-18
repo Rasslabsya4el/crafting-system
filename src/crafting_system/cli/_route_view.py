@@ -898,19 +898,25 @@ def _same_steps(policy: RouteSection, given: RouteSection, prefix: str) -> dict[
     return candidates
 
 
-def _same_words(policy: RouteSection, given: RouteSection, alike: dict[int, StepRow]) -> dict[int, StepRow]:
+def _same_words(policy: RouteSection, given: RouteSection, alike: dict[int, StepRow], prefix: str) -> dict[int, StepRow]:
     """Given row number -> the planner's row that says the same words, whatever follows it (OR-19: only the steps that differ).
 
     A row of `alike` (same continuation too) keeps its pair; any other given row is paired with the first planner's
     row of the same words. Where such a row goes on differently is said by `_parting`, not by drawing the row again.
+    The pair must link from the same lines (`linked`): `_parting` says where a link of the given row lands, and has no
+    words for a line that links in one row only.
     """
+
+    def linked(row: StepRow, prefix: str) -> list[bool]:
+        return [target is not None for target in _targets(row, prefix)]
+
     shared: dict[int, StepRow] = {}
     for row in given.rows:
         if row.number in alike:
             shared[row.number] = alike[row.number]
             continue
         for other in policy.rows:
-            if _row_key(row) == _row_key(other):
+            if _row_key(row) == _row_key(other) and linked(row, prefix) == linked(other, ""):
                 shared[row.number] = other
                 break
     return shared
@@ -960,7 +966,7 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tupl
         head = (Field("Route", (Line(policy.title),)), Field("Given route", (Line(f"Same as the given route ({name})"),)))
         goal = replace(policy.goal, fields=(*head, *policy.goal.fields))
         return (replace(policy, goal=goal),)
-    shared = _same_words(policy, given, alike)
+    shared = _same_words(policy, given, alike, prefix)
     parting = _parting(given, shared, prefix)
 
     def redirect(line: Line) -> Line:
