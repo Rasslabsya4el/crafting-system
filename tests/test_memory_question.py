@@ -88,6 +88,16 @@ def test_a_cheap_answer_does_not_wait_for_the_pace(monkeypatch):
     assert parallel.held_mb(under=12_000.0) == 3_000.0 and memory.dear == 1
 
 
+def test_the_cost_figures_own_question_reads_the_resident_size_first(monkeypatch):
+    """The run of the cost figures (#738) asks `own_mb` with its net: under it the resident size answers, past it the proportional size."""
+    dear = []
+    monkeypatch.setattr(parallel.budget, "process_mb", lambda pid=None: 11_000.0)
+    monkeypatch.setattr(parallel, "_proc_mb", lambda pid: dear.append(pid) or 9_000.0)
+    assert parallel.own_mb(under=12_000.0) == 11_000.0 and dear == []
+    assert parallel.own_mb(under=10_000.0) == 9_000.0 and dear == ["self"]
+    assert parallel.own_mb() == 9_000.0 and len(dear) == 2
+
+
 def test_the_searchs_questions_pass_their_limit(monkeypatch):
     """Every question of the envelope search and of its bound's build on its memory net (`Net.memory_mb`) passes the limit, so each is the cheap
     read while the process is under it; only the round's peak (a figure that is said) and the room check before the arrays grow read in full."""

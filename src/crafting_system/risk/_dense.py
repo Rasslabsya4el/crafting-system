@@ -33,9 +33,10 @@ from math import fsum
 
 import numpy as np
 
-from ._budget import BudgetRun, _grown, rounding_allowance
+from ._budget import BudgetRun, Watch, _grown, rounding_allowance
 from ._chain import Chain
 
+DEADLINE_BINS = 64  # the loop looks at the clock once per this many bins (a bin is a product of up to `DENSE_LIMIT` cells)
 DENSE_LIMIT = 50_000_000  # the most cells the ring buffer (and the matrix) may have
 LOST_FLOOR = 1e-15  # a smaller remainder of the starting mass is float noise, not lost mass
 
@@ -68,11 +69,12 @@ def run_dense(
     target: float | None,
     tail_mass: float,
     max_bins: int,
+    deadline: float | None = None,
 ) -> BudgetRun:
     """Run the DP with `bin_cost[i]` whole bins per step in state i, from `initial` at bin 0.
 
     `initial` is (state index, mass) pairs of states that can finish; `goal_mass` is already
-    absorbed at bin 0. `target` and `tail_mass` are as in `run_budget`.
+    absorbed at bin 0. `target`, `tail_mass` and `deadline` are as in `run_budget`.
     """
     finishing, costs = _capped_costs(chain, bin_cost, max_bins)
     n = len(finishing)
@@ -127,6 +129,7 @@ def run_dense(
     overflow = 0.0
     running = 0.0
     b = 0
+    watch = Watch(deadline)
     while True:
         if b < pmf_end:
             running += float(pmf[b])
@@ -138,8 +141,11 @@ def run_dense(
                 break
         elif 1.0 - lost_total - running <= tail_mass:
             break
+        if b % DEADLINE_BINS == 0 and watch.stops():
+            break  # the net of the cost figures (#738): what is not reached stays unresolved
         if b in pending:
             pending.remove(b)
+            watch.spend(n)
             row = ring[b % width]
             for k, lo, hi, block, v, onward_any, absorbed_any in classes:
                 np.dot(row[lo:hi], block, out=v)
@@ -161,4 +167,4 @@ def run_dense(
             row.fill(0.0)
         b += 1
     unresolved = fsum((fsum(ring.sum(axis=1).tolist()), fsum(pmf[b + 1 : pmf_end].tolist()), overflow))
-    return BudgetRun(cdf, unresolved)
+    return BudgetRun(cdf, unresolved, watch.stopped)

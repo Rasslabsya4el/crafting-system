@@ -43,6 +43,7 @@ __all__ = [
     "partners",
     "tiers_of",
     "is_table_family",
+    "item_tags",
 ]
 
 DOMAIN_MATCH = get_rule("affix_pool.domain_match")

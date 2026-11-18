@@ -77,6 +77,20 @@ def _proc_mb(pid: int | str) -> float | None:
     return None
 
 
+def own_mb(under: float | None = None) -> float | None:
+    """The memory this process alone holds, in MB (its proportional size on Linux, so that a forked worker does not count its parent's pages as
+    its own), or None where it cannot be read (#738: a run of the cost figures reads it against the memory net).
+
+    `under` is the limit of the net that asks: while the resident size (`budget.process_mb`, microseconds) is under it, it is the answer, since
+    the proportional size is not above it (`held_mb`, #1252)."""
+    if under is not None:
+        cheap = budget.process_mb()
+        if cheap is not None and cheap < under:
+            return cheap
+    own = _proc_mb("self")
+    return own if own is not None else budget.process_mb()
+
+
 def held_mb(under: float | None = None) -> float | None:
     """The memory this process and its live workers hold, in MB, or None where it cannot be read.
 
