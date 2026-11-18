@@ -7,6 +7,8 @@ round 1 holds the fillers alone, round 2 adds the Exalted Orb.
 * **Stopped.** With a states net too small for round 2, round 1 proves no plan of the fillers alone and round 2 stops before any plan of its
   own: the answer says no plan was found yet, that this does not show none exists, what round 1 showed, which net stopped round 2, and what
   the user can do. It never says that no plan of the offered actions reaches the goal: a plan exists (with the net lifted the same rounds give one).
+  Round 1 itself is never stopped: its bound proves at the start that no filler reaches the goal (an infinite bound of the start is the answer
+  before any net is asked, #1190), so even a net of one state lets it finish.
 * **Proved.** With the fillers alone in every round, every round closes with no plan, the last over every offer: the answer is the proof.
 * **One search.** A target whose offers are one search: a net that stops it before a plan says no plan found yet; with only the fillers
   offered, the search proves none and says so.
@@ -50,9 +52,10 @@ def _by_hand(monkeypatch, *, exalted: bool):
     monkeypatch.setattr(planner_plan, "offer_groups", groups)
 
 
-@pytest.mark.parametrize("states", [2, 5])
+@pytest.mark.parametrize("states", [1, 4])
 def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_that_none_reaches_the_goal(tmp_path, data, monkeypatch, states):
-    # 2 states: round 1 stops too, round 2 is not tried; 5: round 1 proves no plan of the fillers alone (2 states), round 2 stops at 3
+    # round 1 proves no plan of the fillers alone at its start (1 state: its bound is infinite there, #1190); 1 state: round 2 is not tried;
+    # 4: round 2 stops at 3
     _by_hand(monkeypatch, exalted=True)
     target = _target(tmp_path, data)
     assert plan_target(data, target, _prices(), _settings(None)).mean_remaining == pytest.approx(133.0)  # a plan exists: 3 (c + e) + 2 S
@@ -63,13 +66,11 @@ def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_th
     assert said.startswith("stopped, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists")
     assert "run again with more states or memory, or with fewer methods" in said  # counted in states: no seconds named
     assert " s)" not in said and " s:" not in said
-    if states == 2:
-        assert "No round finished, so nothing is shown about any method" in said
-        assert "round 1 (bench-craft; 1 actions offered, 2 states): stopped (2 states were known, the limit is 2), with no plan" in said
+    assert "The rounds that finished showed only that no plan made only of bench-craft reaches the target" in said
+    assert "round 1 (" not in said  # a round that finished with no plan is named by what it showed, not listed as not finished
+    if states == 1:
         assert "round 2 (exalted-orb; 1 actions offered, 0 states): not tried, the run's states net was used up before this round" in said
     else:
-        assert "The rounds that finished showed only that no plan made only of bench-craft reaches the target" in said
-        assert "round 1 (" not in said  # a round that finished with no plan is named by what it showed, not listed as not finished
         assert "round 2 (exalted-orb; 2 actions offered, 2 states): stopped (2 states were known, the limit is 3" in said
         assert "no plan with them costs less than 133.00 Chaos" in said
 
@@ -115,6 +116,10 @@ def test_the_words_name_the_net_a_run_on_the_clock_has_and_no_stop_leaves_the_pr
     said = _rounds.no_plan_words([record(_rounds.NONE), record(_rounds.STOPPED, "the search stopped at the time limit of 300 s (301 s spent)")])
     assert "no plan made only of alteration reaches the target" in said and "more time or memory" in said
     assert "round 2 (alteration; 3 actions offered, 12 s): stopped (the search stopped at the time limit of 300 s (301 s spent)), with no plan" in said
+    said = _rounds.no_plan_words([record(_rounds.STOPPED, "1 states were known, the limit is 1"), record(_rounds.UNTRIED, "the run's time was used up before this round")])
+    assert "No round finished, so nothing is shown about any method" in said
+    assert "round 1 (alteration; 3 actions offered, 12 s): stopped (1 states were known, the limit is 1), with no plan" in said
+    assert "round 2 (alteration; 3 actions offered, 12 s): not tried, the run's time was used up before this round" in said
     assert _rounds.no_plan_words([record(_rounds.NONE), record(_rounds.NONE)]) is None
     assert _rounds.no_plan_words([record(_rounds.NONE), record(_rounds.REFUSED, "a refusal")]) is None
     assert _rounds.no_plan_words([record(_rounds.STOPPED, "a memory net"), record(_rounds.NONE)]) is None  # the last round held every offer
