@@ -5,9 +5,16 @@ The planner behind an HTTP API (#961, OR-35, OR-36): a user's request becomes a 
 The code is `src/crafting_system/web/`; it holds no planning code and no page code (the figures, the JSON policy and the route page are the
 command's own: `cli.build_report`, `cli.policy_document`, `cli.route_page`). There is no frontend yet: the site's pages call this API.
 
+**Whose decisions these are** (#1278). That a user's plan is a job on our server was the dispatcher chat's decision in #961 (2026-11-15,
+under OR-50), and is the owner's since 2026-11-18 (OR-56): nothing is computed in the user's browser, the software is handed to nobody,
+and a calculation on the user's side is added only on his word. The rest of #961's design is a reading of the dispatcher chat, not the
+owner's word: the HTTP framework, the SQLite store, the Docker image and its smoke test on a Linux runner. No decision of the owner names
+the machine, the system or the hosting of the site; the repository runs on Windows and on Linux (OR-57), and the Docker image is one way
+to run the service, not a choice of host. Work on the site waits for the owner's word (OR-53); that nobody extends this service meanwhile is the dispatcher chat's reading of it.
+
 ## Run it
 
-On a machine with the repository (Linux for the site; Windows works too):
+On a machine with the repository (Linux or Windows):
 
 ```
 uv sync --extra web
