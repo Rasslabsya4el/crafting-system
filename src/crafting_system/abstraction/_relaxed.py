@@ -22,7 +22,11 @@ weight `u_c` the class has left lies in a box,
 clipped at 0, with `Hmin_c(k)`, `Hmax_c(k)` the weight of the `k` lightest and heaviest families of `c`. Proof: with `D` the families
 drawn and `J` those held, `u_c = sum_{F not in D} w_F + (f-1) sum_{F in J - D} w_F`; the first sum is between `A_c - Hmax(d_c)` and
 `A_c - Hmin(d_c)`; `J - D` has between `max(0, n_c - d_c)` and `n_c` families, so the second sum lies between `(f-1)` times the
-lightest of the fewest and the heaviest of the most (the sign of `f-1` orders them). A node offers one kernel for each corner of the
+lightest of the fewest and the heaviest of the most (the sign of `f-1` orders them). A family of the pool that gives the goal nothing
+at any roll but that the abstraction tells apart by name (an enabled action names it) joins the class of its side and protected tags in
+the walk: the members hold it exactly (its boost is known, its weight `w'` is in `A_c` as boosted), and which one is drawn the key does not
+read (it gives no status). It is not one a member may hold unknown, so `Hmin`/`Hmax` of the boost are over the pure junk types alone and
+those of the draw over every family of the class: the proof above holds with `w'` for `w` in the first sum. A node offers one kernel for each corner of the
 box of its open classes (each class at its least or its greatest `u_c`), each at no cost (`FLOOR_COST` in the packed graph); a node
 whose draws are done, or whose candidates weigh nothing, is an end: the item `retained + the relevant mods + d_c families of each class`,
 compressed, whose key is the key of every real item that ends there (the key reads the status, which the relevant mods and the
@@ -93,6 +97,22 @@ def _class_of(pattern, kinds, universe, family) -> tuple | None:
     return found.pop()
 
 
+def _silent(pattern, kinds, family, influences) -> tuple | None:
+    """The class `(side, protected tags)` of a family none of whose mods gives the goal anything at any roll, None for one that gives it
+    something; raises `_Fallback` for a silent family whose mods sit in two classes."""
+    from ._goal import Status
+    from ._pattern import _rolled_contributions, _tagset
+
+    found = set()
+    for entry in family.mods:
+        if any(value is not Status.ABSENT for status in _rolled_contributions(pattern.ab, entry.mod, influences) for value in status):
+            return None
+        found.add((family.side, _tagset(kinds.of(entry.mod))))
+    if len(found) != 1:
+        raise _Fallback
+    return found.pop()
+
+
 class _Fallback(Exception):
     """The relaxed draw does not hold here: the caller makes every member (`ALL`)."""
 
@@ -142,10 +162,16 @@ def _relaxed(pattern, member: CompressedState, action: Action, factor: Fraction)
     if len(names) != len(set(names)):  # a family on both sides
         raise _Fallback
     relevant: list[tuple[Side, str, tuple[tuple[object, Fraction], ...]]] = []
-    junk: dict[tuple, list[tuple[Fraction, object]]] = {}
+    junk: dict[tuple, list[tuple[Fraction, object, bool]]] = {}  # class -> (weight, a mod, whether a member may hold it unknown) of its families
     for family in pool:
         klass = _class_of(pattern, kinds, universe, family)
         hit = [bool(boosted & set(entry.mod.families)) for entry in family.mods]
+        silent = _silent(pattern, kinds, family, influences) if klass is None else None
+        if silent is not None:  # a family that gives the goal nothing and that the members hold exactly: its weight is known, not which is drawn
+            weight = sum((entry.weight * (factor if boost else 1) for entry, boost in zip(family.mods, hit)), Fraction(0))
+            if weight:
+                junk.setdefault(silent, []).append((weight, next(entry.mod for entry in family.mods if entry.weight), False))
+            continue
         if klass is None:
             mods = tuple((entry.mod, entry.weight * (factor if boost else 1)) for entry, boost in zip(family.mods, hit) if entry.weight)
             for mod, _w in mods:
@@ -159,15 +185,16 @@ def _relaxed(pattern, member: CompressedState, action: Action, factor: Fraction)
             weight = sum((entry.weight for entry in family.mods), Fraction(0))
             if weight:
                 representative = next(entry.mod for entry in family.mods if entry.weight)
-                junk.setdefault(klass, []).append((weight, representative))
+                junk.setdefault(klass, []).append((weight, representative, True))
     for klass in held:
         junk.setdefault(klass, [])
     classes = sorted(junk, key=lambda k: (SIDES.index(k[0]), k[1]))
-    weights = {k: sorted(w for w, _ in junk[k]) for k in classes}
+    weights = {k: sorted(w for w, _, _ in junk[k]) for k in classes}
+    holdable = {k: sorted(w for w, _, may in junk[k] if may) for k in classes}
     counts = {k: held.get(k, 0) for k in classes}
 
     def box(klass, drawn: int) -> tuple[Fraction, Fraction]:
-        return class_box(weights[klass], counts[klass], drawn, factor)
+        return class_box(weights[klass], counts[klass], drawn, factor, holdable[klass])
 
     room0 = tuple(retained.free_slots(data, side) for side in SIDES)
     index: dict[tuple, int] = {}
@@ -183,7 +210,7 @@ def _relaxed(pattern, member: CompressedState, action: Action, factor: Fraction)
         for mod in drawn_mods:
             built = built.add_mod(data, ExplicitMod(mod.id, _low_values(mod)))
         for klass, d in zip(classes, drawn_junk):
-            for _, mod in junk[klass][:d]:
+            for _, mod, _ in junk[klass][:d]:
                 built = built.add_mod(data, ExplicitMod(mod.id, _low_values(mod)))
         found = ends[(drawn_mods, drawn_junk)] = ab.compress(built)
         return found
@@ -239,12 +266,17 @@ def _relaxed(pattern, member: CompressedState, action: Action, factor: Fraction)
     return RelaxedDraw(nodes)
 
 
-def class_box(weights: list[Fraction], held: int, drawn: int, factor: Fraction) -> tuple[Fraction, Fraction]:
-    """The least and the greatest weight a class of pure junk has left (the module text): `weights` its families' weights, sorted, `held` how
-    many of them the item held before the reroll, `drawn` how many the reroll has drawn, `factor` the weight factor of the held families."""
+def class_box(
+    weights: list[Fraction], held: int, drawn: int, factor: Fraction, holdable: list[Fraction] | None = None
+) -> tuple[Fraction, Fraction]:
+    """The least and the greatest weight a class has left (the module text): `weights` its families' weights as the pool has them before the
+    unknown boost, sorted; `holdable` (sorted; `weights` when None) those of the families a member may hold unknown (the pure junk types),
+    `held` how many of those the item held before the reroll, `drawn` how many of the class the reroll has drawn, `factor` the weight factor."""
+    holdable = weights if holdable is None else holdable
     lows, highs = _prefix(weights), _prefix(weights[::-1])
     size, total, g = len(weights), lows[-1], factor - 1
     left, rest = total - highs[min(drawn, size)], total - lows[min(drawn, size)]
+    lows, highs, size = _prefix(holdable), _prefix(holdable[::-1]), len(holdable)
     fewest, most = min(max(0, held - drawn), size), min(held, size)
     if g >= 0:
         lo, hi = left + g * lows[fewest], rest + g * highs[most]
