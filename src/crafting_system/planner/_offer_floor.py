@@ -15,6 +15,8 @@ with the same shape (the claim and its proof are in `_offer_kinds`: Wald's ident
                                                     Q*(s, a) >= c(a) for any other offer (a craft from a state in E may stay in E),
     class OTHER   (any other shape; a state that holds an imprint when the start holds none and the restores are set aside, #1074):
                                                     Q*(s, a) >= c(a),
+    (a move, an offer that leaves the start's shape for a shape the floors know, a Scouring of R05's Rare: `_offer_kinds`, THE SHAPES, #973:
+     in OUTSIDE and, as an erasing one, INSIDE, Q*(s, a) >= c(a) + (1 - pbar(a)) R, R the least floor of the shapes it lands in, not rho),
     class UNOPENED (an unopened listing, ADR-0064): Q*(s, a) >= c(a) for the draw that opens it and the restart, and infinity for any other offer
                                                     (the kernel refuses every other action on an unopened item: `Abstraction._prepare`),
 
@@ -40,30 +42,37 @@ import math
 from collections.abc import Callable
 from dataclasses import replace
 
-from crafting_system.abstraction import Abstraction, CompressedState, Status
+from crafting_system.abstraction import Abstraction, CompressedState, Status, add_bound, declared_add_bound, reach_bound
 from crafting_system.abstraction._pattern import Tally
 
+from crafting_system.actions import NotApplicableError, OutOfScopeError
+from crafting_system.items import ItemError
+
 from ._offer_kinds import (
+    ADD,
     FINISHING,
+    MOVE,
     NAMING,
     REROLL,
     REFUSED,
     RESTART_KIND,
     SLACK,
     SMALL_START,
+    ShapeView,
     _Entry,
     _kind_of,
     _raised,
-    best_first_rho,
+    beyond,
     declared_pbars,
     raisable,
     finishes,
     goal_set,
+    shape_rhos,
     through_listing,
     ONE,
     ZERO,
 )
-from ._offers import BuyStartItem, PricedOffer
+from ._offers import BuyStartItem, PricedOffer, reached_by
 
 
 OTHER, INSIDE, OUTSIDE, UNOPENED = 0, 1, 2, 3  # the classes of states a floor is stated for (see the module text)
@@ -124,9 +133,141 @@ class OfferFloors:
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
         self.unimprinted = any(kind == REFUSED for kind, _named in kinds)  # restores set aside: a state that holds an imprint is of another shape (#1074)
+        self.views = [ShapeView(abstraction, self.bare, item, self.chosen, (), {self.shape: 0})]  # the shapes the floors are stated for (THE SHAPES, #973)
+        self.shape_entries = [self.entries]
+        self.settled: list[float | None] = [None]
+        self.rest = 0.0  # no shape left unsettled has a floor below this
         if self.chosen:
-            declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
-        self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
+            self._other_shapes(priced, item)
+            for view, entries in zip(self.views, self.shape_entries):
+                declared_pbars(abstraction, view.bare, view.item, self.chosen, entries, self.ask)  # every set's level 0 from its class at once (#1073)
+            self.settled, self.rest = shape_rhos(self.shape_entries, self._raise_in, until=0)
+        self.rho = self.settled[0] if self.chosen else 0.0
+        self.rhos = [self.rho_of(index) for index in range(len(self.views))] if self.chosen else [0.0]
+
+    # ---- the shapes (THE SHAPES in `_offer_kinds`) --------------------------------------------------------------------------
+
+    def _other_shapes(self, priced, item) -> None:
+        """The shapes of the other rarities the priced offers turn the start item into (`_offers.reached_by`), each with its offers' kinds, its
+        dead leaves (`_dead`) and their pbars; a restart from one of them is a move into the start's shape."""
+        ab, data = self.ab, self.ab.data
+        actions = [offer.offer.action for offer in priced if not isinstance(offer.offer.action, BuyStartItem) and not getattr(offer.offer.action, "opens_listing", False)]
+        if not actions:
+            return
+        known = self.views[0].known
+        for reached in reached_by(data, item, lambda _item: actions)[1:]:
+            state = ab.compress(reached)
+            key = (state.flags, state.fractured)
+            if key in known or getattr(state.flags, "unopened", False):
+                continue
+            known[key] = len(self.views)
+            self.views.append(ShapeView(ab, replace(state, slots=()), reached, self.chosen, (), known))
+        if len(self.views) == 1:
+            return
+        kinds = [[_kind_of(data, view.item, offer) if index else None for offer in priced] for index, view in enumerate(self.views)]
+        kinds[0] = [(entry.kind, None) for entry in self.entries]
+        reach = [[self._rarities(view, offer.offer.action) for offer in priced] for view in self.views]
+        restart = next((entry for entry in self.entries if isinstance(entry.priced.offer.action, BuyStartItem)), None)
+        goal = ab.goal
+        for index in range(1, len(self.views)):
+            view = self.views[index]
+            view.dead = self._dead(index, priced, kinds, reach)
+            entries: list[_Entry] = []
+            for position, (offer, (kind, named)) in enumerate(zip(priced, kinds[index])):
+                if position % 256 == 0:
+                    self.ask()
+                entry = _Entry(position, offer, kind, 0, ONE)
+                if kind == RESTART_KIND:
+                    if restart is not None and offer is restart.priced:  # back to the start: a move into its shape (or its listing and the draw)
+                        entry.pbar, entry.extra, entry.dests = restart.pbar, restart.extra, frozenset({0})
+                    else:  # the draw that opens a listing: no listing is of this shape
+                        entry.kind = REFUSED
+                elif kind in FINISHING:
+                    made = bool(offer.offer.action.adds(data, view.item).crafted)
+                    leaves = [goal.leaves[leaf] for leaf in (view.dead or self.chosen)]
+                    test = all if view.dead else any  # one mod added must pass every dead leaf, or some leaf of U where none is dead
+                    entry.pbar = ONE if test(finishes(leaf, named, made) for leaf in leaves) else ZERO
+                entries.append(entry)
+            self.shape_entries.append(entries)
+
+    def _rarities(self, view: ShapeView, action):
+        """The rarities one use of `action` leaves an item of the shape in: asked of the shape's item, then of its bare item; None when neither
+        answers (THE SHAPES, assumption (8): an action that applies nowhere there leaves no item of another rarity)."""
+        if isinstance(action, BuyStartItem):
+            return None
+        data = self.ab.data
+        for asked in (view.item, view.item.changed(data, mods=tuple(entry for entry in view.item.mods if entry.fractured))):
+            try:
+                return action.rarities(data, asked)
+            except (NotApplicableError, OutOfScopeError, ItemError, ValueError):  # refused there, or the data cannot build it: ask the next item
+                continue
+        return None
+
+    def _dead(self, index: int, priced, kinds, reach) -> tuple[int, ...]:
+        """The leaves of U that no state of the claim of shape `index` holds PASSING (THE SHAPES): U less every leaf a use that lands in the shape
+        may leave PASSING (from any shape, an erasing reroll's outcome at the bare item; any other use that can land there leaves every leaf open to
+        it) and every leaf an offer of the shape may make PASSING."""
+        view = self.views[index]
+        rarity = view.item.rarity
+        open_leaves = set(self.chosen)
+        for source, other in enumerate(self.views):
+            if source == index:
+                continue
+            for position, offer in enumerate(priced):
+                if not open_leaves:
+                    return ()
+                rarities = reach[source][position]
+                kind = kinds[source][position][0]
+                if kind in (REFUSED, RESTART_KIND) or rarities is None or rarity not in rarities:
+                    continue
+                action = offer.offer.action
+                adds = action.adds(self.ab.data, other.item)
+                if kind != REROLL or adds.fractures or adds.keeps_crafted or action.reads(self.ab.data).needs_crafted:
+                    return ()  # it keeps mods of the state it was used at, which may pass any leaf
+                open_leaves -= self._passed(other, offer.offer.action, REROLL, (), open_leaves)
+        for position, offer in enumerate(priced):
+            if not open_leaves:
+                return ()
+            kind, named = kinds[index][position]
+            rarities = reach[index][position]
+            if kind in FINISHING:
+                made = bool(offer.offer.action.adds(self.ab.data, view.item).crafted)
+                open_leaves -= {leaf for leaf in open_leaves if finishes(self.ab.goal.leaves[leaf], named, made)}
+            elif kind in (REROLL, ADD) and (rarities is None or rarity in rarities):
+                open_leaves -= self._passed(view, offer.offer.action, kind, named, open_leaves)
+        return tuple(sorted(open_leaves))
+
+    def _passed(self, view: ShapeView, action, kind: str, _named, leaves) -> set[int]:
+        """The leaves of `leaves` one use of the erasing reroll (`kind` REROLL) or the addition (ADD) `action` at a state of the shape `view` may
+        make PASSING: those its bound for the leaf alone does not prove 0 (`reach_bound` at the bare item; `add_bound` over the states of the
+        shape). A reroll the bare item refuses passes none (assumption (1)); any other answer that proves nothing passes them all."""
+        ab = self.ab
+        found: set[int] = set()
+        for leaf in sorted(leaves):
+            self.ask()
+            if self.tally is not None:
+                self.tally.done += 1
+            try:
+                if kind == REROLL:
+                    bound = reach_bound(ab, view.bare, action, (leaf,))
+                elif action.added_draw(ab.data, view.item) is not None:
+                    bound = declared_add_bound(ab, action, view.item, (leaf,))
+                else:
+                    bound = add_bound(ab, view.bare, action, (leaf,))
+            except NotApplicableError:
+                if kind == REROLL:
+                    return set()
+                bound = None
+            except OutOfScopeError:
+                bound = None
+            if bound is None or bound > 0:
+                found.add(leaf)
+        return found
+
+    def rho_of(self, shape: int) -> float:
+        """The floor of the shape `shape`: settled, or the least an unsettled one can have (`rest`)."""
+        value = self.settled[shape] if shape < len(self.settled) else None
+        return self.rest if value is None else value
 
     def ask(self) -> None:
         """Ask the net; raise `FloorsStopped` with its reason once it is reached."""
@@ -134,11 +275,18 @@ class OfferFloors:
             raise FloorsStopped(reason)
 
     def _raise(self, entry: _Entry, level: int) -> None:
+        """Bring an offer of the start's shape to `level`, asking the net and counting a piece of work."""
+        self._raise_in(0, entry, level)
+
+    def _raise_in(self, shape: int, entry: _Entry, level: int) -> None:
         self.ask()
         if self.tally is not None:
             self.tally.done += 1
-        entry.kind, entry.pbar, entry.level = _raised(
-            self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level
+        self._lift(shape, entry, level)
+
+    def _lift(self, shape: int, entry: _Entry, level: int) -> None:
+        entry.kind, entry.pbar, entry.level, entry.dests = _raised(
+            self.views[shape], entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level, entry.dests
         )
 
     # ---- the classes of states ------------------------------------------------------------------------------------------
@@ -166,14 +314,15 @@ class OfferFloors:
             # rests on) or one that leaves the shape has a floor of `rho` too, not its bare cost. Without that the state's bound (`rho`) stood above the
             # least floor of its offers (R12 with the floors on: 8.98 against a refused reforge's 0.75) and the search refused it as inconsistent (#829)
             return max(entry.cost + self.after_leaving(entry), self.rho)
-        if entry.pbar == ONE or klass == OTHER or (klass == INSIDE and entry.kind != REROLL):
+        if entry.pbar == ONE or klass == OTHER or (klass == INSIDE and entry.kind not in (REROLL, MOVE)):
             return entry.cost
         return entry.cost + self.after_leaving(entry)
 
     def after_leaving(self, entry: _Entry) -> float:
-        """`(1 - pbar) rho`: the least the offer costs after its use beyond its price. 0 for an offer that lands in E for sure, also when `rho` is
+        """`(1 - pbar) R`: the least the offer costs after its use beyond its price, R being `rho` for an offer that keeps the start's shape and the
+        least floor of the shapes a move lands in (`_offer_kinds.beyond`, THE SHAPES). 0 for an offer that lands in E for sure, also when R is
         infinite (nothing else enters E: `_offer_kinds`, UNREACHABLE), where float arithmetic would make it 0 * inf, not a number."""
-        return 0.0 if entry.pbar == ONE else float(1 - entry.pbar) * self.rho
+        return beyond(entry, self.rho, self.rho_of)
 
     def floor(self, positions, klass: int) -> float:
         """The least floor over `positions` (infinity for none)."""
@@ -227,9 +376,7 @@ class OfferFloors:
         """
         entry = self.entries[position]
         while raisable(entry.kind, entry.level) and klass in (INSIDE, OUTSIDE) and self.lower(position, klass) * (1 - SLACK) <= above:
-            entry.kind, entry.pbar, entry.level = _raised(
-                self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, entry.level + 1
-            )
+            self._lift(0, entry, entry.level + 1)
         return self.lower(position, klass)
 
 

@@ -77,6 +77,13 @@ def members(ab: Abstraction):
         yield tuple(mods), sum((chance for state, chance in kernel.items() if state.status[GEM_LEAF] == PASSING), Fraction(0))
 
 
+
+def _raised_add(ab, state, chosen, action, level, pbar):
+    """`_offer_kinds._raised_add` at the shape of `state` (its item read back from it), as `(kind, pbar, level)`."""
+    item = ab._item_of(state, True)[0]
+    view = _offer_kinds.ShapeView(ab, dataclasses.replace(state, slots=()), item, tuple(chosen))
+    return _offer_kinds._raised_add(view, action, _offer_kinds.ADD, level, pbar)[:3]
+
 def test_the_bound_is_never_below_the_exact_chance_at_any_member_and_the_chance_at_the_bare_item_is_no_bound():
     ab = exalted_abstraction()
     bare = ab.compress(small_item(roll(RESIST_2, fractured=True)))
@@ -139,23 +146,26 @@ def test_a_draw_cut_by_memory_strands_gets_no_bound_and_its_offer_stays_terminal
     ab = exalted_abstraction()
     bare = dataclasses.replace(ab.compress(small_item(roll(RESIST_2, fractured=True))), strands=10)
     assert add_bound(ab, bare, EXALTED, (GEM_LEAF,)) is None
-    assert _offer_kinds._raised_add(ab, bare, (GEM_LEAF,), EXALTED, 0, Fraction(1)) == (_offer_kinds.TERMINAL, Fraction(1), 1)
+    assert _raised_add(ab, bare, (GEM_LEAF,), EXALTED, 0, Fraction(1)) == (_offer_kinds.TERMINAL, Fraction(1), 1)
 
 
-def test_an_action_that_is_not_one_drawn_mod_and_a_refusal_at_the_bare_item_leave_the_offer_terminal():
+def test_an_action_that_is_not_one_drawn_mod_and_a_refusal_it_may_outgrow_leave_the_offer_terminal():
     ab = Abstraction(SMALL, GOALS["r12"], AMULET, LEVEL, [EXALTED, HarvestAddRemove("lightning")])
     bare = ab.compress(small_item(roll(RESIST_2, fractured=True)))
     # a Harvest add/remove also removes a mod: its result is not one drawn mod added to the mods kept
     held = ab.compress(small_item(roll(RESIST_2, fractured=True), roll(LIFE_1)))
     assert add_bound(ab, held, HarvestAddRemove("lightning"), (GEM_LEAF,)) is None
-    assert _offer_kinds._raised_add(ab, held, (GEM_LEAF,), HarvestAddRemove("lightning"), 0, Fraction(1))[0] == _offer_kinds.TERMINAL
-    # at the bare item it has nothing to remove: refused there, which proves nothing for a state holding more mods
-    assert _offer_kinds._raised_add(ab, bare, (GEM_LEAF,), HarvestAddRemove("lightning"), 0, Fraction(1))[0] == _offer_kinds.TERMINAL
-    # refused at the bare item (a magic one takes no Exalted Orb): that proves nothing for a state holding more, so terminal, never refused
+    assert _raised_add(ab, held, (GEM_LEAF,), HarvestAddRemove("lightning"), 0, Fraction(1))[0] == _offer_kinds.TERMINAL
+    # at the bare item it has nothing to remove: refused there, which proves nothing for a state holding more mods (the catalog lists it for the
+    # shape's item, a Rare one)
+    assert _raised_add(ab, bare, (GEM_LEAF,), HarvestAddRemove("lightning"), 0, Fraction(1))[0] == _offer_kinds.TERMINAL
+    # refused at the bare item of a Magic shape (a Magic item takes no Exalted Orb), which has the most room of the shape: an addition that keeps
+    # every mod is refused at every state of the shape too, so it is set aside (#973: before, it stayed terminal at its price, as the Regal Orb
+    # did on R05's Rare start); the Harvest add/remove above, which also removes a mod, stays terminal
     magic = ab.compress(small_item(roll(RESIST_2, fractured=True), rarity=Rarity.MAGIC))
-    assert _offer_kinds._raised_add(ab, magic, (GEM_LEAF,), EXALTED, 0, Fraction(1)) == (_offer_kinds.TERMINAL, Fraction(1), 1)
+    assert _raised_add(ab, magic, (GEM_LEAF,), EXALTED, 0, Fraction(1)) == (_offer_kinds.REFUSED, Fraction(1), 1)
     # at its top level an addition is not raised again
-    assert _offer_kinds._raised_add(ab, bare, (GEM_LEAF,), EXALTED, 1, Fraction(1, 3)) == (_offer_kinds.ADD, Fraction(1, 3), 1)
+    assert _raised_add(ab, bare, (GEM_LEAF,), EXALTED, 1, Fraction(1, 3)) == (_offer_kinds.ADD, Fraction(1, 3), 1)
     assert _offer_kinds.raisable(_offer_kinds.ADD, 0) and not _offer_kinds.raisable(_offer_kinds.ADD, 1)
 
 

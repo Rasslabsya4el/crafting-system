@@ -920,11 +920,18 @@ def reached_items(data: GameData, start_item: Item, kind_names: frozenset[str] |
     (`ItemError`, or another `ValueError` of the data: a game data without the veiled placeholders, or cut down for a test) leaves nothing: at plan time it is refused at that item too, so it reaches
     no item the plan could use.
     """
+    return reached_by(data, start_item, lambda item: _listed_at(data, item, kind_names, label_names))
+
+
+def reached_by(data: GameData, start_item: Item, actions_at: Callable[[Item], Iterable[Action]]) -> tuple[Item, ...]:
+    """`reached_items` over the actions `actions_at(item)` gives for each item found: the start item, then one item of each other rarity they
+    turn it into, in the order found. The offers' floors ask it of the priced offers, for the shapes their bound is stated for
+    (`_offer_floor.OfferFloors`, #973)."""
     found = {start_item.rarity: start_item}
     queue = [start_item]
     while queue:
         item = queue.pop(0)
-        for action in _listed_at(data, item, kind_names, label_names):
+        for action in actions_at(item):
             if len(found) == len(Rarity):
                 return tuple(found.values())
             try:

@@ -53,8 +53,8 @@ mods of the start, lands in E with chance at most pbar(x):
   * an addition (#1072): it keeps the mods and adds one mod drawn from the pool less the families on the item
     (`Reads.pool_weight` with `variants` or `draw_tags`: an Exalted Orb, an Eldritch Exalted Orb, an Orb of Augmentation;
     it draws, names no mod, fractures nothing, reads no roll, input or influence). A Regal Orb (it changes the rarity, so it
-    leaves the shape) and a Harvest add/remove (it also removes a mod: not one drawn mod added to the mods kept) are of this
-    kind but get no bound, so they stay TERMINAL (#1084). Its
+    leaves the shape: a MOVE_ADD into a shape the floors know, THE SHAPES, #973) and a Harvest add/remove (it also removes a mod: not one
+    drawn mod added to the mods kept) are of this kind but get no bound of their own, so the second stays TERMINAL (#1084). Its
     chance depends on the families the item holds, so it cannot be read at one state: pbar is the largest chance,
     over every state of the start's shape at which a leaf of U is not PASSING, that the one added mod passes that
     leaf (`add_bound`: the most favourable weight share of the free families, every set of families held and
@@ -113,6 +113,43 @@ floors' arithmetic keeps an infinite rho honest (`after_leaving`: an offer that 
 model has no floor action at an infinite floor (`_pattern_bound._floor_of`), and the search drops an infinite candidate and proves no plan of
 its offers reaches the goal.
 
+THE SHAPES (#973). The claim above is for the start's shape, and an offer that leaves it is cut there at its price. Once the Orb of Scouring is
+offered that cut set rho to its price (0.35 Chaos on R05, R10 and R12, whose fractured Rare start it leaves Magic; R05's floor fell from the
+essence's 118.36), and a Regal Orb back from the Magic item would have cut it again. So the floors are stated for every shape the priced offers
+turn the start item into (`_offers.reached_by`: one item per rarity, its flags and fractured mods; the start's is shape 0), each with its own
+bare item, its offers' kinds read at its item (`_kind_of`), its pbars read at its bare item, and its floor rho_S:
+  * DEAD LEAVES. D_S is U less (a) every leaf a use that lands in S may leave PASSING: from another shape, an erasing reroll (kind REROLL, no
+    fracture, no kept crafted mod, no need of one) whose rarities there (`Action.rarities`) hold S's, those its `reach_bound` for the leaf alone
+    at that shape's bare item does not prove 0 (its outcome does not depend on the state); any other offer whose rarities may hold S's empties
+    D_S (it keeps mods of the state it was used at); the restart lands in the start's shape only; and (b) every leaf an offer of S may make
+    PASSING: an erasing reroll whose rarities hold S's (`reach_bound` for the leaf alone), an addition (`add_bound`, or the declared draw's, for
+    the leaf alone: over every state of S), a craft, a veiled choice or a veil (`finishes`). D_0 is empty. The claim C_S of a shape is: V*(s) >=
+    rho_S at every state s of S outside E that holds no leaf of D_S PASSING. From such a state, every state reached before the first terminal
+    offer or move holds none either (an erasing reroll's outcome holds only leaves of (b), an addition, a craft or a veiled choice adds one mod to
+    the mods kept, a removal adds none, an implicit change touches no leaf of U), so the pbars below hold along the whole argument.
+  * The pbars of S. An erasing reroll, an implicit change, a restart's: as above, at S's bare item. An addition, and a craft, a veiled choice or a
+    veil, add one mod (a placeholder for a veil) to the mods kept: from a state of C_S outside E they land in E only if that mod passes every dead
+    leaf (all open there, all needed by E). So a craft's pbar is 1 when one mod it may add passes every leaf of D_S (some leaf of U when D_S is
+    empty), else 0, and an addition's is the least of its bound over U and its bound for each dead leaf alone (`_least`).
+  * MOVES. An erasing reroll whose outcomes at S's bare item leave S, every one for a shape the floors know (`ShapeView.dests`), is a MOVE: its
+    outcomes are those at the bare item from every state of S, so it lands in E with chance at most its pbar (the levels of a reroll's) and
+    else in a shape d it names, at a state of C_d (the leaves it may leave PASSING are out of D_d by (a)). An addition whose outcome at the bare
+    item leaves S for known shapes (a Regal Orb on the Magic item) is a MOVE_ADD, with an addition's pbar; it lands in a shape whose D (a) leaves
+    empty. A restart from a shape other than the start's is a move into the start's shape, with the restart's pbar and draw (`through_listing`).
+    A reroll whose outcomes fracture or fall in a shape the floors do not know stays TERMINAL.
+  * THE SYSTEM. Let x_S be the infimum of V* over the states of C_S outside E, and F_S(y) = min(W_S, min over the moves m of S of c_m +
+    (1 - pbar_m) min_{d of m} y_d), W_S the least cost / pbar over the other offers of S (a terminal offer at its cost). Then x >= F(x): from a
+    state of C_S outside E, let N be the first time E is entered, a terminal offer is used or a move is used. Until N the state stays in C_S and
+    the Wald argument above runs with w(m) = 1 for a move, and a move's use costs, beyond its price, V* of where it lands: given the history, it
+    lands outside E with chance at least 1 - pbar_m, in a shape d whose V* there is at least x_d. Every offer a then has c'(a) >= F_S(x) w(a)
+    (c' its price, plus (1 - pbar_m) min x_d for a move), so V*(s) >= F_S(x). F is monotone on [0, inf]^n, so by Knaster-Tarski x is at least the
+    least fixed point of F, and `shape_rhos` gives the least fixed point of a G <= F (each move's term taken as min(c + (1 - pbar) y, c / pbar)),
+    found best first; so rho_S <= x_S, and rho = rho_0 is the floor of the start's shape as before. On R05: rho 118.36 again (the Scouring
+    move costs 0.35 + rho_Magic, and from the Magic item E needs the essence-only Strength mod, which no offer there gives: D_Magic holds it, so
+    the Alterations and the Regal Orb have pbar 0, and every way out of Magic goes back to the start's shape).
+  * A move's floor in the start's shape (`_offer_floor.OfferFloors.lower`) is its price plus (1 - pbar) the least floor of the shapes it lands
+    in (`beyond`), not plus rho: the shape it lands in may be cheaper to finish from than the start's.
+
 WHAT THE CLAIM NEEDS, and what is checked. (1) An offer that the game refuses on the bare item of the start's shape never applies at a state
 of that shape (a reroll reads nothing of the item that the shape does not hold; a crafted mod can only add refusals). This is an assumption on
 the contract of `Reads`, not a check. (2) An erasing reroll keeps the shape, which `keeps_shape` checks at the bare item. (3) The bound of
@@ -122,14 +159,20 @@ and its single draw are checked at the bare item, and `add_bound` against every 
 class declares its draw (`Action.added_draw`) draws at every state of the shape as declared and keeps the shape: the declaration's, compared with
 the built outcomes by the contract suite and at every member of a hand-worked shape (`tests/test_fine_group_floors.py`). (6) A veil adds no mod
 but a placeholder, and an implicit change no explicit mod and no flag: the contracts of `Adds.veils` and `Adds.implicits`, not a check (an
-implicit change's shape is checked at the bare item). Floats: rho is
-lowered by 1e-12 of itself.
+implicit change's shape is checked at the bare item). (7) THE SHAPES take on the contracts, not a check: a craft, a veiled choice, a veil
+and an implicit change keep the rarity (a bench craft is refused on a Normal item); `Action.rarities`, asked of the shape's item and then of its
+bare item, gives the rarities of every state of the shape where the offer applies; an addition that keeps every mod (`Reads.variants`) and that
+the bare item refuses is refused at every state of the shape (the bare item has the most room and holds the fewest families; what refuses it
+there is the rarity or the class, a Regal Orb on a Rare item, an Exalted Orb on a Magic one) (one that both refuse leaves none, as `_offers.reached_items`
+reads it); an erasing reroll's `Fixed` result (an Orb of Scouring) keeps of the state only what a reroll's kept mods are (`reach_bound` reads
+it at the bare item as it reads a reroll's kept mods); an addition that leaves the shape draws as one that keeps it does (the contract of
+`Reads.pool_weight`, read by `add_bound` at the bare item). Floats: rho is lowered by 1e-12 of itself.
 """
 
 import heapq
 import math
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from fractions import Fraction
 
 from crafting_system.abstraction import (
@@ -156,9 +199,10 @@ SLACK = 1e-12  # float slack on rho and on the floors' test
 
 RESTART_KIND, CRAFT, VEILED, REROLL, ADD, TERMINAL, REFUSED = "restart", "craft", "veiled", "reroll", "add", "terminal", "refused"
 VEIL, IMPLICIT = "veil", "implicit"  # a Veiled Exalted Orb's kind (it adds a placeholder), and an implicit change's (an Ember, an Ichor; #1074)
+MOVE, MOVE_ADD = "move", "move-add"  # a reroll and an addition that leave the shape for shapes the floors know (THE SHAPES, #973)
 NAMING = (CRAFT, VEILED)  # the kinds that make the goal set U (a leaf they can pass leaves it) and that the bound's model starts with
 FINISHING = (*NAMING, VEIL)  # the kinds whose pbar is read from the mods they may add (`finishes`)
-TOP_LEVEL = {REROLL: 2, ADD: 1, IMPLICIT: 1}  # the highest level of the bound of each kind that has levels (see THE NUMBER pbar); every other kind has none
+TOP_LEVEL = {REROLL: 2, ADD: 1, IMPLICIT: 1, MOVE: 2, MOVE_ADD: 1}  # the highest level of the bound of each kind that has levels (see THE NUMBER pbar); every other kind has none
 
 
 @dataclass
@@ -171,6 +215,7 @@ class _Entry:
     level: int = 0
     pbar: Fraction = ONE
     extra: float = 0.0  # a cost that every use of the offer is followed by: the draw after a restart into an unopened listing (`through_listing`)
+    dests: frozenset[int] = frozenset()  # the shapes a move lands in (THE SHAPES): empty for an offer whose use keeps the shape or is cut there
 
     @property
     def cost(self) -> float:
@@ -321,34 +366,71 @@ def raisable(kind: str, level: int) -> bool:
     return level < TOP_LEVEL.get(kind, 0)
 
 
-def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:
-    """The `(kind, pbar, level)` of a reroll or an addition brought to `target` (see `raise_level`); a function of its arguments alone."""
+@dataclass
+class ShapeView:
+    """One shape the floors are stated for (THE SHAPES): its bare item (`bare`: the shape's flags and fractured mods, nothing else), an item of it
+    (`item`), the leaves of U (`chosen`), the leaves of U no state of its claim holds PASSING (`dead`), and the index of every shape the floors
+    know, by its flags and fractured mods (`known`)."""
+
+    abstraction: Abstraction
+    bare: CompressedState
+    item: Item
+    chosen: tuple[int, ...]
+    dead: tuple[int, ...] = ()
+    known: Mapping[tuple, int] = field(default_factory=dict)
+
+    def dests(self, action) -> frozenset[int] | None:
+        """The shapes the outcomes of `action` at the bare item fall in, or None when one is of a shape the floors do not know or it fractures.
+        Raises what the action raises there."""
+        ab = self.abstraction
+        prepared = ab._prepared(self.bare, action)
+        if prepared.outcomes.fractures:
+            return None
+        found: set[int] = set()
+        for split in ab._splits_of(prepared):
+            index = self.known.get((split.flags, split.fractured))
+            if index is None:
+                return None
+            found.add(index)
+        return frozenset(found)
+
+
+def _raised(view: ShapeView, action, kind: str, level: int, pbar: Fraction, target: int, dests: frozenset[int] = frozenset()) -> tuple[str, Fraction, int, frozenset[int]]:
+    """The `(kind, pbar, level, dests)` of a reroll, an addition, an implicit change or a move of the shape `view` brought to `target` (see
+    `raise_level`); a function of its arguments alone. A reroll whose outcomes at the bare item leave the shape for shapes the floors know is a
+    MOVE (THE SHAPES), its pbar the same bounds of the chance of landing in E, read at the bare item as a reroll's."""
+    abstraction, bare, item, chosen = view.abstraction, view.bare, view.item, view.chosen
     data = abstraction.data
-    if kind == ADD:
-        return _raised_add(abstraction, bare, chosen, action, level, pbar, item)
+    if kind in (ADD, MOVE_ADD):
+        return _raised_add(view, action, kind, level, pbar, dests)
     if kind == IMPLICIT:
-        return _raised_implicit(abstraction, bare, action, level)
+        return (*_raised_implicit(abstraction, bare, action, level), frozenset())
     if level == 0:
         try:
             same_shape = keeps_shape(abstraction, bare, action)
         except NotApplicableError:
-            return REFUSED, ONE, level
+            return REFUSED, ONE, level, frozenset()
         except OutOfScopeError:  # no rule for the bare item proves nothing for the states: the offer stays in the search, and the walk writes its gap (ticket #506)
-            return TERMINAL, ONE, level
+            return TERMINAL, ONE, level, frozenset()
         adds = action.adds(data, item)
-        if not same_shape or adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
-            return TERMINAL, ONE, level
+        if adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
+            return TERMINAL, ONE, level, frozenset()
+        if not same_shape:
+            dests = view.dests(action) or frozenset()  # cached: `keeps_shape` prepared the same outcomes
+            if not dests:
+                return TERMINAL, ONE, level, frozenset()
+            kind = MOVE
         level = 1
         found = reach_bound(abstraction, bare, action, chosen) if chosen else ZERO
         if found is None:
-            return TERMINAL, ONE, level
+            return TERMINAL, ONE, level, frozenset()
         pbar = min(pbar, found)  # pbar at level 0 is 1 or the declared bound (`declared_pbars`): both bound the same chance
-    if target >= 2 and level < 2 and kind == REROLL:
+    if target >= 2 and level < 2 and kind in (REROLL, MOVE):
         level = 2
         exact = reach_bound(abstraction, bare, action, chosen, exact=True) if chosen else ZERO
         if exact is not None and exact < pbar:
             pbar = exact
-    return kind, pbar, level
+    return kind, pbar, level, dests
 
 
 def _raised_implicit(abstraction, bare, action, level: int) -> tuple[str, Fraction, int]:
@@ -363,29 +445,56 @@ def _raised_implicit(abstraction, bare, action, level: int) -> tuple[str, Fracti
     return (IMPLICIT, ZERO, 1) if same_shape else (TERMINAL, ONE, 1)
 
 
-def _raised_add(abstraction, bare, chosen, action, level: int, pbar: Fraction, item: Item | None = None) -> tuple[str, Fraction, int]:
-    """The `(kind, pbar, level)` of an addition brought to level 1: its chance of landing in E from any state of the shape (see THE NUMBER pbar).
+def _raised_add(view: ShapeView, action, kind: str, level: int, pbar: Fraction, dests: frozenset[int] = frozenset()) -> tuple[str, Fraction, int, frozenset[int]]:
+    """The `(kind, pbar, level, dests)` of an addition brought to level 1: its chance of landing in E from any state of the shape's claim (see THE
+    NUMBER pbar, and THE SHAPES for the dead leaves and the additions that leave the shape: a Regal Orb on a Magic item, a MOVE_ADD).
 
     Unlike a reroll's, a refusal at the bare item proves nothing (the addition reads the mods the item holds: an Exalted Orb on a full side,
     a Harvest add/remove with nothing to remove), so the offer stays in the argument as a terminal one, and so does one whose result at the bare
-    item leaves the shape or is not one drawn mod (`add_bound` None).
+    item leaves for a shape the floors do not know or is not one drawn mod (`add_bound` None).
     """
     if level >= 1:
-        return ADD, pbar, level
+        return kind, pbar, level, dests
+    abstraction, bare, item = view.abstraction, view.bare, view.item
     if item is not None and action.added_draw(abstraction.data, item) is not None:  # the class declares the draw of the shape (#1074)
         try:
-            found = declared_add_bound(abstraction, action, item, chosen) if chosen else ZERO
+            found = _least(view, lambda leaves: declared_add_bound(abstraction, action, item, leaves))
         except OutOfScopeError:
-            return TERMINAL, ONE, 1
-        return (TERMINAL, ONE, 1) if found is None else (ADD, found, 1)
+            return TERMINAL, ONE, 1, frozenset()
+        return (TERMINAL, ONE, 1, frozenset()) if found is None else (ADD, found, 1, frozenset())
     try:
         same_shape = keeps_shape(abstraction, bare, action)
-        found = add_bound(abstraction, bare, action, chosen) if same_shape and chosen else (ZERO if same_shape else None)
-    except (NotApplicableError, OutOfScopeError):
-        return TERMINAL, ONE, 1
+        dests = frozenset() if same_shape else (view.dests(action) or frozenset())
+        if not same_shape and not dests:
+            return TERMINAL, ONE, 1, frozenset()
+        found = _least(view, lambda leaves: add_bound(abstraction, bare, action, leaves))
+    except NotApplicableError:
+        # An addition that keeps every mod (`Reads.variants`: an Exalted, a Regal, an Augmentation) refused at the bare item, which has the most
+        # room and holds the fewest families of the shape, is refused at every state of the shape (a Regal Orb on the Rare start, offered for the
+        # Magic item a Scouring leaves, #973; assumption (7)). Any other (a Harvest add/remove, which needs a mod to remove) proves nothing there
+        # for the states that hold more mods.
+        return (REFUSED if abstraction.data is not None and action.reads(abstraction.data).variants else TERMINAL), ONE, 1, frozenset()
+    except OutOfScopeError:
+        return TERMINAL, ONE, 1, frozenset()
     if found is None:
-        return TERMINAL, ONE, 1
-    return ADD, found, 1
+        return TERMINAL, ONE, 1, frozenset()
+    return (ADD if same_shape else MOVE_ADD), found, 1, dests
+
+
+def _least(view: ShapeView, bound: Callable[[tuple[int, ...]], Fraction | None]) -> Fraction | None:
+    """The least of the bounds of one added mod (`add_bound`, `declared_add_bound`) over U and over each dead leaf of the shape alone; None when
+    the bound over U is None. Over U it bounds the chance that the added mod passes a leaf of U that is not PASSING; over a dead leaf, the chance
+    that it passes that leaf, which every state of the claim holds open and E needs (THE SHAPES)."""
+    if not view.chosen:
+        return ZERO
+    found = bound(view.chosen)
+    if found is None:
+        return None
+    for leaf in view.dead:
+        alone = bound((leaf,))
+        if alone is not None and alone < found:
+            found = alone
+    return found
 
 
 def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int], None]) -> float:
@@ -409,6 +518,84 @@ def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int
         raise_level(entry, entry.level + 1)
         heapq.heappush(heap, (entry.ratio, index))
     return 0.0
+
+
+def beyond(entry: _Entry, rest: float, rho_of: Callable[[int], float]) -> float:
+    """`(1 - pbar) R`: the least an offer costs after its use beyond its price, where R is `rest` (the floor of the shape it keeps) for an offer of
+    the shape and the least floor of the shapes it lands in for a move. 0 for an offer that lands in E for sure, also when R is infinite (nothing
+    else enters E: UNREACHABLE), where float arithmetic would make it 0 * inf, not a number."""
+    if entry.pbar == ONE:
+        return 0.0
+    after = min(rho_of(shape) for shape in entry.dests) if entry.dests else rest
+    return float(1 - entry.pbar) * after
+
+
+def shape_rhos(entries: Sequence[Sequence[_Entry]], raise_level: Callable[[int, _Entry, int], None], until: int | None = 0) -> tuple[list[float | None], float]:
+    """The floor rho_S of every shape S (`entries[S]` its offers), found best first as `best_first_rho` is, over the system of THE SHAPES.
+
+    A heap holds, for every offer of every shape, its own key (cost / pbar: for an offer of the shape its Wald ratio, for a move the cost of using
+    it until it lands in E, c / p), and, for a move once a shape it lands in is settled, the key through it (c + (1 - p) rho of that shape). Pop the
+    least; an offer below its top level is brought one level up (`raise_level(shape, entry, level)`, which only lowers its pbar, so both its keys
+    only grow) and its keys pushed again; a key that grew since it was pushed is pushed again at its new value; else the popped key settles its
+    shape, and every move into that shape pushes its key through it. Every key is at most the value it reaches at the top level, and a key through a
+    shape settled later is at least the least of that shape's floor and the move's own key (c + (1 - p) R >= R when R <= c / p, and >= c / p when
+    R > c / p), so the keys settle in order and each shape's settled key is the least fixed point of the system with each move's c + (1 - p) R taken
+    as min(c + (1 - p) R, c / p): a lower bound of the least fixed point of THE SHAPES's system, so of every true floor (Knaster-Tarski: the true
+    floors x satisfy x >= F(x), and F is monotone). Settling stops once the shape `until` is settled (None: when the heap is empty).
+
+    Returns the settled floors, lowered by `SLACK` of themselves (None for a shape not settled when it stopped; infinity for one never settled when
+    the heap ran out: no way into E from it, UNREACHABLE), and the last key settled, which no shape left unsettled has a floor below.
+    """
+    count = len(entries)
+    settled: list[float | None] = [None] * count
+    into: list[list[tuple[int, int]]] = [[] for _ in range(count)]  # the moves (shape, position) that land in each shape
+    heap: list[tuple[float, int, int, bool]] = []  # (key, shape, position, through a settled shape)
+
+    def through(entry: _Entry) -> float | None:
+        known = [settled[shape] for shape in entry.dests if settled[shape] is not None]
+        if not known:
+            return None
+        return entry.cost + (0.0 if entry.pbar == ONE else float(1 - entry.pbar) * min(known))
+
+    def push(shape: int, position: int) -> None:
+        entry = entries[shape][position]
+        heapq.heappush(heap, (entry.ratio, shape, position, False))
+        if entry.dests and (key := through(entry)) is not None:
+            heapq.heappush(heap, (key, shape, position, True))
+
+    for shape, offers in enumerate(entries):
+        for position, entry in enumerate(offers):
+            if entry.dests:
+                for target in entry.dests:
+                    into[target].append((shape, position))
+            push(shape, position)
+    last = 0.0
+    while heap:
+        key, shape, position, via = heapq.heappop(heap)
+        if settled[shape] is not None:
+            continue
+        entry = entries[shape][position]
+        if entry.kind == REFUSED:
+            continue
+        if raisable(entry.kind, entry.level):
+            had = entry.dests
+            raise_level(shape, entry, entry.level + 1)
+            for target in entry.dests - had:
+                into[target].append((shape, position))
+            push(shape, position)
+            continue
+        now = through(entry) if via else entry.ratio
+        if now is None or now > key:  # stale: the offer was raised since this key was pushed
+            if now is not None:
+                heapq.heappush(heap, (now, shape, position, via))
+            continue
+        settled[shape] = last = key * (1 - SLACK)
+        if shape == until:
+            return settled, last
+        for source, at in into[shape]:
+            if settled[source] is None and (found := through(entries[source][at])) is not None:
+                heapq.heappush(heap, (found, source, at, True))
+    return [math.inf if value is None else value for value in settled], math.inf
 
 
 def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]:
