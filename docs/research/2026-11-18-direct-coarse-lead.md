@@ -80,7 +80,7 @@ No R04 run with direct rows finished. Each was stopped by hand at 22:58 (load 10
 | direct, `worked`, `demand`, `MAX` | 22,668 / 16,682 | 1.50% | 25,529 keys (25.3%) (134) | 3.85% | 2.21% | not reached |
 | direct, `RATCHET`, `demand`, `MAX`, `ONE=exact` | 20,330 / 14,787 | 1.50% | 22,987 keys (22.8%) (82) | 3.66% | 2.19% | not reached |
 | direct, `RATCHET`, `floor`, `MAX`, `ONE=exact` | 15,423 / 1,972 (held: the direct model's own build found 5,549; the rest are coarse keys of exact tips, at the floor) | 1.50% | 39,900 keys (39.6%) (82) | 3.67% | 1.52% | not reached |
-| direct, `static` (fixed lead) | R04STATIC |
+| direct, `static` (fixed lead; checked once: 0 keys above the truth) | 6,650 / 2,262 | 1.50% | 43,097 keys (42.8%) (45, its limit; load 3.0 at the end) | 4.01% | 1.51% | not reached |
 | today's floor (#1318, `floor`, mass:0.5; no coarse model; `led2-R04-floor-mass-0.5.tsv`) | - | 0.0% | stopped at 44,341 keys (44.0%) | 4.09% | 1.37% | not reached |
 
 At equal exact keys today's floor (no lead at all) stood at 2.34% after 23,004 keys, 2.47% after 25,516 and 3.59% after 39,929 (#1318's `led-R04-floor-mass-0.5.tsv`, the same run as `led2` to there), against 3.66%, 3.79% to 3.85% and 3.67% here: the direct lead in `demand` is about 1.5 times higher at equal exact keys; counting its own coarse keys too (14,787 in the best `demand` run, 37,774 keys in all), it is level with no lead.
@@ -118,7 +118,7 @@ What the seconds are: of a direct build's 133 to 388 s, 7 to 18 s are kernels an
 - **One rule.** All runs use `mass:0.5`, #1318's rule for its 237 and 3,000. Other rules were not counted with direct rows.
 - **The ratchet and the pins are this note's additions**, each sound given a sound coarse lead; other ways of combining a key's rows with its lead (a value iteration with the maximum at every state) were not counted.
 - **Keys are counted as equal**, coarse and exact; the seconds of a real build per key are not in these counts.
-- **Where the R04 runs would have ended.** All four direct-row runs were stopped by hand at 22:58 (section 2): no count of where they end exists. The plain `worked` `floor` run on R04 and the `MAX`-only `floor` run on R04 were not run (a first plain `floor` run was stopped to free its process for the variants); the R04 `static` row is a run of 45 minutes (section 2).
+- **Where the R04 runs would have ended.** All four direct-row runs were stopped by hand at 22:58 (section 2): no count of where they end exists. The plain `worked` `floor` run on R04 and the `MAX`-only `floor` run on R04 were not run (a first plain `floor` run was stopped to free its process for the variants); the R04 `static` row is a run stopped at its 45-minute limit (section 2).
 
 ## 6. The tools
 
