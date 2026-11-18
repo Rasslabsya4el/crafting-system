@@ -187,7 +187,7 @@ def test_a_restart_never_lowers_rho_and_is_an_infinite_ratio():
     entry = _Entry(0, SimpleNamespace(cost=5.0), "restart", 0, Fraction(0))
 
     assert entry.ratio == float("inf")
-    assert best_first_rho([entry], lambda *_: None) == pytest.approx(_offer_kinds.HUGE * (1 - _offer_kinds.SLACK))
+    assert best_first_rho([entry], lambda *_: None) == float("inf")  # nothing enters E: an infinite rho, never a finite stand-in (#1190)
 
 
 # --- the small real world ----------------------------------------------------------------------------------

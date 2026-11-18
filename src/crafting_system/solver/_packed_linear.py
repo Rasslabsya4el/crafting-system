@@ -364,8 +364,8 @@ class _Flats:
     """The flats of one run's best residual, read step by step (`stalled`): the step it last halved at and the longest flat it came out of. A fall of
     several halvings in one step ends one flat.
 
-    A residual that is not a finite positive number counts no halvings (#1179): an infinite one (the norm of values near 1e300, the floors' stand-in
-    for an infinite cost, overflows) is no fall from an infinite mark, so such a run is flat and stagnates; a fall from an infinite mark, or to zero,
+    A residual that is not a finite positive number counts no halvings (#1179): an infinite one (the norm of values near 1e300 overflows: the floors'
+    stand-in for an infinite cost was one until #1190) is no fall from an infinite mark, so such a run is flat and stagnates; a fall from an infinite mark, or to zero,
     marks the new figure at once. Halving an infinite mark (or a mark down to zero) never ends: R24's first round sat in that loop for an hour."""
 
     def __init__(self, first: float) -> None:

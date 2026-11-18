@@ -106,6 +106,12 @@ most pbar(a_t). With probability 1 either E is entered at a step before tau, or 
 (and the first one is at step tau). So 1 <= sum over t <= N of E[w(a_t)] with w = pbar for the others and
 w = 1 for a terminal action, and the cost of the policy is at least E[sum over t <= N of cost(a_t)] >=
 rho * E[sum w(a_t)] >= rho, since cost(a) >= rho * w(a) for every offer a.
+UNREACHABLE. When every offer that is not refused has pbar = 0 and none is terminal, rho is infinite, and it is kept so (#1190): no policy from a
+state of the start's shape outside E ever enters E, so V* is infinite there. A finite stand-in (it was 1e300) is no bound a search can use: it
+reached the envelope search as a cost, the solver's residuals near it overflowed, and the answer printed it as a lower figure in Chaos. The
+floors' arithmetic keeps an infinite rho honest (`after_leaving`: an offer that never leaves E costs nothing more, never 0 * inf), the bound's
+model has no floor action at an infinite floor (`_pattern_bound._floor_of`), and the search drops an infinite candidate and proves no plan of
+its offers reaches the goal.
 
 WHAT THE CLAIM NEEDS, and what is checked. (1) An offer that the game refuses on the bare item of the start's shape never applies at a state
 of that shape (a reroll reads nothing of the item that the shape does not hold; a crafted mod can only add refusals). This is an assumption on
@@ -147,7 +153,6 @@ ZERO, ONE = Fraction(0), Fraction(1)
 
 SMALL_START = 8  # the rerolls of least cost / pbar that the bound's model starts with (`_offer_floor.OfferFloors.initial`)
 SLACK = 1e-12  # float slack on rho and on the floors' test
-HUGE = 1e300  # stands for an infinite rho (nothing can reach E): keeps 0 * rho at 0
 
 RESTART_KIND, CRAFT, VEILED, REROLL, ADD, TERMINAL, REFUSED = "restart", "craft", "veiled", "reroll", "add", "terminal", "refused"
 VEIL, IMPLICIT = "veil", "implicit"  # a Veiled Exalted Orb's kind (it adds a placeholder), and an implicit change's (an Ember, an Ichor; #1074)
@@ -390,7 +395,7 @@ def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int
     level 2 is brought one level up (`raise_level`, which only lowers its pbar, so its ratio only grows)
     and pushed back; the loop stops at the first pop that is not a reroll or is at level 2. Every other
     entry has a current ratio at least as large and a true ratio at least as large as its current one,
-    so the popped ratio is the least of all. Returns it, lowered by `SLACK` of itself.
+    so the popped ratio is the least of all. Returns it, lowered by `SLACK` of itself: infinity when no offer can enter E.
     """
     heap = [(entry.ratio, entry.index) for entry in entries]
     heapq.heapify(heap)
@@ -400,7 +405,7 @@ def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int
         if entry.kind == REFUSED:
             continue
         if not raisable(entry.kind, entry.level):
-            return min(ratio, HUGE) * (1 - SLACK)
+            return ratio * (1 - SLACK)  # infinite when no offer can enter E (UNREACHABLE)
         raise_level(entry, entry.level + 1)
         heapq.heappush(heap, (entry.ratio, index))
     return 0.0
