@@ -965,6 +965,7 @@ def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_wh
     now = [0.0]
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
     fresh, held, blind = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True))
+    held.grows = blind.grows = True  # both grow their model from part of their offers (`_pattern_bound`)
     now[0] = 1.0
     held.grown(Growth(5, 12, 4, 4), held.used())
     blind.grown(Growth(5, 12, 4, 4), blind.used())
@@ -1303,14 +1304,17 @@ def test_a_nearly_done_build_goes_on_past_its_net_to_at_most_twice_it_and_one_fa
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
     near, far, blind, fresh = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=held, late=1.0), 0.0) for held in (True, True, True, False))
     last = _envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=True, late=0.0), 0.0)  # the last round: no room past its share
-    last.growth = Growth(80, 84)
-    near.growth, far.growth, fresh.growth = Growth(80, 84), Growth(19, 89), Growth(80, 84)
+    # past the net the clock's rule reads the pace (`Pace.need`, #1224): 21 s and 93.7 s, the figures above; a build with no pace stops there
+    last.need = near.need = fresh.need = 21.0
+    far.need = 93.7
     now[0] = 20.0
     assert near() is None and near.late
     assert far() == blind() == "the time limit of 20 seconds was reached" and not far.late
     assert fresh() == last() == "the time limit of 20 seconds was reached"
     now[0] = 39.0
-    assert near() == "the time limit of 20 seconds was reached, the build having gone on past it to 39 s, nearly done"
+    assert near() is None
+    now[0] = 40.0
+    assert near() == "the time limit of 20 seconds was reached, the build having gone on past it to 40 s, nearly done"
 
 
 @pytest.mark.parametrize("late", [1.0, 0.0])
@@ -1479,6 +1483,7 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
 
     def exalted() -> Pace:
         pace = Pace()
+        pace.grows = True
         pace.grown(Growth(18, 84, 10, 10), 2.5)
         pace.grown(Growth(30, 84, 10, 18), 4.3)
         return pace
@@ -1501,12 +1506,18 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     r13 = Pace()
     r13.grown(Growth(51, 51, 49, 49), 1.5)
     assert r13.need is None
+    r13.grows = True
     assert r13.verdict(74.0, 297.0, walked) is None and r13.verdict(74.3, 297.0, walked) == QUARTER == r13.verdict(74.3, 297.0, held)
-    assert Pace().verdict(74.3, 297.0, held) == QUARTER  # its first model not even solved
+    unsolved = Pace()
+    unsolved.grows = True
+    assert unsolved.verdict(74.3, 297.0, held) == QUARTER  # its first model not even solved
+    # a build that does not grow its model (one model on every offer, or a floors pass alone) keeps its whole share, as since #1099
+    assert Pace().verdict(296.0, 297.0, held) is None and Pace().verdict(297.0, 297.0, held) == SHARE
     # a build whose pace ends past its room stops there, past the quarter, and leaves its search the rest of the share, where it took the
     # whole share and left the search none (R17, R20: #1167): its first model solved at 2 s, 10 of the 80 offers to add joined by 8 s, so
     # it would need 2 + 6 * 80 / 10 = 50 s of a room of 40
     slow = Pace()
+    slow.grows = True
     slow.grown(Growth(20, 90, 10, 10), 2.0)
     slow.grown(Growth(25, 90, 10, 20), 8.0)
     assert slow.need == pytest.approx(50.0)

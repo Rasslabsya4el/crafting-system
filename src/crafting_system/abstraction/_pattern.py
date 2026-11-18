@@ -1093,6 +1093,7 @@ class Pace:
         self.growth: Growth | None = None
         self.grew_from: float | None = None  # the net's count when the first model was solved
         self.need: float | None = None  # the build's expected need at its pace of growth, None until growth has added offers
+        self.grows = False  # the build grows its model from part of its offers (its offers' floors are worked out, `_pattern_bound`)
 
     def grown(self, growth: Growth, used: float) -> None:
         self.growth = growth
@@ -1109,25 +1110,24 @@ class Pace:
         * before `room.quarter` of the net it goes on;
         * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`), and stops as soon as it does
           not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
-          no pace yet (its first model not solved, or its growth has added no offer) has nothing that shows it will end there: it stops,
-          whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its second never ended; R17's site
-          plan: rounds whose first model of 10 to 69 offers was not solved after their whole share, and whose searches had 0 s);
-        * past its net it goes on while nearly done: within its room at its pace, or, when the net was not asked since the quarter, by the
-          offers it holds (`Growth.nearly_done`)."""
+          no pace yet that grows its model (`grows`: its first model not solved, or its growth has added no offer) has nothing that shows
+          it will end there: it stops, whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its
+          second never ended; R17's site plan: rounds whose first model of 10 to 69 offers was not solved after their whole share, and
+          whose searches had 0 s). One that does not grow (one model on every offer, or still working out its offers' floors, or a
+          floors pass alone, `_rounds.by_floor`) keeps the whole share, as since #1099;
+        * past its net it goes on while nearly done: only at a pace that ends within its room."""
         if room is None:
             return SHARE if used >= given else None
         whole = (1.0 + room.late) * given
         if used >= given:
             if room.late <= 0 or used >= whole:
                 return SHARE
-            if self.need is not None:
-                return None if self.need <= whole else SHARE
-            return None if self.growth is not None and self.growth.nearly_done(used, given, room.late) else SHARE
+            return None if self.need is not None and self.need <= whole else SHARE
         if used < room.quarter * given:
             return None
         if self.need is not None:
             return None if self.need <= whole else PACE
-        return QUARTER
+        return QUARTER if self.grows else None
 
 
 SHARE, QUARTER, PACE = "share", "quarter", "pace"  # why a build's net stops it (`Pace.verdict`)
