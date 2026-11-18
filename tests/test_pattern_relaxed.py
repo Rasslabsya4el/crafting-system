@@ -8,6 +8,7 @@ key with the same relevant mods and the same count of pure junk families per cla
 is worked by hand on a small pool.
 """
 
+import dataclasses
 import random
 from collections import Counter
 from fractions import Fraction
@@ -17,6 +18,7 @@ import test_planner_harvest_likelihood as toy
 from crafting_system.abstraction._pattern import Mode, Pattern, _base, _tagset
 from crafting_system.abstraction._relaxed import class_box, relaxed_draw
 from crafting_system.actions import HarvestReforgeLikelihood
+from crafting_system.data import Weight
 
 MORE, LESS = HarvestReforgeLikelihood(more=True), HarvestReforgeLikelihood(more=False)
 
@@ -83,6 +85,22 @@ def test_the_choice_nodes_stand_below_every_member_of_the_key(tmp_path):
 def test_the_choice_nodes_stand_below_every_member_where_one_family_is_wanted(tmp_path):
     checked = _check(tmp_path, (toy.LIFE_1,), (toy.GEM, toy.DAMAGE_1, toy.RESIST_1, toy.COLD_RESIST), toy.TOY)
     assert checked >= 4
+
+
+WEIGHTED = {toy.GEM: 1, toy.DAMAGE_1: 2, toy.LIFE_1: 3, toy.RESIST_1: 5, toy.COLD_RESIST: 8, toy.MANA_1: 13, toy.FIRE_RESIST: 40}
+
+
+def test_the_choice_nodes_stand_below_every_member_where_the_families_weigh_differently(tmp_path):
+    """The box reads the lightest and heaviest fills of a class: with one-weight families they are the same, so the toys above do not test it."""
+    data = dataclasses.replace(
+        toy.TOY7,
+        mods={
+            mod_id: dataclasses.replace(mod, spawn_weights=(Weight("amulet", WEIGHTED[mod_id]), Weight("default", 0))) if mod_id in WEIGHTED else mod
+            for mod_id, mod in toy.TOY7.mods.items()
+        },
+    )
+    checked = _check(tmp_path, (toy.GEM, toy.DAMAGE_1, toy.LIFE_1), (toy.GEM, toy.DAMAGE_1, toy.RESIST_1, toy.COLD_RESIST), data)
+    assert checked >= 10
 
 
 def test_the_box_of_a_class_by_hand():

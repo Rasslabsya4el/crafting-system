@@ -166,6 +166,8 @@ def _relaxed(pattern, member: CompressedState, action: Action, factor: Fraction)
     for family in pool:
         klass = _class_of(pattern, kinds, universe, family)
         hit = [bool(boosted & set(entry.mod.families)) for entry in family.mods]
+        if klass is None and any(set(entry.mod.families) - {family.family} - boosted for entry in family.mods):
+            raise _Fallback  # a mod of several families, one of which a member may hold unknown: its boost is not known exactly
         silent = _silent(pattern, kinds, family, influences) if klass is None else None
         if silent is not None:  # a family that gives the goal nothing and that the members hold exactly: its weight is known, not which is drawn
             weight = sum((entry.weight * (factor if boost else 1) for entry, boost in zip(family.mods, hit)), Fraction(0))
@@ -192,6 +194,8 @@ def _relaxed(pattern, member: CompressedState, action: Action, factor: Fraction)
     weights = {k: sorted(w for w, _, _ in junk[k]) for k in classes}
     holdable = {k: sorted(w for w, _, may in junk[k] if may) for k in classes}
     counts = {k: held.get(k, 0) for k in classes}
+    if any(counts[k] > len(holdable[k]) for k in classes):
+        raise _Fallback  # the item holds more families of a class than the pool gives it weight for: the box's least boost would be too high
 
     def box(klass, drawn: int) -> tuple[Fraction, Fraction]:
         return class_box(weights[klass], counts[klass], drawn, factor, holdable[klass])

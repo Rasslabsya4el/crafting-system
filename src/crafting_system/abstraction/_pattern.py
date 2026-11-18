@@ -1296,6 +1296,7 @@ class PatternBuilder:
         self.done = 0  # the number of offers every expanded key holds
         self.members_kept: dict[int, dict[tuple[Mode, frozenset[str]], list[CompressedState]]] = {}
         self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
+        self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
         self.pattern.note(self.start)
         self.start_id = self._intern(self.start)
 
@@ -1604,7 +1605,8 @@ class PatternBuilder:
                     raise _gap(offer, key, gap) from gap
                 if draw is None:
                     return None
-                owner = len(self.relaxed)
+                owner = self.relaxed_made
+                self.relaxed_made += 1
                 ids = []
                 for at in range(len(draw.nodes)):
                     ids.append(len(self.keys))
