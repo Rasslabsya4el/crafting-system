@@ -31,12 +31,15 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   needs no room kept in its share for its search to make one, so its bound's build may take the whole share, not the quarter a search
   with no plan keeps it to (`RoundCall.held`, `_plan.search_net`, #1099): a short share otherwise cut the build before it was complete,
   and the round stopped on a weak lower figure (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s, where the
-  complete bound's first plan costs 188.03 c against the 617.28 c in hand). A plan a stopped search walked to (#1142) is not held so: it is
-  proved near nothing, and a build that took the whole share left the round's search no time to find a better one (R13). The share itself
-  is unchanged. A build that the share ends nearly done (by the offers its model holds) finishes, to at most twice the share, and its
-  search makes its first plan (#1135, `abstraction._pattern.Growth`): R11's Exalted round builds in 24 to 28 s on a runner against a share
-  of 26 to 27 s, and cut there it kept 617.28 c on 3 of 4 runners. The time past the share comes off the rounds after it; a build far from
-  done stops at the share as before.
+  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged. A build that the share ends
+  nearly done finishes, to at most twice the share, and its search makes its first plan (#1135, `abstraction._pattern.Growth`): R11's
+  Exalted round builds in 24 to 28 s on a runner against a share of 26 to 27 s, and cut there it kept 617.28 c on 3 of 4 runners. The time
+  past the share comes off the rounds after it; a build far from done stops at the share as before. What decides the build's room past a
+  quarter of the share is whether it will end in it (#1224, `abstraction._pattern.Pace`): once its model has grown, the pace it grows at,
+  kept to its last offer, must end within that room, or it stops there and leaves its search the rest of the share; one that grows its
+  model and has not grown yet stops at the quarter (a build of one model keeps the whole share) (R13's round 2, #1142: its first model held 49 of 51 offers, the model adding the rest never
+  ended, and with the whole share its search had none). A plan a stopped search walked to (#1142, `walked`) is in hand like any other. On R11's site plan every plan in hand was walked, and every
+  round's build was cut at its quarter: the Exalted round's at 7 of its 27 s, on a pace that ends at about 38 s.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
   less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
@@ -106,8 +109,11 @@ class RoundCall:
     give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
     states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
     # a plan in hand when the round began, other than one a stopped search walked to (`walked`, #1142): its bound's build may take the
-    # round's whole share (`_plan.search_net`, #1099)
+    # round's whole share (`_plan.search_net`, #1099); past a quarter of it, only at a pace that ends within its room once its model grew (#1224)
     held: bool = False
+    # a plan in hand that a stopped search walked to (#1142): its bound's build keeps a quarter of the share for the search unless the pace its
+    # model grows at ends within the round's room (`_envelope_plan.BuildStop`, #1224)
+    walked: bool = False
     floors: bool = False  # only the figure of the group's offers' floors is asked (`Floor`, raised by `_make_plan`): the order of the rounds (#1135)
 
 
@@ -338,7 +344,7 @@ def widen(
         searches = rest if best is not None else 1
         asked = give_way if meter is None else _seen_by(meter, give_way)  # counted in states: every round's search reports the states it knows
         try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
-            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches), held))
+            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches), held, best is not None and not held))
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
             touched = getattr(beaten, "states", None)

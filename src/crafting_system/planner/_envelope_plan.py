@@ -36,7 +36,7 @@ import numpy as np
 
 from crafting_system import parallel
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
-from crafting_system.abstraction._pattern import SINK, Growth, Pattern
+from crafting_system.abstraction._pattern import PACE, QUARTER, SINK, Pace, Pattern, Room
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
@@ -265,8 +265,8 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     R08 at the prices of 2026-11-10 a build that left the search 103 s gave a plan of 33,755 Chaos where a search given 266 s gave 2,236, on the same
     lower figure (heavy runs 43358114571, 43358085172).
 
-    A search that begins with a plan in hand (`Net.held`, a round of `_rounds` after the first plan, #1099; a plan a stopped search walked to is
-    not held, `_rounds.walked`, #1142) needs no room kept: the room is for
+    A search that begins with a plan in hand (`Net.held`, a round of `_rounds` after the first plan, #1099; for a plan a stopped search walked to,
+    `Net.walked`, see the last paragraph) needs no room kept: the room is for
     the search to make a plan, and the answer holds one already. Its build stops only at the search's net, so a round's short share does not
     cut it at a quarter before it is complete (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s). On the clock its
     time still comes off the round's search (`envelope_result`): a build that takes the whole share leaves that search no time, and the
@@ -278,40 +278,74 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     `abstraction._pattern.Growth`, #1135): cut there, R11's Exalted round kept 617.28 c on 3 of 4 runners where its finished bound's first
     plan costs 188.03 c. Its search then makes its first plan in what is left of that (`Net.first`) and stops: the time past the share comes
     off the rounds after it, at most half of theirs (`_plan.search_net`), and the last round has none, so the run keeps its net (OR-40).
+
+    **Whether the build will end decides its room, not only the plan in hand (#1224).** Past a quarter of the share the build of a round with
+    a plan in hand goes on only while the pace its model grows at ends within that room (`abstraction._pattern.Pace.verdict`), and a plan a
+    stopped search walked to (#1142) is in hand like any other: R11's site plan (no guide's actions) had a walked essence plan of 230,524 c,
+    its Exalted round's build was cut at 7 of its 27 s on a pace that ends at about 38 s, and the answer kept 617.28 c where the finished
+    bound's first plan is 168.03 c (+ 20 c start). A build whose pace ends past its room stops there and leaves its search the rest of the
+    share, where it took the whole share and left the search none (R17, R20: #1167); one that grows its model and has no pace yet (its first
+    model not solved, or its growth has added no offer) has nothing that shows it will end, and stops at the quarter, whatever the plan in hand (R13's round
+    2, #1142; R17's site plan, whose rounds' first models were unsolved after their whole share).
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
     return BuildStop(net, began)
 
 
-class BuildStop:
+def room_of(net: Net | None) -> Room | None:
+    """What a build with a plan in hand may take (`abstraction._pattern.Room`, #1224), None for a build with no plan in hand."""
+    if net is None or not (net.held or net.walked):
+        return None
+    return Room(late=net.late, quarter=1.0 / (1.0 + SEARCH_PER_BUILD))
+
+
+class BuildStop(Pace):
     """The net of the bound's build on the clock (`build_stop`); called, the reason once one is reached, else None.
 
-    A build that begins with a plan in hand (`Net.held`) and is nearly done when its seconds are used (`growth`, set by the build once its
-    first model is solved: `abstraction._pattern.Growth`, #1135) goes on past them, to at most `1 + Net.late` times its seconds: it finishes,
-    and the search after it makes its first plan (`Net.first`, `_envelope_run`). `late` says it went past."""
+    The build tells it how far it is (`Pace.grown`, once a solved model lets more offers join, #1135, #1224), and `Pace.verdict` keeps the
+    rule: with no plan in hand it stops at the quarter `SEARCH_PER_BUILD` leaves it; with one (`Net.held`, `Net.walked`) past the quarter
+    only at a pace that ends within `1 + Net.late` times its seconds, and past its seconds while nearly done: it finishes, and the search
+    after it makes its first plan (`Net.first`, `_envelope_run`). `late` says it went past."""
 
     def __init__(self, net: Net, began: float) -> None:
+        super().__init__()
         self.net, self.began = net, began
-        self.growth: Growth | None = None
+        self.room = room_of(net)
         self.late = False
 
+    def used(self) -> float:
+        """The seconds the build has taken; 0 in a run counted in states, which reads no clock (its pieces net, `Tally`, keeps the pace)."""
+        return 0.0 if self.net.seconds is None else time.perf_counter() - self.began
+
     def __call__(self) -> str | None:
-        net, now = self.net, time.perf_counter()
+        net = self.net
         if net.seconds is not None:
-            spent = now - self.began
-            left = net.seconds - spent
-            if left <= 0.0:
-                if not (net.held and self.growth is not None and self.growth.nearly_done(spent, net.seconds, net.late)):
-                    return f"the time limit of {net.seconds:g} seconds was reached" + (
-                        f", the build having gone on past it to {spent:.0f} s, nearly done" if self.late else ""
+            spent = self.used()
+            if self.room is None:
+                if spent >= net.seconds:
+                    return f"the time limit of {net.seconds:g} seconds was reached"
+                if net.seconds - spent <= SEARCH_PER_BUILD * spent:
+                    return (
+                        f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan, "
+                        f"which takes several times as long as this count"
                     )
-                self.late = True
-            elif not net.held and left <= SEARCH_PER_BUILD * spent:
+            elif (stop := self.verdict(spent, net.seconds, self.room)) == PACE:
                 return (
-                    f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan, "
-                    f"which takes several times as long as this count"
+                    f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit: at the pace its model grew it would need about "
+                    f"{self.need:.0f} s, more than the {(1.0 + net.late) * net.seconds:.0f} s it may take, so the rest is left for the search for the plan"
                 )
+            elif stop == QUARTER:
+                return (
+                    f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan: its "
+                    f"model had not grown past its first, so nothing showed that it would end within the time it may take"
+                )
+            elif stop is not None:
+                return f"the time limit of {net.seconds:g} seconds was reached" + (
+                    f", the build having gone on past it to {spent:.0f} s, nearly done" if self.late else ""
+                )
+            elif spent >= net.seconds:
+                self.late = True
         if net.memory_mb is not None:
             used = resident_mb()
             if used is not None and used >= net.memory_mb:
@@ -435,7 +469,7 @@ def _envelope_run(
     if bound is None:
         bound = pattern_lower_bound(
             abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after),
-            pieces=None if net is None else net.pieces, finish=net.late if net is not None and net.held else 0.0,
+            pieces=None if net is None else net.pieces, room=room_of(net),
         )  # fmt: skip
     built = time.perf_counter()
     expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)

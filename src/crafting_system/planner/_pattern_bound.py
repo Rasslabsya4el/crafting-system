@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.abstraction._pattern import IMPRINTS, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Tally
+from crafting_system.abstraction._pattern import IMPRINTS, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Tally
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
@@ -71,7 +71,7 @@ class PatternBound:
     rounds: int = 1  # models built and solved (more than one when offers joined, #988)
     pieces: int = 0  # a build counted in pieces of work (`pieces` of `pattern_lower_bound`, #1101): the pieces it did; 0 otherwise
     share: int | None = None  # the pieces it was given; None for a build on the clock
-    late: bool = False  # nearly done when its net was reached, it went on past it (`Growth`, `finish` of `pattern_lower_bound`, #1135)
+    late: bool = False  # nearly done when its net was reached, it went on past it (`Growth`, `room` of `pattern_lower_bound`, #1135)
 
     @property
     def lower(self) -> float:
@@ -143,7 +143,7 @@ def pattern_lower_bound(
     approximate: bool | None = None,
     refuse_above: float | None = None,
     pieces: int | None = None,
-    finish: float = 0.0,
+    room: Room | None = None,
 ) -> PatternBound:
     """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`.
 
@@ -159,15 +159,17 @@ def pattern_lower_bound(
     `pieces` (a run counted in states, #1101) is the build's net in pieces of work (`abstraction._pattern.Tally`: a (member, offer) pair looked at,
     or an offer's floor raised, the binding step's included): it is asked at every offer and before every raise and solve, never on the clock, so
     where it stops is the same on every machine; `stop` is asked after it. The bound says how many it did (`PatternBound.pieces`).
-    `finish` (above 0: a round that began with a plan in hand, `Net.late`, #1135): once the first model is solved, the build tells its nets
-    how far it is (`Growth`: the offers its model holds of those given), and a build that is nearly done goes on past the pieces net, to at
-    most `1 + finish` times it; the net on the clock (`stop`, when it has a `growth`: `_envelope_plan.BuildStop`) decides the same of its seconds. `PatternBound.late` says it did.
+    `room` (a round that began with a plan in hand, #1099, #1135, #1224): the pieces net is the round's whole share, and the build goes on
+    past a quarter of it, or past it, as `abstraction._pattern.Pace.verdict` says. Each time a solved model lets more offers join, the build
+    tells its nets how far it is (`Growth`, `Pace.grown`: the offers of its first model, of the model solved, of the model being built, of
+    those given); the net on the clock (`stop`, when it is a `Pace`: `_envelope_plan.BuildStop`) decides the same of its seconds.
+    `PatternBound.late` says it went past its net.
     """
     say = progress or (lambda _text: None)
     all_offers = pattern_offers(priced)
     began = time.perf_counter()
-    tally = None if pieces is None else Tally(pieces, _pieces_words, stop, finish=finish)
-    watched = [net for net in (tally, stop) if finish and hasattr(net, "growth")]  # the nets told how far the build is (`Growth`)
+    tally = None if pieces is None else Tally(pieces, _pieces_words, stop, room=room)
+    watched = [net for net in (tally, stop) if hasattr(net, "grown")]  # the nets told how far the build is (`Pace`)
     if tally is not None:
         stop = tally
     phases: dict[str, float] = {"floors": 0.0, "model": 0.0, "solve": 0.0}
@@ -185,6 +187,8 @@ def pattern_lower_bound(
         else:
             order = floors.initial()
             phases["floors"] = time.perf_counter() - began
+            for net in watched:  # the model grows from part of the offers: past a quarter of a share it needs a pace (`Pace.verdict`)
+                net.grows = len(order) < len(priced)
             say(
                 f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
                 f"({phases['floors']:.1f} s)"
@@ -192,6 +196,7 @@ def pattern_lower_bound(
     builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate, tally=tally)
     kept = None  # the last round that ran to its end: (model, value, error bound, order)
     adding = list(order)
+    first = len(order)  # the offers of the first model: what growth adds is the rest (`Growth.start`)
     rounds = 0
     while True:
         rounds += 1
@@ -249,7 +254,7 @@ def pattern_lower_bound(
         adding = more
         order = [*order, *more]
         for net in watched:  # the next model holds these offers: how far the build is, for a net that lets a nearly done build finish
-            net.growth = Growth(len(order), len(priced))
+            net.grown(Growth(len(order), len(priced), first, len(kept[3])), net.used())
 
 
 def _bound(model, value, error, phases, began, order, floors, rounds, stopped, phase, tally: Tally | None = None, watched=()) -> PatternBound:

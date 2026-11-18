@@ -928,8 +928,10 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
 
     monkeypatch.setattr(_rounds, "round_groups", named_alone)
     monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", counted)
-    if not held:  # the rule before #1099: a round's build had a quarter's worth of its share, a plan in hand or not
-        monkeypatch.setattr(planner_plan, "search_net", lambda clock, searches=1, give_way=None, states=None, held=False: real_net(clock, searches, give_way, states))
+    if held:  # its model grows one offer at a time (#1224: past a quarter of its share the build goes on only at a pace that ends in its room)
+        _one_offer_per_model(monkeypatch)
+    else:  # the rule before #1099: a round's build had a quarter's worth of its share, a plan in hand or not
+        monkeypatch.setattr(planner_plan, "search_net", lambda clock, searches=1, give_way=None, states=None, held=False, walked=False: real_net(clock, searches, give_way, states))
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
     monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
@@ -953,16 +955,28 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
         assert "Not proved: that it is anywhere near the best possible cost" in walked.guarantee
 
 
-def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_and_stops_only_at_its_net(monkeypatch):
-    # #1099, on the clock: a build keeps three times its time for the search (`SEARCH_PER_BUILD`), so of a 20 s net it stops at 5 s; with a
-    # plan in hand (`Net.held`) only the net itself stops it. The clock is a figure set here (no real clock is read).
+def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_while_its_pace_ends_within_its_net(monkeypatch):
+    # #1099, #1224, on the clock: a build keeps three times its time for the search (`SEARCH_PER_BUILD`), so of a 20 s net it stops at 5 s;
+    # with a plan in hand (`Net.held`) it goes on past 5 s while the pace its model grows at ends within the net (its first model solved at
+    # 1 s, half of the 8 offers to add joined by 3 s: 1 + 2 * 8 / 4 = 5 s), and only the net itself stops it. One whose model has not grown
+    # yet has nothing to show it will end there: it stops at 5 s too, and the search has the rest. The clock is a figure set here.
+    from crafting_system.abstraction._pattern import Growth
+
     now = [0.0]
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
-    fresh, held = _envelope_plan.build_stop(_envelope.Net(seconds=20.0), 0.0), _envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=True), 0.0)
+    fresh, held, blind = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True))
+    held.grows = blind.grows = True  # both grow their model from part of their offers (`_pattern_bound`)
+    now[0] = 1.0
+    held.grown(Growth(5, 12, 4, 4), held.used())
+    blind.grown(Growth(5, 12, 4, 4), blind.used())
+    now[0] = 3.0
+    held.grown(Growth(10, 12, 4, 8), held.used())
+    assert held.need == pytest.approx(5.0)
     now[0] = 4.9
-    assert fresh() is None and held() is None
+    assert fresh() is None and held() is None and blind() is None
     now[0] = 5.0
     assert fresh().startswith("stopped after 5 of the 20 seconds") and held() is None
+    assert blind().startswith("stopped after 5 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown")
     now[0] = 19.9
     assert held() is None
     now[0] = 20.0
@@ -1290,14 +1304,17 @@ def test_a_nearly_done_build_goes_on_past_its_net_to_at_most_twice_it_and_one_fa
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
     near, far, blind, fresh = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=held, late=1.0), 0.0) for held in (True, True, True, False))
     last = _envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=True, late=0.0), 0.0)  # the last round: no room past its share
-    last.growth = Growth(80, 84)
-    near.growth, far.growth, fresh.growth = Growth(80, 84), Growth(19, 89), Growth(80, 84)
+    # past the net the clock's rule reads the pace (`Pace.need`, #1224): 21 s and 93.7 s, the figures above; a build with no pace stops there
+    last.need = near.need = fresh.need = 21.0
+    far.need = 93.7
     now[0] = 20.0
     assert near() is None and near.late
     assert far() == blind() == "the time limit of 20 seconds was reached" and not far.late
     assert fresh() == last() == "the time limit of 20 seconds was reached"
     now[0] = 39.0
-    assert near() == "the time limit of 20 seconds was reached, the build having gone on past it to 39 s, nearly done"
+    assert near() is None
+    now[0] = 40.0
+    assert near() == "the time limit of 20 seconds was reached, the build having gone on past it to 40 s, nearly done"
 
 
 @pytest.mark.parametrize("late", [1.0, 0.0])
@@ -1332,6 +1349,7 @@ def test_through_the_entry_a_round_whose_build_its_share_ends_nearly_done_finish
     monkeypatch.setattr(_rounds, "round_groups", named_alone)
     monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", counted)
     monkeypatch.setattr(_pattern, "LATE", late)
+    _one_offer_per_model(monkeypatch)  # a pace to go on by past a quarter of the share (#1224): the first model holds one offer, each model adds one
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
     monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
@@ -1454,3 +1472,125 @@ def test_a_plan_in_hand_that_a_stopped_search_walked_to_is_not_held_by_the_next_
     assert rounds((walk,)) == [False, False, True]  # round 2 begins with round 1's walked plan: not held; round 3 with round 2's own plan: held
     assert rounds(()) == [False, True, True]
     assert _rounds.walked(SimpleNamespace(limits=(walk,))) and not _rounds.walked(SimpleNamespace(limits=())) and not _rounds.walked(object())
+
+
+def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at_a_pace_that_ends_within_its_room():
+    # #1224, in hand-worked seconds (`Pace.verdict` reads no clock). R11's Exalted round, essences in its base (probe run 44124277553, runner
+    # 1): a share of 27 s and room for one more (`Room.late` 1: 54 s); its first model (10 of 84 offers) is solved at 2.5 s, its second (18)
+    # at 4.3 s: at that pace it needs 2.5 + 1.8 * 74 / 8 = 19.15 s; its third (30) at 11.6 s: 2.5 + 9.1 * 74 / 20 = 36.17 s; it ends at
+    # 38.3 s. The figure holds between two solved models: its fourth model takes 8.5 s, and the pace is not read off a model being built.
+    from crafting_system.abstraction._pattern import PACE, QUARTER, SHARE, Growth, Pace, Room
+
+    def exalted() -> Pace:
+        pace = Pace()
+        pace.grows = True
+        pace.grown(Growth(18, 84, 10, 10), 2.5)
+        pace.grown(Growth(30, 84, 10, 18), 4.3)
+        return pace
+
+    walked = held = Room(late=1.0, quarter=0.25)  # a walked plan in hand is in hand like a held one (#1224)
+    pace = exalted()
+    assert pace.need == pytest.approx(2.5 + 1.8 * 74 / 8)
+    # after a plan a stopped search walked to (R11's site plan: the essence round's 230,524 c), the quarter's rule cut it at 6.8 s; it goes on
+    assert pace.verdict(6.8, 27.0, walked) is None and pace.verdict(6.8, 27.0, held) is None
+    pace.grown(Growth(40, 84, 10, 30), 11.6)
+    assert pace.need == pytest.approx(2.5 + 9.1 * 74 / 20)
+    assert pace.verdict(19.0, 27.0, walked) is None  # inside its fourth model: the pace of the third holds
+    assert pace.verdict(27.0, 27.0, walked) is None and pace.verdict(38.3, 27.0, walked) is None  # past the share, within 54 s at its pace
+    assert pace.verdict(54.0, 27.0, walked) == SHARE  # never past its room
+    assert pace.verdict(27.0, 27.0, Room(late=0.0)) == SHARE  # the last round: no room past its share
+    # R13's round 2 (#1142, heavy run 44097630217): its first model held 49 of 51 offers and the model adding the other 2 never ended; R17's
+    # rounds on the site plan (server run l2-R17-2: models of 10 to 69 offers, 160,000 to 320,000 kernels, unsolved after their whole
+    # share, searches of 0 s). Their growth has no pace: nothing shows they will end in their room, so past the quarter they stop and leave
+    # their search the rest, whatever the plan in hand (#1142 kept this for a walked plan only)
+    r13 = Pace()
+    r13.grown(Growth(51, 51, 49, 49), 1.5)
+    assert r13.need is None
+    r13.grows = True
+    assert r13.verdict(74.0, 297.0, walked) is None and r13.verdict(74.3, 297.0, walked) == QUARTER == r13.verdict(74.3, 297.0, held)
+    unsolved = Pace()
+    unsolved.grows = True
+    assert unsolved.verdict(74.3, 297.0, held) == QUARTER  # its first model not even solved
+    # a build that does not grow its model (one model on every offer, or a floors pass alone) keeps its whole share, as since #1099
+    assert Pace().verdict(296.0, 297.0, held) is None and Pace().verdict(297.0, 297.0, held) == SHARE
+    # a build whose pace ends past its room stops there, past the quarter, and leaves its search the rest of the share, where it took the
+    # whole share and left the search none (R17, R20: #1167): its first model solved at 2 s, 10 of the 80 offers to add joined by 8 s, so
+    # it would need 2 + 6 * 80 / 10 = 50 s of a room of 40
+    slow = Pace()
+    slow.grows = True
+    slow.grown(Growth(20, 90, 10, 10), 2.0)
+    slow.grown(Growth(25, 90, 10, 20), 8.0)
+    assert slow.need == pytest.approx(50.0)
+    assert slow.verdict(4.9, 20.0, held) is None and slow.verdict(8.0, 20.0, held) == PACE and slow.verdict(8.0, 20.0, walked) == PACE
+    # with no plan in hand the net is the quarter itself: the build stops at it, whatever its pace
+    assert exalted().verdict(6.8, 6.8, None) == SHARE and exalted().verdict(6.7, 6.8, None) is None
+
+
+@pytest.mark.parametrize("pace", [True, False])
+def test_through_the_entry_after_a_walked_plan_a_round_whose_build_grows_at_a_pace_that_ends_within_its_room_completes_it(data, target, monkeypatch, pace):
+    # #1224 (R11's site plan: the essence round's plan of 230,524 c was one its stopped search walked to, #1142, so the Exalted round's build
+    # kept the quarter of its share for the search, was cut at 7 of 27 s, and the answer kept 617.28 c where its finished bound's first plan
+    # is 168.03 c). The rounds of the #1099 test above, counted in states (`Budget.in_states(40)`, one piece of work per state): round 1
+    # (the Exalted Orb alone) closes at 16e/3 + 2S = 153.33 having known 12 states, and its plan is taken as one a stopped search walked to.
+    # Round 2 (the fillers) has 14 states, so its build may do 4 * 14 = 56 pieces of work, past the quarter (14) only at a pace that ends
+    # within its room (1.5 * 56 = 84: `Net.late` 0.5, two rounds left).
+    # * Its model grows one offer at a time from one (the offers' floors keep one, the binding lets one in per model: R11's Exalted round
+    #   grows over 17 models): the first model is solved at 2 pieces, the second at 13, so at the quarter it is expected to need
+    #   2 + 11 * 4 / 1 = 46 pieces: it goes on, completes at 51, and the round closes on the filler's plan, 3(c + e) + 2S = 133.
+    # * Its first model holds 4 of the 5 offers and the model adding the last one is all its work (R13's round 2, R17's shape, #1180): its
+    #   growth has no pace, so after a walked plan it stops at the quarter, as before (#1142); the round stops, and its walk's plan is the
+    #   filler's, 133, which the answer takes saying it is not shown near the best.
+    from crafting_system.budget import Budget
+    from crafting_system.planner import _pattern_bound, _rounds
+
+    real_groups, real_bound = _rounds.round_groups, _envelope_plan.pattern_lower_bound
+
+    def named_alone(offers, named, added):
+        head, *rest = real_groups(offers, named, added)
+        asked = tuple(i for i in head.positions if offers[i].blocks is None)
+        fillers = tuple(i for i in head.positions if i not in asked)
+        return (_rounds.Group(asked, (), frozenset()), _rounds.Group(fillers, ("bench-craft",), head.features), *rest)
+
+    builds = []
+
+    def counted(*args, **kwargs):
+        bound = real_bound(*args, **kwargs)
+        builds.append((bound.pieces, bound.share, bound.phase, bound.rounds))
+        return bound
+
+    monkeypatch.setattr(_rounds, "round_groups", named_alone)
+    monkeypatch.setattr(_rounds, "walked", lambda plan: True)
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", counted)
+    if pace:
+        _one_offer_per_model(monkeypatch)
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
+    monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+    plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=Budget.in_states(40, build_per_state=1.0)))
+    first, second = _rounds_of(plan)[:2]
+    assert (first.status, first.states, first.upper) == ("closed", 12, pytest.approx(16 * E / 3 + 2 * S, rel=1e-9))
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
+    if pace:
+        assert builds[1] == (51, 4 * 14, "complete", 5)
+        assert second.status == "closed"
+    else:
+        assert builds[1] == (14, 4 * 14, "growth", 1)
+        assert second.status == "stopped" and any(limit.kind == "plan-reached" for limit in plan.limits)
+
+
+def _one_offer_per_model(monkeypatch):
+    """The belt's bound grows over several models (#1224): the offers' floors keep one offer in the first model and the binding lets one more
+    in per model (R11's Exalted round grows over 17 models), so its growth has a pace once the second model is solved: the first model at 2
+    pieces of work, the second at 13 (expected need 2 + 11 * 4 / 1 = 46), the third at 25 (48), the fourth at 51, where it ends. Without it
+    the first model holds 4 of the 5 offers and the model adding the last is all the work: no pace (R13's and R17's shape, #1180)."""
+    from crafting_system.planner import _offer_floor, _pattern_bound
+
+    real_binding, real_initial = _pattern_bound._binding, _offer_floor.OfferFloors.initial
+
+    def one_at_a_time(*args, **kwargs):
+        more, limits = real_binding(*args, **kwargs)
+        return more[-1:], limits
+
+    monkeypatch.setattr(_pattern_bound, "_binding", one_at_a_time)
+    monkeypatch.setattr(_offer_floor.OfferFloors, "initial", lambda self: real_initial(self)[:1])

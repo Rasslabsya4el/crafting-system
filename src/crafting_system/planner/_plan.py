@@ -515,7 +515,7 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False) -> Net | None:
+def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False, walked: bool = False) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
     Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net. `states`, when
     given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`).
@@ -532,7 +532,9 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     needs about 6 s, and the round stopped on a weak lower figure with no plan, where the complete bound's first plan costs 188.03 c (#1086).
     Such a build that its share ends nearly done may go past it by `Net.late` times it (#1135, `abstraction._pattern.Growth`): at most
     `LATE`, and at most half of the time the `searches - 1` rounds after it have, so the last round (all the time left) goes past nothing
-    and the run keeps its net (OR-40)."""
+    and the run keeps its net (OR-40). `walked` (#1224): the plan in hand is one a stopped search walked to (#1142); its build has the same
+    net and room, and keeps a quarter of it for the search unless the pace its model grows at ends within that room
+    (`abstraction._pattern.Pace.verdict`)."""
     if clock is None:
         return None
     given: Budget = clock.budget
@@ -543,10 +545,10 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     if given.counted:
         if states is None:
             states = max(int(clock.states_left() or 0) // max(searches, 1), 1)
-        pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if held else 1.0) * states), 1)
+        pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if held or walked else 1.0) * states), 1)
     return Net(
         seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
-        give_way=give_way, pieces=pieces, held=held, late=min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held else 0.0,
+        give_way=give_way, pieces=pieces, held=held, walked=walked and not held, late=min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held or walked else 0.0,
     )  # fmt: skip
 
 
@@ -946,7 +948,7 @@ def _make_plan(
         if twins:
             limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
         if envelope:
-            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held) if round_call is not None else search_net(clock)
+            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held, round_call.walked) if round_call is not None else search_net(clock)
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
                     gap, gap_after = search_gap(clock)
