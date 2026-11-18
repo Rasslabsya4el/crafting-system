@@ -73,7 +73,7 @@ def check(ab, start, action, finished):
 
 
 def test_the_target_goal_asks_for_the_tier_one_mods(goal):
-    assert len(goal.leaves) == 5  # life, three resistances and the one damage craft (OR-2)
+    assert len(goal.leaves) == 7  # life, three resistances, the two crafts of the post's picture and the multimod that lets both stay (OR-2, OR-58, #1289)
 
 
 @pytest.mark.parametrize(

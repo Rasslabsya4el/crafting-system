@@ -36,9 +36,28 @@
 name: S13, test route, R13 with an Unravelling finish
 
 rules:
-  # Step 4: life and two tier-1 resistances are on the belt (R13's three rules): the bench craft.
+  # Step 3, after the multimod: the two damage crafts the target names exactly (OR-2), in the two free prefixes.
   - when:
       rarity: rare
+      requirements:
+        - family: ItemGenerationCanHaveMultipleCraftedMods
+          status: passing
+        - family: AllDamage
+          status: absent
+    do: "Bench craft (15-17)% increased Damage"
+  - when:
+      rarity: rare
+      requirements:
+        - family: ItemGenerationCanHaveMultipleCraftedMods
+          status: passing
+        - family: IncreasedWeaponElementalDamagePercent
+          status: absent
+    do: "Bench craft (24-32)% increased Elemental Damage with Attack Skills"
+
+  # Step 3: life and two tier-1 resistances are on the belt, in the three ways to pick two of the three: the multimod first.
+  - when:
+      rarity: rare
+      crafted_mods: false
       requirements:
         - family: IncreasedLife
           status: passing
@@ -46,9 +65,10 @@ rules:
           status: passing
         - family: ColdResistance
           status: passing
-    do: "Bench craft (15-17)% increased Damage"
+    do: Bench craft Can have up to 3 Crafted Modifiers
   - when:
       rarity: rare
+      crafted_mods: false
       requirements:
         - family: IncreasedLife
           status: passing
@@ -56,9 +76,10 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft (15-17)% increased Damage"
+    do: Bench craft Can have up to 3 Crafted Modifiers
   - when:
       rarity: rare
+      crafted_mods: false
       requirements:
         - family: IncreasedLife
           status: passing
@@ -66,7 +87,7 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft (15-17)% increased Damage"
+    do: Bench craft Can have up to 3 Crafted Modifiers
 
   # Step 4: life and two resistances are on the rare belt but some are below tier 1, and strands remain: Unravel.
   - when:

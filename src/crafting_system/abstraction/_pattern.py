@@ -79,6 +79,18 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
 
 Every member offered is checked to be an item (`Abstraction._item_of`), so a member that no item has is never offered.
 
+**The impossible corner (#1192).** The lightest fill of each class, taken together, need not be an item: one family type can hold mods of two
+tag classes (on R20's helmet the one family of critical strike chance for socketed gems has an attack mod and a caster mod, each the lightest
+kind of its class), and two slots of one family are no item. `EXTREMES` rests on the corners of the box, so there the composition is offered
+at every fill (`ALL`, exact). `ANY` and `ONE` do not: by their own arguments above the pushed kernel and the refusals of the action are the
+same at every fill of the pure junk of a composition (the action reads of the pure junk its count and its classes; the families it names are
+relevant slots, enumerated, or folded families, the `named` members), so any one fill that is an item stands for all of them, as the lightest
+does where it is one. The composition is then offered at the first fill that is an item (`Pattern._assemble`), not at every one: on R20's
+guide offers a key of three prefixes and three suffixes had 11,263 members under `ONE` and 8,062 under `ANY` where a few dozen stand for
+them, and each was a pair of every such offer. With folded families to tell apart (`named`), every fill is still made. The rows of the
+model are the same (a pair left out gave a kernel another pair of its composition gave); a build counted in pieces counts the pairs it
+looks at, so it gets further on the same count.
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -182,7 +194,15 @@ the action only at the states where the gap is, so leaving it out of the key cou
 model gap in `_item_of` always refuses. An action that declares `Reads.refusal_by_families` (a bench craft, Remove Crafted Mods) is refused alike
 at every item of one refusal class (`Abstraction._refusal_class`, #1178): a pair whose class holds a refusal already is counted as refused
 without asking `kernel_key` (`Abstraction.refusal_class_of`, `refused_in_class`; #1256: R04's round of bench crafts asked 2.3 million pairs,
-2.28 million of them refusals of a class met before), the very answer `kernel_key` gives it.
+2.28 million of them refusals of a class met before), the very answer `kernel_key` gives it. Where such an action names no family (Remove
+Crafted Mods, a Fracturing Orb: `Abstraction.refusal_names_no_junk`), its class at a member is the action and the member's item without its
+junk, with the junk's count per side. The members of a key differ in their ordinary slots alone, which are that junk: the flags, the fractured
+mods, the crafted and the veiled slots, the item state beyond the mods and the count of ordinary slots per side are the key's. So every member
+of the key has the class of the first, and once one member's class holds a refusal the others are counted as refused without making their
+item to look the class up (#1193: a Fracturing Orb is asked at every pure junk assignment, `ALL`, and at most keys it is refused by the
+key: not rare, fewer than four mods, a fractured mod; on R04's 19 offers 154,808 of its 225,719 pairs, each of which built the member's item
+to find the class). A member with no class (a fractured family type that may decide the refusal) is asked as before, and so are the members
+after it.
 
 **The certain additions (#1193).** An action declared `Adds.only_named` (a bench craft, an aspect beast; the contract suite checks it) has
 one outcome: the item it was given with its named mods added, nothing else changed. At a member `m` of key `k` that takes it, the successor
@@ -249,7 +269,9 @@ SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
+SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
+SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
@@ -452,7 +474,7 @@ class PatternStats:
     restarted_keys: int = 0  # expanded keys a grown universe made again (`PatternBuilder._begin_again`, #1086)
     modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
-    fallbacks: int = 0  # keys whose extremes were impossible and used every member
+    fallbacks: int = 0  # compositions whose lightest (or heaviest) fill was no item: offered at every fill, or under `ANY` and `ONE` at one that is (#1192)
 
 
 @dataclass
@@ -515,6 +537,7 @@ class Pattern:
         self._universes: dict[frozenset, _Universe] = {}
         self._reads: dict[Action, object] = {}
         self._only_named: dict[Action, bool] = {}
+        self._draws: dict[Action, bool] = {}
         self._feasible: dict[CompressedState, bool] = {}
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
@@ -751,6 +774,13 @@ class Pattern:
             found = self._only_named[action] = action.adds(self.data).only_named
         return found
 
+    def draws(self, action: Action) -> bool:
+        """Whether `action` may draw a mod from a pool (`Adds.draws`; an action that declares nothing draws)."""
+        found = self._draws.get(action)
+        if found is None:
+            found = self._draws[action] = action.adds(self.data).draws
+        return found
+
     def holds_lock(self, key: PatternKey) -> bool:
         """Whether the key holds a lock (`Prefixes` / `Suffixes Cannot Be Changed`), crafted or fractured: a reroll then keeps the locked side."""
         mods = self.data.mods
@@ -930,20 +960,31 @@ class Pattern:
             return
         # a corner that two classes make impossible together (or no state at all): every assignment of this composition instead
         every = [_fills(universe.classes[SIDES[side_index]].get(tagset, []), count, blocked, Mode.ALL) for (side_index, tagset), count in sorted(need.items())]
+        if SHARE_FILLS and mode in (Mode.ANY, Mode.ONE) and not named:
+            # ... of which one stands for them all under these policies (module docstring, "The impossible corner", #1192): the first that is an item
+            for state in self._each_state(key, relevant, every):
+                if self._ok(state):
+                    self.fallbacks += 1
+                    yield state
+                    return
+            return
         found = [state for state in self._states(key, relevant, every) if self._ok(state)]
         if found:
             self.fallbacks += 1
         yield from found
 
     def _states(self, key: PatternKey, relevant, options) -> list[CompressedState]:
-        out = []
+        return list(self._each_state(key, relevant, options))
+
+    def _each_state(self, key: PatternKey, relevant, options) -> Iterator[CompressedState]:
+        """The state of `key` with the `relevant` slots and each pick of one fill from each class's `options`, in the order of the picks."""
+        held = self.held_of(key)
         for pick in product(*options) if options else [()]:
             slots = [*key.crafted, *key.veiled, *relevant]
             for part in pick:
                 slots.extend(part)
             slots.sort(key=_slot_key)
-            out.append(CompressedState(key.flags, key.fractured, key.status, tuple(slots), *self.held_of(key)))
-        return out
+            yield CompressedState(key.flags, key.fractured, key.status, tuple(slots), *held)
 
     def _ok(self, state: CompressedState) -> bool:
         """Whether the state is an item the abstraction can give to an action (every slot has a family of its own)."""
@@ -1483,7 +1524,10 @@ class PatternBuilder:
         for offer in self.offers[lo:hi]:
             if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
-            if SHARE_ADDITIONS and self.pattern.adds_only_named(offer.action):  # one fixed result, nothing to draw: priming would only prepare every pair
+            if not self.pattern.draws(offer.action):
+                # nothing is drawn (a bench craft, a Fracturing Orb, an Annulment): no walk to make ahead, and preparing its pairs here would
+                # make the item of every member, the ones the build then answers without one too (a certain addition, a refusal of the key;
+                # #1193: on R04's 19 offers the Fracturing Orb's pairs were prepared at every pure junk assignment of every key)
                 continue
             policy = self.pattern.policy(offer.action, key)
             if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw
@@ -1544,6 +1588,8 @@ class PatternBuilder:
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
             classed = ab.refusal_class_of(offer.action) if SHARE_REFUSED else None
+            keyed = SHARE_KEY_REFUSALS and classed is not None and ab.refusal_names_no_junk(offer.action)
+            refused_at_key = False  # a member's refusal class, which is the key's (`keyed`), holds a refusal: every member's does
             seen: set[int] = set()
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             if policy[0] is Mode.RELAXED:
@@ -1568,14 +1614,21 @@ class PatternBuilder:
                 stats.pairs += 1
                 if self.tally is not None:
                     self.tally.done += 1
-                if classed is not None and (found := classed(member)) is not None and ab.refused_in_class(found):
+                if refused_at_key:  # the class of this member is the one that member was refused in (module docstring, "Refusals", #1193)
+                    stats.refused_pairs += 1
+                    ab.refusals_shared += 1
+                    continue
+                found = classed(member) if classed is not None else None
+                if found is not None and ab.refused_in_class(found):
                     # a refusal met in the pair's class: what `kernel_key` would raise here (module docstring, "Refusals", #1256)
                     stats.refused_pairs += 1
+                    refused_at_key = keyed
                     continue
                 try:
                     ck = ab.kernel_key(member, offer.action)
                 except NotApplicableError:
                     stats.refused_pairs += 1
+                    refused_at_key = keyed and found is not None and ab.refused_in_class(found, count=False)
                     continue
                 except OutOfScopeError as gap:
                     if _gap_everywhere(pattern, self.gaps, key, offer):

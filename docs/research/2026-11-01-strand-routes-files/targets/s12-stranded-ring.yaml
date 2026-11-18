@@ -62,6 +62,11 @@ requirements:
 # Where the crafting starts: R05's ring (a fractured All Attributes) bought with 60 Memory Strands.
 # `memory_strands` is the key of ADR-0040 and of the amendment of ADR-0008; the target loader does not read
 # it until B5-1 (#274). A target never asks for strands; only the start item holds them.
+# The 20% Intrinsic Catalyst quality of R05's target (#1289, OR-58): the route's first rule applies the catalysts.
+quality:
+  type: intrinsic
+  min_percent: 20
+
 start_item:
   rarity: rare
   memory_strands: 60

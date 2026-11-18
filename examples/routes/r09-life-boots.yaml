@@ -9,26 +9,21 @@
 #
 # The route (PoE Vault, "Basic boots crafting", docs/research/2026-10-30-5-reference-routes.md, id R09):
 #   1. Use 2-socket resonators (Potent Chaotic Resonators) with a Pristine Fossil and a Shuddering Fossil until
-#      the boots hold high Life and a Movement Speed.
-#   2. Bench-craft the missing useful modifier: Movement Speed, in an open prefix.
+#      the boots hold high Life and a Movement Speed ("When reforging, focus on a higher Life tier as well as a
+#      movement speed modifier alongside modifiers you'll be satisfied with").
+#
+# The guide's finished item is the target's (OR-58, #1289): the top tier of Life and the rolled 35% Movement
+# Speed, so the one rule below is followed until the boots hold both. The guide's fallback (a bench-crafted
+# Movement Speed where none rolled) is not the target, so no rule crafts it: boots with a lower rolled speed or
+# none are rolled again. The guide's optional finish ("You can either keep these or bench-craft the item to
+# finish") names no mod and is no rule here (listed for the owner in #1289's pull request).
 #
 # The guide starts from a rare pair of boots, as the target does (see `start_item` in the target).
 
 name: R09, PoE Vault guide
 
 rules:
-  # Step 2: the Life is there, the boots have no Movement Speed and a prefix is open: craft it: the
-  # plain Movement Speed craft of the bench, as the guide says.
-  - when:
-      rarity: rare
-      requirements:
-        - stat: "+# to maximum Life"
-          status: passing
-        - family: MovementVelocity
-          status: absent
-      open_prefixes: 1
-    do: "Bench craft (20-24)% increased Movement Speed"
-  # Step 1: use the two fossils again (this is also the first use).
+  # Step 1: use the two fossils (this is also the first use), until the target.
   - when:
       rarity: rare
     do: Fossils Pristine Fossil + Shuddering Fossil

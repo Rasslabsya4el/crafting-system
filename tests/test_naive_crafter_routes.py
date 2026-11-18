@@ -32,7 +32,7 @@ bracket `(low, high)` from a cost grid whose horizon is 64 of the smallest costs
 own uses say about 10% of plays reach the last two crafts (issue #683). The tests: the share of naive plays that finish lies inside the recorded bracket (widened by K standard
 errors), the share of the recorded heavy run too, and a strict xfail tied to #683 says that the planner's printed value equals the heavy share (it flips when the fix is recorded).
 
-The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24, R07, R17 and R20, #775), and R06's target, which it cannot read, in `UNREAD_TARGET`; a test makes it refuse each with a message that names the
+The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24, R07 and R20, #775), and the targets it cannot read (R06, and R17 since #1289), in `UNREAD_TARGET`; a test makes it refuse each with a message that names the
 mechanic, and another makes the lists together hold every route file of `examples/routes/`.
 
 R13 plays about 100,000 orb uses per finish (its mean is 12,000 Chaos), so the run of this file plays only `CI_RUNS` of it and its standard
@@ -78,6 +78,26 @@ PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.js
 KEYS = ROOT / "tests" / "reconcile" / "expected_keys.txt"
 TARGETS = ROOT / "examples" / "targets"
 ROUTES = ROOT / "examples" / "routes"
+# R05 is played on its mods alone (#1289): its reference target asks the 20% Intrinsic quality of the guide's step 3 and its route applies the
+# catalysts, and the naive crafter judges no quality (`naive_crafter/world.py`). The frozen pair is the target without the quality block and the
+# route without the catalyst rule; `test_the_frozen_r05_route_is_the_examples_without_its_catalyst_rule` holds the route to the example's.
+MODS_ALONE = {"r05-strength-ring": (ROOT / "tests" / "real_targets" / "r05-strength-ring-mods.yaml", ROOT / "tests" / "real_routes" / "r05-strength-ring-mods.yaml")}
+
+
+def target_file(stem: str) -> Path:
+    return MODS_ALONE[stem][0] if stem in MODS_ALONE else TARGETS / f"{stem}.yaml"
+
+
+def route_file(stem: str) -> Path:
+    return MODS_ALONE[stem][1] if stem in MODS_ALONE else ROUTES / f"{stem}.yaml"
+
+
+def test_the_frozen_r05_route_is_the_examples_without_its_catalyst_rule():
+    example = yaml.safe_load((ROUTES / "r05-strength-ring.yaml").read_text(encoding="utf-8"))["rules"]
+    frozen = yaml.safe_load(route_file("r05-strength-ring").read_text(encoding="utf-8"))["rules"]
+    assert frozen == [rule for rule in example if not rule["do"].endswith("Catalyst")] and len(frozen) == len(example) - 1
+    target = yaml.safe_load((TARGETS / "r05-strength-ring.yaml").read_text(encoding="utf-8"))
+    assert {**target, "quality": None} == {**yaml.safe_load(target_file("r05-strength-ring").read_text(encoding="utf-8")), "quality": None}
 
 #            route id: (target and route file stem, plays in this file's run)
 COVERED = {
@@ -85,7 +105,7 @@ COVERED = {
     "R08": ("r08-energy-shield-boots", 3000),
     "R09": ("r09-life-boots", 3000),
     "R10": ("r10-fractured-boots", 3000),
-    "R11": ("r11-reservation-helmet", 3000),
+    "R11": ("r11-reservation-helmet", 600),  # a play of the whole helmet (#1289) is about six times the essences of before: 3,000 plays ran past the suite's 300 s on a runner
     "R12": ("r12-lightning-amulet", 3000),
     "R13": ("r13-life-resist-belt", 16),
 }
@@ -103,11 +123,13 @@ GAPPED = {
 NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {
     "R24": ("r24-avoid-shock-boots", ("Veiled Chaos Orb", "Unveil", "lock a side", "Harvest Add Remove Fire")),  # #775
     "R07": ("r07-minion-wand", ("Veiled Chaos Orb", "Unveil", "lock a side", "Corroded Fossil", "no bench option")),  # #775
-    "R17": ("r17-lightning-talisman", ("Imprint with the Fenumal Plagued Arachnid", "Restore imprint 1", "lock a side", "Harvest Add Remove Lightning")),  # #823, #775
     "R20": ("r20-rf-helmet", ("Harvest Reforge Influence", "Wild Bristle Matron", "lock a side")),  # #775
 }
-# the routes whose target this player cannot read (an implicit or quality wish; the planner refuses them too, #516): R06 (#901)
-UNREAD_TARGET = {"R06": ("r06-strength-heavy-belt", "implicits, quality")}
+# the routes whose target this player cannot read (an implicit or quality wish; the planner refuses them too, #516): R06 (#901), and R17
+# since #1289: its target is the guide's finished Talisman, which has 20% quality, so the world is refused before its route is read. Until
+# then R17 stood in NOT_COVERED for the mechanics its route needs and this player lacks (the imprint, the restore, "lock a side", the
+# Harvest add and remove: #823, #775); they are still lacking, and R17 goes back there when the naive crafter reads quality.
+UNREAD_TARGET = {"R06": ("r06-strength-heavy-belt", "implicits, quality"), "R17": ("r17-lightning-talisman", "implicits, quality")}
 RECORDED = ROOT / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
 HEAVY = bool(os.environ.get("NAIVE_HEAVY"))
 RUNS_OVERRIDE = int(os.environ["NAIVE_RUNS"]) if os.environ.get("NAIVE_RUNS") else None
@@ -117,7 +139,7 @@ OUT = Path(os.environ["NAIVE_OUT"]) if os.environ.get("NAIVE_OUT") else None
 
 def route_labels(stem: str) -> list[str]:
     """The action labels of a route file, in the order the rules name them (plain YAML)."""
-    document = yaml.safe_load((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"))
+    document = yaml.safe_load((route_file(stem)).read_text(encoding="utf-8"))
     seen: list[str] = []
     for rule in document["rules"]:
         if rule["do"] not in seen:
@@ -163,9 +185,9 @@ def played(request) -> Played:
     route_id = request.param
     stem, plays = COVERED[route_id]
     data = real_game_data()
-    target = load_target(TARGETS / f"{stem}.yaml", data)
+    target = load_target(target_file(stem), data)
     plan = make_plan(data, target, load_price_file(PRICES), solve_it=False)
-    result = evaluate_route(plan, load_route(ROUTES / f"{stem}.yaml", plan, data), data)
+    result = evaluate_route(plan, load_route(route_file(stem), plan, data), data)
     assert result.gaps == () and result.risk.success_probability.value == pytest.approx(1.0), route_id
     spend = expected_spend(plan, result.policy)
     assert sum(spend.values()) == pytest.approx(result.risk.mean.value, rel=1e-9), "the chain's visits do not add up to risk.evaluate's mean"
@@ -173,9 +195,9 @@ def played(request) -> Played:
     # the solver certifies (#657). The exact side leaves that price out, so both sides are of the same process; #657 removes it (R13: 0.0016 Chaos a draw).
     drawn = spend.get(DRAW_LABEL, 0.0)
 
-    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS)
+    world = load_world(target_file(stem), PRICES, KEYS)
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     runs = RUNS_OVERRIDE or plays
     tally = t.simulate(Player(world, route, judge), runs, seed=555 * 1000 + SEED)
     if OUT is not None:
@@ -193,9 +215,9 @@ def recorded_for(route_id: str) -> dict:
 
 
 def play_world(stem: str, laws: Laws | None = None):
-    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS, laws=laws)
+    world = load_world(target_file(stem.removesuffix('-restart')), PRICES, KEYS, laws=laws)
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     return Player(world, route, judge)
 
 
@@ -299,7 +321,11 @@ def test_the_recorded_planner_numbers_are_of_the_game_data_pin_as_it_is(route_id
     assert recorded_for(route_id)["pin"] == data_pin(), "the game data moved: record the planner side again"
 
 
-@pytest.mark.parametrize("route_id", [*BENCHMARKED, *GAPPED])
+# #1306: R04's target and route are the guide's item since #1289, and the planner side cannot record them (the exact plan of the whole target ran out of 16 GB)
+STALE_RECORD = pytest.mark.xfail(strict=True, reason="#1306: R04's record is of the target and route of before #1289; the exact plan of the new target does not fit in memory, so it is not recorded again")
+
+
+@pytest.mark.parametrize("route_id", [pytest.param(route, marks=STALE_RECORD) if route.startswith("R04") else route for route in (*BENCHMARKED, *GAPPED)])
 def test_the_recorded_planner_numbers_are_of_the_files_and_prices_as_they_are(route_id):
     """Quick, so it runs in every CI run: the route file and the target by hash, and what one use of each action of the route costs. It does not see a change of the planner's code."""
     stem = {**BENCHMARKED, **GAPPED}[route_id][0]
@@ -347,13 +373,14 @@ def test_the_simulation_is_long_enough_to_say_something(played):
 # --- the test can fail ------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("played", ["R05", "R10", "R11"], indirect=True)
+# R11 is not played here since #1289: 3,000 plays of its whole helmet under the wrong law took 108 s on the quiet server (18 standard errors), past the suite's time on a runner
+@pytest.mark.parametrize("played", ["R05", "R10"], indirect=True)
 def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with_the_planner(played):
     """If the law of 4, 5 or 6 mods were 1:1:1 instead of 8:3:1, the naive mean would be far from the planner's: the comparison has the power to see it."""
     stem, _ = COVERED[played.route]
-    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=Laws(rare=((4, 1), (5, 1), (6, 1))))
+    world = load_world(target_file(stem), PRICES, KEYS, laws=Laws(rare=((4, 1), (5, 1), (6, 1))))
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
     verdict = t.verdict_on(f"{played.route} with the wrong law", played.exact_mean, wrong.mean_se())
     print(verdict)  # the distance, shown with -rP
@@ -368,15 +395,17 @@ def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with
 # On a runner at the plays of the rows below, with the essence prices of #885 (heavy run 43539062163): no family exclusion moves R10 by 6.4 and
 # R11 by 9.2, a side chosen first moves R11 by 13.7 (each at 3,000 plays), and the wrong count of mods above moves R11 by 75. A play of R11 is
 # about 362 essences, and its four tests take about 45 seconds of a runner together.
+# Since #1289 R11's target is the guide's whole helmet (the essence's mod, an Evasion mod of tier 3 or better and the tier 1 Life; about
+# 3,900 c a play), and "no family exclusion" no longer moves it: 0.40 standard errors at 3,000 plays and seed 7. So R11 is not counted as
+# evidence for that rule, which R10 shows; R11 keeps the row of the side chosen first.
 # The last number of a row is its plays: R05's level gate moves its mean by about 6% since #895 (only the tier 1 Life is drawn for, and the gate
 # only thins the pool by the mods above item level 75; it was 24 standard errors while a tier 2 resistance counted), so it needs 12,000 plays
 # to stand clear of the line; a play of R05 is about 37 essences.
 MUTATIONS = [
     ("no level gate", Laws(level_gate=False), "R05", 12000),
     ("no family exclusion", Laws(family_exclusion=False), "R10", 3000),
-    ("no family exclusion", Laws(family_exclusion=False), "R11", 3000),
     ("a side chosen first, not one pool", Laws(one_pool=False), "R05", 12000),
-    ("a side chosen first, not one pool", Laws(one_pool=False), "R11", 3000),
+    ("a side chosen first, not one pool", Laws(one_pool=False), "R11", 600),  # 113 standard errors at 3,000 plays of the whole helmet (#1289), so 600 stand clear
     # the laws of #608 and #609. R09 does not move when the block is off (0.66 standard errors at 3,000 plays and seed 7: the blocked Defence mods are few next to the boosted
     # Life ones), so the block is shown by R08 and by `test_naive_mechanics.py`, and R09 is not counted as evidence for it.
     ("no fossil boost", Laws(fossil_boost=False), "R08", 3000),
@@ -389,9 +418,9 @@ MUTATIONS = [
 @pytest.mark.parametrize(("played", "name", "laws", "plays"), [(route, name, laws, plays) for name, laws, route, plays in MUTATIONS], indirect=["played"])
 def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(played, name, laws, plays):
     stem, _ = COVERED[played.route]
-    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=laws)
+    world = load_world(target_file(stem), PRICES, KEYS, laws=laws)
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     wrong = t.simulate(Player(world, route, judge), plays, seed=7)
     verdict = t.verdict_on(f"{played.route} with {name}", played.exact_mean, wrong.mean_se())
     print(verdict)  # the distance, shown with -rP
@@ -447,15 +476,15 @@ def test_a_route_whose_target_the_naive_crafter_cannot_read_is_refused_naming_wh
     stem, why = UNREAD_TARGET[route]
     real_game_data()  # skips without the game data
     with pytest.raises(Unsupported, match=why):
-        load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS)
+        load_world(target_file(stem), PRICES, KEYS)
 
 
 @pytest.mark.parametrize("route", list(NOT_COVERED))
 def test_a_route_with_a_mechanic_the_naive_crafter_lacks_is_refused_naming_it(route):
     stem, mechanics = NOT_COVERED[route]
     real_game_data()  # skips without the game data
-    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS)
-    text = (ROUTES / f"{stem}.yaml").read_text(encoding="utf-8")
+    world = load_world(target_file(stem.removesuffix('-restart')), PRICES, KEYS)
+    text = (route_file(stem)).read_text(encoding="utf-8")
 
     missing = lacking(text, world)
     for mechanic in mechanics:

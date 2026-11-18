@@ -31,10 +31,18 @@
 #   * "Mana Reservation Efficiency from Loathing, at least Shrieking": the guide leaves the essence's tier to the crafter, so
 #     the planner chooses between the Shrieking and the Deafening essence (see the entry below), and the route page shows the
 #     one it chose in its steps, its prices and its finished item (#895).
+#   * "until you hit an open Suffix" and "Finish off crafting Resistances/Stats as needed" (the guide's page, read 2026-11-18; the
+#     research note words it "a crafted Resistance or Attribute"): the helmet the guide ends with holds a bench craft in the suffix
+#     its essence step leaves open, so the target asks at least 1 of the bench's Resistance and Attribute crafts, each at the top
+#     rank the bench sells for a helmet of this item level (OR-1, OR-58): (29-35)% Fire, Cold or Lightning Resistance, or +(26-30)
+#     Strength, Dexterity or Intelligence. The helmet has three suffixes; the fractured Chaos Resistance and the essence's
+#     reservation take two, so the craft needs the third free: a helmet whose three suffixes are full is not finished (#890). Its
+#     Resistances are the elemental ones (the guide's list: "+#% to Elemental Resistances - As much as needed to Cap"); "Stats"
+#     is read as the three attributes. The bench's two-stat crafts (two resistances, two attributes) and its lower ranks are
+#     not listed: the guide names none of them. Until #1289 the file left the finish out ("the guide gives no number for it, so it
+#     asks nothing of the item"); the owner, 2026-11-18: «Это меняет крафт, почему в нашем крафте это не учтено??».
 #   * The two implicits of the guide (reduced mana cost of attacks, physical taken as lightning) are
-#     Eldritch implicits, a different part of the work, and are left out. So is "finish with a
-#     crafted Resistance or Attribute": the guide gives no number for it ("as needed"), so it asks
-#     nothing of the item here.
+#     Eldritch implicits, a different part of the work, and are left out (Eldritch currency is not planned, #919).
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Lion Pelt
@@ -80,6 +88,24 @@ requirements:
   - stat: "+# to maximum Life"
     min_tier: 1
     not_crafted: true
+
+  # The crafted finish in the suffix left open: at least 1 of the bench's Resistance and Attribute crafts at their top rank
+  # (OR-58, #890). Guide: "until you hit an open Suffix & Evasion/Life prefixes you are happy with. Finish off crafting
+  # Resistances/Stats as needed". Each is a bench mod, named by `mod:` (a bench craft has no natural tier, OR-2).
+  - at_least: 1
+    of:
+      - family: FireResistance
+        mod: EinharMasterFireResist3_
+      - family: ColdResistance
+        mod: EinharMasterColdResist3__
+      - family: LightningResistance
+        mod: EinharMasterLightningResist3_
+      - family: Strength
+        mod: EinharMasterStrength3
+      - family: Dexterity
+        mod: EinharMasterDexterity3
+      - family: Intelligence
+        mod: EinharMasterIntelligence3
 
 # Where the crafting starts: a helmet that already has Chaos Resistance fractured.
 start_item:

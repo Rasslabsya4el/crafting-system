@@ -44,6 +44,9 @@ OFFERS = {
     "R04": {
         "Essence of Insanity", "Deafening Essence of Rage", "Orb of Annulment", "Fracturing Orb", "Exalted Orb",
         "Remove Crafted Mods", "Bench craft Cannot roll Attack Modifiers", "restart",
+        # the guide's step 9 (#1289, OR-58): the four crafts the target takes for "something useful like Resistances or Attack Speed"
+        "Bench craft +(29-35)% to Fire Resistance", "Bench craft +(29-35)% to Cold Resistance", "Bench craft +(29-35)% to Lightning Resistance",
+        "Bench craft (7-12)% increased Attack Speed",
     },
     "R14": {
         "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Annulment", "Exalted Orb",

@@ -15,7 +15,7 @@
 #   6. Keep one suffix open, Annulment if needed. If the Strength or the arrow is removed, go back to step 5.
 #   7. Craft "Cannot roll Attack Modifiers".
 #   8. Two Exalted Orbs: the only prefixes left are Maximum Life and Damage with Bow Skills.
-#   9. Remove the craft (the finish; not part of the target).
+#   9. Remove the craft and bench-craft a useful suffix, "like Resistances or Attack Speed" (part of the target since #1289, OR-58).
 #
 # Counting mods: a rare quiver always holds at least 4 mods in this route (an essence leaves 4, 5 or 6, and the
 # route annuls down to 4 and no further), so "4 or fewer" is "at least 2 slots free in all", which the rules
@@ -29,7 +29,41 @@ rules:
       rarity: normal
     do: Essence of Insanity
 
-  # Steps 5 to 8 need the Pierce fractured: look at that first.
+  # Steps 5 to 9 need the Pierce fractured: look at that first.
+  # Step 9: "Remove the \"Cannot roll Attack Modifiers\" crafted mod (with the Crafting Bench) and craft something useful like Resistances or
+  # Attack Speed." The two Exalted Orbs gave the target's Life and Damage with Bow Skills: the metamod comes off, and its suffix takes the craft.
+  # The target asks at least 1 of the three (29-35)% resistances (3 Chaos Orbs each at the bench) and (7-12)% Attack Speed (2 Chaos Orbs); the
+  # guide names none of them over the others, so this route takes the cheapest, the Attack Speed (OR-58, #1289).
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: true
+      requirements:
+        - family: Strength
+          status: passing
+        - family: AdditionalArrows
+          status: passing
+        - family: IncreasedLife
+          status: passing
+        - family: DamageWithWeaponTypeSkill
+          status: passing
+    do: Remove Crafted Mods
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: Strength
+          status: passing
+        - family: AdditionalArrows
+          status: passing
+        - family: IncreasedLife
+          status: passing
+        - family: DamageWithWeaponTypeSkill
+          status: passing
+    do: "Bench craft (7-12)% increased Attack Speed"
+
   # Step 8: the metamod is on the quiver, the Pierce is fractured, the Strength and the arrow are there:
   # an Exalted Orb while a prefix is free. (Prefixes full before the Exalted Orbs, or full of the wrong
   # tiers after them, is a gap of the guide: it names no way out.)

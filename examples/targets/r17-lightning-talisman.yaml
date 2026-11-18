@@ -27,8 +27,19 @@
 #   * "+1 all skills": "+1 to Level of all Skill Gems", the one tier of its mod (GlobalSkillGemLevel1), rolled (OR-1).
 #   * "+1 all Lightning skills": "+1 to Level of all Lightning Skill Gems", the one tier (GlobalLightningGemLevel1), added by the
 #     Harvest craft, so rolled, never crafted.
-#   * Steps 9 and 10 ask for "desired" Exalted mods the guide never names; with nothing named there is no requirement to plan for
-#     (OR-4: the guide's own words), so the target ends at the +2. The metamods may stay on the finished Talisman.
+#   * Steps 9 and 10, "Time to imprint and then exalt slam until you hit what you want. I made prefixes first then did suffixes":
+#     the post's words name no mod, but its picture is the finished Talisman (i.redd.it/otas5uw1blkh1.jpeg, read 2026-11-18 for
+#     #1289): "Quality (Attribute Modifiers): +20%", the implicits "+1 to Level of all Skill Gems" and "12% increased effect of
+#     Non-Curse Auras from your Skills", and six mods: "+42 to all Attributes", "+63 to Dexterity", "37% increased Global
+#     Critical Strike Chance", "21% increased maximum Energy Shield", "+1 to Level of all Skill Gems", "+1 to Level of all
+#     Lightning Skill Gems". So the target is that Talisman whole (OR-58). With 20% Intrinsic quality the two attribute mods show
+#     their base roll times 1.2: 35 to all Attributes (tier 1, (33-35), AllAttributes9_) and 52 or 53 Dexterity (tier 1,
+#     (51-55), Dexterity9); 37% is tier 1 of the critical strike suffix ((35-38), CriticalStrikeChance6) and 21% tier 1 of the
+#     Energy Shield prefix ((20-22), IncreasedEnergyShieldPercent7). All four are the top tier, so the leaves write no
+#     `min_tier` (OR-1). Six rolled mods fill the Talisman, so no metamod of step 7 can stay on it; the target language has no
+#     other way to refuse one. Until #1289 the target ended at the +2 and said "The metamods may stay on the finished Talisman".
+#   * The implicits are not asked: the start is the bought Talisman (ADR-0013, above), and the author's second implicit is his own
+#     pick of step 3 ("In my case inc effect of non-curse auras"). Named for the owner in #1289's pull request.
 
 # The base item. Its implicit (whichever the market sells) is kept by every step of the route.
 base: Croaker Talisman
@@ -45,6 +56,25 @@ requirements:
   - family: GlobalDamageTypeGemLevel
     mod: GlobalLightningGemLevel1
     not_crafted: true
+  # Steps 9 and 10 of the guide, "exalt slam until you hit what you want", as the post's picture shows the result (see the readings
+  # above): each of the four at its top tier (OR-1), rolled.
+  # "+42 to all Attributes" (35 with the 20% quality).
+  - family: AllAttributes
+    not_crafted: true
+  # "+63 to Dexterity" (52 or 53 with the 20% quality).
+  - family: Dexterity
+    not_crafted: true
+  # "37% increased Global Critical Strike Chance".
+  - family: CriticalStrikeChanceIncrease
+    not_crafted: true
+  # "21% increased maximum Energy Shield".
+  - family: EnergyShieldPercent
+    not_crafted: true
+
+# The catalyst quality of the picture's Talisman: "Quality (Attribute Modifiers): +20%", the Intrinsic type.
+quality:
+  type: intrinsic
+  min_percent: 20
 
 # Where the crafting starts: a Normal Croaker Talisman, bought (see above).
 start_item:

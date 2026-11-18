@@ -25,11 +25,12 @@
 #     extra useful modifiers like Maximum Life, Resistances"; before #895 the file read that as "at least 1 of Life and the
 #     three elemental resistances". The guide names no tier, so the tier is the top one the item level (75) allows (OR-1),
 #     which is the tier 1 the owner names.
-#   * "use the crafting bench on any open modifier" (the guide's last step): a craft on a free slot. It asks nothing of the
-#     finished item here: a bench craft has no natural tier and meets no tier line (OR-1), whatever its range.
-#   * "20 Intrinsic Catalysts" (quality, the guide's step 3): not in this file yet. The planner plans a `quality:` block since
-#     issue #159, as a finish of catalysts after the mods; the guide's line is added to this target, with its re-records, by
-#     issue #1233. A bench craft of no use to the requirements below is not offered by the planner.
+#   * "applying 20x Intrinsic Catalyst to the ring" (the guide's STEP #3): the `quality:` block below, 20 percent of the Intrinsic
+#     type (OR-58: the item's quality is part of it; OR-16's counter-example names this line; #1233).
+#   * "If you have any open modifiers, use the Crafting Bench to add another useful modifier" (STEP #3, the guide's page read
+#     2026-11-18): not written. The step is conditional ("If you have any open modifiers"), so a ring with no free slot is the
+#     guide's finished ring too, and it names no craft ("another useful modifier"); the target language cannot say "no free slot
+#     is left unfilled", and no craft is made up. Listed for the owner in #1289's pull request, with the issue for the language.
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 # The guide says only "rare ring"; every plain ring has the same pool of mods, so one is picked.
@@ -60,6 +61,12 @@ requirements:
   - family: IncreasedLife
     min_tier: 1
     not_crafted: true
+
+# The catalyst quality of the ring: 20 percent of the Intrinsic type (it scales attribute mods).
+# Guide (same page, "Rings", STEP #3): "Finish the craft by applying 20x Intrinsic Catalyst to the ring."
+quality:
+  type: intrinsic
+  min_percent: 20
 
 # Where the crafting starts: a ring that already has All Attributes fractured.
 start_item:

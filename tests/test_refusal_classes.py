@@ -24,7 +24,7 @@ from test_abstraction_pattern_real import CASES, E
 from test_kernel_projection import answer, generated
 from test_pattern_items_kept import PIECES, same_model
 
-from crafting_system.abstraction import Abstraction
+from crafting_system.abstraction import Abstraction, _pattern
 from crafting_system.abstraction._pattern import build_pattern_model
 from crafting_system.actions import Reads
 from crafting_system.actions.bench import BenchCraft
@@ -100,7 +100,7 @@ DECLARING = [
 
 def test_the_bench_declares_its_refusal_by_families():
     kinds = {type(action).__name__ for _, action, _ in DECLARING}
-    assert kinds == {"BenchCraft", "RemoveCraftedMods"}
+    assert kinds == {"BenchCraft", "RemoveCraftedMods", "FracturingOrb"}  # the orb reads, of the junk, its count alone (#1193)
     assert all(action.reads(CONTRACT_DATA).families is not None for _, action, _ in DECLARING)
 
 
@@ -164,7 +164,8 @@ def test_every_pair_answers_what_it_answered_when_each_was_asked(name, seed):
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
-def test_the_build_of_the_hand_worked_world_is_the_build_before(tags):
+def test_the_build_of_the_hand_worked_world_is_the_build_before(tags, monkeypatch):
+    monkeypatch.setattr(_pattern, "SHARE_FILLS", False)  # every fill of an impossible corner, both builds: where this world shows the sharing (#1192 offers one fill there; `test_pattern_impossible_corner_real.py`)
     data = pattern_data()
 
     def made(before: bool):

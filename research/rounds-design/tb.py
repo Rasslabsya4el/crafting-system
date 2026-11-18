@@ -3,6 +3,9 @@ LEAD=one            every offer in one group (one search, no rounds)
 LEAD=allbut:K1,K2   one first group of every kind but K1,K2; those kinds keep their own rounds after it
 LEAD=kinds:K1,K2:F  first group = the groups of kinds K1,K2 (a kind as kind or kind@feat+feat for one of two groups of a kind); rest in main's order
 LEAD=tier0          first group = every group whose features are within {junk}; rest in main's order
+LEAD=names:L1|L2    the labels (or kinds) lead the first group, as a target's named actions do
+ONLY=L1|L2          the planner's own offers are cut to these labels before any search (#1192): the probe of a route that is not searched
+                    in rounds (R14: an Awakener's Orb among its offers), and with LEAD=one a single search of exactly those offers
 """
 import os, runpy, sys, time
 T0 = time.perf_counter()
@@ -26,6 +29,16 @@ if os.environ.get("SPB"):  # the build's room before a first plan: it stops when
     from crafting_system.planner import _envelope_plan as _ep
     _ep.SEARCH_PER_BUILD = float(os.environ["SPB"])
     print(f"TRACE SPB {_ep.SEARCH_PER_BUILD}", flush=True)
+if os.environ.get("ONLY"):
+    import dataclasses
+    only = set(os.environ["ONLY"].split("|"))
+    real_offers_for = pp.offers_for
+    def offers_for(*a, **k):
+        chosen = real_offers_for(*a, **k)
+        kept = tuple(o for o in chosen.offers if o.label in only)
+        print(f"TRACE ONLY: {len(kept)} of {len(chosen.offers)} offers kept; labels not found: {sorted(only - {o.label for o in kept})}", flush=True)
+        return dataclasses.replace(chosen, offers=kept)
+    pp.offers_for = offers_for
 LEAD = os.environ.get("LEAD")
 real_groups = _rounds.round_groups
 def name(g): return g.kinds[0] + "@" + "+".join(sorted(g.features)) if len(g.kinds) == 1 else ",".join(g.kinds)

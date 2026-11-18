@@ -500,7 +500,11 @@ def test_the_cache_of_built_actions_builds_each_state_and_offer_once(world, monk
 
 # --- 3. the routes on the real dump ---------------------------------------------------------------------------
 
-ROUTES = ["r11-reservation-helmet", "r10-fractured-boots", "r05-strength-ring"]
+# R11 left this list with #1289: its target now holds the guide's last step (one of six bench crafts in an open suffix, OR-58), and the whole
+# walk of that target, the reference this test holds a plan to, does not end within the suite's 300 s for one test (it was stopped there
+# when the file was re-recorded on the server). The walk is retired (CLAUDE.md, "Direction since 2026-11-13") and is not made faster for it;
+# R11's plan is held by its page (`tests/golden/real_r11.html`) and by the heavy benchmark's record.
+ROUTES = ["r10-fractured-boots", "r05-strength-ring"]
 
 
 @pytest.fixture(scope="module")
