@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 14 |
-| - with `planner=True` | 48 |
+| - with `planner=False` (no plan can use them) | 13 |
+| - with `planner=True` | 49 |
 | - `planner=True` and offered by at least one target (reachable) | 33 |
-| - `planner=True` and offered by no target | 15 |
+| - `planner=True` and offered by no target | 16 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 29 of 62 (14 closed by `planner=False`, 15 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 29 of 62 (13 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -67,7 +67,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `wild-bristle-matron` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r20 |  |  |
 | `divine-orb` | yes |  | r10-fractured-boots-70-life |  |  |
 | `awakeners-orb` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
-| `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155) |  |
+| `beast-influence-recipe` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names a base implicit (#516; the catalyst quality is planned since #159, and the compressed state holds a base implicit and its roll since ticket #158) |  |
 | `recombinator` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 19 entries); not named in the target's `actions:` (12 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
 | `catalyst` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); not offered (it only sets the quality, and the target asks for none of its type) (r05, r12); the kind lists no action for this start item nor for the items of the other rarities its actions reach (r10-fractured-boots, r10-fractured-boots-70-life, r11); the target is refused by `make_plan` (section 3) (r03, r06) |  |
