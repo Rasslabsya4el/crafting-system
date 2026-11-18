@@ -120,23 +120,39 @@ site's plans", below).
 
 The chats work on the owner's server (Ubuntu 24.04, 24 cores, 60 GB, the repo at `/root/projects/crafting system`), and heavy work
 runs there: benchmarks, profiling, sweeps, solves, measurements, golden re-records and the full suite. Nothing heavy runs on the
-owner's own PC. The main chat starts a run from its ticket's worktree as a background command, whose exit is its notification,
-and writes the output under `.claude/scratch/`:
+owner's own PC. The main chat (here the ticket's agent: `CLAUDE.md`, "How work is split") starts a run from its ticket's worktree as a
+background command, whose exit is its notification, and writes the output under `.claude/scratch/`:
 
     export CRAFTING_CACHE_DIR="/root/projects/crafting system/.claude/scratch/crafting-cache"
+    export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
     uv sync --locked --extra web        # once per worktree
-    timeout 90m uv run --no-sync python bench.py --out "/root/projects/crafting system/.claude/scratch/t123" > ... 2>&1
+    timeout 90m systemd-run --scope -q -p MemoryMax=16G -p MemorySwapMax=0 uv run --no-sync python bench.py --out "/root/projects/crafting system/.claude/scratch/t123" > ... 2>&1
 
 - **Data.** `CRAFTING_CACHE_DIR` above is shared by every worktree (without the variable each worktree would look in its own
   `local/cache`). When the folder is gone, `uv run --no-sync python -m crafting_system.data fetch` fills it and `... data verify`
   checks it against the pin; a new pin needs a new fetch.
-- **Cores.** The chats share the 24 cores and nothing queues the runs for them. One run takes at most 8 processes, and starts
-  only when the 1-minute load (the first number after `load average:` in `uptime`) plus its processes is at most 20; otherwise the chat
-  starts it later. A sweep the dispatcher would split over N runners is one command with N processes here, or N parts one after another.
+- **Cores.** The agents share the 24 cores and nothing queues the runs for them. The owner gave the whole machine to this work on
+  2026-11-17 («Ты можешь юзать все мощности сервера для тестов и прочего. Там почти ничего больше нк происходит»), so one run takes at most 16 processes, and starts
+  only when the 1-minute load (the first number after `load average:` in `uptime`) plus its processes is at most 22; otherwise the agent
+  starts it later, with a background `until` loop that ends once the run has started. The two figures are the dispatcher chat's (8 and 20
+  until that day). A sweep the dispatcher would split over N runners is one command with N processes here, or N parts one after another.
+- **Threads.** Before any run, a quick test included:
+  `export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1`.
+  Without them one Python process opens a 24-thread math pool and takes about 7 cores (the load reached 76 on 2026-11-17). A run that
+  needs more threads sets a number and counts them as processes.
+- **Memory.** Before a run on a real route, `free -g` shows at least 20 GB available. The run is wrapped so that a runaway is killed
+  alone, `systemd-run --scope -q -p MemoryMax=16G -p MemorySwapMax=0 <command>`, and the planner gets an explicit memory net of at most
+  12 GB where the command takes one (its default is 80% of the machine, 48 GB here, which several runs at once cannot all have). On
+  2026-11-17 and 2026-11-18 the machine's memory in use passed 55 GB of 60 three times (58.8 GB at the highest), and on 2026-11-17 the
+  kernel killed one uncapped Python process of 54 GB.
 - **Time.** The chat gives the run a limit with `timeout`, about twice what it expects. The 60-minute cap and `--long` below are
   rules for GitHub's runners and do not bind a server run.
 - **Re-records.** A command that re-records files (`UPDATE_GOLDEN=1 ...`) writes them in the worktree; the chat reads the diff and
   commits them itself. The integration run then checks them on Ubuntu and Windows.
+- **Waiting.** A job that may outlive its agent is detached, `setsid nohup <script> > <log> 2>&1 < /dev/null &`, with its pid and log
+  path written into the agent's handoff file at once. An agent waits on a pid (`while kill -0 PID 2>/dev/null; do sleep 20; done`),
+  never on `pgrep -f "<pattern>"`: the waiting shell's own command line holds the pattern, so the loop matches itself and never ends
+  (an agent hung for hours on 2026-11-18).
 - **Helpers.** `finder`, `checker` and `crafter` start no heavy run, on the server or on GitHub; they run quick, targeted tests
   only (under a minute, one process).
 
