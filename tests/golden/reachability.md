@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 16 |
-| - with `planner=True` | 46 |
+| - with `planner=False` (no plan can use them) | 15 |
+| - with `planner=True` | 47 |
 | - `planner=True` and offered by at least one target (reachable) | 32 |
-| - `planner=True` and offered by no target | 14 |
+| - `planner=True` and offered by no target | 15 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 30 of 62 (16 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 30 of 62 (15 closed by `planner=False`, 15 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -68,7 +68,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `divine-orb` | yes |  | r10-fractured-boots-70-life |  |  |
 | `awakeners-orb` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155) |  |
-| `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names a base implicit (#516; the catalyst quality is planned since #159, and the compressed state holds a base implicit and its roll since ticket #158) |  |
+| `blessed-orb` | yes | burns, only: an item with a ranged implicit, reads: any | none | not named in the target's `actions:` (12 of 19 entries); not offered (removed by `usable_actions`, which needs a crafted mod) (r05, r12); the kind lists no action for this start item (r10-fractured-boots, r10-fractured-boots-70-life, r11); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `recombinator` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 19 entries); not named in the target's `actions:` (12 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
 | `catalyst` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); not offered (it only sets the quality, and the target asks for none of its type) (r05, r12); the kind lists no action for this start item (r10-fractured-boots, r10-fractured-boots-70-life, r11); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `eldritch-implicit-currency` | yes | only: armour | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
@@ -104,7 +104,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r03 | refused: no price for the start item 'Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage'. |  |  |  |  |  |  |
 | r04 | plans | 8 names | 57 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 9299 | 0 | 0 | 21 | annulment-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, remove-crafted-mods, restore, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r06 | refused: the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet. |  |  |  |  |  |  |
+| r06 | refused: no price for the start item 'Heavy Belt, normal, item level 75-76, Hunter influence'. |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12703 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12703 | 0 | 0 | 2 | bench-craft, fossil-set |
@@ -128,7 +128,7 @@ The refusals at the top of `make_plan`, as the code states them (the condition, 
 |---|---|---|
 | `setting.on` | Memory Strands are on ({setting.why}), which the planner cannot plan yet: the cut and the spend of strands are not built, so an answer would silently ignore them | no benchmark target |
 | `isinstance(target.quality, PlainQualityRequirement)` | the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring, an amulet or a belt | no benchmark target |
-| `any((wish.corrupted or not any((mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids)) for wish in target.implicits))` | the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet; it plans the Searing Exarch and Eater of Worlds implicits | r06 |
+| `any((wish.corrupted for wish in target.implicits))` | the target asks for a corrupted implicit, which the planner cannot plan yet; it plans the implicits of the base (rolled by a Blessed Orb) and the Searing Exarch and Eater of Worlds implicits | no benchmark target |
 | `target.enchantment is not None` | the target asks for an enchantment, which the planner cannot plan yet | no benchmark target |
 | `unreachable` | {unreachable} | no benchmark target |
 | `axes and solver not in ('auto', 'object', 'envelope')` | an offered action reads a rule the sources leave open ({', '.join((axis_what(axis.name) for axis in axes))}), so the plan is made once for each reading of that rule by the envelope search (or by the walk of every item, `--solver object`); `--solver {solver}` does not do that | no benchmark target |
@@ -222,12 +222,12 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_finish.py, planner/_plan.py |  |
 | `influences` | cli/_route_card.py, planner/_bought_starts.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_finish.py, planner/_plan.py, and 2 more |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_finish.py, planner/_implicit_finish.py, and 3 more |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
-| `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py |  |
+| `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_implicit_finish.py, planner/_plan.py |  |
 | `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py, planner/_quality_finish.py |  |
-| `actions` | cli/_benchmark_outcomes.py, planner/_plan.py, planner/_quality_finish.py |  |
+| `actions` | cli/_benchmark_outcomes.py, planner/_implicit_finish.py, planner/_plan.py, planner/_quality_finish.py |  |
 | `enchantment` | planner/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
 | `sockets` | planner/_finish.py, planner/_plan.py |  |
