@@ -228,5 +228,7 @@ def test_what_the_answer_calls_unpriced_has_no_price_and_no_kept_offer_is_among_
 
     assert unpriced  # the fixture price file holds one lifeforce and the start item
     assert all(name not in prices for limit in unpriced for name in limit.names)
+    own = [limit for limit in unpriced if not limit.names]  # an action whose missing price is its own item: its label is the item
+    assert own and all(label not in prices for limit in own for label in limit.labels)
     kept = {offer.label for offer in plan.offers}
     assert kept and not kept.intersection(label for limit in unpriced for label in limit.labels)
