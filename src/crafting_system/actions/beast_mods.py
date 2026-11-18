@@ -54,15 +54,40 @@ def _refuse_if_corrupted(item: Item, what: str) -> None:
         raise NotApplicableError(f"the item is corrupted, and a corrupted item takes no {what}")
 
 
-def _metamod_classes(data: GameData) -> frozenset[str]:
-    """The item classes the bench offers a metamod for: the five share one list (`bench_craft.option_item_classes`)."""
-    ids = {mod.id for mod in wild_bristle_metamods(data)}
-    return frozenset(
+# id(data) -> (data, the Matron's metamods, the item classes the bench offers a metamod for). Both read the game data alone, and the Matron's
+# outcomes ask for them at every item: looked up in the data at each call they were two passes over every mod of the game (#1192: 99 of the
+# 150 s of the bound's build on R20's guide offers, 33 ms a pass under the profiler). The entry keeps `data` alive, so its `id` is not reused.
+_METAMODS_LIMIT = 8
+_METAMODS: dict[int, tuple[GameData, tuple[Mod, ...], frozenset[str]]] = {}
+
+
+def _metamods_of(data: GameData) -> tuple[GameData, tuple[Mod, ...], frozenset[str]]:
+    found = _METAMODS.get(id(data))
+    if found is not None and found[0] is data:
+        return found
+    wanted = METAMOD_IDS.value
+    by_family: dict[str, Mod] = {}
+    for mod in data.mods.values():
+        for family in mod.families:
+            if family in wanted and mod.generation_type == wanted[family]:
+                by_family.setdefault(family, mod)
+    mods = tuple(by_family.values())
+    ids = {mod.id for mod in mods}
+    classes = frozenset(
         item_class
         for option in data.bench_options
         if option.actions.add_explicit_mod in ids
         for item_class in option.item_classes
     )
+    if len(_METAMODS) >= _METAMODS_LIMIT:
+        _METAMODS.clear()
+    found = _METAMODS[id(data)] = (data, mods, classes)
+    return found
+
+
+def _metamod_classes(data: GameData) -> frozenset[str]:
+    """The item classes the bench offers a metamod for: the five share one list (`bench_craft.option_item_classes`)."""
+    return _metamods_of(data)[2]
 
 
 def _allowed_classes(data: GameData, item: Item) -> tuple[Mod, ...]:
@@ -76,15 +101,9 @@ def _allowed_classes(data: GameData, item: Item) -> tuple[Mod, ...]:
 def wild_bristle_metamods(data: GameData) -> tuple[Mod, ...]:
     """The metamods the Matron can add that `data` holds, one per family of `beastcraft.metamod_ids`, in data order.
 
-    A family the data holds no mod of on the side the claim names is left out.
+    A family the data holds no mod of on the side the claim names is left out. Found once for each game data object (`_metamods_of`).
     """
-    wanted = METAMOD_IDS.value
-    found: dict[str, Mod] = {}
-    for mod in data.mods.values():
-        for family in mod.families:
-            if family in wanted and mod.generation_type == wanted[family]:
-                found.setdefault(family, mod)
-    return tuple(found.values())
+    return _metamods_of(data)[1]
 
 
 @dataclass(frozen=True)

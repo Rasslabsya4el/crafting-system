@@ -195,6 +195,31 @@ def test_the_matrons_five_metamods_are_found_by_family_in_the_data():
     assert {mod.id for mod in wild_bristle_metamods(fewer)} == set(METAMODS) - {MULTI}
 
 
+def test_the_matrons_metamods_are_looked_up_in_the_game_data_once_and_not_at_every_item():
+    """The five metamods and the item classes the bench offers them for read the game data alone. Found again at every item, each outcome
+    of the Matron cost two passes over every mod of the game: two thirds of the bound's build on R20's guide offers (#1192)."""
+
+    class Counted(dict):
+        passes = 0
+
+        def values(self):
+            type(self).passes += 1
+            return super().values()
+
+    data = dataclasses.replace(SMALL, mods=Counted(SMALL.mods))
+    first, second = item_of(ES1, FIRE), item_of(LIFE1, ES1, LIGHTNING1, FIRE)
+
+    expected = tables(WildBristleMatron(), first)
+    assert outcome_table(WildBristleMatron().outcomes(data, first)) == expected  # the same answer on a copy of the data, found on that copy
+    after_first = Counted.passes
+    assert after_first >= 1
+    for item in (first, second, first):
+        WildBristleMatron().outcomes(data, item)
+    assert wild_bristle_metamods(data) == wild_bristle_metamods(SMALL)
+
+    assert Counted.passes == after_first  # no pass over the mods after the first item
+
+
 # --- the side swaps: the hand oracle ----------------------------------------------------------------------------
 
 
