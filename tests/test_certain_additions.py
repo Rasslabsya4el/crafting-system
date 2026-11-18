@@ -87,7 +87,8 @@ def test_a_removal_or_a_draw_is_no_certain_addition():
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
-def test_the_build_of_the_hand_worked_world_is_the_build_before(tags):
+def test_the_build_of_the_hand_worked_world_is_the_build_before(tags, monkeypatch):
+    monkeypatch.setattr(_pattern, "SHARE_FILLS", False)  # every fill of an impossible corner, both builds: where this world shows the sharing (#1192 offers one fill there; `test_pattern_impossible_corner_real.py`)
     data = pattern_data()
     offers = [*offers_of(), PatternOffer("bench-lock", ACTIONS["bench-lock"], 1.0), PatternOffer("bench-craft", ACTIONS["bench-craft"], 2.0)]
 

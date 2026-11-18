@@ -351,6 +351,18 @@ class Kinds:
                 if not self.metamods or protected_tags(mod) == tags:
                     taken.add(key)
                     return mod
+            if place is None and all(self.is_influenced(mod) for mod in mods) and (mod := self._named_only(key, side, tags, taken)) is not None:
+                return mod  # the pool holds only influence mods of this family on this side: the slot is a mod an action names (below)
+        if place is None:
+            # No family of the type has an ordinary mod of the pool on this side with room. `of` gives a mod that only an action puts on the
+            # item by name (an essence's) the type of its family, also where the family has its weight on the other side, or in influence mods
+            # alone: holding it takes that weight out of the pool. A slot of such a mod stands for it, found in the data as the mod of a
+            # family the pool does not list is (#1290: the Essence of Horror's suffix on a Shaper and Elder helmet is of the family of the
+            # influences' "supported by" mods; the state an essence gave was no item, and the bound's build met a key with no member).
+            other = Side.SUFFIX if side is Side.PREFIX else Side.PREFIX
+            for key, _ in self._members_of(other, base):
+                if key not in taken and (family is None or key == family) and (mod := self._named_only(key, side, tags, taken)) is not None:
+                    return mod
         raise ValueError(f"the state has more {side.value} slots of an ordinary family of that type than the pool has families")
 
     def _influence_groups(self) -> dict[str, str]:
@@ -416,6 +428,18 @@ class Kinds:
             )
             self._pooled = build_pool(self.data, empty)
         return self._pooled
+
+    def _named_only(self, key: str, side: Side, tags: frozenset[str], taken: set[str]) -> Mod | None:
+        """The ordinary mod of the family `key` on `side` that the data holds and the pool does not (`_mod_of`), for a slot of the family's
+        type that no mod of the pool can stand for (`representative`); None when the data has none or its families are `taken`."""
+        try:
+            mod = self._mod_of(key, side, tags)
+        except ValueError:
+            return None
+        if held_families(mod) & taken:
+            return None
+        taken |= held_families(mod)
+        return mod
 
     def _members_of(self, side: Side, kind: str) -> list[tuple[str, tuple[Mod, ...]]]:
         """The families (key and its mods) of the pool on `side` with this kind, in pool order."""
