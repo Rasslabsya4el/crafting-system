@@ -310,6 +310,21 @@ class OrbOfDominance(Action):
         )
         return _claims_of(own, metamods)
 
+    def influence_alike(self, data: GameData, item: Item, mods: tuple[Mod, ...]) -> bool:
+        """Alike when the upgrade of each of `mods` is known and is one of `mods` (#1238): both picks are uniform over the influenced mods, so
+        which mod of the group a slot holds changes only which mod of the group the result holds there. A mod whose upgrade the data cannot
+        name (`OutOfScopeError`) refuses where the others do not, so its group is kept apart by mod."""
+        ids = {mod.id for mod in mods}
+        tiers = tiers_of(data, item)
+        for mod in mods:
+            try:
+                upgraded = self._upgraded(data, item, ExplicitMod(mod.id, _low(mod)), tiers)
+            except OutOfScopeError:
+                return False
+            if upgraded.mod_id not in ids:
+                return False
+        return True
+
     def _elevated_of(self, data: GameData) -> Mapping[str, str]:
         return dict(self.elevated) if self.elevated is not None else load_elevated().for_data(data)
 

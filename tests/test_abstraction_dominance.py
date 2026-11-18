@@ -207,7 +207,8 @@ def test_a_top_tier_mod_becomes_its_elevated_version_and_that_no_longer_meets_a_
     held = found.compress(item(rolled(MIX_S2_MAVEN, 1), rolled(S1, 2), influences={SHAPER}))
     assert f"${MIX_S2_MAVEN}" in {slot.kind for slot in held.slots}
     again = found.kernel(held, DOMINANCE)  # S1 removed and the Elevated mod stays, or the Elevated mod removed and S1 upgraded to S2
-    assert {tuple(slot.kind for slot in state.slots) for state in again} == {(f"${MIX_S2_MAVEN}",), (f"${S2}",)}
+    # the goal reads no S tier, so S1 and S2 are one group, named by S1 (#1238): the upgrade stays in it
+    assert {tuple(slot.kind for slot in state.slots) for state in again} == {(f"${MIX_S2_MAVEN}",), (f"${S1}",)}
 
 
 def test_the_elevated_mod_is_the_same_in_the_item_the_orb_makes_and_in_the_state_that_rebuilds_it():
@@ -216,7 +217,8 @@ def test_the_elevated_mod_is_the_same_in_the_item_the_orb_makes_and_in_the_state
     for chance, result in DOMINANCE.outcomes(DATA, start).results:
         state = found.compress(result)
         rebuilt, _ = found._item_of(state, False)
-        assert {m.mod_id for m in rebuilt.mods} == {m.mod_id for m in result.mods}
+        # the Elevated mod the goal names is rebuilt as itself; S1 and S2, which the goal does not read, are one group (#1238)
+        assert {m.mod_id for m in rebuilt.mods} - {S1, S2} == {m.mod_id for m in result.mods} - {S1, S2}
         assert found.compress(rebuilt) == state
     assert found.kernel(found.compress(start), DOMINANCE)  # a state that holds the Elevated mod exists
     assert {state.status for state in found.kernel(found.compress(start), DOMINANCE)} == {(Status.ABSENT,), (Status.PASSING,)}

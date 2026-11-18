@@ -953,6 +953,14 @@ class Action(ABC):
         """
         return None
 
+    def influence_alike(self, data: GameData, item: Item, mods: tuple[Mod, ...]) -> bool:
+        """For an action that declares `Reads.influenced`: whether it treats the influence mods `mods` alike on items like `item` (its base, item
+        level and influences; `mods` are one family on one side, decided by one influence tag, and give the goal the same). Alike: whichever of
+        them a slot holds, the action gives the same results up to which of `mods` each result holds in that slot, and refuses all of them or
+        none. The compressed state then names the group and not the mod (`abstraction._kinds`, #1238). False (the default) keeps them apart.
+        """
+        return False
+
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         """The ids of the registry claims the result or the price depends on.
 

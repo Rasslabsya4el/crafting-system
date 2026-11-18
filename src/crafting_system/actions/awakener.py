@@ -43,7 +43,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
-from crafting_system.data import GameData, conflicts
+from crafting_system.data import GameData, Mod, conflicts
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity, Side
 from crafting_system.items.words import base_words, mod_words_of
 from crafting_system.rules import get_rule
@@ -159,6 +159,11 @@ class AwakenersOrb(Action):
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """The donor's mod and a draw; every crafted mod goes. Implicits, quality and the offer stay as they were."""
         return Adds.erasing()
+
+    def influence_alike(self, data: GameData, item: Item, mods: tuple[Mod, ...]) -> bool:
+        """Alike unless the donor's mod is one of `mods` (#1238): the kept receiver mod is drawn uniformly over the held influence mods and stays
+        the mod it was, the conflict with the donor's mod is by family (`conflicts`), and the rest is a pool draw that reads the families held."""
+        return all(mod.id != self.donor_mod for mod in mods)
 
     def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
         return (GROUP_CONFLICT_AXIS,)

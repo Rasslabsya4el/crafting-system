@@ -48,7 +48,9 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable
 
 from crafting_system.actions import BLOCKED_TAG, Action, Reads, build_pool, influence_spawn_test
+from crafting_system.actions.pool import item_tags
 from crafting_system.data import GameData, Mod
+from crafting_system.data.elevated import is_elevated
 from crafting_system.items import GENERIC_PLACEHOLDERS, Item, Rarity, Side
 from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, UNVEILED_DOMAIN, VEILED_DOMAIN
 
@@ -155,8 +157,11 @@ class Kinds:
         numbers: TypeNumbers | None = None,
         rollable: Callable[[], Iterable[Mod]] = lambda: (),
         alike: bool = False,
+        group_influenced: bool = False,
     ):
         self.data = data
+        self.group_influenced = group_influenced  # influence mods an enabled action treats alike share one kind (`_influence_groups`, #1238)
+        self._groups: dict[str, str] | None = None
         self._reads: dict[Action, Reads] = {}  # `reads`
         self.profile = profile
         self.alike = alike  # the slots of the ordinary mods drawn or held are told apart by side and protected tags alone (`slot_kind`, #1146)
@@ -239,8 +244,10 @@ class Kinds:
         key = family_key(mod)
         if mod.domain == UNVEILED_DOMAIN:
             kind = UNVEILED_PREFIX + key  # a veiled mod, told apart from the ordinary mods of its family whatever an action reads
-        elif self.is_influenced(mod) or key in self._families_by_mod():
+        elif key in self._families_by_mod():
             kind = MOD_PREFIX + mod.id
+        elif self.is_influenced(mod):
+            kind = MOD_PREFIX + self._influence_groups().get(mod.id, mod.id)  # the mod, or the one that stands for its group
         elif self._everything or key in self._distinct or key not in self._listed_families():
             kind = key
         elif self.by_weight:
@@ -346,6 +353,49 @@ class Kinds:
                     taken.add(key)
                     return mod
         raise ValueError(f"the state has more {side.value} slots of an ordinary family of that type than the pool has families")
+
+    def _influence_groups(self) -> dict[str, str]:
+        """The influence mods that share one kind, each to the id of the mod that stands for its group (#1238); a mod absent stands for itself.
+
+        A group is the influence mods of one family on one side whose first spawn tag the item holds is one influence's, that give the goal
+        the same (`profile`), when the family is not told apart by mod and every enabled action that reads the influence mods treats them
+        alike (`Action.influence_alike`: the Orb of Dominance when each upgrade is known and stays in the group). Its kind is `"$" + the id of
+        its first mod` (the lowest required level, an Elevated mod last), so every reader of a `"$"` kind finds a mod of the group, whose
+        families and side are the group's. Only with `group_influenced` (a goal without a roll limit: under one, which mod a slot holds
+        decides its roll law, and an Elevated mod picked by the Orb of Dominance is rerolled).
+
+        Exact: two states that differ only in which mod of a group a slot holds have the same results up to that, and the same cost. The
+        listing draw of an influenced rare, which draws the influence mods one by one, then draws a group once (R20 with the Orb of
+        Dominance: past 12 GB in one kernel with every mod apart).
+        """
+        if self._groups is not None:
+            return self._groups
+        self._groups = {}
+        readers = [action for action in self.actions if self.reads(action).influenced]
+        if not (self.group_influenced and self.influenced and self.influences and readers):
+            return self._groups
+        probe = Item.build(self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE, influences=self.influences)
+        held = frozenset(item_tags(self.data, probe))
+        domains = {self.data.base_items[self.base_id].domain} | EXPLICIT_EXTRA_DOMAINS - {"crafted", UNVEILED_DOMAIN}
+        by_mod = self._families_by_mod()
+        grouped: dict[tuple, list[Mod]] = defaultdict(list)
+        for mod in self.data.mods.values():
+            if mod.domain not in domains or not mod.families or not self.is_influenced(mod):
+                continue
+            key = family_key(mod)
+            if key in by_mod:
+                continue
+            tag = next((spawn.tag for spawn in mod.spawn_weights if spawn.tag in held), None)
+            grouped[key, mod.generation_type, tag, self.profile(mod)].append(mod)
+        for mods in grouped.values():
+            if len(mods) < 2:
+                continue
+            mods.sort(key=lambda mod: (is_elevated(mod), mod.required_level, mod.id))
+            group = tuple(mods)
+            if all(action.influence_alike(self.data, probe, group) for action in readers):
+                for mod in group:
+                    self._groups[mod.id] = group[0].id
+        return self._groups
 
     def _families_by_mod(self) -> set[str]:
         """The families told apart by mod: those with a rollable mod, when an enabled action rerolls values, and those an enabled action names (`Reads.by_mod`)."""
