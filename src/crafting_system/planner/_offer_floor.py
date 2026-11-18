@@ -106,7 +106,7 @@ class OfferFloors:
         crafts = {(named, made) for (kind, named), made in zip(kinds, crafted) if kind in NAMING}  # the mods each craft or veiled choice may add, and whether crafted
         # A bought start the market sells unopened (ADR-0064) is a listing no reroll applies to: the floors are stated for the item it opens into,
         # as the retired bound pruning's were (`shape`). Stated for the listing, every reroll is refused there, `rho` is infinite, and the
-        # listing itself (outside E, of "the start's shape") got a floor of 1e300 above its finite cost (#731). The listing is then of another shape.
+        # listing itself (outside E, of "the start's shape") got an infinite floor above its finite cost (#731). The listing is then of another shape.
         shape = abstraction.compress(item) if start.flags.unopened else start
         self.chosen = goal_set(goal, shape, sorted(crafts, key=lambda craft: (sorted(craft[0]), craft[1])))
         chosen_leaves = [goal.leaves[index] for index in self.chosen]
@@ -165,10 +165,15 @@ class OfferFloors:
             # Q*(s, a) >= V*(s) >= rho for every offer at a state of this class, whatever the offer is: one the bare item refuses (the assumption `rho`
             # rests on) or one that leaves the shape has a floor of `rho` too, not its bare cost. Without that the state's bound (`rho`) stood above the
             # least floor of its offers (R12 with the floors on: 8.98 against a refused reforge's 0.75) and the search refused it as inconsistent (#829)
-            return max(entry.cost + float(1 - entry.pbar) * self.rho, self.rho)
+            return max(entry.cost + self.after_leaving(entry), self.rho)
         if entry.pbar == ONE or klass == OTHER or (klass == INSIDE and entry.kind != REROLL):
             return entry.cost
-        return entry.cost + float(1 - entry.pbar) * self.rho
+        return entry.cost + self.after_leaving(entry)
+
+    def after_leaving(self, entry: _Entry) -> float:
+        """`(1 - pbar) rho`: the least the offer costs after its use beyond its price. 0 for an offer that lands in E for sure, also when `rho` is
+        infinite (nothing else enters E: `_offer_kinds`, UNREACHABLE), where float arithmetic would make it 0 * inf, not a number."""
+        return 0.0 if entry.pbar == ONE else float(1 - entry.pbar) * self.rho
 
     def floor(self, positions, klass: int) -> float:
         """The least floor over `positions` (infinity for none)."""
