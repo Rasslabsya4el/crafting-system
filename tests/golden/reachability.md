@@ -12,9 +12,9 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 13 |
-| - with `planner=True` | 49 |
-| - `planner=True` and offered by at least one target (reachable) | 33 |
+| - with `planner=False` (no plan can use them) | 12 |
+| - with `planner=True` | 50 |
+| - `planner=True` and offered by at least one target (reachable) | 34 |
 | - `planner=True` and offered by no target | 16 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 29 of 62 (13 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 28 of 62 (12 closed by `planner=False`, 16 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -36,7 +36,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `chaos-orb` | yes |  | j01, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `harvest-reforge` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r20 |  |  |
 | `harvest-reforge-influence` | yes |  | r20 |  |  |
-| `harvest-reforge-likelihood` | **no** |  | none | `planner=False`: reads every junk family, so a state is a set of family types and every kernel has all-distinct weights; not in the B1 offer set until pruning (#118) decides | ACT1-4 |
+| `harvest-reforge-likelihood` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  | ACT1-4 |
 | `harvest-add-remove` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r17, r24 |  |  |
 | `harvest-resistance-swap` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `harvest-damage-swap` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
@@ -103,15 +103,15 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
 | r03 | refused: no price for the start item 'Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage'. |  |  |  |  |  |  |
 | r04 | plans | 8 names | 57 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
-| r05 | plans | no key | 9303 | 0 | 0 | 25 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r05 | plans | no key | 9305 | 0 | 0 | 26 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-likelihood, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
 | r06 | refused: no price for the start item 'Heavy Belt, normal, item level 75-76, Hunter influence'. |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12703 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12703 | 0 | 0 | 2 | bench-craft, fossil-set |
-| r10-fractured-boots | plans | no key | 10871 | 0 | 0 | 30 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r10-fractured-boots-70-life | plans | no key | 10872 | 0 | 0 | 31 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r11 | plans | no key | 10874 | 0 | 0 | 30 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r12 | plans | no key | 9295 | 0 | 0 | 25 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r10-fractured-boots | plans | no key | 10873 | 0 | 0 | 31 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-likelihood, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r10-fractured-boots-70-life | plans | no key | 10874 | 0 | 0 | 32 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-likelihood, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r11 | plans | no key | 10876 | 0 | 0 | 31 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-likelihood, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r12 | plans | no key | 9297 | 0 | 0 | 26 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-likelihood, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
 | r13 | plans | 5 names | 50 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
 | r14 | plans | 9 names | 78 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
 | r17 | plans | 11 names | 14 | 0 | 0 | 9 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, harvest-add-remove, imprint, regal-orb, restore, transmutation-orb |

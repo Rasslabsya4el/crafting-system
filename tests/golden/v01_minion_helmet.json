@@ -216,7 +216,7 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 12,
+      "count": 11,
       "labels": [
         "Harvest quality enchants",
         "Beast influence recipe",
