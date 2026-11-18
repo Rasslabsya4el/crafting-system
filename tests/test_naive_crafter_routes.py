@@ -32,7 +32,7 @@ bracket `(low, high)` from a cost grid whose horizon is 64 of the smallest costs
 own uses say about 10% of plays reach the last two crafts (issue #683). The tests: the share of naive plays that finish lies inside the recorded bracket (widened by K standard
 errors), the share of the recorded heavy run too, and a strict xfail tied to #683 says that the planner's printed value equals the heavy share (it flips when the fix is recorded).
 
-The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24, R07, R17 and R20, #775), and R06's target, which it cannot read, in `UNREAD_TARGET`; a test makes it refuse each with a message that names the
+The routes the naive crafter cannot play are listed in `NOT_COVERED` with the mechanic each lacks (R24, R07 and R20, #775), and the targets it cannot read (R06, and R17 since #1289), in `UNREAD_TARGET`; a test makes it refuse each with a message that names the
 mechanic, and another makes the lists together hold every route file of `examples/routes/`.
 
 R13 plays about 100,000 orb uses per finish (its mean is 12,000 Chaos), so the run of this file plays only `CI_RUNS` of it and its standard
@@ -123,11 +123,13 @@ GAPPED = {
 NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {
     "R24": ("r24-avoid-shock-boots", ("Veiled Chaos Orb", "Unveil", "lock a side", "Harvest Add Remove Fire")),  # #775
     "R07": ("r07-minion-wand", ("Veiled Chaos Orb", "Unveil", "lock a side", "Corroded Fossil", "no bench option")),  # #775
-    "R17": ("r17-lightning-talisman", ("Imprint with the Fenumal Plagued Arachnid", "Restore imprint 1", "lock a side", "Harvest Add Remove Lightning")),  # #823, #775
     "R20": ("r20-rf-helmet", ("Harvest Reforge Influence", "Wild Bristle Matron", "lock a side")),  # #775
 }
-# the routes whose target this player cannot read (an implicit or quality wish; the planner refuses them too, #516): R06 (#901)
-UNREAD_TARGET = {"R06": ("r06-strength-heavy-belt", "implicits, quality")}
+# the routes whose target this player cannot read (an implicit or quality wish; the planner refuses them too, #516): R06 (#901), and R17
+# since #1289: its target is the guide's finished Talisman, which has 20% quality, so the world is refused before its route is read. Until
+# then R17 stood in NOT_COVERED for the mechanics its route needs and this player lacks (the imprint, the restore, "lock a side", the
+# Harvest add and remove: #823, #775); they are still lacking, and R17 goes back there when the naive crafter reads quality.
+UNREAD_TARGET = {"R06": ("r06-strength-heavy-belt", "implicits, quality"), "R17": ("r17-lightning-talisman", "implicits, quality")}
 RECORDED = ROOT / "tests" / "fixtures" / "naive_crafter" / "benchmark_means.json"
 HEAVY = bool(os.environ.get("NAIVE_HEAVY"))
 RUNS_OVERRIDE = int(os.environ["NAIVE_RUNS"]) if os.environ.get("NAIVE_RUNS") else None
@@ -388,13 +390,15 @@ def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with
 # On a runner at the plays of the rows below, with the essence prices of #885 (heavy run 43539062163): no family exclusion moves R10 by 6.4 and
 # R11 by 9.2, a side chosen first moves R11 by 13.7 (each at 3,000 plays), and the wrong count of mods above moves R11 by 75. A play of R11 is
 # about 362 essences, and its four tests take about 45 seconds of a runner together.
+# Since #1289 R11's target is the guide's whole helmet (the essence's mod, an Evasion mod of tier 3 or better and the tier 1 Life; about
+# 3,900 c a play), and "no family exclusion" no longer moves it: 0.40 standard errors at 3,000 plays and seed 7. So R11 is not counted as
+# evidence for that rule, which R10 shows; R11 keeps the row of the side chosen first.
 # The last number of a row is its plays: R05's level gate moves its mean by about 6% since #895 (only the tier 1 Life is drawn for, and the gate
 # only thins the pool by the mods above item level 75; it was 24 standard errors while a tier 2 resistance counted), so it needs 12,000 plays
 # to stand clear of the line; a play of R05 is about 37 essences.
 MUTATIONS = [
     ("no level gate", Laws(level_gate=False), "R05", 12000),
     ("no family exclusion", Laws(family_exclusion=False), "R10", 3000),
-    ("no family exclusion", Laws(family_exclusion=False), "R11", 3000),
     ("a side chosen first, not one pool", Laws(one_pool=False), "R05", 12000),
     ("a side chosen first, not one pool", Laws(one_pool=False), "R11", 3000),
     # the laws of #608 and #609. R09 does not move when the block is off (0.66 standard errors at 3,000 plays and seed 7: the blocked Defence mods are few next to the boosted
