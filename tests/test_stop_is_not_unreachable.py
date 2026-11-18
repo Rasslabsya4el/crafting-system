@@ -75,6 +75,25 @@ def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_th
         assert "no plan with them costs less than 133.00 Chaos" in said
 
 
+def test_through_the_entry_a_net_that_stops_the_first_round_says_no_round_finished(tmp_path, data, monkeypatch):
+    # the rounds the other way round: round 1 the Exalted Orb (it can reach the goal, so its bound is finite and the net can stop it), round 2
+    # the fillers; 3 states stop both before a plan, and nothing is shown about any method
+    def groups(data, goal, target, grouped, route):
+        fills = tuple(i for i, offer in enumerate(grouped) if offer.kind == "bench-craft" and "Fill" in offer.label)
+        exalts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "exalted-orb")
+        return (_rounds.Group(exalts, ("exalted-orb",), frozenset()), _rounds.Group(fills, ("bench-craft",), frozenset()))
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    monkeypatch.setattr(planner_plan, "offer_groups", groups)
+    with pytest.raises(PlanError) as raised:
+        plan_target(data, _target(tmp_path, data), _prices(), _settings(3))
+    said = str(raised.value)
+    assert UNREACHABLE not in said and "reaches the goal" not in said
+    assert said.startswith("stopped, no plan found yet: no round of the methods made a plan before the search stopped")
+    assert "No round finished, so nothing is shown about any method" in said
+    assert "round 1 (exalted-orb; 1 actions offered, 1 states): stopped (1 states were known, the limit is 3" in said
+
+
 def test_through_the_entry_rounds_that_all_finish_with_no_plan_are_the_proof(tmp_path, data, monkeypatch):
     _by_hand(monkeypatch, exalted=False)
     target = _target(tmp_path, data)
