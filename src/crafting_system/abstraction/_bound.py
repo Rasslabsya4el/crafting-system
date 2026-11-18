@@ -334,9 +334,11 @@ def reach_bound(
 
     `leaves` are indexes into `abstraction.goal.leaves`. The bound uses the pool alone and costs
     milliseconds; with `exact=True` the result is the exact chance. Returns None when the action
-    cannot be bounded: it reads the junk (it does not erase it), a part of its result is a `Fixed`
-    or a `Rerolled` one, or it fractures a mod. A roll limit on a mod of its pool is bounded since
+    cannot be bounded: it reads the junk (it does not erase it), a part of its result is a `Rerolled`
+    one or a `Fixed` one that adds a mod or rolls a value afresh, or it fractures a mod. A roll limit on a mod of its pool is bounded since
     #830: the bound counts a mod that passes at some roll, and the exact chance follows the mod's roll law.
+    A `Fixed` part that only keeps mods of `state` (an Orb of Scouring: the fractured mods and a locked side) is read exactly: its share counts
+    when its result has every leaf PASSING (#973, the moves of the offers' floors).
     """
     checkpoint()  # the run's net (#825, #702): the bound pruning raises thousands of these, in pool workers too (they inherit the run's clock by fork)
     leaves = tuple(leaves)
@@ -351,11 +353,15 @@ def reach_bound(
     try:
         prepared = abstraction._prepared(state, action)
         outcomes = prepared.outcomes
-        if outcomes.fractures or any(isinstance(part, (Fixed, Rerolled)) for _, part in outcomes.components):
+        if outcomes.fractures or any(isinstance(part, Rerolled) or (isinstance(part, Fixed) and not _keeps_only(prepared, part)) for _, part in outcomes.components):
             return None
         memo: dict = {}
         total = ZERO
         for share, part in outcomes.components:
+            if isinstance(part, Fixed):  # no draw: the result is the one item (`_keeps_only`)
+                status = abstraction._split(part.retained, prepared.origins).status
+                total += share if all(status[index] is Status.PASSING for index in leaves) else ZERO
+                continue
             _guard(part.pool)
             retained = abstraction._split(part.retained, prepared.origins).status
             todo = [index for index in leaves if retained[index] is not Status.PASSING]
@@ -375,6 +381,15 @@ def reach_bound(
         return min(ONE, total)
     except OutOfScopeError:
         return None
+
+
+def _keeps_only(prepared, part: Fixed) -> bool:
+    """Whether the `Fixed` result `part` holds only mods of the item it was given, none rolled afresh: a removal (an Orb of Scouring)."""
+    given = prepared.item
+    if given is None or part.rerolled:
+        return False
+    held = {(entry.mod_id, entry.fractured) for entry in given.mods}
+    return all((entry.mod_id, entry.fractured) in held for entry in part.retained.mods)
 
 
 def declared_bounds(abstraction: Abstraction, state: CompressedState, actions: Sequence[Action], leaves: Sequence[int]) -> list[Fraction | None]:

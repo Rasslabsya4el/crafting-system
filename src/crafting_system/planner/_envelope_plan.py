@@ -172,9 +172,12 @@ class CraftingProblem:
         k = self._key(state)
         if k is None:
             self.keys_missing += 1  # the model never reached this key: the floor of the offers' class (0 outside it) is a bound that needs no model
-            return self.floors.rho if self._klass(state) == OUTSIDE else 0.0
-        found = float(self.values[k])
-        return max(found, self.floors.rho) if self._klass(state) == OUTSIDE else found
+            return self._at(state)
+        return max(float(self.values[k]), self._at(state))
+
+    def _at(self, state: CompressedState) -> float:
+        """The floor of the state's class (`OfferFloors.at`): rho outside E in the start's shape, rho_S in the claim of another known shape, else 0."""
+        return 0.0 if self.floors is None else self.floors.at(self._klass(state))
 
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
