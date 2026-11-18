@@ -24,16 +24,16 @@ import pytest
 from abstraction_support import real_game_data
 from cli_support import R12, given
 from targets_support import DATA, EXAMPLES
-from test_planner_wipe import ALCHEMY, ALTERATION, SCOURING, chance, plan
+from test_planner_wipe import ALCHEMY, ALTERATION, SCOURING, chance, plan, prices
 
 import crafting_system.cli  # noqa: F401 - names the presenter of plans (`planner.present_with`, issue #882)
 from crafting_system.abstraction import Goal
 from crafting_system.actions import AlchemyOrb, AlterationOrb, ChaosOrb, ScouringOrb
 from crafting_system.items import Rarity
-from crafting_system.planner import _pattern_bound
+from crafting_system.planner import PlanSettings, _pattern_bound, plan_target
 from crafting_system.planner import _plan as planner_plan
 from crafting_system.planner._offer_floor import INSIDE, OUTSIDE, OfferFloors
-from crafting_system.planner._offer_kinds import MOVE, REROLL, SLACK, TERMINAL, _Entry, shape_rhos
+from crafting_system.planner._offer_kinds import MOVE, RESTART_KIND, REROLL, SLACK, TERMINAL, _Entry, shape_rhos
 from crafting_system.targets import load_target
 
 
@@ -154,6 +154,26 @@ def test_through_the_entry_a_plain_rare_start_is_floored_by_the_scouring_and_the
         assert floors.rho <= wiped.mean_remaining
         assert floors.rhos[1] == pytest.approx(ALCHEMY / p, rel=1e-9)
 
+
+
+def test_through_the_entry_a_normal_starts_model_starts_on_its_moves(floors_on):
+    """R12's amulet as a Normal item with no mod, with Alchemies and Chaos Orbs: from the Normal start every offer that can lead into E is a move
+    (the Alchemy makes the Rare shape), and the bound's model starts on it (`OfferFloors.initial`). Started on the rerolls alone it took no
+    action at the start, the start's model value was infinite and every offer joined at once: R17's 7,062 offers in one growth, 656 s past a
+    net of 19 s, and R04's 6,100, killed at 4 GB (#973)."""
+    r12 = load_target(R12, DATA)
+    normal = r12.start_item.changed(DATA, rarity=Rarity.NORMAL, mods=())
+    target = dataclasses.replace(r12, start_item=normal)  # bought: the restart is in the start set, as on every bought start (R17, R04)
+
+    planned = plan_target(DATA, target, prices(), PlanSettings(recipe_starts=False, start_price=1.0, methods=("chaos-orb", "alchemy-orb")))
+
+    assert math.isfinite(planned.mean_remaining)
+    for floors in _holding(floors_on, {"Orb of Alchemy", "Chaos Orb"}):
+        alchemy = next(position for position, entry in enumerate(floors.entries) if entry.priced.label == "Orb of Alchemy")
+        assert floors.entries[alchemy].kind == MOVE
+        assert any(entry.kind == RESTART_KIND for entry in floors.entries)  # so the start set is not the cheapest offers' fallback
+        assert alchemy in floors.initial()
+        assert floors.rho <= planned.mean_remaining
 
 CLASSIC_OFFERS = True  # plans a real route's target (R05's) in CI: the classic offers, though the methods are named below (`tests/test_classic_offers.py`)
 

@@ -54,6 +54,7 @@ from ._offer_kinds import (
     ADD,
     FINISHING,
     MOVE,
+    MOVE_ADD,
     NAMING,
     REROLL,
     REFUSED,
@@ -355,14 +356,23 @@ class OfferFloors:
         return min((self.lower(position, klass) for position in positions), default=math.inf)
 
     def initial(self) -> list[int]:
-        """The offers the model starts with: the restart, the crafts, the veiled choices and the `SMALL_START` rerolls of least cost / pbar (the cheapest
-        offers if none)."""
+        """The offers the model starts with: the restart, the crafts, the veiled choices and the `SMALL_START` rerolls and moves of least floor (a
+        reroll's cost / pbar; a move's key in `shape_rhos`, the least of its c / p and c + (1 - p) R) (the cheapest offers if none).
+
+        The moves are ranked with the rerolls (#973): from a Normal start every essence, Alchemy and Transmutation is a move into the shape it
+        makes, and a model started without them took no action at the start, its value there infinite, so every offer was found needed at
+        once (R17: 7,062 offers joining in one growth, 656 s past a net of 19 s; R04: 6,100, killed at 4 GB). Which offers the model starts
+        with only decides how it grows; any start set is sound."""
         inside = {entry.index for entry in self.entries if entry.kind in (RESTART_KIND, *NAMING)}
-        rerolls = sorted((entry for entry in self.entries if entry.kind == REROLL), key=lambda entry: (entry.ratio, entry.index))
+        rerolls = sorted((entry for entry in self.entries if entry.kind in (REROLL, MOVE, MOVE_ADD)), key=lambda entry: (self._start_key(entry), entry.index))
         inside.update(entry.index for entry in rerolls[:SMALL_START])
         if not inside:
             inside.update(entry.index for entry in sorted(self.entries, key=lambda entry: (entry.cost, entry.index))[:SMALL_START])
         return sorted(inside)
+
+    def _start_key(self, entry: _Entry) -> float:
+        """The floor `initial` ranks an offer by: cost / pbar, and for a move the least of that and its price plus the floor it lands in."""
+        return min(entry.ratio, entry.cost + self.after_leaving(entry)) if entry.dests else entry.ratio
 
     def needed(self, position: int, limits: dict[int, float | None]) -> float | None:
         """The floor that makes the offer at `position` worth building into the bound's model, or None when it cannot lower the value of any key it was
