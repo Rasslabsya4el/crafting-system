@@ -63,7 +63,8 @@ INERT_ON_J01 = frozenset({
 })  # fmt: skip
 MAGIC_ON_J01 = frozenset({"scouring-orb", "alchemy-orb", "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb"})  # #973
 REFUSED_ON_A_JEWEL = frozenset({  # cut A: listed for the jewel, refused by the model on every item of the base
-    "harvest-reforge", "harvest-add-remove", "harvest-resistance-swap", "harvest-damage-swap", "veiled-chaos-orb", "veiled-exalted-orb",
+    "harvest-reforge", "harvest-reforge-likelihood", "harvest-add-remove", "harvest-resistance-swap", "harvest-damage-swap", "veiled-chaos-orb",
+    "veiled-exalted-orb",
 })  # fmt: skip
 LISTED_AS_A_GAP = frozenset({"influenced-exalted-orb"})  # lists no action for a jewel (no influence class key) and tells it as a model gap (#818)
 NEED_A_VEIL = frozenset({"unveil", "pick"})  # cut B: no offered action makes a veiled placeholder on a jewel
@@ -142,7 +143,7 @@ def forced_walk_mean(data, target, prices, monkeypatch) -> tuple[float, int]:
 # --- 1 and 2: J01 -------------------------------------------------------------------------------------------------------------------
 
 
-def test_on_j01_every_kind_named_leaves_out_the_inert_kinds_and_the_eight_it_proves_unusable(data, tmp_path):
+def test_on_j01_every_kind_named_leaves_out_the_inert_kinds_and_the_nine_it_proves_unusable(data, tmp_path):
     target = jewel_target(data, tmp_path, "Cobalt Jewel", (LIFE, ATTACK_SPEED, WAND_SPEED), every_kind())
 
     chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions)

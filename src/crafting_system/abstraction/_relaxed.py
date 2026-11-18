@@ -54,9 +54,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from itertools import product
 
-from crafting_system.actions import Action
-from crafting_system.actions.outcomes import Outcomes
-from crafting_system.actions.pool import build_pool
+from crafting_system.actions import Action, Outcomes, build_pool
 from crafting_system.items import Side
 from crafting_system.items.model import ExplicitMod
 
