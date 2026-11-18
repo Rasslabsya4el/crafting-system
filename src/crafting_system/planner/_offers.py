@@ -526,6 +526,7 @@ def offers_for(
     listed = [action for action in listed if action not in refused]
 
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
+    implicit_roll_matters = _implicit_roll_limit_can_matter(data, goal, start_item)
     left_out_rolls: list[str] = []
     left_out_quality: list[str] = []  # a quality action (a catalyst) that cannot give the quality the goal asks for, or a goal that asks for none (#159)
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
@@ -537,7 +538,10 @@ def offers_for(
             continue
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(told_apart(action))
-        elif adds.needs_roll_limit and not roll_matters:
+        elif adds.needs_roll_limit and adds.implicits and not implicit_roll_matters:
+            if any(wish.has_roll_limit for wish in goal.implicits):  # else unsaid: no implicit roll matters (`_kinds_unsaid`, #1231)
+                left_out_rolls.append(told_apart(action))
+        elif adds.needs_roll_limit and not adds.implicits and not roll_matters:
             left_out_rolls.append(told_apart(action))
         elif adds.only_quality and not _gives_quality_wanted(data, goal, start_item, action):
             left_out_quality.append(told_apart(action))
@@ -578,7 +582,7 @@ def offers_for(
             offer = offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, ""))
             offers.append(replace(offer, blocks=classes[action]) if action in classes else offer)
 
-    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps, _quality_kinds_unsaid(data, goal, start_item))
+    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps, _kinds_unsaid(data, goal, start_item))
     unlisted = (
         tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.corrupting and entry.name not in kind_names)
         if kind_names is not None and not goal.takes_corrupted
@@ -651,7 +655,7 @@ def offers_for(
                 tuple(left_out_quality),
             ),
         )
-    if left_out_rolls and any(leaf.has_roll_limit for leaf in goal.leaves):  # a target without a roll limit needs no word about it
+    if left_out_rolls and any(item.has_roll_limit for item in (*goal.leaves, *goal.implicits)):  # a target without a roll limit needs no word about it
         limits += (
             Limit(
                 _limits.ROLLS,
@@ -730,7 +734,7 @@ def _kind_limits(
     """The kinds of the catalog that no plan for this target offers, each group with its reason: not named, opt-in, not built (K1, K2, K4),
     and what the listed kinds left out because the model has no rule for the start item (`listing_gaps`, #511).
 
-    A kind that only sets the quality is not named in any group when it is in `unsaid` (`_quality_kinds_unsaid`): it could not make the plan
+    A kind that only sets the quality is not named in any group when it is in `unsaid` (`_kinds_unsaid`): it could not make the plan
     cheaper, and a target that asks for quality hears about it in the line of its quality (`_quality_finish`, #159).
 
     A kind that only corrupts is the corrupting limit's when the target takes no corrupted item, and a kind that needs Memory
@@ -805,15 +809,18 @@ def _kind_limits(
     return found
 
 
-def _quality_kinds_unsaid(data: GameData, goal: Goal, start_item: Item) -> frozenset[str]:
+def _kinds_unsaid(data: GameData, goal: Goal, start_item: Item) -> frozenset[str]:
     """The kinds that only set the quality (`Kind.only_quality`: the catalysts, the quality currency) the answer does not name among the methods
     left out (#159): all of them when the target asks for no quality (quality changes no odds of the mods, ADR-0029, so none could make the plan
     of the mods cheaper; a target that names sockets has the quality currency in its socket finish, which says it, `_finish.finish_limits`), and
-    else those that list nothing for the start item (a catalyst on boots, a quality currency on a ring)."""
+    else those that list nothing for the start item (a catalyst on boots, a quality currency on a ring). The kinds that only reroll implicit
+    values (`Kind.only_implicit_rolls`, the Blessed Orb) likewise when the target asks for no roll of an implicit the start item holds with a
+    range (#1231): no roll of it can matter, and a target whose implicit is a finish says the orb in the finish's line."""
     quality_kinds = [entry.name for entry in kinds() if entry.only_quality]
+    rerolls = frozenset() if _implicit_roll_limit_can_matter(data, goal, start_item) else frozenset(entry.name for entry in kinds() if entry.only_implicit_rolls)
     if goal.quality is None:
-        return frozenset(quality_kinds)
-    return frozenset(name for name in quality_kinds if not catalog_kinds(data, start_item, names=frozenset({name})))
+        return frozenset(quality_kinds) | rerolls
+    return frozenset(name for name in quality_kinds if not catalog_kinds(data, start_item, names=frozenset({name}))) | rerolls
 
 
 def listing_gap_limits(gaps: Collection[ListingGap], goal: Goal) -> tuple[Limit, ...]:
@@ -1000,6 +1007,16 @@ def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed:
         return bool(limited & drawable_mod_ids(data, start_item))
     except (NotApplicableError, OutOfScopeError):  # either: a pool that cannot be built is no proof the mod is out of reach, so the orb stays (nothing is left out)
         return True
+
+
+def _implicit_roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item) -> bool:
+    """Whether a roll limit of the goal's implicit wishes is on a ranged implicit the start item holds: the only implicits whose values an action
+    that rerolls implicit values alone (`Adds.needs_roll_limit` with `Adds.implicits`, a Blessed Orb, #1231) can change. An implicit another
+    action puts on the item (an Ember, an Ichor, an Orb of Conflict) is rolled by that action, whose own outcomes give its values, and an
+    Eldritch implicit is no Blessed Orb's to reroll (`actions/blessed.py`: the orb is not offered on an item that holds one)."""
+    mods = (data.mods.get(entry.mod_id) for entry in start_item.implicits)
+    held = {mod.id for mod in mods if mod is not None and eldritch_side(mod) is None and any(stat.min != stat.max for stat in mod.stats)}
+    return any(wish.has_roll_limit and wish.mod_ids & held for wish in goal.implicits)
 
 
 def _gives_quality_wanted(data: GameData, goal: Goal, start_item: Item, action: Action) -> bool:

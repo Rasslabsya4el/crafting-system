@@ -313,14 +313,14 @@
           "lower": null,
           "seconds": null,
           "peak_mb": null,
-          "stop": "not planned: the target asks for an implicit roll and catalyst quality, which the planner does not plan yet (#516); the route file holds the guide's steps 2 and 3 only"
+          "stop": "not planned: the start belt has no price (#483, #515), the planner takes the target since #159 and #1231 but its search for the mods gives no plan within 25 minutes yet (#1267), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232)"
         },
         {
           "mean": null,
           "lower": null,
           "seconds": null,
           "peak_mb": null,
-          "stop": "not planned: the target asks for an implicit roll and catalyst quality, which the planner does not plan yet (#516); the route file holds the guide's steps 2 and 3 only"
+          "stop": "not planned: the start belt has no price (#483, #515), the planner takes the target since #159 and #1231 but its search for the mods gives no plan within 25 minutes yet (#1267), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232)"
         }
       ],
       "state": "no plan",

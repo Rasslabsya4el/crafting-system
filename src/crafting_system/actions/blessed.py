@@ -25,8 +25,9 @@ implicit values stand at their lowest, like the mods a `Finite` adds), `chance_a
 action that adds no mod, `sample` which rolls the values, and `value_law(mod_id, index)`, the exact law of one rolled
 value, for a requirement on an implicit roll (ticket #158). `Reads.implicits` and `Adds.implicits` are declared, so the
 compressed state keeps the implicits a requirement names, and the kernel spreads the rerolled ones over `value_law` (ticket #158; layer 1
-in `tests/test_abstraction_implicit_rolls.py`). The kind is no planner kind until the planner takes a target that names an implicit
-(ticket #159), so the contract suite does not ask it about its fixture items.
+in `tests/test_abstraction_implicit_rolls.py`). It is a planner kind since #1231 (OR-37: B2), offered only to a target that asks for a roll of
+an implicit the start item holds with a range (`planner._offers`); where nothing else changes the implicits the planner rolls it last, as a
+finish after the mods (`planner._implicit_finish`: `b / p` from the chance `p` one use meets the target, read from `value_law`).
 
 Memory Strands (ticket #287, ADR-0041): it neither cuts nor spends; the claim is memory_strands.cut_follows_spend_table (approximate).
 
@@ -183,13 +184,12 @@ class BlessedOrb(Action):
 @kind(
     "blessed-orb",
     order=88,
-    planner=False,
-    why_not="the planner refuses a target that names a base implicit (#516; the catalyst quality is planned since #159, and the compressed state holds a base implicit and its roll since ticket #158)",
     # it works on an item that holds a ranged implicit (a ring, an amulet, a belt, a base with one), and none of the contract suite's
     # fixture amulets does
     applies_only_to="an item with a ranged implicit",
     reads_item_state_while_not_planner="any",  # it reads and rerolls the implicits
     burns=True,  # a burn where no requirement reads the implicits (ticket #295)
+    only_implicit_rolls=True,  # it rerolls implicit values alone: unmentioned for a target that asks for no implicit roll (#1231)
 )
 def _blessed_orb(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)

@@ -71,6 +71,7 @@ STATE_LINE = "state-line"
 RISK = "risk"
 FINISH = "socket-finish"
 QUALITY_FINISH = "quality-finish"
+IMPLICIT_FINISH = "implicit-finish"
 
 GROUPS: tuple[tuple[str, str], ...] = (
     (NOT_NAMED, "Methods this run's setting leaves out"),
@@ -96,6 +97,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (START, "The start item"),
     (FINISH, "The sockets"),
     (QUALITY_FINISH, "The quality"),
+    (IMPLICIT_FINISH, "The implicit"),
     (SOLVE, "How the answer was found"),
     (REACHED, "A plan that reaches the target, not one shown near the best"),
     (BUDGET, "Time and memory limits that stopped a stage"),

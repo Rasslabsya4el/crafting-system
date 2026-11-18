@@ -43,7 +43,8 @@ from ._axes import axis_what
 from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
-from . import _quality_finish
+from . import _implicit_finish, _quality_finish
+from ._implicit_finish import ImplicitFinish, ImplicitFinishRefused, implicit_finish_limits, plan_implicit_finish
 from ._quality_finish import QualityFinish, QualityFinishRefused, plan_quality_finish, quality_finish_limits
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
@@ -192,6 +193,7 @@ class Plan:
     finish: PlanFinish | None = None  # the socket finish added to every goal state (ticket #231, ADR-0045); None for a target that names no sockets
     donors: "DonorPlan | None" = None  # set when an offer takes donors (ticket #225): the product of the main item and its donors' processes
     quality_finish: QualityFinish | None = None  # the catalyst quality applied after the mods (#159, `_quality_finish`); None when none is asked or it is searched
+    implicit_finish: ImplicitFinish | None = None  # the base implicit rolled by Blessed Orbs after the mods (#1231, `_implicit_finish`); None when none is asked or it is searched
 
     def __post_init__(self) -> None:
         # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13),
@@ -246,18 +248,23 @@ class Plan:
 
     @property
     def finish_value(self) -> float:
-        """What the finishes add to every goal state: the socket finish's mean from the start item's sockets (ADR-0045) and the quality finish's
-        from its quality (#159), 0 for a target that asks for neither.
+        """What the finishes add to every goal state: the socket finish's mean from the start item's sockets (ADR-0045), the quality finish's
+        from its quality (#159) and the implicit finish's from its implicit (#1231), 0 for a target that asks for none.
 
         One value for every goal state (no mod action changes sockets; Orb of Binding, which gives a goal a second one, is ticket #232; no mod
-        action changes the quality where it is a finish), so the plan of the mods is the cheapest with the finishes too and only its mean grows
-        (`_finish.py`, `_quality_finish.py`)."""
-        return (0.0 if self.finish is None else self.finish.value) + self.quality_finish_value
+        action changes the quality or the implicit where it is a finish), so the plan of the mods is the cheapest with the finishes too and only
+        its mean grows (`_finish.py`, `_quality_finish.py`, `_implicit_finish.py`)."""
+        return (0.0 if self.finish is None else self.finish.value) + self.quality_finish_value + self.implicit_finish_value
 
     @property
     def quality_finish_value(self) -> float:
         """What the quality finish adds to every goal state (#159): the mean cost of the catalysts from the start item's quality, 0 for none."""
         return 0.0 if self.quality_finish is None else self.quality_finish.value
+
+    @property
+    def implicit_finish_value(self) -> float:
+        """What the implicit finish adds to every goal state (#1231): the mean cost of the Blessed Orbs from the start item's implicit, 0 for none."""
+        return 0.0 if self.implicit_finish is None else self.implicit_finish.value
 
     def value_of(self, state: CompressedState) -> float:
         """The expected cost from `state` to the finished item: the solver's value of the mods plus the finish, which every goal state adds."""
@@ -461,28 +468,40 @@ def make_plan(
     which for a target read from a file is every beta method. A target that asks for a catalyst quality is planned without it, and the quality is
     added as a finish (`_quality_finish`, #159: no other method changes the quality, so the catalysts come last and cost `Q(q0)` from the start
     item's quality, `Plan.quality_finish`); where an offered action changes or reads the quality, or corrupts the item, the quality is searched
-    with the mods instead. The rest is `_make_plan`'s text.
+    with the mods instead. A target whose implicit wishes are all on base implicits the start item holds is planned without them likewise, and
+    the roll is added as a finish of Blessed Orbs (`_implicit_finish`, #1231: no other method changes a base implicit, so the orbs come last and
+    cost `b / p`, `Plan.implicit_finish`); where an offered action changes or reads the implicits, or corrupts the item, the implicit is
+    searched with the mods instead. The rest is `_make_plan`'s text.
     """
     target = with_methods(target, methods)
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
-    finished_last = _quality_finish.applies(target, offers, judged=judges_route or incumbent is not None or route_actions is not None)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
+    judged = judges_route or incumbent is not None or route_actions is not None
+    finished_last = _quality_finish.applies(target, offers, judged=judged)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
+    implicit_last = _implicit_finish.applies(data, target, offers, judged=judged)  # so is a base implicit's roll (#1231)
+
+    def mods_target() -> Target:
+        return replace(target, quality=None if finished_last else target.quality, implicits=() if implicit_last else target.implicits)
+
     with running(plan_budget.start() if plan_budget is not None else None) as clock:
         try:
             plan = _make_plan(
-                data, replace(target, quality=None) if finished_last else target, prices, start_price=start_price, offers=offers,
+                data, mods_target(), prices, start_price=start_price, offers=offers,
                 aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
                 strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
                 incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
             )  # fmt: skip
-            if finished_last and not _quality_finish.holds(data, (p.offer.action for p in plan.offers if not isinstance(p.offer.action, BuyStartItem))):
-                # an offered action other than a catalyst changes or reads the quality, or corrupts the item (a recombinator, a Vaal Orb a run
-                # names): the finish is not exact, so the quality is searched with the mods, in the one search. The second plan shares the run's
-                # clock, so it pays what is left of the net: only a deferred method or a named corrupting one leads here, and checking the
-                # offers before the first plan would need the offers `_make_plan` chooses (#159)
-                finished_last = False
+            offered = [p.offer.action for p in plan.offers if not isinstance(p.offer.action, BuyStartItem)]
+            quality_holds = not finished_last or _quality_finish.holds(data, offered)
+            implicit_holds = not implicit_last or _implicit_finish.holds(data, offered)
+            if not (quality_holds and implicit_holds):
+                # an offered action other than a catalyst changes or reads the quality, or one changes or reads the implicits, or corrupts the
+                # item (a recombinator, a Vaal Orb a run names, an Ember on boots): that finish is not exact, so what it would finish is searched
+                # with the mods, in the one search. The second plan shares the run's clock, so it pays what is left of the net; checking the
+                # offers before the first plan would need the offers `_make_plan` chooses (#159, #1231)
+                finished_last, implicit_last = finished_last and quality_holds, implicit_last and implicit_holds
                 plan = _make_plan(
-                    data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds,
+                    data, mods_target(), prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds,
                     rates=rates, strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver,
                     with_risk=with_risk, incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
                 )  # fmt: skip
@@ -490,20 +509,31 @@ def make_plan(
             if clock is not None:
                 clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
             raise PlanError(stopped_refusal(clock, stop.binding)) from None
-    if finished_last:  # after the mods, so that a refusal of the target itself is said first
-        try:
-            plan = with_quality_finish(plan, plan_quality_finish(data, target, prices, price_source, names=target.actions))
-        except (QualityFinishRefused, OutOfScopeError) as error:
-            raise PlanError(str(error)) from error
+    # after the mods, so that a refusal of the target itself is said first
+    try:
+        quality = plan_quality_finish(data, target, prices, price_source, names=target.actions) if finished_last else None
+        implicit = plan_implicit_finish(data, target, prices, price_source, names=target.actions) if implicit_last else None
+    except (QualityFinishRefused, ImplicitFinishRefused, OutOfScopeError) as error:
+        raise PlanError(str(error)) from error
+    plan = with_finishes(plan, quality, implicit)
     return with_bindings(plan, clock) if owns else plan
 
 
-def with_quality_finish(plan: Plan, quality: QualityFinish) -> Plan:
-    """`plan` of the mods with the quality finish added (#159): its value on every goal state, and the lines that say it (`_quality_finish`)."""
+def with_finishes(plan: Plan, quality: QualityFinish | None, implicit: ImplicitFinish | None) -> Plan:
+    """`plan` of the mods with the quality finish (#159) and the implicit finish (#1231) added: their values on every goal state, and the lines
+    that say them (`_quality_finish`, `_implicit_finish`). Each line gives the total of the whole craft, the mods and both finishes."""
+    if quality is None and implicit is None:
+        return plan
     mods = plan.solution.values.get(plan.start, float("inf"))
     upper_end = plan.approximation is not None or (plan.search is not None and not plan.search.exact)  # the mods' mean is then an upper end (OR-13)
-    said = quality_finish_limits(quality, mods, mods_at_most=upper_end)
-    return replace(plan, quality_finish=quality, limits=(*plan.limits, *said))
+    quality_value = 0.0 if quality is None else quality.value
+    implicit_value = 0.0 if implicit is None else implicit.value
+    said: tuple[Limit, ...] = ()
+    if quality is not None:
+        said += quality_finish_limits(quality, mods + implicit_value, mods_at_most=upper_end)
+    if implicit is not None:
+        said += implicit_finish_limits(implicit, mods + quality_value + implicit_value, at_most=upper_end)
+    return replace(plan, quality_finish=quality, implicit_finish=implicit, limits=(*plan.limits, *said))
 
 
 def with_methods(target: Target, methods: tuple[str, ...] | None) -> Target:
@@ -672,9 +702,9 @@ def _make_plan(
     `start_price` is the cost of the start item for this run (it wins over the price file);
     `offers` default to `offers_for` the target. Raises `PlanError` when the target asks for the plain quality of a weapon or armour (the
     catalyst quality is planned since #159: as a finish after the mods, `make_plan`, or where that is not exact with the quality in the bound's key
-    and a catalyst offered last) or for an implicit that is not an
-    Eldritch one (a base or a corrupted implicit; the Eldritch implicits are planned since #835: the bound's key holds the pair, and the
-    Eldritch currencies are offered to a target that asks for one), when no offer has a price or no policy reaches the
+    and a catalyst offered last) or for a corrupted implicit (the Eldritch implicits are planned since #835: the bound's key holds the pair, and the
+    Eldritch currencies are offered to a target that asks for one; a base implicit's roll since #1231: as a finish after the mods, `make_plan`, or
+    where that is not exact with the roll status in the bound's key and the Blessed Orb an offer), when no offer has a price or no policy reaches the
     goal, and what the layers below raise for a bad input.
 
     A target that names sockets (ADR-0045, ticket #231) is planned in two parts: the mods as for the same target without sockets, and the socket
@@ -750,10 +780,10 @@ def _make_plan(
             "the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a"
             " method of the planner); it plans the catalyst quality of a ring, an amulet or a belt"
         )
-    if any(wish.corrupted or not any(mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
+    if any(wish.corrupted for wish in target.implicits):
         raise PlanError(
-            "the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet;"
-            " it plans the Searing Exarch and Eater of Worlds implicits"
+            "the target asks for a corrupted implicit, which the planner cannot plan yet; it plans the implicits of the base (rolled by a"
+            " Blessed Orb) and the Searing Exarch and Eater of Worlds implicits"
         )
     if target.enchantment is not None:
         raise PlanError(
