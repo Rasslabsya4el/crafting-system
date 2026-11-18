@@ -524,6 +524,7 @@ class Pattern:
         self._universes: dict[frozenset, _Universe] = {}
         self._reads: dict[Action, object] = {}
         self._only_named: dict[Action, bool] = {}
+        self._draws: dict[Action, bool] = {}
         self._feasible: dict[CompressedState, bool] = {}
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
@@ -758,6 +759,13 @@ class Pattern:
         found = self._only_named.get(action)
         if found is None:
             found = self._only_named[action] = action.adds(self.data).only_named
+        return found
+
+    def draws(self, action: Action) -> bool:
+        """Whether `action` may draw a mod from a pool (`Adds.draws`; an action that declares nothing draws)."""
+        found = self._draws.get(action)
+        if found is None:
+            found = self._draws[action] = action.adds(self.data).draws
         return found
 
     def holds_lock(self, key: PatternKey) -> bool:
@@ -1492,7 +1500,10 @@ class PatternBuilder:
         for offer in self.offers[lo:hi]:
             if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
-            if SHARE_ADDITIONS and self.pattern.adds_only_named(offer.action):  # one fixed result, nothing to draw: priming would only prepare every pair
+            if not self.pattern.draws(offer.action):
+                # nothing is drawn (a bench craft, a Fracturing Orb, an Annulment): no walk to make ahead, and preparing its pairs here would
+                # make the item of every member, the ones the build then answers without one too (a certain addition, a refusal of the key;
+                # #1193: on R04's 19 offers the Fracturing Orb's pairs were prepared at every pure junk assignment of every key)
                 continue
             policy = self.pattern.policy(offer.action, key)
             if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw

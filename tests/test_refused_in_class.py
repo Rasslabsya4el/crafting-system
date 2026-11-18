@@ -210,3 +210,24 @@ def test_a_refusal_of_the_key_leaves_the_bound_of_a_real_route(route, tags, monk
     assert new_shared == old_shared > 0
     assert new_profiles <= old_profiles
     assert new.pieces == old.pieces and str(new.model.stopped) == str(old.model.stopped)  # the counted net (`PIECES`) stops where it did
+
+
+def test_only_the_actions_that_draw_are_prepared_ahead_for_the_process_pool(monkeypatch):
+    """The build prepares, ahead of a key's offers, the pairs whose walks a process pool could make (`PatternBuilder._prime`). An action that
+    draws nothing has no walk, and its pairs prepared there were the items of every member made a first time: the Fracturing Orb's at every
+    pure junk assignment, refused by the key or not (#1193)."""
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 1)  # every key prepares its offers (the product does from 16)
+    primed: list = []
+    monkeypatch.setattr(Abstraction, "prime", lambda self, requests, **options: primed.extend(requests))
+    data = pattern_data()
+    offers = [*offers_of(), PatternOffer("bench-lock", ACTIONS["bench-lock"], 1.0), PatternOffer("bench-craft", ACTIONS["bench-craft"], 2.0)]
+    ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+    model = build_pattern_model(ab, ab.compress(build(data, BOW, STARTS[0])), offers)
+    names = {action: name for name, action in ACTIONS.items()}
+    asked = {names[offer.action] for offer in offers if offer.action is not None}
+    assert {"chaos", "exalted", "annul", "fracture", "remove", "bench-lock", "bench-craft"} <= asked
+    assert {names[action] for _, action in primed} == {name for name in asked if ACTIONS[name].adds(data).draws}
+    assert {names[action] for _, action in primed} == {"chaos", "exalted"}
+    plain = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 10**9)
+    same_model(build_pattern_model(plain, plain.compress(build(data, BOW, STARTS[0])), offers), model)
