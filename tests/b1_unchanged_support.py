@@ -15,6 +15,8 @@ import json
 import sys
 from pathlib import Path
 
+from catalog_lists_support import limits_without
+
 from crafting_system.abstraction import Abstraction, Goal, integer_weights
 from crafting_system.actions import ActionError
 from crafting_system.planner._offers import offers_for
@@ -49,7 +51,7 @@ def route_fingerprint(data, stem: str) -> dict:
     goal = Goal.from_target(target)
     chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
     offers = [[offer.label, sorted(offer.resources.items()), offer.tag, offer.shares] for offer in chosen.offers]
-    limits = sorted(repr(entry) for entry in chosen.limits)
+    limits = sorted(repr(entry) for entry in limits_without(chosen.limits))  # not the lists read off the catalog: every new method moves them (#1277)
     enabled = [offer.action for offer in chosen.offers if offer.action.reads(data).junk]
     ab = Abstraction(data, goal, target.base_id, target.item_level, enabled)
     start = ab.compress(target.start_item)

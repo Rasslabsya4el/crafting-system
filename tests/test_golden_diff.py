@@ -14,6 +14,7 @@ import golden_diff
 import pytest
 import route_view_support
 import targets_sockets_support
+from catalog_lists_support import one_element_to_a_line
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDENS = sorted((ROOT / "tests" / "golden").iterdir())
@@ -241,7 +242,9 @@ def test_the_size_limit_of_the_summary_counts_utf8_bytes_not_characters(repo, mo
 def test_assert_golden_fails_with_the_readable_diff_not_two_page_strings(tmp_path, monkeypatch):
     monkeypatch.setattr(route_view_support, "GOLDEN", tmp_path)
     monkeypatch.delenv("UPDATE_GOLDEN", raising=False)
-    (tmp_path / "toy.html").write_text(PAGE, encoding="utf-8", newline="\n")
+    recorded = one_element_to_a_line(PAGE)  # a page is recorded with one element to a line (#1277)
+    assert recorded != PAGE
+    (tmp_path / "toy.html").write_text(recorded, encoding="utf-8", newline="\n")
 
     route_view_support.assert_golden("toy", PAGE)
     with pytest.raises(AssertionError) as caught:

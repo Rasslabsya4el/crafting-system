@@ -570,6 +570,18 @@ first draw's kernel holds 303,948 and 468,779 states, every one new, so neither 
 that runs out of memory or time there is not fixed by a smaller N, and runs with the run wrapped so that a runaway is killed alone
 (`systemd-run --scope -p MemoryMax=...` on the server).
 
+**A new method changes one recorded file** (#1277). The lists an answer reads off the catalog (the kinds the run's methods setting does not
+name, the kinds offered only when it names them, the methods the planner cannot use yet) are not recorded in any page, text report, JSON
+policy or digest: `tests/catalog_lists_support.py` writes a placeholder where their labels stand, in what a test writes and in what it
+compares, and the page a user reads is untouched. The pages of the fixture world (`r12_fixture.html`, `r12_fixture_given_route.html`,
+`given_route_differs.html`, planned with every method on against a price file of two prices) record "Actions with no price" by its kinds
+of line only. So a pull request that adds a kind, or turns one into a planner kind, re-records `tests/golden/reachability.md` (the
+catalog's record, a row per kind) and names the kind in `tests/test_classic_offers.py`; a page, `v01_minion_helmet.*` or
+`b1_unchanged_142.json` moves only when the route's own steps, prices, costs or other limits move, and then the pull request says
+which. `tests/test_catalog_lists.py` holds this as a test (a kind added to the catalog changes what the user reads and nothing
+recorded) and checks the lists against the catalog. A recorded page has one element to a line, so two pull requests that change
+different parts of one page merge in git.
+
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
 in the PR, and commit the file (a golden that needs the real game data is re-recorded on the server, where the data is, or on a runner by a heavy run with `--commit`, below). Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
 real game data is taken from where it is made, since a PC without the cache cannot make it. `reachability.md` is the artifact
