@@ -308,13 +308,15 @@ class OfferFloors:
         self.ask()
         if self.tally is not None:
             self.tally.done += 1
-        self._lift(shape, entry, level)
+        with self.inside():
+            self._lift(shape, entry, level)
 
     def _lift(self, shape: int, entry: _Entry, level: int) -> None:
-        with self.inside():
-            entry.kind, entry.pbar, entry.level, entry.dests = _raised(
-                self.views[shape], entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level, entry.dests
-            )
+        """Bring an offer of the shape `shape` to `level`, the net not asked: `tighten` calls it from the search, which keeps its own net and
+        does not catch `FloorsStopped` (#829); the floors' own raises ask it through `_raise_in`."""
+        entry.kind, entry.pbar, entry.level, entry.dests = _raised(
+            self.views[shape], entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level, entry.dests
+        )
 
     # ---- the classes of states ------------------------------------------------------------------------------------------
 
