@@ -931,7 +931,7 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
     if held:  # its model grows one offer at a time (#1224: past a quarter of its share the build goes on only at a pace that ends in its room)
         _one_offer_per_model(monkeypatch)
     else:  # the rule before #1099: a round's build had a quarter's worth of its share, a plan in hand or not
-        monkeypatch.setattr(planner_plan, "search_net", lambda clock, searches=1, give_way=None, states=None, held=False, walked=False: real_net(clock, searches, give_way, states))
+        monkeypatch.setattr(planner_plan, "search_net", lambda clock, searches=1, give_way=None, states=None, held=False, walked=False, blind=None: real_net(clock, searches, give_way, states))
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
     monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)

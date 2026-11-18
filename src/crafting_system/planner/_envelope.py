@@ -252,6 +252,19 @@ class Net:
     # how many times its seconds (or its pieces) a nearly done bound's build of a search with a plan in hand (held or walked) may go past them
     # (`abstraction._pattern.Growth`, #1135); set by `_plan.search_net`, 0 for none
     late: float = 0.0
+    # a round of the planner's widening that began with no plan in hand while other rounds are left (`_rounds`, #1268): the rounds left, this
+    # one included. Should its bound's build end before it is complete, its search keeps to its share of the net (the net over `blind`) and
+    # gives way with no plan, so the rounds after it are tried (`_envelope_plan._envelope_run`, `YIELDED`); None: the whole net
+    blind: int | None = None
+    # (seconds, states) set by `_envelope_plan` for such a round once its build ended before it was complete: the search gives way once it has
+    # used them with no plan in hand (`YIELDED`); either None when the net has no such figure
+    yield_at: tuple[float | None, int | None] | None = None
+
+
+YIELDED = (
+    "its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left "
+    "over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan"
+)  # the words of a round with no plan in hand that gave way (`Net.blind`, `Net.yield_at`, `_rounds.widen`, #1268)
 
 
 @dataclass
@@ -989,6 +1002,12 @@ class Search[S]:
         in a run counted in states, `Net.pieces` set, where it is asked at every state of the chain and of a round). `seconds`, when given, is
         the time limit in place of the net's (`Net.first`, the first plan's chain)."""
         net = self.net
+        if net.yield_at is not None and self.upper is None:  # a round with no plan in hand on a bound not complete (`Net.blind`, #1268)
+            after, known = net.yield_at
+            if after is not None and time.perf_counter() - began >= after:
+                return f"{YIELDED} ({after:g} seconds)"
+            if known is not None and states and len(self.states) >= known:
+                return f"{YIELDED} ({len(self.states):,} states known)"
         limit = net.seconds if seconds is None else seconds
         if limit is not None and time.perf_counter() - began >= limit:
             if seconds is None and net.first is not None:  # the search after a bound's build that went past the round's share (#1135)

@@ -294,6 +294,16 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     share, where it took the whole share and left the search none (R17, R20: #1167); one that grows its model and has no pace yet (its first
     model not solved, or its growth has added no offer) has nothing that shows it will end, and stops at the quarter, whatever the plan in hand (R13's round
     2, #1142; R17's site plan, whose rounds' first models were unsolved after their whole share).
+
+    **A round with no plan in hand and others after it (`Net.blind`, #1268)** builds as any round with no plan in hand does (its quarter of
+    the time left). Should its build end before it is complete, its search has the round's share of the time (the time left over the rounds
+    left), counted from the search's own start, to make a plan; with none by then the round gives way (`_envelope.YIELDED`, `Net.yield_at`),
+    and the rounds after it are tried; a search that holds a plan by then goes on as any round's does once its search holds one
+    (`_rounds.Share`). R04's site plan: its fossil sets' round built for its quarter and was not complete, and its search took the 321 s left
+    with no plan, so the rounds that hold the guide's methods (essences, the Exalted and the Fracturing Orb) were never tried (#1135, #1193,
+    #1256, #1268). The build itself is not cut shorter: R10's and R13's first plans come from a bound not complete that took its whole
+    quarter (149 s and 146 s) and then held the plan in seconds; a build cut to the round's share left R10 and R13 with no plan (#1268's
+    measurements).
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
@@ -491,6 +501,14 @@ def _envelope_run(
         say(f"first plan's order: the count solved on what it finished, the start at {problem.closed_start!r} ({ready - built:.1f} s)")
     # the search has what the build and the problem left of the time (OR-40), and the aim is of the whole plan (OR-33): both count, the closed solve
     # of a stopped build (#948) included, which is one more solve of the model the build already solved and so of the same order as its own
+    # a round with no plan in hand and others left whose build ended before it was complete (`Net.blind`, #1268): its search, on a bound that
+    # does not show it the way, gives way once it has used the round's share with no plan in hand, counted from its own start (`Net.yield_at`)
+    if net is not None and net.blind is not None and net.blind > 1 and not (net.held or net.walked) and not bound.complete:
+        net = dataclasses.replace(
+            net, yield_at=(
+                None if net.seconds is None else net.seconds / net.blind, None if net.states is None else max(net.states // net.blind, 1)
+            ),
+        )  # fmt: skip
     if net is not None and net.seconds is not None:
         late = (1.0 + net.late) * net.seconds - (ready - began)  # a nearly done build went past the share (`BuildStop`): the first plan has what is left of its room
         net = dataclasses.replace(net, seconds=max(net.seconds - (ready - began), 0.0), first=max(late, 0.0) if bound.late and bound.complete else net.first)
