@@ -1,0 +1,23 @@
+dump ../../scratch/t1310/k-R24.pkl: keys 60904 (choice nodes 0), worked out 60904, kernels 15057, rows 245515, offers 11, start value 3617.644353959281, stopped None
+offers: Harvest Add Remove Fire 330.6; Deafening Essence of Torment 2.02; Bench craft Suffixes Cannot Be Changed 353.2; Veiled Chaos Orb 18.48; Unveil 1.782e-07; Pick 1 1.782e-07; Pick 2 1.782e-07; Pick 3 1.782e-07; Orb of Annulment 12.73; Orb of Alteration 0.1782; restart 50
+PARTS  part: distinct values | keys left when this part alone is dropped
+  flags           1 |   60904
+  fractured       1 |   60904
+  status        196 |    3251
+  held          200 |    6853
+  crafted         2 |   36909
+  counts         12 |   60904
+  tags           12 |   60904
+  veiled         20 |   55194
+  counts: (0, 2) x18396 ; (1, 2) x17850 ; (2, 2) x8652 ; (0, 1) x4380 ; (1, 1) x4250 ; (0, 3) x2744 ; (2, 1) x2060 ; (1, 3) x1470 ; (0, 0) x438 ; (1, 0) x425 ; (2, 0) x206 ; (2, 3) x33
+  crafted: () x36909 ; (Slot(side=<Side.PREFIX: 'prefix'>, kind='DexMasterItemGenerationCannotChangeSuffixes', contribution=(<Status. x23995
+  fractured: (FracturedMod(mod_id='IncreasedMana12', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: x60904
+  flags: Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()) x60904
+  tags: (((1, ()), 2),) x18396 ; (((0, ()), 1), ((1, ()), 2)) x17850 ; (((0, ()), 2), ((1, ()), 2)) x8652 ; (((1, ()), 1),) x4380 ; (((0, ()), 1), ((1, ()), 1)) x4250 ; (((1, ()), 3),) x2744
+  a status: (<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)
+  leaves in the status: 7 ; keys by leaves PASSING: {1: 18722, 2: 29383, 3: 12231, 4: 538, 5: 30}
+MERGED without tags; counts as their total: 53291 keys, 13438 kernels, 215269 rows; start value 3617.6443539599836 (solver's error 4.2e-10); policy from the start visits 175 keys (0 at a tip's floor) and uses: Deafening Essence of Torment x102; Bench craft Suffixes Cannot Be Changed x14; Veiled Chaos Orb x14; Pick 3 x14; Pick 2 x7; Orb of Annulment x6; Unveil x6; Pick 1 x6
+MERGED without tags; counts capped at 1 a side: 39517 keys, 11895 kernels, 161901 rows; start value 3359.6349184788096 (solver's error 3e-10); policy from the start visits 136 keys (0 at a tip's floor) and uses: Deafening Essence of Torment x70; Pick 3 x20; Bench craft Suffixes Cannot Be Changed x12; Veiled Chaos Orb x12; Unveil x6; Pick 2 x4; Pick 1 x3; Orb of Annulment x3
+MERGED without tags; counts capped at 2 a side: 59089 keys, 13649 kernels, 238935 rows; start value 3617.64435395844 (solver's error 4.1e-10); policy from the start visits 177 keys (0 at a tip's floor) and uses: Deafening Essence of Torment x104; Pick 3 x15; Bench craft Suffixes Cannot Be Changed x14; Veiled Chaos Orb x14; Orb of Annulment x6; Unveil x6; Pick 1 x6; Pick 2 x6
+MERGED without tags; prefix count only: 47330 keys, 12362 kernels, 192635 rows; start value 3617.6443539599695 (solver's error 3.7e-10); policy from the start visits 174 keys (0 at a tip's floor) and uses: Deafening Essence of Torment x101; Pick 3 x21; Bench craft Suffixes Cannot Be Changed x14; Veiled Chaos Orb x14; Orb of Annulment x6; Unveil x6; Pick 1 x5; Pick 2 x1
+MERGED without tags; suffix count only: 25958 keys, 11809 kernels, 109328 rows; start value 3128.5494748024894 (solver's error 2.7e-10); policy from the start visits 65 keys (0 at a tip's floor) and uses: Deafening Essence of Torment x41; Bench craft Suffixes Cannot Be Changed x6; Veiled Chaos Orb x6; Pick 3 x4; Unveil x3; Pick 2 x2

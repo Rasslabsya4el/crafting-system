@@ -1,0 +1,1 @@
+LEAD=names:Beastcraft Wild Bristle Matron (add a metamod)|Bench craft Suffixes Cannot Be Changed|Essence of Horror|Harvest Reforge Fire|Harvest Reforge Influence|Orb of Annulment
