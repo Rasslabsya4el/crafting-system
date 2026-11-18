@@ -1,0 +1,184 @@
+
+=== R12: 9298 offers (5960 after twins), start rare, rounds apply True, open leaves 1 (1 necessary, U 1), providers 116, crafts naming no goal mod 59, tools 44: fracture 1, imprint chain 3, metamod 5, other 28, removal 2, veil chain 5
+  leaf 0 '+1 to Level of all Lightning Skill Gems': Orb of Augmentation 15.31; Regal Orb 33.61; Harvest Reforge Lightning 38.23; Screaming Essence of Misery 48.45  (116 providers)
+  GUIDE 'Harvest Reforge Lightning': provider, rank 3 on leaf 0 (cost/chance 38.23, cost 1.266)
+  P(1): 1 offers; guide providers inside 0/1; with every tool 45 offers; missing providers: ['Harvest Reforge Lightning']
+  P(2): 2 offers; guide providers inside 0/1; with every tool 46 offers; missing providers: ['Harvest Reforge Lightning']
+  P(3): 3 offers; guide providers inside 1/1; with every tool 47 offers; missing providers: []
+  P(5): 5 offers; guide providers inside 1/1; with every tool 49 offers; missing providers: []
+
+=== R10: 10874 offers (4254 after twins), start rare, rounds apply True, open leaves 3 (3 necessary, U 2), providers 109, crafts naming no goal mod 60, tools 62: fracture 1, imprint chain 3, metamod 5, other 46, removal 2, veil chain 5
+  leaf 1 'family Intelligence, mod Intelligence8': Shrieking Essence of Spite 0.8; Orb of Augmentation 2.883; Screaming Essence of Misery 5.729; Screaming Essence of Doubt 5.756  (105 providers)
+  leaf 2 '+# to maximum Life (tier 2 or better, not crafted)': Regal Orb 3.357; Screaming Essence of Suffering 3.515; Screaming Essence of Anguish 3.571; Screaming Essence of Misery 3.647  (102 providers)
+  leaf 3 'family AvoidElementalStatusAilments, mod EinharMasterAvoidElementalAil': Bench craft (16-20)% chance to Avoid Element 1  (1 providers)
+  GUIDE 'Bench craft (16-20)% chance to Avoid Elemental Ailments': provider, rank 1 on leaf 3 (cost/chance 1, cost 1)
+  GUIDE 'Shrieking Essence of Spite': provider, rank 1 on leaf 1 (cost/chance 0.8, cost 0.8)
+  P(1): 3 offers; guide providers inside 2/2; with every tool 65 offers; missing providers: []
+  P(2): 5 offers; guide providers inside 2/2; with every tool 67 offers; missing providers: []
+  P(3): 7 offers; guide providers inside 2/2; with every tool 69 offers; missing providers: []
+  P(5): 10 offers; guide providers inside 2/2; with every tool 72 offers; missing providers: []
+
+=== R11: 10877 offers (5539 after twins), start rare, rounds apply True, open leaves 4 (2 necessary, U 2), providers 110, crafts naming no goal mod 64, tools 62: fracture 1, imprint chain 3, metamod 5, other 46, removal 2, veil chain 5
+  leaf 1 (k-of-n) 'family ReducedManaReservationsCost, mod ManaReservationEfficiencyEssen': Shrieking Essence of Loathing 1.65  (1 providers)
+  leaf 2 (k-of-n) 'family ReducedManaReservationsCost, mod ManaReservationEfficiencyEssen': Deafening Essence of Loathing 4.95  (1 providers)
+  leaf 3 'family DefencesPercent (tier 3 or better, not crafted)': Orb of Augmentation 0.6789; Regal Orb 1.36; Screaming Essence of Suffering 1.473; Screaming Essence of Anguish 1.497  (110 providers)
+  leaf 4 '+# to maximum Life (tier 1 or better, not crafted)': Orb of Augmentation 2.037; Screaming Essence of Suffering 4.367; Screaming Essence of Anguish 4.437; Regal Orb 4.656  (107 providers)
+  GUIDE 'Shrieking Essence of Loathing': provider, rank 1 on leaf 1 (cost/chance 1.65, cost 1.65)
+  P(1): 3 offers; guide providers inside 1/1; with every tool 65 offers; missing providers: []
+  P(2): 5 offers; guide providers inside 1/1; with every tool 67 offers; missing providers: []
+  P(3): 6 offers; guide providers inside 1/1; with every tool 68 offers; missing providers: []
+  P(5): 7 offers; guide providers inside 1/1; with every tool 69 offers; missing providers: []
+
+=== R05: 9306 offers (4895 after twins), start rare, rounds apply True, open leaves 2 (2 necessary, U 2), providers 113, crafts naming no goal mod 67, tools 45: fracture 1, imprint chain 3, metamod 5, other 29, removal 2, veil chain 5
+  leaf 1 'family Strength, mod StrengthEssence7_': Deafening Essence of Rage 3.22  (1 providers)
+  leaf 2 'family IncreasedLife (tier 1 or better, not crafted)': Orb of Augmentation 2.023; Regal Orb 3.261; Screaming Essence of Misery 6.276; Screaming Essence of Greed 6.355  (113 providers)
+  GUIDE 'Deafening Essence of Rage': provider, rank 1 on leaf 1 (cost/chance 3.22, cost 3.22)
+  P(1): 2 offers; guide providers inside 1/1; with every tool 47 offers; missing providers: []
+  P(2): 3 offers; guide providers inside 1/1; with every tool 48 offers; missing providers: []
+  P(3): 4 offers; guide providers inside 1/1; with every tool 49 offers; missing providers: []
+  P(5): 6 offers; guide providers inside 1/1; with every tool 51 offers; missing providers: []
+
+=== R13: 11129 offers (5712 after twins), start magic, rounds apply True, open leaves 5 (2 necessary, U 1), providers 130, crafts naming no goal mod 40, tools 85: fracture 1, imprint chain 3, metamod 5, other 69, removal 2, veil chain 5
+  leaf 0 'family IncreasedLife (tier 1 or better, not crafted)': Orb of Transmutation 0.5805; Wailing Essence of Suffering 1.305; Wailing Essence of Anguish 1.326; Wailing Essence of Wrath 1.406  (128 providers)
+  leaf 1 (k-of-n) 'family FireResistance (tier 1 or better, not crafted)': Orb of Transmutation 0.6618; Deafening Essence of Anger 2.35; Orb of Alchemy 2.482; Orb of Augmentation 3.475  (105 providers)
+  leaf 2 (k-of-n) 'family ColdResistance (tier 1 or better, not crafted)': Orb of Transmutation 0.6618; Deafening Essence of Hatred 2.11; Orb of Alchemy 2.482; Orb of Augmentation 3.475  (106 providers)
+  leaf 3 (k-of-n) 'family LightningResistance (tier 1 or better, not crafted)': Orb of Transmutation 0.6618; Deafening Essence of Wrath 2.07; Orb of Alchemy 2.482; Orb of Augmentation 3.475  (107 providers)
+  leaf 4 'family AllDamage, mod JunMaster2AllDamage3': Bench craft (15-17)% increased Damage 5.44  (1 providers)
+  GUIDE 'Bench craft (15-17)% increased Damage': provider, rank 1 on leaf 4 (cost/chance 5.44, cost 5.44)
+  GUIDE 'Regal Orb': provider, rank 17 on leaf 2 (cost/chance 9.206, cost 0.1918)
+  GUIDE 'Orb of Alteration': provider, rank 21 on leaf 1 (cost/chance 11.25, cost 0.1782)
+  P(1): 2 offers; guide providers inside 1/3; with every tool 87 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+  P(2): 6 offers; guide providers inside 1/3; with every tool 91 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+  P(3): 8 offers; guide providers inside 1/3; with every tool 93 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+  P(5): 12 offers; guide providers inside 1/3; with every tool 97 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+
+=== R08: 12960 offers (5344 after twins), start rare, rounds apply True, open leaves 3 (1 necessary, U 1), providers 133, crafts naming no goal mod 64, tools 96: fracture 1, imprint chain 3, metamod 5, other 80, removal 2, veil chain 5
+  leaf 0 'family DefencesPercent (tier 2 or better, not crafted)': Orb of Transmutation 0.285; Orb of Alchemy 1.076; Wailing Essence of Suffering 1.318; Wailing Essence of Anguish 1.339  (132 providers)
+  leaf 1 (k-of-n) 'family MovementVelocity (tier 1 or better, not crafted)': Orb of Transmutation 0.5673; Orb of Alchemy 2.101; Orb of Augmentation 2.749; Screaming Essence of Suffering 4.324  (110 providers)
+  leaf 2 (k-of-n) '#% increased Movement Speed, mod EinharMasterMovementVelocity3': Bench craft (20-24)% increased Movement Spee 4  (1 providers)
+  GUIDE 'Bench craft (20-24)% increased Movement Speed': provider, rank 1 on leaf 2 (cost/chance 4, cost 4)
+  GUIDE 'Fossils Dense Fossil + Shuddering Fossil': provider, rank 77 on leaf 1 (cost/chance 131.8, cost 24.1)
+  P(1): 2 offers; guide providers inside 1/2; with every tool 98 offers; missing providers: ['Fossils Dense Fossil + Shuddering Fossil']
+  P(2): 3 offers; guide providers inside 1/2; with every tool 99 offers; missing providers: ['Fossils Dense Fossil + Shuddering Fossil']
+  P(3): 5 offers; guide providers inside 1/2; with every tool 101 offers; missing providers: ['Fossils Dense Fossil + Shuddering Fossil']
+  P(5): 8 offers; guide providers inside 1/2; with every tool 104 offers; missing providers: ['Fossils Dense Fossil + Shuddering Fossil']
+
+=== R09: 12949 offers (5333 after twins), start rare, rounds apply True, open leaves 3 (1 necessary, U 1), providers 149, crafts naming no goal mod 53, tools 79: fracture 1, imprint chain 3, metamod 5, other 63, removal 2, veil chain 5
+  leaf 0 '+# to maximum Life (tier 2 or better, not crafted)': Muttering Essence of Torment 0.1099; Muttering Essence of Fear 0.1105; Muttering Essence of Hatred 0.1115; Muttering Essence of Anger 0.1242  (145 providers)
+  leaf 1 (k-of-n) 'family MovementVelocity (tier 1 or better, not crafted)': Orb of Transmutation 0.5353; Orb of Alchemy 1.97; Orb of Augmentation 2.541; Screaming Essence of Suffering 4.036  (107 providers)
+  leaf 2 (k-of-n) '#% increased Movement Speed, mod EinharMasterMovementVelocity3': Bench craft (20-24)% increased Movement Spee 4  (1 providers)
+  GUIDE 'Bench craft (20-24)% increased Movement Speed': provider, rank 1 on leaf 2 (cost/chance 4, cost 4)
+  GUIDE 'Fossils Pristine Fossil + Shuddering Fossil': provider, rank 67 on leaf 1 (cost/chance 64.39, cost 19.52)
+  P(1): 3 offers; guide providers inside 1/2; with every tool 82 offers; missing providers: ['Fossils Pristine Fossil + Shuddering Fos']
+  P(2): 5 offers; guide providers inside 1/2; with every tool 84 offers; missing providers: ['Fossils Pristine Fossil + Shuddering Fos']
+  P(3): 7 offers; guide providers inside 1/2; with every tool 86 offers; missing providers: ['Fossils Pristine Fossil + Shuddering Fos']
+  P(5): 11 offers; guide providers inside 1/2; with every tool 90 offers; missing providers: ['Fossils Pristine Fossil + Shuddering Fos']
+
+=== R04: 11134 offers (6214 after twins), start normal, rounds apply True, open leaves 5 (5 necessary, U 5), providers 130, crafts naming no goal mod 47, tools 84: fracture 1, imprint chain 3, metamod 5, other 68, removal 2, veil chain 5
+  leaf 0 'family Pierce, mod AdditionalPierceEssence7': Essence of Insanity 20.26  (1 providers)
+  leaf 1 'family Strength, mod StrengthEssence7_': Deafening Essence of Rage 3.22  (1 providers)
+  leaf 2 'family AdditionalArrows, mod AdditionalArrowQuiver1_': Orb of Transmutation 2.318; Wailing Essence of Suffering 5.915; Wailing Essence of Anguish 6.01; Wailing Essence of Doubt 6.063  (130 providers)
+  leaf 3 'family IncreasedLife (top tier, not crafted)': Orb of Transmutation 0.3514; Orb of Augmentation 0.7779; Wailing Essence of Doubt 0.832; Wailing Essence of Greed 0.8636  (129 providers)
+  leaf 4 'family DamageWithWeaponTypeSkill (top tier, not crafted)': Orb of Transmutation 0.3514; Orb of Augmentation 0.7779; Regal Orb 0.959; Orb of Alchemy 1.252  (113 providers)
+  GUIDE 'Essence of Insanity': provider, rank 1 on leaf 0 (cost/chance 20.26, cost 20.26)
+  GUIDE 'Exalted Orb': provider, rank 25 on leaf 4 (cost/chance 6.8, cost 1.36)
+  GUIDE 'Bench craft Cannot roll Attack Modifiers': tool: metamod [craft/craft] cost 176.6
+  GUIDE 'Orb of Annulment': tool: removal [craft/craft] cost 12.73
+  GUIDE 'Deafening Essence of Rage': provider, rank 1 on leaf 1 (cost/chance 3.22, cost 3.22)
+  GUIDE 'Fracturing Orb': tool: fracture [terminal/terminal] cost 321
+  GUIDE 'Remove Crafted Mods': tool: removal [craft/craft] cost 0.3463
+  P(1): 3 offers; guide providers inside 2/3; with every tool 87 offers; missing providers: ['Exalted Orb']
+  P(2): 5 offers; guide providers inside 2/3; with every tool 89 offers; missing providers: ['Exalted Orb']
+  P(3): 8 offers; guide providers inside 2/3; with every tool 92 offers; missing providers: ['Exalted Orb']
+  P(5): 12 offers; guide providers inside 2/3; with every tool 96 offers; missing providers: ['Exalted Orb']
+
+=== R14: 10915 offers (10915 after twins), start magic, rounds apply False, open leaves 5 (5 necessary, U 3), providers 153, crafts naming no goal mod 65, tools 55: fracture 1, imprint chain 3, metamod 5, other 39, removal 2, veil chain 5
+  leaf 0 'family IncreasedAttackSpeed (tier 1 or better, not crafted)': Muttering Essence of Hatred 0.2373; Muttering Essence of Torment 0.2396; Muttering Essence of Fear 0.2407; Muttering Essence of Anger 0.2643  (139 providers)
+  leaf 1 'family IncreaseSocketedGemLevel (top tier, not crafted)': Orb of Augmentation 0.1037; Regal Orb 0.1918; Weeping Essence of Doubt 0.4196; Weeping Essence of Greed 0.4367  (143 providers)
+  leaf 2 'family WeaponCasterDamagePrefix (top tier, not crafted)': Orb of Augmentation 1.037; Regal Orb 1.918; Orb of Transmutation 6.165; Exalted Orb 13.6  (106 providers)
+  leaf 3 'family DamageOverTimeMultiplier, mod JunMaster2ChaosDamageOverTimeMult': Bench craft +(18-20)% to Chaos Damage over T 4  (1 providers)
+  leaf 4 'family IncreaseSpecificSocketedGemLevel, mod JunMaster2LocalIncreaseSo': Bench craft +2 to Level of Socketed Support  5.44  (1 providers)
+  GUIDE 'Regal Orb': provider, rank 2 on leaf 1 (cost/chance 0.1918, cost 0.1918)
+  GUIDE 'Orb of Alteration': provider, rank 20 on leaf 2 (cost/chance 104.8, cost 0.1782)
+  GUIDE 'Bench craft +(18-20)% to Chaos Damage over Time Multiplier': provider, rank 1 on leaf 3 (cost/chance 4, cost 4)
+  GUIDE 'Bench craft +2 to Level of Socketed Support Gems': provider, rank 1 on leaf 4 (cost/chance 5.44, cost 5.44)
+  GUIDE 'Remove Crafted Mods': tool: removal [craft/craft] cost 0.3463
+  GUIDE 'Bench craft Can have up to 3 Crafted Modifiers': tool: craft naming no goal mod [craft/craft] cost 353.2
+  GUIDE 'Bench craft Cannot roll Attack Modifiers': tool: metamod [craft/craft] cost 176.6
+  GUIDE 'Exalted Orb': provider, rank 4 on leaf 2 (cost/chance 13.6, cost 1.36)
+  GUIDE 'Orb of Annulment': tool: removal [craft/craft] cost 12.73
+  P(1): 4 offers; guide providers inside 2/5; with every tool 59 offers; missing providers: ['Regal Orb', 'Orb of Alteration', 'Exalted Orb']
+  P(2): 6 offers; guide providers inside 3/5; with every tool 61 offers; missing providers: ['Orb of Alteration', 'Exalted Orb']
+  P(3): 9 offers; guide providers inside 3/5; with every tool 64 offers; missing providers: ['Orb of Alteration', 'Exalted Orb']
+  P(5): 15 offers; guide providers inside 4/5; with every tool 70 offers; missing providers: ['Orb of Alteration']
+
+=== R17: 11149 offers (7316 after twins), start normal, rounds apply True, open leaves 2 (2 necessary, U 2), providers 133, crafts naming no goal mod 58, tools 85: fracture 3, imprint chain 5, metamod 5, other 65, removal 2, veil chain 5
+  leaf 0 'family GlobalSkillGemLevel (top tier, not crafted)': Orb of Transmutation 20.26; Wailing Essence of Greed 47.98; Wailing Essence of Fear 50.24; Wailing Essence of Wrath 50.98  (133 providers)
+  leaf 1 'family GlobalDamageTypeGemLevel, mod GlobalLightningGemLevel1 (not cra': Orb of Transmutation 5.068; Wailing Essence of Greed 12.02; Wailing Essence of Fear 12.58; Wailing Essence of Wrath 12.77  (129 providers)
+  GUIDE 'Orb of Transmutation': provider, rank 1 on leaf 0 (cost/chance 20.26, cost 0.01048)
+  GUIDE 'Regal Orb': provider, rank 18 on leaf 0 (cost/chance 134.5, cost 0.1918)
+  GUIDE 'Orb of Alteration': provider, rank 35 on leaf 0 (cost/chance 344.5, cost 0.1782)
+  GUIDE 'Restore imprint 1': tool: imprint chain [refused/refused] cost 2.702e-09
+  GUIDE 'Bench craft Can have up to 3 Crafted Modifiers': tool: craft naming no goal mod [craft/craft] cost 353.2
+  GUIDE 'Imprint with the Fenumal Plagued Arachnid': tool: imprint chain [terminal/terminal] cost 95
+  GUIDE 'Orb of Annulment': tool: removal [craft/craft] cost 12.73
+  GUIDE 'Bench craft Prefixes Cannot Be Changed': tool: metamod [craft/craft] cost 353.2
+  GUIDE 'Bench craft Cannot roll Attack Modifiers': tool: metamod [craft/craft] cost 176.6
+  GUIDE 'Harvest Add Remove Lightning': tool: other [add/add] cost 403.9
+  P(1): 1 offers; guide providers inside 1/3; with every tool 86 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+  P(2): 2 offers; guide providers inside 1/3; with every tool 87 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+  P(3): 3 offers; guide providers inside 1/3; with every tool 88 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+  P(5): 5 offers; guide providers inside 1/3; with every tool 90 offers; missing providers: ['Regal Orb', 'Orb of Alteration']
+
+=== R20: 10878 offers (10878 after twins), start rare, rounds apply True, open leaves 4 (4 necessary, U 4), providers 122, crafts naming no goal mod 41, tools 73: fracture 1, imprint chain 3, metamod 5, other 57, removal 2, veil chain 5
+  leaf 0 'family Supported, mod SocketedGemsDealMoreElementalDamageEssence1': Essence of Horror 25.61; Fossils Glyphic Fossil 139.8; Fossils Aberrant Fossil + Glyphic Fossil + T 146.4; Fossils Glyphic Fossil + Metallic Fossil + T 148.5  (31 providers)
+  leaf 1 'family MineSupported, mod MineDamageTrapUber3': Orb of Transmutation 3.63; Orb of Alchemy 13.85; Orb of Augmentation 17.94; Screaming Essence of Doubt 29.32  (120 providers)
+  leaf 2 'family HelmetAilmentUber, mod IncreasedBurningDamageSupportedUber3': Orb of Transmutation 1.136; Orb of Alchemy 4.362; Orb of Augmentation 5.607; Screaming Essence of Doubt 9.223  (120 providers)
+  leaf 3 'family AreaDamage, mod AreaDamageSupportedUber3': Orb of Transmutation 0.8737; Orb of Alchemy 3.341; Orb of Augmentation 3.376; Screaming Essence of Suffering 6.649  (120 providers)
+  GUIDE 'Harvest Reforge Influence': provider, rank 115 on leaf 1 (cost/chance 1.086e+04, cost 150.6)
+  GUIDE 'Beastcraft Wild Bristle Matron (add a metamod)': tool: metamod [terminal/terminal] cost 238
+  GUIDE 'Orb of Annulment': tool: removal [craft/craft] cost 12.73
+  GUIDE 'Harvest Reforge Fire': provider, rank 16 on leaf 2 (cost/chance 12.92, cost 1.022)
+  GUIDE 'Bench craft Suffixes Cannot Be Changed': tool: metamod [craft/craft] cost 353.2
+  GUIDE 'Essence of Horror': provider, rank 1 on leaf 0 (cost/chance 25.61, cost 25.61)
+  P(1): 2 offers; guide providers inside 1/3; with every tool 75 offers; missing providers: ['Harvest Reforge Influence', 'Harvest Reforge Fire']
+  P(2): 4 offers; guide providers inside 1/3; with every tool 77 offers; missing providers: ['Harvest Reforge Influence', 'Harvest Reforge Fire']
+  P(3): 6 offers; guide providers inside 1/3; with every tool 79 offers; missing providers: ['Harvest Reforge Influence', 'Harvest Reforge Fire']
+  P(5): 12 offers; guide providers inside 1/3; with every tool 85 offers; missing providers: ['Harvest Reforge Influence', 'Harvest Reforge Fire']
+
+=== R06: 9330 offers (9330 after twins), start normal, rounds apply True, open leaves 7 (2 necessary, U 2), providers 133, crafts naming no goal mod 52, tools 66: fracture 1, imprint chain 3, metamod 5, other 50, removal 2, veil chain 5
+  leaf 0 (k-of-n) 'family IncreasedLife (top tier)': Orb of Transmutation 0.5436; Wailing Essence of Suffering 1.364; Wailing Essence of Anguish 1.386; Wailing Essence of Wrath 1.472  (132 providers)
+  leaf 1 (k-of-n) 'family IncreasedPhysicalDamageReductionRating (top tier)': Screaming Essence of Dread 0.2167; Orb of Transmutation 0.5436; Shrieking Essence of Dread 0.65; Wailing Essence of Suffering 1.364  (131 providers)
+  leaf 2 (k-of-n) 'family FireResistance (top tier)': Orb of Transmutation 0.6148; Shrieking Essence of Anger 0.7833; Wailing Essence of Doubt 1.673; Wailing Essence of Greed 1.679  (125 providers)
+  leaf 3 (k-of-n) 'family ColdResistance (top tier)': Orb of Transmutation 0.6148; Shrieking Essence of Hatred 0.7033; Wailing Essence of Doubt 1.673; Wailing Essence of Greed 1.679  (126 providers)
+  leaf 4 (k-of-n) 'family LightningResistance (top tier)': Orb of Transmutation 0.6148; Shrieking Essence of Wrath 0.69; Wailing Essence of Doubt 1.673; Wailing Essence of Greed 1.679  (127 providers)
+  leaf 5 'family PercentageAllAttributes, mod PercentageAllAttributesInfluence2 ': Orb of Transmutation 1.227; Wailing Essence of Doubt 3.318; Wailing Essence of Greed 3.331; Wailing Essence of Suffering 3.737  (132 providers)
+  leaf 6 'family Strength, mod StrengthEssence7_': Deafening Essence of Rage 3.22  (1 providers)
+  GUIDE 'Exalted Orb': provider, rank 67 on leaf 0 (cost/chance 34.34, cost 1.36)
+  GUIDE 'Orb of Annulment': tool: removal [craft/craft] cost 12.73
+  GUIDE 'Deafening Essence of Rage': provider, rank 1 on leaf 6 (cost/chance 3.22, cost 3.22)
+  P(1): 3 offers; guide providers inside 1/2; with every tool 69 offers; missing providers: ['Exalted Orb']
+  P(2): 8 offers; guide providers inside 1/2; with every tool 74 offers; missing providers: ['Exalted Orb']
+  P(3): 11 offers; guide providers inside 1/2; with every tool 77 offers; missing providers: ['Exalted Orb']
+  P(5): 13 offers; guide providers inside 1/2; with every tool 79 offers; missing providers: ['Exalted Orb']
+
+=== R24: 10873 offers (4253 after twins), start rare, rounds apply True, open leaves 6 (3 necessary, U 2), providers 111, crafts naming no goal mod 60, tools 59: fracture 1, imprint chain 3, metamod 5, other 46, removal 2, veil chain 2
+  leaf 1 'family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaug': Pick 1 1.048e-08; Pick 2 1.048e-08; Pick 3 1.048e-08  (3 providers)
+  leaf 2 'family ReducedShockChance, mod ChanceToAvoidShockEssence7': Deafening Essence of Torment 2.02  (1 providers)
+  leaf 3 'family ChanceToSuppressSpells (tier 1 or better, not crafted)': Orb of Augmentation 5.871; Screaming Essence of Doubt 11.38; Screaming Essence of Greed 11.48; Screaming Essence of Dread 11.56  (106 providers)
+  leaf 4 (k-of-n) 'family FireResistance (tier 2 or better, not crafted)': Shrieking Essence of Anger 0.7833; Orb of Augmentation 1.468; Deafening Essence of Anger 2.35; Screaming Essence of Doubt 2.902  (104 providers)
+  leaf 5 (k-of-n) 'family ColdResistance (tier 2 or better, not crafted)': Shrieking Essence of Hatred 0.7033; Orb of Augmentation 1.468; Deafening Essence of Hatred 2.11; Screaming Essence of Doubt 2.902  (97 providers)
+  leaf 6 (k-of-n) 'family LightningResistance (tier 2 or better, not crafted)': Shrieking Essence of Wrath 0.69; Orb of Augmentation 1.468; Deafening Essence of Wrath 2.07; Screaming Essence of Doubt 2.902  (104 providers)
+  GUIDE 'Pick 1': provider, rank 1 on leaf 1 (cost/chance 1.048e-08, cost 1.048e-08)
+  GUIDE 'Pick 2': provider, rank 2 on leaf 1 (cost/chance 1.048e-08, cost 1.048e-08)
+  GUIDE 'Pick 3': provider, rank 3 on leaf 1 (cost/chance 1.048e-08, cost 1.048e-08)
+  GUIDE 'Unveil': tool: veil chain [veiled/veiled] cost 1.048e-08
+  GUIDE 'Veiled Chaos Orb': provider, rank 86 on leaf 5 (cost/chance 281, cost 18.48)
+  GUIDE 'Bench craft Suffixes Cannot Be Changed': tool: metamod [craft/craft] cost 353.2
+  GUIDE 'Orb of Annulment': tool: removal [craft/craft] cost 12.73
+  GUIDE 'Harvest Add Remove Fire': tool: other [add/add] cost 330.6
+  GUIDE 'Deafening Essence of Torment': provider, rank 1 on leaf 2 (cost/chance 2.02, cost 2.02)
+  P(1): 6 offers; guide providers inside 2/5; with every tool 65 offers; missing providers: ['Pick 2', 'Pick 3', 'Veiled Chaos Orb']
+  P(2): 8 offers; guide providers inside 3/5; with every tool 67 offers; missing providers: ['Pick 3', 'Veiled Chaos Orb']
+  P(3): 13 offers; guide providers inside 4/5; with every tool 72 offers; missing providers: ['Veiled Chaos Orb']
+  P(5): 15 offers; guide providers inside 4/5; with every tool 74 offers; missing providers: ['Veiled Chaos Orb']
