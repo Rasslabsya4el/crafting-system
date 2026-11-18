@@ -1053,7 +1053,8 @@ class Growth:
     essences in its base, builds in 18 s on the server and 24 to 28 s on a runner, against a share of 26 to 27 s; complete, its first plan
     costs 188.03 c against the 617.28 c in hand, and cut, its figure is 13 to 15 c and the answer keeps 617.28 c (probe run 44091258887). Its
     model's value stays low until the last offers join (it is the floor of the cheapest offer left out), so the value says nothing of how far
-    the build is; what does is how many offers it holds. A build that has used `used` of its net `given` (seconds, or pieces of work) and
+    the build is; what does is how many offers it holds. (Since #1224 the nets decide by the pace of the growth, `Pace`, and
+    `nearly_done`, the count below, is no longer read by them.) A build that has used `used` of its net `given` (seconds, or pieces of work) and
     holds `inside` of `total` offers is expected to need `used * total / inside` in all, at most: the offers still out cost on average what
     those in cost, and not every one of them joins (R11's Exalted round ends with 80 of 84). It may go on past its net while that figure is
     within `1 + late` nets, and never past `1 + late` nets (`late` at most `LATE`): the build that is nearly done finishes, a build far

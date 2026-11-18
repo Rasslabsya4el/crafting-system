@@ -188,7 +188,7 @@ def pattern_lower_bound(
             order = floors.initial()
             phases["floors"] = time.perf_counter() - began
             for net in watched:  # the model grows from part of the offers: past a quarter of a share it needs a pace (`Pace.verdict`)
-                net.grows = True
+                net.grows = len(order) < len(priced)
             say(
                 f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
                 f"({phases['floors']:.1f} s)"
