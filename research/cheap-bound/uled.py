@@ -14,7 +14,9 @@ incumbent of a round is the best plan that uses only the rows of the keys worked
 each tip's one action "restart" (cost c_r, to the start), solved by the planner's solver. Its start value U is the value of a real policy of
 the dump's model, so U >= V(start) (checked every round). With UPPER=none a tip has no upper value (infinite): the incumbent is then the best
 plan that never meets a tip (the worked keys from which some plan surely avoids every tip; infinite until the start is among them).
-Both incumbents are solved and written every round; UPPER only says which one weighs the tips.
+Both incumbents are solved and written every round; UPPER only says which one weighs the tips. UPPER=oracle weighs a tip by its visits
+times (its complete value - its lead): the best upper value a tip can have; it reads the truth, so no build can, and it bounds what any
+sharper upper stand-in could do to the order of the work (with it the incumbent would be the complete value from the first round).
 
 A round: the lower model (tips at their lead, led.py's) and the two upper models are solved; L = the lower start value. The cheapest policy
 of the lower model is walked from the start, and the expected visits of each key under it counted over 400 steps (led.py's). The gap of
@@ -43,7 +45,7 @@ dump, lead = sys.argv[1], sys.argv[2]
 RULE = os.environ.get("RULE", "gap:0.5")
 UPPER = os.environ.get("UPPER", "restart")
 LIMIT = float(os.environ.get("LIMIT", "3600"))
-assert UPPER in ("restart", "none") and RULE.split(":")[0] in ("gap", "mass", "all")
+assert UPPER in ("restart", "none", "oracle") and RULE.split(":")[0] in ("gap", "mass", "all")
 SHARE = float(RULE.split(":")[1]) if ":" in RULE else None
 d = pickle.load(open(dump, "rb"))
 keys, goal, actions, kernels, exp = d["keys"], d["goal"], d["actions"], d["kernels"], d["expanded"]
@@ -114,6 +116,11 @@ else:  # a coarse key of ka.py, merged from the complete model (led.py's merge_l
             reps[cls[i]] = keys[i]
     h = np.asarray(solve_all(reps, g, [sorted(r) for r in rows], newk, [True] * nc).value, dtype=float)[np.asarray(cls)]
     coarse = nc - sum(choice)
+    if os.environ.get("BEST"):  # led.py's BEST: the least complete value inside the coarse key (reads the truth; a reference, no build has it)
+        lo = np.full(nc, np.inf)
+        np.minimum.at(lo, np.asarray(cls), V)
+        h = lo[np.asarray(cls)]
+        lead += "@best"
 tip = np.array([not choice[i] and not goal[i] for i in range(n)])
 over = int(np.sum((h > V * (1 + 1e-7) + 1e-9) & tip))
 print(f"lead {lead}: coarse keys {coarse}; at the start {h[0]!r} ({100 * h[0] / V[0]:.2f}%); above the complete value at {over} keys (must be 0)", flush=True)
@@ -289,7 +296,7 @@ while True:
                 vis += x
         visits = {i: float(vis[loc[i]]) for i in tips}
     utip = CR + ur
-    gap = {i: visits[i] * max(utip - float(h[i]), 0.0) for i in tips}
+    gap = {i: visits[i] * max(utip - float(h[i]), 0.0) if visits[i] > 0 else 0.0 for i in tips}
     pgap = sum(gap.values())
     c = counted()
     if stop_r is None and L >= 0.99 * ur:
@@ -312,7 +319,11 @@ while True:
         print(f"  STOPPED at the limit: round {rounds}, worked out {c}, L/V {100 * L / V[0]:.2f}%, L/U restart {100 * L / ur:.2f}%", flush=True)
         break
     if SHARE is not None and len(tips) > 1:
-        wt = {i: (visits[i] if (RULE.startswith("mass") or UPPER == "none") else gap[i]) for i in tips}
+        # with no plan in hand yet (U infinite) every gap is infinite: the tips are then weighed by visits alone, as mass:F
+        if UPPER == "oracle":  # the best upper value a tip can have, its complete value (reads the truth: led.py's oracle rule)
+            wt = {i: visits[i] * max(V[i] - float(h[i]), 0.0) for i in tips}
+        else:
+            wt = {i: (visits[i] if (RULE.startswith("mass") or UPPER == "none" or not math.isfinite(utip)) else gap[i]) for i in tips}
         if sum(wt.values()) > 0:
             tips.sort(key=lambda i: -wt[i])
             goal_mass, acc, cut = sum(wt.values()) * SHARE, 0.0, 0
