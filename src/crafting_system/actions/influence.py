@@ -295,7 +295,8 @@ class OrbOfDominance(Action):
 
     def reads(self, data: GameData) -> Reads:
         # Which mods are influenced, and which mod each is (its tier, its Elevated version), decide the result; nothing else of the junk does, it only
-        # counts by side. The state tells the influence mods apart by mod (`influenced`). The side locks are crafted mods of the item, which a state
+        # counts by side. The state tells the influence mods apart by mod (`influenced`), but
+        # for the groups whose upgrades stay inside (`influence_alike`, #1238). The side locks are crafted mods of the item, which a state
         # always holds.
         return Reads(junk=True, families=frozenset(), pool_weight=False, influenced=True)
 
@@ -313,6 +314,21 @@ class OrbOfDominance(Action):
             INFLUENCED_MODS, INFLUENCE_TAGS, INFLUENCE_STAYS_ON_THE_ITEM, ONE_INFLUENCE_TWO_BY_AWAKENER,
         )
         return _claims_of(own, metamods)
+
+    def influence_alike(self, data: GameData, item: Item, mods: tuple[Mod, ...]) -> bool:
+        """Alike when the upgrade of each of `mods` is known and is one of `mods` (#1238): both picks are uniform over the influenced mods, so
+        which mod of the group a slot holds changes only which mod of the group the result holds there. A mod whose upgrade the data cannot
+        name (`OutOfScopeError`) refuses where the others do not, so its group is kept apart by mod."""
+        ids = {mod.id for mod in mods}
+        tiers = tiers_of(data, item)
+        for mod in mods:
+            try:
+                upgraded = self._upgraded(data, item, ExplicitMod(mod.id, _low(mod)), tiers)
+            except OutOfScopeError:
+                return False
+            if upgraded.mod_id not in ids:
+                return False
+        return True
 
     def _elevated_of(self, data: GameData) -> Mapping[str, str]:
         return dict(self.elevated) if self.elevated is not None else load_elevated().for_data(data)

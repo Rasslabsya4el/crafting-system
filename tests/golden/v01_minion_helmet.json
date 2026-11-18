@@ -213,13 +213,12 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 15,
+      "count": 13,
       "labels": [
         "Harvest reforges that favour a mod",
         "Harvest quality enchants",
         "Beast influence recipe",
         "Blessed Orb",
-        "Catalysts",
         "Tempering",
         "Tailoring",
         "Jeweller's Orb",
@@ -228,7 +227,6 @@
         "Bench socket links",
         "Chromatic Orb",
         "Bench socket colours",
-        "Quality currency",
         "Re-anoint"
       ],
       "names": []

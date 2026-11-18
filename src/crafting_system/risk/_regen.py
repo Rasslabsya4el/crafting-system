@@ -33,6 +33,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .. import budget, parallel
+from . import _budget
 from ._budget import BudgetRun, run_budget
 from ._chain import Chain
 from ._fold import FOLD_GAVE_UP, FOLD_LIMIT, fold_free
@@ -50,14 +51,29 @@ ATTEMPT_TAIL = 1e-13  # the mass of an attempt that may stay in flight when its 
 MAX_MISSING = 1e-10  # the cut attempts' mass over the chance of success must not exceed this
 ABANDON_MARGIN = 60.0  # seconds past its runs' time a worker has to stop by itself before it is killed
 TIMED_OUT = "timed out"  # what `regenerative_runs` returns for a step its time net stopped
+OUT_OF_MEMORY = "out of memory"  # ... and for a step the run's memory net stopped (#738)
 
 
 def time_net_words(seconds: float, coarser: bool) -> str:
-    """What the player is told when the time net stops a step (OR-13): whether the figures shown still come from this method."""
+    """What the player is told when the time net stops a step (OR-13): whether the figures shown still come from this method. A slower method that
+    follows is held to the same net (#738): past it, each of its runs may expand only `_budget.ALLOWANCE` entries more (`figures_words`)."""
     limit = f"{seconds / 60:.0f} minutes" if seconds >= 120 else f"{seconds:.0f} seconds"
     if coarser:
         return f"a finer pass of the quicker method for the cost figures ran past its time limit of {limit} and was stopped; the figures shown come from the coarser pass before it, and their ranges still hold"
     return f"the quicker method for the cost figures ran past its time limit of {limit} and was stopped, so it worked out none of them; the slower method follows"
+
+
+def figures_words(reason: str, seconds: float, memory_mb: float | None, by_run: bool) -> str:
+    """What the player is told when the net stopped the last method of the cost figures short of a figure (#738, OR-13): the figures it had not
+    reached are not computed. `reason` is `budget.TIME` or `budget.MEMORY` (`_budget.Watch`)."""
+    tail = "; a figure it had not reached is marked as not computed"
+    if reason == budget.MEMORY:
+        return f"the work on the cost figures reached the memory limit of {memory_mb or 0:,.0f} MB and was stopped" + tail
+    reach = f"{_budget.ALLOWANCE:,} steps of the calculation"
+    if by_run:
+        return f"the run's time limit was reached before the cost figures were worked out, and the work on them was stopped {reach} past it" + tail
+    limit = f"{seconds / 60:.0f} minutes" if seconds >= 120 else f"{seconds:.0f} seconds"
+    return f"the work on the cost figures ran past its time limit of {limit} and was stopped {reach} past it" + tail
 
 
 @dataclass(frozen=True)
@@ -67,32 +83,59 @@ class LadderNet:
     deadline: float
     seconds: float
     by_run: bool
-
+    memory_mb: float | None = None  # the run's memory net (`Budget.memory_mb`), watched by every run of the figures and by their pools
 
 def ladder_net(seconds: float) -> LadderNet:
-    """The net of a ladder that starts now: `seconds`, or less when the run's clock (`crafting_system.budget`) has less time left (#745, #825).
+    """The net of the cost figures from now: `seconds`, or less when the run's clock (`crafting_system.budget`) has less time left (#745, #825).
 
-    One net for every step and every attempt run of the ladder, run side by side or one after another: before #745 each run had `seconds` from its own
-    start, so a ladder of five steps of four runs one after another could take twenty nets (about 10 hours at 30 minutes)."""
+    One net for every method of the figures (`_evaluate.evaluate`: the free-action count, the coarse grid, every step and every attempt run of the
+    ladder, the ordinary grid), run side by side or one after another: before #745 each attempt run had `seconds` from its own start, so a ladder of
+    five steps of four runs one after another could take twenty nets (about 10 hours at 30 minutes); before #738 the methods after the ladder had no
+    net at all, so a run whose net was spent by its plan went on into the ordinary grid and was killed for memory (R17)."""
     clock = budget.active()
+    memory = None if clock is None else clock.budget.memory_mb
     if clock is not None and clock.budget.seconds is None and clock.budget.states is not None:
-        return LadderNet(math.inf, math.inf, False)  # a run counted in states (`Budget.in_states`): no clock decides its figures
+        return LadderNet(math.inf, math.inf, False, memory)  # a run counted in states (`Budget.in_states`): no clock decides its figures
     left = None if clock is None else clock.left()
     if left is not None and left < seconds:
-        return LadderNet(time.monotonic() + left, left, True)
-    return LadderNet(time.monotonic() + seconds, seconds, False)
+        return LadderNet(time.monotonic() + left, left, True, memory)
+    return LadderNet(time.monotonic() + seconds, seconds, False, memory)
+
+
+def deadline(net: LadderNet) -> float | None:
+    """The net's deadline as the DPs take it (`time.monotonic`), or None when it has none."""
+    return net.deadline if math.isfinite(net.deadline) else None
 
 
 def run_spent_words(coarser: bool) -> str:
-    """What the player is told when the run's own time limit stopped the ladder (OR-13, OR-33): the plan before it took the time."""
+    """What the player is told when the run's own time limit stopped the cost figures (OR-13, OR-33): the plan before them took the time."""
     if coarser:
         return "the run's time limit was reached during a finer pass of the quicker method for the cost figures; the figures shown come from the coarser pass before it, and their ranges still hold"
     return "the run's time limit was reached before the quicker method for the cost figures could work any of them out; the slower method follows"
 
 
-def ladder_stopped(net: LadderNet, coarser: bool) -> str:
-    """Say that the net stopped the ladder (OR-13), and record it on the run's clock when the run's net was the one that bound (#378)."""
+def figures_stopped(net: LadderNet, reason: str) -> str:
+    """Say that the net stopped the cost figures short of a figure, which is not computed (#738, OR-13), and record it on the run's clock when the
+    run's own net bound (its time, or its memory: the figures watch the run's memory net)."""
     clock = budget.active()
+    kept = "the cost figures it had not reached are not computed"
+    if clock is not None and reason == budget.MEMORY and net.memory_mb is not None:
+        clock.bind(budget.Binding(clock.stage, budget.MEMORY, net.memory_mb, clock.memory(fresh=True) or net.memory_mb, kept))
+    elif clock is not None and reason == budget.TIME and net.by_run:
+        clock.bind(budget.Binding(clock.stage, budget.TIME, clock.budget.seconds or 0.0, clock.elapsed(), kept))
+    return figures_words(reason, net.seconds, net.memory_mb, net.by_run)
+
+
+def ladder_stopped(net: LadderNet, coarser: bool, reason: str = budget.TIME) -> str:
+    """Say that the net stopped the ladder (OR-13), and record it on the run's clock when the run's net was the one that bound (#378).
+
+    `reason` `budget.MEMORY`: the run's memory net stopped it (#738), said with its figure and recorded as the run's binding."""
+    clock = budget.active()
+    if reason == budget.MEMORY:
+        kept = "the figures of the coarser step already worked out are kept" if coarser else "the slower method works them out instead, held to the same limit"
+        if clock is not None and net.memory_mb is not None:
+            clock.bind(budget.Binding(clock.stage, budget.MEMORY, net.memory_mb, clock.memory(fresh=True) or net.memory_mb, kept))
+        return f"the quicker method for the cost figures reached the memory limit of {net.memory_mb or 0:,.0f} MB and was stopped; {kept}"
     if net.by_run and clock is not None:
         kept = "the figures of the coarser step already worked out are kept" if coarser else "the slower method works them out instead"
         clock.bind(budget.Binding(clock.stage, budget.TIME, clock.budget.seconds or 0.0, clock.elapsed(), kept))
@@ -155,14 +198,14 @@ def attempt_chain(chain: Chain, *, success: bool) -> Chain:
 def attempt_pmf(
     chain: Chain, bins: list[int], *, success: bool, max_bins: int, deadline: float | None = None
 ) -> tuple[np.ndarray, float, bool] | None:
-    """`(pmf over bins, mass that is neither in it nor lost, stopped by the time net)` of one attempt ending in a goal (`success`) or back at the start, or None.
+    """`(pmf over bins, mass that is neither in it nor lost, the net that stopped it or "")` of one attempt ending in a goal (`success`) or back at the start, or None.
 
     None when a free component is too large to fold (`_fold`). `deadline` (on `time.monotonic`, which a forked worker shares) is the ladder's net (`ladder_net`).
     """
     attempt = attempt_chain(chain, success=success)
     extended = [*bins, 0]
     if not attempt.can_finish[0]:
-        return np.zeros(1), 0.0, False
+        return np.zeros(1), 0.0, ""
     folded = fold_free(attempt, extended)
     if folded is None:
         return None
@@ -171,8 +214,8 @@ def attempt_pmf(
         deadline=deadline,
     )
     cdf = np.asarray(run.cdf)
-    stopped = deadline is not None and run.unresolved > ATTEMPT_TAIL and time.monotonic() >= deadline
-    trace(f"attempt run ({'goal' if success else 'back to the start'}): {len(cdf):,} bins, in flight at the end {run.unresolved:.3g}" + (" (stopped by the time net)" if stopped else ""))
+    stopped = run.stopped if run.unresolved > ATTEMPT_TAIL else ""  # the net that stopped it (`_budget.Watch`), or ""
+    trace(f"attempt run ({'goal' if success else 'back to the start'}): {len(cdf):,} bins, in flight at the end {run.unresolved:.3g}" + (f" (stopped by the {stopped} net)" if stopped else ""))
     return np.diff(cdf, prepend=0.0), run.unresolved, stopped
 
 
@@ -215,12 +258,16 @@ def regenerative_runs(
     except TimedOut as stopped:
         trace(f"attempt by attempt on step {step:.4g}: {stopped}")
         return TIMED_OUT
+    except parallel.MemoryNetReached as stopped:  # the pool's parent saw the workers pass the run's memory net and stopped them (#738)
+        trace(f"attempt by attempt on step {step:.4g}: {stopped}")
+        return OUT_OF_MEMORY
+    reasons = {each[2] for each in found if each is not None and each[2]}
+    if reasons:  # before the folds that gave up: a finer step past the net would only be stopped too (#738, R17)
+        trace(f"attempt by attempt on step {step:.4g}: a run was stopped by the {', '.join(sorted(reasons))} net")
+        return OUT_OF_MEMORY if budget.MEMORY in reasons else TIMED_OUT
     if any(each is None for each in found):
         note(FOLD_GAVE_UP.format(FOLD_LIMIT))  # an attempt cut short by `fold_free`; said here as well, since a forked worker's note is not seen
         return None
-    if any(each[2] for each in found):
-        trace(f"attempt by attempt on step {step:.4g}: a run was stopped by the ladder's time net")
-        return TIMED_OUT
     runs: list[BudgetRun] = []
     for k in range(len(distinct)):
         (g, _, _), (f, _, _) = found[2 * k], found[2 * k + 1]
@@ -264,6 +311,8 @@ def run_jobs(jobs: list[tuple], *, deadline: float | None = None) -> list:
                 return pool.map(_call, names, chunk=1, timeout=timeout)
         except TimeoutError as late:
             raise TimedOut(f"a worker was not back {ABANDON_MARGIN:.0f} s after its time net and was stopped: {late}") from late
+        except parallel.MemoryNetReached:
+            raise  # past the run's memory net: running the jobs here would take the same memory (#738)
         except Exception:  # a worker failed or was killed: run them here
             pass
         finally:

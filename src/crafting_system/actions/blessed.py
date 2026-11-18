@@ -184,7 +184,7 @@ class BlessedOrb(Action):
     "blessed-orb",
     order=88,
     planner=False,
-    why_not="the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158)",
+    why_not="the planner refuses a target that names a base implicit (#516; the catalyst quality is planned since #159, and the compressed state holds a base implicit and its roll since ticket #158)",
     # it works on an item that holds a ranged implicit (a ring, an amulet, a belt, a base with one), and none of the contract suite's
     # fixture amulets does
     applies_only_to="an item with a ranged implicit",

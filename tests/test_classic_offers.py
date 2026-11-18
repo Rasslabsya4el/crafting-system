@@ -16,7 +16,7 @@ TURNED_ON_BY_886 = {
     "veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick", "annulment-orb", "fracturing-orb", "talisman-fracture", "aspect-beast",
     "beast-side-swap", "wild-bristle-matron", "imprint", "restore",
 }
-TURNED_ON_LATER = {"influenced-exalted-orb", "orb-of-dominance"}  # beta methods made planner kinds after #886, on by default (#818, #1195, OR-41)
+TURNED_ON_LATER = {"influenced-exalted-orb", "catalyst", "orb-of-dominance"}  # beta methods made planner kinds after #886, on by default (#818, #159, #1195, OR-41)
 DEFERRED = {"recombinator", "foulborn-exalted-orb"}  # opt-in with or without the classic offers (OR-37)
 CLASSIC_DEFERRED = {"vaal", "locus"}  # B4: classic kinds, opt-in since #1125 (OR-37) and on again under the classic offers
 

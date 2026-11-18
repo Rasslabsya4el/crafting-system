@@ -522,6 +522,7 @@ def offers_for(
 
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
+    left_out_quality: list[str] = []  # a quality action (a catalyst) that cannot give the quality the goal asks for, or a goal that asks for none (#159)
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
     left_out_asked: list[str] = []  # the target allows a corrupted item but asks for no corrupted implicit, and the set is offered only to one that does (ADR-0038)
     for action in listed:
@@ -533,6 +534,8 @@ def offers_for(
             left_out_unwanted.append(told_apart(action))
         elif adds.needs_roll_limit and not roll_matters:
             left_out_rolls.append(told_apart(action))
+        elif adds.only_quality and not _gives_quality_wanted(data, goal, start_item, action):
+            left_out_quality.append(told_apart(action))
         elif adds.rolls_unfollowed and any(leaf.has_roll_limit for leaf in goal.leaves):  # a model gap the search could not drop (#1195, #993)
             listing_gaps.append(ListingGap(kind_of.get(action, ""), "", ROLLS_UNFOLLOWED))
         else:
@@ -570,7 +573,7 @@ def offers_for(
             offer = offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, ""))
             offers.append(replace(offer, blocks=classes[action]) if action in classes else offer)
 
-    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps)
+    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps, _quality_kinds_unsaid(data, goal, start_item))
     unlisted = (
         tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.corrupting and entry.name not in kind_names)
         if kind_names is not None and not goal.takes_corrupted
@@ -633,6 +636,16 @@ def offers_for(
             else claim("the offered crafts only", "A craft left out could still pay off, and that is not checked.")
         )
         limits += (Limit(_limits.CRAFTS, "Not offered", why, labels=tuple(left_out_crafts), **guarantee),)
+    if left_out_quality and goal.quality is not None:  # a target that asks for no quality needs no word about it, as for the rolls
+        limits += (
+            Limit(
+                _limits.QUALITY,
+                "Not offered",
+                "it only sets the quality, and never to the type the target asks for: a catalyst of another type restarts the quality from 0%",
+                "The plan is unaffected: such a catalyst only costs currency and undoes the quality asked.",
+                tuple(left_out_quality),
+            ),
+        )
     if left_out_rolls and any(leaf.has_roll_limit for leaf in goal.leaves):  # a target without a roll limit needs no word about it
         limits += (
             Limit(
@@ -707,9 +720,13 @@ def _kind_limits(
     goal: Goal,
     start_item: Item,
     listing_gaps: Collection[ListingGap] = (),
+    unsaid: Collection[str] = (),
 ) -> tuple[Limit, ...]:
     """The kinds of the catalog that no plan for this target offers, each group with its reason: not named, opt-in, not built (K1, K2, K4),
     and what the listed kinds left out because the model has no rule for the start item (`listing_gaps`, #511).
+
+    A kind that only sets the quality is not named in any group when it is in `unsaid` (`_quality_kinds_unsaid`): it could not make the plan
+    cheaper, and a target that asks for quality hears about it in the line of its quality (`_quality_finish`, #159).
 
     A kind that only corrupts is the corrupting limit's when the target takes no corrupted item, and a kind that needs Memory
     Strands, while the start item has none, is the strands limit's (`make_plan`): neither is named here. Hinekora's Lock is no kind of the
@@ -723,7 +740,10 @@ def _kind_limits(
         not_named = tuple(
             kind_title(entry.name)
             for entry in kinds(planner_only=True)
-            if entry.name not in (kind_names or ()) and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in strands
+            if entry.name not in (kind_names or ())
+            and not (entry.corrupting and not goal.takes_corrupted)
+            and entry.name not in strands
+            and entry.name not in unsaid
         ) + (lock if LOCK_KIND not in kinds_named else ())
         if not_named:
             found += (
@@ -739,7 +759,7 @@ def _kind_limits(
         opt_in = tuple(
             kind_title(entry.name)
             for entry in kinds(planner_only=True)
-            if entry.opt_in and entry.name not in strands and not (entry.corrupting and not goal.takes_corrupted)
+            if entry.opt_in and entry.name not in strands and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in unsaid
         ) + lock
         if opt_in:
             found += (
@@ -752,7 +772,7 @@ def _kind_limits(
                 ),
             )
     found += listing_gap_limits(listing_gaps, goal)
-    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner and not entry.player_why)
+    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner and not entry.player_why and entry.name not in unsaid)
     if not_built:
         found += (
             Limit(
@@ -765,7 +785,7 @@ def _kind_limits(
         )
     stated: dict[str, list[str]] = {}  # a kind with its reason in a player's words is named apart, with that reason (#943, OR-13)
     for entry in kinds():
-        if not entry.planner and entry.player_why:
+        if not entry.planner and entry.player_why and entry.name not in unsaid:
             stated.setdefault(entry.player_why, []).append(kind_title(entry.name))
     for why, labels in stated.items():
         found += (
@@ -778,6 +798,17 @@ def _kind_limits(
             ),
         )
     return found
+
+
+def _quality_kinds_unsaid(data: GameData, goal: Goal, start_item: Item) -> frozenset[str]:
+    """The kinds that only set the quality (`Kind.only_quality`: the catalysts, the quality currency) the answer does not name among the methods
+    left out (#159): all of them when the target asks for no quality (quality changes no odds of the mods, ADR-0029, so none could make the plan
+    of the mods cheaper; a target that names sockets has the quality currency in its socket finish, which says it, `_finish.finish_limits`), and
+    else those that list nothing for the start item (a catalyst on boots, a quality currency on a ring)."""
+    quality_kinds = [entry.name for entry in kinds() if entry.only_quality]
+    if goal.quality is None:
+        return frozenset(quality_kinds)
+    return frozenset(name for name in quality_kinds if not catalog_kinds(data, start_item, names=frozenset({name})))
 
 
 def listing_gap_limits(gaps: Collection[ListingGap], goal: Goal) -> tuple[Limit, ...]:
@@ -908,6 +939,26 @@ def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed:
         return bool(limited & drawable_mod_ids(data, start_item))
     except (NotApplicableError, OutOfScopeError):  # either: a pool that cannot be built is no proof the mod is out of reach, so the orb stays (nothing is left out)
         return True
+
+
+def _gives_quality_wanted(data: GameData, goal: Goal, start_item: Item, action: Action) -> bool:
+    """Whether an action that only sets the quality (`Adds.only_quality`, a catalyst) can give the quality the goal asks for (#159).
+
+    Read from its outcomes (the contract, not its fields) on the start item with no quality, so a start that holds the quality already
+    does not hide the type the action gives. A goal that asks for no quality never needs it: the quality changes no odds (ADR-0029). An
+    action the model refuses on that item gives nothing, and one it cannot model is kept (nothing is left out on a doubt).
+    """
+    wanted = goal.quality
+    if wanted is None:
+        return False
+    bare = start_item if start_item.quality is None else start_item.changed(data, quality=None)
+    try:
+        results = action.outcomes(data, bare).results
+    except NotApplicableError:
+        return False
+    except OutOfScopeError:
+        return True
+    return any(getattr(made.quality, "type", None) == wanted.type for _, made in results)
 
 
 def _counts_as_crafted(data: GameData, leaf, mod_id: str) -> bool:

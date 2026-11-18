@@ -291,6 +291,9 @@ class Abstraction:
         self._implicit_laws: dict[tuple[str, int], Cells] = {}
         # whether an enabled action takes a quality action off the states where it cannot help (`quality_offer_pruned`)
         self._quality_last = not goal.takes_corrupted or (goal.asks_corrupted and not any(a.corrupts and not a.keeps_mods for a in adds))
+        # the quality is a finish (#159): once every other requirement passes only the quality actions are needed, since no other enabled action
+        # changes the quality (a restart only gives back the start's, which no state is below: the quality of the type asked only rises)
+        self._quality_finish = self._quality_last and goal.quality is not None and not any(a.quality and not a.only_quality for a in adds)
         # the lines a requirement names, when an enabled action moves an implicit inside its line: the state keeps the line of a side that holds one of them
         self._named_lines = (
             frozenset(implicit_line(mod_id) for leaf in goal.implicits for mod_id in leaf.mod_ids)
@@ -572,6 +575,7 @@ class Abstraction:
             numbers=self._numbers,
             rollable=lambda: self._rollable_mods(influences),
             alike=self._alike,
+            group_influenced=not self._has_laws,
         )
         context = self._contexts[influences] = _Context(influences, kinds)
         return context
@@ -750,6 +754,22 @@ class Abstraction:
     def quality_is_met(self, state: CompressedState) -> bool:
         """Whether the quality of `state` meets the quality wanted (always, when the goal wants none)."""
         return self.goal.quality is None or self.goal.quality.is_met_by(state.quality)
+
+    def quality_last_action(self, action: Action) -> bool:
+        """Whether `quality_offer_pruned` can prune `action` at some state: it only sets the quality and the quality is met last (#159)."""
+        return self._quality_last and action.adds(self.data).only_quality
+
+    def quality_finish_only(self, state: CompressedState, action: Action) -> bool:
+        """Whether `action`, which does not only set the quality, is not needed at `state` because the quality is all that is left (#159).
+
+        At a state that meets every requirement but the quality, the cheapest way on is the quality actions alone: no other enabled action
+        changes the quality, so whatever it does the item still needs the same quality after it, and a restart gives back the start's quality,
+        which is no higher (only a quality action of the type asked moves it, and only up). So leaving the other actions out there changes no
+        value: the bound's model (`_pattern.PatternBuilder`) does, which keeps it from copying the item's whole graph once per quality percent.
+        """
+        if not self._quality_finish or action.adds(self.data).only_quality:
+            return False
+        return self.meets_all_but_quality(state) and not self.quality_is_met(state)
 
     def quality_offer_pruned(self, state: CompressedState, action: Action) -> bool:
         """Whether an action that only sets the quality (a catalyst: `Adds.only_quality`) is not an action of `state` (ticket #158, ADR-0029).
@@ -1977,7 +1997,10 @@ class Abstraction:
                 for implicits, before in spread
                 for ints, each in cells
             ]
+        allowance = budget.allowed()  # asked, never counted: a fixed result's states are not counted in states (#1105), but a net on the clock asks here too (#1238)
         for implicits, chance in spread:
+            if allowance is not None:
+                allowance.tick()
             result[CompressedState(split.flags, split.fractured, split.status, slots, implicits, split.quality, split.offer, split.imprints, split.strands, split.replaced)] += share * chance
 
     def _add_drawn(

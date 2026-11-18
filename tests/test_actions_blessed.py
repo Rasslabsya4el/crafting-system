@@ -274,7 +274,7 @@ def test_the_compressed_state_holds_a_base_implicit_only_when_a_requirement_name
 
 def test_the_kind_is_registered_for_items_that_can_hold_an_implicit_and_is_no_planner_kind_yet():
     entry = next(entry for entry in kinds() if entry.name == "blessed-orb")
-    assert entry.planner is False and "158" in entry.why_not
+    assert entry.planner is False and "516" in entry.why_not
     assert BlessedOrb() in catalog(DATA, belt(30), names={"blessed-orb"})
     assert BlessedOrb() in catalog(DATA, _item(RING), names={"blessed-orb"})
     assert catalog(DATA, _item(PLAIN_RING), names={"blessed-orb"}) == ()

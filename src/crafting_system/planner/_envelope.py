@@ -169,7 +169,8 @@ CHECK_SHARED = False
 
 
 class _Cut(Exception):
-    """A kernel of a search counted in states that would take the search past its states net (#1105): `reason` is the net's words."""
+    """A kernel left unmade at a net: in a search counted in states, one that would take the search past its states net (#1105); on the clock,
+    one whose making reached the time or memory net (#1238). `reason` is the net's words."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
@@ -238,14 +239,17 @@ class Net:
     # a run counted in states (`Budget.in_states`, #1101): the pieces of work the bound's build of this search may do (`_pattern_bound`), its
     # share of the search's states net; None for a build on the clock (`_envelope_plan.build_stop`)
     pieces: int | None = None
-    # a plan in hand when the search began (a round of the planner's widening after the first plan, `_rounds`, #1099; not a walked one, #1142):
+    # a plan in hand when the search began (a round of the planner's widening after the first plan, `_rounds`, #1099; a walked one is `walked`):
     # the answer already holds a plan (OR-33), so the bound's build keeps no room for the search to make one and may take the search's whole net
     # (`_envelope_plan.build_stop`, `_plan.search_net`)
     held: bool = False
+    # a plan in hand that a stopped search walked to (#1142): the build keeps the room for its search a round with no plan keeps, unless the
+    # pace its model grows at ends within the round's room (`_envelope_plan.BuildStop`, `abstraction._pattern.Pace.verdict`, #1224)
+    walked: bool = False
     # the seconds the first plan's chain may take when they are more than `seconds`: a round whose bound's build, nearly done, went past the
     # round's share (`_envelope_plan.BuildStop`, #1135) still makes its first plan, in what is left of twice the share; None: `seconds` holds
     first: float | None = None
-    # how many times its seconds (or its pieces) a nearly done bound's build of a search with a plan in hand may go past them
+    # how many times its seconds (or its pieces) a nearly done bound's build of a search with a plan in hand (held or walked) may go past them
     # (`abstraction._pattern.Growth`, #1135); set by `_plan.search_net`, 0 for none
     late: float = 0.0
 
@@ -430,6 +434,7 @@ class Search[S]:
             raise ValueError(f"the gap of the stop is a share, zero or more (0.01 is 1%); got {gap!r}")
         self.p = problem
         self.net = net or Net()
+        self.began: float | None = None  # when `run` began: the net asked inside the making of a kernel reads its seconds from there (#1238)
         self.gap = gap  # OR-32: stop when the plan is proved to cost at most this share more than the cheapest; 0 is the exact search
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
         self.refuse_above = figure_error(gap, gap_after)  # the certified error above which a solve is refused (#867)
@@ -515,7 +520,7 @@ class Search[S]:
                 if not self._fresh_equal(state, position, kid):
                     raise ValueError(f"two states share the kernel key {key!r} but not its kernel (checked at {state!r})")
             return kid
-        weights = self._counted_kernel(state, position) if self.counted else self.p.kernel(state, position)
+        weights = self._counted_kernel(state, position) if self.counted else self._netted_kernel(state, position)
         kid = self._store([self.intern(s) for s in weights], list(weights.values()))
         if key is not None:
             self.shared[key] = kid
@@ -525,6 +530,24 @@ class Search[S]:
     def counted(self) -> bool:
         """Whether the search counts its work in states (`Budget.in_states`: a states net and the build's pieces, #1101)."""
         return self.net.pieces is not None and self.net.states is not None
+
+    def _netted_kernel(self, state: S, position: int) -> dict[S, int]:
+        """The kernel of offer `position` at `state` in a search on the clock, made under its time and memory net (#1238): the making asks the net
+        at most every `budget.ASK_SECONDS`, looking at the clock every `budget.ASK_EVERY` pieces (`budget.asking`), and once it is reached the kernel is left unmade and `_Cut` says so, the search ending
+        there as at its net with its plan in hand. One kernel (R20's listing draw under `Reads.influenced`) grew past 12 GB between two of the
+        search's own questions. The seconds are those of the first plan's chain where they are more (`Net.first`), so that a chain the net lets
+        run is not cut inside one of its kernels; a kernel of a later round may then overrun the round's own seconds by at most `first - seconds`,
+        and the round's own question between two kernels stops it there. Raises `Refused` as `kernel` does."""
+        net = self.net
+        if self.began is None or (net.seconds is None and net.memory_mb is None):
+            return self.p.kernel(state, position)
+        seconds = None if net.first is None or net.seconds is None else max(net.first, net.seconds)
+        began = self.began
+        try:
+            with budget.asking(lambda: self._net(began, states=False, seconds=seconds)):
+                return self.p.kernel(state, position)
+        except budget.NetReached as reached:
+            raise _Cut(f"{reached.reason}, inside the making of the next action's outcomes: it was left unmade") from None
 
     def _counted_kernel(self, state: S, position: int) -> dict[S, int]:
         """The kernel of offer `position` at `state` in a search counted in states, made on an allowance of the states the search may still know
@@ -1005,10 +1028,14 @@ class Search[S]:
             raise beaten
 
     def run(self) -> SearchResult[S]:
-        began = time.perf_counter()
+        began = self.began = time.perf_counter()
         if self.p.restart is not None:
             self.restart_kernel = self._store([0], [1])
         stopped = None
+        if not self.goal[0] and not math.isfinite(self.lb[0]):
+            # the start's own bound proves that no plan of the offers reaches the goal (#1190: the offers' floors when no offer can enter E, or a
+            # bound's model whose start reaches no goal): that is the answer, before any net can stop the search and say "no plan found yet"
+            raise NoPolicy("no policy of the offers reaches the goal from the start", states=len(self.states))
         if not self.goal[0]:
             self._beaten(float(self.lb[0]), began)  # the start's own bound already reaches the plan in hand: nothing is expanded
             if math.isfinite(self.lb[0]):
