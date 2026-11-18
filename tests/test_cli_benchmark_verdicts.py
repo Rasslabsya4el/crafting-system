@@ -246,13 +246,9 @@ def test_the_project_config_states_the_tolerance():
 # --- the verdicts of the repository -------------------------------------------------------------------------
 
 
-def test_r04_and_r09_carry_their_verdicts_as_real_finds():
-    found = {(each.id, each.side): each for each in verdicts.VERDICTS}
-
-    assert found[("R04", COMPLETED)].issues == (599, 628) and found[("R09", GUIDE)].issues == (901,)
-    assert {each.kind for each in found.values()} == {REAL_FIND}
-    assert found[("R04", COMPLETED)].ratio == pytest.approx(0.331, abs=1e-3)
-    assert found[("R09", GUIDE)].ratio == pytest.approx(0.168, abs=1e-3)
+def test_no_route_carries_a_verdict_since_the_targets_became_the_guides_items():
+    """#1289 (OR-58): the two verdicts left (R04's completed route, R09's guide) were reviewed on targets that asked less than the guide's item, and went with them."""
+    assert verdicts.VERDICTS == ()
 
 
 def test_only_a_reference_route_carries_a_verdict():
@@ -262,23 +258,21 @@ def test_only_a_reference_route_carries_a_verdict():
     assert "V01" not in references
 
 
-# What the heavy runs 42395491917 (R04, at the committed price snapshot) and 43828591390 (R09, at the week-one prices, #901) measured: the ratio
-# planner mean / guide mean and the planner's first divergent action. The verdicts were written from them. R08's and R09's old ones (run
-# 42433997611, Prismatic Fossil) left with their old targets (#901).
+# The two verdicts the repository held until #1289, as the heavy runs 42395491917 (R04) and 43828591390 (R09, #901) measured them: the ratio
+# planner mean / guide mean and the planner's first divergent action. They are no verdicts any more (their targets changed, OR-58); they stay
+# here as the cases of the judging: a verdict stands at its measured ratio on unchanged files, and is asked again when one of them moves.
 MEASURED = {
-    ("R04", COMPLETED): (0.33095397065170684, "Exalted Orb"),
-    ("R09", GUIDE): (0.16765561098943751, "Fossils Pristine Fossil"),
+    ("R04", COMPLETED): (Verdict("R04", COMPLETED, REAL_FIND, (599, 628), 0.331, "2026-11-07", "target", "route", "Exalted Orb"), 0.33095397065170684),
+    ("R09", GUIDE): (Verdict("R09", GUIDE, REAL_FIND, (901,), 0.168, "2026-11-16", "target", "route", "Fossils Pristine Fossil"), 0.16765561098943751),
 }
 
 
 @pytest.mark.parametrize("key", sorted(MEASURED))
-def test_the_verdicts_of_the_real_routes_stand_at_the_measured_ratios_and_flag_again_when_prices_move_them(key):
-    """The benchmark prints R04 and R09 reviewed at the numbers of the heavy run, and "NEEDS A HUMAN AGAIN" if a price moved a ratio by a quarter."""
-    ratio, action = MEASURED[key]
-    found = next(each for each in verdicts.VERDICTS if (each.id, each.side) == key)
-    bench = next(each for each in BENCHMARKS if each.id == key[0])
-    route = bench.route if key[1] == GUIDE else bench.completed
-    here = Reviewing(found, 0.2, text_hash(ROOT / bench.target), text_hash(ROOT / route))
+def test_a_verdict_stands_at_the_measured_ratio_and_flags_again_when_a_price_a_file_or_the_action_moves(key):
+    """The benchmark prints a route reviewed at the numbers of its heavy run, and "NEEDS A HUMAN AGAIN" if a price moved the ratio by a quarter."""
+    found, ratio = MEASURED[key]
+    action = found.planner_action
+    here = Reviewing(found, 0.2, "target", "route")
 
     standing = here.judge(ratio, action)
     text = "\n".join(review_lines(key[1], review_of(ratio, 0.5, standing), NO_BLOCK))
@@ -287,6 +281,7 @@ def test_the_verdicts_of_the_real_routes_stand_at_the_measured_ratios_and_flag_a
     assert standing["again"] is False and f"reviewed: real find (#{found.issues[0]}" in text and "NEEDS A HUMAN" not in text
     assert moved["again"] is True and "above the ratio at review" in moved["reasons"][0]
     assert here.judge(ratio, "Orb of Alchemy")["again"] is True
+    assert Reviewing(found, 0.2, "another target", "route").judge(ratio, action)["reasons"] == ["the target file text changed since the review"]
 
 
 def test_every_verdict_names_a_route_of_the_list_and_the_files_it_was_reviewed_on_are_unchanged():
@@ -426,18 +421,19 @@ def test_the_benchmark_json_and_text_carry_the_numbers_at_the_first_divergence(t
     assert "bench craft" not in text  # R12 offers no bench craft: the reading does not apply
 
 
-# --- the start boots of R08 and R09, on the real game data (#617, from #591 and #592) ----------------------
-# At the week-one prices of OR-44 and with the tiers named by #901 (tier 1 or 2 of the Energy Shield and of the Life): the Prismatic Fossil is
-# about 3 times cheaper per use than the guide's pair, not 25 times as at the prices of 2026-10-31 (Prismatic 0.2 Chaos then, 6.77 now).
-# The Prismatic Fossil is the planner's old choice (the verdicts of #591, #592), kept here as a pinned per-use case; at the week-one prices the
-# planner chooses another fossil (R09: the Pristine Fossil alone, its verdict of #901; R08: see #901's PR).
+# --- the start boots of R08 and R09, on the real game data (#617, from #591 and #592; #1289) --------------
+# At the week-one prices of OR-44, on the targets as the guide's finished boots (OR-58, #1289: the top tier of the Energy Shield or of the Life
+# and the rolled 35% Movement Speed, with no bench craft in its place). The Prismatic Fossil is about 3 times cheaper per use than the guide's
+# pair and ends in the target 14 to 20 times less often: the guide's pair is the cheaper way per finished item. Until #1289 the targets took the
+# bench's (20-24)% Movement Speed too, and the Prismatic Fossil then reached them about as often as the pair (one sure bench craft short), which
+# was the planner's choice in the verdicts of #591 and #592: a fault of the targets, not a find.
 
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
 PRISMATIC = "Fossils Prismatic Fossil"
 # route -> (target, the guide's pair, [cost of Prismatic, cost of the pair], [chance of reaching the target for each], resources of the pair)
 START_BOOTS = {
-    "R08": ("r08-energy-shield-boots", "Fossils Dense Fossil + Shuddering Fossil", (7.6292, 24.1013), (0.045412, 0.044787), ("Dense Fossil", "Shuddering Fossil")),
-    "R09": ("r09-life-boots", "Fossils Pristine Fossil + Shuddering Fossil", (7.6292, 19.5213), (0.048041, 0.053958), ("Pristine Fossil", "Shuddering Fossil")),
+    "R08": ("r08-energy-shield-boots", "Fossils Dense Fossil + Shuddering Fossil", (7.6292, 24.1013), (0.00068413, 0.0096307), ("Dense Fossil", "Shuddering Fossil")),
+    "R09": ("r09-life-boots", "Fossils Pristine Fossil + Shuddering Fossil", (7.6292, 19.5213), (0.00077224, 0.01577), ("Pristine Fossil", "Shuddering Fossil")),
 }
 
 
@@ -460,8 +456,8 @@ def the_boots_after_the_draw(plan):
     return plan.abstraction.compress(plan.target.start_item) if plan.start.flags.unopened else plan.start
 
 
-def test_one_use_on_the_start_boots_has_near_odds_and_a_cost_about_3_times_apart(boots):
-    """#591, #592, #901: the Prismatic Fossil (the planner's old choice) and the guide's pair reach the target about as often, the pair at 3.2 and 2.6 times the cost per use."""
+def test_one_use_on_the_start_boots_costs_about_3_times_less_and_ends_in_the_target_over_10_times_less_often(boots):
+    """#591, #592, #1289: against the guide's pair the Prismatic Fossil costs 3.2 and 2.6 times less per use and rolls the whole target 14 and 20 times less often."""
     route, plan = boots
     _, pair, (cheap_cost, dear_cost), (cheap_odds, dear_odds), pair_parts = START_BOOTS[route]
 
@@ -472,12 +468,11 @@ def test_one_use_on_the_start_boots_has_near_odds_and_a_cost_about_3_times_apart
     assert [part["resource"] for part in cheap["parts"]] == ["Primitive Chaotic Resonator", "Prismatic Fossil"]
     assert {part["resource"] for part in dear["parts"]} == {"Potent Chaotic Resonator", *pair_parts}
     assert sum(part["chaos"] for part in dear["parts"]) == pytest.approx(dear_cost)
-    # reaching the target: the item is it, or one sure bench craft (the Movement Speed) short of it
-    assert cheap["chance"] + cheap["short"] == pytest.approx(cheap_odds, abs=2e-4)
-    assert dear["chance"] + dear["short"] == pytest.approx(dear_odds, abs=2e-4)
+    # reaching the target is rolling it whole: no bench craft stands in for the rolled Movement Speed (OR-58), so no use is "one craft short"
+    assert cheap["short"] is None and dear["short"] is None
+    assert cheap["chance"] == pytest.approx(cheap_odds, rel=1e-3) and dear["chance"] == pytest.approx(dear_odds, rel=1e-3)
     assert dear["cost"] / cheap["cost"] > 2.5
-    assert 0.85 < (cheap["chance"] + cheap["short"]) / (dear["chance"] + dear["short"]) < 1.15
-    assert cheap["chance"] < 0.002 < cheap["short"]  # the cheap set almost never rolls the Movement Speed itself: its odds are the bench craft
+    assert dear["chance"] / cheap["chance"] > 10  # so the pair is the cheaper way per finished pair of boots
 
 
 def test_the_row_of_the_start_boots_tells_both_numbers(boots):
@@ -495,8 +490,8 @@ def test_the_row_of_the_start_boots_tells_both_numbers(boots):
 
     assert lines[1].startswith(
         "      the planner's Fossils Prismatic Fossil: one use costs 7.63 Chaos (0.86 for 1 Primitive Chaotic Resonator + 6.77 for 1 Prismatic Fossil), "
-        "reaches the target with chance 4."
+        "ends in the target with chance 0.0"
     )
-    assert "reaches the target with chance 4." in lines[1] and "or is one certain bench craft away from it (0." in lines[1]
-    assert ("reaches the target with chance 4." in lines[2] or "reaches the target with chance 5." in lines[2]) and "certain bench craft" in lines[2]
+    assert f"the guide's {pair}: one use costs" in lines[2] and "ends in the target with chance" in lines[2]
+    assert all("bench craft" not in line for line in lines)  # the target takes no bench craft for the Movement Speed (OR-58)
     assert f"the guide's {pair}: one use costs " in lines[2] and "Shuddering Fossil" in lines[2]

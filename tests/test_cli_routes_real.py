@@ -101,7 +101,8 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
 def test_the_json_policy_keeps_the_group_of_the_target(solved, data):
     """`policy_document(...)["requirements"]` of the real plan (ticket #630): a group of the target stays a group, not a list of required mods.
 
-    R11 asks for 1 of 2 (the reservation of the Shrieking or of the Deafening essence). R05 asked for 1 of 4 (Life or one resistance) until
+    R11 asks for 1 of 2 (the reservation of the Shrieking or of the Deafening essence) and, since #1289, for 1 of the 6 bench crafts the guide
+    finishes with. R05 asked for 1 of 4 (Life or one resistance) until
     #895; the owner's target asks the Life itself, so it has no group (the old reading is the fixture of `test_cli_report_requirements.py`).
     """
     route_id, _, target, plan = solved
@@ -112,9 +113,11 @@ def test_the_json_policy_keeps_the_group_of_the_target(solved, data):
     assert len(requirements["groups"]) == len(groups)
     assert len(requirements["plain"]) == len(target.requirements) - len(groups)
     if route_id == "R11":
-        [group] = requirements["groups"]
+        group, finish = requirements["groups"]
         assert group["at_least"] == 1 and len(group["of"]) == 2
         assert [member["side"] for member in group["of"]] == ["suffix", "suffix"]  # the Shrieking and the Deafening reservation
+        assert finish["at_least"] == 1 and len(finish["of"]) == 6  # the guide's last step: a crafted resistance or attribute (#890, #1289)
+        assert {member["side"] for member in finish["of"]} == {"suffix"}
         assert not any("ReducedManaReservationsCost" in label for label in requirements["plain"])
     if route_id == "R05":
         assert requirements["groups"] == [] and len(requirements["plain"]) == 3  # the attributes, the Strength and the Life, each asked itself

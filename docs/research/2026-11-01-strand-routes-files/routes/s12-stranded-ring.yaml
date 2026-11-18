@@ -32,6 +32,14 @@
 name: S12, test route, R05 on a ring with 60 strands
 
 rules:
+  # Step 3: the ring holds the tier 1 Life beside the essence's Strength: Intrinsic Catalysts until 20% quality.
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+    do: Intrinsic Catalyst
+  # Step 2: the essence again (this is also the first use, on the bought ring).
   - when:
       rarity: rare
     do: Deafening Essence of Rage

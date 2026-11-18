@@ -228,10 +228,11 @@ def test_the_implicit_and_quality_requirements_are_each_met_by_a_probe(results, 
 
 
 def test_the_benchmarks_ask_the_kinds_this_ticket_covers(export):
-    """The probes exist because targets ask for them: R03 and R06 an implicit, R06 a quality."""
+    """The probes exist because targets ask for them: R03 and R06 an implicit, R05 and R06 a quality."""
     asked = {stem: other_kind_paths(oracle_for(export, stem)[0]) for stem in BENCHMARKS}
     assert {stem: paths for stem, paths in asked.items() if paths} == {
         "r03-avoid-shock-boots": {"implicits[0]"},
+        "r05-strength-ring": {"quality"},  # the 20% Intrinsic quality of the guide's ring (#1289)
         "r06-strength-heavy-belt": {"implicits[0]", "quality"},
     }
 
