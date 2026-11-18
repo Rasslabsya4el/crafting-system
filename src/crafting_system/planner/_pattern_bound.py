@@ -415,10 +415,58 @@ def _binding(
             where = [k for k in where if k not in held[position]]
         if where:
             found.append((low, position))
-            needs[position] = sorted(where)
-    say(f"binding: {len(needs):,} of {len(candidates):,} offers are needed, at {len({k for keys in needs.values() for k in keys}):,} of {len(model.keys):,} keys ({time.perf_counter() - examined:.1f} s)")
+            needs[position] = where
+    more = _doubled(needs, holders or {}, keys_of, candidates, floors, found)
+    say(
+        f"binding: {len(needs):,} of {len(candidates):,} offers are needed, at {len({k for keys in needs.values() for k in keys}):,} of {len(model.keys):,} keys"
+        + (f"; {more:,} more offers at a key, as many as those keys held (`_doubled`)" if more else "")
+        + f" ({time.perf_counter() - examined:.1f} s)"
+    )
     found.sort()
-    return {position: needs[position] for _, position in found}, limit
+    return {position: sorted(needs[position]) for _, position in found}, limit
+
+
+def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
+    """Give a key that needs offers at least as many as it already holds of those built at some keys only, the least floors first (#1325).
+
+    The model's value at a key of another shape rises by cents as offers join, and every offer's floor there is its price (`OfferFloors.lower`):
+    R24's thousands of fossil sets, priced a cent apart, joined three a round at one key, 325 rounds of a solve each with no end in sight. Given as
+    many as it held, a key that keeps needing offers holds twice as many each time it is found binding, so it is found binding at most about
+    log2 of the offers times, and it is given at most twice the offers it needs in the end. Which offers a key holds changes nothing of
+    the bound's soundness (any set of offers built at a key is a lower bound there, `_floor_of`): only how many rounds the growth takes.
+    Adds to `needs` and `found` in place; returns how many (offer, key) pairs were added."""
+    if not holders:
+        return 0
+    held: dict[int, int] = {}
+    for keys in holders.values():
+        for k in keys:
+            held[k] = held.get(k, 0) + 1
+    given: dict[int, int] = {}
+    for keys in needs.values():
+        for k in keys:
+            given[k] = given.get(k, 0) + 1
+    added = 0
+    ranked: dict[int, list[tuple[float, int]]] = {}
+    for klass, keys in keys_of.items():
+        short = [k for k in keys.tolist() if 0 < given.get(k, 0) < held.get(k, 0)]
+        if not short:
+            continue
+        if klass not in ranked:
+            ranked[klass] = sorted((low, p) for p in candidates if (low := floors.lower(p, klass)) < math.inf)
+        for k in short:
+            want = held[k] - given[k]
+            for low, p in ranked[klass]:
+                if want == 0:
+                    break
+                if k in holders.get(p, ()) or k in needs.get(p, ()):
+                    continue
+                if p not in needs:
+                    needs[p] = []
+                    found.append((low, p))
+                needs[p].append(k)
+                want -= 1
+                added += 1
+    return added
 
 
 __all__ = ["PatternBound", "pack_pattern_model", "pattern_lower_bound", "pattern_offers"]
