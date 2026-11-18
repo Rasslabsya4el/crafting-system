@@ -190,3 +190,19 @@ def test_the_finish_holds_only_while_no_offered_action_changes_the_implicits():
     assert not _implicit_finish.applies(D, target)  # a Blessed Orb is a burn of the Lock (ADR-0056): with the Lock named, the roll is searched
     assert _implicit_finish.applies(D, parse(HELD, methods=("blessed-orb",)))
     assert not _implicit_finish.applies(D, parse(HELD, methods=("blessed-orb",)), judged=True)  # a judged route may name the orb as a step
+
+
+def test_where_an_offered_action_would_break_the_finish_the_wish_is_searched_with_the_mods_at_the_same_mean(monkeypatch):
+    # `make_plan` checks the plan's offers after the plan of the mods (`_implicit_finish.holds`): an offered action that changes or reads the
+    # implicits (an Ember on boots) or corrupts the item sends the wish into the search, and the plan is made again there
+    monkeypatch.setattr(_implicit_finish, "holds", lambda data, actions: False)
+    plan = _plan(CRAFTED, methods=("bench-craft", "blessed-orb"))
+    assert plan.implicit_finish is None and "Blessed Orb" in {priced.label for priced in plan.offers}
+    assert plan.total_mean == pytest.approx(6 * A + 11 * B, rel=1e-9)
+
+
+def test_two_wishes_on_one_implicit_take_the_higher_roll():
+    two = HELD.replace("    min_roll: 30\n", f"    min_roll: 25\n  - family: {FAMILY}\n    min_roll: 28\n")
+    plan = _plan(two)
+    assert plan.implicit_finish.chance == Fraction(3, 11) and plan.total_mean == pytest.approx(11 / 3 * B, rel=1e-12)
+

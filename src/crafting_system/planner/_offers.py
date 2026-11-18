@@ -951,8 +951,10 @@ def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed:
 def _implicit_roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item) -> bool:
     """Whether a roll limit of the goal's implicit wishes is on a ranged implicit the start item holds: the only implicits whose values an action
     that rerolls implicit values alone (`Adds.needs_roll_limit` with `Adds.implicits`, a Blessed Orb, #1231) can change. An implicit another
-    action puts on the item (an Ember, an Ichor, an Orb of Conflict) is rolled by that action, whose own outcomes give its values."""
-    held = {entry.mod_id for entry in start_item.implicits if any(stat.min != stat.max for stat in data.mods[entry.mod_id].stats)}
+    action puts on the item (an Ember, an Ichor, an Orb of Conflict) is rolled by that action, whose own outcomes give its values, and an
+    Eldritch implicit is no Blessed Orb's to reroll (`actions/blessed.py`: the orb is not offered on an item that holds one)."""
+    mods = (data.mods.get(entry.mod_id) for entry in start_item.implicits)
+    held = {mod.id for mod in mods if mod is not None and eldritch_side(mod) is None and any(stat.min != stat.max for stat in mod.stats)}
     return any(wish.has_roll_limit and wish.mod_ids & held for wish in goal.implicits)
 
 
