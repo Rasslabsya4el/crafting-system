@@ -1,0 +1,4 @@
+RESULT k-R24.pkl dropped tags,counts: coarse keys 19958; fewest-junk members 19958; keys reachable from them 60895 of 60895 (100.00%); members with no junk 438, keys reachable from those 60895 (100.00%); start key's junk 0
+RESULT k-R24.pkl dropped tags,counts,crafted,held,veiled: coarse keys 193; fewest-junk members 19958; keys reachable from them 60895 of 60895 (100.00%); members with no junk 438, keys reachable from those 60895 (100.00%); start key's junk 0
+RESULT k-R04.pkl dropped tags,counts: coarse keys 28594; fewest-junk members 28597; keys reachable from them 100771 of 100771 (100.00%); members with no junk 1441, keys reachable from those 100771 (100.00%); start key's junk 0
+RESULT k-R04.pkl dropped tags,counts,crafted,held,veiled: coarse keys 2500; fewest-junk members 28549; keys reachable from them 100771 of 100771 (100.00%); members with no junk 1441, keys reachable from those 100771 (100.00%); start key's junk 0
