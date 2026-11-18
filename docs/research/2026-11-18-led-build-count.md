@@ -100,7 +100,7 @@ R04_REFINED_B
 These rows were counted after the first version of this note, at the `checker`'s request; they narrow its answer.
 
 - **The coarse key itself loses almost nothing.** With the least true value inside each coarse key as the lead (`BEST`), the build ends in 804 keys (R04, 28,596 coarse keys) and 874 (R04, 2,502 coarse keys), 232 (R24, 19,964) and 329 (R24, 196): a perfect lead needs 734 and 231. The merged leads on the same coarse keys are worth 8.2%, 7.6%, 86% and 42% of the value. So what is lost is lost in the merge (an action of one member offered at every member, its outcomes pushed through the coarse key), not in what the coarse key forgets.
-- **That least value has a name, but no build can have it.** It sits at the member with the fewest junk mods in 98.64% (R04, 28,596 coarse keys) to 100% (R24, 196) of the coarse keys holding several keys (`ledmin.py`, `ledmin-results.txt`). It is not a lower bound: on R04, 889 of 93,540 keys are below their fewest-junk member, by at most 0.02%; on R24 one key, by 1.16%. And it is the same problem again: the fewest-junk members include the start key and reach every key of both dumps (`ledreach.py`, `ledreach-results.txt`: 100,771 of 100,771 and 60,895 of 60,895).
+- **That least value has a name, but no build can have it.** It sits at the member with the fewest junk mods in 98.64% (R04, 28,596 coarse keys) to 100% (R24, 196) of the coarse keys holding several keys (`ledmin.py`, `ledmin-results.txt`). It is not a lower bound: on R04, 889 of 93,540 keys are below their fewest-junk member, by at most 0.02%; on R24 one key, by 1.16%. And it is the same problem again: the fewest-junk members are 28,597 of R04's 100,771 keys (28%) and 19,958 of R24's 60,895 (33%), the least a build of that lead has to work out, and they include the start key, so their exact values need every key (`ledreach.py`, `ledreach-results.txt`).
 - **Re-solved each round, the merged lead is nearly perfect.** `hybrid` (the coarse model's rows unchanged, every successor that is a worked-out key read at that key) and `refined` (the same, the worked-out keys also leaving their coarse key's rows), both checked at or under the truth at every key and round:
 
 | Route | Coarse key | Coarse keys | Static lead's value | Static, mass:0.5 | `hybrid`, mass:0.5 (to 1%) | `refined`, mass:0.5 (to 1%) |
@@ -161,8 +161,8 @@ What these two runs say: with the stand-in in place of the arguments, the direct
 
 The "no" rests on:
 
-1. Section 2, R24: a lead at 86% of the truth leaves 30% to 90% of the build to do, and the coarse model that gives that lead is a third of the exact one. Counted, two rules, two coarse keys at 86%.
-2. Section 2, R04: no coarse key tried is both small and within 1% of the truth; the leads at 92% and at 8% were heading for most of the keys when read. Counted as far as the runs went; the two slow runs were not finished, and the note says where they stood.
+1. Section 2, R24: a static lead at 86% of the truth leaves 26% to 90% of the build to do, and the coarse model that gives that lead is a third of the exact one. Counted, two rules, two coarse keys at 86%.
+2. Section 2, R04: no static lead tried is both from a small coarse key and within 1% of the truth; the leads at 92% and at 8% were heading for most of the keys when read. Counted as far as the runs went; the two slow runs were not finished, and the note says where they stood.
 3. Section 2, both routes: for a static lead the rule is not the lever (`oracle` no better than `mass:0.5`).
 4. Section 4: the direct model with the optimistic stand-in is at the level of the offers' floors, so the figures the design note gave for the status model (42% to 86% on R24) are only reached after every per-class argument is written and proved. Counted on R24's guide offers; over every offer the build did not get past the start key on five of the six targets tried (section 4).
 

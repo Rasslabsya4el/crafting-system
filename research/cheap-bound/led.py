@@ -40,7 +40,8 @@ from crafting_system.solver import PackedBuilder, solve_packed
 FOLDS = {"sum": lambda c: sum(c), "cap1": lambda c: tuple(min(x, 1) for x in c), "cap2": lambda c: tuple(min(x, 2) for x in c), "prefix": lambda c: c[0], "suffix": lambda c: c[1]}
 dump, lead = sys.argv[1], sys.argv[2]
 RULE = os.environ.get("RULE", "all")
-HYBRID = os.environ.get("REFINE") == "hybrid"
+HYBRID = os.environ.get("REFINE") in ("hybrid", "worked")
+WORKED = os.environ.get("REFINE") == "worked"  # as hybrid, but only a worked key's own rows name exact successors; the rows of keys not worked out see coarse keys only
 MASS = float(RULE.split(":")[1]) if RULE.startswith(("mass:", "oracle:")) else None
 ORACLE = RULE.startswith("oracle:")
 d = pickle.load(open(dump, "rb"))
@@ -87,18 +88,19 @@ else:
         for i in range(n):
           for c in ([cls[i], cc[i]] if HYBRID and i in cc else [cls[i]]):  # hybrid: a worked key's rows stay in its coarse key too
             g[c] = g[c] or goal[i]
+            routed = not WORKED or i in cc
             for oi, kid in actions[i]:
-                r = kmap.get(kid)
+                r = kmap.get((kid, routed))
                 if r is None:
                     acc = defaultdict(int)
                     for s, w in zip(*kernels[kid]):
-                        acc[-1 if s < 0 else cls[s]] += w
+                        acc[-1 if s < 0 else cls[s] if routed else cc.get(s, cls[s])] += w
                     t = tuple(sorted(acc.items()))
                     r = kidx.get(t)
                     if r is None:
                         r = kidx[t] = len(newk)
                         newk.append((tuple(s for s, _ in t), tuple(w for _, w in t)))
-                    kmap[kid] = r
+                    kmap[(kid, routed)] = r
                 if newk[r][0] != (c,):
                     rows[c].add((oi, r))
         reps = [None] * nc
@@ -121,7 +123,7 @@ else:
         print(f"BEST: the lead is the least complete value inside the coarse key; at the start key {h[0]!r} ({100 * h[0] / V[0]:.2f}%)", flush=True)
 REFINE = bool(os.environ.get("REFINE")) and lead not in ("floor", "exact") and not os.environ.get("BEST")
 if REFINE:
-    lead += "@hybrid" if HYBRID else "@refined"
+    lead += "@worked" if WORKED else "@hybrid" if HYBRID else "@refined"
 tip = np.array([not choice[i] and not goal[i] for i in range(n)])  # a goal and a choice node are never tips: their lead is never read
 over = int(np.sum((h > V * (1 + 1e-7) + 1e-9) & tip))
 print(f"lead above the complete value at {over} keys of {n} (the lemma says 0); lead/exact over the keys that can be tips: median {float(np.median((h / np.maximum(V, 1e-300))[tip])):.4f}", flush=True)
