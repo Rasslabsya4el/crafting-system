@@ -86,6 +86,8 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("actions/recombinator.py", "junk_craft_for", ("OutOfScopeError",), LISTS, "no rule for the craft on the item: not a candidate, and the listing is told"),
     ("actions/corruption.py", "_vaal_orb", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel: no rule for its pool, no Vaal Orb is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
     ("actions/influence.py", "_influenced_exalted_orbs", ("OutOfScopeError",), LISTS, "an item class with no influence class key (a jewel, a flask): no influenced Exalted Orb is listed, and the listing is told"),
+    ("actions/influence.py", "_beast_influence_recipes", ("OutOfScopeError",), LISTS, "an item class with no influence class key (a jewel, a flask): no beast influence recipe is listed, and the listing is told (#1196)"),
+    ("actions/influence.py", "BeastInfluenceRecipe.added_draw", ("OutOfScopeError",), GAP, "no pool is modelled for the bare item: no draw is declared, the offer stays terminal (#1196)"),
     ("actions/influence.py", "OrbOfDominance.influence_alike", ("OutOfScopeError",), GAP, "an influence mod whose upgrade the data cannot name: its group is kept apart by mod, and the use itself still raises (#1238)"),
     ("actions/locus.py", "_locus", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel, an empty pool or one with no second draw: no Locus is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
     ("actions/scope.py", "base_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "refused before the base was asked, whichever family: this probe item proves nothing, the next is asked (#848); `UnmodelledBase` is caught before it"),
@@ -129,7 +131,9 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_envelope_plan.py", "CraftingProblem.kernel_key", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`, the offer is left out of the state"),
     ("planner/_envelope_plan.py", "CraftingProblem.kernel", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_envelope_plan.py", "CraftingProblem.kernel", ("OutOfScopeError",), RECORDS, "a model gap: written in `Abstraction.gaps`"),
-    ("planner/_plan.py", "make_plan", ("QualityFinishRefused", "OutOfScopeError"), GAP, "the quality finish cannot be planned (#159): no catalyst of the type asked is offered or priced, or the model has no rule for its gain; the text becomes the `PlanError`"),
+    ("planner/_plan.py", "make_plan", ("QualityFinishRefused", "ImplicitFinishRefused", "OutOfScopeError"), GAP, "the quality or implicit finish cannot be planned (#159, #1231): no catalyst of the type asked or no Blessed Orb is offered or priced, no roll reaches the wish, or the model has no rule for the orb on the item; the text becomes the `PlanError`"),
+    ("planner/_implicit_finish.py", "chance_of_meeting", ("NotApplicableError",), GAME, "the game refuses the Blessed Orb on the item (corrupted, no ranged implicit): the finish is refused and says why"),
+    ("planner/_implicit_finish.py", "plan_implicit_finish", ("OutOfScopeError",), GAP, "the model has no rule for the Blessed Orb on the item (an Eldritch implicit): the finish is refused and says why"),
     ("planner/_quality_finish.py", "mean_uses.mean", ("NotApplicableError",), GAME, "the game refuses the catalyst on the item (not a ring, an amulet or a belt; corrupted): the finish is refused and says why"),
     ("planner/_plan.py", "_make_plan", ("FinishRefused", "OutOfScopeError", "ArithmeticError"), GAP, "the socket finish cannot be planned (#231): its start sockets are not stated, the goal is corrupted, a mod action changes sockets, no offered action completes it, the base has no colour weights, or it did not settle; the text becomes the `PlanError`"),
     ("planner/_plan.py", "_make_plan", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search cannot answer this target: the bound has no members for it (#507), no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the text becomes the `PlanError`"),
@@ -285,7 +289,7 @@ def test_a_listing_clause_says_a_model_gap_and_keeps_the_game_refusal_silent():
     """Ticket #511: a model gap met while a kind lists its actions is told to the listing (`listing_gap`), and a game refusal there is not."""
     listing = [(file, function, caught, node) for file, function, caught, node in clauses_found() if (file, function, caught) in LISTING_CLAUSES]
 
-    assert len(listing) == len([clause for clause in CLAUSES if clause[3] == LISTS]) == 10  # fossil item x2, fossil x2, set, junk craft x2, Vaal, Locus, influenced Exalted Orb
+    assert len(listing) == len([clause for clause in CLAUSES if clause[3] == LISTS]) == 11  # fossil item x2, fossil x2, set, junk craft x2, Vaal, Locus, influenced Exalted Orb, beast influence recipe
     for file, function, caught, node in listing:
         assert _says_a_listing_gap(node) is (caught == ("OutOfScopeError",)), (file, function, caught)
     for file, function, caught, node in clauses_found():  # the clause after a Vaal Orb's or a Locus' gap is the game's: silent

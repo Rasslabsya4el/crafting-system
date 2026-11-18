@@ -254,11 +254,11 @@ def test_a_target_with_the_plain_quality_of_a_weapon_or_armour_is_refused_becaus
 
 
 def test_a_target_with_a_corrupted_implicit_requirement_is_refused_for_the_same_reason(target):
-    """The Eldritch implicits are planned since #835; a base or a corrupted implicit is still refused."""
+    """The Eldritch implicits are planned since #835 and a base implicit's roll since #1231; a corrupted implicit is still refused."""
     wanted = ImplicitRequirement(None, "#% chance to Avoid being Shocked", frozenset({"AvoidShockEldritchImplicit1"}), corrupted=True)
     asked = dataclasses.replace(target, implicits=(wanted,))
 
-    with pytest.raises(PlanError, match="not an Eldritch one.*cannot plan yet"):
+    with pytest.raises(PlanError, match="a corrupted implicit, which the planner cannot plan yet"):
         make_plan(DATA, asked, price_file())
 
 

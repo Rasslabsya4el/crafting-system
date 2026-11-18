@@ -252,7 +252,7 @@ def test_the_target_form_still_works_next_to_the_benchmark_command(tmp_path):
 def test_the_benchmark_lists_its_reference_crafts_and_the_v01_smoke_test_with_their_target_and_route_files():
     """The reference crafts after the owner's review of 2026-11-13 (#901, OR-45): R07, R15, R18, R01, R21, R16, R03 and R23 are not references
     (R22 is the boots route with Eldritch implicits kept of the three; its files wait, see the PR of #901 part 2); R20 and R06 were added in part 2,
-    R06 as "not planned" until the planner plans its implicit and quality (#516); V01 is kept as a smoke test only (a target the project made up), with no verdict and off the checkpoint list (OR-46)."""
+    R06 as "not planned" until its route holds step 4 and its start belt has a price (#1232; the planner plans its implicit and quality since #159 and #1231); V01 is kept as a smoke test only (a target the project made up), with no verdict and off the checkpoint list (OR-46)."""
     root = Path(__file__).resolve().parents[1]
 
     assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R20", "R06", "R24", "V01"]
@@ -260,7 +260,7 @@ def test_the_benchmark_lists_its_reference_crafts_and_the_v01_smoke_test_with_th
         assert (root / bench.target).is_file(), bench.id
         assert bench.route is None or (root / bench.route).is_file(), bench.id
         assert (bench.route is None) == (bench.id == "V01")  # only the route that starts from a vendor recipe has no guide to compare with
-    assert {bench.id: bench.waits.rsplit("(", 1)[-1].split(")")[0] for bench in benchmark_module.BENCHMARKS if bench.waits is not None} == {"R06": "#516"}
+    assert {bench.id: bench.waits.rsplit("(", 1)[-1].split(")")[0] for bench in benchmark_module.BENCHMARKS if bench.waits is not None} == {"R06": "#1232"}
     assert [bench.id for bench in benchmark_module.REFERENCES] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "R17", "R20", "R06", "R24"]
 
 

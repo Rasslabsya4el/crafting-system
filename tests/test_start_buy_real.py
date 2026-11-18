@@ -393,7 +393,7 @@ def test_j01_plans_from_its_example_file_as_a_given_start_item_with_no_restart(d
         ),
         pytest.param(
             "r06-strength-heavy-belt",
-            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price, and the planner refuses its base implicit (#516) first (its quality is planned since #159)"),
+            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price (its quality is planned since #159, its base implicit since #1231)"),
         ),
     ],
 )
