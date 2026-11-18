@@ -172,7 +172,10 @@ of it. An action that raises a model gap at a member (`OutOfScopeError`: no admi
 no member of the key can take it (each is a game refusal or a gap: the exact model has no action at any state of the key, as the walk and the
 planner treat a gap as unavailable). If another member can take it, the build refuses and names the offer and the key: the exact model drops
 the action only at the states where the gap is, so leaving it out of the key could put the bound above the exact cost (`_gap_everywhere`). A
-model gap in `_item_of` always refuses.
+model gap in `_item_of` always refuses. An action that declares `Reads.refusal_by_families` (a bench craft, Remove Crafted Mods) is refused alike
+at every item of one refusal class (`Abstraction._refusal_class`, #1178): a pair whose class holds a refusal already is counted as refused
+without asking `kernel_key` (`Abstraction.refusal_class_of`, `refused_in_class`; #1256: R04's round of bench crafts asked 2.3 million pairs,
+2.28 million of them refusals of a class met before), the very answer `kernel_key` gives it.
 
 **The certain additions (#1193).** An action declared `Adds.only_named` (a bench craft, an aspect beast; the contract suite checks it) has
 one outcome: the item it was given with its named mods added, nothing else changed. At a member `m` of key `k` that takes it, the successor
@@ -236,6 +239,7 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
@@ -812,14 +816,17 @@ class Pattern:
         base = best_of(self.width, [slot.contribution for slot in (*key.crafted, *key.veiled)] + [entry.contribution for entry in key.fractured])
         found: dict[CompressedState, None] = {}
         allowance = budget.allowed()  # a stage on the clock asks its net here too (#1217): one key's members can take minutes
-        for rel_p, rel_s in product(
-            self._relevant(universe, Side.PREFIX, key.counts[0], key.status), self._relevant(universe, Side.SUFFIX, key.counts[1], key.status)
-        ):
+        prefixes = self._relevant(universe, Side.PREFIX, key.counts[0], key.status)
+        suffixes = self._relevant(universe, Side.SUFFIX, key.counts[1], key.status)
+        # the status of a pair of multisets is the per-leaf best of the prefixes' (with the key's own slots) and the suffixes': each side's is
+        # made once and a pair is looked up by the two (#1256: 3.5 million `best_of` over the pairs took R04's round of bench crafts 17 s)
+        fits = _fitting(self.width, key.status, [[slot.contribution for slot in rel] + [base] for rel in prefixes], [[slot.contribution for slot in rel] for rel in suffixes])
+        for (rel_p, at_p), (rel_s, at_s) in product(zip(prefixes, fits[0]), zip(suffixes, fits[1])):
             if allowance is not None:
                 allowance.tick()
-            relevant = rel_p + rel_s
-            if best_of(self.width, [slot.contribution for slot in relevant] + [base]) != key.status:
+            if not fits[2][at_p][at_s]:
                 continue
+            relevant = rel_p + rel_s
             for compositions in self._compositions(universe, key, rel_p, rel_s):
                 if allowance is not None:
                     allowance.tick()
@@ -935,6 +942,18 @@ class Pattern:
                 found = False
             self._feasible[state] = found
         return found
+
+
+def _fitting(width: int, status: tuple, firsts: list[list], seconds: list[list]) -> tuple[list[int], list[int], list[list[bool]]]:
+    """Which pairs of `firsts` and `seconds` (lists of contributions) have together the per-leaf best `status`: `best_of(width, first + second)
+    == status` is `fits[first's class][second's class]`, where a class is a distinct `best_of` of one side (the best of a union is the per-leaf
+    best of the bests). Returns each first's class, each second's class and the table."""
+    numbers: list[dict[tuple, int]] = [{}, {}]
+    places = []
+    for side, lists in enumerate((firsts, seconds)):
+        places.append([numbers[side].setdefault(best_of(width, vectors), len(numbers[side])) for vectors in lists])
+    table = [[tuple(max(a, b) for a, b in zip(first, second)) == status for second in numbers[1]] for first in numbers[0]]
+    return places[0], places[1], table
 
 
 def _splits(total: int, parts: int) -> Iterator[tuple[int, ...]]:
@@ -1402,10 +1421,13 @@ class PatternBuilder:
             if not self.goal[i]:
                 first = self.done if self.expanded[i] else 0
                 if first < len(offers):
-                    if not self.expanded[i] and not pattern.members(self.keys[i], Mode.ANY):  # a key expanded before had a member: the universe only grows
-                        raise _no_member(self.keys[i])
+                    firsts = None
+                    if not self.expanded[i]:  # a key expanded before had a member: the universe only grows
+                        firsts = (pattern.members(self.keys[i], Mode.ANY), pattern.grew)
+                        if not firsts[0]:
+                            raise _no_member(self.keys[i])
                     try:
-                        self._offers_of_key(i, first, tick)
+                        self._offers_of_key(i, first, tick, firsts)
                     except _Stopped as reached:
                         self._release()
                         return reached.reason
@@ -1425,7 +1447,7 @@ class PatternBuilder:
         if self.pattern._twin is not None:
             self.pattern._twin.release_prepared(keep_erased=True)
 
-    def _prime(self, key: PatternKey, lo: int, hi: int, by_mode: dict, ask: Callable[[], None] | None = None) -> None:
+    def _prime(self, key: PatternKey, lo: int, hi: int, members_for: Callable[[tuple[Mode, frozenset[str]]], list[CompressedState]], ask: Callable[[], None] | None = None) -> None:
         """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
 
         The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
@@ -1439,11 +1461,7 @@ class PatternBuilder:
                 continue
             if SHARE_ADDITIONS and self.pattern.adds_only_named(offer.action):  # one fixed result, nothing to draw: priming would only prepare every pair
                 continue
-            policy = self.pattern.policy(offer.action, key)
-            members = by_mode.get(policy)
-            if members is None:
-                members = by_mode[policy] = self.pattern.members(key, *policy)
-                self.stats.members += len(members)
+            members = members_for(self.pattern.policy(offer.action, key))  # the key's members of the policy, made once (`_offers_of_key`)
             last = self.ab.quality_last_action(offer.action)
             requests.extend(
                 (member, offer.action)
@@ -1454,17 +1472,33 @@ class PatternBuilder:
             )
         self.ab.prime(requests, ask=ask)
 
-    def _offers_of_key(self, i: int, first: int, tick) -> None:
-        """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel)."""
+    def _offers_of_key(self, i: int, first: int, tick, firsts: tuple[list[CompressedState], int] | None = None) -> None:
+        """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel).
+
+        `firsts`: the members of the key for `Mode.ANY` that the pass made to check the key has one, with the pattern's growth count then. The
+        offers of policy `ANY` take them while the universe has not grown since (#1256: each key made them twice, 7 s of R04's round 8); they are
+        the list `members` would make again, so the build is the same."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
         key = self.keys[i]
         by_mode: dict[tuple[Mode, frozenset[str]], list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
+        anyone = (Mode.ANY, frozenset())
+
+        def members_for(policy: tuple[Mode, frozenset[str]]) -> list[CompressedState]:
+            members = by_mode.get(policy)
+            if members is None:
+                if policy == anyone and firsts is not None and firsts[1] == pattern.grew:
+                    members = firsts[0]
+                else:
+                    members = pattern.members(key, *policy)
+                by_mode[policy] = members
+                stats.members += len(members)
+            return members
         added: list[tuple[int, int]] = []
         for oi in range(first, len(offers)):
             offer = offers[oi]
             tick(oi)
             if (oi - first) % PRIME_CHUNK == 0 and len(offers) - first >= PRIME_FROM:
-                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), by_mode, lambda: tick(oi, True))
+                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), members_for, lambda: tick(oi, True))
             if offer.action is None:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
@@ -1479,12 +1513,10 @@ class PatternBuilder:
                     added.append((oi, kid))
                 continue
             policy = pattern.policy(offer.action, key)
-            members = by_mode.get(policy)
-            if members is None:
-                members = by_mode[policy] = pattern.members(key, *policy)
-                stats.members += len(members)
+            members = members_for(policy)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
+            classed = ab.refusal_class_of(offer.action) if SHARE_REFUSED else None
             seen: set[int] = set()
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             for member in members:
@@ -1502,6 +1534,10 @@ class PatternBuilder:
                 stats.pairs += 1
                 if self.tally is not None:
                     self.tally.done += 1
+                if classed is not None and (found := classed(member)) is not None and ab.refused_in_class(found):
+                    # a refusal met in the pair's class: what `kernel_key` would raise here (module docstring, "Refusals", #1256)
+                    stats.refused_pairs += 1
+                    continue
                 try:
                     ck = ab.kernel_key(member, offer.action)
                 except NotApplicableError:
