@@ -1,8 +1,8 @@
 """The memory question of a net reads the cheap resident sum first and the dear proportional sum at its own pace (ticket #1252).
 
-`parallel.held_mb` read `/proc/<pid>/smaps_rollup` (the proportional size, PSS) of the process and of each live worker at every question, about
+`parallel.held_mb` read `smaps_rollup` under `/proc` (the proportional size, PSS) of the process and of each live worker at every question, about
 8 ms per GB the process maps: under the 0.25 s gate of a making (`budget.ASK_SECONDS`) a process near a 12 GB net spent about a third of its time
-reading its own memory. A net's question now passes its limit (`under`): the resident sum (`/proc/<pid>/status`, microseconds) answers while it is
+reading its own memory. A net's question now passes its limit (`under`): the resident sum (`status` under `/proc`, microseconds) answers while it is
 under the limit, since no proportional size is above its resident size, and the proportional sum is read only past it, at most once per
 `parallel.READ_SHARE` times what the last reading took.
 

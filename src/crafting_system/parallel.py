@@ -83,8 +83,8 @@ def held_mb(under: float | None = None) -> float | None:
     On Linux the sum of the proportional sizes (a page that a fork shares is counted once, split between the processes that share it); on Windows
     and macOS the sum of the resident sizes (`budget.process_mb`: the working set, the resident size; #540, #825), workers included.
 
-    `under` is the limit of a net that asks (#1252). The proportional size (`/proc/<pid>/smaps_rollup`) costs about 8 ms per GB the process
-    maps, a resident size (`/proc/<pid>/status`) some microseconds at any size, and no process's proportional size is above its resident
+    `under` is the limit of a net that asks (#1252). The proportional size (`smaps_rollup` under `/proc`) costs about 8 ms per GB the process
+    maps, a resident size (`status` under `/proc`) some microseconds at any size, and no process's proportional size is above its resident
     size (a page counts in full in each process that maps it, against a share of it). So the resident sum is read first, and while it is under
     `under` it is the answer: the proportional sum is under the limit too, and the net is not reached. Only once the resident sum reaches it
     (a process near its net, or forked workers whose shared pages each counts in full) is the proportional sum read, and that reading is made
