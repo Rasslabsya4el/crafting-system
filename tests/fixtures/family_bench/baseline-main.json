@@ -1,7 +1,7 @@
 {
  "bound_violations": [],
  "cases": 126,
- "commit": "2563837c",
+ "commit": "7f96b205",
  "families": {
   "alchemy-scouring": {
    "batch": "B1",
@@ -375,11 +375,11 @@
      "exact": null,
      "gap": null,
      "path": null,
-     "plan_peak_mb": null,
-     "plan_seconds": 0.0,
+     "plan_peak_mb": 1536.6,
+     "plan_seconds": 205.98,
      "reach": null,
-     "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
-     "status": "refused",
+     "reason": "PlanError: the search for the cheapest route could not give an answer: the policy iteration on 227,040 states certifies only a relative bound of 0.0143 (asked: tolerance 1e-10, accepted: 1e-06; residu",
+     "status": "failed",
      "within": null
     },
     "medium": {
@@ -389,11 +389,11 @@
      "exact": null,
      "gap": null,
      "path": null,
-     "plan_peak_mb": null,
-     "plan_seconds": 0.0,
+     "plan_peak_mb": 999.1,
+     "plan_seconds": 251.8,
      "reach": null,
-     "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
-     "status": "refused",
+     "reason": "PlanError: the target asks for 15% Intrinsic quality, and no catalyst of that type is among the methods offered (without a price: Intrinsic Catalyst)",
+     "status": "failed",
      "within": null
     },
     "small": {
@@ -403,11 +403,11 @@
      "exact": null,
      "gap": null,
      "path": null,
-     "plan_peak_mb": null,
-     "plan_seconds": 0.0,
+     "plan_peak_mb": 445.2,
+     "plan_seconds": 49.55,
      "reach": null,
-     "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
-     "status": "refused",
+     "reason": "PlanError: the target asks for 10% Intrinsic quality, and no catalyst of that type is among the methods offered (without a price: Intrinsic Catalyst)",
+     "status": "failed",
      "within": null
     }
    }
@@ -1575,7 +1575,7 @@
      "plan_peak_mb": null,
      "plan_seconds": 0.0,
      "reach": null,
-     "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+     "reason": "PlanError: the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring",
      "status": "refused",
      "within": null
     },
@@ -1589,7 +1589,7 @@
      "plan_peak_mb": null,
      "plan_seconds": 0.0,
      "reach": null,
-     "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+     "reason": "PlanError: the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring",
      "status": "refused",
      "within": null
     },
@@ -1603,7 +1603,7 @@
      "plan_peak_mb": null,
      "plan_seconds": 0.0,
      "reach": null,
-     "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+     "reason": "PlanError: the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring",
      "status": "refused",
      "within": null
     }
@@ -6082,14 +6082,14 @@
     ],
     "base_id": "Metadata/Items/Rings/Ring1",
     "batch": "B2",
-    "digest": "81130753ecc429ef",
+    "digest": "9d37adbad3be5b77",
     "id": "catalysts/large",
     "item_class": "Ring",
     "item_level": 80,
     "keep_count": null,
     "method": "catalysts",
     "primary_snapshot": "tests/fixtures/prices/bases-allflame-2026-11-01.json",
-    "refused": "catalyst: planner=False; target asks for quality",
+    "refused": null,
     "seed": 824,
     "size": "large",
     "start": "bought",
@@ -6108,7 +6108,7 @@
     "names": 201,
     "primary": "tests/fixtures/prices/bases-allflame-2026-11-01.json"
    },
-   "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+   "reason": "PlanError: the search for the cheapest route could not give an answer: the policy iteration on 227,040 states certifies only a relative bound of 0.0143 (asked: tolerance 1e-10, accepted: 1e-06; residual 0.0145 of its margin) (measured with every sum rounded once; with a rounding a term: 0.303). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`",
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -6123,20 +6123,20 @@
    "stages": {
     "plan": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 251.9,
-     "seconds": 0.0
+     "peak_mb": 1536.6,
+     "process_peak_mb": 1552.1,
+     "seconds": 205.98
     },
     "setup": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 251.9,
-     "seconds": 1.15
+     "peak_mb": 193.7,
+     "process_peak_mb": 253.1,
+     "seconds": 1.63
     }
    },
-   "status": "refused",
+   "status": "failed",
    "walk": null,
-   "wall_seconds": 2.0
+   "wall_seconds": 209.9
   },
   {
    "case": {
@@ -6148,14 +6148,14 @@
     ],
     "base_id": "Metadata/Items/Rings/Ring5",
     "batch": "B2",
-    "digest": "740c4a04b2017b3d",
+    "digest": "2631cf025a9054d6",
     "id": "catalysts/medium",
     "item_class": "Ring",
     "item_level": 79,
     "keep_count": null,
     "method": "catalysts",
     "primary_snapshot": "tests/fixtures/prices/foresight-allflame-2026-11-02.json",
-    "refused": "catalyst: planner=False; target asks for quality",
+    "refused": null,
     "seed": 824,
     "size": "medium",
     "start": "bought",
@@ -6166,7 +6166,240 @@
    "checks": {
     "mark_agrees": true
    },
-   "envelope_rounds": [],
+   "envelope_rounds": [
+    {
+     "expanded": 70801,
+     "known": 71345,
+     "lower": 9781.349533276682,
+     "realized": 70801,
+     "round": 1,
+     "seconds": 13.7
+    },
+    {
+     "expanded": 70801,
+     "known": 71387,
+     "lower": 9782.26825858103,
+     "realized": 72198,
+     "round": 2,
+     "seconds": 15.01
+    },
+    {
+     "expanded": 70843,
+     "known": 71483,
+     "lower": 9782.52532011231,
+     "realized": 74452,
+     "round": 3,
+     "seconds": 19.43
+    },
+    {
+     "expanded": 70843,
+     "known": 71483,
+     "lower": 9783.246674717655,
+     "realized": 75751,
+     "round": 4,
+     "seconds": 22.85
+    },
+    {
+     "expanded": 70843,
+     "known": 71604,
+     "lower": 9783.585880624492,
+     "realized": 77160,
+     "round": 5,
+     "seconds": 25.39
+    },
+    {
+     "expanded": 70843,
+     "known": 71605,
+     "lower": 9783.61507297353,
+     "realized": 79333,
+     "round": 6,
+     "seconds": 29.17
+    },
+    {
+     "expanded": 70843,
+     "known": 71605,
+     "lower": 9783.72363069351,
+     "realized": 80632,
+     "round": 7,
+     "seconds": 32.58
+    },
+    {
+     "expanded": 70843,
+     "known": 71847,
+     "lower": 9786.523318595622,
+     "realized": 101431,
+     "round": 8,
+     "seconds": 64.39
+    },
+    {
+     "expanded": 71189,
+     "known": 71983,
+     "lower": 9788.002519287176,
+     "realized": 104593,
+     "round": 9,
+     "seconds": 67.2
+    },
+    {
+     "expanded": 71189,
+     "known": 71984,
+     "lower": 9789.997797774564,
+     "realized": 108265,
+     "round": 10,
+     "seconds": 72.09
+    },
+    {
+     "expanded": 71347,
+     "known": 72001,
+     "lower": 9792.029324911464,
+     "realized": 173317,
+     "round": 11,
+     "seconds": 115.38
+    },
+    {
+     "expanded": 71356,
+     "known": 72001,
+     "lower": 9793.190874024629,
+     "realized": 174601,
+     "round": 12,
+     "seconds": 117.37
+    },
+    {
+     "expanded": 71367,
+     "known": 72001,
+     "lower": 9793.45469918372,
+     "realized": 176951,
+     "round": 13,
+     "seconds": 120.82
+    },
+    {
+     "expanded": 71367,
+     "known": 72193,
+     "lower": 9793.643243629102,
+     "realized": 179610,
+     "round": 14,
+     "seconds": 124.9
+    },
+    {
+     "expanded": 71367,
+     "known": 72897,
+     "lower": 9794.74110503421,
+     "realized": 226712,
+     "round": 15,
+     "seconds": 183.92
+    },
+    {
+     "expanded": 71944,
+     "known": 72897,
+     "lower": 9795.69667227765,
+     "realized": 229459,
+     "round": 16,
+     "seconds": 186.57
+    },
+    {
+     "expanded": 71944,
+     "known": 72897,
+     "lower": 9797.050007906651,
+     "realized": 231519,
+     "round": 17,
+     "seconds": 189.05
+    },
+    {
+     "expanded": 71944,
+     "known": 72897,
+     "lower": 9799.134836281275,
+     "realized": 232388,
+     "round": 18,
+     "seconds": 190.86
+    },
+    {
+     "expanded": 72139,
+     "known": 72897,
+     "lower": 9802.666378333439,
+     "realized": 233610,
+     "round": 19,
+     "seconds": 192.6
+    },
+    {
+     "expanded": 72299,
+     "known": 72897,
+     "lower": 9806.362327933395,
+     "realized": 234671,
+     "round": 20,
+     "seconds": 194.26
+    },
+    {
+     "expanded": 72301,
+     "known": 72897,
+     "lower": 9809.211954372295,
+     "realized": 235725,
+     "round": 21,
+     "seconds": 195.69
+    },
+    {
+     "expanded": 72339,
+     "known": 72897,
+     "lower": 9814.506631634173,
+     "realized": 236436,
+     "round": 22,
+     "seconds": 196.98
+    },
+    {
+     "expanded": 72339,
+     "known": 72897,
+     "lower": 9819.743597302273,
+     "realized": 236874,
+     "round": 23,
+     "seconds": 197.94
+    },
+    {
+     "expanded": 72339,
+     "known": 72897,
+     "lower": 9825.535344029966,
+     "realized": 237403,
+     "round": 24,
+     "seconds": 198.9
+    },
+    {
+     "expanded": 72339,
+     "known": 72897,
+     "lower": 9832.00635708133,
+     "realized": 237503,
+     "round": 25,
+     "seconds": 199.67
+    },
+    {
+     "expanded": 72339,
+     "known": 72897,
+     "lower": 9835.940783534801,
+     "realized": 237531,
+     "round": 26,
+     "seconds": 200.39
+    },
+    {
+     "expanded": 72350,
+     "known": 72897,
+     "lower": 9837.378068178803,
+     "realized": 237587,
+     "round": 27,
+     "seconds": 201.56
+    },
+    {
+     "expanded": 72353,
+     "known": 72897,
+     "lower": 9838.278355242921,
+     "realized": 237604,
+     "round": 28,
+     "seconds": 202.69
+    },
+    {
+     "expanded": 72353,
+     "known": 72897,
+     "lower": 9840.709308063357,
+     "realized": 237700,
+     "round": 29,
+     "seconds": 203.68
+    }
+   ],
    "exit": 0,
    "mode": "plan",
    "no_plan": true,
@@ -6174,7 +6407,7 @@
     "names": 201,
     "primary": "tests/fixtures/prices/foresight-allflame-2026-11-02.json"
    },
-   "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+   "reason": "PlanError: the target asks for 15% Intrinsic quality, and no catalyst of that type is among the methods offered (without a price: Intrinsic Catalyst)",
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -6189,20 +6422,20 @@
    "stages": {
     "plan": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 251.7,
-     "seconds": 0.0
+     "peak_mb": 999.1,
+     "process_peak_mb": 1015.9,
+     "seconds": 251.8
     },
     "setup": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 251.7,
-     "seconds": 1.67
+     "peak_mb": 194.3,
+     "process_peak_mb": 253.2,
+     "seconds": 1.42
     }
    },
-   "status": "refused",
+   "status": "failed",
    "walk": null,
-   "wall_seconds": 2.9
+   "wall_seconds": 255.3
   },
   {
    "case": {
@@ -6214,14 +6447,14 @@
     ],
     "base_id": "Metadata/Items/Rings/Ring10",
     "batch": "B2",
-    "digest": "b98524ed26fa942d",
+    "digest": "eee1a322d6c13dc9",
     "id": "catalysts/small",
     "item_class": "Ring",
     "item_level": 80,
     "keep_count": null,
     "method": "catalysts",
     "primary_snapshot": "tests/fixtures/prices/bases-allflame-2026-11-01.json",
-    "refused": "catalyst: planner=False; target asks for quality",
+    "refused": null,
     "seed": 824,
     "size": "small",
     "start": "bought",
@@ -6232,7 +6465,64 @@
    "checks": {
     "mark_agrees": true
    },
-   "envelope_rounds": [],
+   "envelope_rounds": [
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 222.4193847204352,
+     "realized": 48279,
+     "round": 1,
+     "seconds": 5.99
+    },
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 222.98276017256075,
+     "realized": 50007,
+     "round": 2,
+     "seconds": 7.27
+    },
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 233.62819041305306,
+     "realized": 70023,
+     "round": 3,
+     "seconds": 30.72
+    },
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 233.99007116597565,
+     "realized": 115547,
+     "round": 4,
+     "seconds": 46.12
+    },
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 234.31685232251317,
+     "realized": 115759,
+     "round": 5,
+     "seconds": 46.4
+    },
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 234.45239664899896,
+     "realized": 116944,
+     "round": 6,
+     "seconds": 47.0
+    },
+    {
+     "expanded": 48279,
+     "known": 50368,
+     "lower": 234.58821597668836,
+     "realized": 117035,
+     "round": 7,
+     "seconds": 47.22
+    }
+   ],
    "exit": 0,
    "mode": "plan",
    "no_plan": true,
@@ -6240,7 +6530,7 @@
     "names": 201,
     "primary": "tests/fixtures/prices/bases-allflame-2026-11-01.json"
    },
-   "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+   "reason": "PlanError: the target asks for 10% Intrinsic quality, and no catalyst of that type is among the methods offered (without a price: Intrinsic Catalyst)",
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -6255,20 +6545,20 @@
    "stages": {
     "plan": {
      "done": true,
-     "peak_mb": null,
-     "process_peak_mb": 251.7,
-     "seconds": 0.0
+     "peak_mb": 445.2,
+     "process_peak_mb": 562.3,
+     "seconds": 49.55
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.7,
-     "seconds": 1.36
+     "process_peak_mb": 253.2,
+     "seconds": 1.03
     }
    },
-   "status": "refused",
+   "status": "failed",
    "walk": null,
-   "wall_seconds": 2.3
+   "wall_seconds": 51.8
   },
   {
    "case": {
@@ -31404,14 +31694,14 @@
     ],
     "base_id": "Metadata/Items/Weapons/TwoHandWeapons/TwoHandMaces/TwoHandMace2",
     "batch": "B2",
-    "digest": "a0afef54f9a266cb",
+    "digest": "a1febe00587d3c24",
     "id": "quality/large",
     "item_class": "Two Hand Mace",
     "item_level": 84,
     "keep_count": null,
     "method": "quality",
     "primary_snapshot": "tests/fixtures/prices/vendor-v01-2026-11-01.json",
-    "refused": "quality-currency: planner=False; target asks for quality",
+    "refused": "quality-currency: planner=False; target asks for the plain quality of a weapon or armour",
     "seed": 824,
     "size": "large",
     "start": "bought",
@@ -31430,7 +31720,7 @@
     "names": 201,
     "primary": "tests/fixtures/prices/vendor-v01-2026-11-01.json"
    },
-   "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+   "reason": "PlanError: the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring, an amulet or a belt",
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -31446,19 +31736,19 @@
     "plan": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.7,
+     "process_peak_mb": 253.1,
      "seconds": 0.0
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.7,
-     "seconds": 1.8
+     "process_peak_mb": 253.1,
+     "seconds": 1.7
     }
    },
    "status": "refused",
    "walk": null,
-   "wall_seconds": 3.1
+   "wall_seconds": 3.0
   },
   {
    "case": {
@@ -31470,14 +31760,14 @@
     ],
     "base_id": "Metadata/Items/Weapons/OneHandWeapons/Wands/Wand8",
     "batch": "B2",
-    "digest": "b39f525a61f20036",
+    "digest": "09a9fa767e9ef850",
     "id": "quality/medium",
     "item_class": "Wand",
     "item_level": 81,
     "keep_count": null,
     "method": "quality",
     "primary_snapshot": "tests/fixtures/prices/bases-allflame-2026-11-01.json",
-    "refused": "quality-currency: planner=False; target asks for quality",
+    "refused": "quality-currency: planner=False; target asks for the plain quality of a weapon or armour",
     "seed": 824,
     "size": "medium",
     "start": "bought",
@@ -31496,7 +31786,7 @@
     "names": 201,
     "primary": "tests/fixtures/prices/bases-allflame-2026-11-01.json"
    },
-   "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+   "reason": "PlanError: the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring, an amulet or a belt",
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -31512,19 +31802,19 @@
     "plan": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.6,
+     "process_peak_mb": 253.3,
      "seconds": 0.0
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.6,
-     "seconds": 1.82
+     "process_peak_mb": 253.3,
+     "seconds": 1.13
     }
    },
    "status": "refused",
    "walk": null,
-   "wall_seconds": 3.1
+   "wall_seconds": 2.1
   },
   {
    "case": {
@@ -31536,14 +31826,14 @@
     ],
     "base_id": "Metadata/Items/Weapons/OneHandWeapons/Wands/WandK2",
     "batch": "B2",
-    "digest": "6a6fbb263ad4bb93",
+    "digest": "46b3a1d3895678f9",
     "id": "quality/small",
     "item_class": "Wand",
     "item_level": 80,
     "keep_count": null,
     "method": "quality",
     "primary_snapshot": "tests/fixtures/prices/routes-allflame-2026-11-10.json",
-    "refused": "quality-currency: planner=False; target asks for quality",
+    "refused": "quality-currency: planner=False; target asks for the plain quality of a weapon or armour",
     "seed": 824,
     "size": "small",
     "start": "bought",
@@ -31562,7 +31852,7 @@
     "names": 201,
     "primary": "tests/fixtures/prices/routes-allflame-2026-11-10.json"
    },
-   "reason": "PlanError: the target asks for quality, which the planner cannot plan yet",
+   "reason": "PlanError: the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a method of the planner); it plans the catalyst quality of a ring, an amulet or a belt",
    "settings": {
     "aim_seconds": null,
     "gap": 0.01,
@@ -31578,19 +31868,19 @@
     "plan": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.9,
+     "process_peak_mb": 253.0,
      "seconds": 0.0
     },
     "setup": {
      "done": true,
      "peak_mb": null,
-     "process_peak_mb": 251.9,
-     "seconds": 1.23
+     "process_peak_mb": 253.0,
+     "seconds": 1.12
     }
    },
    "status": "refused",
    "walk": null,
-   "wall_seconds": 2.2
+   "wall_seconds": 2.1
   },
   {
    "case": {
@@ -37701,24 +37991,24 @@
   "cases": 38,
   "peak_mb": {
    "largest": 1224.0947265625,
-   "largest_residual": 719.5140953101558,
+   "largest_residual": 719.5140953101552,
    "r2": 0.7287229839725242,
    "rates": [
-    260.509704061782,
-    0.019129185633190375,
-    0.0014056307848574895,
-    0.003777071296626918
+    260.5097040617825,
+    0.019129185633190507,
+    0.0014056307848574912,
+    0.0037770712966269182
    ]
   },
   "seconds": {
    "largest": 587.9121126360001,
-   "largest_residual": 387.5650256231388,
-   "r2": 0.6161572217440427,
+   "largest_residual": 387.5650256231382,
+   "r2": 0.6161572217440429,
    "rates": [
-    32.634064307757285,
-    0.015597676559071067,
-    0.0007704135141325241,
-    -0.00028927062149954616
+    32.634064307757704,
+    0.015597676559071152,
+    0.0007704135141325254,
+    -0.00028927062149954774
    ]
   },
   "terms": [
@@ -37729,15 +38019,16 @@
   ]
  },
  "run_ids": [
+  "44218509238",
   "43837986241",
   "43838030138",
   "43853845389"
  ],
  "schema": 1,
  "status_counts": {
-  "failed": 3,
+  "failed": 6,
   "planned": 38,
-  "refused": 35,
+  "refused": 32,
   "stopped": 50
  },
  "ticket": 824,

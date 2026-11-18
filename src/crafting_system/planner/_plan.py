@@ -477,7 +477,9 @@ def make_plan(
             )  # fmt: skip
             if finished_last and not _quality_finish.holds(data, (p.offer.action for p in plan.offers if not isinstance(p.offer.action, BuyStartItem))):
                 # an offered action other than a catalyst changes or reads the quality, or corrupts the item (a recombinator, a Vaal Orb a run
-                # names): the finish is not exact, so the quality is searched with the mods, in the one search
+                # names): the finish is not exact, so the quality is searched with the mods, in the one search. The second plan shares the run's
+                # clock, so it pays what is left of the net: only a deferred method or a named corrupting one leads here, and checking the
+                # offers before the first plan would need the offers `_make_plan` chooses (#159)
                 finished_last = False
                 plan = _make_plan(
                     data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds,
