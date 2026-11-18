@@ -7,7 +7,7 @@ table (count times price), not read from the registry.
 import datetime
 
 import pytest
-from cli_support import R12, START
+from cli_support import R12, START, classic_offers
 from harvest_reforge_support import BOW, HUNTER, INFLUENCE_COST, LIKELIHOOD_COST, TABLE, bow
 from items_support import AMULET, DATA
 
@@ -47,13 +47,13 @@ def test_the_sixteen_tagged_reforges_and_both_likelihood_reforges_are_offered_fo
     labels = {offer.label for offer in amulet_offers}
     assert {f"Harvest Reforge {craft.title()}" for craft in TABLE} <= labels
     assert "Harvest Reforge Influence" not in labels  # the start amulet has no influence
-    assert not labels & {"Harvest Reforge More Likely", "Harvest Reforge Less Likely"}  # not a planner kind, see below
+    assert {"Harvest Reforge More Likely", "Harvest Reforge Less Likely"} <= labels  # a planner kind since #975 (OR-37)
 
 
-def test_the_likelihood_reforges_are_a_catalog_kind_the_planner_leaves_out_with_its_reason():
+def test_the_likelihood_reforges_are_a_planner_kind():
     (entry,) = (entry for entry in kinds() if entry.name == "harvest-reforge-likelihood")
-    assert not entry.planner and "pruning (#118)" in entry.why_not
-    assert entry in kinds() and entry not in kinds(planner_only=True)
+    assert entry.planner and not entry.why_not
+    assert entry in kinds(planner_only=True)
 
 
 def test_every_reforge_is_priced_by_its_lifeforce(amulet_offers):
@@ -90,7 +90,16 @@ def test_the_influence_reforge_is_offered_for_an_influenced_item_and_priced_by_p
     assert start.influences == HUNTER
 
 
-def test_a_plan_with_all_the_reforges_priced_still_solves_the_r12_target():
+def test_a_plan_with_all_the_reforges_priced_still_solves_the_r12_target(monkeypatch):
+    """Held to the classic offers (`cli_support.CLASSIC_KINDS`) since #975.
+
+    With every default kind on, the likelihood reforges make the R12 plan about 29% cheaper (15.22 against 21.33) and the search solves a
+    larger problem to find it: the reforge keeps the junk by family type and each held set weighs its own pool, so its exact kernel is built
+    at every state (12,578 states and 13,640 such kernels on the fixture, about 400 s against 6 s). That cost is filed as an issue; the
+    likelihood reforges are planned through `plan_target` in `tests/test_planner_harvest_likelihood.py`. This test is about the tagged
+    reforges being priced and planned, which the classic offers keep.
+    """
+    classic_offers(monkeypatch)
     target = load_target(R12, DATA)
     prices = price_file()
     prices.prices[START] = PriceEntry(4.0, "trade-api")

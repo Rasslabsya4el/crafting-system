@@ -232,8 +232,8 @@ def test_a_label_of_a_rarity_the_start_never_reaches_is_refused_and_one_it_reach
 
 
 def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
-    with pytest.raises(ValueError, match=r"harvest-reforge-likelihood cannot be used by the planner yet; the kinds the planner can use are"):
-        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["harvest-reforge-likelihood"])
+    with pytest.raises(ValueError, match=r"tempering cannot be used by the planner yet; the kinds the planner can use are"):
+        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["tempering"])
 
 
 # --- kinds named, and single actions named by label (ticket #70) ---------------------------------------------------

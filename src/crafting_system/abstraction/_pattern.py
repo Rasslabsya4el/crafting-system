@@ -66,6 +66,13 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   tags and the held families take out their eligible weight) and checked against all members on the fixtures. A corner that two classes make
   impossible together (one family type shared by two tag kinds) is not offered: the key then falls back to `ALL`.
   An action that draws by tag or by item level (`Reads.draw_tags`, `Reads.draw_levels`) makes the family types differ by more than weight: `ALL`.
+* `RELAXED` (one member for each relevant multiset and class composition, as `ONE`, each with the choice nodes of `_relaxed`): a reroll whose
+  pool weighs the families the item holds (`Action.held_weight_factor`: the likelihood Harvest reforges, #975). Each fill of the pure junk
+  is a pool of its own and the draw is several mods, so neither `ONE` nor `EXTREMES` holds; the choice nodes walk the draw at the level of
+  the key, with the weight each class has left in a box that every fill lies in, and offer each corner of the box at each draw. **Proved**
+  in `_relaxed`'s docstring (the least backup over the box is at a corner, by induction on the draws) and checked against every member on the
+  toy pools (`tests/test_pattern_relaxed.py`). Under a lock, or with a family on both sides, `ALL`; a member where the walk does not hold
+  (`relaxed_draw` returns None) makes the key's offer `ALL`.
 * `ALL` (every pure junk assignment): the Fracturing Orb (the successor key holds the type of the mod fractured, a function of which types the
   member holds: not of the weights), any action that is not declared one of the above, and an erasing reroll under a lock. **Unproved to be
   cheaper, and exact by construction.**
@@ -222,6 +229,7 @@ from crafting_system.items.model import VEILED_DOMAIN
 
 from ._goal import Status
 from ._kernel import Abstraction
+from ._relaxed import ChoiceNode, relaxed_draw
 from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags
 from ._rolls import is_rollable
 from ._state import CompressedState, Slot, best_of
@@ -231,6 +239,7 @@ from ._state import CompressedState, Slot, best_of
 # member that is not a state of the route it says nothing about the states that are, and dropping the action from the key could put the bound
 # above the exact cost. The build refuses and says why. The clauses name the families themselves (`tests/test_cli_model_gaps.py` scans for them).
 
+CHOICE = -2  # the offer index of a row of a choice node (`_relaxed`): a step of a relaxed draw, at no cost (carried at `FLOOR_COST`)
 SINK = -1  # the successor of the mass an approximate kernel does not account for: a state that costs nothing (the goal)
 SHRINK = Fraction(2**30 - 1, 2**30)  # every chance of a float kernel is taken this much lower; the float error is 1e-13, so no chance is above its exact one
 PRIME_FROM = 16  # a key that is given at least this many offers at once primes their distributions in a process pool (fewer cost more in forks than they save: R14, 11 offers), in chunks of ...
@@ -252,6 +261,7 @@ class Mode(StrEnum):
     ANY = "any"
     ONE = "one"
     EXTREMES = "extremes"
+    RELAXED = "relaxed"
     ALL = "all"
 
 
@@ -756,6 +766,10 @@ class Pattern:
     def mode_of(self, action: Action, key: PatternKey) -> Mode:
         reads = self.reads(action)
         kinds = self.ab._context(key.flags.influences).kinds
+        if action.held_weight_factor() is not None:
+            # a reroll whose pool reads which families the item holds (the likelihood reforges, #975): the relaxed draw of `_relaxed` at the
+            # `ONE` members, every member under a lock or with a family on both sides (see "RELAXED" in the module text)
+            return Mode.ALL if self.holds_lock(key) or self._has_partners(key.flags.influences) else Mode.RELAXED
         if reads.variants and reads.junk and reads.pool_weight and not reads.fractures:
             if kinds._tagged or kinds._levels:
                 return Mode.ALL
@@ -806,6 +820,8 @@ class Pattern:
 
         `named` (with `ONE`): the folded families the action reads at this key (`named_of`): every way the pure junk holds them is a member.
         """
+        if mode is Mode.RELAXED:  # the relaxed draw is made at one member for each relevant multiset and class composition (`_relaxed`)
+            mode = Mode.ONE
         if not self.ab._context(key.flags.influences).kinds.tracked:
             # no enabled action reads the junk, so a state keeps none of it: its status is a fact about mods that are not stored, and the one
             # state the key stands for is the key itself (no ordinary slot to choose, nothing to check the status against)
@@ -1298,6 +1314,8 @@ class PatternBuilder:
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key holds
         self.members_kept: dict[int, dict[tuple[Mode, frozenset[str]], list[CompressedState]]] = {}
+        self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
+        self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
         self.pattern.note(self.start)
         self.start_id = self._intern(self.start)
 
@@ -1347,8 +1365,10 @@ class PatternBuilder:
         """The universe grew (`Pattern.grown`): every expanded key a grown slot may be in is made again (members, row, gaps); keys and kernels stay."""
         grown, pattern = self.pattern.grown, self.pattern
         again = {
-            i for i, key in enumerate(self.keys) if self.expanded[i] and any(pattern.may_hold(key, influences, slot) for influences, slot in grown)
+            i for i, key in enumerate(self.keys)
+            if self.expanded[i] and not isinstance(key, ChoiceNode) and any(pattern.may_hold(key, influences, slot) for influences, slot in grown)
         }
+        self.relaxed = {}  # a relaxed draw reads the universe's classes: the keys made again make theirs again
         for i in again:
             self.rows[i] = []
             self.expanded[i] = False
@@ -1418,6 +1438,10 @@ class PatternBuilder:
         while i < len(self.keys):
             if self.stop is not None and (reason := self.stop()) is not None:
                 return reason
+            if isinstance(self.keys[i], ChoiceNode):  # a node of a relaxed draw: its rows were made with it
+                self.expanded[i] = True
+                i += 1
+                continue
             if not self.goal[i]:
                 first = self.done if self.expanded[i] else 0
                 if first < len(offers):
@@ -1461,7 +1485,10 @@ class PatternBuilder:
                 continue
             if SHARE_ADDITIONS and self.pattern.adds_only_named(offer.action):  # one fixed result, nothing to draw: priming would only prepare every pair
                 continue
-            members = members_for(self.pattern.policy(offer.action, key))  # the key's members of the policy, made once (`_offers_of_key`)
+            policy = self.pattern.policy(offer.action, key)
+            if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw
+                continue
+            members = members_for(policy)  # the key's members of the policy, made once (`_offers_of_key`)
             last = self.ab.quality_last_action(offer.action)
             requests.extend(
                 (member, offer.action)
@@ -1519,6 +1546,13 @@ class PatternBuilder:
             classed = ab.refusal_class_of(offer.action) if SHARE_REFUSED else None
             seen: set[int] = set()
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
+            if policy[0] is Mode.RELAXED:
+                relaxed = self._relaxed_rows(key, oi, offer, members, last, tick)
+                if relaxed is not None:
+                    added.extend((oi, kid) for kid in dict.fromkeys(relaxed))
+                    continue
+                members = pattern.members(key, Mode.ALL)  # the relaxed draw does not hold at a member: every member, exactly
+                stats.members += len(members)
             for member in members:
                 tick(oi, True)
                 if ab.quality_offer_pruned(member, offer.action) if last else ab.quality_finish_only(member, offer.action):
@@ -1580,6 +1614,57 @@ class PatternBuilder:
                     seen.add(kid)
                     added.append((oi, kid))
         self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
+
+    def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
+        """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does
+        not hold (the caller then makes every member). A member the game refuses gives no row; a model gap is treated as at a member."""
+        pattern, ab, stats = self.pattern, self.ab, self.stats
+        found: list[int] = []
+        for member in members:
+            tick(oi, True)
+            if ab.quality_offer_pruned(member, offer.action) if last else ab.quality_finish_only(member, offer.action):
+                continue
+            stats.pairs += 1
+            if self.tally is not None:
+                self.tally.done += 1
+            cache = (member, offer.action)
+            kid = self.relaxed.get(cache)
+            if kid is None:
+                try:
+                    draw = relaxed_draw(pattern, member, offer.action, offer.action.held_weight_factor())
+                except NotApplicableError:
+                    stats.refused_pairs += 1
+                    continue
+                except OutOfScopeError as gap:
+                    if _gap_everywhere(pattern, self.gaps, key, offer):
+                        stats.gap_pairs += 1
+                        continue
+                    raise _gap(offer, key, gap) from gap
+                if draw is None:
+                    return None
+                owner = self.relaxed_made
+                self.relaxed_made += 1
+                ids = []
+                for at in range(len(draw.nodes)):
+                    ids.append(len(self.keys))
+                    self.keys.append(ChoiceNode(owner, at))
+                    self.goal.append(False)
+                    self.rows.append([])
+                    self.expanded.append(True)
+                for node, kernels in zip(ids, draw.nodes):
+                    for kernel in kernels:
+                        pushed: dict[int, Fraction] = defaultdict(Fraction)
+                        for target, chance in kernel.items():
+                            if isinstance(target, int):
+                                pushed[ids[target]] += chance
+                            else:
+                                pattern.note(target)
+                                pushed[self._intern(target)] += chance
+                        self.rows[node].append((CHOICE, _kernel_id(self.kernel_ids, self.kernels, pushed)))
+                        stats.kernels += 1
+                kid = self.relaxed[cache] = _kernel_id(self.kernel_ids, self.kernels, {ids[0]: Fraction(1)})
+            found.append(kid)
+        return found
 
     def _move(self, key: PatternKey, offer: PatternOffer, move) -> int | None:
         """The kernel id of the imprint or restore `offer` at `key`, or None where no member needs it (#833, "The imprints" in the module docstring).
@@ -1739,4 +1824,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["Growth", "LATE", "Mode", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]
+__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]

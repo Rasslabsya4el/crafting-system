@@ -60,6 +60,8 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_estimate.py", "_Pilot.kernel_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the forecast only counts the graph; the build writes the gap"),
     ("abstraction/_estimate.py", "_Pilot.walked_kernel", ("NotApplicableError", "OutOfScopeError"), EITHER, "the forecast only counts the graph; the build writes the gap"),
     ("abstraction/_inputs.py", "_kernel_of", ("NotApplicableError",), GAME, "the game's refusal of the representative is another placement's: a gap in the model's average"),
+    ("abstraction/_pattern.py", "PatternBuilder._relaxed_rows", ("NotApplicableError",), GAME, "the game refuses the relaxed reroll at this member: it is not an action of the member, counted in `refused_pairs`"),
+    ("abstraction/_pattern.py", "PatternBuilder._relaxed_rows", ("OutOfScopeError",), GAP, "a model gap at a member of a relaxed draw: left out of the key only where `_gap_everywhere` says no member can take it, else the build refuses"),
     ("abstraction/_pattern.py", "_Universe._seed_named", ("NotApplicableError",), GAME, "the game refuses the offered action on the empty probe item: it adds no mod by name there, nothing is seeded"),
     ("abstraction/_pattern.py", "Pattern._ok", ("OutOfScopeError",), GAP, "a model gap while building the item of a member is raised: whether the member is an item is not known, so none is left out"),
     ("abstraction/_pattern.py", "PatternBuilder._offers_of_key", ("NotApplicableError",), GAME, "the game refuses the action at this member (its kernel key): it is not an action of the member, counted in `refused_pairs`"),

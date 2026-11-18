@@ -891,6 +891,12 @@ class Action(ABC):
             detail=f"{type(self).__name__} cannot be used with other inputs than its own",
         )
 
+    def held_weight_factor(self) -> Fraction | None:
+        """The factor a reroll multiplies the weight of every mod of a family the item holds by before it draws (the likelihood Harvest
+        reforges, #975); None, the default, for an action whose pool does not read which families the item holds. The bound's build gives
+        such an action the relaxed draw (`abstraction/_relaxed.py`) in place of every member of a key."""
+        return None
+
     def imprint_move(self) -> ImprintMove | None:
         """How the action moves the imprints of the item (`ImprintMove`); None, the default, for an action that does not make or use one.
 

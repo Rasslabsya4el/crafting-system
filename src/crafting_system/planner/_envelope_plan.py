@@ -36,7 +36,7 @@ import numpy as np
 
 from crafting_system import parallel
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
-from crafting_system.abstraction._pattern import PACE, QUARTER, SINK, Pace, Pattern, Room
+from crafting_system.abstraction._pattern import CHOICE, PACE, QUARTER, SINK, Pace, Pattern, Room
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
@@ -94,6 +94,8 @@ class CraftingProblem:
         for row in model.actions:
             found: dict[int, float] = {}
             for index, kernel in row:
+                if index == CHOICE:  # a step of a relaxed draw: no offer of a state
+                    continue
                 position = bound.positions[index]
                 q = self.offers[position].cost + expected[kernel]
                 if position not in found or q < found[position]:
@@ -135,6 +137,8 @@ class CraftingProblem:
         for row in model.actions:
             found: dict[int, float] = {}
             for index, kernel in row:
+                if index == CHOICE:  # a step of a relaxed draw: no offer of a state
+                    continue
                 position = bound.positions[index]
                 q = self.offers[position].cost + expected[kernel]
                 if math.isfinite(q) and (position not in found or q < found[position]):

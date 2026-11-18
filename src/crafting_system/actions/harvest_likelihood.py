@@ -7,6 +7,11 @@ is no guaranteed mod. Unlike the other rerolls this one reads the mods it remove
 holds decides the pool. The result depends on a family only through the weights of its mods and what they give
 the goal, so the declaration is `Reads.adding()` and the compressed state keeps the junk by family type.
 
+A planner kind since #975 (Harvest is batch B1, a beta method: OR-37). The family types are the ones every Exalted Orb of a default plan
+already makes the state keep, so the reforge adds no state the search would not hold; its kernel differs from state to state (the held
+types weigh the pool), so it is built at each state the search realizes it. The offers' floors class it TERMINAL (it reads the junk and draws
+mods it does not name): its floor is its price (`planner/_offer_kinds.py`).
+
 The metamods hold as for the other reforges (ticket #68): a side that `Prefixes` or `Suffixes Cannot Be Changed` locks
 stays and counts inside the total, and an Attack or Caster metamod that stays filters the first drawn mod only (D8 of
 issue #28; there is no guaranteed mod, so the first draw plays its part). The draws after it are not filtered.
@@ -16,7 +21,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 
-from crafting_system.data import GameData, Mod
+from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.rules import get_rule
 
@@ -27,7 +32,7 @@ from .errors import NotApplicableError
 from .harvest import check_reforgeable
 from .metamods import blocked_tags
 from .outcomes import Outcomes, retained_item
-from .pool import build_pool, mark_pool
+from .pool import PoolFamily, PoolMod, build_pool, mark_pool
 from .strand_use import FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY, StrandUse
 
 __all__ = [
@@ -63,6 +68,11 @@ class HarvestReforgeLikelihood(Action):
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(LIFEFORCE_COST.value)
 
+    def held_weight_factor(self) -> Fraction:
+        """The weight factor of the held families (`harvest_reforge.likelihood_weight_factor`): 10, or 1/10 for the less likely craft."""
+        weight = Fraction(LIKELIHOOD_WEIGHT_FACTOR.value[self._key])
+        return weight if self.more else 1 / weight
+
     def reads(self, data: GameData) -> Reads:
         return Reads.adding()
 
@@ -78,19 +88,15 @@ class HarvestReforgeLikelihood(Action):
         weigh the pool); the mods of a locked side stay.
         """
         check_reforgeable(data, item)
-        held = {family for entry in item.mods for family in data.mods[entry.mod_id].families}
-        weight = Fraction(LIKELIHOOD_WEIGHT_FACTOR.value[self._key])
-        factor = weight if self.more else 1 / weight
-
-        def reweigh(mod: Mod) -> Fraction:
-            return factor if held.intersection(mod.families) else Fraction(1)
+        held = frozenset(family for entry in item.mods for family in data.mods[entry.mod_id].families)
+        factor = self.held_weight_factor()
 
         retained = retained_item(data, item)
         total = max(len(item.mods), NEVER_FEWER_MODS.value["floor"])
         blocked = blocked_tags(data, retained)
         if not blocked or total <= len(retained.mods):  # nothing is drawn when the kept mods fill the total
-            return Outcomes(data, retained, build_pool(data, retained, factor=reweigh), {total: Fraction(1)}, None)
-        pool = mark_pool(build_pool(data, retained, factor=reweigh, tag_filter=False), FIRST_DRAW, lambda mod: True)
+            return Outcomes(data, retained, _reweighed(build_pool(data, retained), held, factor), {total: Fraction(1)}, None)
+        pool = mark_pool(_reweighed(build_pool(data, retained, tag_filter=False), held, factor), FIRST_DRAW, lambda mod: True)
         result = Outcomes(data, retained, pool, {total: Fraction(1)}, FIRST_DRAW, None, blocked)
         if not guaranteed_candidates(result.pool, result.free, FIRST_DRAW, blocked):
             raise NotApplicableError(
@@ -100,11 +106,27 @@ class HarvestReforgeLikelihood(Action):
         return result
 
 
+def _reweighed(pool: tuple[PoolFamily, ...], held: frozenset[str], factor: Fraction) -> tuple[PoolFamily, ...]:
+    """`pool` with the weight of every mod of a held family times `factor` (`harvest_reforge.likelihood_weight_factor`).
+
+    The pool of the item without the factor comes from the cached table of its class (`build_pool`); a family none of whose mods is of a held
+    family is kept as it is, so a reforge builds new families only for the few the item holds (#975: the bound's build asks every member of a key).
+    """
+    found = []
+    for family in pool:
+        hits = [not held.isdisjoint(entry.mod.families) for entry in family.mods]
+        if not any(hits):
+            found.append(family)
+            continue
+        mods = tuple(PoolMod(entry.mod, entry.weight * factor) if hit else entry for entry, hit in zip(family.mods, hits))
+        found.append(PoolFamily(family.family, family.side, mods))
+    return tuple(found)
+
+
 @kind(
     "harvest-reforge-likelihood",
     order=22,
-    planner=False,
-    why_not="reads every junk family, so a state is a set of family types and every kernel has all-distinct weights; not in the B1 offer set until pruning (#118) decides",
+    planner=True,
 )
 def _harvest_reforge_likelihood(data: GameData, item: Item):
     for key in LIKELIHOOD_REFORGES_EXIST.value:
