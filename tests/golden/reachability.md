@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 17 |
-| - with `planner=True` | 45 |
+| - with `planner=False` (no plan can use them) | 16 |
+| - with `planner=True` | 46 |
 | - `planner=True` and offered by at least one target (reachable) | 32 |
-| - `planner=True` and offered by no target | 13 |
+| - `planner=True` and offered by no target | 14 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 30 of 62 (17 closed by `planner=False`, 13 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 30 of 62 (16 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -54,7 +54,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `exalted-orb` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r14 |  |  |
 | `influenced-exalted-orb` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `veiled-chaos-orb` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
-| `orb-of-dominance` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced or an Elevated mod yet (the compressed state tells them apart since ticket #155) |  |
+| `orb-of-dominance` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `veiled-exalted-orb` | yes | reads: any | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `unveil` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
 | `pick` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |

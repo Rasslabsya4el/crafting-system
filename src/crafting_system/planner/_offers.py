@@ -463,6 +463,9 @@ def offers_for(
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
+    * An action whose results the state cannot follow under a roll limit at some states only (`Adds.rolls_unfollowed`, an Orb of Dominance,
+      #1195) is left out for a goal with a roll limit, and the answer says it as a model gap of the listing (#511): the search judges a group
+      of states together and cannot drop the action from part of one, so it would refuse the route (#993 is the roll law that lifts it).
     * An Eldritch currency (a kind of `ELDRITCH_KINDS`: an Ember, an Ichor, an Eldritch Chaos, Exalted or Annulment Orb, an Orb of Conflict) is
       offered to every target whose item can take it, whether or not the goal names an Eldritch implicit (#886 lifted the gate of #835, #919):
       a target with no implicit wish gains from them too (an Ember, then an Eldritch Chaos Orb that rerolls the prefixes alone; an Eldritch
@@ -533,6 +536,8 @@ def offers_for(
             left_out_rolls.append(told_apart(action))
         elif adds.only_quality and not _gives_quality_wanted(data, goal, start_item, action):
             left_out_quality.append(told_apart(action))
+        elif adds.rolls_unfollowed and any(leaf.has_roll_limit for leaf in goal.leaves):  # a model gap the search could not drop (#1195, #993)
+            listing_gaps.append(ListingGap(kind_of.get(action, ""), "", ROLLS_UNFOLLOWED))
         else:
             candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
@@ -916,6 +921,9 @@ def _listed(
         extra = {a: k for a, k in catalog_kinds(data, start_item, planner_only=True, names=usable).items() if a.label(data) in label_names}
         found.update({a: k for a, k in extra.items() if a not in found})
     return found
+
+
+ROLLS_UNFOLLOWED = "the target has a roll limit, and the model cannot follow the roll of a mod this action upgrades or puts on"
 
 
 def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed: Iterable[Action]) -> bool:

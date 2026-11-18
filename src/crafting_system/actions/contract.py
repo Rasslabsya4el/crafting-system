@@ -374,6 +374,11 @@ class Adds:
       two as well, so it needs all three. The default is False, which says the action leaves that part as it was; `Action.adds` itself (an
       action that declares nothing) says True for all three. Like the enchantment they are not part of `item_state`: the sockets are a finish
       step and stay out of the compressed state of the mods (ADR-0045).
+    * `rolls_unfollowed`: under a goal with a roll limit the compressed state cannot follow this action's results at some states and can at
+      others, and which depends on the mods the item holds (an Orb of Dominance: the new tier it puts on is at its lowest values, and an
+      Elevated mod it picks keeps its mod and has its values rolled afresh; `Finite.rerolled`, #993). The search cannot drop such an action
+      from part of a group of states it judges together, so it would refuse the route; a planner leaves it out for a goal with a roll limit
+      and says so as a model gap of the listing (#1195). The default is False.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -401,6 +406,7 @@ class Adds:
     socket_count: bool = False
     socket_links: bool = False
     socket_colours: bool = False
+    rolls_unfollowed: bool = False
 
     def __post_init__(self) -> None:
         if self.socket_count and not (self.socket_links and self.socket_colours):

@@ -236,7 +236,9 @@ def test_the_orb_has_its_name_price_and_approximate_claims():
     assert not claims & {"influence.exalt_refused_on_eldritch_implicit", "influence_beast.adds_a_mod_of_that_influence"}
 
 
-def test_the_catalog_offers_the_orb_on_an_influenced_armour_piece_only():
+def test_the_catalog_offers_the_orb_on_an_armour_piece_that_has_or_may_take_an_influence():
     shaper = helmet(roll(P1, 3), roll(S1, 2), influences=frozenset({SHAPER}))
     assert [a for a in catalog(DATA, shaper) if isinstance(a, OrbOfDominance)] == [OrbOfDominance()]
-    assert not [a for a in catalog(DATA, helmet(roll(P1, 3), roll(S1, 2))) if isinstance(a, OrbOfDominance)]
+    # no influence yet: an influenced Exalted Orb may give one on the way (item level 68 or more), so the orb is listed (#1195)
+    assert [a for a in catalog(DATA, helmet(roll(P1, 3), roll(S1, 2))) if isinstance(a, OrbOfDominance)] == [OrbOfDominance()]
+    assert not [a for a in catalog(DATA, helmet(level=67)) if isinstance(a, OrbOfDominance)]
