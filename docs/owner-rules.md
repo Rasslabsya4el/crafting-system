@@ -10,7 +10,8 @@ The document of record for how the owner reads a target, a price, a search and a
 - A rule says what the owner means. It does not say how the code does it. Where the code or a file differs today, that is an open point of the ticket that finds it, not a reason to bend the rule.
 - A brief, a PR or a checker verdict cites a rule as `OR-n`.
 - Sources named "memory note" are files in the main chat's memory. Their substance is copied here, so nothing outside the repository is needed to read a rule.
-- Rules OR-35 to OR-52 are the owner's eighteen decisions of the retro of 2026-11-13, held in the dispatcher chat (his standing chat that starts the ticket chats) and written down in [#900](https://github.com/Rasslabsya4el/crafting-system/issues/900); decision *k* of that ticket is OR-(34 + *k*). Each has a one-line **Reason** as well. They stand in the group they belong to, so the numbers within a group are not in order. "The beta" in them is the website of OR-35 with the methods of OR-37.
+- Rules OR-35 to OR-52 are the owner's eighteen decisions of the retro of 2026-11-13, held in the dispatcher chat (his standing chat that starts the ticket chats) and written down in [#900](https://github.com/Rasslabsya4el/crafting-system/issues/900); decision *k* of that ticket is OR-(34 + *k*). #900 holds no quote of him: the wording of the eighteen decisions is the dispatcher chat's, written from the retro, and his own messages of that day were typed on his PC and are not in the repository (the audit of 2026-11-18, [#1278](https://github.com/Rasslabsya4el/crafting-system/issues/1278)). Each has a one-line **Reason** as well, which #900 asked the chat that wrote the rules down to add; no quote of the owner stands behind any of the eighteen, so each is labelled "the dispatcher chat's reading, not the owner's word". They stand in the group they belong to, so the numbers within a group are not in order. "The beta" in them is the website of OR-35 with the methods of OR-37.
+- Rules OR-53 to OR-57 were written down on 2026-11-18 ([#1278](https://github.com/Rasslabsya4el/crafting-system/issues/1278)). OR-53, OR-54 and OR-56 quote the owner's messages in the dispatcher chat word for word, in Russian as he typed them, with the date and a translation; OR-55 and OR-57 rest on a memory note and on the record of a design grill, and say so. In these entries a sentence that is not the owner's stands under "The dispatcher chat's reading, not the owner's word", and where he gave no reason the entry says so and gives none.
 
 ## The product
 
@@ -22,7 +23,7 @@ A public website opens in November 2026: the user builds an item as on Craft of 
 
 - **Example.** None yet: no page of the site exists. What exists is the end of such a run, the route page the command writes (`<target>.route.html`, ADR-0015). The list of economy modes (softcore, hardcore and the like) is [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)'s to settle.
 - **Counter-example.** A YAML target file written by hand and a command line as the only way in: v1 as ADR-0015 and the map [#1](https://github.com/Rasslabsya4el/crafting-system/issues/1) described it until this date.
-- **Reason.** The product is for players and has to pay for itself, and a command line does neither.
+- **Reason (the dispatcher chat's reading, not the owner's word).** The product is for players and has to pay for itself, and a command line does neither.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 1).
 - **Replaces.** "v1 has no HTTP service" of ADR-0015 (amended there) and the destination and the "UI, HTTP service and Docker" out-of-scope line of the map #1 (rewritten). The site, until now a v2 idea on [#325](https://github.com/Rasslabsya4el/crafting-system/issues/325), is the product.
 
@@ -32,7 +33,7 @@ Every route the site generates is stored and listed on the site, so that other p
 
 - **Example.** None yet: nothing stores a route today, and no ticket builds the store ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** A run that plans again a request already answered; a route that exists only as one file on the machine that ran it (ADR-0015, "one file per query, no server").
-- **Reason.** A route computed once serves every later player and costs nothing the second time.
+- **Reason (the dispatcher chat's reading, not the owner's word).** A route computed once serves every later player and costs nothing the second time.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 2).
 - **Replaces.** "One file per query, no server" of ADR-0015 (amended there).
 
@@ -42,7 +43,7 @@ Batches B1, B2 and B3 without the recombinator are the beta, catalysts included.
 
 - **Example.** R06's catalysts are in the beta ([#901](https://github.com/Rasslabsya4el/crafting-system/issues/901)). Of B3 the Awakener's Orb and the beast imprints stay, and the recombinator routes R25 to R29 wait. In the batches of ADR-0013 the later methods are corruption (B4), Memory Strands (B5), sockets (B6), enchants (B7) and Hinekora's Lock (B8).
 - **Counter-example.** The map's destination until this date, "all eight batches (B1–B8) pass their benchmark routes". For the second half, a method of the beta cut to gain speed, no case is named here.
-- **Reason.** The beta has to open in November with every method it offers working end to end, and speed is won in the foundation, not by offering less.
+- **Reason (the dispatcher chat's reading, not the owner's word).** The beta has to open in November with every method it offers working end to end, and speed is won in the foundation, not by offering less.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 3).
 - **Replaces.** The v1 scope of eight batches (ADR-0013 with [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81); amended there) and the destination of the map #1 (rewritten). Narrows OR-33: its ten minutes are also the mark past which the foundation is reviewed.
 
@@ -52,7 +53,7 @@ In November the player may type in what currency and ingredients he owns; readin
 
 - **Example.** None yet: the site has no such input. The inputs of a run are [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)'s, and no ticket builds this one ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** A site that cannot open, or cannot serve an SSF player, until the stash integration is approved.
-- **Reason.** GGG's approval is not in the project's hands and November is; typing it in gives the player the same answer without the integration.
+- **Reason (the dispatcher chat's reading, not the owner's word).** GGG's approval is not in the project's hands and November is; typing it in gives the player the same answer without the integration.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 14).
 
 ### OR-52. Patch 3.30 is applied once, at the end of November, with 3.30 week-one prices
@@ -61,9 +62,53 @@ Patch 3.30 is applied once, at the end of November, with 3.30 week-one prices.
 
 - **Example.** None yet: the data pin is 3.29.3.3 and the tests' prices are OR-44's 3.29 file. The move is one run of the skill `patch-update`.
 - **Counter-example.** Moving the data pin or the test prices to 3.30 in the middle of November, while the routes are being fixed against 3.29.
-- **Reason.** One move instead of a moving target: the routes are fixed against one patch and one price file, then moved once.
+- **Reason (the dispatcher chat's reading, not the owner's word).** One move instead of a moving target: the routes are fixed against one patch and one price file, then moved once.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 18).
 - **Replaces.** The earlier wording "no 3.30 update until v1 is built and tested" (owner, memory note `stay-on-329.md`; the comment "the owner keeps 3.29 until v1 is built" at `tests/family_bench_support.py:63` repeats it, [#913](https://github.com/Rasslabsya4el/crafting-system/issues/913)): the update now has a date, not a condition.
+
+### OR-53. Work is on the planning system only; work on the site and a server for it starts on the owner's word
+
+Until the owner says otherwise, the work is on the planning system itself. Nothing about the site or a server for it is decided, built or put to him as a question: he says when work on the site starts and when a server is bought.
+
+- **Example.** The site tickets #1198 to #1200 and #1203 to #1214 carry the label `deferred` since 2026-11-17, and so do the follow-ups of the landed service (#906, #965, #967, #971, #972, #1009, #1010, #1035). The two planner rules cut together with them, [#1201](https://github.com/Rasslabsya4el/crafting-system/issues/1201) (OR-42) and [#1202](https://github.com/Rasslabsya4el/crafting-system/issues/1202) (OR-43), stay `ready-for-agent`.
+- **Counter-example.** On 2026-11-17 the dispatcher chat cut 17 site tickets (#1198 to #1214), started four agents on site tickets and asked the owner about a paid server (its own account, memory note `system-before-site.md`). His message below answered that.
+- **Reason.** None given by the owner.
+- **Source.** Owner in the dispatcher chat, 2026-11-17 (22:19 UTC): «Не надо … щас ничего про сервер или сайт решать / сейчас работа только над САМОЙ СИСТЕМОЙ!!!!!!!!!!!!!!!! я сам решу когда надо будет рбаотать над сайтом и покупать сервер» ("Nothing about a server or the site is to be decided now / the work now is only on THE SYSTEM ITSELF; I will decide myself when it is time to work on the site and to buy a server"). Two swear words are left out, one at "…" and one at the end; the rest is as he typed it.
+- **The dispatcher chat's reading, not the owner's word.** "The site" covers its pages, the front end, the deploy, the hosting and the money for them. "The system" is the planner: the methods, the search, the bounds, the stop, prices and data, routes. The service already landed (`docs/web.md`, [#961](https://github.com/Rasslabsya4el/crafting-system/issues/961)) stays in the repository with its tests, and nobody extends it.
+- **Narrows.** OR-35, OR-36 and OR-48 stand as what the product is; when their site work is done is the owner's to say.
+
+### OR-54. Nothing of the beta is cut for a date; the owner tracks the deadlines
+
+Nothing is cut to meet a date, and the work goes on as it went. The owner tracks the deadlines himself.
+
+- **Example.** Catalysts and the Blessed Orb, the two methods the offer below would have left out, became planner methods on 2026-11-18 ([#159](https://github.com/Rasslabsya4el/crafting-system/issues/159) part 1, PR #1239; [#1231](https://github.com/Rasslabsya4el/crafting-system/issues/1231), PR #1265).
+- **Counter-example.** On 2026-11-17 (22:03 UTC) the dispatcher chat showed the owner the remaining work and offered him two ways: a later date, or 30 November with a beta without part of its methods (catalysts, the Blessed Orb). His message below answered that.
+- **Reason.** None given by the owner.
+- **Source.** Owner in the dispatcher chat, 2026-11-17 (22:09 UTC): «Ничего не урезаем и работаем как работали. Я сам слежу за дедлайнамит» ("We cut nothing and work as we worked. I track the deadlines myself").
+- **The dispatcher chat's reading, not the owner's word.** No chat proposes a smaller beta (fewer methods, fewer routes, fewer pieces of the site) to make a date, and none asks him to pick a launch date. A chat reports what is done and what is left, with sizes, and he judges the timing.
+- **Note.** OR-37 forbids cutting a method of the beta to gain speed; this rule forbids cutting for a date. The dates written in OR-35 and OR-52 are not changed by this entry.
+
+### OR-55. The beta's bar is wide: every B1 to B3 method works on any target within the limit
+
+The bar of the beta is the wide one: every method of B1, B2 and B3 works on any target within the limit, not only on a fixed list of reference routes.
+
+- **Example.** None yet. As the site would plan (every beta method on, the 10-minute net), 8 of the 13 reference routes had a plan and 5 had none in the heavy benchmark's record of 2026-11-17 (the audit of 2026-11-18, #1278), and the reference routes are only some of "any target".
+- **Counter-example.** The narrow bar he was offered and did not take: a fixed set of 10 to 12 reference routes plans in 10 minutes, and every other target is answered "cannot yet".
+- **Reason.** None given by the owner (the memory note says so).
+- **Source.** Owner in the dispatcher chat, 2026-11-16, memory note `beta-bar-wide.md`: asked which bar the beta has, A (narrow) or B (wide, "every B1–B3 method works on any target within the limit"), he answered «Б широкая» ("B, the wide one"). He typed it on his PC, so the message itself is not in the repository; the wording of the two options is the dispatcher chat's.
+- **The dispatcher chat's reading, not the owner's word.** "The methods" are the beta's of OR-37 (B3 without the recombinator), and "the limit" is the machine's time and memory setting of OR-40. The reference routes of OR-45 show how far the planner is from the bar; they are not the bar.
+
+### OR-56. A site user's plan is computed on our server; nothing is computed in the user's browser, and the software is not handed out
+
+A site user's plan is computed by the site's service on our server, as it was built. Users are not given a calculation in their browser, and the software itself is handed to nobody. A calculation on the user's side may be added later, on the owner's word.
+
+- **Example.** The service as landed: a user's request becomes a job, and a worker process of the server plans it (`docs/web.md`, [#961](https://github.com/Rasslabsya4el/crafting-system/issues/961)).
+- **Counter-example.** A build of the planner that runs in the user's browser, or a program the user downloads and runs on his own machine. Neither exists, and no ticket builds one.
+- **Reason.** The owner's, as far as his two messages give one: he will not hand the software to anyone, and he chose to leave things as they are when the dispatcher chat told him that a calculation in the browser means the browser downloads the code (his «Тогда», "then", below). No other reason is recorded.
+- **Source.** Owner in the dispatcher chat, 2026-11-18, two messages. At 09:34 UTC, asked whether the system must run on Windows because he or the users would run it on their own PCs and not only through the site: «Я миллиард раз повторял что юзер может запустить прогон у себя через сайт. То есть в интерфейсе сайта. Не на мозностях нашего сервера. Следовательно требуется вин версия? Отдавать прям софт в руки кому то я не буду» ("I have repeated a billion times that a user can start a run at his own side through the site. That is, in the site's interface. Not on the capacity of our server. So is a Windows version required? I will not hand the software itself to anyone"). At 09:36 UTC, after the dispatcher chat answered that the browser would have to download the code in order to run it, so that "not handed out" and "not computed on our server" cannot both hold in full: «Тогда оставляем как есть и не даем юзерам делать расчет на их браузере. Потом если что добавим» ("Then we leave it as it is and do not let users do the calculation in their browser. We will add it later if need be").
+- **History.** Until 2026-11-18 "a run is a job on our server" was the dispatcher chat's decision, taken in #961 on 2026-11-15 under OR-50 and built without a word of his. His first message says he had wanted the user's run off our server's capacity; no rule, ADR or ticket held that. His second message keeps what was built.
+- **The dispatcher chat's reading, not the owner's word.** «как есть» ("as it is") is the service as landed: every plan is a job on our server. "On the owner's word" joins his «Потом если что добавим» with OR-53. This entry decides nothing about the machine or the system the site's server runs on (OR-53, OR-57).
+- **Open.** The repository is public on GitHub and has no licence file (public since 2026-10-31, so that CI is free), so the planner's code can be downloaded today. Whether that stands beside "I will not hand the software to anyone" is the owner's to decide, and he has not been asked ([#1279](https://github.com/Rasslabsya4el/crafting-system/issues/1279)).
 
 ## Reading a target
 
@@ -129,7 +174,7 @@ Every method of the beta is offered to the planner by default, and the player sw
 
 - **Example.** None yet ([#886](https://github.com/Rasslabsya4el/crafting-system/issues/886) builds it). The route it must find with nothing named in the target: fill the suffixes with a cheap bench craft, use an Exalted Orb for a guaranteed prefix, remove the craft.
 - **Counter-example.** Today most strong methods are off unless a target names them (the Exalted Orb, the Orb of Annulment, the Fracturing Orb, fossils, Harvest add and remove, veiled mods, imprints, beasts), and a bench craft that is not a goal mod is not offered (#886). R05 is planned with no Exalted Orb offered (OR-5).
-- **Reason.** The answer is the best route only among what was offered, so a method left off by default is a cheaper route the player never sees.
+- **Reason (the dispatcher chat's reading, not the owner's word).** The answer is the best route only among what was offered, so a method left off by default is a cheaper route the player never sees.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 7).
 - **Narrows.** OR-5: the user setting it names starts with every beta method on.
 
@@ -139,7 +184,7 @@ Starting over costs the cheaper of buying the start item again or wiping the sam
 
 - **Example.** None yet: no route page shows a wipe as the way to start over ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** V01: each of about 107 restarts buys a new helmet where a player scours the old one, and the page says nothing of the old item. R14: the guide's "back to step 1" is priced as buying another start item, 744 Chaos, 48% of the completed route (both [#687](https://github.com/Rasslabsya4el/crafting-system/issues/687)).
-- **Reason.** A player wipes the item in his hand when that is cheaper than buying another.
+- **Reason (the dispatcher chat's reading, not the owner's word).** A player wipes the item in his hand when that is cheaper than buying another.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 8).
 - **Replaces.** "A restart buys it again" as the only way to start over (`GLOSSARY.md`, **Start item**, marked there). The wipe is a step of OR-16.
 
@@ -149,7 +194,7 @@ Where the guide names no rarity, the start is the cheapest rarity the market sel
 
 - **Example.** None checked against this rule yet; the `crafter` helper asks it of every page it reads (its question 2), and no ticket builds the rule for every bought start ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
 - **Counter-example.** R06 starts from a Normal Hunter belt with no market, while the guide accepts Hunter or Elder at any rarity ([#515](https://github.com/Rasslabsya4el/crafting-system/issues/515)). The bought fractured starts of R03, R05, R10, R11 and R12: the listing holds mods the target does not name, and the planner holds the fractured mod alone ([#656](https://github.com/Rasslabsya4el/crafting-system/issues/656)).
-- **Reason.** A player buys what is listed cheapest and pays for making it the rarity he needs, and a fractured item on the market is a Rare with other mods on it.
+- **Reason (the dispatcher chat's reading, not the owner's word).** A player buys what is listed cheapest and pays for making it the rarity he needs, and a fractured item on the market is a Rare with other mods on it.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 9).
 - **Narrows.** OR-6 (the start item is still given or bought, and which rarity is bought is now a rule) and OR-17 for a bought fractured item. The mark is OR-23's.
 
@@ -190,7 +235,7 @@ Tests use the 3.29 week-one price file, with one price per item and no ranges. L
 
 - **Example.** `tests/fixtures/prices/routes-allflame-2026-07-31.json`, league Allflame on its day 7 ([#838](https://github.com/Rasslabsya4el/crafting-system/issues/838)), which the owner looked through and accepted on 2026-11-13. A Shrieking essence at a third of its Deafening one, and so on down ([#885](https://github.com/Rasslabsya4el/crafting-system/issues/885)).
 - **Counter-example.** In that file before #885: Muttering Essence of Fear at 87 Chaos, and many Wailing and Weeping essences at 2 to 4 Chaos, above their Deafening tier, because nobody buys them. The hand prices that carry V01's total (the base and the gem set) are not in its price list ([#891](https://github.com/Rasslabsya4el/crafting-system/issues/891)): hand-set, and not marked.
-- **Reason.** Tests need prices that do not move and that a player would pay in a league's first week, and a market nobody buys from is not a price.
+- **Reason (the dispatcher chat's reading, not the owner's word).** Tests need prices that do not move and that a player would pay in a league's first week, and a market nobody buys from is not a price.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 10).
 - **Narrows.** OR-7 and OR-8 for the tests' prices: the marked hand-set price is a third marked kind, beside OR-7's fallback and OR-8's old or thin price. Replaces the snapshots of later days (2026-10-31, 2026-11-10) as the tests' default. It stands until OR-52's update.
 
@@ -266,7 +311,7 @@ The rules given to the system for a method are the absolute: the route must be t
 
 - **Example.** The beast influence recipes are modelled as that influence's Exalted Orb and marked unverified (ADR-0013, the B2 amendment): the plan is the cheapest under that rule. The owner on Memory Strands, 2026-11-01 (ADR-0013, the B5 amendment): the system reproduces the evidence gathered, and matching the real game beyond that is not required.
 - **Counter-example.** An answer held back because the game's true odds for a method are unknown, or a page line "accurate to N% of the game". No route shows either.
-- **Reason.** The game's hidden odds cannot be checked and the rules written down can, so the promise is the one that can be kept.
+- **Reason (the dispatcher chat's reading, not the owner's word).** The game's hidden odds cannot be checked and the rules written down can, so the promise is the one that can be kept.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 4).
 - **Note.** OR-23 stands: an input that is an estimate is still marked approximate on the answer. That mark names the input; it is not an accuracy figure for the route.
 
@@ -276,7 +321,7 @@ A plan is shown as soon as an executable one exists; the proof goes on and stops
 
 - **Example.** R04 at the 2026-11-10 prices (OR-32's example): the plan made from the bound alone costs 189,226.57 Chaos on average and nothing costs less than 188,299.94, a gap of 0.49%, so the plan is shown when it exists and the proof has nothing left to do ([#826](https://github.com/Rasslabsya4el/crafting-system/issues/826) builds it).
 - **Counter-example.** Today's search on the same route spends 364 to 510 s after the plan is in hand and shows nothing meanwhile (OR-32's counter-example). A page that swaps the route the player is reading for one a fraction of a percent cheaper; none is measured yet.
-- **Reason.** A player wants a route he can start on, not to wait for a proof, and not a route that keeps changing under him.
+- **Reason (the dispatcher chat's reading, not the owner's word).** A player wants a route he can start on, not to wait for a proof, and not a route that keeps changing under him.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 5).
 - **Narrows.** OR-32: the plan no longer waits for its proof, and the proof stops by itself at a proved gap of 1%. The decision does not name OR-32's "about a minute". A reading, not the owner's word: the dispatcher's decision of 2026-11-13 on [#925](https://github.com/Rasslabsya4el/crafting-system/issues/925) (its comment there is the source). The proof goes on while the plan's elapsed time is under its aim (the machine setting of OR-40, a minute by default; no setting of its own); past the aim, it stops at the first round whose plan is proved within 1%. A craft whose proof closes inside the aim is proved the cheapest and the page says "the cheapest"; a plan that stopped at the gap states the gap actually proved (R14: 0.000014%, not "within 1%"). The measurement behind it is #925's, not the comment's: on every generated case that reaches 1% inside the first minute of the search, the full proof costs 0.1 to 1.3 s more; between one and two minutes, 3 to 12 s more; past that, 37 s to several minutes. It replaces the reading of #900's chat, under which the stop was the 1% gap whatever the time, so that a craft whose proof would close a second later said "within 1%". What OR-32 says of the exact mean of the plan shown, and of the proof figure as a certificate beside it, stands.
 - **Open.** No ticket yet measures the threshold of "notably better" or decides the "keep searching" button ([#914](https://github.com/Rasslabsya4el/crafting-system/issues/914)).
@@ -287,7 +332,7 @@ A time or memory limit is a setting of the machine, a guard against a hang, neve
 
 - **Example.** The planner takes the limits of a run in its settings from whoever calls it (ADR-0018, the amendment of [#880](https://github.com/Rasslabsya4el/crafting-system/issues/880)), and a run that a limit stopped says so in its answer (OR-13).
 - **Counter-example.** The generated family benchmark, where 6 targets end at the 10-minute net ([#871](https://github.com/Rasslabsya4el/crafting-system/issues/871)): the net as the way a craft ends. A limit chosen so that a run fits a 16 GB GitHub runner; no place is named here.
-- **Reason.** The site runs on its own machine, not on a GitHub runner, and a limit that ends ordinary crafts hides a slow foundation.
+- **Reason (the dispatcher chat's reading, not the owner's word).** The site runs on its own machine, not on a GitHub runner, and a limit that ends ordinary crafts hides a slow foundation. "The site runs on its own machine" is a sentence of the chat that wrote #900's rules down. It is no decision of the owner on where a site user's plan is computed (that is OR-56, his decision of 2026-11-18), nor on which machine or system the site runs (not decided: OR-53).
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 6).
 - **Narrows.** OR-32 and OR-33: "about a minute" and the 10-minute net are no longer fixed figures of the product; they stand as the defaults of that setting until measurements change them. This is about the planner's limits only, not the timeouts of heavy runs or the caps of CI. (Both sentences are the dispatcher chat's, written in `CLAUDE.md` on 2026-11-13 and moved here by #900.)
 
@@ -368,7 +413,7 @@ A fractured mod is marked as fractured wherever the item is shown; a mod from an
 
 - **Example.** The pages of R05, R10 and R11 since [#895](https://github.com/Rasslabsya4el/crafting-system/issues/895): R11's target card and every card after it read `+(31-35)% to Chaos Resistance · T1`, marked fractured (the mod the bought helmet really holds, not "any tier"); R10's Intelligence reads `+(43-50) to Intelligence · Shrieking essence`, and R11's target names `Shrieking essence` and `Deafening essence` for its two reservation mods. Which essence a mod comes from is read from the essences the route uses, so the same mod rolled with no essence keeps its tier number.
 - **Counter-example.** The R10 and R11 pages the owner read on 2026-11-13 did not show the fracture, and R10's Intelligence from the essence carried "T2" where the owner wants the essence's tier (#895).
-- **Reason.** A player reads a fractured mod as the one he cannot lose, and an essence's mod by its essence.
+- **Reason (the dispatcher chat's reading, not the owner's word).** A player reads a fractured mod as the one he cannot lose, and an essence's mod by its essence.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 13).
 - **Narrows.** OR-15: the one format of a mod line gains these two marks.
 
@@ -422,8 +467,9 @@ Eater of Worlds and Searing Exarch influence acts on implicits, and the other in
 
 - **Example.** The Prime Chaotic Resonator at 160.7 Chaos and the Chromatic Orb at 1.9 Chaos in the 3.29 week-one file stand as they are ([#885](https://github.com/Rasslabsya4el/crafting-system/issues/885)).
 - **Counter-example.** A plan that uses a Hunter's Exalted Orb on boots that hold an Eldritch implicit, or that joins an Eldritch implicit to another item through the Awakener's Orb. No route shows either.
-- **Reason.** He knows these from play, and a route that breaks one of them cannot be done in the game.
+- **Reason (the dispatcher chat's reading, not the owner's word).** He knows these from play, and a route that breaks one of them cannot be done in the game.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 15).
+- **A further fact of his, about patch 3.30.** Patch 3.30 removed the three yellow filler beasts from beast crafts. It is second-hand: the handoff of ticket [#885](https://github.com/Rasslabsya4el/crafting-system/issues/885), written on 2026-11-13 by the chat that did its first PR, says "The owner says 3.30 removed the three yellow filler beasts from beast crafts"; his own message was typed on his PC and is not in the repository, and decision 15 of #900 does not hold the fact. It was written down here on 2026-11-18 ([#1278](https://github.com/Rasslabsya4el/crafting-system/issues/1278)). The project stays on 3.29 (OR-52), where a beast recipe still takes them: each `any_rare_creature` slot of a recipe is paid as 1 Chaos Orb (claim `beastcraft.recipe_beasts` and setting `beastcraft.any_rare_creature_price` in `src/crafting_system/rules/claims/beastcraft.yaml`). So nothing changes today, and the fact is for the move to 3.30, which checks it against the 3.30 data and drops that charge.
 - **Note.** These are sources of kind `owner` (OR-21, OR-22). OR-25 is about his opinion on a method of search, not about what he saw in the game.
 
 ## Process
@@ -475,7 +521,7 @@ A guide's route is a ceiling, not the truth: the planner may honestly find a che
 
 - **Example.** The owner's targets of 2026-11-13 ([#895](https://github.com/Rasslabsya4el/crafting-system/issues/895)): R10's boots ask Life tier 1 or tier 2, R11's helmet Evasion tier 1 to tier 3 and Life tier 1. R08 and R09 are kept with named tiers, and their "6% of the guide" verdict is measured again ([#901](https://github.com/Rasslabsya4el/crafting-system/issues/901)): a much cheaper route, reviewed.
 - **Counter-example.** R10 and R11 with Life at any tier: "nobody buys or crafts boots with tier 10 Life" (the owner, #895). R15 and R18, guides from 2020; R07, whose guide rests on the old Veiled Chaos Orb; V01 and J01, targets the project invented (#901).
-- **Reason.** A verdict against a guide means something only when the target is an item players make and the guide can still be followed.
+- **Reason (the dispatcher chat's reading, not the owner's word).** A verdict against a guide means something only when the target is an item players make and the guide can still be followed.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 11).
 - **Narrows.** OR-4 for reference targets: a guide's soft wish does not make a reference target accept any tier of Life or defences (the R10 and R11 readings in OR-4's entry are replaced by the targets of #895). OR-27: agents still find the references, and the mirror-tier ones come from the owner when asked. The benchmark list R01 to R30 of ADR-0013 (amended there).
 
@@ -485,7 +531,7 @@ Every changed route page is read by the `crafter` helper as a player before it l
 
 - **Example.** `.claude/agents/crafter.md` and `CLAUDE.md`, "How work is split" ([#888](https://github.com/Rasslabsya4el/crafting-system/issues/888)). Seven emulator cases of 12,000 uses each agreed with the planner's chance of one use of the Exalted Orb on J01 and V01 (`docs/research/2026-11-13-637-exalt-key.md`, [#637](https://github.com/Rasslabsya4el/crafting-system/issues/637); skill `coe-emulator-check`).
 - **Counter-example.** Before #888 no one read a page as a player before it landed. The helper's trial run found on R11's recorded page that a helmet with three full suffixes counts as finished, while the guide rolls until an open suffix ([#890](https://github.com/Rasslabsya4el/crafting-system/issues/890)).
-- **Reason.** Tests do not see what a player would call wrong, and the owner does not read every page himself.
+- **Reason (the dispatcher chat's reading, not the owner's word).** Tests do not see what a player would call wrong, and the owner does not read every page himself.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 12).
 - **Narrows.** OR-21 (and ADR-0005, amended there): for the outcome of a single action the emulator is the reference, where OR-21 names no ranking of sources. The decision does not say what happens where current game data shows the emulator out of date, the case of OR-21's counter-example. The reading of the chat that wrote this rule down (#900), not the owner's word: there OR-21 still stands, the stale source loses, and the disagreement is filed as an issue; the question is put to the owner in [#915](https://github.com/Rasslabsya4el/crafting-system/issues/915). OR-24 is unchanged: a doubtful mechanic goes beside the emulator first.
 - **Replaces.** The sentence of `CLAUDE.md` that the dispatcher chat shows the owner every benchmark page at each checkpoint (changed there).
@@ -496,7 +542,7 @@ The owner is not a developer or a mathematician and leaves the architecture, the
 
 - **Example.** Planning moved into a module of its own with one entry ([#880](https://github.com/Rasslabsya4el/crafting-system/issues/880), ADR-0018's amendment). A compiled kernel generator is measured against today's Python before anything is rewritten ([#881](https://github.com/Rasslabsya4el/crafting-system/issues/881)).
 - **Counter-example.** A question to the owner about which search or which language to use. No real case is recorded here.
-- **Reason.** He decides what the product does and what he pays for it; how it is built is decided by whoever can measure it (OR-25).
+- **Reason (the dispatcher chat's reading, not the owner's word).** He decides what the product does and what he pays for it; how it is built is decided by whoever can measure it (OR-25).
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 16).
 - **Note.** The ADRs on the language and the modules (ADR-0010, ADR-0016, ADR-0018) stand until the dispatcher chat changes one by an ADR; this rule says whose decision that is. Path of Exile 2 itself stays outside the beta (the map [#1](https://github.com/Rasslabsya4el/crafting-system/issues/1), "Out of scope").
 
@@ -508,11 +554,24 @@ Every chat and helper runs on Fable 5.2 until he says to go back to the earlier 
 
 - **Example.** A chat passes `model: "fable"` when it starts `finder`, `checker` or `crafter`, whatever their own files say (`CLAUDE.md`, "How work is split").
 - **Counter-example.** A helper started with no model named, which runs on the model of its own file (Haiku 5.5 or Sonnet 5.5).
-- **Reason.** It is temporary: his Fable allowance.
+- **Reason (the dispatcher chat's reading, not the owner's word).** It is temporary: his Fable allowance.
 - **Source.** Owner in the dispatcher chat, the retro of 2026-11-13 ([#900](https://github.com/Rasslabsya4el/crafting-system/issues/900), decision 17).
 - **Replaces, for now.** The rule of 2026-11-10 it returns to: every chat on Opus 5.5 with effort medium, the helpers on their own models (`CLAUDE.md` keeps its text).
+- **Note of 2026-11-18.** The owner set the dispatcher chat to Fable 5.2 himself on 2026-11-17 and again on 2026-11-18 (his `/model` commands in that chat; the audit of 2026-11-18, #1278). He stated no rule with them, so none is written here; `CLAUDE.md`, "How work is split", says what runs on which model today.
+
+### OR-57. The repo installs and runs on any Windows or Linux machine
+
+Nothing is tied to the owner's machine: no hard-coded paths, no speed assumptions about one machine, and the repo installs and runs on any Windows or Linux machine.
+
+- **Example.** The integration run that lands a PR tests on Ubuntu and on Windows (`docs/ci.md`, "Landing a pull request"). No test asserts a timing (`tests/test_no_timing.py`), and the data, cache and output folders come from settings (ADR-0014).
+- **Counter-example.** On 2026-11-18 the dispatcher chat told the owner that the Windows check had been needed while the work ran on his Windows PC, that everything now runs on a Linux server, and that the site would be on Linux too. He asked «А с чего ты это вообще взял?» ("And where did you get that from at all?", 09:33 UTC). The chat then told him that the reason for the Windows check was written nowhere; it is written, as his requirement, in ADR-0014.
+- **Reason.** None recorded: the record of the grill states the requirement and gives no reason for it.
+- **Source.** Owner, design grill round 1 of 2026-10-30 ([#2](https://github.com/Rasslabsya4el/crafting-system/issues/2), Q9): "**Owner requirement:** nothing tied to the owner's machine: no hard-coded paths, no machine-specific speed assumptions; the repo must install and run on any Windows or Linux machine." That record is the grilling chat's wording in English, not a quote of his message. ADR-0014 (`docs/adr/0014-nothing-tied-to-one-machine.md`) holds the requirement since then; this entry cites it so that the Windows check has its reason in this file ([#1278](https://github.com/Rasslabsya4el/crafting-system/issues/1278)).
+- **The dispatcher chat's reading, not the owner's word.** The Windows half of the integration run rests on this requirement and stays until the owner lifts the requirement himself. The rule is about the repository; on which machine and which system the site will run is not decided (OR-53; ADR-0014's note of 2026-11-13 says the same).
 
 ## Left out on purpose
 
 - **The pannable board** (decision 6 of #396) is a v2 idea on the map ([#325](https://github.com/Rasslabsya4el/crafting-system/issues/325)), not a rule of reading; nothing is taken into work until the owner says so. The website itself is no longer on that list: it is the product (OR-35).
 - **Rules the audit proposes but the owner did not state**, such as "a start price is required" and "done means reachable", are not here.
+- **The owner's words of 2026-11-17 on how the chats use his server** (any number of tasks at once; the whole server for tests and runs) are about the process, not about how he reads a target, a price, a search or a page. They stand with their quotes in `CLAUDE.md`, "How work is split" and "Heavy runs".
+- **His question of 2026-11-18, «Почему мы не юзаем сервер для проверок вместо гх? Сервер гораздо быстрее их машин»** ("Why do we not use the server for the checks instead of GitHub? The server is much faster than their machines"), is a question and not a decision. How a PR lands is unchanged: the integration run on Ubuntu and Windows (`docs/ci.md`, "Landing a pull request"; OR-57).
