@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.abstraction._pattern import IMPRINTS, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Tally
+from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Tally
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
@@ -118,8 +118,9 @@ def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floo
             if made is None:
                 successors, weights = model.kernels[kernel]
                 made = built[kernel] = builder.kernel([n if successor < 0 else successor for successor in successors], weights)  # -1 is the sink
-            builder.action(offer_index, offers[offer_index].cost, made)
-        if floor is not None and not is_goal:
+            # a row of a choice node (a step of a relaxed draw, `abstraction/_relaxed.py`) costs nothing: carried at `FLOOR_COST`, as a floor of 0
+            builder.action(offer_index, FLOOR_COST if offer_index == CHOICE else offers[offer_index].cost, made)
+        if floor is not None and not is_goal and not isinstance(key, ChoiceNode):
             cost = floor(key, was_built)
             if cost is not None:
                 if sink is None:
@@ -334,7 +335,7 @@ def _binding(
     binding = fake < best * (1.0 - BINDING)
     reached = np.zeros(n, dtype=bool)
     reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
-    shaped = np.array([floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
+    shaped = np.array([not isinstance(key, ChoiceNode) and floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
     binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape has the cost of an offer as its floor and is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
         return [], dict.fromkeys(CLASSES)

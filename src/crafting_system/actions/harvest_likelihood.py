@@ -68,6 +68,11 @@ class HarvestReforgeLikelihood(Action):
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(LIFEFORCE_COST.value)
 
+    def held_weight_factor(self) -> Fraction:
+        """The weight factor of the held families (`harvest_reforge.likelihood_weight_factor`): 10, or 1/10 for the less likely craft."""
+        weight = Fraction(LIKELIHOOD_WEIGHT_FACTOR.value[self._key])
+        return weight if self.more else 1 / weight
+
     def reads(self, data: GameData) -> Reads:
         return Reads.adding()
 
@@ -84,8 +89,7 @@ class HarvestReforgeLikelihood(Action):
         """
         check_reforgeable(data, item)
         held = frozenset(family for entry in item.mods for family in data.mods[entry.mod_id].families)
-        weight = Fraction(LIKELIHOOD_WEIGHT_FACTOR.value[self._key])
-        factor = weight if self.more else 1 / weight
+        factor = self.held_weight_factor()
 
         retained = retained_item(data, item)
         total = max(len(item.mods), NEVER_FEWER_MODS.value["floor"])
