@@ -16,7 +16,12 @@ The tool is `research/cheap-bound/dled.py` (its docstring states the count; `dle
 
 **The direct model** (point 1). The coarse key is `tags,counts` (the bound's key without the ordinary slots' counts and protected tags), the key of #1318's 3,000 and 237. It is built by `sdm.py`'s method (#1315): a coarse key holds representatives, concrete states a kernel produced; an offer is taken at a representative as the bound's builder takes it at a member (the key's refusal, the quality pruning, the lumped twin of an erasing action), its successors pushed to their coarse keys, and the row is the exact pushed kernel where `Pattern.mode_of` is `ANY` at the representative's key or the kernel has one successor, else **angelic** (one certain row to each coarse key the kernel reaches, at the offer's cost). The dump holds no `Pattern.mode_of`; it is recomputed for each (representative, offer) through the same `Pattern` the bound uses. Which offers got which:
 
-KINDS
+| Route | Exact kernel (`ANY` at the representative) | Exact, one successor | Angelic stand-in (mode at the representative) |
+|---|---|---|---|
+| R04 | Chaos Orb, both essences, Veiled Chaos Orb, Orb of Alteration (110 rows), Alchemy and Transmutation (1 each) | every bench craft, Remove Crafted Mods, Orb of Scouring, part of Annulment and of the Wild Bristle Matron | Exalted Orb, Regal Orb, Augmentation (`extremes`); Annulment, Wild Bristle Matron (`one`); Fracturing Orb, and Chaos, Veiled Chaos, Annulment, Alteration under a lock (`all`) |
+| R24 | Deafening Essence of Torment, Veiled Chaos Orb | Pick 1 to 3, the suffix lock, part of Annulment and of the Veiled Chaos Orb | Harvest Add Remove Fire, and Annulment and Veiled Chaos Orb under a lock (`all`); Unveil, Annulment (`one`) |
+
+(Counts of rows per offer and mode are on each run's `DIRECT` line; R04's own-policy build made 41,895 (representative, offer) pairs and 18,683 kernels, R24's 50,131 and 6,495.)
 
 **Coarse keys off the direct model's own policy** (point 4). Three modes:
 
