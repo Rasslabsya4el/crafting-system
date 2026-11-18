@@ -55,7 +55,7 @@ from crafting_system.items.sockets import class_maximum
 from crafting_system.items.spawn import spawn_weight
 from crafting_system.items.vendor_recipes import RECIPES
 from crafting_system.prices.price_file import PriceFile, load_price_file
-from crafting_system.targets import parse_target
+from crafting_system.targets import PlainQualityRequirement, parse_target
 from crafting_system.targets.model import Target
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -676,8 +676,8 @@ def refusal_today(data: GameData, target: Target, actions: Sequence[str]) -> str
     for key in ("sockets", "enchantment"):
         if getattr(target, key):
             reasons.append(f"target asks for {key}")
-    if target.quality is not None:
-        reasons.append("target asks for quality")
+    if isinstance(target.quality, PlainQualityRequirement):  # the catalyst quality is planned since #159
+        reasons.append("target asks for the plain quality of a weapon or armour")
     return "; ".join(reasons) or None
 
 

@@ -519,6 +519,7 @@ def offers_for(
 
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
+    left_out_quality: list[str] = []  # a quality action (a catalyst) that cannot give the quality the goal asks for, or a goal that asks for none (#159)
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
     left_out_asked: list[str] = []  # the target allows a corrupted item but asks for no corrupted implicit, and the set is offered only to one that does (ADR-0038)
     for action in listed:
@@ -530,6 +531,8 @@ def offers_for(
             left_out_unwanted.append(told_apart(action))
         elif adds.needs_roll_limit and not roll_matters:
             left_out_rolls.append(told_apart(action))
+        elif adds.only_quality and not _gives_quality_wanted(data, goal, start_item, action):
+            left_out_quality.append(told_apart(action))
         else:
             candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
@@ -628,6 +631,16 @@ def offers_for(
             else claim("the offered crafts only", "A craft left out could still pay off, and that is not checked.")
         )
         limits += (Limit(_limits.CRAFTS, "Not offered", why, labels=tuple(left_out_crafts), **guarantee),)
+    if left_out_quality and goal.quality is not None:  # a target that asks for no quality needs no word about it, as for the rolls
+        limits += (
+            Limit(
+                _limits.QUALITY,
+                "Not offered",
+                "it only sets the quality, and never to the type the target asks for: a catalyst of another type restarts the quality from 0%",
+                "The plan is unaffected: such a catalyst only costs currency and undoes the quality asked.",
+                tuple(left_out_quality),
+            ),
+        )
     if left_out_rolls and any(leaf.has_roll_limit for leaf in goal.leaves):  # a target without a roll limit needs no word about it
         limits += (
             Limit(
@@ -900,6 +913,26 @@ def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed:
         return bool(limited & drawable_mod_ids(data, start_item))
     except (NotApplicableError, OutOfScopeError):  # either: a pool that cannot be built is no proof the mod is out of reach, so the orb stays (nothing is left out)
         return True
+
+
+def _gives_quality_wanted(data: GameData, goal: Goal, start_item: Item, action: Action) -> bool:
+    """Whether an action that only sets the quality (`Adds.only_quality`, a catalyst) can give the quality the goal asks for (#159).
+
+    Read from its outcomes (the contract, not its fields) on the start item with no quality, so a start that holds the quality already
+    does not hide the type the action gives. A goal that asks for no quality never needs it: the quality changes no odds (ADR-0029). An
+    action the model refuses on that item gives nothing, and one it cannot model is kept (nothing is left out on a doubt).
+    """
+    wanted = goal.quality
+    if wanted is None:
+        return False
+    bare = start_item if start_item.quality is None else start_item.changed(data, quality=None)
+    try:
+        results = action.outcomes(data, bare).results
+    except NotApplicableError:
+        return False
+    except OutOfScopeError:
+        return True
+    return any(getattr(made.quality, "type", None) == wanted.type for _, made in results)
 
 
 def _counts_as_crafted(data: GameData, leaf, mod_id: str) -> bool:

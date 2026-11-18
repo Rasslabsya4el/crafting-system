@@ -52,6 +52,7 @@ STRANDS = "strands"
 CRAFTS = "crafts"
 FIXED_MOD = "fixed-mod"
 ROLLS = "rolls"
+QUALITY = "quality-type"
 CRAFTED_MODS = "crafted-mods"
 NO_VEIL = "veiled-mods"
 UNPRICED = "unpriced"
@@ -82,6 +83,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (CRAFTS, "Bench crafts that count for nothing"),
     (FIXED_MOD, "Actions that add one fixed mod nobody wants"),
     (ROLLS, "Value rerolls without a roll limit"),
+    (QUALITY, "Catalysts of another quality type"),
     (CRAFTED_MODS, "Removing crafted mods"),
     (NO_VEIL, "Unveiling with no veiled mod"),
     (UNPRICED, "Actions with no price"),

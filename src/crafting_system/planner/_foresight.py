@@ -82,6 +82,7 @@ class Status(StrEnum):
     NO_OPTION = "no previewable action"  # no state the plan visits has a previewable option
     REFUSED = "refused"  # the start item takes no Lock (corrupted)
     SWITCHED_OFF = "off: the run's methods setting does not name it"  # a deferred method (OR-37): on only when `PlanSettings.methods` names it
+    WITH_QUALITY = "not offered on a target that asks for quality"  # the burn of its Peeks keeps no quality yet (#159): the plan is the one without the Lock
     WITH_SECOND_ITEMS = "not offered in a plan that makes second items"  # the target allows it, but a plan with donors has no Lock solve yet (#225, #796)
     NO_PRICE = "no price"  # the price file has none: the Lock is dropped, N is still found
     COARSE = "coarse"  # an approximate answer whose pruning removed the Lock everywhere: no N (the exact values it needs do not exist)
@@ -362,11 +363,11 @@ def plan_burn(
     """The burn of the plan's Peeks: the cheapest legal burn of the start item, or None.
 
     Its legality is read on the start item: a burn depends on the class, the corruption (a corrupted state takes no Lock), the implicits (refused
-    where the state keeps them, `BurnKeeps.implicits`), the quality (which the planner never keeps: it refuses a target that names it) and, for a
+    where the state keeps them, `BurnKeeps.implicits`), the quality (which a burn never keeps: a target that names it takes no Lock, `Status.WITH_QUALITY`, #159) and, for a
     target that names sockets (`sockets`), the sockets: the finish starts from them, so a burn that changes them is refused (`BurnKeeps.sockets`).
     """
     if abstraction.tracks_quality:
-        raise ValueError("the Lock's burn is built for states that keep no quality; the planner refuses a target that names it")
+        raise ValueError("the Lock's burn is built for states that keep no quality; the plan of a target that names it takes no Lock (`Status.WITH_QUALITY`)")
     keeps = BurnKeeps(quality=False, implicits=abstraction.tracks_implicits, enchantment=False, sockets=sockets)
     found = cheapest_burn(burns_at(data, item, keeps), data, prices, price_source)
     return None if found is None else BurnPrice(found.burn.label(data), found.cost)

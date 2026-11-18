@@ -259,16 +259,16 @@ def test_the_declarations_name_the_quality_and_nothing_else_of_the_item_state():
     assert adds.named == frozenset() and not adds.draws
 
 
-def test_the_kind_lists_the_twelve_catalysts_for_jewellery_only_and_is_no_planner_kind_yet():
+def test_the_kind_lists_the_twelve_catalysts_for_jewellery_only_and_is_a_planner_kind():
     entry = next(entry for entry in kinds() if entry.name == "catalyst")
-    assert entry.planner is False and "158" in entry.why_not
+    assert entry.planner and not entry.opt_in  # a beta method, offered by default (#159, OR-37, OR-41)
     listed = catalog(ITEM_DATA, at(84), names={"catalyst"})
     assert listed == tuple(ApplyCatalyst(kind) for kind in CatalystType) and len(listed) == 12
     assert catalog(ITEM_DATA, at(84, corrupted=True), names={"catalyst"}) == ()
     from implicits_support import BOOTS
 
     assert catalog(ITEM_DATA, Item.build(ITEM_DATA, base_id=BOOTS, item_level=84, rarity=Rarity.RARE), names={"catalyst"}) == ()
-    assert not any(isinstance(action, ApplyCatalyst) for action in catalog(ITEM_DATA, at(84), planner_only=True))
+    assert tuple(action for action in catalog(ITEM_DATA, at(84), planner_only=True) if isinstance(action, ApplyCatalyst)) == listed
     assert all(isinstance(action, Action) for action in listed)
 
 

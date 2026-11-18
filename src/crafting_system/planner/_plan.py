@@ -34,7 +34,7 @@ from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
 from crafting_system.solver import MAIN, Acquisition, Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
-from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
+from crafting_system.targets import KOfN, PlainQualityRequirement, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
 from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_info
@@ -625,7 +625,8 @@ def _make_plan(
     """Solve the target and measure the risk of the policy.
 
     `start_price` is the cost of the start item for this run (it wins over the price file);
-    `offers` default to `offers_for` the target. Raises `PlanError` when the target asks for `quality` or for an implicit that is not an
+    `offers` default to `offers_for` the target. Raises `PlanError` when the target asks for the plain quality of a weapon or armour (the
+    catalyst quality is planned since #159: the key holds the quality and a catalyst is offered last) or for an implicit that is not an
     Eldritch one (a base or a corrupted implicit; the Eldritch implicits are planned since #835: the bound's key holds the pair, and the
     Eldritch currencies are offered to a target that asks for one), when no offer has a price or no policy reaches the
     goal, and what the layers below raise for a bad input.
@@ -698,8 +699,11 @@ def _make_plan(
             f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
             ": the cut and the spend of strands are not built, so an answer would silently ignore them"
         )
-    if target.quality is not None:
-        raise PlanError("the target asks for quality, which the planner cannot plan yet")
+    if isinstance(target.quality, PlainQualityRequirement):
+        raise PlanError(
+            "the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a"
+            " method of the planner); it plans the catalyst quality of a ring, an amulet or a belt"
+        )
     if any(wish.corrupted or not any(mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
         raise PlanError(
             "the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet;"
@@ -1435,6 +1439,8 @@ def plan_foresight(
     lock = lock_price(prices, price_source)
     if not lock_wanted(target.actions):  # switched off: nothing is built
         return Foresight(LockStatus.SWITCHED_OFF, lock), None
+    if abstraction.tracks_quality:  # a burn keeps no quality yet (#159): nothing is built, and the answer says the Lock was not offered
+        return Foresight(LockStatus.WITH_QUALITY, lock), None
     burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
     cache: dict = {}
     plain = fallback if fallback is not None else offered if offered is not None else priced

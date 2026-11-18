@@ -16,10 +16,9 @@ from targets_support import DATA
 from crafting_system.actions import ChaosOrb, HarvestReforge, RemoveCraftedMods
 from crafting_system.cli import Offer, PlanError, build_report, default_offers, make_plan, policy_document, render_text
 from crafting_system.planner._limits import unpriced_limits
-from crafting_system.items import CatalystType
 from crafting_system.prices import write_price_file
 from crafting_system.rules import get_rule
-from crafting_system.targets import ImplicitRequirement, QualityRequirement, load_target
+from crafting_system.targets import ImplicitRequirement, PlainQualityRequirement, load_target
 
 GEM = "GlobalLightningGemLevel1"
 LIFEFORCE_PRICE = 0.01
@@ -246,10 +245,11 @@ def test_a_start_item_that_already_meets_the_target_is_planned_the_same_by_the_p
     assert plan.mean_remaining == 0.0 and len(plan.policy) == 0 and plan.risk is not None
 
 
-def test_a_target_with_quality_is_refused_because_the_planner_would_ignore_it(target):
-    asked = dataclasses.replace(target, quality=QualityRequirement(CatalystType.INTRINSIC, 20))
+def test_a_target_with_the_plain_quality_of_a_weapon_or_armour_is_refused_because_the_planner_would_ignore_it(target):
+    # the catalyst quality is planned since #159 (`tests/test_planner_catalysts.py`); the quality currency is not a planner kind yet
+    asked = dataclasses.replace(target, quality=PlainQualityRequirement(20))
 
-    with pytest.raises(PlanError, match=r"asks for quality.*cannot plan yet"):
+    with pytest.raises(PlanError, match=r"plain quality of a weapon or armour.*cannot plan yet"):
         make_plan(DATA, asked, price_file())
 
 
@@ -263,11 +263,7 @@ def test_a_target_with_a_corrupted_implicit_requirement_is_refused_for_the_same_
 
 
 def test_the_command_reports_the_refusal_and_exits_with_an_error(tmp_path, capsys):
-    target_file = tmp_path / "asks-for-quality.yaml"
-    asks = "quality:\n  type: intrinsic\n  min_percent: 20\n"
-    target_file.write_text(R12.read_text(encoding="utf-8") + asks, encoding="utf-8")
-
-    code, _ = run(tmp_path, target=target_file)
+    code, _ = run(tmp_path, "--strands")  # Memory Strands on: refused before anything is planned
 
     assert code == 1
     assert "cannot plan yet" in capsys.readouterr().err
