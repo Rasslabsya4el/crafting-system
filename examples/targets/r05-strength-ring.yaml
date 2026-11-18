@@ -27,9 +27,9 @@
 #     which is the tier 1 the owner names.
 #   * "use the crafting bench on any open modifier" (the guide's last step): a craft on a free slot. It asks nothing of the
 #     finished item here: a bench craft has no natural tier and meets no tier line (OR-1), whatever its range.
-#   * "20 Intrinsic Catalysts" (quality): left out, it is B2 (the guide's step 3 asks it; a target with a `quality:` block cannot be
-#     planned yet, issue #516, and the line is issue #159). A bench craft of no use to the
-#     requirements below is not offered by the planner.
+#   * "20 Intrinsic Catalysts" (quality, the guide's step 3): not in this file yet. The planner plans a `quality:` block since
+#     issue #159, as a finish of catalysts after the mods; the guide's line is added to this target, with its re-records, by
+#     issue #1233. A bench craft of no use to the requirements below is not offered by the planner.
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 # The guide says only "rare ring"; every plain ring has the same pool of mods, so one is picked.

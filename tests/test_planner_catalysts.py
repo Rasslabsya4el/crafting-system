@@ -277,3 +277,69 @@ def test_a_plan_a_given_route_is_judged_against_keeps_the_catalyst_among_its_off
     plan = plan_target(D, target, _prices(), PlanSettings(recipe_starts=False, solver="envelope", judges_route=True))
     assert plan.quality_finish is None and "Intrinsic Catalyst" in {priced.label for priced in plan.offers}
     assert plan.mean_remaining == pytest.approx(6 * A + _mean(84) * K, rel=1e-9)
+
+
+QUALITY_KINDS = ("Catalysts", "Quality currency")  # the kinds that only set the quality (`Kind.only_quality`)
+NO_QUALITY = LIGHTNING_HELD.replace("quality:\n  type: intrinsic\n  min_percent: 20\n", "")
+
+
+def _named_left_out(plan) -> set[str]:
+    return {label for limit in plan.limits for label in limit.labels}
+
+
+def test_a_target_with_no_quality_names_no_quality_method_among_those_left_out(monkeypatch):
+    # quality changes no odds of the mods (ADR-0029): no catalyst nor quality currency could make such a plan cheaper, so neither is a
+    # method "left out" in any group, whether the run's setting names methods (not named) or not (opt-in, here the classic offers)
+    from cli_support import classic_offers
+
+    named = _plan(NO_QUALITY, methods=("chaos-orb",))
+    assert not _named_left_out(named) & set(QUALITY_KINDS)
+    classic_offers(monkeypatch)  # the catalysts are then an opt-in kind ("could be cheaper"): the crafter's fault on R05 (#159)
+    default = plan_target(D, parse(NO_QUALITY), _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
+    assert not _named_left_out(default) & set(QUALITY_KINDS)
+    assert not [limit for limit in default.limits if limit.kind == "quality-finish"]
+
+
+def test_a_quality_target_on_a_belt_says_its_quality_once_and_names_no_quality_currency():
+    # the belt takes catalysts and no quality currency (weapon and armour only): the quality is said by the finish's line, and the catalysts
+    # of the other types by their own line, which says the plan is unaffected
+    plan = _plan(LIGHTNING_HELD, methods=("catalyst", "chaos-orb"))
+    assert not _named_left_out(plan) & set(QUALITY_KINDS)
+    assert sorted(limit.kind for limit in plan.limits if limit.kind.startswith("quality")) == ["quality-finish", "quality-type"]
+    assert next(limit for limit in plan.limits if limit.kind == "quality-type").guarantee.startswith("The plan is unaffected")
+
+
+BODY = """\
+base: Metadata/Items/Armours/BodyArmours/BodyInt1
+item_level: 84
+requirements:
+  - family: LightningResistance
+    min_tier: 2
+start_item:
+  rarity: rare
+  mods:
+    - mod: LightningResist7
+      values: [45]
+"""
+
+
+def test_a_body_armour_with_no_quality_hears_of_no_catalyst_nor_quality_currency():
+    # a body armour takes no catalyst and takes a quality currency; with no quality asked neither could lower the cost
+    plan = plan_target(D, parse(BODY, header=False), _prices(), PlanSettings(recipe_starts=False, solver="envelope"))
+    assert not _named_left_out(plan) & set(QUALITY_KINDS)
+
+
+def test_a_kind_declared_only_quality_lists_only_actions_that_only_set_the_quality():
+    from items_support import item
+    from targets_support import belt
+
+    from crafting_system.actions import catalog_kinds, kinds
+
+    declared = {entry.name for entry in kinds() if entry.only_quality}
+    assert declared == {"catalyst", "quality-currency"}
+    seen = set()
+    for held in (belt(), item()):  # a belt takes catalysts, a body armour a quality currency
+        for action, name in catalog_kinds(D, held, names=declared).items():
+            assert action.adds(D).only_quality, (name, action)
+            seen.add(name)
+    assert seen == declared

@@ -34,6 +34,11 @@ The flag does not offer the kind: a burn is never a plain action, and the kind s
 A kind is `corrupting` when every action it lists corrupts (`Adds.corrupts`: the Vaal Orb, the Locus of Corruption). A planner
 leaves such a kind unmentioned in its report when the target takes no corrupted item (ADR-0036).
 
+A kind is `only_quality` when every action it lists only sets the quality (`Adds.only_quality`: the catalysts, the quality currency). Quality
+changes no odds of the mods (ADR-0029), so such a kind can never make a plan of the mods cheaper: a planner leaves it unmentioned in its
+report when the target asks for no quality, or when the kind lists nothing for the start item (a catalyst on boots), as it does the
+corrupting kinds (#159).
+
 Two declarations are read by the shared tests, which therefore name no kind (ticket #334). `applies_only_to` names the item class
 that is the only one the kind works on (`"armour"`: body armours, boots, gloves and helmets; the fixture items of the contract suite
 are amulets, so the suite does not require that the kind applies to one, and fails when it does). `reads_item_state_while_not_planner`
@@ -89,6 +94,7 @@ class Kind:
     needs_strands: bool = False
     burns: bool = False
     player_why: str = field(default="", compare=False)
+    only_quality: bool = False
 
 
 _KINDS: dict[str, Kind] = {}
@@ -146,11 +152,12 @@ def kind(
     needs_strands: bool = False,
     burns: bool = False,
     player_why: str = "",
+    only_quality: bool = False,
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands, burns, player_why))
+        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands, burns, player_why, only_quality))
         return members
 
     return decorate

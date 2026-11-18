@@ -568,7 +568,7 @@ def offers_for(
             offer = offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, ""))
             offers.append(replace(offer, blocks=classes[action]) if action in classes else offer)
 
-    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps)
+    limits = _kind_limits(kinds_named, kind_names, goal, start_item, listing_gaps, _quality_kinds_unsaid(data, goal, start_item))
     unlisted = (
         tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.corrupting and entry.name not in kind_names)
         if kind_names is not None and not goal.takes_corrupted
@@ -715,9 +715,13 @@ def _kind_limits(
     goal: Goal,
     start_item: Item,
     listing_gaps: Collection[ListingGap] = (),
+    unsaid: Collection[str] = (),
 ) -> tuple[Limit, ...]:
     """The kinds of the catalog that no plan for this target offers, each group with its reason: not named, opt-in, not built (K1, K2, K4),
     and what the listed kinds left out because the model has no rule for the start item (`listing_gaps`, #511).
+
+    A kind that only sets the quality is not named in any group when it is in `unsaid` (`_quality_kinds_unsaid`): it could not make the plan
+    cheaper, and a target that asks for quality hears about it in the line of its quality (`_quality_finish`, #159).
 
     A kind that only corrupts is the corrupting limit's when the target takes no corrupted item, and a kind that needs Memory
     Strands, while the start item has none, is the strands limit's (`make_plan`): neither is named here. Hinekora's Lock is no kind of the
@@ -731,7 +735,10 @@ def _kind_limits(
         not_named = tuple(
             kind_title(entry.name)
             for entry in kinds(planner_only=True)
-            if entry.name not in (kind_names or ()) and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in strands
+            if entry.name not in (kind_names or ())
+            and not (entry.corrupting and not goal.takes_corrupted)
+            and entry.name not in strands
+            and entry.name not in unsaid
         ) + (lock if LOCK_KIND not in kinds_named else ())
         if not_named:
             found += (
@@ -747,7 +754,7 @@ def _kind_limits(
         opt_in = tuple(
             kind_title(entry.name)
             for entry in kinds(planner_only=True)
-            if entry.opt_in and entry.name not in strands and not (entry.corrupting and not goal.takes_corrupted)
+            if entry.opt_in and entry.name not in strands and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in unsaid
         ) + lock
         if opt_in:
             found += (
@@ -760,7 +767,7 @@ def _kind_limits(
                 ),
             )
     found += listing_gap_limits(listing_gaps, goal)
-    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner and not entry.player_why)
+    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner and not entry.player_why and entry.name not in unsaid)
     if not_built:
         found += (
             Limit(
@@ -773,7 +780,7 @@ def _kind_limits(
         )
     stated: dict[str, list[str]] = {}  # a kind with its reason in a player's words is named apart, with that reason (#943, OR-13)
     for entry in kinds():
-        if not entry.planner and entry.player_why:
+        if not entry.planner and entry.player_why and entry.name not in unsaid:
             stated.setdefault(entry.player_why, []).append(kind_title(entry.name))
     for why, labels in stated.items():
         found += (
@@ -786,6 +793,16 @@ def _kind_limits(
             ),
         )
     return found
+
+
+def _quality_kinds_unsaid(data: GameData, goal: Goal, start_item: Item) -> frozenset[str]:
+    """The kinds that only set the quality (`Kind.only_quality`: the catalysts, the quality currency) the answer does not name among the methods
+    left out (#159): all of them when the target asks for no quality (quality changes no odds of the mods, ADR-0029, so none could make the plan
+    cheaper), and else those that list nothing for the start item (a catalyst on boots, a quality currency on a ring)."""
+    quality_kinds = [entry.name for entry in kinds() if entry.only_quality]
+    if goal.quality is None:
+        return frozenset(quality_kinds)
+    return frozenset(name for name in quality_kinds if not catalog_kinds(data, start_item, names=frozenset({name})))
 
 
 def listing_gap_limits(gaps: Collection[ListingGap], goal: Goal) -> tuple[Limit, ...]:

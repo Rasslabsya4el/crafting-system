@@ -231,6 +231,7 @@ class ApplyCatalyst(Action):
 @kind(
     "catalyst",
     order=90,
+    only_quality=True,
     reads_item_state_while_not_planner="any",  # it reads and adds the quality, which the compressed state keeps (`Abstraction.tracks_quality`)
 )
 def _catalysts(data: GameData, item: Item):
