@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds the run's methods setting does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 35,
+      "count": 34,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -196,7 +196,6 @@
         "Divine Orb",
         "Awakener's Orb",
         "Recombinators",
-        "Catalysts",
         "Eldritch implicit currency",
         "Eldritch Chaos Orb",
         "Eldritch Exalted Orb",
@@ -213,7 +212,7 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 15,
+      "count": 14,
       "labels": [
         "Harvest reforges that favour a mod",
         "Harvest quality enchants",
@@ -228,7 +227,6 @@
         "Bench socket links",
         "Chromatic Orb",
         "Bench socket colours",
-        "Quality currency",
         "Re-anoint"
       ],
       "names": []
