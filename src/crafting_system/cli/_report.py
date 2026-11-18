@@ -24,6 +24,7 @@ from crafting_system.planner import (
     PERCENTILE_WORDS,
     UNRESOLVED,
     LockStatus,
+    stopped_figure,
     Plan,
     PlanError,
     chance,
@@ -661,7 +662,8 @@ def _verification_lines(check: Verification, plan: Plan) -> list[str]:
     cost = report.cost
     p90 = check.p90
     divine = plan.prices.chaos_per_divine
-    computed_p90 = UNRESOLVED if unresolved(plan.risk, plan.risk.p90) else money(check.computed_p90)
+    stopped = stopped_figure(plan.risk) if plan.risk.grid.stopped else UNRESOLVED  # the net stopped it (#738), or the grid could not reach it
+    computed_p90 = stopped if unresolved(plan.risk, plan.risk.p90) else money(check.computed_p90)
     return [
         f"Verification by simulation ({check.runs:,} runs, seed {check.seed}, at most {check.max_steps:,} uses per run)",
         f"  simulated mean cost {money(cost.value)} Chaos, {report.confidence:.0%} interval "

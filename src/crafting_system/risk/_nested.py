@@ -52,13 +52,15 @@ The work of a pass is about (starts * states + extra input copies) * H^2 (a dire
 suits runs of a few hundred bins; `nested_work` is that estimate.
 """
 
+import time
 from collections import deque
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import fsum, prod
 
 import numpy as np
 
+from .. import budget
 from ._budget import BudgetRun, rounding_allowance
 from ._chain import Chain
 
@@ -102,8 +104,12 @@ def run_nested(
     tail_mass: float,
     max_bins: int,
     horizon: int | None = None,
+    deadline: float | None = None,
 ) -> BudgetRun:
     """Run the nested DP with `bin_cost[i]` whole bins per step in state i, like `run_budget`.
+
+    `deadline` (`time.monotonic`, the net of the cost figures, #738) is looked at between two passes: past it no wider pass starts, and the
+    mass beyond the last pass's horizon stays unresolved.
 
     Raises `BranchingError` when a run depends on itself, `ValueError` when the start cannot finish.
     """
@@ -123,6 +129,8 @@ def run_nested(
             return result
         if horizon_bins >= max_bins:
             return _whole(run)
+        if deadline is not None and time.monotonic() >= deadline:
+            return replace(_whole(run), stopped=budget.TIME)
         horizon_bins = min(2 * horizon_bins, max_bins)
 
 
