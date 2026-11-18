@@ -87,7 +87,7 @@ from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 from crafting_system.data import GameData, Mod
-from crafting_system.items import Item
+from crafting_system.items import Item, Rarity
 from crafting_system.rules import Rule
 
 from .cut import Cut
@@ -826,6 +826,15 @@ class Action(ABC):
         """The price-file name of the currency item the action is, for a previewable action (ADR-0055): all currency items of one type show the
         same preview, so a state has one option per item. None, the default, for an action that is not previewable."""
         return None
+
+    def rarities(self, data: GameData, item: Item) -> frozenset[Rarity]:
+        """The rarities one use on `item` can leave it in (a superset is allowed: the planner then lists a little more); raises as `outcomes` does.
+
+        The default reads them off `outcomes` (the `retained` item of each part). The planner asks every listed action this, to list the offers
+        for every rarity the item can reach (`planner/_offers.py` `reached_items`, #973), so an action whose outcomes are dear to build answers
+        from its rules instead (a fossil set: a rare item stays rare). The contract suite checks the answer against the finished items.
+        """
+        return frozenset(part.retained.rarity for _, part in self.outcomes(data, item).components)
 
     def burn(self, data: GameData | None = None) -> bool:
         """Whether the action is a burn (ADR-0056): a currency that changes no mod and may give a Lock up. False by default."""
