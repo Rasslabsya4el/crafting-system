@@ -23,11 +23,12 @@ from crafting_system.planner._envelope_plan import envelope_result
 class Readings:
     """Hand-made memory: a resident sum, a proportional sum that takes `cost` seconds of a hand-moved clock to read, and the count of each read."""
 
-    def __init__(self, monkeypatch, resident: float, proportional: float, cost: float = 0.0) -> None:
-        self.resident, self.proportional, self.cost = resident, proportional, cost
+    def __init__(self, monkeypatch, resident: float, proportional: float, cost: float = 0.0, group: float | None = None) -> None:
+        self.resident, self.proportional, self.cost, self.group = resident, proportional, cost, group
         self.now = 0.0
         self.cheap = self.dear = 0
         monkeypatch.setattr(parallel, "_resident_sum", self.read_resident)
+        monkeypatch.setattr(parallel, "_group_sum", lambda: self.group)  # no control group unless a test gives one (#1258)
         monkeypatch.setattr(parallel, "_proportional_sum", self.read_proportional)
         monkeypatch.setattr(parallel, "_now", lambda: self.now)
         monkeypatch.setattr(parallel, "_dear", [float("-inf"), None])
