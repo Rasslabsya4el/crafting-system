@@ -439,6 +439,23 @@ class Adds:
         )
 
     @property
+    def only_named(self) -> bool:
+        """Whether the action is declared as a certain addition: it names the mods it adds, draws none, and changes no implicit, quality, offer,
+        corruption, fracture, imprint, veil, enchantment or socket (a bench craft, an aspect beast).
+
+        Such an action keeps every mod of the item and adds the named ones (crafted when `crafted`), the same on every item that takes it, so
+        its one outcome is the item it was given with those mods added. The bound's build reads it so (`PatternBuilder._offers_of_key`, #1193):
+        at every member of a key that takes it the successor key is the same. The contract suite checks that no result differs from the item
+        but in the named mods added.
+        """
+        return (
+            bool(self.named)
+            and not self.draws
+            and not (self.implicits or self.quality or self.offer or self.corrupts or self.fractures or self.imprints or self.veils)
+            and not (self.enchantment or self.sockets)
+        )
+
+    @property
     def only_sockets(self) -> bool:
         """Whether the action is declared as a socket action (`socket_action`): it changes sockets and adds no mod."""
         return self.sockets and self.named == frozenset() and not self.draws

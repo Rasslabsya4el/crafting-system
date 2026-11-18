@@ -174,6 +174,21 @@ planner treat a gap as unavailable). If another member can take it, the build re
 the action only at the states where the gap is, so leaving it out of the key could put the bound above the exact cost (`_gap_everywhere`). A
 model gap in `_item_of` always refuses.
 
+**The certain additions (#1193).** An action declared `Adds.only_named` (a bench craft, an aspect beast; the contract suite checks it) has
+one outcome: the item it was given with its named mods added, nothing else changed. At a member `m` of key `k` that takes it, the successor
+holds `m`'s flags, fractured mods, item state beyond the mods and veiled slots; its crafted slots are `k`'s with the crafted mod added, its
+ordinary slots `m`'s with an ordinary named mod added (one slot of a kind the mod alone fixes, so the counts and the tags of `k` move by a
+fixed step); and its status is the per-leaf best of `m`'s status and what the named mods give (`best_of`), with `m`'s status `k`'s. Each part
+is a function of `k` and the action, so the successor key is the same at every member of `k` that takes it, and so is the pushed kernel: one
+certain successor. The members differ only in whether they take it (the refusal, which reads the junk of the families named). So the build
+asks the members in turn until one takes the action and leaves the rest out (`PatternBuilder._offers_of_key`): they would add only that same
+kernel, and no new slot (theirs are of the universe already, and the named mods are noted with the first). The pairs left out still count as
+pairs of the build (`stats.pairs`, the counted net's `Tally`), so a build counted in pieces stops where it did; a member the quality rule
+prunes (#159) is passed over before, as for any action, and counts as no pair. Its model gaps (a normal item,
+an item with no mod, a roll limit on the named mod) read the key and the action alone, so no member left out could have raised one. R04's
+round of bench crafts asked 73 crafts at every member of every key, 1.17 million pairs nearly all of distinct kernels (#1193). **Proved** so,
+and checked against every member on the hand-worked world and on real routes (`tests/test_certain_additions.py`).
+
 **The universe.** The members of a key are made of the ordinary slots an item can hold. They come from three places: the pool of an empty rare
 item (every mod a draw can give, under a roll limit once for each outcome of its roll, #830; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced
 mod, which the pool does not list; `Universe._seed_named`), and every slot a kernel the build evaluates produces (`note`; a slot found this way
@@ -220,6 +235,7 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
@@ -410,7 +426,8 @@ class PatternStats:
     keys: int = 0
     goal_keys: int = 0
     members: int = 0  # concrete states offered an action, over all keys and modes (a member counted once per mode)
-    pairs: int = 0  # (member, action) pairs whose kernel key was asked for
+    pairs: int = 0  # (member, action) pairs whose kernel key was asked for, or that a certain addition left out (`shared_pairs`)
+    shared_pairs: int = 0  # pairs of a certain addition not asked: a member before them took it (#1193)
     kernels: int = 0  # distinct kernels computed (the walk's count is its distinct `kernel_key`s)
     abstract_actions: int = 0
     abstract_edges: int = 0
@@ -482,6 +499,7 @@ class Pattern:
         self.zero = (Status.ABSENT,) * self.width
         self._universes: dict[frozenset, _Universe] = {}
         self._reads: dict[Action, object] = {}
+        self._only_named: dict[Action, bool] = {}
         self._feasible: dict[CompressedState, bool] = {}
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
@@ -709,6 +727,13 @@ class Pattern:
         found = self._reads.get(action)
         if found is None:
             found = self._reads[action] = action.reads(self.data)
+        return found
+
+    def adds_only_named(self, action: Action) -> bool:
+        """Whether `action` is a certain addition (`Adds.only_named`: module docstring, "The certain additions", #1193)."""
+        found = self._only_named.get(action)
+        if found is None:
+            found = self._only_named[action] = action.adds(self.data).only_named
         return found
 
     def holds_lock(self, key: PatternKey) -> bool:
@@ -1411,6 +1436,8 @@ class PatternBuilder:
         for offer in self.offers[lo:hi]:
             if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
+            if SHARE_ADDITIONS and self.pattern.adds_only_named(offer.action):  # one fixed result, nothing to draw: priming would only prepare every pair
+                continue
             policy = self.pattern.policy(offer.action, key)
             members = by_mode.get(policy)
             if members is None:
@@ -1456,6 +1483,7 @@ class PatternBuilder:
                 members = by_mode[policy] = pattern.members(key, *policy)
                 stats.members += len(members)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
+            certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
             seen: set[int] = set()
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             for member in members:
@@ -1463,6 +1491,12 @@ class PatternBuilder:
                 if ab.quality_offer_pruned(member, offer.action) if last else ab.quality_finish_only(member, offer.action):
                     # exact: a catalyst is pruned at every such state by the search too (`_envelope_plan`); another action where only the quality
                     # is left changes no value (`Abstraction.quality_finish_only`), and the search then leaves it out there as the model does
+                    continue
+                if certain and seen:  # a certain addition taken at a member: this one adds that same kernel (module docstring, #1193)
+                    stats.pairs += 1
+                    stats.shared_pairs += 1
+                    if self.tally is not None:
+                        self.tally.done += 1
                     continue
                 stats.pairs += 1
                 if self.tally is not None:
