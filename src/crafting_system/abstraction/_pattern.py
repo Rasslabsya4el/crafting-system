@@ -1109,9 +1109,11 @@ class Pace:
         * before `room.quarter` of the net it goes on;
         * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`), and stops as soon as it does
           not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
-          no pace yet goes on when the plan in hand is held, and stops when it is one a stopped search walked to (`room.held` False, #1142:
-          R13's round 2, whose first model held 49 of 51 offers and whose second never ended, took its whole share and its search had none);
-        * past its net it goes on while nearly done: within its room at its pace, or, with no pace yet, by the offers it holds (`Growth`)."""
+          no pace yet (its first model not solved, or its growth has added no offer) has nothing that shows it will end there: it stops,
+          whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its second never ended; R17's site
+          plan: rounds whose first model of 10 to 69 offers was not solved after their whole share, and whose searches had 0 s);
+        * past its net it goes on while nearly done: within its room at its pace, or, when the net was not asked since the quarter, by the
+          offers it holds (`Growth.nearly_done`)."""
         if room is None:
             return SHARE if used >= given else None
         whole = (1.0 + room.late) * given
@@ -1125,7 +1127,7 @@ class Pace:
             return None
         if self.need is not None:
             return None if self.need <= whole else PACE
-        return None if room.held else QUARTER
+        return QUARTER
 
 
 SHARE, QUARTER, PACE = "share", "quarter", "pace"  # why a build's net stops it (`Pace.verdict`)
@@ -1135,12 +1137,11 @@ SHARE, QUARTER, PACE = "share", "quarter", "pace"  # why a build's net stops it 
 class Room:
     """What the bound's build of a round with a plan in hand may take (`Pace.verdict`, #1099, #1135, #1224): its net is the round's whole
     share; `late` is how many times its net it may go past it, nearly done; `quarter` the part of its net past which it goes on only at a
-    pace that ends within that room (the quarter `_envelope_plan.SEARCH_PER_BUILD` leaves the build of a round with no plan in hand); `held`
-    whether the plan in hand is held (False: one a stopped search walked to, `_rounds.walked`)."""
+    pace that ends within that room (the quarter `_envelope_plan.SEARCH_PER_BUILD` leaves the build of a round with no plan in hand). A plan
+    a stopped search walked to (`_rounds.walked`, #1142) is in hand like a held one."""
 
     late: float = 0.0
     quarter: float = 0.25
-    held: bool = True
 
 
 class Tally(Pace):
@@ -1168,7 +1169,7 @@ class Tally(Pace):
             elif stop == PACE:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, and at the pace its model grew it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
             else:
-                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, its model had not grown past the first, and the plan in hand is not held: the rest is left for the search"
+                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work and its model had not grown past its first, so nothing showed that it would end within what it may take: the rest is left for the search"
             return said + (", the build having gone on past it, nearly done" if self.late else "")
         if self.done >= self.cap:
             self.late = True

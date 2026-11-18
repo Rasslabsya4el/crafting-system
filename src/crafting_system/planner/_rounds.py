@@ -36,10 +36,9 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   Exalted round builds in 24 to 28 s on a runner against a share of 26 to 27 s, and cut there it kept 617.28 c on 3 of 4 runners. The time
   past the share comes off the rounds after it; a build far from done stops at the share as before. What decides the build's room past a
   quarter of the share is whether it will end in it (#1224, `abstraction._pattern.Pace`): once its model has grown, the pace it grows at,
-  kept to its last offer, must end within that room, or it stops there and leaves its search the rest of the share. A plan a stopped
-  search walked to (#1142, `walked`) is in hand like any other for this; only a build whose model has not grown yet keeps the rule of the
-  plan in hand: a held plan, the share; a walked one, the quarter, since R13's round 2 (its first model held 49 of 51 offers, the model
-  adding the rest never ended) took its whole share and left its search none. On R11's site plan every plan in hand was walked, and every
+  kept to its last offer, must end within that room, or it stops there and leaves its search the rest of the share; one whose model
+  has not grown yet stops at the quarter (R13's round 2, #1142: its first model held 49 of 51 offers, the model adding the rest never
+  ended, and with the whole share its search had none). A plan a stopped search walked to (#1142, `walked`) is in hand like any other. On R11's site plan every plan in hand was walked, and every
   round's build was cut at its quarter: the Exalted round's at 7 of its 27 s, on a pace that ends at about 38 s.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net

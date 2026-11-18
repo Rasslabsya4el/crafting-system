@@ -284,8 +284,9 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     stopped search walked to (#1142) is in hand like any other: R11's site plan (no guide's actions) had a walked essence plan of 230,524 c,
     its Exalted round's build was cut at 7 of its 27 s on a pace that ends at about 38 s, and the answer kept 617.28 c where the finished
     bound's first plan is 168.03 c (+ 20 c start). A build whose pace ends past its room stops there and leaves its search the rest of the
-    share, where it took the whole share and left the search none (R17, R20: #1167); one that has no pace yet (its growth has added no offer)
-    keeps the rule of its plan in hand: held, the share; walked, the quarter (R13's round 2, #1142).
+    share, where it took the whole share and left the search none (R17, R20: #1167); one that has no pace yet (its first model not solved,
+    or its growth has added no offer) has nothing that shows it will end, and stops at the quarter, whatever the plan in hand (R13's round
+    2, #1142; R17's site plan, whose rounds' first models were unsolved after their whole share).
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
@@ -296,7 +297,7 @@ def room_of(net: Net | None) -> Room | None:
     """What a build with a plan in hand may take (`abstraction._pattern.Room`, #1224), None for a build with no plan in hand."""
     if net is None or not (net.held or net.walked):
         return None
-    return Room(late=net.late, quarter=1.0 / (1.0 + SEARCH_PER_BUILD), held=net.held)
+    return Room(late=net.late, quarter=1.0 / (1.0 + SEARCH_PER_BUILD))
 
 
 class BuildStop(Pace):
@@ -337,7 +338,7 @@ class BuildStop(Pace):
             elif stop == QUARTER:
                 return (
                     f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan: its "
-                    f"model had not grown past the first, and the plan in hand is one a stopped search walked to"
+                    f"model had not grown past its first, so nothing showed that it would end within the time it may take"
                 )
             elif stop is not None:
                 return f"the time limit of {net.seconds:g} seconds was reached" + (
