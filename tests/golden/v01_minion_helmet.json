@@ -168,7 +168,7 @@
       "what": "Not offered",
       "why": "kinds the run's methods setting does not name",
       "guarantee": "The plan is the cheapest among the kinds offered.",
-      "count": 38,
+      "count": 39,
       "labels": [
         "Chaos Orb",
         "Harvest reforges",
@@ -217,7 +217,7 @@
       "what": "Not offered",
       "why": "methods the planner cannot use yet",
       "guarantee": "The plan is the cheapest among the methods the planner can use.",
-      "count": 11,
+      "count": 10,
       "labels": [
         "Harvest quality enchants",
         "Tempering",
