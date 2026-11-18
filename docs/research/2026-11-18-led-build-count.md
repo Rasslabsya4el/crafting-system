@@ -10,12 +10,12 @@ Words, as in the design note. A **key** is the exact bound's summary of an item;
 
 ## Short answer
 
-**No: steps 2 to 5 of the design note's plan should not be built as they stand**, that is with a status model built once and its value at a tip's coarse key used as the tip's lead. Three counts say so (points 1 to 3). **But this "no" is narrower than the first version of this note said** (point 4, section 2a): the same coarse models, re-solved each round with the keys the build has already worked out kept exact, lead the build to its end in 1.7% to 2.5% of R04's keys and 0.3% to 0.6% of R24's. That lead was computed here from every key's kernels in the complete dump, which a direct build does not have; whether a build can supply it was **not counted** (#1322). So the line of a cheap bound is not closed; the design note's form of it is.
+**No: steps 2 to 5 of the design note's plan should not be built as they stand**, that is with a status model built once and its value at a tip's coarse key used as the tip's lead. Three counts say so (points 1 to 3). **But this "no" is narrower than the first version of this note said** (point 4, section 2a): the same merged coarse model, **solved again each round** with the rows of the keys the build has worked out, ends the build in 3,000 of R04's 100,771 keys (coarse key of 28,596) and 237 of R24's 60,895 (coarse key of 19,964). That count used the merge of the complete exact model as the coarse model; with a coarse model built directly (weaker rows, and a build of 28,596 coarse keys to pay for) it was **not counted** (#1322). So the line of a cheap bound is not closed; the design note's form of it (a lead held fixed) is.
 
 1. **A led build needs most of the keys unless the lead is nearly exact.** On R24 a lead worth 86% of the true value (the junk counts dropped: 19,964 coarse keys) still makes the build work out 54,866 of 60,895 keys (90%) by the plain rule, and 15,731 to 18,161 (26% to 30%) by the better rules tried; a lead worth 42% (the status alone, 196 coarse keys) makes it work out 60,894 (100%) and 40,601 (67%). Only leads at 99.99% or more of the true value bring the count down to the hundreds or low thousands (section 2).
-2. **On R04 no small coarse key gives such a lead.** The leads worth 99.99% or more have 29,057 to 73,676 coarse keys, so the "cheap" model is a third to three quarters of the exact one. The lead worth 92% (junk counts as their sum, 64,186 coarse keys) needed 83,347 of 100,771 keys (83%) to come within 1%; the lead worth 8% (junk counts dropped) had moved the start value from 8.2% to 9.0% after 9,741 keys when its run was stopped. **So the line stops on R04, as the design note said it would in this case.**
+2. **On R04 no small coarse key gives such a lead held fixed.** The fixed leads worth 99.99% or more have 29,057 to 73,676 coarse keys, so the "cheap" model is a third to three quarters of the exact one. The lead worth 92% (junk counts as their sum, 64,186 coarse keys) needed 83,347 of 100,771 keys (83%) to come within 1%; the lead worth 8% (junk counts dropped) was at 12.5% of the value after 48,910 keys when its run was stopped; every other fixed lead tried had worked out 43% to 50% of the keys, none within 1%. **So the fixed-lead form stops on R04, as the design note said it would in this case.**
 3. **A status model built directly, with the optimistic stand-in where no argument exists, proves little, and over every offer it was not built at all.** On R04's guide offers it proves 352.39 c, complete, where the merged model of the design note proves 1,932.62 c and the exact bound 23,534.09 c (1.5%); on R24's it stood at 390.16 c when stopped, against 3,128.55 c and 3,617.64 c. Its strength is all in the per-class arguments (the design note's step 4, two to three days each, one of them with no finished argument), not in the model. Over every offer of a target the scratch build ran out of memory at the start key on five of six targets tried: **point 2 of the ticket is not delivered, and R17 still has no figure** (section 4; #1320).
-4. **The loss is in the merge, not in the coarse key.** The least true value inside a coarse key, used as the lead (`BEST`, which reads the truth and no build can have), ends the build in 804 to 874 keys on R04 and 232 to 329 on R24, even on the coarse key of 2,502 keys (R04) or 196 keys (R24) whose merged lead is worth 7.6% and 42%. And the merged coarse model **re-solved each round** with the worked-out keys exact (`hybrid`: the coarse rows unchanged, every successor that is a worked-out key read at that key) ends it in 1,718 keys (1.70%, 28,596 coarse keys) and 2,464 keys (2.45%, 2,502 coarse keys) on R04, 214 and 332 on R24 (section 2a). What a build needs for that is a coarse model whose kernels name the exact successor key where one has been worked out; a status model whose kernels are pushed through the coarse key, as the design note's section 5 builds it, does not have that.
+4. **A fixed lead loses in the merge; a re-solved one recovers it.** The least true value inside a coarse key (`BEST`, which reads the truth and no build can have) ends the build in 804 to 874 keys on R04 and 232 to 329 on R24, even on coarse keys whose merged lead is worth 7.6% and 42%: the coarse key forgets little, the merge loses much. The merged model solved again each round with the worked-out keys' own rows (`worked`, inputs a build has) ends the build in 3,000 keys on R04 and 237 on R24 with the coarse keys of 28,596 and 19,964; with the small coarse keys (2,502 and 196) it does not (R24: 43% of the keys). A version that also reads the tips' own rows (`hybrid`, which a build does not have) ends in 1,718 to 2,464 keys on R04 and 214 to 332 on R24 (section 2a).
 
 What the counts suggest instead, on R04 (section 3): **the kind of a fractured junk mod can leave the key for nothing.** Merged on a key where a fractured junk mod is one value whatever its family type, R04's model has 60,901 keys in place of 100,773 and the same start value to 12 digits (23,534.0922029); with every fractured mod that gives no leaf anything folded, 41,847 keys and the same value. That is an exact build 1.7 to 2.4 times smaller on R04 with no loss, if a direct argument is found for it; it is a merge of a built model here, not a build (#1317). The junk **count** cannot leave: that is where R04's cost is, as the design note found (8% of the value without it).
 
@@ -64,7 +64,7 @@ What the counts suggest instead, on R04 (section 3): **the kind of a fractured j
 
 ### R04 (100,771 keys to work out; complete start value 23,534.09 c)
 
-R04_RUNS_PARAGRAPH
+Static leads: one run finished (`tags+sum`, rule `all`). Every other static run under 99.99% was stopped by hand at 19:27 (or at its 80-minute limit, the three of the first agent), after 74 to 88 minutes, one process each, load 18 to 21; the row gives where it stood ("stopped at": keys worked out, and the start value as a share of the complete one). **None of them was within 1% when stopped, each had worked out 42,888 to 49,947 keys (43% to 50%) except `mass:0.1` (17,122, slower per key), and none could have changed the answer** (the answer needs a lead that ends in a few thousand keys). The design note's prefix count only, counts capped at 1, and counts with crafted slots dropped were not run on R04.
 
 | Lead | Coarse keys | Lead's value | Rule | Keys worked out until the policy meets no tip | Until within 1% |
 |---|---|---|---|---|---|
@@ -77,21 +77,37 @@ R04_RUNS_PARAGRAPH
 | tags dropped, `fj` | 42,966 | 99.99% | mass:0.5 | 2,050 (2.03%) | 1 |
 | tags dropped, `fa` | 29,057 | 99.99% | mass:0.5 | 2,061 (2.05%) | 1 |
 | tags dropped, junk counts as their sum | 64,186 | 92.02% | all | 87,986 (87.31%) | 83,347 (82.7%) |
-R04_ROWS
+| | | | mass:0.5 | **stopped at** 49,947 (49.6%), 96.59% | not reached |
+| | | | oracle:0.5 | **stopped at** 47,523 (47.2%), 96.27% | not reached |
+| tags and fractured mods dropped (`tags,fractured`) | 16,643 | 93.76% | mass:0.5 | **stopped at** 45,888 (45.5%), 98.02% | not reached |
+| tags and veiled slots dropped, `fa` | 16,070 | 83.44% | mass:0.5 | **stopped at** 43,785 (43.4%), 87.28% | not reached |
+| tags dropped, the suffix count only | 42,675 | 73.30% | mass:0.5 | **stopped at** 49,501 (49.1%), 77.87% | not reached |
+| tags dropped, counts capped at 2 | 61,360 | 10.86% | mass:0.5 | **stopped at** 49,854 (49.5%), 15.47% | not reached |
+| tags and junk counts dropped | 28,596 | 8.21% | mass:0.5 | **stopped at** 48,910 (48.5%), 12.54% | not reached |
+| | | | oracle:0.5 | **stopped at** 49,681 (49.3%), 12.71% | not reached |
+| | | | mass:0.1 | **stopped at** 17,122 (17.0%), 9.48% | not reached |
+| the cheapest offer's price (today) | - | 0.0% | mass:0.5 | **stopped at** 44,341 (44.0%), 4.09% | not reached |
+
+Leads that read the truth or are re-solved each round (section 2a), on the same coarse keys:
+
+| Lead | Coarse keys | Lead's value | Rule | Keys worked out until the policy meets no tip | Until within 1% |
+|---|---|---|---|---|---|
 | tags and junk counts dropped | 28,596 | 8.21% | `BEST`, mass:0.5 | 804 (0.80%) | 1 |
 | | | | `hybrid`, mass:0.5 | **1,718 (1.70%)** | 1,266 (1.26%) |
-R04_REFINED_A
+| | | | `worked`, mass:0.5 | **3,000 (2.98%)** | 2,257 (2.24%) |
+| | | | `refined`, mass:0.5 | **stopped at** 706, 26.53% | - |
 | flags, fractured mods and status (`tags,counts,crafted,held,veiled`) | 2,502 | 7.56% | `BEST`, mass:0.5 | 874 (0.87%) | 1 |
 | | | | `hybrid`, mass:0.5 | **2,464 (2.45%)** | 1,993 (1.98%) |
-R04_REFINED_B
+| | | | `worked`, mass:0.5 | R04_WORKED_B |
+| | | | `refined`, mass:0.5 | **stopped at** 1,380, 20.55% | - |
 
 ### What the table says
 
 - **The design note's hope was the first row: 231 and 734 keys.** That is what a perfect lead needs (the note counted 197 and 681 keys on the plan itself; the build needs a few more, to see the plan's neighbours are dearer). It is 0.4% and 0.7% of the build.
-- **The lead has to be nearly exact for anything like it.** On R24 the lead at 100.00% (53,291 coarse keys) needs 185 keys; the leads at 86% need 30% to 90% of the build; the leads at 42% to 56% need 59% to 100%. There is no middle: between 86% and 100% of the value the count falls from tens of thousands to hundreds, and no coarse key tried lies in between.
+- **The lead has to be nearly exact for anything like it.** On R24 the lead at 100.00% (53,291 coarse keys) needs 185 keys; the leads at 86% need 26% to 90% of the build; the leads at 42% to 56% need 59% to 100%. There is no middle: between 86% and 100% of the value the count falls from tens of thousands to hundreds, and no coarse key tried lies in between.
 - **A led build is better than a blind one, by less than the note hoped.** With today's tip value and the better rules, R24's build needs 70% to 75% of its keys; with the 196-key status model as the lead, 67%; with the 19,964-key model, 26% to 30%. So on R24 the best static case counted is a build 3.9 times smaller (`mass:0.1`), bought with a coarse model of 19,964 keys that would itself have to be built directly, soundly, over the same offers. The sum, 35,695 keys, is 59% of the 60,895.
 - **"Within 1%" is no shortcut.** On every lead under 100% the build is within 1% only a few hundred keys before the end (R24, junk counts dropped, mass:0.5: 17,256 of 18,161).
-- **On R04 the static lead stops the line.** The only static leads that end in a few thousand keys are those at 99.99% or more of the value, and their coarse models have 29,057 to 73,676 keys: no cheap bound, the exact model again at a third to three quarters of its size. The lead at 92% (64,186 coarse keys) needed 83,347 keys (83%) to be within 1% under the plain rule; under the better rule it had worked out 21,732 keys and stood at 94.1%, having started at 92.0%. The lead at 8% (the design note's "without tags and counts", the one its recommendation rested on for R04) had gained 0.76 points of the value in 9,741 keys. Where these two runs would have ended is **not known**; that they are far from the 734 keys of a perfect lead is counted.
+- **On R04 the static lead stops the line.** The only static leads that end in a few thousand keys are those at 99.99% or more of the value, and their coarse models have 29,057 to 73,676 keys: no cheap bound, the exact model again at a third to three quarters of its size. The lead at 92% (64,186 coarse keys) needed 83,347 keys (83%) to be within 1% under the plain rule, and was at 96.6% after 49,947 keys under the better one. The lead at 8% (the design note's "without tags and counts", the one its recommendation rested on for R04) was at 12.5% after 48,910 keys. The smallest coarse key above 90% (`tags,fractured`, 16,643 keys, 93.76%) was at 98.0% after 45,888 keys. Where the stopped runs would have ended is **not known**; that each needs far more than the 734 keys of a perfect lead is counted.
 
 - **A better rule is not the way out for a static lead.** The `oracle` rule, which reads the truth, is no better than `mass:0.5` (R24: 18,727 against 18,161 keys; R04: see the rows), and `mass:0.1` gains a few points (R24: 26% against 30%).
 
@@ -101,16 +117,22 @@ These rows were counted after the first version of this note, at the `checker`'s
 
 - **The coarse key itself loses almost nothing.** With the least true value inside each coarse key as the lead (`BEST`), the build ends in 804 keys (R04, 28,596 coarse keys) and 874 (R04, 2,502 coarse keys), 232 (R24, 19,964) and 329 (R24, 196): a perfect lead needs 734 and 231. The merged leads on the same coarse keys are worth 8.2%, 7.6%, 86% and 42% of the value. So what is lost is lost in the merge (an action of one member offered at every member, its outcomes pushed through the coarse key), not in what the coarse key forgets.
 - **That least value has a name, but no build can have it.** It sits at the member with the fewest junk mods in 98.64% (R04, 28,596 coarse keys) to 100% (R24, 196) of the coarse keys holding several keys (`ledmin.py`, `ledmin-results.txt`). It is not a lower bound: on R04, 889 of 93,540 keys are below their fewest-junk member, by at most 0.02%; on R24 one key, by 1.16%. And it is the same problem again: the fewest-junk members are 28,597 of R04's 100,771 keys (28%) and 19,958 of R24's 60,895 (33%), the least a build of that lead has to work out, and they include the start key, so their exact values need every key (`ledreach.py`, `ledreach-results.txt`).
-- **Re-solved each round, the merged lead is nearly perfect.** `hybrid` (the coarse model's rows unchanged, every successor that is a worked-out key read at that key) and `refined` (the same, the worked-out keys also leaving their coarse key's rows), both checked at or under the truth at every key and round:
+- **Re-solved each round, the merged lead leads the build.** Three ways of solving the merged coarse model again after each round, each a lower bound by construction (every key's rows sit on the state it is sent to; checked as well at every key and round):
+  - `worked`: the coarse model's rows unchanged (every member's actions, outcomes pushed through the coarse key), **plus** the rows of each worked-out key as a state of its own, whose outcomes name the exact successor key where that key is worked out. A build has every input of this one: the coarse model, and the rows of the keys it has worked out. **This is the fair count.**
+  - `hybrid`: as `worked`, but the rows of keys **not** worked out also name their exact successor key when it is worked out. A build does not have those rows (they are the rows of tips), so this lead is optimistic in kind: it measures how many keys' values must be pinned, with the whole exact model in the loop.
+  - `refined`: as `hybrid`, and the worked-out keys also leave their coarse key's rows.
 
-| Route | Coarse key | Coarse keys | Static lead's value | Static, mass:0.5 | `hybrid`, mass:0.5 (to 1%) | `refined`, mass:0.5 (to 1%) |
-|---|---|---|---|---|---|---|
-| R24 | junk counts and tags dropped | 19,964 | 86.48% | 18,161 (29.82%) | 214 (0.35%; 198) | 201 (0.33%; 182) |
-| R24 | flags, fractured mods and status | 196 | 42.17% | 40,601 (66.67%) | 332 (0.55%; 303) | 320 (0.53%; 301) |
-| R04 | junk counts and tags dropped | 28,596 | 8.21% | R04_STATIC_A | 1,718 (1.70%; 1,266) | R04_REF_A |
-| R04 | flags, fractured mods and status | 2,502 | 7.56% | not run | 2,464 (2.45%; 1,993) | R04_REF_B |
+| Route | Coarse key | Coarse keys | Static lead's value | Static, mass:0.5 | `worked` (to 1%) | `hybrid` (to 1%) | `refined` (to 1%) |
+|---|---|---|---|---|---|---|---|
+| R24 | junk counts and tags dropped | 19,964 | 86.48% | 18,161 (29.82%) | **237 (0.39%; 205)** | 214 (0.35%; 198) | 201 (0.33%; 182) |
+| R24 | flags, fractured mods and status | 196 | 42.17% | 40,601 (66.67%) | **26,187 (43.00%; 26,184)** | 332 (0.55%; 303) | 320 (0.53%; 301) |
+| R04 | junk counts and tags dropped | 28,596 | 8.21% | stopped at 48,910 (48.5%), 12.54% | **3,000 (2.98%; 2,257)** | 1,718 (1.70%; 1,266) | stopped at 706, 26.53% |
+| R04 | flags, fractured mods and status | 2,502 | 7.56% | not run | **R04_WORKED_B2** | 2,464 (2.45%; 1,993) | stopped at 1,380, 20.55% |
 
-- **What this needs, and why it is not the design note's model.** The re-solve gains because a kernel of the coarse model can send its chance to a worked-out key and read that key's exact value. Here the kernels came from the complete dump: every member's action, with its exact successor keys. A status model built directly (the design note's section 5) pushes its kernels through the coarse key: a chance that lands "somewhere in the coarse key G" can only be valued at G's coarse value, and the re-solve then has nothing to read. So this count shows that **a coarse model with key-level successors**, re-solved as the build goes, would lead the build in 2% of R04's keys; it does not show that such a model can be built soundly without building the exact one. That is the next count (#1322): the same re-solve with key-level successors only where a direct build could have them (an action one member fixes, a certain move) and the angelic stand-in elsewhere.
+(All mass:0.5; one process each, load 18 to 21; `refined` on R04 was stopped by hand to keep the load rule once `worked` was the fair count.)
+
+- **What it says.** With a coarse model of a third of the exact key count (R24: 19,964 coarse keys; R04: 28,596), solving it again with the build's own worked-out keys ends the build in 237 of 60,895 keys and 3,000 of 100,771: within a factor of 1.0 and 4.1 of a perfect lead, where the same coarse model held fixed needs 30% and more than 48%. With the small coarse keys (196 on R24, 2,502 on R04) the fair count does not get there (R24: 43% of the keys; R04: see the row): there the gain needs the tips' own rows (`hybrid`), which a build does not have.
+- **What it does not say.** The coarse model's rows here are the merge of the complete exact model: every member's actions, outcomes pushed through the coarse key. A status model built directly (the design note's section 5) has rows only as strong as its per-class arguments, with the angelic stand-in where none exists; on the guide's offers that model proved 1.5% of R04's value (section 4), where the merge proves 8.2%. Whether `worked`, fed with **direct** rows, still ends in a few thousand keys was **not counted**; nor was the cost of building a 28,596-key coarse model directly, beside the 3,000 exact keys. That is the next count (#1322).
 
 ## 3. What the counts suggest instead, on R04
 
@@ -157,7 +179,7 @@ What these two runs say: with the stand-in in place of the arguments, the direct
 
 ## 5. The yes or no, and what it rests on
 
-**Should steps 2 to 5 of the design note's plan be built: no, as they stand** (a status model built once, kernels pushed through the coarse key, its value at a tip's coarse key the lead). **Whether a cheap bound can lead the exact build at all: not decided** (section 2a, #1322).
+**Should steps 2 to 5 of the design note's plan be built: no, as they stand** (a status model built once, its value at a tip's coarse key the lead, held fixed). **Whether a coarse model solved again as the build goes can lead the exact build: yes on both dumps when the coarse model is the merge of the exact one (3,000 and 237 keys); not counted with a coarse model built directly** (section 2a, #1322). Steps 2 to 5 should wait for #1322's count, which is a day of work on the same dumps.
 
 The "no" rests on:
 
@@ -186,7 +208,8 @@ Ways of not working out every key that these counts do **not** answer:
 
 | Way | Counted here? | Where it stands |
 |---|---|---|
-| A coarse model re-solved as the build goes, with key-level successors (section 2a) | from the complete dump only: R04 1.7% to 2.5% of the keys, R24 0.3% to 0.6% | whether a direct build can have its kernels: **not counted**, #1322 |
+| A coarse model solved again as the build goes (section 2a, `worked`) | yes, with the merge of the exact model as the coarse model: R04 3,000 keys (28,596 coarse keys), R24 237 (19,964); not with the small coarse keys | with a coarse model built directly (its rows, its cost): **not counted**, #1322 |
+| The same with the tips' own rows (`hybrid`, `refined`) | from the complete dump: R04 1,718 to 2,464, R24 201 to 332 | needs rows a build does not have; an upper limit of the re-solve, not a design |
 | A lead refined by splitting coarse keys where the build finds they differ (other than taking worked-out keys out, `refined`) | no | its limit is `BEST` (section 2a: 804 to 874 keys on R04); a refinement that a build can compute was not designed. Part of #1322 |
 | A build that also uses an upper bound (the plan in hand, or a per-key upper value: bounded RTDP, branch and bound) to choose which tips to work out and when to stop | no | #1321. The "within 1%" columns are a floor of its stop, not its stop |
 | Other rules for the next tip, for a static lead | `all`, `mass:0.5`, `mass:0.1`, `oracle:0.5` | the `oracle` rule, an upper limit of what a rule reading the lead's error can do, is no better than `mass:0.5`: closed for the static leads counted |
@@ -197,9 +220,9 @@ Ways of not working out every key that these counts do **not** answer:
 ## Not done, not verified
 
 - **Point 2 of the ticket is not done** (section 4): no direct status model over every offer on any target, no figure for R17, no answer to "are the guide's offers on its plan among all offers". The seven targets not named in section 4's last table were not run at all.
-- Four R04 runs of point 1 were stopped unfinished, and six leads of the design note's section 4 were not run on R04 (section 2 says which). The "no" for R04 rests on the runs that finished (leads at 99.99% and above) and on where the unfinished ones stood.
+- Twelve R04 runs with a fixed lead were stopped unfinished (section 2 gives where each stood: 43% to 50% of the keys, none within 1%, except `mass:0.1` at 17%); the prefix count only, counts capped at 1, and counts with crafted slots dropped were not run on R04. The `refined` runs on R04 were stopped early (section 2a).
 - Four rules were counted (`all`, `mass:0.5`, `mass:0.1`, `oracle:0.5`); the best rule for a re-solved lead was not looked for (only `mass:0.5`).
-- The re-solved leads of section 2a (`hybrid`, `refined`) read every key's kernels from the complete dump; no build can have them as counted (#1322).
+- The re-solved leads of section 2a use the merge of the complete exact model as their coarse model; `hybrid` and `refined` also read the rows of tips, which no build has. Only `worked` uses inputs a build has, and only with a coarse model it does not yet know how to build (#1322).
 - Keys are counted as equal. A key's cost in seconds is not in the dumps, so "30% of the keys" is not "30% of the time".
 - The counts are on two routes, on the guide's offers (21 and 11), not on a target's thousands of offers. More offers were not counted.
 - The fold of section 3 is a merge on one route. No argument for a direct build was written; whether the Fracturing Orb may take a bench craft or a veiled mod in the game (the dump has such keys) was not checked.
