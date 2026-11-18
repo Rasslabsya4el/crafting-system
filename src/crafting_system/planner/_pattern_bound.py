@@ -334,7 +334,7 @@ def _binding(
     reached = np.zeros(n, dtype=bool)
     reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
     shaped = np.array([floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
-    binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape has the cost of an offer as its floor and is left to the search unless the policy reaches it
+    binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape (OTHER: the cost of an offer as its floor; SHAPED + S: rho_S, #973) is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
         return [], dict.fromkeys(floors.classes)
     limit: dict[int, float | None] = dict.fromkeys(floors.classes)

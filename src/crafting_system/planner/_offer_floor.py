@@ -339,7 +339,7 @@ class OfferFloors:
 
     def klass(self, flags, fractured, status: tuple, imprints: tuple) -> int:
         """The class of a state with these flags, fractured mods, status and imprints: `UNOPENED` (a listing), `OUTSIDE` (outside `E`, the start's
-        shape), `INSIDE` (in `E`, the start's shape) or `OTHER`. When the restores are set aside (`_offer_kinds`, #1074), a state that holds an
+        shape), `INSIDE` (in `E`, the start's shape), `SHAPED + S` (outside `E`, of another known shape S, no dead leaf of S PASSING: THE SHAPES) or `OTHER`. When the restores are set aside (`_offer_kinds`, #1074), a state that holds an
         imprint is not of the start's shape."""
         if getattr(flags, "unopened", False):
             return UNOPENED
