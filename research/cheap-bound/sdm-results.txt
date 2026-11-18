@@ -1,0 +1,28 @@
+== sdm-R04-all.log
+R04: offers 11140, after twins 6220, guide labels 8 (8 among the offers), setup 4 s
+    representative 1 (key 0, 0 ordinary mods): offer 0 of 6220, kernels 0, keys 1, 4 s
+MemoryError
+== sdm-R04-guide.log
+R04: offers 11140, after twins 9, guide labels 8 (8 among the offers), setup 6 s
+RESULT R04 offers 9 (guide): coarse keys 1537, worked out 1059, rounds 84, stopped None, start value 352.39069919721067, 287.8 s (load 15.0); kernels 6690, pairs 11265, exact rows 6850, angelic rows 3997; policy keys 61; guide's labels on the policy 5 of 8: ['Essence of Insanity', 'Bench craft (7-12)% increased Attack Speed', 'Exalted Orb', 'Deafening Essence of Rage', 'Fracturing Orb']; policy uses: Deafening Essence of Rage x28; Fracturing Orb x18; Exalted Orb x7; Bench craft (7-12)% increased Attack Speed x6; Essence of Insanity x1
+== sdm-R12-all.log
+R12: offers 9298, after twins 5960, guide labels 1 (1 among the offers), setup 6 s
+    representative 1 (key 0, 0 ordinary mods): offer 0 of 5960, kernels 0, keys 1, 6 s
+MemoryError
+== sdm-R14-all.log
+    representative 1 (key 0, 0 ordinary mods): offer 10500 of 10915, kernels 0, keys 1, 6 s
+    representative 1 (key 0, 0 ordinary mods): offer 10750 of 10915, kernels 0, keys 1, 6 s
+MemoryError
+== sdm-R17-all.log
+R17: offers 11166, after twins 7333, guide labels 14 (13 among the offers), setup 6 s
+    representative 1 (key 0, 0 ordinary mods): offer 0 of 7333, kernels 0, keys 1, 6 s
+== sdm-R20-all.log
+    representative 1 (key 0, 0 ordinary mods): offer 10500 of 10878, kernels 0, keys 1, 7 s
+    representative 1 (key 0, 0 ordinary mods): offer 10750 of 10878, kernels 0, keys 1, 7 s
+MemoryError
+== sdm-R24-all.log
+R24: offers 10873, after twins 4253, guide labels 9 (9 among the offers), setup 5 s
+    representative 1 (key 0, 0 ordinary mods): offer 0 of 4253, kernels 0, keys 1, 6 s
+MemoryError
+== sdm-R24-guide.log
+R24: offers 10873, after twins 10, guide labels 9 (9 among the offers), setup 6 s

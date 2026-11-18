@@ -134,7 +134,14 @@ def main(route_id, out):
             s = span[i]
             span[i] = [junk, junk] if s is None else [min(s[0], junk), max(s[1], junk)]
             stats["representatives"] += 1
-            for label, action, cost in acts:
+            for number, (label, action, cost) in enumerate(acts):
+                if number % 250 == 0 and len(acts) > 250:
+                    used_s = time.perf_counter() - T0
+                    if stats["representatives"] <= 3 or used_s > LIMIT:
+                        print(f"    representative {stats['representatives']} (key {i}, {junk} ordinary mods): offer {number} of {len(acts)}, kernels {stats['kernels']}, keys {len(keys)}, {used_s:.0f} s", flush=True)
+                    if used_s > LIMIT:  # cut inside a key: its rows are not all there, so the model's value is no figure
+                        stats["cut inside a key at offer"] = number
+                        return False
                 if action is None:
                     if i != 0:
                         row = ((0, 1),)
@@ -169,6 +176,7 @@ def main(route_id, out):
                     for s, _chance in pushed:
                         if s != i and (s not in angel_rows[i] or angel_rows[i][s][0] > cost):
                             angel_rows[i][s] = (cost, label)
+        return True
 
     def solve():
         n = len(keys)
@@ -228,10 +236,10 @@ def main(route_id, out):
         if time.perf_counter() - T0 > LIMIT:
             stopped = f"the limit of {LIMIT:.0f} s"
             break
-        for i in tips:
-            work(i)
-            if time.perf_counter() - T0 > LIMIT:
-                break
+        if not all(work(i) for i in tips):
+            stopped = f"the limit of {LIMIT:.0f} s, inside a key: the start value below is NOT a value of the model"
+            value = float("nan")
+            break
     worked = sum(1 for s in span if s is not None)
     on_plan = [g for g in guide if used.get(g)]
     result = {

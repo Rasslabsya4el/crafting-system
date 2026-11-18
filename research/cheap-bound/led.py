@@ -8,7 +8,8 @@ LEAD names what values a key that is not worked out yet (a tip):
     a coarse key of ka.py (section 4 of the note), by its parts dropped and its fold of the junk counts:
     tags | tags,counts | tags,counts,veiled | tags,counts,crafted | tags,counts,crafted,held,veiled | ...,fractured | ...,fractured,flags
     tags+sum | tags+cap1 | tags+cap2 | tags+prefix | tags+suffix
-    +fj after any of them (none+fj for it alone): a fractured mod that gives no leaf anything is one value, whatever its kind
+    +fj after any of them (none+fj for it alone): a fractured junk mod that the key knows by its family type ("~3") and that gives no leaf
+    anything is one value, whatever the type; +fa: the same for EVERY fractured mod that gives no leaf anything (a fractured craft too)
 
 The count. Start: only the start key is worked out. A round: the model of the keys worked out so far, each tip a state whose one action costs
 its lead value and ends (the planner's own floor action, `pack_pattern_model`), is solved by the planner's solver; the cheapest policy is
@@ -59,14 +60,14 @@ elif lead == "exact":
     h, coarse = V.copy(), 0
 else:
     drop, *folds = lead.split("+")
-    drop, fc, fj = (() if drop == "none" else tuple(drop.split(","))), next((FOLDS[f] for f in folds if f in FOLDS), None), "fj" in folds
+    drop, fc, fj = (() if drop == "none" else tuple(drop.split(","))), next((FOLDS[f] for f in folds if f in FOLDS), None), next((f for f in folds if f in ("fj", "fa")), None)
     cid, cls = {}, [0] * n
     for i, k in enumerate(keys):
         pk = ("choice", i) if choice[i] else k._replace(**{f: None for f in drop})
         if fc is not None and not choice[i]:
             pk = pk._replace(counts=fc(k.counts))
-        if fj and not choice[i] and k.fractured:  # a fractured mod that gives no leaf anything: one value, whatever its kind
-            pk = pk._replace(fractured=tuple(sorted("junk" if not any(m.contribution) else repr(m) for m in k.fractured)))
+        if fj and not choice[i] and k.fractured:  # fj: a fractured junk mod known by its family type ("~3"); fa: every fractured mod that gives no leaf anything
+            pk = pk._replace(fractured=tuple(sorted("junk" if (fj == "fa" or m.mod_id.startswith("~")) and not any(int(x) for x in m.contribution) else repr(m) for m in k.fractured)))
         cls[i] = cid.setdefault(pk, len(cid))
     nc = len(cid)
     g, rows = [False] * nc, [set() for _ in range(nc)]
