@@ -246,11 +246,12 @@ def test_the_answers_name_the_approximate_claims_they_read():
     assert "influence.exalt_refused_on_eldritch_implicit" not in recipe
 
 
-def test_the_catalog_offers_the_six_orbs_on_an_uninfluenced_item_and_the_recipes_on_the_influences_it_has():
+def test_the_catalog_offers_the_six_orbs_on_an_uninfluenced_item_and_the_recipes_on_the_influences_it_may_hold():
     plain_item = plain()
     assert [a for a in catalog(DATA, plain_item) if isinstance(a, InfluencedExaltedOrb)] == [InfluencedExaltedOrb(i) for i in Influence]
-    assert not [a for a in catalog(DATA, plain_item) if isinstance(a, BeastInfluenceRecipe)]
-    shaper_item = plain(influences=frozenset({SHAPER}))
+    # an influenced Exalted Orb gives the item an influence on the way, so the six recipes are listed too (#1196)
+    assert {a for a in catalog(DATA, plain_item) if isinstance(a, BeastInfluenceRecipe)} == {BeastInfluenceRecipe(i) for i in Influence}
+    shaper_item = plain(influences=frozenset({SHAPER}), level=67)  # below 68 no Awakener's Orb adds a second influence: the Shaper recipe only
     offered = catalog(DATA, shaper_item)
     assert not [a for a in offered if isinstance(a, InfluencedExaltedOrb)]
     assert [a for a in offered if isinstance(a, BeastInfluenceRecipe)] == [BeastInfluenceRecipe(SHAPER)]

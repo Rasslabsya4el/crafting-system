@@ -63,7 +63,7 @@ INERT_ON_J01 = frozenset({
 REFUSED_ON_A_JEWEL = frozenset({  # cut A: listed for the jewel, refused by the model on every item of the base
     "harvest-reforge", "harvest-add-remove", "harvest-resistance-swap", "harvest-damage-swap", "veiled-chaos-orb", "veiled-exalted-orb",
 })  # fmt: skip
-LISTED_AS_A_GAP = frozenset({"influenced-exalted-orb"})  # lists no action for a jewel (no influence class key) and tells it as a model gap (#818)
+LISTED_AS_A_GAP = frozenset({"influenced-exalted-orb", "beast-influence-recipe"})  # list no action for a jewel (no influence class key) and tell it as a model gap (#818, #1196)
 NEED_A_VEIL = frozenset({"unveil", "pick"})  # cut B: no offered action makes a veiled placeholder on a jewel
 CUT_KINDS = sorted(REFUSED_ON_A_JEWEL | NEED_A_VEIL)
 # Walked with the kinds forced in: all but the Harvest add and remove crafts, whose reads tell every junk family apart (J01 with them did

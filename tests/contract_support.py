@@ -501,7 +501,8 @@ def _held(items, mod_id: str, data=None) -> Fraction:
 def check_added_draw(action, given: Item, items, data) -> None:
     """An action that declares its one added mod for the shape (`Action.added_draw`, #1074) does at `given` what it declares: every result keeps the
     rarity, the corruption, the influences and the fractured mods and adds one mod, and that mod is drawn by weight from the declared pool's mods of
-    one side with room whose family `given` does not hold (and whose tags its metamods let in), as the bound of one added mod takes it."""
+    one side with room (every side with room, for a draw `together`) whose family `given` does not hold (and whose tags its metamods let in), as the
+    bound of one added mod takes it."""
     from crafting_system.actions import allowed_by_tags, blocked_tags
 
     draw = action.added_draw(data, given)
@@ -518,10 +519,19 @@ def check_added_draw(action, given: Item, items, data) -> None:
         added[new[0]] += chance
     held, blocked = given.families(data), blocked_tags(data, given)
     sides = {family.side for family in draw.pool for entry in family.mods if entry.mod.id in added}
-    assert len(sides) == 1, "the added mod is drawn on one side"
-    (side,) = sides
-    assert given.free_slots(data, side) > 0 and draw.free.get(side, 0) > 0, "on a side with room"
-    weights = {entry.mod.id: entry.weight for family in draw.pool if family.side is side and family.family not in held for entry in family.mods if allowed_by_tags(entry.mod, blocked)}
+    if draw.together:  # over every side with room at once, as an Exalted Orb draws (#1196)
+        sides = {
+            side for side in sides | {family.side for family in draw.pool}
+            if given.free_slots(data, side) > 0 and draw.free.get(side, 0) > 0
+        }
+    else:
+        assert len(sides) == 1, "the added mod is drawn on one side"
+    for side in sides:
+        assert given.free_slots(data, side) > 0 and draw.free.get(side, 0) > 0, "on a side with room"
+    weights = {
+        entry.mod.id: entry.weight
+        for family in draw.pool if family.side in sides and family.family not in held for entry in family.mods if allowed_by_tags(entry.mod, blocked)
+    }
     total = sum(weights.values(), Fraction(0))
     assert dict(added) == {mod_id: weight / total for mod_id, weight in weights.items() if weight}, "the added mod follows the declared weights"
 
