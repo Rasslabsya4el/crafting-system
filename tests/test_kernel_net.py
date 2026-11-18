@@ -31,6 +31,7 @@ REASON = "the test net"
 @pytest.fixture(autouse=True)
 def every_piece_asks(monkeypatch):
     monkeypatch.setattr(budget, "ASK_EVERY", 1)
+    monkeypatch.setattr(budget, "ASK_SECONDS", 0.0)  # no clock: every piece asks
 
 
 class Inside:
@@ -74,6 +75,25 @@ def test_asking_asks_once_every_so_many_pieces_and_stops_on_a_reason():
             allowance.add("way")
     assert reached.value.reason == "stop now"
     assert isinstance(reached.value, BaseException) and not isinstance(reached.value, Exception)  # no `except Exception` inside a making swallows it
+
+
+def test_a_net_is_not_asked_more_often_than_its_seconds(monkeypatch):
+    monkeypatch.setattr(budget, "ASK_SECONDS", 1e9)  # never that long between two makings: the gate holds every question back
+    asked = []
+    with budget.asking(lambda: asked.append(1) or "stop", every=1) as allowance:
+        for _ in range(100):
+            allowance.add("state")
+    assert asked == []
+
+
+def test_counting_inside_asking_counts_and_is_not_asked():
+    with budget.asking(lambda: "never") as outer:
+        with budget.counting(3) as counted:
+            assert counted.ask is None and budget.counts()
+            with pytest.raises(budget.OutcomesCut):
+                for _ in range(4):
+                    counted.add("state")
+        assert budget.allowed() is outer and not budget.counts()
 
 
 def test_a_count_is_never_asked_inside_and_no_net_opens_nothing():

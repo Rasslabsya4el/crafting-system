@@ -533,7 +533,8 @@ class Search[S]:
         every `budget.ASK_EVERY` pieces (`budget.asking`), and once it is reached the kernel is left unmade and `_Cut` says so, the search ending
         there as at its net with its plan in hand. One kernel (R20's listing draw under `Reads.influenced`) grew past 12 GB between two of the
         search's own questions. The seconds are those of the first plan's chain where they are more (`Net.first`), so that a chain the net lets
-        run is not cut inside one of its kernels. Raises `Refused` as `kernel` does."""
+        run is not cut inside one of its kernels; a kernel of a later round may then overrun the round's own seconds by at most `first - seconds`,
+        and the round's own question between two kernels stops it there. Raises `Refused` as `kernel` does."""
         net = self.net
         if self.began is None or (net.seconds is None and net.memory_mb is None):
             return self.p.kernel(state, position)

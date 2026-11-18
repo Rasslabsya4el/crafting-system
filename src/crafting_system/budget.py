@@ -44,7 +44,8 @@ NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every met
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
 MEMORY_POLL_SECONDS = 0.5  # a checkpoint reads the memory at most this often (the clock it reads every time)
-ASK_EVERY = 1024  # a making under a net on the clock (`asking`) asks it once every this many pieces: one kernel can take minutes and gigabytes (#1238)
+ASK_EVERY = 1024  # a making under a net on the clock (`asking`) looks at the clock once every this many pieces: one kernel can take minutes and gigabytes (#1238)
+ASK_SECONDS = 0.25  # ... and asks its net at most this often: a question reads the memory of the process and its workers (`/proc`, milliseconds at gigabytes)
 BUILD_PER_STATE = 100.0  # a run counted in states (`Budget.in_states`): the bound's build of a search may do this many pieces of work per state of that search's net (#1101; `Budget.build_per_state`)
 
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
@@ -358,7 +359,9 @@ class Allowance:
     made: dict[str, int] = field(default_factory=dict)
     ask: Callable[[], str | None] | None = None
     every: int = ASK_EVERY
-    since: int = 0  # the pieces made since `ask` was last asked
+    seconds: float = ASK_SECONDS  # the least time between two questions
+    since: int = 0  # the pieces made since the clock was last looked at
+    asked: float = field(default_factory=lambda: time.perf_counter())  # when `ask` was last asked (the allowance's opening at first)
 
     def add(self, stage: str = "state", count: int = 1) -> None:
         if self.given is not None:
@@ -369,13 +372,17 @@ class Allowance:
             self.tick(count)
 
     def tick(self, count: int = 1) -> None:
-        """`count` pieces of work made: ask the net (`ask`) once `every` of them have been made since the last question, and raise `NetReached`
+        """`count` pieces of work made: ask the net (`ask`) once `every` of them have been made since the clock was last looked at and `seconds` have passed since the last question, and raise `NetReached`
         with its reason once it gives one; nothing without a net."""
         if self.ask is None:
             return
         self.since += count
         if self.since >= self.every:
             self.since = 0
+            now = time.perf_counter()
+            if now - self.asked < self.seconds:
+                return
+            self.asked = now
             reason = self.ask()
             if reason is not None:
                 raise NetReached(reason)
@@ -414,7 +421,7 @@ def asking(ask: Callable[[], str | None] | None, every: int | None = None) -> It
     if ask is None or (outer is not None and outer.given is not None):
         yield outer
         return
-    token = _allowance.set(Allowance(None, ask=ask, every=ASK_EVERY if every is None else every))
+    token = _allowance.set(Allowance(None, ask=ask, every=ASK_EVERY if every is None else every, seconds=ASK_SECONDS))
     try:
         yield _allowance.get()
     finally:
