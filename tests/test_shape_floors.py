@@ -155,7 +155,6 @@ def test_through_the_entry_a_plain_rare_start_is_floored_by_the_scouring_and_the
         assert floors.rhos[1] == pytest.approx(ALCHEMY / p, rel=1e-9)
 
 
-
 def test_through_the_entry_a_normal_starts_model_starts_on_its_moves(floors_on):
     """R12's amulet as a Normal item with no mod, with Alchemies and Chaos Orbs: from the Normal start every offer that can lead into E is a move
     (the Alchemy makes the Rare shape), and the bound's model starts on it (`OfferFloors.initial`). Started on the rerolls alone it took no
