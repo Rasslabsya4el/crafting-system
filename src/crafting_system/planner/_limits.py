@@ -623,6 +623,16 @@ def lock_with_donors_limit() -> Limit:
     )
 
 
+def lock_with_quality_limit() -> Limit:
+    """The limit of a plan of a target that asks for quality when the run names Hinekora's Lock (#159): the Lock is not offered there."""
+    return Limit(
+        SOLVE,
+        "Hinekora's Lock is not offered",
+        "the target asks for quality, and the burn the Lock's previews need keeps no quality yet",
+        **claim("the plans without Hinekora's Lock", "Taking the Lock could make it cheaper."),
+    )
+
+
 def second_items_shown_limit() -> Limit:
     """What the steps of a plan that makes second items leave out (ticket #225): how each second item is made is not drawn yet."""
     return Limit(

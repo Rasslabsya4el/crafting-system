@@ -716,6 +716,8 @@ def _make_plan(
     price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price, price_source)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
+    if target.quality is not None and lock_wanted(target.actions):  # the run names the Lock, and a burn keeps no quality yet (#159)
+        limits += (_limits.lock_with_quality_limit(),)
     mod_names, finish_names = split_names(data, target.start_item, target.actions) if target.sockets is not None else (target.actions, None)
     chosen_here = offers is None  # the planner's own offers (a caller's are searched as given, in one search)
     if offers is None:
@@ -891,8 +893,9 @@ def _make_plan(
             try:
                 with stage(APPROXIMATE_STAGE):
                     solved = climb(decision, start, merged)
-                burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
-                foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
+                wanted = lock_wanted(target.actions) and not abstraction.tracks_quality  # a burn keeps no quality yet (#159)
+                burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None) if wanted else None
+                foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), wanted)
             except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
                 raise PlanError(str(error)) from error
             limits += skipped_level_limits(solved.skipped)

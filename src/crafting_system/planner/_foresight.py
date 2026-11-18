@@ -15,8 +15,8 @@ price file's (`prices.lock_price`); with none the Lock is dropped (ADR-0056) and
   legality filters that are no pruning stay: an offer the game refuses, a corrupting offer that ADR-0036 offers only at the states that meet every other
   requirement, a quality offer that ADR-0029 offers only at the last step;
 * the **fallback** is every plain action of `s` that is not previewable (the bench, Harvest, the restart, ...) and the cheapest legal burn of the
-  start item (`actions.burns_at`, `prices.cheapest_burn`, ADR-0056). The planner refuses a target that names quality, sockets, implicits or an
-  enchantment (`make_plan`), so a burn changes nothing the state keeps: it leads back to `s`, a cycle through the Lock that `solve_peek` handles.
+  start item (`actions.burns_at`, `prices.cheapest_burn`, ADR-0056). The planner refuses a target that names sockets, implicits or an
+  enchantment (`make_plan`), and offers no Lock on one that names quality (`Status.WITH_QUALITY`, #159), so a burn changes nothing the state keeps: it leads back to `s`, a cycle through the Lock that `solve_peek` handles.
   A corrupted state takes no Lock (`hinekora_lock.refused_on`), and a jewel has no burn.
 
 **Exact pruning** (ADR-0054): the Lock is offered at `s` only if `L + c_min < V_noLock(s)`. A Peek costs at least `L` plus the cheapest of its options

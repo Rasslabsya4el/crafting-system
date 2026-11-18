@@ -1310,8 +1310,13 @@ class PatternBuilder:
                 stats.members += len(members)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             seen: set[int] = set()
+            last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             for member in members:
                 tick(oi, True)
+                if ab.quality_offer_pruned(member, offer.action) if last else ab.quality_finish_only(member, offer.action):
+                    # exact: a catalyst is pruned at every such state by the search too (`_envelope_plan`); another action where only the quality
+                    # is left changes no value (`Abstraction.quality_finish_only`), and the search then leaves it out there as the model does
+                    continue
                 stats.pairs += 1
                 if self.tally is not None:
                     self.tally.done += 1

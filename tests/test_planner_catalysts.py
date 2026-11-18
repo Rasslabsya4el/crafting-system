@@ -153,3 +153,44 @@ def test_a_run_that_names_hinekoras_lock_plans_the_quality_without_it_and_says_s
     plan = _plan(LIGHTNING_HELD, methods=("catalyst", "hinekora-lock"))
     assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)
     assert plan.foresight is not None and plan.foresight.status is LockStatus.WITH_QUALITY
+
+
+def test_with_no_method_named_the_catalyst_is_offered_by_default():
+    plan = plan_target(D, parse(LIGHTNING_HELD), _prices(), PlanSettings(recipe_starts=False, solver="envelope"))  # the target names none (OR-41)
+    assert "Intrinsic Catalyst" in {priced.label for priced in plan.offers}
+    assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)
+
+
+THREE = """\
+requirements:
+  - family: LightningResistance
+    min_tier: 2
+  - family: FireResistance
+    min_tier: 2
+  - family: ColdResistance
+    min_tier: 2
+quality:
+  type: intrinsic
+  min_percent: 20
+start_item:
+  rarity: rare
+"""
+
+
+def test_the_quality_adds_e_times_k_to_a_rerolled_target_and_the_bound_does_not_copy_the_graph_per_percent():
+    # Where only the quality is left, the bound's model offers the catalysts alone (`Abstraction.quality_finish_only`): the other actions would
+    # copy the item's graph once for each percent of quality (2,244 keys here before, 192 now; 112 without the quality)
+    methods = ("chaos-orb", "annulment-orb", "exalted-orb", "catalyst")
+    prices = _prices(**{"Chaos Orb": 1.0, "Exalted Orb": 10.0, "Orb of Annulment": 5.0})
+    settings = PlanSettings(recipe_starts=False, solver="envelope")
+    plain = plan_target(D, parse(THREE.replace("quality:\n  type: intrinsic\n  min_percent: 20\n", ""), methods=methods), prices, settings)
+    seen: list = []
+    asked = plan_target(D, parse(THREE, methods=methods), prices, dataclasses.replace(settings, watch=seen.append))
+    assert asked.mean_remaining == pytest.approx(plain.mean_remaining + _mean(84) * K, rel=1e-9)
+    assert seen[-1].lower == pytest.approx(asked.mean_remaining, rel=1e-9)
+    assert asked.search.bound_keys <= 2 * plain.search.bound_keys
+
+
+def test_a_named_lock_on_a_quality_target_is_said_in_the_answer():
+    plan = _plan(LIGHTNING_HELD, methods=("catalyst", "hinekora-lock"))
+    assert any(limit.what == "Hinekora's Lock is not offered" and "quality" in limit.why for limit in plan.limits)
