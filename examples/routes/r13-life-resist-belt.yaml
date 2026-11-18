@@ -12,19 +12,50 @@
 #   1. Spam Orbs of Alteration on a magic belt until it holds tier-1 life and a tier-1 resistance.
 #   2. Use a Regal Orb for the second tier-1 resistance. Restart (buy the belt again) if the Regal gives
 #      anything else.
-#   3. Craft the damage modifier at the bench.
+#   3. "Multi-mod damage": the bench's "Can have up to 3 Crafted Modifiers", then two damage crafts. The post's picture of the
+#      finished belt (i.redd.it, read 2026-11-18 for #1289) names them: "30(24-32)% increased Elemental Damage with Attack
+#      Skills" and "17(15-17)% increased Damage"; the author (comment hd8ejyz): "Basically it allows you to craft two mods on an
+#      item instead of just one. Nice for this instance where I had 3 open slots to use."
 #
 # The guide starts from a magic belt and so does the target (#576), so no rule makes the belt magic. The guide's "tier-1 resistance" is any of fire, cold and
 # lightning (the target asks for two of the three), and an unstated tier is the top tier (owner rule).
+#
+# NOT IN THE POST: the last rule of step 3, the Abrasive Catalyst. The picture's belt has "Quality (Attack Modifiers): +16%" and the
+# target asks it (OR-58), but no step of the post makes it; the rule is here so that the route ends at the target's item. Whether the
+# picture's quality belongs to the target is asked of the owner (#1289's pull request): if not, that rule and the target's `quality:` go.
 
 name: R13, Reddit guide
 
 rules:
-  # Step 3: life and two tier-1 resistances are on the belt, in the three ways to pick two of the three.
-  # The guide's "crafted damage modifier" is a bench craft that the target names exactly (mod JunMaster2AllDamage3, OR-2):
-  # the highest damage craft the belt's item level allows is used.
+  # Step 3, after the multimod: the two damage crafts the target names exactly (OR-2), in the two free prefixes.
   - when:
       rarity: rare
+      requirements:
+        - family: ItemGenerationCanHaveMultipleCraftedMods
+          status: passing
+        - family: AllDamage
+          status: absent
+    do: "Bench craft (15-17)% increased Damage"
+  - when:
+      rarity: rare
+      requirements:
+        - family: ItemGenerationCanHaveMultipleCraftedMods
+          status: passing
+        - family: IncreasedWeaponElementalDamagePercent
+          status: absent
+    do: "Bench craft (24-32)% increased Elemental Damage with Attack Skills"
+  # NOT IN THE POST (see above): the picture's 16% quality, on the belt that holds every mod.
+  - when:
+      rarity: rare
+      requirements:
+        - family: ItemGenerationCanHaveMultipleCraftedMods
+          status: passing
+    do: Abrasive Catalyst
+
+  # Step 3: life and two tier-1 resistances are on the belt, in the three ways to pick two of the three: the multimod first.
+  - when:
+      rarity: rare
+      crafted_mods: false
       requirements:
         - family: IncreasedLife
           status: passing
@@ -32,9 +63,10 @@ rules:
           status: passing
         - family: ColdResistance
           status: passing
-    do: "Bench craft (15-17)% increased Damage"
+    do: Bench craft Can have up to 3 Crafted Modifiers
   - when:
       rarity: rare
+      crafted_mods: false
       requirements:
         - family: IncreasedLife
           status: passing
@@ -42,9 +74,10 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft (15-17)% increased Damage"
+    do: Bench craft Can have up to 3 Crafted Modifiers
   - when:
       rarity: rare
+      crafted_mods: false
       requirements:
         - family: IncreasedLife
           status: passing
@@ -52,7 +85,7 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft (15-17)% increased Damage"
+    do: Bench craft Can have up to 3 Crafted Modifiers
 
   # Step 2: a rare belt that is not one of those is a Regal that gave something else: buy the belt again.
   - when:

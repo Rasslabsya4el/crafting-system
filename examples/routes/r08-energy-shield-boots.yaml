@@ -9,26 +9,22 @@
 #
 # The route (PoE Vault, "Basic boots crafting", docs/research/2026-10-30-5-reference-routes.md, id R08):
 #   1. Use Potent Chaotic Resonators with a Dense Fossil and a Shuddering Fossil until the boots hold high
-#      Energy Shield and a desirable Movement Speed.
-#   2. Bench-craft Movement Speed in an open prefix.
+#      Energy Shield and an included Movement Speed roll ("Ideally, you'll want an item with both a high Energy
+#      Shield and an included movement speed roll").
+#
+# The guide's finished item is the target's (OR-58, #1289): the top tier of "#% increased Energy Shield" and the
+# rolled 35% Movement Speed, so the one rule below is followed until the boots hold both. The guide's fallback
+# ("If you end up with a high Energy Shield and no movement speed roll, you can always bench-craft the movement
+# speed") is not the target, so no rule crafts Movement Speed: boots with a lower rolled speed or none are rolled
+# again. The guide's optional finish ("You can either keep these or bench-craft the item to finish") names no mod
+# and is no rule here (listed for the owner in #1289's pull request).
 #
 # The guide starts from a rare pair of boots, as the target does (see `start_item` in the target).
 
 name: R08, PoE Vault guide
 
 rules:
-  # Step 2: the Energy Shield is there, the boots have no Movement Speed and a prefix is open: craft it: the
-  # plain Movement Speed craft of the bench, as the guide says.
-  - when:
-      rarity: rare
-      requirements:
-        - family: DefencesPercent
-          status: passing
-        - family: MovementVelocity
-          status: absent
-      open_prefixes: 1
-    do: "Bench craft (20-24)% increased Movement Speed"
-  # Step 1: use the two fossils again (this is also the first use).
+  # Step 1: use the two fossils (this is also the first use), until the target.
   - when:
       rarity: rare
     do: Fossils Dense Fossil + Shuddering Fossil

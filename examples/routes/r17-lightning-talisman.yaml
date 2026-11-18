@@ -23,9 +23,29 @@
 #      craft has no room to add and the guide names no way on. Should a later craft take the +1 (its prefix lock taken first),
 #      step 6's restore applies, as the guide's own rule for a lost +1. A Talisman back at 2 free prefixes after its prefix lock and
 #      its Lightning prefix were taken meets step 7's rules again; where the bench refuses the craft there, it is a gap.
+#   9. "Now you have +1 all skills and +1 to all lightning skills."
+#  10. "Time to imprint and then exalt slam until you hit what you want. I made prefixes first then did suffixes." What he wanted is
+#      the post's picture, the target (OR-58, #1289): one more prefix (maximum Energy Shield) and three suffixes (all Attributes,
+#      Dexterity, Global Critical Strike Chance), each at its top tier. The rules: an imprint of the Talisman as it stands, an Exalted
+#      Orb, and when the orb added anything but one of the four the imprint is restored and the step is tried again; when it added one
+#      of the four the Talisman is imprinted anew (the new imprint replaces the old one) before the next orb.
+#
+# What step 10's rules read into the post (each a reading, said here):
+#   * The metamods left of step 7 are taken off first (Remove Crafted Mods): the picture's Talisman holds six rolled mods and no
+#     crafted one, and the post names no moment for it. NOT IN THE POST.
+#   * "prefixes first then suffixes" is not kept as an order: an Exalted Orb cannot be aimed at a side, so a wanted suffix that comes
+#     before the prefix is kept, which is never dearer.
+#   * A Talisman that holds the +2 and is none of the kept states (an unwanted mod is on it) is restored from its imprint. After a
+#     failed Exalted Orb that is the post's step. A Talisman that comes out of step 8 with an unwanted mod of the Harvest craft
+#     (a Lightning Resistance, a Lightning Damage prefix) is the same state to these rules: with an imprint of step 6 still held it is
+#     taken back to step 6, and with none it is a gap (the post names no way on).
+#   * NOT IN THE POST: the Intrinsic Catalysts on the finished Talisman. The picture shows "Quality (Attribute Modifiers): +20%" and
+#     the target asks it, but no step of the post makes it. Whether the picture's quality and its four other mods belong to the target
+#     is asked of the owner (#1289's pull request): if not, step 10's rules and the catalyst rule go with the target's leaves.
 #
 # Counting mods: "only the +1" is 2 free prefixes and 3 free suffixes (the +1 is a prefix); the three metamods are suffixes.
 name: R17, Reddit guide
+skip_refused: true  # step 10: a rule whose action the game refuses falls through to the next that matches (an imprint of a state already held is refused, so the Exalted Orb follows it)
 
 rules:
   # Step 4: the Normal Talisman is made Magic, then Alterations until the +1.
@@ -41,6 +61,688 @@ rules:
   - when:
       rarity: magic
     do: Orb of Alteration
+
+  # Steps 9 and 10 (the +2 is on the Talisman). First the metamods left of step 7 come off (NOT IN THE POST, see above).
+  - when:
+      rarity: rare
+      crafted_mods: true
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: Remove Crafted Mods
+  # NOT IN THE POST (see above): the picture's 20% quality, on the Talisman that holds all six mods.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Intrinsic Catalyst
+  # Step 10, the kept states: the +2, any of the four wanted mods, and every other slot free (the free slots are counted, so no unwanted
+  # mod is on the Talisman). In each: the imprint (the first one, or a new one in place of the old; refused when the Talisman is already
+  # the state of its imprint), then the Exalted Orb.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 3
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 3
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 3
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: EnergyShieldPercent
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 3
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 3
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 3
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 2
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Imprint with the Fenumal Plagued Arachnid
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: "Imprint with the Fenumal Plagued Arachnid, replacing imprint 1"
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+        - family: AllAttributes
+          status: passing
+        - family: Dexterity
+          status: passing
+        - family: CriticalStrikeChanceIncrease
+          status: passing
+    do: Exalted Orb
+  # Step 10: the Exalted Orb added an unwanted mod: restore the imprint.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      imprints: 1
+      requirements:
+        - family: GlobalSkillGemLevel
+          status: passing
+        - family: GlobalDamageTypeGemLevel
+          status: passing
+    do: Restore imprint 1
 
   # Step 6: the Annulment took the +1: restore the imprint.
   - when:
@@ -59,15 +761,21 @@ rules:
       open_suffixes: 3
     do: Bench craft Can have up to 3 Crafted Modifiers
 
-  # Step 6: more than the +1, no imprint held: imprint, then annul.
+  # Step 6: more than the +1, no imprint held: imprint, then annul (never on a Talisman that holds the +1 Lightning: that is step 10).
   - when:
       rarity: rare
       crafted_mods: false
       imprints: 0
+      requirements:
+        - family: GlobalDamageTypeGemLevel
+          status: absent
     do: Imprint with the Fenumal Plagued Arachnid
   - when:
       rarity: rare
       crafted_mods: false
+      requirements:
+        - family: GlobalDamageTypeGemLevel
+          status: absent
     do: Orb of Annulment
 
   # Step 7: the multimod stands (2 free prefixes: no Harvest craft yet): the prefix lock, then Cannot roll Attack Modifiers.

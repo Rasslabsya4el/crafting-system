@@ -17,7 +17,8 @@ name: R10, PoE Vault guide
 
 rules:
   # Step 2: the essence has given Intelligence, there is Life and a free suffix: craft in it. The
-  # target asks for the (16-20)% craft only, so that is the one tier the bench offers here.
+  # guide names no number ("Open suffix to craft \"#% chance to avoid elemental ailments\""), so the craft is the top
+  # rank the bench sells for boots of this item level, (21-25)% (OR-1, OR-58; until #1289 the (16-20)% one).
   - when:
       rarity: rare
       requirements:
@@ -28,7 +29,7 @@ rules:
         - family: AvoidElementalStatusAilments
           status: absent
       open_suffixes: 1
-    do: "Bench craft (16-20)% chance to Avoid Elemental Ailments"
+    do: "Bench craft (21-25)% chance to Avoid Elemental Ailments"
   # Step 1: use the essence again (this is also the first use, on the bought boots).
   - when:
       rarity: rare
