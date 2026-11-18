@@ -534,7 +534,7 @@ def offers_for(
         elif adds.needs_roll_limit and not roll_matters:
             left_out_rolls.append(told_apart(action))
         elif adds.rolls_unfollowed and any(leaf.has_roll_limit for leaf in goal.leaves):  # a model gap the search could not drop (#1195, #993)
-            listing_gaps.append(ListingGap(kind_of.get(action, ""), "", ROLLS_UNFOLLOWED, ROLLS_UNFOLLOWED_DETAIL))
+            listing_gaps.append(ListingGap(kind_of.get(action, ""), "", ROLLS_UNFOLLOWED))
         else:
             candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
@@ -893,10 +893,6 @@ def _listed(
 
 
 ROLLS_UNFOLLOWED = "the target has a roll limit, and the model cannot follow the roll of a mod this action upgrades or puts on"
-ROLLS_UNFOLLOWED_DETAIL = (
-    "Adds.rolls_unfollowed under a goal with a roll limit: the new tier is kept at its lowest values and a picked Elevated mod's reroll is "
-    "not followed (Finite.rerolled), at some members of a key only, which the envelope search refuses (#993, #1195)"
-)
 
 
 def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed: Iterable[Action]) -> bool:
