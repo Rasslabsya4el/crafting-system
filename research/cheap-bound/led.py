@@ -40,6 +40,7 @@ from crafting_system.solver import PackedBuilder, solve_packed
 FOLDS = {"sum": lambda c: sum(c), "cap1": lambda c: tuple(min(x, 1) for x in c), "cap2": lambda c: tuple(min(x, 2) for x in c), "prefix": lambda c: c[0], "suffix": lambda c: c[1]}
 dump, lead = sys.argv[1], sys.argv[2]
 RULE = os.environ.get("RULE", "all")
+HYBRID = os.environ.get("REFINE") == "hybrid"
 MASS = float(RULE.split(":")[1]) if RULE.startswith(("mass:", "oracle:")) else None
 ORACLE = RULE.startswith("oracle:")
 d = pickle.load(open(dump, "rb"))
@@ -68,40 +69,45 @@ elif lead == "exact":
 else:
     drop, *folds = lead.split("+")
     drop, fc, fj = (() if drop == "none" else tuple(drop.split(","))), next((FOLDS[f] for f in folds if f in FOLDS), None), next((f for f in folds if f in ("fj", "fa")), None)
-    cid, cls = {}, [0] * n
-    for i, k in enumerate(keys):
-        pk = ("choice", i) if choice[i] else k._replace(**{f: None for f in drop})
-        if fc is not None and not choice[i]:
-            pk = pk._replace(counts=fc(k.counts))
-        if fj and not choice[i] and k.fractured:  # fj: a fractured junk mod known by its family type ("~3"); fa: every fractured mod that gives no leaf anything
-            pk = pk._replace(fractured=tuple(sorted("junk" if (fj == "fa" or m.mod_id.startswith("~")) and not any(int(x) for x in m.contribution) else repr(m) for m in k.fractured)))
-        cls[i] = cid.setdefault(pk, len(cid))
-    nc = len(cid)
-    g, rows = [False] * nc, [set() for _ in range(nc)]
-    kmap, kidx, newk = {}, {}, []
-    for i in range(n):
-        c = cls[i]
-        g[c] = g[c] or goal[i]
-        for oi, kid in actions[i]:
-            r = kmap.get(kid)
-            if r is None:
-                acc = defaultdict(int)
-                for s, w in zip(*kernels[kid]):
-                    acc[-1 if s < 0 else cls[s]] += w
-                t = tuple(sorted(acc.items()))
-                r = kidx.get(t)
+    def merge_lead(split=()):  # split: keys kept as their own coarse key (REFINE: the keys already worked out)
+        cid, cls, cc = {}, [0] * n, {}
+        for i, k in enumerate(keys):
+            pk = ("choice", i) if choice[i] else k._replace(**{f: None for f in drop})
+            if fc is not None and not choice[i]:
+                pk = pk._replace(counts=fc(k.counts))
+            if fj and not choice[i] and k.fractured:  # fj: a fractured junk mod known by its family type ("~3"); fa: every fractured mod that gives no leaf anything
+                pk = pk._replace(fractured=tuple(sorted("junk" if (fj == "fa" or m.mod_id.startswith("~")) and not any(int(x) for x in m.contribution) else repr(m) for m in k.fractured)))
+            if i in split:
+                cc[i] = cid.setdefault(pk, len(cid))
+                pk = ("own", i)
+            cls[i] = cid.setdefault(pk, len(cid))
+        nc = len(cid)
+        g, rows = [False] * nc, [set() for _ in range(nc)]
+        kmap, kidx, newk = {}, {}, []
+        for i in range(n):
+          for c in ([cls[i], cc[i]] if HYBRID and i in cc else [cls[i]]):  # hybrid: a worked key's rows stay in its coarse key too
+            g[c] = g[c] or goal[i]
+            for oi, kid in actions[i]:
+                r = kmap.get(kid)
                 if r is None:
-                    r = kidx[t] = len(newk)
-                    newk.append((tuple(s for s, _ in t), tuple(w for _, w in t)))
-                kmap[kid] = r
-            if newk[r][0] != (c,):
-                rows[c].add((oi, r))
-    reps = [None] * nc
-    for i in range(n):
-        if reps[cls[i]] is None:
-            reps[cls[i]] = keys[i]
-    merged = solve_all(reps, g, [sorted(r) for r in rows], newk, [True] * nc, None)
-    h = np.asarray(merged.value, dtype=float)[np.asarray(cls)]
+                    acc = defaultdict(int)
+                    for s, w in zip(*kernels[kid]):
+                        acc[-1 if s < 0 else cls[s]] += w
+                    t = tuple(sorted(acc.items()))
+                    r = kidx.get(t)
+                    if r is None:
+                        r = kidx[t] = len(newk)
+                        newk.append((tuple(s for s, _ in t), tuple(w for _, w in t)))
+                    kmap[kid] = r
+                if newk[r][0] != (c,):
+                    rows[c].add((oi, r))
+        reps = [None] * nc
+        for i in range(n):
+            if reps[cls[i]] is None:
+                reps[cls[i]] = keys[i]
+        merged = solve_all(reps, g, [sorted(r) for r in rows], newk, [True] * nc, None)
+        return np.asarray(merged.value, dtype=float)[np.asarray(cls)], cls, nc
+    h, cls, nc = merge_lead()
     coarse = nc - sum(choice)
     print(f"lead {lead}: coarse keys {coarse}, coarse start value {h[0]!r} ({100 * h[0] / V[0]:.2f}% of the complete model's)", flush=True)
     cl, lo, hi, size = np.asarray(cls), np.full(nc, np.inf), np.zeros(nc), np.bincount(np.asarray(cls), minlength=nc)
@@ -113,6 +119,9 @@ else:
         h = lo[cl]
         lead += "@best"
         print(f"BEST: the lead is the least complete value inside the coarse key; at the start key {h[0]!r} ({100 * h[0] / V[0]:.2f}%)", flush=True)
+REFINE = bool(os.environ.get("REFINE")) and lead not in ("floor", "exact") and not os.environ.get("BEST")
+if REFINE:
+    lead += "@hybrid" if HYBRID else "@refined"
 tip = np.array([not choice[i] and not goal[i] for i in range(n)])  # a goal and a choice node are never tips: their lead is never read
 over = int(np.sum((h > V * (1 + 1e-7) + 1e-9) & tip))
 print(f"lead above the complete value at {over} keys of {n} (the lemma says 0); lead/exact over the keys that can be tips: median {float(np.median((h / np.maximum(V, 1e-300))[tip])):.4f}", flush=True)
@@ -242,6 +251,9 @@ while True:
             tips = tips[:cut]
     for i in tips:
         work(i)
+    if REFINE:  # the lead re-merged with every key worked out so far as its own coarse key; still at or under the truth (checked)
+        h = merge_lead(worked)[0]
+        assert int(np.sum((h > V * (1 + 1e-7) + 1e-9) & tip)) == 0
 fmt = lambda a: "never" if not a else f"{a[0]} keys ({100 * a[0] / total:.2f}%), round {a[1]}"
 print(f"RESULT {os.path.basename(dump)} lead {lead} rule {RULE}: coarse keys {coarse}; complete build works out {total} keys; led: no tip on the cheapest policy after {counted()} keys "
       f"({100 * counted() / total:.2f}%), {rounds} rounds; within 1% of the complete value after {fmt(at99)}; within 10% after {fmt(at90)}; half after {fmt(at50)}; "
