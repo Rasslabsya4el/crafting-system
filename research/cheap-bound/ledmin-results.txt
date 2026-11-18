@@ -1,0 +1,8 @@
+load 18.92
+RESULT k-R24.pkl dropped tags,counts: coarse keys 19958, of them 19233 hold several keys; the least complete value is at a member with the fewest junk mods in 19232 of them (99.99%); keys whose value is at least that member's: 60169 of 60170 (100.00%); where it is not, the fewest-junk member is above the least value by at most 1.16%
+load 19.25
+RESULT k-R24.pkl dropped tags,counts,crafted,held,veiled: coarse keys 193, of them 193 hold several keys; the least complete value is at a member with the fewest junk mods in 193 of them (100.00%); keys whose value is at least that member's: 60895 of 60895 (100.00%); where it is not, the fewest-junk member is above the least value by at most 0.00%
+load 19.55
+RESULT k-R04.pkl dropped tags,counts: coarse keys 28594, of them 21363 hold several keys; the least complete value is at a member with the fewest junk mods in 21073 of them (98.64%); keys whose value is at least that member's: 92651 of 93540 (99.05%); where it is not, the fewest-junk member is above the least value by at most 0.02%
+load 20.33
+RESULT k-R04.pkl dropped tags,counts,crafted,held,veiled: coarse keys 2500, of them 2305 hold several keys; the least complete value is at a member with the fewest junk mods in 2304 of them (99.96%); keys whose value is at least that member's: 100544 of 100576 (99.97%); where it is not, the fewest-junk member is above the least value by at most 0.00%

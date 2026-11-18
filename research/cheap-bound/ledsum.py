@@ -2,7 +2,7 @@
 import glob, re, sys
 
 rows = []
-for path in sorted(glob.glob(sys.argv[1] + "/led-R*.log")):
+for path in sorted(glob.glob(sys.argv[1] + "/led*-R*.log")):
     text = open(path).read()
     m = re.search(r"RESULT k-(\w+)\.pkl lead (\S+) rule (\S+): coarse keys (\d+); complete build works out (\d+) keys; led: no tip on the cheapest policy after (\d+) keys \(([\d.]+)%\), (\d+) rounds; "
                   r"within 1% of the complete value after (never|(\d+) keys \(([\d.]+)%\)), round \d+; within 10% after (never|(\d+) keys \(([\d.]+)%\)), round \d+; half after (never|(\d+) keys \(([\d.]+)%\)).*?(\d+) s$", text, re.M)

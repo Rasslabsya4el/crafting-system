@@ -20,6 +20,12 @@ the build works out with members. "Gap 1%" is the first round whose start value 
 RULE says which of the tips the policy meets are worked out in a round. `all`: every one (the plain rule of LAO*). `mass:F`: the tips the
 policy visits most (expected visits from the start under the cheapest policy, counted over 400 steps), the fewest that hold the share F of
 all its visits to tips: a build that goes first where the plan goes most often. The end is the same under either rule (no tip on the policy).
+`oracle:F`: as `mass:F`, each tip weighed by its visits times the lead's true error at it (the complete value less the lead). No build can
+follow this rule, since it reads the value the build is looking for; it is counted to see how much a better rule than `mass` could save.
+
+With env BEST=1 the lead of a coarse key is not the merged model's value but the least complete value among its keys: the most any lead
+that reads only the coarse key can say. No build can have it without the complete model; it separates what the coarse key loses from what
+the merge loses.
 
 The lead is checked to be a lower bound of the complete model's value at every key before it is used (the merge lemma, by count)."""
 import math, os, pickle, sys, time
@@ -34,7 +40,8 @@ from crafting_system.solver import PackedBuilder, solve_packed
 FOLDS = {"sum": lambda c: sum(c), "cap1": lambda c: tuple(min(x, 1) for x in c), "cap2": lambda c: tuple(min(x, 2) for x in c), "prefix": lambda c: c[0], "suffix": lambda c: c[1]}
 dump, lead = sys.argv[1], sys.argv[2]
 RULE = os.environ.get("RULE", "all")
-MASS = float(RULE.split(":")[1]) if RULE.startswith("mass:") else None
+MASS = float(RULE.split(":")[1]) if RULE.startswith(("mass:", "oracle:")) else None
+ORACLE = RULE.startswith("oracle:")
 d = pickle.load(open(dump, "rb"))
 keys, goal, actions, kernels, exp = d["keys"], d["goal"], d["actions"], d["kernels"], d["expanded"]
 labels, costs, cheapest = d["labels"], d["costs"], d["cheapest"]
@@ -97,6 +104,15 @@ else:
     h = np.asarray(merged.value, dtype=float)[np.asarray(cls)]
     coarse = nc - sum(choice)
     print(f"lead {lead}: coarse keys {coarse}, coarse start value {h[0]!r} ({100 * h[0] / V[0]:.2f}% of the complete model's)", flush=True)
+    cl, lo, hi, size = np.asarray(cls), np.full(nc, np.inf), np.zeros(nc), np.bincount(np.asarray(cls), minlength=nc)
+    np.minimum.at(lo, cl, V)
+    np.maximum.at(hi, cl, V)
+    several = size > 1
+    print(f"coarse keys that hold several keys: {int(several.sum())}; the complete values inside one of them differ by at most {float(np.max((hi - lo)[several] / np.maximum(hi[several], 1e-300), initial=0.0)):.1e} (relative)", flush=True)
+    if os.environ.get("BEST"):  # the least complete value among the keys of the coarse key: the most ANY lead that reads only the coarse key can say
+        h = lo[cl]
+        lead += "@best"
+        print(f"BEST: the lead is the least complete value inside the coarse key; at the start key {h[0]!r} ({100 * h[0] / V[0]:.2f}%)", flush=True)
 tip = np.array([not choice[i] and not goal[i] for i in range(n)])  # a goal and a choice node are never tips: their lead is never read
 over = int(np.sum((h > V * (1 + 1e-7) + 1e-9) & tip))
 print(f"lead above the complete value at {over} keys of {n} (the lemma says 0); lead/exact over the keys that can be tips: median {float(np.median((h / np.maximum(V, 1e-300))[tip])):.4f}", flush=True)
@@ -216,12 +232,14 @@ while True:
         for _ in range(400):
             x = np.bincount(dst, weights=pr * x[src], minlength=len(loc))
             visits += x
-        tips.sort(key=lambda i: -visits[loc[i]])
-        mass, acc, cut = sum(visits[loc[i]] for i in tips) * MASS, 0.0, 0
-        while cut < len(tips) and (acc < mass or cut == 0):
-            acc += visits[loc[tips[cut]]]
-            cut += 1
-        tips = tips[:cut]
+        wt = {i: visits[loc[i]] * (max(V[i] - h[i], 0.0) if ORACLE else 1.0) for i in tips}  # oracle: the visits times the lead's true error at the tip
+        if sum(wt.values()) > 0:  # else (oracle, every tip's lead exact) all the tips are worked out
+            tips.sort(key=lambda i: -wt[i])
+            mass, acc, cut = sum(wt.values()) * MASS, 0.0, 0
+            while cut < len(tips) and (acc < mass or cut == 0):
+                acc += wt[tips[cut]]
+                cut += 1
+            tips = tips[:cut]
     for i in tips:
         work(i)
 fmt = lambda a: "never" if not a else f"{a[0]} keys ({100 * a[0] / total:.2f}%), round {a[1]}"
