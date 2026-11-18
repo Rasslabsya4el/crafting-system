@@ -350,7 +350,7 @@ class BuildStop(Pace):
             elif spent >= net.seconds:
                 self.late = True
         if net.memory_mb is not None:
-            used = resident_mb()
+            used = resident_mb(under=net.memory_mb)
             if used is not None and used >= net.memory_mb:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None

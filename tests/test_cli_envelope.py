@@ -296,7 +296,7 @@ def test_a_plan_in_hand_at_or_below_the_optimum_ends_the_search_with_a_lower_fig
 def test_the_memory_net_is_asked_before_the_kernel_arrays_grow_and_the_search_stops_before_they_do(monkeypatch):
     # #839: the arrays grow by half again; the net is asked with that growth before it is taken. A process said to hold 1,000 MB under a limit
     # of 1,000.0001 MB passes every check of the net until the first growth (any growth takes more than 0.0001 MB): the search stops there
-    monkeypatch.setattr(envelope, "resident_mb", lambda: 1_000.0)
+    monkeypatch.setattr(envelope, "resident_mb", lambda under=None: 1_000.0)
     value, _ = dense_optimum(random_graph(SEEDS[0], SIZE))
     first = envelope.Kernels.__init__
 

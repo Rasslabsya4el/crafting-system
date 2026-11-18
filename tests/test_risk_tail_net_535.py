@@ -63,9 +63,14 @@ def test_a_long_run_stops_at_its_tail_though_one_minus_the_float_sums_stays_abov
 
 
 @pytest.mark.parametrize("base", [1, 16], ids=["plain loop", "blocks"])
-def test_a_passed_deadline_stops_the_run_with_its_mass_in_flight_unresolved(base):
+def test_a_passed_deadline_stops_the_run_with_its_mass_in_flight_unresolved(base, monkeypatch):
     chain, bins = ring(20, 3e-3, 1, 3, base)
+    whole = run_budget(chain, bins, target=None, tail_mass=TAIL, max_bins=CAP)
+    monkeypatch.setattr(_budget, "ALLOWANCE", 10**9)
+    cheap = run_budget(chain, bins, target=None, tail_mass=TAIL, max_bins=CAP, deadline=-math.inf)
+    assert cheap == whole  # #738: a run that ends within `ALLOWANCE` entries past the net still ends, and exact
 
+    monkeypatch.setattr(_budget, "ALLOWANCE", 0)
     run = run_budget(chain, bins, target=None, tail_mass=TAIL, max_bins=CAP, deadline=-math.inf)  # a deadline long past
 
     assert len(run.cdf) < 1000
@@ -77,6 +82,7 @@ def test_the_attempt_runs_stopped_by_the_time_net_say_so_and_leave_no_finer_step
 
     assert math.isfinite(narrow(regenerative=True).p90.high)
     monkeypatch.setattr(_evaluate, "REGEN_SECONDS", 0.0)
+    monkeypatch.setattr(_budget, "ALLOWANCE", 0)  # no entry past the net (#738: a run that would end within it is not stopped)
     tried = []
     original = _regen.regenerative_runs
     monkeypatch.setattr(_regen, "regenerative_runs", lambda *a, **k: tried.append(k["step"]) or original(*a, **k))
@@ -86,7 +92,8 @@ def test_the_attempt_runs_stopped_by_the_time_net_say_so_and_leave_no_finer_step
     assert len(tried) == 1  # the time net stopped the first step and no finer one was tried
     (said,) = [line for line in stopped.grid.gave_up if "time limit" in line]
     assert said == _regen.time_net_words(0.0, coarser=False)  # no coarser step was kept: it says the slower method follows
-    assert math.isinf(stopped.p90.high)  # no coarser step was kept: the ordinary grid ran instead and could not reach it
+    assert math.isinf(stopped.p90.high)  # no coarser step was kept: the ordinary grid ran instead, held to the same net (#738), and could not reach it
+    assert stopped.grid.stopped == _regen.figures_words(budget.TIME, 0.0, None, False)  # and its stop is said too
 
 
 def test_the_ladder_reads_no_clock_and_runs_every_step_until_one_is_narrow_enough(monkeypatch):
@@ -233,6 +240,7 @@ def test_workers_that_never_come_back_are_killed_and_the_step_is_refused_and_sai
     monkeypatch.setattr(_evaluate, "REGEN_SECONDS", 0.0)
     monkeypatch.setattr(_regen, "ABANDON_MARGIN", 0.0)
     monkeypatch.setattr(_regen, "attempt_pmf", never_ends)
+    monkeypatch.setattr(_budget, "ALLOWANCE", 0)
 
     stopped = narrow(regenerative=True)
 

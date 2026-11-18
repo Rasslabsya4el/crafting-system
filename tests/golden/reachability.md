@@ -12,9 +12,9 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 15 |
-| - with `planner=True` | 47 |
-| - `planner=True` and offered by at least one target (reachable) | 33 |
+| - with `planner=False` (no plan can use them) | 16 |
+| - with `planner=True` | 46 |
+| - `planner=True` and offered by at least one target (reachable) | 32 |
 | - `planner=True` and offered by no target | 14 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 29 of 62 (15 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 30 of 62 (16 closed by `planner=False`, 14 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -46,31 +46,31 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `bench-craft` | yes |  | r04, r05, r07, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r17, r20, r24 |  |  |
 | `remove-crafted-mods` | yes |  | r04, r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r24 |  |  |
 | `fossil-set` | yes |  | r05, r07, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
-| `alchemy-orb` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT1-4, PLANNING-2 |
+| `alchemy-orb` | **no** |  | none | `planner=False`: the offers are listed once, for the start item (`planner/_offers.py` `_listed`), and a kind lists only what fits that item's rarity: on a Rare start the Normal item a Scouring leaves (or the Magic one holding the fractured mod) is offered nothing it takes, so the Scouring would be a dead offer; the Orb of Alchemy is held back with it, on a Normal start too; both wait for the offers of the item a Scouring leaves (#973, #943) | ACT1-4, PLANNING-2 |
 | `transmutation-orb` | yes |  | r17, v01 |  |  |
-| `alteration-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r17, v01 |  |  |
-| `augmentation-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r17, v01 |  |  |
-| `regal-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r17, v01 |  |  |
+| `alteration-orb` | yes |  | r13, r14, r17, v01 |  |  |
+| `augmentation-orb` | yes |  | r13, r14, r17, v01 |  |  |
+| `regal-orb` | yes |  | r13, r14, r17, v01 |  |  |
 | `exalted-orb` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r14 |  |  |
-| `influenced-exalted-orb` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `influenced-exalted-orb` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `veiled-chaos-orb` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
-| `orb-of-dominance` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced or an Elevated mod yet (the compressed state tells them apart since ticket #155) |  |
+| `orb-of-dominance` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `veiled-exalted-orb` | yes | reads: any | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `unveil` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
 | `pick` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
-| `scouring-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  | ACT1-4, PLANNING-2 |
+| `scouring-orb` | **no** |  | none | `planner=False`: the offers are listed once, for the start item (`planner/_offers.py` `_listed`), and a kind lists only what fits that item's rarity: on a Rare start the Normal item a Scouring leaves (or the Magic one holding the fractured mod) is offered nothing it takes, so the Scouring would be a dead offer; the Orb of Alchemy is held back with it, on a Normal start too; both wait for the offers of the item a Scouring leaves (#973, #943) | ACT1-4, PLANNING-2 |
 | `annulment-orb` | yes |  | r04, r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r14, r17, r20, r24 |  |  |
 | `fracturing-orb` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
-| `talisman-fracture` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `talisman-fracture` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `aspect-beast` | yes |  | none | left out: it adds one fixed mod and the target wants none of those, so it only takes a slot and costs currency (5 of 19 entries); not named in the target's `actions:` (12 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `beast-side-swap` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `wild-bristle-matron` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r20 |  |  |
 | `divine-orb` | yes |  | r10-fractured-boots-70-life |  |  |
-| `awakeners-orb` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
+| `awakeners-orb` | yes |  | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
 | `beast-influence-recipe` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155) |  |
 | `blessed-orb` | **no** | burns, only: an item with a ranged implicit, reads: any | none | `planner=False`: the planner refuses a target that names a base implicit (#516; the catalyst quality is planned since #159, and the compressed state holds a base implicit and its roll since ticket #158) |  |
 | `recombinator` | yes | opt-in, reads: any | none | an opt-in kind and the target has no `actions:` key (5 of 19 entries); not named in the target's `actions:` (12 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) | ACT2-11 |
-| `catalyst` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); not offered (it only sets the quality, and the target asks for none of its type) (r05, r12); the kind lists no action for this start item nor for the items of the other rarities its actions reach (r10-fractured-boots, r10-fractured-boots-70-life, r11); the target is refused by `make_plan` (section 3) (r03, r06) |  |
+| `catalyst` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); not offered (it only sets the quality, and the target asks for none of its type) (r05, r12); the kind lists no action for this start item (r10-fractured-boots, r10-fractured-boots-70-life, r11); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `eldritch-implicit-currency` | yes | only: armour | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
 | `eldritch-chaos-orb` | yes | only: armour | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
 | `eldritch-exalted-orb` | yes | only: armour | r10-fractured-boots, r10-fractured-boots-70-life, r11 |  |  |
@@ -103,15 +103,15 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
 | r03 | refused: no price for the start item 'Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage'. |  |  |  |  |  |  |
 | r04 | plans | 8 names | 57 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
-| r05 | plans | no key | 9303 | 0 | 0 | 25 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r05 | plans | no key | 9299 | 0 | 0 | 21 | annulment-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, remove-crafted-mods, restore, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
 | r06 | refused: the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet. |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12703 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12703 | 0 | 0 | 2 | bench-craft, fossil-set |
-| r10-fractured-boots | plans | no key | 10871 | 0 | 0 | 30 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r10-fractured-boots-70-life | plans | no key | 10872 | 0 | 0 | 31 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r11 | plans | no key | 10874 | 0 | 0 | 30 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r12 | plans | no key | 9295 | 0 | 0 | 25 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r10-fractured-boots | plans | no key | 10867 | 0 | 0 | 26 | annulment-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, remove-crafted-mods, restore, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r10-fractured-boots-70-life | plans | no key | 10868 | 0 | 0 | 27 | annulment-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, divine-orb, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, remove-crafted-mods, restore, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r11 | plans | no key | 10870 | 0 | 0 | 26 | annulment-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, eldritch-annulment-orb, eldritch-chaos-orb, eldritch-exalted-orb, eldritch-implicit-currency, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, orb-of-conflict, pick, remove-crafted-mods, restore, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
+| r12 | plans | no key | 9291 | 0 | 0 | 21 | annulment-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-resistance-swap, imprint, pick, remove-crafted-mods, restore, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
 | r13 | plans | 5 names | 50 | 0 | 0 | 5 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods |
 | r14 | plans | 9 names | 78 | 0 | 0 | 7 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods |
 | r17 | plans | 11 names | 14 | 0 | 0 | 9 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, harvest-add-remove, imprint, regal-orb, restore, transmutation-orb |
