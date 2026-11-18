@@ -19,14 +19,18 @@ offers' floors class the orb TERMINAL (`planner/_offer_kinds`: it reads the impl
 shape), so its lower bound in the envelope search is its price. The Orb of Dominance is a planner kind since #1195 (batch B2, OR-37),
 offered by default (OR-41): a goal names the next tier of an influenced mod by its family and tier, and an Elevated mod by `mod:` (it has no
 natural tier); the offers' floors class it TERMINAL too (it reads the junk and the influenced mods and adds a mod it does not name), so its
-lower bound is its price. The beast recipes are not a planner kind yet (their `why_not`). The compressed state tells the influenced mods
-apart where Dominance reads them and keeps the Elevated tier since ticket #155 (below). A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
+lower bound is its price. The beast recipes are a planner kind since #1196 (batch B2, OR-37), offered by default (OR-41): they keep every
+mod and add one drawn mod of the influence, and their class declares that draw for a shape that holds the influence (`added_draw`), so the
+offers' floors class them ADD there, with the bound of one added mod; a shape without the influence refuses them and keeps them TERMINAL (their
+floor is their price). The answer names their approximate claim (`influence_beast.adds_a_mod_of_that_influence`). The compressed state tells
+the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155 (below). A mod an action puts on the item is
+rolled at its lowest values (`Finite`), as for every action that lists its results.
 
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
 unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
-influence's orb for an item that has it (unverified, approximate). The orbs are a planner kind since #818, Dominance since #1195; the recipes are not yet.
+influence's orb for an item that has it (unverified, approximate). The orbs are a planner kind since #818, Dominance since #1195, the recipes since #1196.
 
 The compressed state (ticket #155, ADR-0030 amendment). `OrbOfDominance` declares `Reads.influenced` (an Awakener's Orb does too): the state then tells
 each influence mod of the item's influences apart by MOD (the kind `$<mod id>`), because the families of the data hold ordinary and influence mods
@@ -55,7 +59,7 @@ from types import ModuleType
 
 from crafting_system.data import GameData, Mod
 from crafting_system.data.elevated import is_elevated, load_elevated
-from crafting_system.items import ExplicitMod, Influence, Item, Rarity
+from crafting_system.items import ExplicitMod, Influence, Item, Rarity, Side
 from crafting_system.items.words import mod_words
 from crafting_system.rules import Rule, get_rule
 
@@ -63,7 +67,7 @@ from . import add, metamods, outcomes, pool
 from .add import refuse_if_nothing_to_draw
 from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
 from .catalog import kind, listing_gap
-from .contract import Action, Adds, Reads
+from .contract import Action, AddedDraw, Adds, Reads
 from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
@@ -118,6 +122,7 @@ BEAST_REFUSED_ON_CORRUPTED = get_rule("influence_beast.refused_on_corrupted")
 
 ONE, ZERO = Fraction(1), Fraction(0)
 MIN_INFLUENCED_MODS = 2  # the Orb of Dominance removes one influenced mod and upgrades another
+MAX_INFLUENCES = 2  # an item holds one influence, or two from an Awakener's Orb (`influence.one_normally_two_by_awakener`)
 WORDS = {influence: influence.value.capitalize() for influence in Influence}  # Shaper, Elder, ... as the orbs and recipes read
 
 
@@ -483,6 +488,20 @@ class BeastInfluenceRecipe(Action):
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=True)
 
+    def added_draw(self, data: GameData, item: Item) -> AddedDraw | None:
+        """One mod of the influence's pool, less the families held, on the sides with room, drawn over them together (`Action.added_draw`, #1074,
+        #1196): every item of the shape of `item` holds the same influences and item level, so its pool is the bare item's less the families it
+        holds, and the recipe keeps every mod. None where the shape refuses it (not rare, corrupted, without the influence): the offer is then
+        TERMINAL, as it is for one the shape refuses."""
+        if item.rarity is not Rarity.RARE or item.corrupted or self.influence not in item.influences:
+            return None
+        bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
+        try:
+            pool_ = influence_pool(data, bare, self.influence)
+        except OutOfScopeError:
+            return None  # no pool is modelled for the item: nothing is declared, the offer stays terminal
+        return AddedDraw(pool_, {side: bare.free_slots(data, side) for side in Side}, together=True)
+
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         own = (BEAST_RECIPES, BEAST_USES_ITEM_LEVEL, BEAST_ADDS_A_MOD_OF_THAT_INFLUENCE, BEAST_REFUSED_ON_CORRUPTED, EXALT_DRAWS_FROM_THAT_INFLUENCE,
                EXALT_RESPECTS_METAMODS, ANY_RARE_CREATURE_PRICE)
@@ -506,13 +525,21 @@ class BeastInfluenceRecipe(Action):
         return _draw_one(data, item, self.influence, what)
 
 
-@kind(
-    "beast-influence-recipe",
-    order=88,
-    planner=False,
-    why_not="a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155)",
-)
+@kind("beast-influence-recipe", order=88)
 def _beast_influence_recipes(data: GameData, item: Item):
-    if item.rarity is Rarity.RARE:
-        for influence in sorted(item.influences):
-            yield BeastInfluenceRecipe(influence)
+    # The catalog is asked once, for the start item (as for the orbs, #818, #1195): a normal or magic item becomes rare on the way, and an item
+    # takes an influence on the way, from an influenced Exalted Orb (none held) or an Awakener's Orb (one held), both from item level 68. So the
+    # recipe of every influence is listed where the item may gain one, and the recipes of the influences it holds where it may not. What no later
+    # item of a plan loses is checked here: corruption, and a fractured mod (an influenced item never holds one, and no influence comes to a
+    # fractured item). The rarity and the influences held are `outcomes`'s refusals.
+    if item.corrupted or item.fractured_mods:
+        return
+    try:  # an item class with no influence class key (a jewel, a flask) has no influence pool in the model: a model gap, said (#511, #818)
+        influence_tag(data, item, Influence.SHAPER)
+    except OutOfScopeError as error:
+        listing_gap(error)
+        return
+    gains = len(item.influences) < MAX_INFLUENCES and item.item_level >= EXALT_MIN_ITEM_LEVEL.value
+    later = sorted(set(Influence) - item.influences) if gains else []
+    for influence in (*sorted(item.influences), *later):  # the influences held first: the recipes that may act at the start
+        yield BeastInfluenceRecipe(influence)
