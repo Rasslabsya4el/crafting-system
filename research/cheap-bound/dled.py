@@ -17,7 +17,8 @@ kernel's successors are pushed to their coarse keys; the row is
   - else ANGELIC: one certain row to each coarse key the kernel reaches, at the offer's cost.
 A key is worked out at its first representative and again at a later one whose number of ordinary mods is outside those worked out before.
 A coarse key that a kernel reached only through the lumped twin, or that the exact build met first, gets its representative from the bound's
-own members (`Pattern.members(key, ANY)` of a full key holding it). Not a proof; the check below is its test.
+own members (`Pattern.members(key, ANY)` of a full key holding it). A coarse key not worked out is valued at the cheapest offer's price; one
+worked out keeps its rows while a new representative of it waits to be worked out (as sdm.py's solve). Not a proof; the check below is its test.
 
 MODE: which coarse keys the direct model works out, and how the exact build is led.
   floor    the direct model is built along its OWN cheapest policy from the start until that policy meets no tip of it (sdm.py's order), then
@@ -261,7 +262,11 @@ cc = {}
 def cid_of_exact(i):
     c = cc.get(i)
     if c is None:
-        c = cc[i] = seen_key(keys[i], goal[i])
+        if MODE == "demand":  # the exact key is a member the direct model may work out
+            c = cc[i] = seen_key(keys[i], goal[i])
+        else:  # the direct model is held: the key only names its coarse state (a new one is a tip at the floor)
+            c = cc[i] = cid(CK[i])
+            cgoal[c] = cgoal[c] or goal[i]
     return c
 
 
@@ -308,7 +313,7 @@ def solve(with_exact=True):
                     act(cost, b.kernel([s for s, _x in pushed], int_weights(pushed)), [s for s, _x in pushed], ("coarse", oi))
                 for s2, (cost, oi) in angel_rows[c].items():
                     act(cost, b.kernel([s2], [1]), [s2], ("angel", oi))
-            if not worked_c[c] or reps[c]:
+            if not worked_c[c]:  # a key worked out keeps its rows while a new representative waits (sdm.py's solve)
                 act(max(cheapest, pb.FLOOR_COST), b.kernel([sink], [1]), [], ("floor", None))
             for i in by_coarse.get(c, ()):  # a worked member's own rows sit on its coarse state too
                 for oi, (k, succ) in exact_rows_of(i):
