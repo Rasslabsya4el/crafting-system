@@ -348,8 +348,9 @@ class Allowance:
     pool), and a kernel made whole still has its new states checked against the net by its search. Only a search counted in states opens
     one with a `given`; elsewhere a making counts nothing.
 
-    `ask` (with `given` None: `asking`, #1238, #1217) is the net of a stage that runs on the clock: the making asks it once every `every`
-    pieces it makes (`add`, and `tick` for a piece that is not an outcome, a member of a key listed), and once it gives a reason the making
+    `ask` (with `given` None: `asking`, #1238, #1217) is the net of a stage that runs on the clock: the making looks at the clock once every `every`
+    pieces it makes (`add`, and `tick` for a piece that is not an outcome, a member of a key listed) and asks it at most every `seconds`
+    (a question reads `/proc`), and once it gives a reason the making
     stops (`NetReached`, a `BaseException` like `OutcomesCut`, so that no `except` inside the making swallows it). One
     kernel of the listing draw under `Reads.influenced` grew past 12 GB with no question asked (R20 with the Orb of Dominance, #1238). A piece
     is a step of bounded work, so the questions come at a bounded interval on the clock. A count (`given` set) is never asked: a run counted
@@ -414,7 +415,7 @@ def counts() -> bool:
 
 @contextlib.contextmanager
 def asking(ask: Callable[[], str | None] | None, every: int | None = None) -> Iterator[Allowance | None]:
-    """Ask `ask` once every `every` pieces the makings inside the block make (`Allowance.tick`): the net of a stage on the clock and on memory,
+    """Ask `ask` from the makings inside the block, looking at the clock once every `every` pieces they make (`Allowance.tick`) and asking at most every `ASK_SECONDS`: the net of a stage on the clock and on memory,
     which gives the reason once it is reached; the making then raises `NetReached` (#1238, #1217). `every` is `ASK_EVERY` by default. Nothing with `ask` None, nor inside a count (`counting`): a run counted in states keeps its stop
     points. An `asking` inside another takes its place for the block: the inner stage's net is the one that stops it."""
     outer = _allowance.get()

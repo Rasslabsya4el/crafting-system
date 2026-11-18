@@ -530,7 +530,7 @@ class Search[S]:
 
     def _netted_kernel(self, state: S, position: int) -> dict[S, int]:
         """The kernel of offer `position` at `state` in a search on the clock, made under its time and memory net (#1238): the making asks the net
-        every `budget.ASK_EVERY` pieces (`budget.asking`), and once it is reached the kernel is left unmade and `_Cut` says so, the search ending
+        at most every `budget.ASK_SECONDS`, looking at the clock every `budget.ASK_EVERY` pieces (`budget.asking`), and once it is reached the kernel is left unmade and `_Cut` says so, the search ending
         there as at its net with its plan in hand. One kernel (R20's listing draw under `Reads.influenced`) grew past 12 GB between two of the
         search's own questions. The seconds are those of the first plan's chain where they are more (`Net.first`), so that a chain the net lets
         run is not cut inside one of its kernels; a kernel of a later round may then overrun the round's own seconds by at most `first - seconds`,

@@ -2,7 +2,7 @@
 
 R20 with the Orb of Dominance offered (#1195): the listing draw of an unopened Shaper/Elder helmet under `Reads.influenced` grew past 12 GB inside
 one kernel (`through_listing` -> `Abstraction.kernel`), and the planner's net of 3,000 MB was never asked there. The net of a stage on the clock
-(`budget.asking`) is now asked every `budget.ASK_EVERY` pieces a making makes: by the offers' floors, by the bound's build (inside a kernel and
+(`budget.asking`) is now asked at most every `budget.ASK_SECONDS`, the clock looked at every `budget.ASK_EVERY` pieces a making makes: by the offers' floors, by the bound's build (inside a kernel and
 inside the listing of a key's members) and by the envelope search. A count (`Budget.in_states`, a build counted in pieces) is never asked inside:
 its stop points stay where they were.
 
