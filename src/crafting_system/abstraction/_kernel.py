@@ -1707,13 +1707,24 @@ class Abstraction:
 
         return of
 
-    def refused_in_class(self, refusal_class: Hashable) -> bool:
+    def refused_in_class(self, refusal_class: Hashable, count: bool = True) -> bool:
         """Whether a pair of `refusal_class` (`refusal_class_of`) was refused: then `kernel_key` raises that refusal at every pair of the class
-        (`_build`), and the pair is counted as `kernel_key` counts it (`refusals_shared`)."""
+        (`_build`), and the pair is counted as `kernel_key` counts it (`refusals_shared`; not with `count` off, for a pair `kernel_key` was
+        asked and has counted)."""
         if refusal_class in self._refused_by:
-            self.refusals_shared += 1
+            if count:
+                self.refusals_shared += 1
             return True
         return False
+
+    def refusal_names_no_junk(self, action: Action) -> bool:
+        """Whether the refusal class of `action` (`refusal_class_of`) holds no junk mod at any state: the action declares
+        `Reads.refusal_by_families` and names no family (Remove Crafted Mods, a Fracturing Orb). Its class at a state is then the action and
+        the item without its junk, with the junk's count per side: the same at two states that differ in their junk alone."""
+        if not self.share_refusals:
+            return False
+        reads = self._kinds.reads(action)
+        return bool(reads.refusal_by_families and reads.junk and reads.families is not None and not reads.families)
 
     def _junk_profile(self, state: CompressedState) -> tuple[int, tuple[tuple[str, frozenset[str]], ...], frozenset[str]] | None:
         """The parts of the refusal class of `state` that no action changes (`refusal_class_of`): the number of its item without the junk, its

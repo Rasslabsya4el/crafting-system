@@ -18,7 +18,7 @@ from items_support import AMULET
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, _prime
-from crafting_system.actions import ApplyFossils, ScouringOrb
+from crafting_system.actions import ApplyFossils, ExaltedOrb, ScouringOrb
 from crafting_system.data.model import Fossil
 
 MODS = [MANA_1, LIFE_1, RESIST_1, COLD_RESIST, "FireResist1"]
@@ -167,6 +167,62 @@ def test_two_pools_are_primed_and_one_is_left_to_the_kernel_call(pool):
 
     assert _prime.prime(ab, [(state, CHAOS) for state in reps[:2]], workers=4) == 2  # MIN_JOBS pools are enough
     assert pool.made == [2] and len(ab._cache) == 2 and ab._kernels == 2
+
+
+# --- the work a pool is forked for (ticket #1193) ---------------------------------------------------------------------------
+
+EXALT = ExaltedOrb()
+
+
+def exalt_requests(ab):
+    """Six requests of an Exalted Orb, each a pool of its own: the orb draws one mod on a rare amulet that keeps its mods, so the pool is
+    the amulet's less the families held, and the six items hold six different sets of families."""
+    held = [(MANA_1,), (LIFE_1,), (RESIST_1,), (COLD_RESIST,), (MANA_1, LIFE_1), (LIFE_1, RESIST_1)]
+    return [(ab.compress(item(*(roll(mod) for mod in mods))), EXALT) for mods in held]
+
+
+def test_a_walk_counts_by_the_mods_it_draws():
+    ab = abstraction(actions=(*ENABLED, EXALT))
+    chaos = ab._prepared(ab.compress(item(roll(MANA_1))), CHAOS).outcomes.components[0][1]
+    kept = ab._prepared(ab.compress(item(roll(MANA_1, fractured=True))), CHAOS).outcomes.components[0][1]
+    exalt = ab._prepared(ab.compress(item(roll(MANA_1))), EXALT).outcomes.components[0][1]
+    # a rare amulet holds six mods at most: the reroll draws six, five beside a fractured mod, and the Exalted Orb one
+    assert [_prime._draws(part) for part in (chaos, kept, exalt)] == [6, 5, 1]
+    assert [_prime._work(part) for part in (chaos, kept, exalt)] == [8**3, 8**2, 0]
+    assert (_prime.SHALLOW, _prime.GROWTH, _prime.WORTH) == (3, 8, 256)
+
+
+def test_walks_of_one_mod_fork_no_pool_however_many_and_the_kernels_make_them(pool):
+    # #1193: R04's build of 19 offers forked 1,341 pools for 6,057 walks of half a millisecond
+    ab = abstraction(actions=(*ENABLED, EXALT))
+    requests = exalt_requests(ab)
+
+    assert _prime.prime(ab, requests, workers=4) == 0
+    assert pool.made == [] and not ab._cache and ab._kernels == 0
+
+    plain = abstraction(actions=(*ENABLED, EXALT))
+    for state, action in requests:
+        assert ab.kernel(state, action) == plain.kernel(state, action)
+    assert len(ab._cache) == len(requests)  # six pools, each made by its kernel call
+
+
+def test_a_pool_forked_for_the_deep_walks_makes_the_shallow_ones_too(pool):
+    ab = abstraction(actions=(*ENABLED, EXALT))
+    requests = exalt_requests(ab)
+    reroll = (ab.compress(item(roll(MANA_1))), CHAOS)  # six mods drawn: 512, past `WORTH` alone, but one walk is no pool
+
+    assert _prime.prime(ab, [reroll], workers=4) == 0 and pool.made == []
+    assert _prime.prime(ab, [*requests, reroll], workers=4) == len(requests) + 1
+    assert pool.made == [4] and len(ab._cache) == len(requests) + 1
+
+
+def test_deep_walks_below_the_worth_fork_no_pool(pool, monkeypatch):
+    ab = abstraction()
+    two = [(state, CHAOS) for state in one_per_pool(ab)[1:3]]  # two rerolls beside a fractured mod, five mods drawn each: 64 + 64
+
+    assert _prime.prime(ab, two, workers=4) == 0 and pool.made == []
+    monkeypatch.setattr(_prime, "WORTH", 128)
+    assert _prime.prime(ab, two, workers=4) == 2 and pool.made == [2]
 
 
 @pytest.mark.parametrize("workers", [0, 1])

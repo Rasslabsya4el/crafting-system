@@ -194,7 +194,15 @@ the action only at the states where the gap is, so leaving it out of the key cou
 model gap in `_item_of` always refuses. An action that declares `Reads.refusal_by_families` (a bench craft, Remove Crafted Mods) is refused alike
 at every item of one refusal class (`Abstraction._refusal_class`, #1178): a pair whose class holds a refusal already is counted as refused
 without asking `kernel_key` (`Abstraction.refusal_class_of`, `refused_in_class`; #1256: R04's round of bench crafts asked 2.3 million pairs,
-2.28 million of them refusals of a class met before), the very answer `kernel_key` gives it.
+2.28 million of them refusals of a class met before), the very answer `kernel_key` gives it. Where such an action names no family (Remove
+Crafted Mods, a Fracturing Orb: `Abstraction.refusal_names_no_junk`), its class at a member is the action and the member's item without its
+junk, with the junk's count per side. The members of a key differ in their ordinary slots alone, which are that junk: the flags, the fractured
+mods, the crafted and the veiled slots, the item state beyond the mods and the count of ordinary slots per side are the key's. So every member
+of the key has the class of the first, and once one member's class holds a refusal the others are counted as refused without making their
+item to look the class up (#1193: a Fracturing Orb is asked at every pure junk assignment, `ALL`, and at most keys it is refused by the
+key: not rare, fewer than four mods, a fractured mod; on R04's 19 offers 154,808 of its 225,719 pairs, each of which built the member's item
+to find the class). A member with no class (a fractured family type that may decide the refusal) is asked as before, and so are the members
+after it.
 
 **The certain additions (#1193).** An action declared `Adds.only_named` (a bench craft, an aspect beast; the contract suite checks it) has
 one outcome: the item it was given with its named mods added, nothing else changed. At a member `m` of key `k` that takes it, the successor
@@ -261,6 +269,7 @@ SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
+SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
@@ -528,6 +537,7 @@ class Pattern:
         self._universes: dict[frozenset, _Universe] = {}
         self._reads: dict[Action, object] = {}
         self._only_named: dict[Action, bool] = {}
+        self._draws: dict[Action, bool] = {}
         self._feasible: dict[CompressedState, bool] = {}
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
@@ -762,6 +772,13 @@ class Pattern:
         found = self._only_named.get(action)
         if found is None:
             found = self._only_named[action] = action.adds(self.data).only_named
+        return found
+
+    def draws(self, action: Action) -> bool:
+        """Whether `action` may draw a mod from a pool (`Adds.draws`; an action that declares nothing draws)."""
+        found = self._draws.get(action)
+        if found is None:
+            found = self._draws[action] = action.adds(self.data).draws
         return found
 
     def holds_lock(self, key: PatternKey) -> bool:
@@ -1507,7 +1524,10 @@ class PatternBuilder:
         for offer in self.offers[lo:hi]:
             if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
-            if SHARE_ADDITIONS and self.pattern.adds_only_named(offer.action):  # one fixed result, nothing to draw: priming would only prepare every pair
+            if not self.pattern.draws(offer.action):
+                # nothing is drawn (a bench craft, a Fracturing Orb, an Annulment): no walk to make ahead, and preparing its pairs here would
+                # make the item of every member, the ones the build then answers without one too (a certain addition, a refusal of the key;
+                # #1193: on R04's 19 offers the Fracturing Orb's pairs were prepared at every pure junk assignment of every key)
                 continue
             policy = self.pattern.policy(offer.action, key)
             if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw
@@ -1568,6 +1588,8 @@ class PatternBuilder:
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
             classed = ab.refusal_class_of(offer.action) if SHARE_REFUSED else None
+            keyed = SHARE_KEY_REFUSALS and classed is not None and ab.refusal_names_no_junk(offer.action)
+            refused_at_key = False  # a member's refusal class, which is the key's (`keyed`), holds a refusal: every member's does
             seen: set[int] = set()
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             if policy[0] is Mode.RELAXED:
@@ -1592,14 +1614,21 @@ class PatternBuilder:
                 stats.pairs += 1
                 if self.tally is not None:
                     self.tally.done += 1
-                if classed is not None and (found := classed(member)) is not None and ab.refused_in_class(found):
+                if refused_at_key:  # the class of this member is the one that member was refused in (module docstring, "Refusals", #1193)
+                    stats.refused_pairs += 1
+                    ab.refusals_shared += 1
+                    continue
+                found = classed(member) if classed is not None else None
+                if found is not None and ab.refused_in_class(found):
                     # a refusal met in the pair's class: what `kernel_key` would raise here (module docstring, "Refusals", #1256)
                     stats.refused_pairs += 1
+                    refused_at_key = keyed
                     continue
                 try:
                     ck = ab.kernel_key(member, offer.action)
                 except NotApplicableError:
                     stats.refused_pairs += 1
+                    refused_at_key = keyed and found is not None and ab.refused_in_class(found, count=False)
                     continue
                 except OutOfScopeError as gap:
                     if _gap_everywhere(pattern, self.gaps, key, offer):

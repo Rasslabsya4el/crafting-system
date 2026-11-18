@@ -100,7 +100,7 @@ DECLARING = [
 
 def test_the_bench_declares_its_refusal_by_families():
     kinds = {type(action).__name__ for _, action, _ in DECLARING}
-    assert kinds == {"BenchCraft", "RemoveCraftedMods"}
+    assert kinds == {"BenchCraft", "RemoveCraftedMods", "FracturingOrb"}  # the orb reads, of the junk, its count alone (#1193)
     assert all(action.reads(CONTRACT_DATA).families is not None for _, action, _ in DECLARING)
 
 
