@@ -1977,7 +1977,10 @@ class Abstraction:
                 for implicits, before in spread
                 for ints, each in cells
             ]
+        allowance = budget.allowed()  # asked, never counted: a fixed result's states are not counted in states (#1105), but a net on the clock asks here too (#1238)
         for implicits, chance in spread:
+            if allowance is not None:
+                allowance.tick()
             result[CompressedState(split.flags, split.fractured, split.status, slots, implicits, split.quality, split.offer, split.imprints, split.strands, split.replaced)] += share * chance
 
     def _add_drawn(

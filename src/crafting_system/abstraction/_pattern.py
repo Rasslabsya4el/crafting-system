@@ -195,6 +195,7 @@ from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
 
+from crafting_system import budget
 from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
@@ -784,14 +785,21 @@ class Pattern:
         blocked = self.blocked_tags(key)
         base = best_of(self.width, [slot.contribution for slot in (*key.crafted, *key.veiled)] + [entry.contribution for entry in key.fractured])
         found: dict[CompressedState, None] = {}
+        allowance = budget.allowed()  # a stage on the clock asks its net here too (#1217): one key's members can take minutes
         for rel_p, rel_s in product(
             self._relevant(universe, Side.PREFIX, key.counts[0], key.status), self._relevant(universe, Side.SUFFIX, key.counts[1], key.status)
         ):
+            if allowance is not None:
+                allowance.tick()
             relevant = rel_p + rel_s
             if best_of(self.width, [slot.contribution for slot in relevant] + [base]) != key.status:
                 continue
             for compositions in self._compositions(universe, key, rel_p, rel_s):
+                if allowance is not None:
+                    allowance.tick()
                 for state in self._assemble(universe, key, relevant, compositions, blocked, mode, named):
+                    if allowance is not None:
+                        allowance.tick()
                     found[state] = None
                 if mode is Mode.ANY and found:
                     return list(found)
@@ -1239,9 +1247,17 @@ class PatternBuilder:
         )
 
     def _pass(self) -> str | None:
-        """Expand every key for the offers it lacks; the reason a net ended it, or None when it ran to the end."""
+        """Expand every key for the offers it lacks; the reason a net ended it, or None when it ran to the end.
+
+        The net on the clock and on memory is asked inside the making of a key's members and of one kernel too (`budget.asking`, #1217, #1238),
+        not only between two offers: either can run for minutes and take gigabytes. A build counted in pieces of work asks at its pieces alone."""
         with self.ab.approximate() if self.approximate else nullcontext():
-            return self._pass_keys()
+            try:
+                with budget.asking(self.stop if self.tally is None else None):
+                    return self._pass_keys()
+            except budget.NetReached as reached:  # inside a making: the key's row is whole or untouched, as at a stop between two offers
+                self._release()
+                return reached.reason
 
     def _pass_keys(self) -> str | None:
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
