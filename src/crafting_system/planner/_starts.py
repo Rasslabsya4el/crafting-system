@@ -27,7 +27,7 @@ from datetime import date
 from typing import Any
 
 from crafting_system.budget import running
-from crafting_system.actions.draw import sharing
+from crafting_system.actions import sharing
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE

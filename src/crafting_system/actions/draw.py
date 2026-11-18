@@ -116,7 +116,7 @@ class DrawStore:
         self.renamed = 0  # those of them whose labels had other names than the kept ones (`find`)
         self.dropped = 0  # the kept walks that left for room or for the memory net
         self.keys: list[Hashable] | None = None  # a test's record: the key of every walk made, in order (None: not recorded)
-        self.fresh: list[tuple] | None = None  # a pool worker's record of what it kept, for its parent (`adopt`, `abstraction._prime`)
+        self.fresh: list[tuple] | None = None  # in a pool worker: the walks of the job in hand, for its parent, kept nowhere else (`adopt`, `abstraction._prime`)
         self._kept: OrderedDict[Hashable, tuple[list[tuple[tuple, dict]], dict[str, int] | None, int]] = OrderedDict()
 
     def __len__(self) -> int:
@@ -154,7 +154,7 @@ class DrawStore:
         if self.keys is not None:
             self.keys.append(key)
         size = sum(len(outcomes) for outcomes in result) + 1  # an empty result still takes an entry
-        if self._gives_way():
+        if self.fresh is None and self._gives_way():
             return
         self._add(key, ([(tuple(listed), dict(outcomes)) for listed, outcomes in zip(names, result)], counts, size))
 
@@ -172,6 +172,9 @@ class DrawStore:
         return True
 
     def _add(self, key: Hashable, entry: tuple) -> None:
+        if self.fresh is not None:  # a pool worker: the walk goes to its parent and is not kept here
+            self.fresh.append((key, entry))
+            return
         size = entry[2]
         before = self._kept.pop(key, None)
         if before is not None:
@@ -184,8 +187,6 @@ class DrawStore:
             self.dropped += 1
         self._kept[key] = entry
         self.held += size
-        if self.fresh is not None:
-            self.fresh.append((key, entry))
 
     def adopt(self, fresh: Iterable[tuple]) -> None:
         """Keep what a pool worker kept (its `fresh`): the walks it made are this plan's too."""

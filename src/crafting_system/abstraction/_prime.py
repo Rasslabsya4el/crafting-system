@@ -25,8 +25,7 @@ copies it. The walks the workers make go back with their results and are kept fo
 from collections.abc import Callable, Iterable
 
 from crafting_system import budget, parallel
-from crafting_system.actions import Action, Fixed, Rerolled
-from crafting_system.actions.draw import shared_draws
+from crafting_system.actions import Action, Fixed, Rerolled, shared_draws
 
 MIN_JOBS = 2  # fewer uncached pools than this are computed by the kernel call itself
 
@@ -38,12 +37,18 @@ def _hold(abstraction, jobs: list) -> tuple:
 def _compute(index: int):
     abstraction, jobs = parallel.context()
     (kind, key), (part, signature) = jobs[index]
-    store = shared_draws()  # the plan's store as the fork found it: the walks this job adds go back with its result (#1194)
+    # the plan's store as the fork found it: it answers what the plan holds, and the walks this job makes go back with its result and are
+    # not kept here (a worker's copy of the store is lost with the worker, and its memory would be the pool's, #1194)
+    store = shared_draws()
     if store is not None:
         store.fresh = []
-    with budget.unasked():  # a forked worker holds its parent's net, which raises the parent's stop: the parent asks its net between two results
-        made = abstraction._distribution(signature, part) if kind == "draw" else abstraction._fracture_entries(part, signature)
-    return made, () if store is None else store.fresh
+    try:
+        with budget.unasked():  # a forked worker holds its parent's net, which raises the parent's stop: the parent asks its net between two results
+            made = abstraction._distribution(signature, part) if kind == "draw" else abstraction._fracture_entries(part, signature)
+        return made, () if store is None else store.fresh
+    finally:
+        if store is not None:
+            store.fresh = None
 
 
 def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: int | None = None, ask: Callable[[], None] | None = None) -> int:

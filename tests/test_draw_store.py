@@ -392,7 +392,6 @@ class ForkSpy(PoolSpy):
         finally:
             if store is not None:
                 store.walks, store.hits, store.held, store.dropped, store.keys, store._kept = saved
-                store.fresh = None
 
 
 @pytest.fixture
@@ -420,15 +419,15 @@ def test_prime_takes_back_its_workers_walks_and_sends_no_kept_walk_to_a_worker(p
         assert PoolSpy.mapped == [(pools, 1)]
         # the workers' walks are the plan's. Two of the six pools are one walk: the pool without the Cold Resistance family and the one
         # without the Fire Resistance family are each other's image (the two families have the same side and weights, and the same place in
-        # the goal's hybrid craft), so the spy's one worker walked five and answered the sixth from its own copy of the store
-        assert (store.walks, len(store)) == (pools - 1, pools - 1)
-        assert len(set(store.keys)) == len(store.keys) == pools - 1
+        # the goal's hybrid craft). A worker keeps no walk of its own, so each of the two jobs made it, and the plan keeps it once
+        assert (store.walks, len(store)) == (pools, pools - 1)
+        assert len(store.keys) == pools and len(set(store.keys)) == pools - 1
         # the model of the next round: every pool's walk is kept, so no pool is forked and the kernels copy
         assert _prime.prime(second, requests_of(second), workers=4) == 0
         assert PoolSpy.mapped == [(pools, 1)]
         for state, action in requests_of(second):
             assert second.kernel(state, action) == alone.kernel(state, action)
-        assert (store.walks, store.hits) == (pools - 1, pools)
+        assert (store.walks, store.hits) == (pools, pools)
     assert first._cache == alone._cache == second._cache
 
 
@@ -442,13 +441,22 @@ def test_two_pools_that_are_each_others_image_are_one_walk():
     assert ab._cache == alone._cache
 
 
-def test_a_store_record_is_only_what_a_worker_added():
+def test_a_worker_hands_its_walks_to_its_parent_and_keeps_none():
+    outcome = lambda n: [{frozenset({("a", n)}): Fraction(1)}]  # noqa: E731
     store = DrawStore(100)
-    store.keep("before", [("a",)], [{frozenset({("a", 1)}): Fraction(1)}], None)
-    store.fresh = []
-    store.keep("made", [("a",)], [{frozenset({("a", 2)}): Fraction(1)}], None)
+    store.keep("before", [("a",)], outcome(1), None)
+    store.fresh = []  # a pool worker's job begins (`_prime._compute`)
+    store.keep("made", [("a",)], outcome(2), None)
     assert [key for key, _ in store.fresh] == ["made"]
+    assert store.holds("before") and not store.holds("made") and store.held == 2  # the worker's memory does not grow with what it makes
+    assert store.find("before", [("a",)], None) == outcome(1)  # what the plan held at the fork still answers
     parent = DrawStore(100)
     parent.adopt(store.fresh)
     assert parent.holds("made") and not parent.holds("before") and (parent.walks, parent.held) == (1, 2)
     assert parent.find("made", [("b",)], None) == [{frozenset({("b", 2)}): Fraction(1)}]
+
+
+def test_a_plan_that_ends_in_an_error_closes_its_store():
+    with pytest.raises(RuntimeError), sharing():
+        raise RuntimeError("a plan refused")
+    assert shared_draws() is None
