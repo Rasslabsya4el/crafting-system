@@ -798,7 +798,8 @@ def _kind_limits(
 def _quality_kinds_unsaid(data: GameData, goal: Goal, start_item: Item) -> frozenset[str]:
     """The kinds that only set the quality (`Kind.only_quality`: the catalysts, the quality currency) the answer does not name among the methods
     left out (#159): all of them when the target asks for no quality (quality changes no odds of the mods, ADR-0029, so none could make the plan
-    cheaper), and else those that list nothing for the start item (a catalyst on boots, a quality currency on a ring)."""
+    of the mods cheaper; a target that names sockets has the quality currency in its socket finish, which says it, `_finish.finish_limits`), and
+    else those that list nothing for the start item (a catalyst on boots, a quality currency on a ring)."""
     quality_kinds = [entry.name for entry in kinds() if entry.only_quality]
     if goal.quality is None:
         return frozenset(quality_kinds)

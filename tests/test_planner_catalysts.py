@@ -343,3 +343,11 @@ def test_a_kind_declared_only_quality_lists_only_actions_that_only_set_the_quali
             assert action.adds(D).only_quality, (name, action)
             seen.add(name)
     assert seen == declared
+
+
+def test_searched_with_the_mods_a_quality_target_whose_run_leaves_the_catalysts_out_names_them():
+    # where the quality is searched with the mods the goal asks for it, so a catalyst left out by the run's setting is a method left out, and said
+    text = LIGHTNING_HELD.replace("      values: [45]\n", "      values: [45]\n  quality:\n    type: intrinsic\n    percent: 20\n")
+    plan = _plan(text, methods=("chaos-orb",), searched=True)
+    assert "Catalysts" in {label for limit in plan.limits if limit.kind == "kinds-not-named" for label in limit.labels}
+    assert "Quality currency" not in _named_left_out(plan)  # a belt takes none
