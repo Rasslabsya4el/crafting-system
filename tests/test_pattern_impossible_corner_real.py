@@ -15,9 +15,11 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from pattern_support import check_dominates
+from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, STARTS, build, offers_of, pattern_data
+from test_pattern_items_kept import same_model
 
-from crafting_system.abstraction import _pattern
-from crafting_system.abstraction._pattern import Mode, Pattern
+from crafting_system.abstraction import Abstraction, _pattern
+from crafting_system.abstraction._pattern import Mode, Pattern, build_pattern_model
 from crafting_system.cli import make_plan
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
@@ -110,3 +112,20 @@ def test_the_model_built_at_one_fill_is_the_model_built_at_every_fill(plan):
     for key in shared:  # a key built both ways has the same row: the same offers, the same kernels over the keys
         assert built[key] == before[key], key
     assert new.model.stats.pairs < old.model.stats.pairs
+
+
+def test_the_whole_model_of_the_hand_worked_world_is_the_model_built_at_every_fill():
+    """A complete build, both ways: the same keys in the same order, the same rows and kernels (so the same values), from fewer pairs."""
+    data = pattern_data()
+
+    def made(before: bool):
+        ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+        start = ab.compress(build(data, BOW, STARTS[0]))
+        with every_fill() if before else contextlib.nullcontext():
+            return build_pattern_model(ab, start, offers_of(), tags=True)
+
+    old, new = made(True), made(False)
+    same_model(old, new)
+    assert new.stopped is None and all(new.expanded)
+    assert new.stats.fallbacks > 100  # the corner is met at hundreds of compositions of this world
+    assert new.stats.pairs < old.stats.pairs and new.stats.members < old.stats.members
