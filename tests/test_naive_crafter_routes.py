@@ -105,7 +105,7 @@ COVERED = {
     "R08": ("r08-energy-shield-boots", 3000),
     "R09": ("r09-life-boots", 3000),
     "R10": ("r10-fractured-boots", 3000),
-    "R11": ("r11-reservation-helmet", 3000),
+    "R11": ("r11-reservation-helmet", 600),  # a play of the whole helmet (#1289) is about six times the essences of before: 3,000 plays ran past the suite's 300 s on a runner
     "R12": ("r12-lightning-amulet", 3000),
     "R13": ("r13-life-resist-belt", 16),
 }
@@ -373,7 +373,8 @@ def test_the_simulation_is_long_enough_to_say_something(played):
 # --- the test can fail ------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("played", ["R05", "R10", "R11"], indirect=True)
+# R11 is not played here since #1289: 3,000 plays of its whole helmet under the wrong law took 108 s on the quiet server (18 standard errors), past the suite's time on a runner
+@pytest.mark.parametrize("played", ["R05", "R10"], indirect=True)
 def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with_the_planner(played):
     """If the law of 4, 5 or 6 mods were 1:1:1 instead of 8:3:1, the naive mean would be far from the planner's: the comparison has the power to see it."""
     stem, _ = COVERED[played.route]
@@ -404,7 +405,7 @@ MUTATIONS = [
     ("no level gate", Laws(level_gate=False), "R05", 12000),
     ("no family exclusion", Laws(family_exclusion=False), "R10", 3000),
     ("a side chosen first, not one pool", Laws(one_pool=False), "R05", 12000),
-    ("a side chosen first, not one pool", Laws(one_pool=False), "R11", 3000),
+    ("a side chosen first, not one pool", Laws(one_pool=False), "R11", 600),  # 113 standard errors at 3,000 plays of the whole helmet (#1289), so 600 stand clear
     # the laws of #608 and #609. R09 does not move when the block is off (0.66 standard errors at 3,000 plays and seed 7: the blocked Defence mods are few next to the boosted
     # Life ones), so the block is shown by R08 and by `test_naive_mechanics.py`, and R09 is not counted as evidence for it.
     ("no fossil boost", Laws(fossil_boost=False), "R08", 3000),
