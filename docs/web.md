@@ -10,7 +10,7 @@ under OR-50), and is the owner's since 2026-11-18 (OR-56): nothing is computed i
 and a calculation on the user's side is added only on his word. The rest of #961's design is a reading of the dispatcher chat, not the
 owner's word: the HTTP framework, the SQLite store, the Docker image and its smoke test on a Linux runner. No decision of the owner names
 the machine, the system or the hosting of the site; the repository runs on Windows and on Linux (OR-57), and the Docker image is one way
-to run the service, not a choice of host. Work on the site waits for the owner's word (OR-53): nobody extends this service meanwhile.
+to run the service, not a choice of host. Work on the site waits for the owner's word (OR-53); that nobody extends this service meanwhile is the dispatcher chat's reading of it.
 
 ## Run it
 
