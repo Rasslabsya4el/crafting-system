@@ -27,12 +27,12 @@ from targets_support import DATA, EXAMPLES
 from test_planner_wipe import ALCHEMY, ALTERATION, SCOURING, chance, plan, prices
 
 import crafting_system.cli  # noqa: F401 - names the presenter of plans (`planner.present_with`, issue #882)
-from crafting_system.abstraction import Goal
+from crafting_system.abstraction import Goal, Status
 from crafting_system.actions import AlchemyOrb, AlterationOrb, ChaosOrb, ScouringOrb
 from crafting_system.items import Rarity
 from crafting_system.planner import PlanSettings, _pattern_bound, plan_target
 from crafting_system.planner import _plan as planner_plan
-from crafting_system.planner._offer_floor import INSIDE, OUTSIDE, OfferFloors
+from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, SHAPED, OfferFloors
 from crafting_system.planner._offer_kinds import MOVE, RESTART_KIND, REROLL, SLACK, TERMINAL, _Entry, shape_rhos
 from crafting_system.targets import load_target
 
@@ -134,6 +134,29 @@ def test_through_the_entry_r12s_fractured_start_is_floored_by_the_scouring_and_t
         assert floors.lower(scouring, INSIDE) == pytest.approx(floor, rel=1e-9)
 
 
+def test_through_the_entry_a_state_the_scouring_leaves_is_floored_by_its_shapes_own_floor_not_by_one_offers_price(floors_on):
+    """The same world: the Magic amulet the Scouring leaves is of the Magic shape's claim (outside E, no dead leaf held), so every offer there is
+    floored at that shape's rho, alt / p_alt (1.33 Chaos), not at its own price (the Alteration's 0.01), and so is the state itself in the
+    search (`OfferFloors.at`). Before, a state of another shape had the price of one offer as its floor, and a bound's model whose growth had
+    not reached the Magic keys valued the start at a Scouring and that price (0.06 Chaos here, R11's Exalted round 0.52 for its 9.64, #973)."""
+    target = given(load_target(R12, DATA))
+    goal = Goal.from_target(target)
+    scoured = ScouringOrb().outcomes(DATA, target.start_item).retained
+    magic = ALTERATION / chance(AlterationOrb().outcomes(DATA, scoured), goal)
+
+    wiped = plan(target, ("chaos-orb", "scouring-orb", "alteration-orb"))
+
+    assert wiped.mean_remaining == pytest.approx(SCOURING + magic, rel=1e-9)
+    for floors in _holding(floors_on, {"Orb of Scouring", "Orb of Alteration", "Chaos Orb"}):
+        state = floors.ab.compress(scoured)
+        klass = floors.klass(state.flags, state.fractured, state.status, state.imprints)
+        assert klass == SHAPED + 1 and klass in floors.classes
+        assert floors.at(klass) == pytest.approx(magic, rel=1e-9) and floors.at(klass) <= magic
+        for position, entry in enumerate(floors.entries):
+            assert floors.lower(position, klass) == pytest.approx(max(entry.cost, magic), rel=1e-9)
+        assert floors.at(OUTSIDE) == floors.rho and floors.at(INSIDE) == 0.0 == floors.at(OTHER)
+
+
 def test_through_the_entry_a_plain_rare_start_is_floored_by_the_scouring_and_the_alchemys_own_floor_on_the_normal_item(floors_on):
     """R12's amulet as a Rare with no mod, with Chaos Orbs, Scourings and Alchemies: an Alchemy on the Normal amulet draws as a Chaos Orb on the
     Rare one, chance p, and the plan scours and alchemises at (s + a) / p. The Normal shape's floor is the Alchemy's own c / p = a / p (a move into
@@ -219,3 +242,9 @@ def test_r05s_magic_ring_holds_the_essence_only_strength_dead_so_the_regal_orb_b
     essences = [entry for entry in floors.entries if entry.kind == REROLL and "Essence" in entry.priced.label and entry.level == 2]
     assert essences and floors.rho == pytest.approx(min(entry.ratio for entry in essences) * (1 - SLACK), rel=1e-12)
     assert floors.rho > 100 > scouring.cost + regal.cost
+    # a Magic ring of the claim is floored at the Magic shape's own floor; one holding the dead leaf PASSING (no use reaches it) is not claimed
+    bare = floors.views[magic].bare
+    held = tuple(Status.PASSING if index == strength else status for index, status in enumerate(bare.status))
+    assert floors.klass(bare.flags, bare.fractured, bare.status, bare.imprints) == SHAPED + magic
+    assert floors.klass(bare.flags, bare.fractured, held, bare.imprints) == OTHER
+    assert floors.at(SHAPED + magic) == floors.rho_of(magic) > 100

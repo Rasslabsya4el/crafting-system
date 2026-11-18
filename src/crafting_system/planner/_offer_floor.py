@@ -17,10 +17,20 @@ with the same shape (the claim and its proof are in `_offer_kinds`: Wald's ident
                                                     Q*(s, a) >= c(a),
     (a move, an offer that leaves the start's shape for a shape the floors know, a Scouring of R05's Rare: `_offer_kinds`, THE SHAPES, #973:
      in OUTSIDE and, as an erasing one, INSIDE, Q*(s, a) >= c(a) + (1 - pbar(a)) R, R the least floor of the shapes it lands in, not rho),
+    class SHAPED + S (outside E, of another shape S the floors know, holding no dead leaf of S PASSING: the claim C_S of THE SHAPES):
+                                                    Q*(s, a) >= max(c(a), rho_S),  V*(s) >= rho_S  (C_S gives V*(s) >= rho_S, and Q* >= V*),
     class UNOPENED (an unopened listing, ADR-0064): Q*(s, a) >= c(a) for the draw that opens it and the restart, and infinity for any other offer
                                                     (the kernel refuses every other action on an unopened item: `Abstraction._prepare`),
 
 and `V*(s) >= 0` everywhere (costs are not negative).
+
+Why SHAPED is a class of its own (#973). With moves offered, the cheapest way from the start in a bound's model is often a move and then a state of
+the shape it lands in; a state of another shape in class OTHER had the price of one offer as its floor, so a model whose growth had not reached
+those keys valued the start at a move and that price (R11's Exalted round: a Scouring and an Alteration, 0.52 Chaos, where the start's rho is
+9.64 and main's model started at 160.26). Its build then grew the model many times to lift that value (R05: 15 growths, its build run past its
+share and its search given 0 s; R11: 21) and its search was led by a bound near 0. The floors of every known shape are already worked out
+(`rho_of`), and the claim C_S is what they are proved for, so a state of C_S outside E reads rho_S, as a state of the start's shape outside E
+reads rho. A state in E, holding a dead leaf PASSING, holding an imprint the floors set aside, or of a shape the floors do not know stays OTHER.
 
 An offer that fractures, changes the flags or reads the item's implicits, quality, offer or imprints has `pbar = 1`: its floor is its cost; but a
 veiled choice (an Unveil, a Pick: it reads the offer) and a veil (a Veiled Exalted Orb) have the pbar of the mods they may add, as a bench craft,
@@ -80,6 +90,12 @@ from ._offers import BuyStartItem, PricedOffer, reached_by
 
 OTHER, INSIDE, OUTSIDE, UNOPENED = 0, 1, 2, 3  # the classes of states a floor is stated for (see the module text)
 CLASSES = (OTHER, INSIDE, OUTSIDE, UNOPENED)
+SHAPED = 4  # class SHAPED + S: outside E, of the known shape S > 0, no dead leaf of S PASSING (THE SHAPES, #973); `OfferFloors.classes` lists them
+
+
+def shape_of(klass: int) -> int | None:
+    """The shape a class of another known shape is stated for (`SHAPED`), or None for the four classes of `CLASSES`."""
+    return klass - SHAPED if klass >= SHAPED else None
 
 
 class FloorsStopped(Exception):
@@ -149,6 +165,7 @@ class OfferFloors:
             self.settled, self.rest = shape_rhos(self.shape_entries, self._raise_in, until=0)
         self.rho = self.settled[0] if self.chosen else 0.0
         self.rhos = [self.rho_of(index) for index in range(len(self.views))] if self.chosen else [0.0]
+        self.classes = CLASSES + tuple(SHAPED + index for index in range(1, len(self.views)))  # every class a state can be in here
 
     # ---- the shapes (THE SHAPES in `_offer_kinds`) --------------------------------------------------------------------------
 
@@ -326,15 +343,34 @@ class OfferFloors:
         imprint is not of the start's shape."""
         if getattr(flags, "unopened", False):
             return UNOPENED
-        if not self.chosen or (flags, fractured) != self.shape or (imprints and self.unimprinted):
+        if not self.chosen or (imprints and self.unimprinted):
             return OTHER
+        if (flags, fractured) != self.shape:
+            # another shape the floors know (THE SHAPES): its claim C_S holds outside E where no leaf of its dead leaves D_S is PASSING
+            index = self.views[0].known.get((flags, fractured))
+            if not index or all(status[leaf] is Status.PASSING for leaf in self.chosen) or any(status[leaf] is Status.PASSING for leaf in self.views[index].dead):
+                return OTHER
+            return SHAPED + index
         return INSIDE if all(status[index] is Status.PASSING for index in self.chosen) else OUTSIDE
+
+    def at(self, klass: int) -> float:
+        """The floor of `V*` at every state of the class `klass`: rho for `OUTSIDE`, rho_S for a class of another known shape S (THE SHAPES), 0
+        for any other (costs are not negative)."""
+        if klass == OUTSIDE:
+            return self.rho
+        shape = shape_of(klass)
+        return 0.0 if shape is None else self.rho_of(shape)
 
     # ---- the floors -----------------------------------------------------------------------------------------------------
 
     def lower(self, position: int, klass: int) -> float:
         """A floor of `Q*(s, a)` for the offer at `position` and a state of the class `klass` (never above the exact cost)."""
         entry = self.entries[position]
+        if klass >= SHAPED:
+            # a state of the claim C_S of another known shape S, outside E: Q*(s, a) >= V*(s) >= rho_S for every offer (THE SHAPES). Without it every
+            # state a move lands in had the price of one offer as its floor, and the model of R11's Exalted round valued the start at a Scouring and an
+            # Alteration (0.52 Chaos, where its rho is 9.64), its build grew 21 times to lift it and its search had no bound to go by (#973)
+            return max(entry.cost, self.rho_of(klass - SHAPED))
         if klass == UNOPENED:  # only the draw works on a listing; the restart buys it again
             action = entry.priced.offer.action
             return entry.cost if getattr(action, "opens_listing", False) or isinstance(action, BuyStartItem) else math.inf
@@ -386,7 +422,7 @@ class OfferFloors:
         class of another shape, a terminal offer) is its price.
         """
         entry = self.entries[position]
-        for klass in (OTHER, UNOPENED):
+        for klass in (OTHER, UNOPENED, *self.classes[len(CLASSES):]):
             if limits.get(klass) is not None and (low := self.lower(position, klass)) * (1 - SLACK) <= limits[klass]:
                 return low
         found: list[tuple[float, int]] = []
@@ -418,4 +454,4 @@ class OfferFloors:
         return self.lower(position, klass)
 
 
-__all__ = ["CLASSES", "FloorsStopped", "OfferFloors"]
+__all__ = ["CLASSES", "FloorsStopped", "OfferFloors", "SHAPED", "shape_of"]
