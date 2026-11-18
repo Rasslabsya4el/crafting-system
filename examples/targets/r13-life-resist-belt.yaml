@@ -21,8 +21,12 @@
 #   * The base: the picture's belt is a Stygian Vise; this file keeps the Leather Belt it has had since #19 (the research note
 #     says "Rare Belt"), because the start item is priced for a Magic Leather Belt only. The two bases share the belt's mods.
 #     Named for the owner and filed (see #1289's pull request).
-#   * The quality: the picture shows 16% of the Abrasive type ("Attack Modifiers"); the post's three steps name no catalyst, but
-#     the item is asked whole (OR-58), so the `quality:` block below asks it. Named for the owner in #1289's pull request.
+#   * The quality: the picture shows 16% of the Abrasive type ("Attack Modifiers"); the post's three steps name no catalyst. The
+#     file does NOT ask it yet (the `quality:` block at the end is commented out), for a reason of the planner and not of the item:
+#     a target with catalyst quality is planned at its exact item level (a catalyst's gain depends on the level,
+#     `targets/floor.py`), so the start belt's price key becomes "Leather Belt, magic, item level 86", and the price files hold
+#     only "... item level 86-100": the belt would have no start price and R13 no plan at all. Whether the picture's quality
+#     belongs to the target is asked of the owner, and the missing price is filed (both named in #1289's pull request).
 
 # The base item: a Leather Belt, written by its English name as in the game. (When the game
 # data has several bases with one name, the planner skips the Battle Royale copies; if that still
@@ -80,7 +84,8 @@ requirements:
   - family: ItemGenerationCanHaveMultipleCraftedMods
     mod: StrIntMasterItemGenerationCanHaveMultipleCraftedMods
 
-# The catalyst quality of the picture's belt: "Quality (Attack Modifiers): +16%", the Abrasive type.
-quality:
-  type: abrasive
-  min_percent: 16
+# The catalyst quality of the picture's belt: "Quality (Attack Modifiers): +16%", the Abrasive type. Not asked yet (see the readings above):
+# uncomment once the owner has said the picture's quality is part of the target and the start belt has a price at its exact item level.
+# quality:
+#   type: abrasive
+#   min_percent: 16

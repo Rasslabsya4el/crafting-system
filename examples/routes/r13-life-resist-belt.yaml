@@ -20,9 +20,8 @@
 # The guide starts from a magic belt and so does the target (#576), so no rule makes the belt magic. The guide's "tier-1 resistance" is any of fire, cold and
 # lightning (the target asks for two of the three), and an unstated tier is the top tier (owner rule).
 #
-# NOT IN THE POST: the last rule of step 3, the Abrasive Catalyst. The picture's belt has "Quality (Attack Modifiers): +16%" and the
-# target asks it (OR-58), but no step of the post makes it; the rule is here so that the route ends at the target's item. Whether the
-# picture's quality belongs to the target is asked of the owner (#1289's pull request): if not, that rule and the target's `quality:` go.
+# The picture's belt also has "Quality (Attack Modifiers): +16%"; no step of the post makes it and the target does not ask it yet (see
+# the target file), so no rule applies a catalyst.
 
 name: R13, Reddit guide
 
@@ -44,13 +43,6 @@ rules:
         - family: IncreasedWeaponElementalDamagePercent
           status: absent
     do: "Bench craft (24-32)% increased Elemental Damage with Attack Skills"
-  # NOT IN THE POST (see above): the picture's 16% quality, on the belt that holds every mod.
-  - when:
-      rarity: rare
-      requirements:
-        - family: ItemGenerationCanHaveMultipleCraftedMods
-          status: passing
-    do: Abrasive Catalyst
 
   # Step 3: life and two tier-1 resistances are on the belt, in the three ways to pick two of the three: the multimod first.
   - when:
