@@ -16,7 +16,7 @@ from coarse_support import abstraction
 from test_cli_envelope_build import listing_world
 from test_packed_walk_light import START_ITEM, make_offers
 
-from crafting_system import budget
+from crafting_system import budget, parallel
 from crafting_system.abstraction import Abstraction, _pattern
 from crafting_system.abstraction._pattern import Pattern, PatternBuilder, Tally, build_pattern_model
 from crafting_system.planner import _envelope
@@ -30,8 +30,13 @@ REASON = "the test net"
 
 @pytest.fixture(autouse=True)
 def every_piece_asks(monkeypatch):
+    """Every piece of every making asks its net, and no question reads the memory: a net on memory reads `parallel.held_mb` (`/proc`'s PSS, which
+    costs about 8 ms per GB the process holds), and with every piece asking, the search's bound build alone asks it some 10,000 times. In a
+    test process that held 2 GB (a CI shard after its other tests) that took this file past the suite's 300 s (#1251). A test that wants a
+    memory reading patches its own."""
     monkeypatch.setattr(budget, "ASK_EVERY", 1)
-    monkeypatch.setattr(budget, "ASK_SECONDS", 0.0)  # no clock: every piece asks
+    monkeypatch.setattr(budget, "ASK_SECONDS", 0.0)  # no gate: every piece asks, whatever the clock reads
+    monkeypatch.setattr(parallel, "held_mb", lambda: 1.0)
 
 
 class Inside:
@@ -175,7 +180,7 @@ def test_the_search_stops_at_its_memory_net_inside_one_kernel_and_says_so(monkey
     ab = abstraction()
     inside = Inside()
     monkeypatch.setattr(Abstraction, "kernel", inside.wrap(Abstraction.kernel))
-    monkeypatch.setattr(_envelope, "resident_mb", lambda: 10_000.0 if inside.depth else 1.0)  # the search's reading; the build reads its own
+    monkeypatch.setattr(_envelope, "resident_mb", lambda: 10_000.0 if inside.depth else 1.0)  # the search's reading; the build's is the fixture's
     with pytest.raises(NoPolicy) as stopped:
         envelope_result(ab, ab.compress(START_ITEM), make_offers(), net=Net(memory_mb=5_000.0))
     assert "10,000 MB" in str(stopped.value.stopped) and "inside the making" in str(stopped.value.stopped)
