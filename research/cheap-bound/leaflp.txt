@@ -1,0 +1,78 @@
+R04: offers 6220, open leaves 9 (necessary 5), today's floor rho 0.7884
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Crusader Item x1.00 (4 c)
+  LP HI: 25.75 ; offers used: Orb of Transmutation x216.38 (0.01048 c); Essence of Insanity x1.00 (20.26 c); Deafening Essence of Rage x1.00 (3.22 c)
+  guide's labels: 8; in the LP's offers: ['Deafening Essence of Rage', 'Essence of Insanity']; with a chance on a necessary open leaf: ['Deafening Essence of Rage', 'Essence of Insanity', 'Exalted Orb']; with none: ['Bench craft (7-12)% increased Attack Speed', 'Bench craft Cannot roll Attack Modifiers', 'Fracturing Orb', 'Orb of Annulment', 'Remove Crafted Mods']; not offered under that label: []
+  per leaf, least cost over chance: family Pierce, mod AdditionalPierceEssen: 20.26 by Essence of Insanity | family Strength, mod StrengthEssence7_: 3.22 by Deafening Essence of Rage | family AdditionalArrows, mod AdditionalA: 2.32 by Orb of Transmutation | family IncreasedLife (top tier, not craf: 0.35 by Orb of Transmutation | family DamageWithWeaponTypeSkill (top ti: 0.35 by Orb of Transmutation
+  offers by floor kind: {'reroll': 6034, 'terminal': 32, 'add': 12, 'move': 72, 'craft': 59, 'refused': 5, 'veil': 1, 'veiled': 4, 'restart': 1}; with no per-leaf bound today: 5984
+R05: offers 4895, open leaves 2 (necessary 2), today's floor rho 2.369
+  LP LO: 4.09 ; offers used: Harvest Reforge More Likely x1.00 (4.088 c)
+  LP HI: 9.28 ; offers used: Screaming Essence of Misery x28.11 (0.2156 c); Deafening Essence of Rage x1.00 (3.22 c)
+  guide's labels: 2; in the LP's offers: ['Deafening Essence of Rage']; with a chance on a necessary open leaf: ['Deafening Essence of Rage']; with none: []; not offered under that label: ['Intrinsic Catalyst']
+  per leaf, least cost over chance: family Strength, mod StrengthEssence7_: 3.22 by Deafening Essence of Rage | family IncreasedLife (tier 1 or better, : 6.28 by Screaming Essence of Misery
+  offers by floor kind: {'reroll': 4779, 'terminal': 18, 'add': 14, 'craft': 73, 'veil': 1, 'veiled': 4, 'move': 1, 'refused': 4, 'restart': 1}; with no per-leaf bound today: 4685
+R06: offers 9330, open leaves 7 (necessary 2), today's floor rho 4
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Hunter Item x1.00 (4 c)
+  LP HI: 4.42 ; offers used: Orb of Transmutation x114.70 (0.01048 c); Deafening Essence of Rage x1.00 (3.22 c)
+  guide's labels: 3; in the LP's offers: ['Deafening Essence of Rage']; with a chance on a necessary open leaf: ['Deafening Essence of Rage', 'Exalted Orb']; with none: ['Orb of Annulment']; not offered under that label: []
+  per leaf, least cost over chance: family PercentageAllAttributes, mod Perc: 1.23 by Orb of Transmutation | family Strength, mod StrengthEssence7_: 3.22 by Deafening Essence of Rage
+  offers by floor kind: {'refused': 17, 'reroll': 9125, 'terminal': 27, 'move': 97, 'craft': 58, 'veil': 1, 'veiled': 4, 'restart': 1}; with no per-leaf bound today: 9105
+R08: offers 5344, open leaves 2 (necessary 2), today's floor rho 3.105
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Crusader Item x1.00 (4 c)
+  LP HI: 4.32 ; offers used: Screaming Essence of Suffering x20.81 (0.2078 c)
+  guide's labels: 1; in the LP's offers: []; with a chance on a necessary open leaf: ['Fossils Dense Fossil + Shuddering Fossil']; with none: []; not offered under that label: []
+  per leaf, least cost over chance: family DefencesPercent (top tier, not cr: 4.32 by Screaming Essence of Suffering | family MovementVelocity (tier 1 or bette: 4.32 by Screaming Essence of Suffering
+  offers by floor kind: {'reroll': 5159, 'refused': 49, 'terminal': 33, 'add': 15, 'craft': 71, 'veil': 1, 'veiled': 4, 'move': 1, 'implicit': 9, 'restart': 2}; with no per-leaf bound today: 5112
+R09: offers 5333, open leaves 2 (necessary 2), today's floor rho 2.898
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Crusader Item x1.00 (4 c)
+  LP HI: 4.05 ; offers used: Screaming Essence of Suffering x19.50 (0.2078 c)
+  guide's labels: 1; in the LP's offers: []; with a chance on a necessary open leaf: ['Fossils Pristine Fossil + Shuddering Fossil']; with none: []; not offered under that label: []
+  per leaf, least cost over chance: +# to maximum Life (top tier, not crafte: 4.05 by Screaming Essence of Suffering | family MovementVelocity (tier 1 or bette: 4.04 by Screaming Essence of Suffering
+  offers by floor kind: {'reroll': 5159, 'refused': 49, 'terminal': 33, 'add': 15, 'craft': 60, 'veil': 1, 'veiled': 4, 'move': 1, 'implicit': 9, 'restart': 2}; with no per-leaf bound today: 5111
+R10: offers 4254, open leaves 3 (necessary 3), today's floor rho 3.23
+  LP LO: 4.09 ; offers used: Harvest Reforge More Likely x1.00 (4.088 c)
+  LP HI: 5.83 ; offers used: Screaming Essence of Suffering x16.34 (0.2078 c); Bench craft (21-25)% chance to Avoid Elemental Ailments x1.00 (2 c); Shrieking Essence of Spite x0.54 (0.8 c)
+  guide's labels: 2; in the LP's offers: ['Bench craft (21-25)% chance to Avoid Elemental Ailments', 'Shrieking Essence of Spite']; with a chance on a necessary open leaf: ['Bench craft (21-25)% chance to Avoid Elemental Ailments', 'Shrieking Essence of Spite']; with none: []; not offered under that label: []
+  per leaf, least cost over chance: family Intelligence, mod Intelligence8: 0.8 by Shrieking Essence of Spite | +# to maximum Life (tier 2 or better, no: 3.52 by Screaming Essence of Suffering | family AvoidElementalStatusAilments, mod: 2.0 by Bench craft (21-25)% chance to Avoid Elemental Ailments
+  offers by floor kind: {'reroll': 4127, 'refused': 9, 'terminal': 20, 'add': 15, 'craft': 67, 'veil': 1, 'veiled': 4, 'move': 1, 'implicit': 9, 'restart': 1}; with no per-leaf bound today: 4042
+R11: offers 5557, open leaves 10 (necessary 2), today's floor rho 1.025
+  LP LO: 4.09 ; offers used: Harvest Reforge More Likely x1.00 (4.088 c)
+  LP HI: 4.37 ; offers used: Screaming Essence of Suffering x21.02 (0.2078 c)
+  guide's labels: 2; in the LP's offers: []; with a chance on a necessary open leaf: ['Shrieking Essence of Loathing']; with none: ['Bench craft +(26-30) to Dexterity']; not offered under that label: []
+  per leaf, least cost over chance: family DefencesPercent (tier 3 or better: 1.47 by Screaming Essence of Suffering | +# to maximum Life (tier 1 or better, no: 4.37 by Screaming Essence of Suffering
+  offers by floor kind: {'reroll': 5413, 'terminal': 20, 'add': 15, 'refused': 5, 'craft': 88, 'veil': 1, 'veiled': 4, 'move': 1, 'implicit': 9, 'restart': 1}; with no per-leaf bound today: 5322
+R12: offers 5960, open leaves 1 (necessary 1), today's floor rho 4.088
+  LP LO: 4.09 ; offers used: Harvest Reforge More Likely x1.00 (4.088 c)
+  LP HI: 38.23 ; offers used: Harvest Reforge Lightning x30.18 (1.266 c)
+  guide's labels: 1; in the LP's offers: ['Harvest Reforge Lightning']; with a chance on a necessary open leaf: ['Harvest Reforge Lightning']; with none: []; not offered under that label: []
+  per leaf, least cost over chance: +1 to Level of all Lightning Skill Gems: 38.23 by Harvest Reforge Lightning
+  offers by floor kind: {'reroll': 5852, 'terminal': 18, 'add': 14, 'craft': 65, 'veil': 1, 'veiled': 4, 'move': 1, 'refused': 4, 'restart': 1}; with no per-leaf bound today: 5758
+R13: offers 5713, open leaves 7 (necessary 4), today's floor rho 1.099
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Crusader Item x1.00 (4 c)
+  LP HI: 361.71 ; offers used: Orb of Augmentation x49.75 (0.05186 c); Bench craft Can have up to 3 Crafted Modifiers x1.00 (353.2 c); Bench craft (24-32)% increased Elemental Damage with Attack Skills x1.00 (0.494 c); Bench craft (15-17)% increased Damage x1.00 (5.44 c)
+  guide's labels: 5; in the LP's offers: ['Bench craft (15-17)% increased Damage', 'Bench craft (24-32)% increased Elemental Damage with Attack Skills', 'Bench craft Can have up to 3 Crafted Modifiers']; with a chance on a necessary open leaf: ['Bench craft (15-17)% increased Damage', 'Bench craft (24-32)% increased Elemental Damage with Attack Skills', 'Bench craft Can have up to 3 Crafted Modifiers', 'Orb of Alteration', 'Regal Orb']; with none: []; not offered under that label: []
+  per leaf, least cost over chance: family IncreasedLife (tier 1 or better, : 2.58 by Orb of Augmentation | family AllDamage, mod JunMaster2AllDamag: 5.44 by Bench craft (15-17)% increased Damage | family IncreasedWeaponElementalDamagePer: 0.49 by Bench craft (24-32)% increased Elemental Damage with Attack Skills | family ItemGenerationCanHaveMultipleCraf: 353.2 by Bench craft Can have up to 3 Crafted Modifiers
+  offers by floor kind: {'refused': 79, 'reroll': 5532, 'terminal': 32, 'add': 13, 'craft': 48, 'move-add': 1, 'move': 1, 'veil': 1, 'veiled': 4, 'restart': 2}; with no per-leaf bound today: 5487
+R14: offers 10915, open leaves 5 (necessary 5), today's floor rho 0.1037
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Hunter Item x1.00 (4 c)
+  LP HI: 14.26 ; offers used: Orb of Alchemy x32.06 (0.1235 c); Orb of Augmentation x16.49 (0.05186 c); Bench craft +2 to Level of Socketed Support Gems x1.00 (5.44 c); Bench craft +(18-20)% to Chaos Damage over Time Multiplier x1.00 (4 c)
+  guide's labels: 9; in the LP's offers: ['Bench craft +(18-20)% to Chaos Damage over Time Multiplier', 'Bench craft +2 to Level of Socketed Support Gems']; with a chance on a necessary open leaf: ['Bench craft +(18-20)% to Chaos Damage over Time Multiplier', 'Bench craft +2 to Level of Socketed Support Gems', 'Exalted Orb', 'Orb of Alteration', 'Regal Orb']; with none: ['Bench craft Can have up to 3 Crafted Modifiers', 'Bench craft Cannot roll Attack Modifiers', 'Orb of Annulment', 'Remove Crafted Mods']; not offered under that label: []
+  per leaf, least cost over chance: family IncreasedAttackSpeed (tier 1 or b: 4.61 by Orb of Alchemy | family IncreaseSocketedGemLevel (top tie: 0.1 by Orb of Augmentation | family WeaponCasterDamagePrefix (top tie: 1.04 by Orb of Augmentation | family DamageOverTimeMultiplier, mod Jun: 4.0 by Bench craft +(18-20)% to Chaos Damage over Time Multiplier | family IncreaseSpecificSocketedGemLevel,: 5.44 by Bench craft +2 to Level of Socketed Support Gems
+  offers by floor kind: {'reroll': 10761, 'terminal': 34, 'craft': 73, 'add': 3, 'refused': 37, 'veil': 1, 'veiled': 4, 'restart': 2}; with no per-leaf bound today: 10674
+R17: offers 7333, open leaves 6 (necessary 6), today's floor rho 3.125
+  LP LO: 4.0 ; offers used: Beastcraft Add a Mod to a Crusader Item x1.00 (4 c)
+  LP HI: 20.26 ; offers used: Orb of Transmutation x1933.50 (0.01048 c)
+  guide's labels: 14; in the LP's offers: ['Orb of Transmutation']; with a chance on a necessary open leaf: ['Exalted Orb', 'Orb of Alteration', 'Orb of Transmutation', 'Regal Orb']; with none: ['Bench craft Can have up to 3 Crafted Modifiers', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Prefixes Cannot Be Changed', 'Harvest Add Remove Lightning', 'Imprint with the Fenumal Plagued Arachnid', 'Imprint with the Fenumal Plagued Arachnid, replacing imprint 1', 'Orb of Annulment', 'Remove Crafted Mods', 'Restore imprint 1']; not offered under that label: ['Intrinsic Catalyst']
+  per leaf, least cost over chance: family GlobalSkillGemLevel (top tier, no: 20.26 by Orb of Transmutation | family GlobalDamageTypeGemLevel, mod Glo: 5.07 by Orb of Transmutation | family AllAttributes (top tier, not craf: 1.51 by Orb of Transmutation | family Dexterity (top tier, not crafted): 1.21 by Orb of Transmutation | family CriticalStrikeChanceIncrease (top: 1.21 by Orb of Transmutation | family EnergyShieldPercent (top tier, no: 1.02 by Orb of Transmutation
+  offers by floor kind: {'refused': 15, 'reroll': 7089, 'terminal': 36, 'add': 11, 'move': 95, 'craft': 81, 'veil': 1, 'veiled': 4, 'restart': 1}; with no per-leaf bound today: 7075
+R20: offers 10878, open leaves 4 (necessary 4), today's floor rho 3.733
+  LP LO: 4.09 ; offers used: Harvest Reforge More Likely x1.00 (4.088 c)
+  LP HI: 54.75 ; offers used: Screaming Essence of Doubt x136.60 (0.2133 c); Essence of Horror x1.00 (25.61 c)
+  guide's labels: 6; in the LP's offers: ['Essence of Horror']; with a chance on a necessary open leaf: ['Essence of Horror', 'Harvest Reforge Fire', 'Harvest Reforge Influence']; with none: ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Suffixes Cannot Be Changed', 'Orb of Annulment']; not offered under that label: []
+  per leaf, least cost over chance: family Supported, mod SocketedGemsDealMo: 25.61 by Essence of Horror | family MineSupported, mod MineDamageTrap: 29.32 by Screaming Essence of Doubt | family HelmetAilmentUber, mod IncreasedB: 9.22 by Screaming Essence of Doubt | family AreaDamage, mod AreaDamageSupport: 6.65 by Screaming Essence of Suffering
+  offers by floor kind: {'reroll': 10753, 'terminal': 19, 'craft': 47, 'add': 5, 'veil': 1, 'veiled': 4, 'move': 1, 'refused': 46, 'restart': 2}; with no per-leaf bound today: 10659
+R24: offers 4253, open leaves 6 (necessary 3), today's floor rho 3.656
+  LP LO: 4.09 ; offers used: Harvest Reforge More Likely x1.00 (4.088 c)
+  LP HI: 13.23 ; offers used: Screaming Essence of Doubt x52.55 (0.2133 c); Pick 1 x1.00 (1.048e-08 c); Deafening Essence of Torment x1.00 (2.02 c)
+  guide's labels: 9; in the LP's offers: ['Deafening Essence of Torment', 'Pick 1']; with a chance on a necessary open leaf: ['Deafening Essence of Torment', 'Pick 1', 'Pick 2', 'Pick 3', 'Veiled Chaos Orb']; with none: ['Bench craft Suffixes Cannot Be Changed', 'Harvest Add Remove Fire', 'Orb of Annulment', 'Unveil']; not offered under that label: []
+  per leaf, least cost over chance: family MovementVelocity, mod JunMasterVe: 0.0 by Pick 1 | family ReducedShockChance, mod ChanceToA: 2.02 by Deafening Essence of Torment | family ChanceToSuppressSpells (tier 1 or: 11.38 by Screaming Essence of Doubt
+  offers by floor kind: {'reroll': 4126, 'refused': 10, 'terminal': 20, 'add': 15, 'craft': 66, 'veil': 1, 'veiled': 4, 'move': 1, 'implicit': 9, 'restart': 1}; with no per-leaf bound today: 4042
