@@ -36,10 +36,12 @@ the bound's model: whether an offer outside it, its floor raised as far as it go
 the offer joins the model (`_pattern_bound`, #988).
 """
 
+import contextlib
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 
+from crafting_system import budget
 from crafting_system.abstraction import Abstraction, CompressedState, Status
 from crafting_system.abstraction._pattern import Tally
 
@@ -94,7 +96,7 @@ class OfferFloors:
         self.ab = abstraction
         self.start = start
         self.item = item
-        self.stop = stop  # the net: asked between two offers of the kinds and before every raise of a floor (an exact chance, milliseconds); raises `FloorsStopped`
+        self.stop = stop  # the net: asked between two offers of the kinds and before every raise of a floor, and inside the making of a kernel (`inside`); raises `FloorsStopped`
         data = abstraction.data
         goal = abstraction.goal
         kinds = []
@@ -120,12 +122,14 @@ class OfferFloors:
             elif kind in FINISHING:
                 pbar = ONE if any(finishes(leaf, named, made) for leaf in chosen_leaves) else ZERO  # a craft or a veiled choice lands in E only by passing a leaf of U
             self.entries.append(_Entry(index, offer, kind, 0, pbar))
-        through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
+        with self.inside():
+            through_listing(abstraction, start, shape, self.chosen, self.entries)  # a restart into an unopened listing is counted with its draw
         self.bare = replace(shape, slots=())
         self.shape = (shape.flags, shape.fractured)
         self.unimprinted = any(kind == REFUSED for kind, _named in kinds)  # restores set aside: a state that holds an imprint is of another shape (#1074)
         if self.chosen:
-            declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
+            with self.inside():
+                declared_pbars(abstraction, self.bare, item, self.chosen, self.entries, self.ask)  # every set's level 0 from its class at once (#1073)
         self.rho = best_first_rho(self.entries, self._raise) if self.chosen else 0.0
 
     def ask(self) -> None:
@@ -133,13 +137,25 @@ class OfferFloors:
         if self.stop is not None and (reason := self.stop()) is not None:
             raise FloorsStopped(reason)
 
+    @contextlib.contextmanager
+    def inside(self) -> Iterator[None]:
+        """Ask the net inside the making of the kernels of the block too (`budget.asking`, #1238): one kernel can be the whole run. The listing draw
+        of R20 under `Reads.influenced` grew past 12 GB in `through_listing` with the net of 3,000 MB never asked. Only on the clock and on memory:
+        a build counted in pieces of work (`tally`) asks at its pieces alone, so that it stops at the same point on every machine."""
+        try:
+            with budget.asking(self.stop if self.tally is None else None):
+                yield
+        except budget.NetReached as reached:
+            raise FloorsStopped(reached.reason) from None
+
     def _raise(self, entry: _Entry, level: int) -> None:
         self.ask()
         if self.tally is not None:
             self.tally.done += 1
-        entry.kind, entry.pbar, entry.level = _raised(
-            self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level
-        )
+        with self.inside():
+            entry.kind, entry.pbar, entry.level = _raised(
+                self.ab, self.bare, self.item, self.chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level
+            )
 
     # ---- the classes of states ------------------------------------------------------------------------------------------
 
