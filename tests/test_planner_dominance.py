@@ -33,6 +33,7 @@ from test_cli_offers import with_currency_names
 from crafting_system.abstraction import Goal
 from crafting_system.actions import catalog, influence
 from crafting_system.data.elevated import ElevatedMods
+from crafting_system.items import Influence
 from crafting_system.planner import PlanError, PlanSettings, plan_target
 from crafting_system.planner import _envelope, _limits
 from crafting_system.planner._offer_kinds import TERMINAL, _kind_of
@@ -167,3 +168,24 @@ def test_a_goal_with_a_roll_limit_leaves_the_orb_out_and_says_it_as_a_model_gap(
     assert chosen.offers == ()
     (gap,) = [limit for limit in chosen.limits if limit.kind == _limits.LISTING_GAP]
     assert gap.labels == (_limits.kind_title("orb-of-dominance"),) and gap.names == (ROLLS_UNFOLLOWED,)
+
+
+def test_a_roll_limited_goal_is_planned_without_the_orb_where_it_was_refused_before(tmp_path):
+    # A rare helmet with no influence and the Plain prefix, the goal the top Shaper prefix P3 with a roll limit at its lowest values, and the
+    # methods the orb and the influenced Exalted Orbs: the orb is listed (item level 84) but left out for the roll limit, said as a model gap,
+    # and the plan is #818's Shaper's Exalted Orb until P3: `V = 9e + 8S`, 490 at e = 10, S = 50.
+    lowest = [min(stat.min, stat.max) for stat in DATA.mods[P3].stats]
+    limit = "[" + ", ".join([str(lowest[0])] + ["null"] * (len(lowest) - 1)) + "]"
+    path = tmp_path / "limited.yaml"
+    text = TARGET.format(influences="", family="ContractHelmetShaperP", mod=P3, mods=f"    - mod: {PLAIN}\n      values: {list(_low(PLAIN))}")
+    path.write_text(text.replace(f"    mod: {P3}\n", f"    mod: {P3}\n    min_roll: {limit}\n"), encoding="utf-8")
+    target = dataclasses.replace(load_target(path, DATA), actions=("influenced-exalted-orb", *METHODS))
+    names = {"Orb of Dominance": 30.0, **{f"{influence.value.capitalize()}'s Exalted Orb": 1000.0 for influence in Influence}}
+    names["Shaper's Exalted Orb"] = 10.0
+    day = "2026-10-30"
+    entries = {name: PriceEntry(value, "poe.ninja", None, None, Provenance(EXCHANGE, "Test", day, 1e9)) for name, value in names.items()}
+    prices = PriceFile("Test", datetime.datetime(2026, 10, 30, tzinfo=datetime.UTC), 300.0, entries)
+    plan = _plan(target, prices)
+    assert plan.mean_remaining == pytest.approx(9 * 10.0 + 8 * S, rel=1e-9)
+    gaps = [limit for limit in plan.limits if limit.kind == _limits.LISTING_GAP]
+    assert len(gaps) == 1 and gaps[0].labels == (_limits.kind_title("orb-of-dominance"),) and gaps[0].names == (ROLLS_UNFOLLOWED,)

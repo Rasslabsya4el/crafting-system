@@ -19,8 +19,8 @@ offers' floors class the orb TERMINAL (`planner/_offer_kinds`: it reads the impl
 shape), so its lower bound in the envelope search is its price. The Orb of Dominance is a planner kind since #1195 (batch B2, OR-37),
 offered by default (OR-41): a goal names the next tier of an influenced mod by its family and tier, and an Elevated mod by `mod:` (it has no
 natural tier); the offers' floors class it TERMINAL too (it reads the junk and the influenced mods and adds a mod it does not name), so its
-lower bound is its price. The beast recipes are not a planner kind yet (their `why_not`). The compressed state tells the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155
-(below). A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
+lower bound is its price. The beast recipes are not a planner kind yet (their `why_not`). The compressed state tells the influenced mods
+apart where Dominance reads them and keeps the Elevated tier since ticket #155 (below). A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
 
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
