@@ -1,7 +1,7 @@
 """Shared helpers of the route view tests (ticket #78): golden pages and hand-made policies on the fixture belt.
 
 `assert_golden(name, html)` compares a page with `tests/golden/<name>.html`; `UPDATE_GOLDEN=1` rewrites it and
-a missing file fails. `hand_input(...)` builds a `RouteInput` for a policy chosen by a small function: the plan
+a missing file fails. The lists a page reads off the catalog are not recorded (`catalog_lists_support`, #1277). `hand_input(...)` builds a `RouteInput` for a policy chosen by a small function: the plan
 is made by hand (`make_plan` cannot enable bench actions yet), the abstraction has the bench crafts enabled so
 the junk of a state is tracked, the offers are priced with `price_offers`, the actions are the solver's own
 (`offer_action`), the risk is `risk.evaluate`. The solver's values are not read by the view and left empty.
@@ -15,6 +15,7 @@ from pathlib import Path
 
 import golden_diff
 from abstraction_oracle import crafted_item
+from catalog_lists_support import CATALOG_LISTS, one_element_to_a_line, page_without
 from items_support import DATA, item, roll
 from plan_support import planner_plan
 from two_runs_support import assert_counted_in_states
@@ -60,11 +61,18 @@ COLD_REQ = Requirement("ColdResistance", None, frozenset({COLD}))
 HYSTERIA_REQ = Requirement(None, "Elemental Penetration during Flask Effect", frozenset({HYSTERIA_MOD}))
 
 
-def assert_golden(name: str, html: str, extension: str = "html") -> None:
-    """The page equals `tests/golden/<name>.<extension>` (`html`, or `txt` for a text report); `UPDATE_GOLDEN=1` writes it first, a missing file fails."""
+def assert_golden(name: str, html: str, extension: str = "html", *, without: tuple[str, ...] = CATALOG_LISTS) -> None:
+    """The page equals `tests/golden/<name>.<extension>` (`html`, or `txt` for a text report); `UPDATE_GOLDEN=1` writes it first, a missing file fails.
+
+    A page is recorded and compared without the labels of the groups of limits `without` (`catalog_lists_support.page_without`: the lists every
+    new method changes, #1277) and with one element to a line, so that two changes of a page merge; a text report comes here already
+    without them (`text_without`).
+    """
     __tracebackhide__ = True
     assert_counted_in_states(html, f"the golden page {name}")  # a golden is a second run compared with the first (tests/two_runs_support.py)
     path = GOLDEN / f"{name}.{extension}"
+    if golden_diff.kind_of(path) == "html":
+        html = one_element_to_a_line(page_without(html, without))
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN.mkdir(exist_ok=True)
         path.write_text(html, encoding="utf-8", newline="\n")

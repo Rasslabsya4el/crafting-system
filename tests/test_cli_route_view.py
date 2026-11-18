@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import pytest
+from catalog_lists_support import FIXTURE_WORLD
 from cli_support import R12, TODAY, price_file
 from cli_support import START as START_KEY
 from items_support import DATA, roll
@@ -309,7 +310,7 @@ def test_golden_r12_through_the_command_the_buy_spec_is_computed_from_the_target
     assert code == 0
     page = out.parent / "r12-lightning-amulet.route.html"
     assert f"Route view written to {page}" in capsys.readouterr().out
-    assert_golden("r12_fixture", page.read_text(encoding="utf-8"))
+    assert_golden("r12_fixture", page.read_text(encoding="utf-8"), without=FIXTURE_WORLD)
 
 
 def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_path, capsys, counted_in_states):
@@ -317,7 +318,7 @@ def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_pa
 
     assert code == 0
     html = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
-    assert_golden("r12_fixture_given_route", html)
+    assert_golden("r12_fixture_given_route", html, without=FIXTURE_WORLD)
     assert "<h2>" not in html and "<nav>" not in html
     ids = re.findall(r' id="([^"]+)"', html)
     assert len(ids) == len(set(ids))
@@ -330,7 +331,7 @@ def test_golden_a_given_route_that_differs_is_a_second_section_with_its_differin
 
     html = render_page(Page("Test page", merge_sections(policy, drawn, "Restart on a lone gem")))
 
-    assert_golden("given_route_differs", html)
+    assert_golden("given_route_differs", html, without=FIXTURE_WORLD)
     assert html.count("<h2>") == 2 and "<nav>" in html
     assert html.count("What this answer leaves out") == 1  # the plan's limits are said once, in the planner's section
     ids = re.findall(r' id="([^"]+)"', html)

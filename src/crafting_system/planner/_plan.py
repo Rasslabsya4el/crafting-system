@@ -584,7 +584,9 @@ RISK_STAGE = "the work on the cost figures (the median cost and the cost 9 runs 
 RISK_KEPT = "the figures of the coarser step already worked out are kept, or none when no step was"
 
 
-def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False, walked: bool = False) -> Net | None:
+def search_net(
+    clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False, walked: bool = False, blind: int | None = None
+) -> Net | None:
     """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
     Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net. `states`, when
     given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`).
@@ -603,7 +605,9 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     `LATE`, and at most half of the time the `searches - 1` rounds after it have, so the last round (all the time left) goes past nothing
     and the run keeps its net (OR-40). `walked` (#1224): the plan in hand is one a stopped search walked to (#1142); its build has the same
     net and room, and keeps a quarter of it for the search unless the pace its model grows at ends within that room
-    (`abstraction._pattern.Pace.verdict`)."""
+    (`abstraction._pattern.Pace.verdict`). `blind` (#1268): the search begins with no plan in hand and `blind` rounds are left, this one
+    included: should its bound's build end before it is complete, its search keeps to its share of the net and gives way with no plan
+    (`Net.blind`, `_envelope_plan.YIELDED`)."""
     if clock is None:
         return None
     given: Budget = clock.budget
@@ -618,6 +622,7 @@ def search_net(clock: Clock | None, searches: int = 1, give_way=None, states: in
     return Net(
         seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
         give_way=give_way, pieces=pieces, held=held, walked=walked and not held, late=min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held or walked else 0.0,
+        blind=None if held or walked or blind is None or blind <= 1 else blind,
     )  # fmt: skip
 
 
@@ -879,15 +884,6 @@ def _make_plan(
     donated = tuple(
         p for p in priced if not isinstance(p.offer.action, BuyStartItem) and takes_inputs(p.offer.action) and p not in awakened
     )  # offers that take donors (#225)
-    finish = None
-    if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
-        try:
-            finish = plan_finish(
-                data, target, prices, price_source, names=finish_names, goal_takes_corrupted=goal.takes_corrupted,
-                mod_actions=[p.offer.action for p in priced if not isinstance(p.offer.action, BuyStartItem)],
-            )  # fmt: skip
-        except (FinishRefused, OutOfScopeError, ArithmeticError) as error:  # ArithmeticError: the finish did not converge
-            raise PlanError(str(error)) from error
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
     # a planned axis is answered at its plan reading (the abstraction's default), its claim an approximate input (OR-11, OR-23); any other
     # axis is solved at every reading of its grid by the interval driver (#589, ADR-0012, ADR-0022): the plan is the route at the plan reading
@@ -916,8 +912,20 @@ def _make_plan(
     abstraction = model()
     start = abstraction.compress(listing or target.start_item)
     if round_call is not None and round_call.floors:  # only the figure the rounds order the groups by (`_rounds.by_floor`, #1135)
+        # asked before the finish is solved (the floors need no finish): its net is what is left of the order pass's share (#1241)
         net = search_net(clock, round_call.searches, states=round_call.states, held=True)
+        if net is not None and net.seconds is not None and round_call.seconds is not None:
+            net = replace(net, seconds=min(net.seconds, round_call.seconds))
         raise _rounds.Floor(offers_floor(abstraction, start, priced, target.start_item, build_stop(net, time.perf_counter()), None if net is None else net.pieces))
+    finish = None
+    if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
+        try:
+            finish = plan_finish(
+                data, target, prices, price_source, names=finish_names, goal_takes_corrupted=goal.takes_corrupted,
+                mod_actions=[p.offer.action for p in priced if not isinstance(p.offer.action, BuyStartItem)],
+            )  # fmt: skip
+        except (FinishRefused, OutOfScopeError, ArithmeticError) as error:  # ArithmeticError: the finish did not converge
+            raise PlanError(str(error)) from error
 
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
@@ -1025,7 +1033,7 @@ def _make_plan(
         if twins:
             limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
         if envelope:
-            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held, round_call.walked) if round_call is not None else search_net(clock)
+            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held, round_call.walked, round_call.blind) if round_call is not None else search_net(clock)
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
                     gap, gap_after = search_gap(clock)
