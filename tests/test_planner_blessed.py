@@ -109,13 +109,15 @@ def test_an_item_with_every_mod_costs_its_blessed_orbs_eleven_b():
     assert plan.total_mean == pytest.approx(11 * B, rel=1e-12)  # 2.75
     assert not any(priced.label == "Blessed Orb" for priced in plan.offers)  # the mods are planned without the wish
     (said,) = [limit for limit in plan.limits if limit.kind == "implicit-finish"]
-    assert said.labels == ("Blessed Orb",) and "11.00 on average" in said.why and "2.75 Chaos" in said.why and "rolls 30 or more" in said.why
+    assert said.labels == ("Blessed Orb",) and "11.00 on average" in said.why and "2.75 Chaos" in said.why and "rolls 30 (a chance" in said.why
 
 
 def test_a_lower_wish_costs_eleven_thirds_b():
     plan = _plan(HELD.replace("min_roll: 30", "min_roll: 28"))
     assert plan.implicit_finish.uses == Fraction(11, 3)
     assert plan.total_mean == pytest.approx(11 / 3 * B, rel=1e-12)
+    (said,) = [limit for limit in plan.limits if limit.kind == "implicit-finish"]
+    assert "rolls 28 or more (a chance" in said.why  # below the top of (20-30) the wish is a floor; at the top it is the value itself
 
 
 def test_a_start_that_holds_the_roll_asked_adds_nothing():
@@ -161,7 +163,7 @@ def test_searched_alone_the_bound_is_the_plans_cost_from_the_first_standing():
 
 
 def test_a_run_whose_methods_name_no_blessed_orb_is_refused_with_the_reason():
-    with pytest.raises(PlanError, match="rolls 30 or more, and no Blessed Orb is among the methods offered"):
+    with pytest.raises(PlanError, match="rolls 30, and no Blessed Orb is among the methods offered"):
         _plan(CRAFTED, methods=("bench-craft",))
 
 

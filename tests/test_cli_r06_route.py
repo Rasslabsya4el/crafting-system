@@ -51,7 +51,7 @@ def test_with_a_start_price_r06_finishes_its_implicit_with_eleven_blessed_orbs_a
     assert plan.quality_finish is not None and plan.quality_finish.catalyst.label == "Intrinsic Catalyst"
     assert not any(priced.label in ("Blessed Orb", "Intrinsic Catalyst") for priced in plan.offers)  # the mods are planned without either
     (said,) = [limit for limit in plan.limits if limit.kind == "implicit-finish"]
-    assert "+(25-35) to Strength rolls 35 or more" in said.why
+    assert "+(25-35) to Strength rolls 35 (a chance" in said.why
 
 
 def test_without_its_implicit_r06_finishes_its_quality_with_the_intrinsic_catalyst_alone_of_the_catalysts(data, target):

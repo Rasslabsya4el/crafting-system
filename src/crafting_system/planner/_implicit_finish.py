@@ -152,8 +152,14 @@ def _words(data: GameData, start: Item, wanted: Iterable[ImplicitRequirement]) -
     for wish in wanted:
         held = [entry for entry in start.implicits if entry.mod_id in wish.mod_ids]
         text = (data.mods[held[0].mod_id].text or held[0].mod_id) if held else "the implicit"
-        rolls = [str(limit) for limit in (wish.min_roll or ()) if limit is not None]
-        parts.append(f"{text} rolls {' and '.join(rolls)} or more" if rolls else f"{text} is held")
+        stats = data.mods[held[0].mod_id].stats if held else ()
+        # a limit at the top of its stat's range is that value exactly: "rolls 35", not "35 or more" (crafter, #1231)
+        rolls = [
+            str(limit) if index < len(stats) and limit >= stats[index].max else f"{limit} or more"
+            for index, limit in enumerate(wish.min_roll or ())
+            if limit is not None
+        ]
+        parts.append(f"{text} rolls {' and '.join(rolls)}" if rolls else f"{text} is held")
     return "; ".join(parts)
 
 
