@@ -730,13 +730,16 @@ class AddedDraw:
     one use keeps those four, keeps every mod but at most ones it removes, and adds ONE mod drawn by weight from the mods of `pool` (with `tag`
     when it is not None) whose family the item does not hold and whose tags its Attack or Caster metamod does not keep out, on ONE side of `free`
     whose room is not filled (`free` is the room of each side at the bare item, its fractured mods and nothing else); which open side, when
-    several are, may depend on the item. That is what the bound of one added mod (`abstraction.add_bound`) ranges over, so it bounds the action
-    at every item of the shape without building its outcomes there; the contract suite compares it with the built outcomes.
+    several are, may depend on the item. With `together` the draw is over every side whose room is not filled at once, by weight, as an Exalted
+    Orb draws (a beast influence recipe, #1196). That is what the bound of one added mod (`abstraction.add_bound`) ranges over (its scenarios
+    draw over the open sides together, as for an Exalted Orb, and close each side in turn, which covers a draw on one of them), so it bounds the
+    action at every item of the shape without building its outcomes there; the contract suite compares it with the built outcomes.
     """
 
     pool: "tuple[PoolFamily, ...]"
     free: Mapping  # Side -> the free slots of that side at the bare item
     tag: str | None = None
+    together: bool = False  # the draw is over every open side at once, not on one of them
 
 
 @dataclass(frozen=True)
