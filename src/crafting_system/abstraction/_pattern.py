@@ -91,6 +91,38 @@ them, and each was a pair of every such offer. With folded families to tell apar
 model are the same (a pair left out gave a kernel another pair of its composition gave); a build counted in pieces counts the pairs it
 looks at, so it gets further on the same count.
 
+**The fills an action cannot tell apart (#1192).** `ALL` makes every fill of the pure junk: every multiset of family types, class by class.
+An action seldom reads which type a slot holds; what it reads of the junk is its own declaration (`Reads`), and two fills that show the
+action the same give it the same kernel pushed through the key, and the same refusal. So of the fills of a composition that an action
+cannot tell apart, the first that is an item is offered and the others are not (`Pattern.alike_of`, `_assemble_alike`): the rows of the
+model are the ones every fill gives, from fewer pairs. What an action reads of the pure junk of a side is one of three things.
+
+* **Nothing but its count and class**: an action that reads the junk through the families it names and adds no mod drawn from the pool
+  (`Reads.families` a set, no `pool_weight`: a Harvest swap, a catalyst, a socket craft, and under a lock an Annulment, a bench craft, a
+  Divine Orb). The families it names are relevant slots, enumerated; a pure junk type holds none of them (`Kinds._members_of`). Its result
+  keeps the pure junk slots or removes some, whatever their type, and the key counts them by class. One fill for each composition, as
+  `ONE` has; `ONE` itself asks `Reads.block_invariant` and no lock, which these keys or actions lack.
+  The same holds for the side an erasing reroll erases at a key with one lock (`Reads.junk` False: it "does not look at" the mods it
+  erases); the side it keeps is told apart by type, as before: the families kept leave its pool, and several mods are drawn.
+* **The weight a held family takes out of its draws**: an addition that keeps the mods (`Reads.pool_weight`, with `families` a set), where
+  `EXTREMES` is not its policy. A draw gives a mod of the pool with the chance of its weight among the families the item does not hold,
+  so a held family shows the draw the weight of its mods and nothing else; the key reads of a drawn mod its side, what it gives the goal
+  and its protected tags; and a draw the action restricts to tags (`Reads.draw_tags`) or makes at another item level (`Reads.draw_levels`)
+  reads those of each mod besides. Two family types whose mods have the same weights, summed over the mods alike in all that (for a
+  draw by tag, over the mods with the tag alone: the others are in no draw of the action), are exchanged by a renaming of the families
+  that the action's kernel and the key do not see: the held one of the first fill for the held one of the second, each staying in the
+  pool of the other fill with the same weights in the same classes of mods. The family types of the state are finer than that (they
+  carry every tag and level that any enabled action reads, and every mod's weight for the additions that draw from the whole pool), so
+  for one action many types are alike: on R17's ring a Harvest craft that adds a lightning mod reads of a family the weight of its
+  lightning mods, which most families lack, and about 320 fills a key showed it a handful of different pools.
+* **Which type each slot holds** (no reduction): a Fracturing Orb (the successor key holds the type of the mod fractured), a
+  recombinator, an action that reads the influence mods or weighs the held families (`held_weight_factor`), the veiled actions, an action
+  that declares no families, and the side a reroll keeps under a lock.
+
+The argument is the declaration's own: `Reads.families` and `Reads.pool_weight` say what of the junk a result may depend on, and the
+contract suite compares the actions against them. Checked here by building a model both ways (`SHARE_ALIKE`), on the hand-worked world
+and on real targets: the same rows at every key (`tests/test_pattern_alike_fills_real.py`).
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -832,11 +864,15 @@ class Pattern:
             return Mode.ALL if self._pure_holds(key.flags.influences, reads.families) else Mode.ONE
         return Mode.ALL
 
-    def policy(self, action: Action, key: PatternKey) -> tuple[Mode, frozenset[str], tuple | None]:
-        """The member policy of `action` at `key`: its mode, the folded families its members must tell apart (`named_of`, with `ONE`), and
-        what the action reads of the pure junk of each side (`alike_of`, with `ALL`)."""
+    def policy(self, action: Action, key: PatternKey) -> tuple[Mode, frozenset[str]]:
+        """The member policy of `action` at `key`: its mode, and the folded families its members must tell apart (`named_of`, with `ONE`)."""
         mode = self.mode_of(action, key)
-        return mode, self.named_of(action, key) if mode is Mode.ONE else frozenset(), self.alike_of(action, key) if mode is Mode.ALL else None
+        return mode, self.named_of(action, key) if mode is Mode.ONE else frozenset()
+
+    def asked(self, action: Action, key: PatternKey) -> tuple[Mode, frozenset[str], tuple | None]:
+        """The members the build asks `action` at: its `policy`, and under `ALL` what it reads of the pure junk of each side (`alike_of`)."""
+        mode, named = self.policy(action, key)
+        return mode, named, self.alike_of(action, key) if mode is Mode.ALL else None
 
     def locked_sides(self, key: PatternKey) -> frozenset[Side]:
         """The sides a lock of the key keeps through a reroll (the lock is a crafted or a fractured mod: the key's)."""
@@ -1640,7 +1676,7 @@ class PatternBuilder:
                 # make the item of every member, the ones the build then answers without one too (a certain addition, a refusal of the key;
                 # #1193: on R04's 19 offers the Fracturing Orb's pairs were prepared at every pure junk assignment of every key)
                 continue
-            policy = self.pattern.policy(offer.action, key)
+            policy = self.pattern.asked(offer.action, key)
             if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw
                 continue
             members = members_for(policy)  # the key's members of the policy, made once (`_offers_of_key`)
@@ -1671,7 +1707,7 @@ class PatternBuilder:
                 if policy == anyone and firsts is not None and firsts[1] == pattern.grew:
                     members = firsts[0]
                 else:
-                    members = pattern.members(key, *policy)
+                    members = pattern.members(key, *policy[:2]) if policy[2] is None else pattern.members(key, *policy)
                 by_mode[policy] = members
                 stats.members += len(members)
             return members
@@ -1694,7 +1730,7 @@ class PatternBuilder:
                 if kid is not None:
                     added.append((oi, kid))
                 continue
-            policy = pattern.policy(offer.action, key)
+            policy = pattern.asked(offer.action, key)
             members = members_for(policy)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
