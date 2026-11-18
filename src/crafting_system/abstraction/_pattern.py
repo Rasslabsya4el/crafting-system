@@ -274,8 +274,7 @@ from math import gcd, lcm
 from typing import NamedTuple
 
 from crafting_system import budget
-from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
-from crafting_system.actions.metamods import LOCKED_SIDE
+from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
 from crafting_system.items.model import VEILED_DOMAIN
@@ -1501,7 +1500,7 @@ class PatternBuilder:
         self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key holds
-        self.members_kept: dict[int, dict[tuple[Mode, frozenset[str]], list[CompressedState]]] = {}
+        self.members_kept: dict[int, dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]]] = {}
         self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
         self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
         self.pattern.note(self.start)

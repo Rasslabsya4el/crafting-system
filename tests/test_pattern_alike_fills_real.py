@@ -9,19 +9,21 @@ member of a key, and the model built so with the model built at every fill, on t
 
 import contextlib
 import dataclasses
-from collections import defaultdict
-from fractions import Fraction
+import random
 from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
-from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, STARTS, build, offers_of, pattern_data
+from pattern_support import pushed as pushed_through_key
+from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, OTHER_STARTS, STARTS, build, offers_of, pattern_data
 from test_pattern_impossible_corner_real import rows_by_key
 from test_pattern_items_kept import same_model
 
 from crafting_system.abstraction import Abstraction, _pattern
 from crafting_system.abstraction._pattern import NOTHING, Mode, Pattern, build_pattern_model
-from crafting_system.actions import NotApplicableError
+from crafting_system.actions import ActionError
+from crafting_system.actions.beast_mods import BeastSideSwap, WildBristleMatron
+from crafting_system.actions.harvest_augment import HarvestAddRemove
 from crafting_system.cli import make_plan
 from crafting_system.items import Side
 from crafting_system.planner._pattern_bound import pattern_lower_bound
@@ -60,15 +62,9 @@ def world(request):
 
 
 def pushed(pattern: Pattern, ab: Abstraction, member, action):
-    """The kernel of `action` at `member` over the keys, or None where the game refuses it."""
-    try:
-        kernel = ab.kernel(member, action)
-    except NotApplicableError:
-        return None
-    out: dict = defaultdict(Fraction)
-    for successor, chance in kernel.items():
-        out[pattern.key(successor)] += chance
-    return frozenset(out.items())
+    """The kernel of `action` at `member` over the keys, or None where the action refuses it."""
+    found = pushed_through_key(pattern, ab, member, action)
+    return None if found is None else frozenset(found.items())
 
 
 LOCK = "StrMasterItemGenerationCannotChangePrefixes"  # the bench craft Prefixes Cannot Be Changed, as a mod
@@ -169,3 +165,51 @@ def test_the_whole_model_of_the_hand_worked_world_is_the_model_built_at_every_fi
     same_model(old, new)
     assert new.stopped is None and all(new.expanded)
     assert new.stats.pairs <= old.stats.pairs and new.stats.members <= old.stats.members  # its one `ALL` action is the Fracturing Orb, told apart by type
+
+
+def test_on_the_hand_worked_world_every_action_gets_from_the_members_offered_every_kernel_of_the_key():
+    """Every kind of reading at once (review of #1192): the swaps that draw at a beast's level, a Harvest craft that draws by tag, the
+    additions from the whole pool, the rerolls under each lock, the actions that read the count alone, at the keys a seeded walk meets."""
+    data = pattern_data()
+    actions = {
+        **ACTIONS,
+        "harvest-add-remove": HarvestAddRemove("fire"),
+        "beast-prefix": BeastSideSwap(Side.PREFIX, beast_level=60),
+        "beast-suffix": BeastSideSwap(Side.SUFFIX, beast_level=84),
+        "matron": WildBristleMatron(),
+    }
+    ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(actions.values()), metamods=True)
+    starts = [ab.compress(build(data, BOW, ids)) for ids in STARTS]
+    starts += [ab.compress(build(data, BOW, ids, rarity=rarity)) for ids, rarity in OTHER_STARTS]
+    rng = random.Random(1192)
+    states: dict = {}
+    for start in starts:
+        for _ in range(40):
+            state = start
+            for _ in range(8):
+                states[state] = None
+                try:
+                    kernel = ab.kernel(state, rng.choice(list(actions.values())))
+                except ActionError:
+                    continue
+                state = rng.choices(list(kernel), weights=[float(chance) for chance in kernel.values()])[0]
+    pattern = Pattern(ab, True, list(actions.values()))
+    seen: dict = {}
+    fewer = 0
+    for key in dict.fromkeys(map(pattern.key, states)):
+        for name, action in actions.items():
+            mode, _, alike = pattern.asked(action, key)
+            if mode is not Mode.ALL or alike is None:
+                continue
+            offered, every = pattern.members(key, Mode.ALL, alike=alike), pattern.members(key, Mode.ALL)
+            assert set(offered) <= set(every)
+            assert {pushed(pattern, ab, member, action) for member in offered} == {pushed(pattern, ab, member, action) for member in every}, (key, name)
+            seen.setdefault(name, set()).add(alike)
+            fewer += len(every) - len(offered)
+    nothing, by_weight = (NOTHING, NOTHING), lambda *read: {(read, read)}  # noqa: E731
+    assert seen["annul"] == seen["matron"] == seen["bench-lock"] == {nothing}
+    assert seen["reforge-fire"] == seen["chaos"] == {(NOTHING, None), (None, NOTHING)}  # under either lock
+    assert seen["exalted"] == seen["regal"] == by_weight((), ())
+    assert seen["harvest-add-remove"] == by_weight(("fire",), ()) and seen["beast-prefix"] == by_weight((), (60,))
+    assert "fracture" not in seen  # told apart by type
+    assert fewer > 1_000
