@@ -64,7 +64,8 @@ class GridInfo:
     `IMPROPER`, a state it reaches cannot finish and its inputs depend on each
     other in a cycle, so no cost is computed; `UNORDERED`, the policy is proper but its inputs depend on each other in a cycle, so there is no order to
     run the distribution in (the mean and the variance are exact). Empty otherwise. `gave_up` holds the words of each faster method that
-    reached a size limit and left the work to a slower one (`_gaveup`, C24, C25, C27). Neither is part of the `repr`.
+    reached a size limit and left the work to a slower one (`_gaveup`, C24, C25, C27). `stopped` holds the words of the net of the cost
+    figures (`_regen.ladder_net`) when it stopped them short of a figure, which is then not computed (#738, OR-40). None of these is part of the `repr`.
     """
 
     step: float
@@ -77,6 +78,7 @@ class GridInfo:
     free_cvar_allowance: float = field(default=0.0, repr=False)
     cause: str = field(default="", repr=False)
     gave_up: tuple[str, ...] = field(default=(), repr=False)
+    stopped: str = field(default="", repr=False)
 
 
 @dataclass(frozen=True, slots=True)

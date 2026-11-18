@@ -456,6 +456,7 @@ def unresolved(risk, estimate) -> bool:
 
 
 UNRESOLVED = "not computed (the cost of the whole craft is far above its cheapest step)"
+STOPPED_FIGURE = "not computed (the work on the cost figures was stopped at its time limit)"  # `GridInfo.stopped` (#738)
 
 
 NOT_COMPUTED = {
@@ -471,11 +472,13 @@ def not_shown(risk, estimate) -> str | None:
     """Why a quantile of `risk` is not shown, in the words the text report and the route page share (#512); None when it is a number to show.
 
     Its own cause (M7) when the report has one and the quantile is infinite; `UNRESOLVED` when only the grid could not reach it (the odds
-    are 1); None otherwise, a finite quantile or one of a plan that may not finish (each reader words that case itself).
+    are 1), or `STOPPED_FIGURE` when the net of the cost figures stopped them first (#738); None otherwise, a finite quantile or one of a plan that may not finish (each reader words that case itself).
     """
     if risk.grid.cause and math.isinf(estimate.value):  # its own cause, not the grid's; a quantile the grid did compute is shown
         return NOT_COMPUTED[risk.grid.cause]
-    return UNRESOLVED if unresolved(risk, estimate) else None
+    if unresolved(risk, estimate):
+        return STOPPED_FIGURE if risk.grid.stopped else UNRESOLVED
+    return None
 
 
 PERCENTILE_WORDS = {
@@ -538,7 +541,16 @@ def risk_limits(risk) -> tuple[Limit, ...]:
     if loose is not None:
         found.append(loose)
     cut = [name for name, estimate in (("p50", risk.p50), ("p90", risk.p90), ("CVaR", risk.cvar)) if unresolved(risk, estimate)]
-    if cut:
+    if cut and risk.grid.stopped:  # the net of the cost figures stopped them (#738, OR-40), not the size of the grid
+        found.append(
+            Limit(
+                RISK,
+                not_computed(*cut),
+                risk.grid.stopped + (f"; the faster methods gave up first: {'; '.join(risk.grid.gave_up)}" if risk.grid.gave_up else ""),
+                UNRESOLVED_EXACT,
+            )
+        )
+    elif cut:
         found.append(
             Limit(
                 RISK,

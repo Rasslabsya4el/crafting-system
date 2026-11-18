@@ -71,6 +71,13 @@ on the CVaR. `_free` has the argument. The grid is then never `exact`. When a co
 not settle, or a level is not reached, the ordinary and the coarse grid are tried as if no cost had been named (with `free_fallback_bins`
 as `max_bins`, so the caller's cut still holds). Without `free_cost`, or when no state is free, nothing differs from before.
 
+The net of the figures (#738, OR-40). One net bounds every method above, made once by `evaluate` (`_regen.ladder_net`: `REGEN_SECONDS`, or
+what the run's time net has left, and the run's memory net): past its deadline each DP run may expand `_budget.ALLOWANCE` entries more, so a
+cheap run still ends exact and a dear one stops where it is; at the memory net a run stops at once, and a pool's parent stops its workers
+(`_budget.Watch`, `parallel.memory_net`). A figure the stopped run did not reach is not computed and `grid.stopped` says which net stopped it;
+the odds and the moments stand. Before #738 only the ladder had a net: R17's site plan, its run's net spent by the plan, went on into an ordinary
+grid of 200,000 bins over 12,399 states and was killed for memory.
+
 Mean of a grid chain, for CVaR. The exact grid uses the solver mean of the real costs. An inexact
 grid solves again with the costs k_lo * D and k_hi * D to get the mean of each grid chain, and CVaR
 of each chain uses the matching end of its mean interval.
@@ -91,9 +98,10 @@ grid.
 
 import math
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import replace
 from numbers import Integral, Real
 
-from .. import parallel
+from .. import budget, parallel
 from ..solver import Action
 from . import _free, _inputs, _moments, _regen
 from ._budget import BudgetRun, rounding_allowance, run_budget, tail_mean
@@ -231,6 +239,7 @@ def evaluate[S](
     cause = ""
     horizon = None
     spread = COVERED_STEPS * c_min
+    mean = variance = None  # an improper policy has neither
     if proper:
         try:
             mean, variance, m1 = _mean_and_variance(chain)
@@ -247,9 +256,21 @@ def evaluate[S](
         return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels, UNORDERED if proper else cause or IMPROPER)
     if proper and not chain.has_inputs and not resolve_quantiles:
         return _unordered_report(chain, (mean, variance), cvar_level, levels)
+    net = _regen.ladder_net(REGEN_SECONDS)  # one net for every method of the figures below (#738)
+    with parallel.memory_net(net.memory_mb if net.memory_mb is not None else parallel.active_memory_net()):  # a pool's parent watches its workers too
+        try:
+            return _figures_within(net, chain, free, free_found, mean, variance, levels, cvar_level, tail_mass, max_bins, max_coarse_bins, resolution,
+                                   work_budget, horizon, spread, costs, c_min, proper, cause, coarse_first, regenerative, free_fallback_bins)  # fmt: skip
+        except parallel.MemoryNetReached:  # a pool of the figures passed the run's memory net and was stopped (#738): nothing slower follows
+            return _stopped_report(chain, mean, variance, proper, cause, cvar_level, levels, net, budget.MEMORY)
+
+
+def _figures_within(net, chain, free, free_found, mean, variance, levels, cvar_level, tail_mass, max_bins, max_coarse_bins, resolution, work_budget,
+                    horizon, spread, costs, c_min, proper, cause, coarse_first, regenerative, free_fallback_bins) -> RiskReport:  # fmt: skip
+    """The figures of `evaluate` by its methods in turn, every one held to `net` (#738)."""
     if free:
         apart = _free_report(
-            chain, free, mean, variance, levels, cvar_level, tail_mass, max_bins, resolution, work_budget, horizon, spread
+            chain, free, mean, variance, levels, cvar_level, tail_mass, max_bins, resolution, work_budget, horizon, spread, net
         )
         if apart is not None:
             return apart
@@ -266,7 +287,7 @@ def evaluate[S](
         )
     ):
         coarse = _coarse_report(
-            chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins
+            chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins, net
         )
         if coarse is not None:
             return coarse
@@ -275,7 +296,7 @@ def evaluate[S](
         and may_exceed_ordinary_grid(mean[0], variance[0], level_asked, c_min, max_bins)
     ):
         again = _regen_report(
-            chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins
+            chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins, net
         )
         if again is not None:
             return again
@@ -287,12 +308,13 @@ def evaluate[S](
 
     target = max([*levels, cvar_level]) if proper else None
     horizon_bins = None if horizon is None else math.ceil(horizon / step)
+    stop = _regen.deadline(net)
     if exact:
-        low_run = high_run = _run(chain, low_bins, target, tail_mass, max_bins, horizon_bins)
+        low_run = high_run = _run(chain, low_bins, target, tail_mass, max_bins, horizon_bins, stop)
     else:
         low_run, high_run = _both(
-            (_run, (chain, low_bins, target, tail_mass, max_bins, horizon_bins), {}),
-            (_run, (chain, high_bins, target, tail_mass, max_bins, horizon_bins), {}),
+            (_run, (chain, low_bins, target, tail_mass, max_bins, horizon_bins, stop), {}),
+            (_run, (chain, high_bins, target, tail_mass, max_bins, horizon_bins, stop), {}),
         )
     runs = (low_run,) if exact else (low_run, high_run)
 
@@ -307,8 +329,11 @@ def evaluate[S](
         success = Estimate(absorbed, absorbed, max(absorbed, success_high))
         mean = variance = cvar = INFINITE
     quantiles = {x: _quantile(x, step, low_run, high_run, success_high) for x in levels}
+    reached = all(math.isfinite(e.high) for e in (*quantiles.values(), Estimate(*cvar)))
+    reason = next((r.stopped for r in runs if r.stopped), "")
+    stopped = "" if reached or not reason else _regen.figures_stopped(net, reason)  # the net cut the run short of a figure: said (OR-13)
     grid = GridInfo(
-        step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), cause=cause
+        step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), cause=cause, stopped=stopped
     )
     return RiskReport(
         success,
@@ -343,8 +368,9 @@ def _free_report(
     work_budget: float,
     horizon: float,
     spread: float,
+    net: _regen.LadderNet,
 ) -> RiskReport | None:
-    """The report with the free actions counted apart from the grid (`_free`), or `None` when the ordinary grid has to do."""
+    """The report with the free actions counted apart from the grid (`_free`), or `None` when the ordinary grid has to do (or the net stopped it)."""
     free_set = set(free)
     paid = [chain.action[i].cost for i in chain.finishing_states() if i not in free_set]
     if not paid:
@@ -366,7 +392,7 @@ def _free_report(
         return None
     allowance = counted[0] * counted[1]
     target = min(max([*levels, cvar_level]) + _free.FREE_TAIL, 1.0)
-    run = dict(initial=folded.initial, goal_mass=folded.goal_mass, target=target, tail_mass=tail_mass, max_bins=max_bins)
+    run = dict(initial=folded.initial, goal_mass=folded.goal_mass, target=target, tail_mass=tail_mass, max_bins=max_bins, deadline=_regen.deadline(net))
     if low_bins == high_bins:
         low_run = high_run = run_budget(folded.chain, low_bins, **run)
     else:
@@ -394,8 +420,9 @@ def _coarse_report(
     cvar_level: float,
     tail_mass: float,
     max_bins: int,
+    net: _regen.LadderNet,
 ) -> RiskReport | None:
-    """The report on the coarse grid of `_coarse`, or `None` when the ordinary grid has to do (see the module docstring)."""
+    """The report on the coarse grid of `_coarse`, or `None` when the ordinary grid has to do (see the module docstring) or the net stopped it."""
     target = max([*levels, cvar_level])
     chosen = choose_step(chain, mean[0], variance[0], target, max_bins)
     if chosen is None:
@@ -408,14 +435,17 @@ def _coarse_report(
     if not fits_dense(folded.chain, low_bins, max_bins) or not fits_dense(chain, high_bins, max_bins):
         note(f"a quicker percentile method would need more than the {_dense.DENSE_LIMIT:,} figures it can hold in memory")
         return None
+    stop = _regen.deadline(net)
     low_run, high_run = _both(
         (run_dense, (folded.chain, low_bins), dict(
-            initial=folded.initial, goal_mass=folded.goal_mass, target=target, tail_mass=tail_mass, max_bins=max_bins)),
-        (run_dense, (chain, high_bins), dict(initial=((0, 1.0),), target=target, tail_mass=tail_mass, max_bins=max_bins)),
+            initial=folded.initial, goal_mass=folded.goal_mass, target=target, tail_mass=tail_mass, max_bins=max_bins, deadline=stop)),
+        (run_dense, (chain, high_bins), dict(initial=((0, 1.0),), target=target, tail_mass=tail_mass, max_bins=max_bins, deadline=stop)),
     )  # fmt: skip
     mean_low, mean_high = _coarse_means(chain, step, low_bins, high_bins)
     cvar = _cvar(step, cvar_level, low_run, high_run, mean_low, mean_high, mean[0])
     quantiles = {x: _quantile(x, step, low_run, high_run, None) for x in levels}
+    if (low_run.stopped or high_run.stopped) and not all(math.isfinite(e.high) for e in (*quantiles.values(), Estimate(*cvar))):
+        return None  # the net cut it short: the ordinary grid follows, held to the same net
     runs = (low_run, high_run)
     grid = GridInfo(
         step, False, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs)
@@ -433,13 +463,15 @@ def _regen_report(
     cvar_level: float,
     tail_mass: float,
     max_bins: int,
+    net: _regen.LadderNet,
 ) -> RiskReport | None:
     """The report from one attempt at a time (`_regen`), on the coarsest step of `REGEN_PARTS` of the restart's cost that brackets every level
     within `REGEN_WIDTH` (relative), else the finest that brackets them at all; `None` when the chain does not start over or no step works.
 
     The ladder is not cut by a guess of the next step's time (before #535 a step was skipped when the last one took over 200 s, so a slower
     runner gave R14 a coarser p50); the only time rule is the net of the whole ladder (`_regen.ladder_net`: `REGEN_SECONDS`, or what the run's
-    budget has left), said when it stops a step (#745)."""
+    budget has left), said when it stops a step (#745). It is the net of every method of the figures (`evaluate`, #738): the ordinary grid that
+    follows a ladder it stopped is held to it too, each of its runs expanding at most `_budget.ALLOWANCE` entries past it (`_budget.Watch`)."""
     into = _regen.regeneration_edges(chain)
     if not into:
         return None
@@ -453,15 +485,14 @@ def _regen_report(
     horizon = mean[0] + math.sqrt(variance[0] * target / (1.0 - target))
     steps = [(unit, 0)] if unit is not None and horizon / unit <= max_bins else []  # every cost a whole multiple of the unit: the exact distribution
     steps += [(base / parts, parts) for parts in REGEN_PARTS]
-    net = _regen.ladder_net(REGEN_SECONDS)
     for step, parts in steps:  # every step until one is narrow enough: which steps run never depends on the machine's speed (#535)
         low_bins, high_bins = _bin_costs(chain, step)
         _regen.trace(f"attempt by attempt: step {step:.4g} ({'the unit of every cost' if parts == 0 else f'the restart cost over {parts}'})")
         found = _regen.regenerative_runs(
-            chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins, deadline=net.deadline if math.isfinite(net.deadline) else None, step=step
+            chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins, deadline=_regen.deadline(net), step=step
         )
-        if found is _regen.TIMED_OUT:  # a finer step would take longer still: none is tried
-            note(_regen.ladder_stopped(net, coarser=best is not None))
+        if found in (_regen.TIMED_OUT, _regen.OUT_OF_MEMORY):  # a finer step would take longer and more still: none is tried
+            note(_regen.ladder_stopped(net, coarser=best is not None, reason=budget.MEMORY if found is _regen.OUT_OF_MEMORY else budget.TIME))
             break
         if found is None:
             continue
@@ -538,12 +569,13 @@ def _run(
     tail_mass: float,
     max_bins: int,
     horizon_bins: int | None,
+    deadline: float | None = None,
 ) -> BudgetRun:
     if chain.has_inputs:
         return run_nested(
-            chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins, horizon=horizon_bins
+            chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins, horizon=horizon_bins, deadline=deadline
         )
-    return run_budget(chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins)
+    return run_budget(chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins, deadline=deadline)
 
 
 def _held(jobs: dict) -> dict:
@@ -567,6 +599,8 @@ def _both(low: tuple, high: tuple) -> tuple:
             with parallel.WorkerPool(_held, ({"low": low, "high": high},), workers=2) as pool:
                 found = pool.map(_call, ["low", "high"], chunk=1)
             return found[0], found[1]
+        except parallel.MemoryNetReached:
+            raise  # past the run's memory net: the two runs here would take the same memory (#738)
         except Exception:  # a worker failed or was killed: run them here, as a serial run does
             pass
     return tuple(function(*args, **kwargs) for function, args, kwargs in (low, high))
@@ -598,6 +632,19 @@ def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence
         unresolved,
         _input_runs(chain) if chain.has_inputs else {},
     )
+
+
+def _stopped_report(
+    chain: Chain, mean, variance, proper: bool, cause: str, cvar_level: float, levels: Sequence[float], net: _regen.LadderNet, reason: str
+) -> RiskReport:
+    """The report of figures the net stopped before the ordinary grid gave them (#738, OR-40): the exact odds and moments of a proper policy, the
+    quantiles and the CVaR not computed, and `grid.stopped` says which net stopped them (OR-13)."""
+    words = _regen.figures_stopped(net, reason)
+    if proper:
+        report = _unordered_report(chain, (mean, variance), cvar_level, levels)
+    else:
+        report = _unordered_report(chain, None, cvar_level, levels, cause or IMPROPER)
+    return replace(report, grid=replace(report.grid, stopped=words))
 
 
 def _level(value: float, name: str) -> float:

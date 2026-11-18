@@ -25,8 +25,9 @@ few steps has too little work per block for numpy to pay; it runs the plain bin 
 
 The run stops when the target is met (proper policy: the cumulative absorbed mass reaches the
 highest asked level plus the rounding allowance; otherwise: the mass still in flight is at most
-`tail_mass`), when the cap is reached, when the caller's `deadline` has passed (a net that stops and says so: what
-was not reached is in `unresolved`), or when no mass is left. The stop is searched at the bins
+`tail_mass`), when the cap is reached, when the caller's `deadline` has passed and the run has expanded `ALLOWANCE` entries more, or this
+process holds the run's memory net (`Watch`, #738: a net that stops and says so in `BudgetRun.stopped`; what was not reached is in
+`unresolved`), or when no mass is left. The stop is searched at the bins
 `s` that are final: with `e` the earliest bin of an entry not yet processed, the lost mass of the
 sources below `e` and the absorbed mass `pmf[s]` for `s <= e` no longer change, so the rules are
 evaluated for those `s` (vectorised, the first bin that meets one wins). It never truncates
@@ -56,6 +57,7 @@ summed directly from its parts, as `unresolved` is, and either one at or below `
 """
 
 import heapq
+import math
 import sys
 import time
 from bisect import bisect_left
@@ -65,16 +67,55 @@ from math import fsum
 
 import numpy as np
 
+from .. import budget, parallel
 from ._chain import Chain
 
 EPS = sys.float_info.epsilon
 BASE_DELTA = 1e-12
 LOST_FLOOR = 1e-15  # a smaller remainder of the starting mass is float noise, not lost mass
 DEADLINE_BINS = 4096  # the plain loop looks at the clock once per this many bins
+ALLOWANCE = 2_000_000  # entries a run may still expand once the net of the cost figures has passed (#738): a cheap run ends exact, a dear one stops
+MEMORY_READ_SECONDS = 0.5  # a run reads its memory at most this often
 PLAIN_LIMIT = 300  # a chain with at most this many (states that can finish) * kmin runs the plain loop
 SLICE_ENTRIES = 1 << 14  # a block is expanded this many entries at a time: arrays that stay in the CPU cache
 DENSE_CELLS = 1 << 24  # the widest block range merged by a dense bincount (a float per cell)
 DENSE_RATIO = 32  # ... and only when it has at most this many cells per entry; a sort is cheaper otherwise
+
+
+class Watch:
+    """When a run stops at the net of the cost figures (#738, OR-40): past its `deadline` (`time.monotonic`) once it has expanded `ALLOWANCE`
+    entries more, so that a cheap run still ends exact and a dear one stops; at once when this process holds the run's memory net
+    (`parallel.memory_net`; a pool's parent also watches its workers' sum while it waits). `stopped` names the net that stopped it.
+
+    Counted in entries, the bound is the same on every machine; only where the deadline falls depends on the clock."""
+
+    def __init__(self, deadline: float | None) -> None:
+        self.deadline = deadline
+        self.done = 0  # entries expanded
+        self.past_at: int | None = None  # entries expanded when the deadline was first seen passed
+        self.read = -math.inf
+        self.stopped = ""
+
+    def spend(self, entries: int) -> None:
+        self.done += entries
+
+    def stops(self) -> bool:
+        """Whether the run stops now (read at the run's own points: a bin, a block)."""
+        now = time.monotonic()
+        if self.deadline is not None and now >= self.deadline:
+            if self.past_at is None:
+                self.past_at = self.done
+            if self.done - self.past_at >= ALLOWANCE:
+                self.stopped = budget.TIME
+                return True
+        limit = parallel.active_memory_net()
+        if limit is not None and now - self.read >= MEMORY_READ_SECONDS:
+            self.read = now
+            held = parallel.own_mb()
+            if held is not None and held >= limit:
+                self.stopped = budget.MEMORY
+                return True
+        return False
 
 
 def rounding_allowance(bins: int) -> float:
@@ -83,10 +124,12 @@ def rounding_allowance(bins: int) -> float:
 
 @dataclass(frozen=True, slots=True)
 class BudgetRun:
-    """`cdf[i]` is P(grid cost <= i bins) for i = 0..bins; `unresolved` is the mass still in flight."""
+    """`cdf[i]` is P(grid cost <= i bins) for i = 0..bins; `unresolved` is the mass still in flight; `stopped` the net that stopped the run
+    short of its target (`budget.TIME` or `budget.MEMORY`, `Watch`), empty when it ran to its own end."""
 
     cdf: list[float]
     unresolved: float
+    stopped: str = ""
 
     @property
     def bins(self) -> int:
@@ -187,6 +230,7 @@ def _run_plain(
     overflow = 0.0
     running = 0.0
     b = 0
+    watch = Watch(deadline)
     while True:
         if b < len(pmf):
             running += pmf[b]
@@ -202,9 +246,11 @@ def _run_plain(
                 break
             if _within_rounding(difference, tail_mass, b) and _plain_in_flight(pending, pmf, b, overflow) <= tail_mass:
                 break
-        if deadline is not None and b % DEADLINE_BINS == 0 and time.monotonic() >= deadline:
+        if (b % DEADLINE_BINS == 0 or (watch.past_at is not None and watch.done - watch.past_at >= ALLOWANCE)) and watch.stops():
             break
-        for i, mass in pending.pop(b, {}).items():
+        slot = pending.pop(b, {})
+        watch.spend(len(slot))
+        for i, mass in slot.items():
             absorbed, onward, lost, stay = moves[i]
             lost_total += mass * lost
             ahead = b + bin_cost[i]
@@ -220,7 +266,7 @@ def _run_plain(
                 for j, p in onward:
                     slot[j] = slot.get(j, 0.0) + mass * p
         b += 1
-    return BudgetRun(cdf, _plain_in_flight(pending, pmf, b, overflow))
+    return BudgetRun(cdf, _plain_in_flight(pending, pmf, b, overflow), watch.stopped)
 
 
 def _plain_in_flight(pending: dict[int, dict[int, float]], pmf: list[float], b: int, overflow: float) -> float:
@@ -381,7 +427,7 @@ class _Dp:
         goal_mass: float = 0.0,
         deadline: float | None = None,
     ) -> None:
-        self.deadline = deadline
+        self.watch = Watch(deadline)
         self.shift = max(1, (len(chain.states) - 1).bit_length())  # key = bin << shift | state
         if (max_bins + 1).bit_length() + self.shift > 62:
             raise ValueError(f"max_bins {max_bins!r} is too large for {len(chain.states)} states: a key must fit 62 bits")
@@ -425,12 +471,12 @@ class _Dp:
             stop = self._scan(max(final, self.checked), quiet, parts)
             if stop is not None:
                 break
-            if self.deadline is not None and time.monotonic() >= self.deadline:
+            if self.watch.stops():
                 stop = self.checked - 1  # the last bin with its cdf: what is beyond it is unresolved
                 break
             self._process()
         cdf = np.concatenate(parts)[: stop + 1]
-        return BudgetRun(cdf.tolist(), self._unresolved(stop))
+        return BudgetRun(cdf.tolist(), self._unresolved(stop), self.watch.stopped)
 
     def _scan(self, hi: int, quiet: bool, parts: list[np.ndarray]) -> int | None:
         """Evaluate the stop rules at the bins `checked..hi`; return the first bin that stops the run."""
@@ -480,6 +526,7 @@ class _Dp:
             bins, states, mass = bins[live], states[live], mass[live]
         if bins.size == 0:
             return
+        self.watch.spend(int(bins.size))
         self.last = max(self.last, int(bins[-1]))
         self.lost = _grown(self.lost, int(bins[-1]) + 1)
         for a in range(0, bins.size, SLICE_ENTRIES):
