@@ -32,6 +32,12 @@ exact key where it is worked out and to its coarse state otherwise. The cheapest
 out (RULE, as led.py); the run ends when it meets no exact tip. At every round the value of every coarse state is compared with the dump's complete
 value at every exact key it holds (the lead must be at or under it), and the value of every worked key's own state with its complete value.
 
+MAX=1 (not in #1318's `worked`): with direct rows, a worked key's rows can be worth less than its coarse lead (its outcomes land on coarse keys
+the direct model values at the floor), and the member rows that `worked` adds to a coarse state can only lower it (they are more actions in a
+minimum). With MAX=1 the coarse states keep their direct rows only, and a worked key whose rows are worth less than its coarse state's value is
+PINNED: its state's one action leads to its coarse state at no cost, so its value is its lead. Both are lower bounds of the key, so the larger is
+too; the pins are set again after each solve until none changes (at most 12 solves a round). The walk for tips follows a pinned key's rows.
+
 What is counted: exact keys worked out (until no tip, and until within 1% and 10%), the direct model's coarse keys found and worked out, its
 representatives, kernels and seconds, the run's peak memory (ru_maxrss), the 1-minute load, and the lead check."""
 import math, os, pickle, resource, runpy, sys, tempfile, time
@@ -44,6 +50,7 @@ OUT = sys.argv[5] if len(sys.argv) > 5 else None
 RULE = os.environ.get("RULE", "mass:0.5")
 MASS = float(RULE.split(":")[1]) if RULE.startswith("mass:") else None
 LIMIT = float(os.environ.get("LIMIT", "7200"))
+MAX = os.environ.get("MAX") == "1"  # a worked key is valued at the larger of its rows' value and its coarse lead (see the docstring, `MAX=1`)
 assert MODE in ("floor", "demand", "static")
 
 import numpy as np
@@ -273,7 +280,7 @@ def solve(with_exact=True):
     sink = C + len(own)
     b, tags = PackedBuilder(), []
     by_coarse = defaultdict(list)
-    for i in own:
+    for i in own if not MAX else ():
         by_coarse[cc[i]].append(i)
     memo_k = {}
 
@@ -308,13 +315,18 @@ def solve(with_exact=True):
                     act(costs[oi], k, succ, ("member", oi))
         b.close_state(cgoal[c])
     for i in own:
-        if not goal[i]:
+        if i in PIN and not goal[i]:
+            act(pb.FLOOR_COST, b.kernel([cc[i]], [1]), [cc[i]], ("pin", None))
+        elif not goal[i]:
             for oi, (k, succ) in exact_rows_of(i):
                 act(costs[oi], k, succ, ("own", oi))
         b.close_state(goal[i])
     b.close_state(True)
     solved = solve_packed(b.build(), progress=None, refuse_above=math.inf)
     return np.asarray(solved.value, dtype=float), np.asarray(solved.action), own, tags
+
+
+PIN = set()
 
 
 def check(v, own):
@@ -400,6 +412,18 @@ def kernel(kid):
     return p
 
 
+KARR = {}
+
+
+def karr(kid):
+    k = KARR.get(kid)
+    if k is None:
+        succ, w = kernels[kid]
+        tot = sum(w)
+        k = KARR[kid] = (np.array([n if x < 0 else x for x in succ]), np.array([x / tot for x in w]))
+    return k
+
+
 rounds, at99, at90, bad_total, worst_total, stop = 0, None, None, 0, 0.0, None
 while True:
     rounds += 1
@@ -426,7 +450,33 @@ while True:
     else:
         v, act_, own, tags = solve()
         val = lambda s: 0.0 if s < 0 or goal[s] else float(v[own[s]] if s in own else v[cc[s]])
+        for _again in range(11 if MAX else 0):  # the pins: a worked key valued at the larger of its rows and its lead
+            changed = 0
+            arr = np.zeros(n + 1)  # the value of every key reached, as this solve has it (its own state, else its coarse state); goals and the sink 0
+            for s, _j in reached.items():
+                if not goal[s]:
+                    arr[s] = v[own[s]] if s in own else v[cc[s]]
+            for i in worked:
+                if goal[i]:
+                    continue
+                if i in PIN:
+                    q = min((costs[oi] + float(karr(kid)[1] @ arr[karr(kid)[0]]) for oi, kid in actions[i]), default=math.inf)
+                else:
+                    q = float(v[own[i]])  # an unpinned key's state holds its rows alone: the solve's value is their minimum
+                lead_i = float(v[cc[i]])
+                if i not in PIN and q < lead_i * (1 - 1e-9) - 1e-12:
+                    PIN.add(i)
+                    changed += 1
+                elif i in PIN and q > lead_i * (1 + 1e-9) + 1e-12:
+                    PIN.discard(i)
+                    changed += 1
+            if not changed:
+                break
+            v, act_, own, tags = solve()
         sv = float(v[own[0]])
+        if MAX and sv < getattr(sys.modules[__name__], "_last_sv", 0.0) * (1 - 1e-9):
+            print(f"  round {rounds}: the start value went DOWN, {sv!r}", flush=True)
+        globals()["_last_sv"] = sv
         bad, worst = check(v, own)
         bad_total += bad
         worst_total = max(worst_total, worst)
@@ -514,7 +564,7 @@ while True:
 
 fmt = lambda a: "never" if not a else f"{a[0]} keys ({100 * a[0] / total:.2f}%), round {a[1]}"
 peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
-print(f"RESULT {ROUTE} {MODE} rule {RULE}: offers {len(offers)}; direct model on its own policy: {d_found} coarse keys found, {d_worked} worked out, {direct_s:.0f} s, start value {dv!r} "
+print(f"RESULT {ROUTE} {MODE}{' MAX' if MAX else ''} rule {RULE}: pinned at the end {len(PIN)}; offers {len(offers)}; direct model on its own policy: {d_found} coarse keys found, {d_worked} worked out, {direct_s:.0f} s, start value {dv!r} "
       f"({100 * dv / V[0]:.2f}%); after the led build: {len(ckeys)} coarse keys found, {sum(worked_c)} worked out, kernels and rows {build_s:.0f} s in all; exact build works out "
       f"{c_now} of {total} keys ({100 * c_now / total:.2f}%) {'STOPPED at ' + stop if stop else 'until no tip'}, {rounds} rounds; within 1% after {fmt(at99)}; within 10% after {fmt(at90)}; "
       f"final start value {sv!r} against {V[0]!r}; lead above the truth: {bad_total} key-rounds, worst {worst_total:.2e}; {time.perf_counter() - T0:.0f} s, peak memory {peak:.2f} GB, load {os.getloadavg()[0]:.1f}", flush=True)
