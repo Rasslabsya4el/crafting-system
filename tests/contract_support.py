@@ -619,6 +619,13 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
             assert result.veil_offer == (given.veil_offer if placeholder else ()), (
                 "an action that does not declare adds.offer leaves the offer as it was (it goes with its placeholder)"
             )
+        if adds.only_named:  # a certain addition (a bench craft, an aspect beast) keeps the item and adds the mods it names (#1193)
+            added = tuple(entry for entry in result.mods if entry not in given.mods)
+            assert all(entry in result.mods for entry in given.mods) and {entry.mod_id for entry in added} == set(adds.named), (
+                "an action declared as a certain addition keeps every mod of the item and adds the mods it names"
+            )
+            assert all(entry.crafted == adds.crafted and not entry.fractured for entry in added), "the named mods are added crafted as declared, none fractured"
+            assert dataclasses.replace(result, mods=given.mods) == given, "an action declared as a certain addition changes no other part of the item"
         if adds.only_quality:  # a quality action (a catalyst) changes nothing but the quality (ticket #158)
             assert dataclasses.replace(result, quality=given.quality) == given, "an action declared as a quality action changes no mod, implicit or other part but the quality"
         if not adds.imprints:
