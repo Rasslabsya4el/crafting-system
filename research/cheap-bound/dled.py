@@ -51,7 +51,9 @@ OUT = sys.argv[5] if len(sys.argv) > 5 else None
 RULE = os.environ.get("RULE", "mass:0.5")
 MASS = float(RULE.split(":")[1]) if RULE.startswith("mass:") else None
 LIMIT = float(os.environ.get("LIMIT", "7200"))
-MAX = os.environ.get("MAX") == "1"  # a worked key is valued at the larger of its rows' value and its coarse lead (see the docstring, `MAX=1`)
+MAX = os.environ.get("MAX") == "1"
+RATCHET = os.environ.get("RATCHET") == "1"  # each coarse key's lead is the largest value it had in any round (finding 1 of the checker)
+ONE_EXACT = os.environ.get("ONE") == "exact"  # `ONE` rows take the representative's exact kernel instead of the angelic stand-in (finding 2)  # a worked key is valued at the larger of its rows' value and its coarse lead (see the docstring, `MAX=1`)
 assert MODE in ("floor", "demand", "static")
 
 import numpy as np
@@ -107,6 +109,7 @@ costs, cheapest = d["costs"], d["cheapest"]
 n = len(keys)
 ab, start = got["ab"], got["start"]
 by_label = {p.label: p for p in got["priced"]}
+assert len(by_label) == len(got["priced"]), "two priced offers share a label"
 assert all(l in by_label for l in d["labels"]), ("offers differ", [l for l in d["labels"] if l not in by_label])
 offers = pb.pattern_offers([by_label[l] for l in d["labels"]])
 assert [o.label for o in offers] == d["labels"] and all(abs(o.cost - c) <= 1e-9 * max(1, c) for o, c in zip(offers, costs)), "offer costs differ"
@@ -225,8 +228,9 @@ def work_coarse(c):
             try:
                 mode = P.mode_of(action, key)
             except Exception:  # noqa: BLE001  (no mode: the angelic row)
+                stats["mode_of failed: angelic"] += 1
                 mode = Mode.ALL
-            if len(pushed) == 1 or mode is Mode.ANY:
+            if len(pushed) == 1 or mode is Mode.ANY or (ONE_EXACT and mode is Mode.ONE):
                 stats[f"exact rows ({'certain' if len(pushed) == 1 else 'any'}) {offer.label}"] += 1
                 if pushed not in exact_rows[c] or exact_rows[c][pushed][0] > offer.cost:
                     exact_rows[c][pushed] = (offer.cost, oi)
@@ -430,28 +434,72 @@ def karr(kid):
 
 
 rounds, at99, at90, bad_total, worst_total, stop = 0, None, None, 0, 0.0, None
+HC = np.zeros(0)
 while True:
     rounds += 1
-    if MODE == "static":
-        b = PackedBuilder()
+    if MODE == "static" or RATCHET:
+        if RATCHET:  # the direct model alone; each coarse key's lead is the largest value it had in any round (each was checked under the truth)
+            v0, act_, _own0, tags = solve(with_exact=False)
+            C = len(ckeys)
+            if len(HC) < C:
+                HC = np.concatenate([HC, np.zeros(C - len(HC))])
+            HC = np.maximum(HC, v0[:C])
+            lead_of = lambda i: float(HC[cc[i]]) if not cgoal[cc[i]] else 0.0
+        else:
+            lead_of = lambda i: float(static_h[i])
         m = len(order)
-        built = {}
-        for i in order:
-            if i in worked and not goal[i]:
-                for oi, kid in actions[i]:
-                    k = built.get(kid)
-                    if k is None:
-                        succ, w = kernels[kid]
-                        k = built[kid] = b.kernel([m if s < 0 else reached[s] for s in succ], list(w))
-                    b.action(oi, costs[oi], k)
-            elif not goal[i]:
-                b.action(pb.FAKE, max(float(static_h[i]), pb.FLOOR_COST), b.kernel([m], [1]))
-            b.close_state(goal[i])
-        b.close_state(True)
-        sv_all = np.asarray(solve_packed(b.build(), progress=None, refuse_above=math.inf).value, dtype=float)
+        sv_all = None
+        for _again in range(12 if MAX else 1):  # MAX: a worked key whose rows are worth less than its lead is pinned at its lead
+            b = PackedBuilder()
+            built = {}
+            for i in order:
+                if i in worked and i not in PIN and not goal[i]:
+                    for oi, kid in actions[i]:
+                        k = built.get(kid)
+                        if k is None:
+                            succ, w = kernels[kid]
+                            k = built[kid] = b.kernel([m if s < 0 else reached[s] for s in succ], list(w))
+                        b.action(oi, costs[oi], k)
+                elif not goal[i]:
+                    b.action(pb.FAKE, max(lead_of(i), pb.FLOOR_COST), b.kernel([m], [1]))
+                b.close_state(goal[i])
+            b.close_state(True)
+            sv_all = np.asarray(solve_packed(b.build(), progress=None, refuse_above=math.inf).value, dtype=float)
+            if not MAX:
+                break
+            arr = np.zeros(n + 1)
+            for s_, j in reached.items():
+                arr[s_] = 0.0 if goal[s_] else sv_all[j]
+            changed = 0
+            for i in worked:
+                if goal[i]:
+                    continue
+                q = min((costs[oi] + float(karr(kid)[1] @ arr[karr(kid)[0]]) for oi, kid in actions[i]), default=math.inf) if i in PIN else float(sv_all[reached[i]])
+                if i not in PIN and q < lead_of(i) * (1 - 1e-9) - 1e-12:
+                    PIN.add(i)
+                    changed += 1
+                elif i in PIN and q > lead_of(i) * (1 + 1e-9) + 1e-12:
+                    PIN.discard(i)
+                    changed += 1
+            if not changed:
+                break
         val = lambda s: 0.0 if s < 0 or goal[s] else float(sv_all[reached[s]])
         sv = float(sv_all[0])
-        bad, worst, ctips = 0, 0.0, []
+        ctips = []
+        if RATCHET:  # the check: every coarse key's lead against every exact key it holds, every worked key's value against its own
+            bad, worst = 0, 0.0
+            for i in range(n):
+                if goal[i]:
+                    continue
+                c = cindex.get(CK[i])
+                x = float(sv_all[reached[i]]) if i in worked else (float(HC[c]) if c is not None and c < len(HC) else cheapest)
+                if x > V[i] * (1 + 1e-7) + 1e-9:
+                    bad += 1
+                    worst = max(worst, (x - V[i]) / max(V[i], 1e-300))
+            bad_total += bad
+            worst_total = max(worst_total, worst)
+        else:
+            bad, worst = 0, 0.0  # the static lead is fixed: it was checked once, before the first round
     else:
         v, act_, own, tags = solve()
         val = lambda s: 0.0 if s < 0 or goal[s] else float(v[own[s]] if s in own else v[cc[s]])
@@ -569,7 +617,8 @@ while True:
 
 fmt = lambda a: "never" if not a else f"{a[0]} keys ({100 * a[0] / total:.2f}%), round {a[1]}"
 peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
-print(f"RESULT {ROUTE} {MODE}{' MAX' if MAX else ''} rule {RULE}: pinned at the end {len(PIN)}; offers {len(offers)}; direct model on its own policy: {d_found} coarse keys found, {d_worked} worked out, {direct_s:.0f} s, start value {dv!r} "
+print(f"RESULT {ROUTE} {MODE}{' MAX' if MAX else ''}{' RATCHET' if RATCHET else ''}{' ONE=exact' if ONE_EXACT else ''} rule {RULE}: pinned at the end {len(PIN)}; offers {len(offers)}; direct model on its own policy: {d_found} coarse keys found, {d_worked} worked out, {direct_s:.0f} s, start value {dv!r} "
       f"({100 * dv / V[0]:.2f}%); after the led build: {len(ckeys)} coarse keys found, {sum(worked_c)} worked out, kernels and rows {build_s:.0f} s in all; exact build works out "
       f"{c_now} of {total} keys ({100 * c_now / total:.2f}%) {'STOPPED at ' + stop if stop else 'until no tip'}, {rounds} rounds; within 1% after {fmt(at99)}; within 10% after {fmt(at90)}; "
-      f"final start value {sv!r} against {V[0]!r}; lead above the truth: {bad_total} key-rounds, worst {worst_total:.2e}; {time.perf_counter() - T0:.0f} s, peak memory {peak:.2f} GB, load {os.getloadavg()[0]:.1f}", flush=True)
+      f"final start value {sv!r} against {V[0]!r}; lead above the truth: {bad_total} key-rounds, worst {worst_total:.2e}; {time.perf_counter() - T0:.0f} s, peak memory {peak:.2f} GB, load {os.getloadavg()[0]:.1f}; "
+      f"direct model's work in all: " + "; ".join(f"{k} {x}" for k, x in sorted(stats.items()) if not k.startswith(("exact rows", "angelic rows"))), flush=True)
