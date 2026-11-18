@@ -277,7 +277,7 @@ BENCHMARKS = (
         "examples/targets/r06-strength-heavy-belt.yaml",
         "examples/routes/r06-strength-heavy-belt.yaml",
         (),
-        waits="the start belt has no price (#483, #515), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232); the target itself is planned since #159 and #1231",
+        waits="the start belt has no price (#483, #515), the planner takes the target since #159 and #1231 but its search for the mods gives no plan within 25 minutes yet (#1267), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232)",
     ),
     # The guide publishes no odds; the start boots are hand-set in the route's own price file (#901). Unveil is through the one search since #828.
     BenchmarkRoute(
