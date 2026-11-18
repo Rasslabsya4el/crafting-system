@@ -35,7 +35,7 @@ import math
 import os
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 
 AIM_SECONDS = 60.0  # OR-32, OR-33: a plan aims at about a minute; past it the search stops at its proved gap (OR-39, #925), and the forecast of the walk paths reads it
@@ -44,6 +44,8 @@ NET_SECONDS = 600.0  # OR-33: the stop-and-say-so net of a plan, until every met
 MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physical memory (a runner of 16 GB stops at 12.8 GB, before it is killed)
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
 MEMORY_POLL_SECONDS = 0.5  # a checkpoint reads the memory at most this often (the clock it reads every time)
+ASK_EVERY = 1024  # a making under a net on the clock (`asking`) looks at the clock once every this many pieces: one kernel can take minutes and gigabytes (#1238)
+ASK_SECONDS = 0.25  # ... and asks its net at most this often: a question reads the memory of the process and its workers (`/proc`, milliseconds at gigabytes)
 BUILD_PER_STATE = 100.0  # a run counted in states (`Budget.in_states`): the bound's build of a search may do this many pieces of work per state of that search's net (#1101; `Budget.build_per_state`)
 
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
@@ -344,23 +346,97 @@ class Allowance:
     a kernel of a few new states at a fraction of the net (#1137). So every structure of the making holds at most `given` entries (the
     multinomial table of one roll law, `_rolls.multinomial`, is the one left uncounted: its size is set by the law's values, not by the
     pool), and a kernel made whole still has its new states checked against the net by its search. Only a search counted in states opens
-    one; elsewhere `allowed()` is None and the making counts nothing."""
+    one with a `given`; elsewhere a making counts nothing.
 
-    given: int
+    `ask` (with `given` None: `asking`, #1238, #1217) is the net of a stage that runs on the clock: the making looks at the clock once every `every`
+    pieces it makes (`add`, and `tick` for a piece that is not an outcome, a member of a key listed) and asks it at most every `seconds`
+    (a question reads `/proc`), and once it gives a reason the making
+    stops (`NetReached`, a `BaseException` like `OutcomesCut`, so that no `except` inside the making swallows it). One
+    kernel of the listing draw under `Reads.influenced` grew past 12 GB with no question asked (R20 with the Orb of Dominance, #1238). A piece
+    is a step of bounded work, so the questions come at a bounded interval on the clock. A count (`given` set) is never asked: a run counted
+    in states stops where it stopped before, on every machine."""
+
+    given: int | None
     made: dict[str, int] = field(default_factory=dict)
+    ask: Callable[[], str | None] | None = None
+    every: int = ASK_EVERY
+    seconds: float = ASK_SECONDS  # the least time between two questions
+    since: int = 0  # the pieces made since the clock was last looked at
+    asked: float = field(default_factory=lambda: time.perf_counter())  # when `ask` was last asked (the allowance's opening at first)
 
     def add(self, stage: str = "state", count: int = 1) -> None:
-        made = self.made[stage] = self.made.get(stage, 0) + count
-        if made > self.given:
-            raise OutcomesCut(self, stage)
+        if self.given is not None:
+            made = self.made[stage] = self.made.get(stage, 0) + count
+            if made > self.given:
+                raise OutcomesCut(self, stage)
+        if self.ask is not None:
+            self.tick(count)
+
+    def tick(self, count: int = 1) -> None:
+        """`count` pieces of work made: ask the net (`ask`) once `every` of them have been made since the clock was last looked at and `seconds` have passed since the last question, and raise `NetReached`
+        with its reason once it gives one; nothing without a net."""
+        if self.ask is None:
+            return
+        self.since += count
+        if self.since >= self.every:
+            self.since = 0
+            now = time.perf_counter()
+            if now - self.asked < self.seconds:
+                return
+            self.asked = now
+            reason = self.ask()
+            if reason is not None:
+                raise NetReached(reason)
+
+
+class NetReached(BaseException):
+    """The net of a stage on the clock (`asking`) was reached inside the making of a kernel or of a key's members (#1238, #1217): the making is
+    left unmade (nothing half made is kept: a distribution is cached only once whole), and the stage that opened the net stops as at its net,
+    with `reason` in its words."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 _allowance: contextvars.ContextVar[Allowance | None] = contextvars.ContextVar("crafting_system_budget_allowance", default=None)
 
 
 def allowed() -> Allowance | None:
-    """The allowance of the kernel being made now (`counting`), or None: read once by a maker, which then counts on it as it makes."""
+    """The allowance of the kernel being made now (`counting`, `asking`), or None: read once by a maker, which then counts on it as it makes."""
     return _allowance.get()
+
+
+def counts() -> bool:
+    """Whether the making in progress is counted in states (`counting`, a `given`), not only asked."""
+    allowance = _allowance.get()
+    return allowance is not None and allowance.given is not None
+
+
+@contextlib.contextmanager
+def asking(ask: Callable[[], str | None] | None, every: int | None = None) -> Iterator[Allowance | None]:
+    """Ask `ask` from the makings inside the block, looking at the clock once every `every` pieces they make (`Allowance.tick`) and asking at most every `ASK_SECONDS`: the net of a stage on the clock and on memory,
+    which gives the reason once it is reached; the making then raises `NetReached` (#1238, #1217). `every` is `ASK_EVERY` by default. Nothing with `ask` None, nor inside a count (`counting`): a run counted in states keeps its stop
+    points. An `asking` inside another takes its place for the block: the inner stage's net is the one that stops it."""
+    outer = _allowance.get()
+    if ask is None or (outer is not None and outer.given is not None):
+        yield outer
+        return
+    token = _allowance.set(Allowance(None, ask=ask, every=ASK_EVERY if every is None else every, seconds=ASK_SECONDS))
+    try:
+        yield _allowance.get()
+    finally:
+        _allowance.reset(token)
+
+
+@contextlib.contextmanager
+def unasked() -> Iterator[None]:
+    """No allowance in the block: the making of a pool worker, which its parent's net does not reach (the parent asks between two results)."""
+    token = _allowance.set(None)
+    try:
+        yield
+    finally:
+        _allowance.reset(token)
 
 
 @contextlib.contextmanager

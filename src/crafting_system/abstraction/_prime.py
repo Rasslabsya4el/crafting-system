@@ -34,9 +34,10 @@ def _hold(abstraction, jobs: list) -> tuple:
 def _compute(index: int):
     abstraction, jobs = parallel.context()
     (kind, key), (part, signature) = jobs[index]
-    if kind == "draw":
-        return abstraction._distribution(signature, part)
-    return abstraction._fracture_entries(part, signature)
+    with budget.unasked():  # a forked worker holds its parent's net, which raises the parent's stop: the parent asks its net between two results
+        if kind == "draw":
+            return abstraction._distribution(signature, part)
+        return abstraction._fracture_entries(part, signature)
 
 
 def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: int | None = None, ask: Callable[[], None] | None = None) -> int:
@@ -47,7 +48,7 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
     """
     workers = parallel.worker_count() if workers is None else workers
     clock = budget.active()
-    if (clock is not None and clock.budget.counted) or budget.allowed() is not None:  # a count: every distribution is made, and counted, in the process
+    if (clock is not None and clock.budget.counted) or budget.counts():  # a count: every distribution is made, and counted, in the process
         return 0
     if workers < 2 or not parallel.can_inherit() or getattr(abstraction, "prime_stopped", None) is not None:
         return 0
