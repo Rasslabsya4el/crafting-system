@@ -131,11 +131,7 @@ def cheapest(found, start, actions) -> tuple[float, int]:
 
 
 @pytest.mark.parametrize("goal", [ONE_PREFIX, Goal((MIXED_BEST,))], ids=["top_prefix", "mixed_tier"])
-
-
 @pytest.mark.parametrize("name", ["two_shaper", "mixed_shaper"])
-
-
 def test_the_cheapest_cost_with_the_groups_is_the_cost_with_every_mod_apart(goal, name, monkeypatch):
     actions = (DOMINANCE, *RECIPES, AnnulmentOrb())  # the recipes add influence mods to an influenced item, which the orbs refuse
     item = starts()[name]
@@ -152,8 +148,6 @@ def test_the_cheapest_cost_with_the_groups_is_the_cost_with_every_mod_apart(goal
 @pytest.mark.parametrize(
     ("name", "goal"), [("two_shaper", ONE_PREFIX), ("top_and_elevated", Goal((TOP_PREFIX, ELDER_SUFFIX)))], ids=["two_shaper", "top_and_elevated"]
 )
-
-
 def test_with_an_awakeners_orb_the_cheapest_cost_with_the_groups_is_the_cost_with_every_mod_apart(name, goal, monkeypatch):
     # the Awakener keeps one influence mod and rereads it into the two-influence context of its result (`_reread`)
     actions = (DOMINANCE, AWAKENERS[0], *RECIPES, AnnulmentOrb())
@@ -169,8 +163,6 @@ def test_with_an_awakeners_orb_the_cheapest_cost_with_the_groups_is_the_cost_wit
 
 
 @pytest.mark.parametrize("goal", [ONE_PREFIX, Goal((TOP_PREFIX, ELDER_SUFFIX))], ids=["top_prefix", "top_and_elder"])
-
-
 def test_a_group_of_one_influence_is_one_group_on_an_item_of_two(goal):
     # an Awakener's Orb rereads a kept mod into the context of both influences: a group there must hold the whole group of one
     found = ability((DOMINANCE, AWAKENERS[1]), goal)

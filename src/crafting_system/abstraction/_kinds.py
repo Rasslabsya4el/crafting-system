@@ -358,7 +358,8 @@ class Kinds:
         """The influence mods that share one kind, each to the id of the mod that stands for its group (#1238); a mod absent stands for itself.
 
         A group is the influence mods of one family on one side whose first spawn tag the item holds is one influence's, that give the goal
-        the same (`profile`) and carry the same protected tags (`protected_tags`: a metamod reads them, and `representative` rebuilds the rep), when the family is not told apart by mod and every enabled action that reads the influence mods treats them
+        the same (`profile`) and carry the same protected tags (`protected_tags`: a metamod reads them, and `representative` rebuilds the
+        group's first mod), when the family is not told apart by mod and every enabled action that reads the influence mods treats them
         alike (`Action.influence_alike`: the Orb of Dominance when each upgrade is known and stays in the group). Its kind is `"$" + the id of
         its first mod` (the lowest required level, an Elevated mod last), so every reader of a `"$"` kind finds a mod of the group, whose
         families and side are the group's. Only with `group_influenced` (a goal without a roll limit: under one, which mod a slot holds
