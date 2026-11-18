@@ -153,6 +153,9 @@ def _group_sum() -> float | None:
     shared page may be charged to another group (a library another program loaded first), so those are added in full, as each process maps them.
     The group's own pages that none of these processes maps (another program in the same group) only raise the figure. What it assumes: no
     process of the run moved to another group after it made its pages (a move leaves them charged to the old group); the run never moves one.
+    The kernel adds a group's counts up in batches per core, so `anon` may lag the pages by some MB either way: nothing against a net of GBs.
+    It is cheap only where the group is the run's own (`systemd-run --scope`, a container, a CI job): in a group that holds other heavy
+    programs too it is past the net, and the wait reads the proportional sizes as before, slower but never late.
 
     Its cost: one `memory.stat` (about 13 us on the owner's server) and one `status` and `cgroup` file under `/proc` per process; the
     proportional sizes it stands for cost seconds near a 12 GB net with four workers."""
