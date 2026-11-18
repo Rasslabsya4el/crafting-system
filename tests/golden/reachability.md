@@ -222,12 +222,12 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_finish.py, planner/_plan.py |  |
 | `influences` | cli/_route_card.py, planner/_bought_starts.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_finish.py, planner/_plan.py, and 1 more |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_finish.py, planner/_plan.py, and 2 more |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
 | `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py |  |
-| `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py |  |
-| `actions` | cli/_benchmark_outcomes.py, planner/_plan.py |  |
+| `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py, planner/_quality_finish.py |  |
+| `actions` | cli/_benchmark_outcomes.py, planner/_plan.py, planner/_quality_finish.py |  |
 | `enchantment` | planner/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
 | `sockets` | planner/_finish.py, planner/_plan.py |  |
