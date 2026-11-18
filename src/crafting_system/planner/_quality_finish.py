@@ -175,7 +175,7 @@ def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_mo
             "Quality finished after the mods",
             why,
             "No step of the mods changes the quality, so finishing it last changes no step of the mods; the mean number of catalysts is exact at "
-            "the gain law read for the catalysts (an approximate input: the wiki's formula by item level; no player sample confirms its random "
+            "the gain law read for the catalysts (an approximate input: the wiki's formula for the gain of one catalyst; no player sample confirms its random "
             "rounding).",
             labels,
         )
