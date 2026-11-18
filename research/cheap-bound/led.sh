@@ -6,5 +6,5 @@ HERE=$(dirname "$(readlink -f "$0")")
 for L in "$@"; do
   N=$(echo "$L-$RU" | sed 's/,/_/g; s/[+:]/-/g')
   RULE=$RU timeout 80m python -u "$HERE/led.py" "$D/k-$R.pkl" "$L" "$O/led-$R-$N.tsv" > "$O/led-$R-$N.log" 2>&1
-  echo "exit $? $R $L $RU $(date +%T) load $(cut -d' ' -f1 /proc/loadavg)"
+  echo "exit $? $R $L $RU $(date +%T)"
 done
