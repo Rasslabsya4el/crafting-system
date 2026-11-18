@@ -319,6 +319,7 @@ class Abstraction:
         self._refused_by: dict[Hashable, NotApplicableError] = {}  # the refusal class of a pair (`_refusal_class`) -> the game's refusal of it
         self._junk_of: dict[int, tuple[Item, int, tuple[tuple[str, frozenset[str]], ...]]] = {}  # id of an item -> (it, its rest, its junk)
         self._rests: dict[Hashable, int] = {}  # the item without its junk, apart from its count per side -> its number (`_junk_parts`)
+        self._profiles: dict[CompressedState, tuple[int, tuple[tuple[str, frozenset[str]], ...], frozenset[str]] | None] = {}  # `refusal_class_of`
         self.share_refusals = True  # False: every pair asks the action whether it is refused (the reference of ticket #1178)
         self.refusals_shared = 0  # how many pairs took the refusal of another item of their refusal class (`_refusal_class`)
         self._free_lock: bool | None = None  # whether the game data has a lock outside the crafted domain (`_holds_lock`)
@@ -1487,6 +1488,7 @@ class Abstraction:
         self._refused_by.clear()
         self._junk_of.clear()
         self._rests.clear()
+        self._profiles.clear()
         if not keep_erased:
             self._shared_by.clear()
 
@@ -1672,6 +1674,65 @@ class Abstraction:
         _, rest, junk = found
         families = reads.families
         return (action, rest, tuple(mod_id for mod_id, held in junk if not held.isdisjoint(families)))
+
+    def refusal_class_of(self, action: Action) -> Callable[[CompressedState], Hashable | None] | None:
+        """The refusal class `kernel_key(state, action)` looks up (`_refusal_class`), as a function of the state; None for an action with none.
+
+        The bound's build asks an action that declares `Reads.refusal_by_families` at every member of a key, and nearly every pair is a refusal
+        already met in its class (#1256: R04's round of bench crafts, 2.3 million pairs, 2.28 million of them refused so). Each such pair went the
+        whole way of `kernel_key` to find it (the view, the item, the class, the exception), 12 microseconds a pair. Here the class of a state is
+        made as `_build` makes it: from the item of the state's view (`_item_of_view`; the action reads the junk, so it does not erase it and the
+        view is the whole state), its number without the junk (`_junk_parts`) and its junk mods that share a family with the action's. What the
+        item gives is kept per state until `release_prepared`, so a state asked for every offer of its key makes it once. The function gives
+        None for a state whose class `_build` would not make (a fractured family type that may decide, a state that is no item: `kernel_key`
+        answers it), and `refused_in_class` tells whether the class holds a refusal. With `share_refusals` off there is no class.
+        """
+        if not self.share_refusals:
+            return None
+        reads = self._kinds.reads(action)
+        if not (reads.refusal_by_families and reads.junk and reads.families is not None):
+            return None
+        families, profiles = reads.families, self._profiles
+
+        def of(state: CompressedState) -> Hashable | None:
+            profile = profiles.get(state, profiles)
+            if profile is profiles:
+                profile = profiles[state] = self._junk_profile(state)
+            if profile is None:
+                return None
+            rest, junk, held = profile
+            if held.isdisjoint(families):
+                return (action, rest, ())
+            return (action, rest, tuple(mod_id for mod_id, own in junk if not own.isdisjoint(families)))
+
+        return of
+
+    def refused_in_class(self, refusal_class: Hashable) -> bool:
+        """Whether a pair of `refusal_class` (`refusal_class_of`) was refused: then `kernel_key` raises that refusal at every pair of the class
+        (`_build`), and the pair is counted as `kernel_key` counts it (`refusals_shared`)."""
+        if refusal_class in self._refused_by:
+            self.refusals_shared += 1
+            return True
+        return False
+
+    def _junk_profile(self, state: CompressedState) -> tuple[int, tuple[tuple[str, frozenset[str]], ...], frozenset[str]] | None:
+        """The parts of the refusal class of `state` that no action changes (`refusal_class_of`): the number of its item without the junk, its
+        junk mods with their families, and the union of those families; None where `_build` makes no class or `_item_of_view` raises, and
+        where `_prepare` refuses the pair before it (an unveil offer held, an unopened listing): `kernel_key` answers those itself."""
+        if state.offer or state.flags.unopened:
+            return None
+        view = self._view(state, False)
+        if self._fractured_family_may_decide(view):
+            return None
+        try:
+            item, _ = self._item_of_view(view, False)
+        except ValueError:
+            return None
+        found = self._junk_of.get(id(item))
+        if found is None or found[0] is not item:
+            found = self._junk_of[id(item)] = (item, *self._junk_parts(item))
+        _, rest, junk = found
+        return rest, junk, frozenset().union(*(own for _, own in junk))
 
     def _junk_parts(self, item: Item) -> tuple[int, tuple[tuple[str, frozenset[str]], ...]]:
         """The number of `item` without its junk, with the junk's count per side (`_refusal_class`), and the junk mods with their families."""
