@@ -13,6 +13,7 @@ them declares them alike (`Action.influence_alike`), and only under a goal with 
 
 import pytest
 from abstraction_b2_support import real_graph
+from abstraction_support import real_game_data
 from test_abstraction_dominance import (
     AWAKENERS,
     DATA,
@@ -20,12 +21,12 @@ from test_abstraction_dominance import (
     ELDER,
     ELDER_S,
     ELDER_S_MAVEN,
-    RECIPES,
-
+    ELDER_SUFFIX,
     MIXED_BEST,
     P1,
     P2,
     P3,
+    RECIPES,
     S1,
     S2,
     S2_MAVEN,
@@ -35,39 +36,47 @@ from test_abstraction_dominance import (
     starts,
 )
 
-from crafting_system.abstraction import Goal, Wanted
+from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.abstraction._kinds import Kinds
 from crafting_system.actions import ActionError, AnnulmentOrb, OrbOfDominance
+from crafting_system.items import Influence
 
 ONE_PREFIX = Goal((TOP_PREFIX,))  # reads the best Shaper prefix only: the Shaper suffixes S1, S2 and the Elevated S2 give it nothing
 
+
 def kind(found, mod_id, influences=frozenset({SHAPER})):
     return found.kind_of(DATA.mods[mod_id], influences)
+
 
 def test_the_shaper_suffixes_the_goal_does_not_read_are_one_kind_named_by_the_lowest():
     found = ability((DOMINANCE,), ONE_PREFIX)
     assert kind(found, S1) == kind(found, S2) == kind(found, S2_MAVEN) == f"${S1}"
     assert kind(found, P3) == f"${P3}"  # the goal reads it
 
+
 def test_a_group_whose_upgrade_leaves_it_stays_apart():
     found = ability((DOMINANCE,), ONE_PREFIX)
     # P1 and P2 give the goal nothing, but the Orb of Dominance upgrades P2 to P3, which the goal reads
     assert len({kind(found, P1), kind(found, P2), kind(found, P3)}) == 3
+
 
 def test_a_goal_that_tells_the_mods_apart_keeps_them_apart():
     found = ability((DOMINANCE,), Goal((Wanted(frozenset({S2, S2_MAVEN})),)))
     assert kind(found, S1) == f"${S1}"
     assert kind(found, S2) == kind(found, S2_MAVEN) == f"${S2}"  # both pass: one group
 
+
 def test_a_roll_limit_keeps_every_mod_apart():
     with_roll = Goal((TOP_PREFIX, Wanted(frozenset({S2}), min_roll=(1,))))
     found = ability((DOMINANCE,), with_roll)
     assert len({kind(found, S1), kind(found, S2), kind(found, S2_MAVEN)}) == 3
 
+
 def test_an_upgrade_the_data_cannot_name_keeps_the_group_apart():
     no_elevated = OrbOfDominance(elevated=())  # S2 is a top tier with no Elevated version known
     found = ability((no_elevated,), ONE_PREFIX)
     assert kind(found, S1) != kind(found, S2)
+
 
 def test_an_awakeners_orb_whose_donor_mod_is_in_the_group_keeps_it_apart():
     elder_donor = AWAKENERS[0]  # its donor holds ELDER_S
@@ -75,51 +84,58 @@ def test_an_awakeners_orb_whose_donor_mod_is_in_the_group_keeps_it_apart():
     assert kind(ability((DOMINANCE, elder_donor), ONE_PREFIX), ELDER_S_MAVEN, frozenset({ELDER})) == f"${ELDER_S_MAVEN}"
     assert kind(ability((DOMINANCE, AWAKENERS[1]), ONE_PREFIX), S2) == f"${S1}"  # a donor of P3: the Shaper suffixes stay one group
 
+
 def test_an_action_that_reads_the_influence_mods_and_does_not_say_keeps_them_apart(monkeypatch):
     monkeypatch.setattr(OrbOfDominance, "influence_alike", lambda self, data, item, mods: False)
     found = ability((DOMINANCE,), ONE_PREFIX)
     assert kind(found, S1) == f"${S1}" and kind(found, S2) == f"${S2}"
+
 
 def test_an_item_without_influence_has_the_kinds_it_had():
     found = ability((DOMINANCE,), ONE_PREFIX)
     assert found.kind_of(DATA.mods[S1]) == found.kind_of(DATA.mods[S1], frozenset())  # no influence: S1 is no influence mod there
     assert not found.kind_of(DATA.mods[S1]).startswith("$")
 
+
 # --- exact: the cheapest cost is the cost with every mod apart ------------------------------------------------------------
 
+
 PRICES = {DOMINANCE: 7.0, RECIPES[0]: 3.0, RECIPES[1]: 2.0}
+
 
 def cheapest(found, start, actions) -> tuple[float, int]:
     """The least expected cost of the goal from `start` over the graph the kernels make (value iteration from below to its fixed point), and its states."""
     seen, _ = real_graph(found, [start], actions)
-    kernels = {}
+    kernels = {}  # state -> (price, its outcomes and their chances) per action it takes
     for state in seen:
         if found.is_goal(state):
             continue
         for action in actions:
             try:
-                kernels[state, action] = found.kernel(state, action)
+                kernel = found.kernel(state, action)
             except ActionError:
                 continue
+            kernels.setdefault(state, []).append((PRICES.get(action, 1.0), [(after, float(chance)) for after, chance in kernel.items()]))
     value = dict.fromkeys(seen, 0.0)  # from below: each sweep raises a value toward the least expected cost (every price is positive)
     for _ in range(200_000):
         changed = 0.0
         for state in seen:
             if found.is_goal(state):
                 continue
-            best = min(
-                (PRICES.get(action, 1.0) + sum(float(chance) * value[after] for after, chance in kernel.items())
-                 for (at, action), kernel in kernels.items() if at == state),
-                default=float("inf"),
-            )
+            best = min((price + sum(chance * value[after] for after, chance in kernel) for price, kernel in kernels.get(state, ())), default=float("inf"))
             changed = max(changed, abs(best - value[state]))
             value[state] = best
         if changed < 1e-11:
             break
     return value[start], len(seen)
 
+
 @pytest.mark.parametrize("goal", [ONE_PREFIX, Goal((MIXED_BEST,))], ids=["top_prefix", "mixed_tier"])
+
+
 @pytest.mark.parametrize("name", ["two_shaper", "mixed_shaper"])
+
+
 def test_the_cheapest_cost_with_the_groups_is_the_cost_with_every_mod_apart(goal, name, monkeypatch):
     actions = (DOMINANCE, *RECIPES, AnnulmentOrb())  # the recipes add influence mods to an influenced item, which the orbs refuse
     item = starts()[name]
@@ -131,3 +147,51 @@ def test_the_cheapest_cost_with_the_groups_is_the_cost_with_every_mod_apart(goal
         cost_apart, states_apart = cheapest(whole, whole.compress(item), actions)
     assert cost == pytest.approx(cost_apart, rel=1e-9, abs=1e-12) and cost < float("inf")
     assert states < states_apart  # the groups made the graph smaller
+
+
+@pytest.mark.parametrize(
+    ("name", "goal"), [("two_shaper", ONE_PREFIX), ("top_and_elevated", Goal((TOP_PREFIX, ELDER_SUFFIX)))], ids=["two_shaper", "top_and_elevated"]
+)
+
+
+def test_with_an_awakeners_orb_the_cheapest_cost_with_the_groups_is_the_cost_with_every_mod_apart(name, goal, monkeypatch):
+    # the Awakener keeps one influence mod and rereads it into the two-influence context of its result (`_reread`)
+    actions = (DOMINANCE, AWAKENERS[0], *RECIPES, AnnulmentOrb())
+    item = starts()[name]
+    grouped = ability(actions, goal)
+    cost, states = cheapest(grouped, grouped.compress(item), actions)
+    with monkeypatch.context() as apart:
+        apart.setattr(Kinds, "_influence_groups", lambda self: {})
+        whole = ability(actions, goal)
+        cost_apart, states_apart = cheapest(whole, whole.compress(item), actions)
+    assert cost == pytest.approx(cost_apart, rel=1e-9, abs=1e-12) and cost < float("inf")
+    assert states < states_apart
+
+
+@pytest.mark.parametrize("goal", [ONE_PREFIX, Goal((TOP_PREFIX, ELDER_SUFFIX))], ids=["top_prefix", "top_and_elder"])
+
+
+def test_a_group_of_one_influence_is_one_group_on_an_item_of_two(goal):
+    # an Awakener's Orb rereads a kept mod into the context of both influences: a group there must hold the whole group of one
+    found = ability((DOMINANCE, AWAKENERS[1]), goal)
+    both = frozenset({SHAPER, ELDER})
+    for one in (frozenset({SHAPER}), frozenset({ELDER})):
+        groups = {}
+        for mod in DATA.mods.values():
+            if (named := found.kind_of(mod, one)).startswith("$"):
+                groups.setdefault(named, []).append(mod)
+        assert any(len(mods) > 1 for mods in groups.values())  # some group to check
+        for mods in groups.values():
+            assert len({found.kind_of(mod, both) for mod in mods}) == 1, [mod.id for mod in mods]
+
+
+def test_mods_of_one_family_with_other_protected_tags_are_other_groups():
+    # real Elder gloves: Increased Attack Speed (tag attack) and Increased Attack and Cast Speed (attack, caster) are one family; a metamod
+    # reads the tags, and the state rebuilds a group's first mod, so the two lines are two groups
+    data = real_game_data()
+    elder = frozenset({Influence.ELDER})
+    found = Abstraction(data, Goal((Wanted(frozenset({"ProjectileSpeedUber3_"})),)), "Metadata/Items/Armours/Gloves/GlovesStr1", 86, (OrbOfDominance(),))
+    attack = {found.kind_of(data.mods[mod_id], elder) for mod_id in ("IncreasedAttackSpeedUber1", "IncreasedAttackSpeedUber2_")}
+    both = {found.kind_of(data.mods[mod_id], elder) for mod_id in ("IncreasedAttackAndCastSpeedUber1_", "IncreasedAttackAndCastSpeedUber2")}
+    assert len(attack) == 1 and len(both) == 1 and attack != both
+    assert next(iter(attack)).startswith("$")

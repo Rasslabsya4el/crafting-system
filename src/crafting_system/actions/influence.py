@@ -293,7 +293,8 @@ class OrbOfDominance(Action):
 
     def reads(self, data: GameData) -> Reads:
         # Which mods are influenced, and which mod each is (its tier, its Elevated version), decide the result; nothing else of the junk does, it only
-        # counts by side. The state tells the influence mods apart by mod (`influenced`). The side locks are crafted mods of the item, which a state
+        # counts by side. The state tells the influence mods apart by mod (`influenced`), but
+        # for the groups whose upgrades stay inside (`influence_alike`, #1238). The side locks are crafted mods of the item, which a state
         # always holds.
         return Reads(junk=True, families=frozenset(), pool_weight=False, influenced=True)
 
