@@ -329,12 +329,14 @@ class Standing:
         return max(self.upper / self.lower - 1.0, 0.0)
 
 
-def resident_mb() -> float | None:
+def resident_mb(under: float | None = None) -> float | None:
     """The memory this process and its live pool workers hold, in MB, or None where it cannot be read (`parallel.held_mb`, #626).
 
     The workers that prime the distributions are processes of their own: a net that read this process alone let them take a runner's memory.
+    `under` is the limit a net compares the reading with: below it the answer may be the cheap resident sum, an upper figure (`parallel.held_mb`,
+    #1252); a figure that is said (the peak of a round) passes none.
     """
-    return parallel.held_mb()
+    return parallel.held_mb(under=under)
 
 
 class Kernels:
@@ -995,7 +997,7 @@ class Search[S]:
         if states and net.states is not None and len(self.states) >= net.states:
             return f"{len(self.states):,} states were known, the limit is {net.states:,}"
         if memory and net.memory_mb is not None:
-            used = resident_mb()
+            used = resident_mb(under=net.memory_mb)
             if used is not None and used >= net.memory_mb:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None
@@ -1007,7 +1009,7 @@ class Search[S]:
     def _room_check(self, growth_mb: float) -> None:
         """Raise `MemoryNet` when the kernel arrays' next growth of `growth_mb` would take the process past the memory net (#839): the net is
         asked before the arrays grow, not after, so a search stops under its memory setting and not past it."""
-        used = resident_mb()
+        used = resident_mb(under=self.net.memory_mb - growth_mb)
         if used is not None and used + growth_mb >= self.net.memory_mb:
             raise MemoryNet(
                 f"the process held {used:,.0f} MB and the search's arrays were to grow by {growth_mb:,.0f} MB, past the limit of {self.net.memory_mb:,.0f} MB"

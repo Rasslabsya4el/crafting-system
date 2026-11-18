@@ -45,7 +45,7 @@ MEMORY_SHARE = 0.8  # the default memory net: this share of the machine's physic
 EARLY_SECONDS = 1.0  # a stage that stops this much or more before its time limit stopped early, to leave room for what follows (`Binding.early`)
 MEMORY_POLL_SECONDS = 0.5  # a checkpoint reads the memory at most this often (the clock it reads every time)
 ASK_EVERY = 1024  # a making under a net on the clock (`asking`) looks at the clock once every this many pieces: one kernel can take minutes and gigabytes (#1238)
-ASK_SECONDS = 0.25  # ... and asks its net at most this often: a question reads the memory of the process and its workers (`/proc`, milliseconds at gigabytes)
+ASK_SECONDS = 0.25  # ... and asks its net at most this often: a question reads the memory of the process and its workers (`parallel.held_mb`: microseconds under the net, its own pace past it, #1252)
 BUILD_PER_STATE = 100.0  # a run counted in states (`Budget.in_states`): the bound's build of a search may do this many pieces of work per state of that search's net (#1101; `Budget.build_per_state`)
 
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
