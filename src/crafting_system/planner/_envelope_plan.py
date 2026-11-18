@@ -318,7 +318,6 @@ def room_of(net: Net | None) -> Room | None:
     return None
 
 
-
 class BuildStop(Pace):
     """The net of the bound's build on the clock (`build_stop`); called, the reason once one is reached, else None.
 

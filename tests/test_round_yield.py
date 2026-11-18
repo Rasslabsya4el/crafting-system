@@ -50,22 +50,26 @@ def test_a_round_that_gives_way_with_no_plan_leaves_the_rounds_after_it_their_tu
     # 100 states, three rounds. Round 1 (offer 0) shows no plan of its offer: 4 states, and it joins the base. Round 2 (offers 0 and 1) begins
     # with no plan in hand and two rounds left (`blind` 2): its build is not complete and its search gives way with no plan at its share
     # (96 // 2 = 48 states). Round 3 (offers 0 and 2, not 1: a round that gave way is not in the base) is the last: all the 48 states left,
-    # no `blind`, and it makes the plan, 10. No round runs again.
+    # no `blind`, and it makes the first plan, 10. Round 2's group then runs again after it (a round that gave way is in no later round's
+    # offers otherwise), with the base round 3 closed into (offers 0, 1 and 2), the states left and no `blind`, and finds the cheaper plan, 7.
     calls = []
 
     def search(chosen, call):
         calls.append((chosen, call.blind, call.states))
         if chosen == (0,):
             raise _none(4)
-        if 1 in chosen:
+        if 1 in chosen and call.blind is not None:
             raise _gave_way(call.states // call.blind)
+        if 1 in chosen:
+            return _plan(7.0, 5)
         return _plan(10.0, 20)
 
     widened = _widen(GROUPS, search)
-    assert calls == [((0,), 3, 100), ((0, 1), 2, 96), ((0, 2), None, 48)]
-    assert [record.status for record in widened.records] == [_rounds.NONE, _rounds.STOPPED, _rounds.CLOSED]
+    assert calls == [((0,), 3, 100), ((0, 1), 2, 96), ((0, 2), None, 48), ((0, 1, 2), None, 28)]
+    assert [record.status for record in widened.records] == [_rounds.NONE, _rounds.STOPPED, _rounds.CLOSED, _rounds.CLOSED]
     assert widened.records[1].reason.startswith(YIELDED) and widened.records[1].states == 48
-    assert widened.plan.mean_remaining == 10.0
+    assert widened.records[1].reason.endswith("a round after it made the first plan, so it ran again after the rounds left")
+    assert widened.plan.mean_remaining == 7.0
 
 
 def test_a_round_that_gave_way_runs_again_with_all_that_is_left_when_no_round_after_it_made_a_plan():

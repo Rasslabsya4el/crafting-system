@@ -27,7 +27,8 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   can (#1268). A round with no plan in hand and other rounds after it (`RoundCall.blind`) whose build ends before it is complete has a
   bound that does not show its search the way: past its share of the time (the time left over the rounds left) the build goes on only at a
   pace that ends within its quarter, and the search gives way once it has used that share with no plan in hand (`_envelope.YIELDED`). Its
-  group is set aside like a stopped one, and runs again after the last round, with all the time left, when no round after it made a plan.
+  group is set aside like a stopped one, and runs again after the last round, with all the time left, when no round after it made a plan;
+  once a round after it makes the first plan, it runs again after the rounds left, under its share like them (its group is in no later round).
   R04's site plan: its bench crafts' round, then (after #973) its fossil sets' round, took every second left with no plan, and the rounds
   of the guide's methods (essences, the Exalted and the Fracturing Orb) were never tried. Once a plan is in hand, the share of a round is the run's time left over the rounds left
   (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
@@ -423,6 +424,14 @@ def widen(
             # widen that plan (R11: the essence round gave way at 52 s, its plan 597.28 c, on 2 of 9 runners, and the Exalted round, without
             # the essences, reached no plan: the answer kept 617.28 c where essences then an Exalted Orb cost 188.03 c)
             base = positions
+        if improved and first and gave_way:
+            # the first plan is in hand, and rounds before it gave way with no plan on a bound not complete (#1268): each runs again after the
+            # rounds left, with the base the first plan's round closed into and its share of the time, as every round with a plan in hand has.
+            # Not run again, their groups would be in no later round's offers (a round that gave way is not in the base)
+            for aside, group_again in gave_way:
+                queue.append(group_again)
+                records[aside] = replace(records[aside], reason=records[aside].reason + "; a round after it made the first plan, so it ran again after the rounds left")
+            gave_way = []
         if floor is not None and improved and first and len(queue) - k - 1 >= 2 and not ((still := left()) is not None and still <= 0.0):
             # the first plan is in hand: the rounds left (two or more) go by the cheapest a plan of their offers with the base can be, lowest
             # first (#1135), the whole pass within one round's share (#1241: `FloorsPass`)
