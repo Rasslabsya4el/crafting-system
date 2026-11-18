@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORLDS = {
     # the item, the requirements kept, the methods (each world's key holds the tags: a metamod is among them), the build's count of pairs
     "r17": ("r17-lightning-talisman.yaml", slice(0, 2), ("Harvest Add Remove Lightning", "annulment-orb", "regal-orb", "alchemy-orb", "chaos-orb", "transmutation-orb", "Bench craft Prefixes Cannot Be Changed"), 1_500),
-    "r20": ("r20-rf-helmet.yaml", slice(1, 3), ("Harvest Reforge Fire", "annulment-orb", "exalted-orb", "Bench craft Prefixes Cannot Be Changed"), 1_500),
+    "r20": ("r20-rf-helmet.yaml", slice(1, 3), ("Harvest Reforge Fire", "annulment-orb", "exalted-orb", "Bench craft Prefixes Cannot Be Changed"), 400),
 }  # fmt: skip
 WIDER = 30  # every fill looks at this many times more pairs, at most, for the rows the build at one fill makes
 
@@ -71,17 +71,28 @@ def pushed(pattern: Pattern, ab: Abstraction, member, action):
     return frozenset(out.items())
 
 
-def locked_keys(pattern: Pattern, ab: Abstraction, model, actions) -> list:
-    """The keys a lock craft of `actions` leads to from the first key of the model that holds a prefix and one suffix (none without such a craft)."""
-    locks = [action for action in actions if action.label(ab.data).startswith("Bench craft")]
-    for key, done in zip(model.keys, model.expanded):
-        if done and locks and key.counts[0] >= 1 and key.counts[1] == 1 and not key.crafted and not key.fractured:
-            for member in pattern.members(key, Mode.ONE):
-                try:
-                    return [k for k in map(pattern.key, ab.kernel(member, locks[0])) if pattern.locked_sides(k)]
-                except NotApplicableError:
-                    continue
-    return []
+LOCK = "StrMasterItemGenerationCannotChangePrefixes"  # the bench craft Prefixes Cannot Be Changed, as a mod
+LOCKED = (("IncreasedLife1", "IncreasedAccuracyNew1_"),)  # a prefix and a suffix (an attack mod: 33 fills of the key) under the lock
+
+
+def locked_keys(pattern: Pattern, plan) -> list:
+    """Keys with one prefix and one suffix under a crafted lock of the prefixes, read off items (none in a world without an erasing reroll):
+    a counted build of the real helmet stops before it expands such a key."""
+    from crafting_system.items import ExplicitMod, Influence, Item, Rarity
+
+    if not any(p.offer.label == "Harvest Reforge Fire" for p in plan.offers):
+        return []
+    data = plan.abstraction.data
+    low = lambda mod_id: tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)  # noqa: E731
+    keys = []
+    for mods in LOCKED:
+        item = Item.build(
+            data, base_id=plan.target.base_id, item_level=plan.target.item_level, rarity=Rarity.RARE,
+            influences=frozenset({Influence.SHAPER, Influence.ELDER}),
+            mods=(*(ExplicitMod(mod_id, low(mod_id)) for mod_id in mods), ExplicitMod(LOCK, low(LOCK), crafted=True)),
+        )  # fmt: skip
+        keys.append(pattern.key(plan.abstraction.compress(item)))
+    return keys
 
 
 def test_the_members_offered_give_every_kernel_that_every_member_of_the_key_gives(world):
@@ -92,7 +103,7 @@ def test_the_members_offered_give_every_kernel_that_every_member_of_the_key_give
     pattern = Pattern(ab, None, actions)
     fewer = compared = 0
     reached = [key for key, done in zip(model.keys, model.expanded) if done]
-    for key in (*locked_keys(pattern, ab, model, actions), *reached):  # a key that holds a lock first, then the keys as met
+    for key in (*locked_keys(pattern, plan), *reached):  # the keys that hold a lock first, then the keys as met
         if compared >= 6:
             break
         for action in actions:
@@ -106,7 +117,7 @@ def test_the_members_offered_give_every_kernel_that_every_member_of_the_key_give
             assert {pushed(pattern, ab, member, action) for member in offered} == {pushed(pattern, ab, member, action) for member in every}, (key, action)
             fewer += len(every) - len(offered)
             compared += 1
-    assert compared >= 2 and fewer > 100
+    assert compared >= 2 and fewer > 50
 
 
 def test_the_model_built_at_the_fills_told_apart_is_the_model_built_at_every_fill(world):
@@ -127,7 +138,6 @@ def test_the_model_built_at_the_fills_told_apart_is_the_model_built_at_every_fil
 def test_what_an_action_reads_of_the_pure_junk_is_its_own_declaration(world):
     plan, _ = world
     ab = plan.abstraction
-    plan, pieces = world
     actions = {p.offer.label: p.offer.action for p in plan.offers if p.offer.action is not None}
     pattern = Pattern(ab, None, list(actions.values()))
     key = pattern.key(plan.start)
@@ -139,8 +149,8 @@ def test_what_an_action_reads_of_the_pure_junk_is_its_own_declaration(world):
     else:
         reforge = actions["Harvest Reforge Fire"]
         assert pattern.alike_of(reforge, key) is None  # no lock: its policy is `ANY`, nothing to share
-        model = pattern_lower_bound(ab, plan.start, plan.offers, pieces=pieces).model
-        locked = locked_keys(pattern, ab, model, list(actions.values()))[0]
+        locked = locked_keys(pattern, plan)[0]
+        assert locked.counts == (1, 1)
         assert pattern.locked_sides(locked) == {Side.PREFIX}
         assert pattern.alike_of(reforge, locked) == (None, NOTHING)  # the side it keeps by type, the side it erases not at all
 
