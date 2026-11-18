@@ -16,15 +16,17 @@
 Each answers with an exact list or pool draw. The influenced Exalted Orbs are a planner kind since #818 (a beta method, batch B2, OR-37): a
 goal built from a target names an influenced mod by its family and tier, as any mod, and the plan offers the six orbs by default (OR-41). The
 offers' floors class the orb TERMINAL (`planner/_offer_kinds`: it reads the implicits and changes the influences, so it leaves the start's
-shape), so its lower bound in the envelope search is its price. The Orb of Dominance and the beast recipes are not planner kinds yet (their
-`why_not`). The compressed state tells the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155
+shape), so its lower bound in the envelope search is its price. The Orb of Dominance is a planner kind since #1195 (batch B2, OR-37),
+offered by default (OR-41): a goal names the next tier of an influenced mod by its family and tier, and an Elevated mod by `mod:` (it has no
+natural tier); the offers' floors class it TERMINAL too (it reads the junk and the influenced mods and adds a mod it does not name), so its
+lower bound is its price. The beast recipes are not a planner kind yet (their `why_not`). The compressed state tells the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155
 (below). A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
 
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
 unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
-influence's orb for an item that has it (unverified, approximate). The orbs are a planner kind since #818; Dominance and the recipes are not yet.
+influence's orb for an item that has it (unverified, approximate). The orbs are a planner kind since #818, Dominance since #1195; the recipes are not yet.
 
 The compressed state (ticket #155, ADR-0030 amendment). `OrbOfDominance` declares `Reads.influenced` (an Awakener's Orb does too): the state then tells
 each influence mod of the item's influences apart by MOD (the kind `$<mod id>`), because the families of the data hold ordinary and influence mods
@@ -299,7 +301,9 @@ class OrbOfDominance(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It removes one mod and puts the next tier of another on the item: a mod it does not name in advance.
-        return Adds(named=None, draws=False)
+        # Under a roll limit the state cannot follow its new tier or the Elevated mod it rerolls, and only at the states where it picks one
+        # (`rolls_unfollowed`, #993, #1195).
+        return Adds(named=None, draws=False, rolls_unfollowed=True)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         own = (
@@ -408,14 +412,16 @@ class OrbOfDominance(Action):
         return Finite(data, item, tuple(results), rerolled)
 
 
-@kind(
-    "orb-of-dominance",
-    order=77,
-    planner=False,
-    why_not="a goal built from a target does not name an influenced or an Elevated mod yet (the compressed state tells them apart since ticket #155)",
-)
+@kind("orb-of-dominance", order=77)
 def _orb_of_dominance(data: GameData, item: Item):
-    if item.rarity is not Rarity.NORMAL and item.influences and data.base_items[item.base_id].item_class in DOMINANCE_GATE.value:
+    # The catalog is asked once, for the start item (as for the influenced Exalted Orbs, #818): a normal or magic item becomes rare on the
+    # way, and an item with no influence takes one from an influenced Exalted Orb (item level 68 or more, no fractured mod), after which its
+    # influenced mods are drawn like any other. What no later item of a plan loses is checked here, so the orb is not offered where it can
+    # never act: the class, corruption, a fractured mod (an influenced item never holds one) and, with no influence, an item level under 68.
+    # The rarity and the count of influenced mods change on the way, and are `outcomes`'s refusals.
+    if data.base_items[item.base_id].item_class not in DOMINANCE_GATE.value or item.corrupted or item.fractured_mods:
+        return
+    if item.influences or item.item_level >= EXALT_MIN_ITEM_LEVEL.value:
         yield OrbOfDominance()
 
 
