@@ -15,8 +15,8 @@ each tip's one action "restart" (cost c_r, to the start), solved by the planner'
 the dump's model, so U >= V(start) (checked every round). With UPPER=none a tip has no upper value (infinite): the incumbent is then the best
 plan that never meets a tip (the worked keys from which some plan surely avoids every tip; infinite until the start is among them).
 Both incumbents are solved and written every round; UPPER only says which one weighs the tips. UPPER=oracle weighs a tip by its visits
-times (its complete value - its lead): the best upper value a tip can have; it reads the truth, so no build can, and it bounds what any
-sharper upper stand-in could do to the order of the work (with it the incumbent would be the complete value from the first round).
+times (its complete value - its lead): the best upper value a tip can have; it reads the truth, so no build can. It is one order of the
+work that a sharper upper stand-in could give, not a bound on every order.
 
 A round: the lower model (tips at their lead, led.py's) and the two upper models are solved; L = the lower start value. The cheapest policy
 of the lower model is walked from the start, and the expected visits of each key under it counted over 400 steps (led.py's). The gap of
