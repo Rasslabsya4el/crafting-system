@@ -44,7 +44,7 @@ from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.abstraction._pattern import IMPRINTS, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Tally
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
-from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors
+from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors, shape_of
 from ._offers import BuyStartItem, PricedOffer
 
 FAKE = -1  # the tag of the floor action
@@ -246,9 +246,8 @@ def pattern_lower_bound(
         if not more:
             return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched)
         names = ", ".join(f"{priced[p].label} (cost {priced[p].cost:.3g})" for p in more[:2]) + (", ..." if len(more) > 2 else "")
-        said = ", ".join(
-            f"{name} {limits[k]:.4g}" for k, name in ((OUTSIDE, "outside E"), (INSIDE, "inside E"), (OTHER, "other shape"), (UNOPENED, "unopened")) if limits[k] is not None
-        )
+        named = ((OUTSIDE, "outside E"), (INSIDE, "inside E"), (OTHER, "other shape"), (UNOPENED, "unopened"), *((k, f"shape {shape_of(k)}") for k in floors.classes[len(CLASSES):]))
+        said = ", ".join(f"{name} {limits[k]:.4g}" for k, name in named if limits.get(k) is not None)
         say(f"model {rounds}: the floor action is the cheapest at some key (largest model value there: {said}); {len(more):,} offers more join the model: {names}")
         kept = (model, value, float(solved.error_bound), list(order))
         adding = more
@@ -298,7 +297,7 @@ def _tip_floor(priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], fl
 def _floor_of(floors: OfferFloors, outside: list[int], priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], float | None]:
     """The floor action of a key: the least floor of the offers outside the model there, or of all the offers when the key is a tip."""
     names = range(len(priced))
-    table = {klass: (floors.floor(outside, klass), floors.floor(names, klass)) for klass in CLASSES}
+    table = {klass: (floors.floor(outside, klass), floors.floor(names, klass)) for klass in floors.classes}
 
     def floor(key: PatternKey, expanded: bool) -> float | None:
         cost = table[floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS])][0 if expanded else 1]
@@ -335,10 +334,10 @@ def _binding(
     reached = np.zeros(n, dtype=bool)
     reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
     shaped = np.array([floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
-    binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape has the cost of an offer as its floor and is left to the search unless the policy reaches it
+    binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape (OTHER: the cost of an offer as its floor; SHAPED + S: rho_S, #973) is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
-        return [], dict.fromkeys(CLASSES)
-    limit: dict[int, float | None] = dict.fromkeys(CLASSES)
+        return [], dict.fromkeys(floors.classes)
+    limit: dict[int, float | None] = dict.fromkeys(floors.classes)
     for k in np.flatnonzero(binding[: len(model.keys)]).tolist():
         key = model.keys[k]
         if not model.expanded[k]:

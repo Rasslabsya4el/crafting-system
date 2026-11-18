@@ -79,3 +79,20 @@ def test_c25_an_attempt_wise_run_refused_for_the_mass_it_cuts_is_written_and_a_r
     assert math.isinf(refused.p90.high)  # the ordinary grid ran instead and could not reach it
     (limit,) = risk_limits(refused)
     assert limit.what == "Not computed: the cost 9 runs in 10 stay under and the average of the worst tenth" and said in limit.reason() and "the faster methods gave up first" in limit_text(limit)
+
+
+@pytest.mark.parametrize(("success", "mass"), [(True, 5 / 18), (False, 13 / 18)])
+def test_an_attempt_whose_every_state_costs_no_bin_ends_at_bin_zero(success, mass):
+    """A grid whose step is above every cost of an attempt (the lower chain of a plan of 184,605 c whose steps cost a few Chaos, R17, #1260)
+    folds every state away: the attempt ends at bin 0 with its chance, where the budget run refused it ('the start state cannot finish').
+    From `s`: the goal 1/6, `t` 2/6, `bad` (back to the start) 3/6; from `t`: the goal, `bad`, `s` 1/3 each. So the goal before the start
+    again is 1/6 + 2/6 * 1/3 = 5/18, and the start again 13/18."""
+    from crafting_system.risk._chain import build_chain
+    from crafting_system.risk._regen import attempt_pmf
+
+    chain = build_chain(policy(), "s", lambda state: state == GOAL)
+
+    pmf, in_flight, stopped = attempt_pmf(chain, [0] * len(chain.states), success=success, max_bins=100)
+
+    assert pmf.tolist() == [pytest.approx(mass, rel=1e-12)]
+    assert (in_flight, stopped) == (0.0, "")

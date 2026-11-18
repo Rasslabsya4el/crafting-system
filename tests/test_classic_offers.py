@@ -1,7 +1,7 @@
 """The classic offers (`cli_support.CLASSIC_KINDS`): what a target with no `actions:` was offered before #886 turned every beta method on.
 
 The real routes' CI tests plan with them, so a kind added to the catalog, or a classic kind renamed, must fail here, not move those tests
-silently: every planner kind is either classic or one #886 turned on (or a deferred kind, opt-in still).
+silently: every planner kind is either classic or one #886 or #973 turned on (or a deferred kind, opt-in still).
 """
 
 import pytest
@@ -16,12 +16,12 @@ TURNED_ON_BY_886 = {
     "veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick", "annulment-orb", "fracturing-orb", "talisman-fracture", "aspect-beast",
     "beast-side-swap", "wild-bristle-matron", "imprint", "restore",
 }
-TURNED_ON_LATER = {"influenced-exalted-orb", "catalyst", "orb-of-dominance"}  # beta methods made planner kinds after #886, on by default (#818, #159, #1195, OR-41)
+TURNED_ON_LATER = {"influenced-exalted-orb", "catalyst", "orb-of-dominance", "alchemy-orb", "scouring-orb"}  # beta methods made planner kinds after #886, on by default (#818, #159, #1195, OR-41; #973: the offers are listed for the item a Scouring leaves)
 DEFERRED = {"recombinator", "foulborn-exalted-orb"}  # opt-in with or without the classic offers (OR-37)
 CLASSIC_DEFERRED = {"vaal", "locus"}  # B4: classic kinds, opt-in since #1125 (OR-37) and on again under the classic offers
 
 
-def test_every_planner_kind_is_classic_turned_on_by_886_or_deferred():
+def test_every_planner_kind_is_classic_turned_on_by_886_or_973_or_deferred():
     planner = [entry.name for entry in kinds(planner_only=True)]
 
     assert len(set(CLASSIC_KINDS)) == len(CLASSIC_KINDS) == 23

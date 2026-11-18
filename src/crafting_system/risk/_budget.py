@@ -171,6 +171,10 @@ def run_budget(
     were folded away, `_fold`). `deadline` (a `time.monotonic()` value) stops the run at the last bin it finished once
     passed; the mass not yet resolved is then in `unresolved`, as at the cap.
     """
+    if initial is not None and not (initial := tuple(initial)):
+        # every state the run would move was folded away (`_fold`: each costs 0 bins, as on a lower grid whose step is above every cost of an
+        # attempt): the whole run ends at bin 0, `goal_mass` in the goal and the rest lost; no state is left to move (#1260)
+        return BudgetRun([goal_mass], 0.0)
     finishing = chain.finishing_states()
     if not finishing or not chain.can_finish[0]:
         raise ValueError("the start state cannot finish: there is no distribution to compute")

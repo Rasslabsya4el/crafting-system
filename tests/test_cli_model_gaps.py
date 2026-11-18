@@ -98,14 +98,18 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_benchmark_use.py", "one_step_short", ("NotApplicableError", "OutOfScopeError"), EITHER, "a bench craft that cannot be used on this state is not a sure step to the target; nothing is left out of a plan and nothing is written"),
     ("planner/_offer_kinds.py", "_raised", ("NotApplicableError",), GAME, "the game refuses the offer on the bare item: set aside as inapplicable"),
     ("planner/_offer_kinds.py", "_raised", ("OutOfScopeError",), GAP, "no rule on the bare item proves nothing for the states: the offer stays in the search"),
-    ("planner/_offer_kinds.py", "_raised_add", ("NotApplicableError", "OutOfScopeError"), EITHER, "a refusal of an addition at the bare item, by the game or by a gap, proves nothing for a state holding more mods: the offer stays in the search as a terminal one"),
     ("planner/_offer_kinds.py", "_raised_add", ("OutOfScopeError",), GAP, "a declared draw whose pool the bound has no argument for (a family on both sides): no bound, the offer stays terminal (#1074)"),
+    ("planner/_offer_kinds.py", "_raised_add", ("NotApplicableError",), GAME, "the game refuses the addition at the bare item: one that keeps every mod (`Reads.variants`) is set aside, the bare item having the most room of the shape (a Regal Orb on a Rare, #973); any other proves nothing for a state holding more mods and stays terminal"),
+    ("planner/_offer_kinds.py", "_raised_add", ("OutOfScopeError",), GAP, "no rule for the addition at the bare item proves nothing for the states: the offer stays in the search as a terminal one"),
     ("planner/_offer_kinds.py", "_raised_implicit", ("NotApplicableError", "OutOfScopeError"), EITHER, "a refusal of an implicit change at the bare item, by the game or by a gap, is not read as a proof for the states: the offer stays terminal (#1074)"),
     ("actions/eldritch.py", "EldritchExaltedOrb.added_draw", ("OutOfScopeError",), GAP, "no pool is modelled for the bare item: no draw is declared, the offer stays terminal (#1074)"),
     ("actions/beast_mods.py", "BeastSideSwap.added_draw", ("OutOfScopeError",), GAP, "no pool is modelled for the bare item: no draw is declared, the offer stays terminal (#1074)"),
     ("actions/eldritch.py", "EldritchExaltedOrb.added_draw", ("NotApplicableError",), GAME, "the item takes no Eldritch currency (its class, an influence, a corruption): no draw is declared (#1074)"),
     ("planner/_offer_kinds.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
     ("planner/_offer_kinds.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
+    ("planner/_offer_floor.py", "OfferFloors._rarities", ("NotApplicableError", "OutOfScopeError", "ItemError", "ValueError"), EITHER, "an offer refused at the shape's item, by the game, a gap or the data, is asked at its bare item; refused at both it leaves no item of another rarity, as `reached_items` reads it (#973)"),
+    ("planner/_offer_floor.py", "OfferFloors._passed", ("NotApplicableError",), GAME, "the game refuses the reroll at the bare item: it never applies in the shape and passes no leaf; an addition's refusal proves nothing, so it may pass the leaf (#973)"),
+    ("planner/_offer_floor.py", "OfferFloors._passed", ("OutOfScopeError",), GAP, "no rule at the bare item proves nothing: the leaf may pass, so it is no dead leaf (#973)"),
     ("planner/_decide.py", "coarse_cause", ("OutOfScopeError",), GAP, "an action that declares no block invariance gives no coarse level; its text is the reason"),
     ("planner/_donors.py", "DonorModel._candidate", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_donors.py", "DonorModel._candidate", ("OutOfScopeError",), RECORDS, "a model gap: written"),
@@ -117,6 +121,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_offers.py", "_gives_quality_wanted", ("NotApplicableError",), GAME, "the game refuses the quality action on the start item without its quality (a corrupted item, another class): it gives no quality on any later item either, so it is left out (#159)"),
     ("planner/_offers.py", "_gives_quality_wanted", ("OutOfScopeError",), GAP, "a quality action the model cannot read is kept: nothing is left out on a doubt (#159)"),
     ("planner/_offers.py", "_told_families", ("ItemError", "NotApplicableError", "OutOfScopeError"), EITHER, "a probe item whose pool cannot be built (an influence the base refuses, a model gap) gives no draw, so no family to tell apart there (#886)"),
+    ("planner/_offers.py", "reached_by", ("ItemError", "NotApplicableError", "OutOfScopeError", "ValueError"), EITHER, "an action that leaves nothing at an item (the game refuses it, no rule covers it, the data cannot build it: a missing mod or bench option) is no way to another rarity there; at plan time it is refused at that item too (#973)"),
     ("planner/_offers.py", "donor_wants", ("OutOfScopeError", "NotApplicableError"), EITHER, "an Awakener's Orb whose donor cannot be read (#832) is kept, so that its donor's search (`_awakener.solve_donors`) leaves it out and says why"),
     ("planner/_packed.py", "walk", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_packed.py", "walk", ("OutOfScopeError",), RECORDS, "a model gap: written"),
@@ -470,7 +475,8 @@ def test_the_bound_pruning_keeps_an_offer_the_model_has_no_rule_for_and_sets_asi
     kinds = {}
     for error in (NotApplicableError, OutOfScopeError):
         monkeypatch.setattr(_offer_kinds, "keeps_shape", lambda *args, error=error: (_ for _ in ()).throw(error("planted")))
-        kinds[error] = _offer_kinds._raised(SimpleNamespace(data=None), None, None, (), ChaosOrb(), _offer_kinds.REROLL, 0, Fraction(1), 1)
+        view = SimpleNamespace(abstraction=SimpleNamespace(data=None), bare=None, item=None, chosen=())
+        kinds[error] = _offer_kinds._raised(view, ChaosOrb(), _offer_kinds.REROLL, 0, Fraction(1), 1)
 
     assert kinds[NotApplicableError][0] == _offer_kinds.REFUSED  # proved never usable: set aside, and said so
     assert kinds[OutOfScopeError][0] == _offer_kinds.TERMINAL  # not proved: it stays in the search, where its gap is written
