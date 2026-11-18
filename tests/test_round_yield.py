@@ -4,10 +4,9 @@ Until #1268 a round that began with no plan in hand took all the time left until
 and a later round was taken not to give one sooner. R04's site plan broke that: its bench crafts' round (the eighth) built for the quarter of
 the time left, was not complete, and searched the rest with no plan; on main after #973 its bench crafts' round was refused and the fossil
 sets' round took the 321 s left the same way. The rounds that hold the guide's methods (essences, the Exalted and the Fracturing Orb) were
-never tried. Now such a round keeps, past its share of the time (the time left over the rounds left), only a build whose pace ends within
-its quarter (`_envelope_plan.room_of`), and a search on a bound not complete gives way once it has used the round's share with no plan in
-hand (`_envelope.Net.yield_at`, `_envelope.YIELDED`). A round that gave way runs again, with all the time left, when no round after it made
-a plan (`_rounds.widen`). Every figure here is counted in states or read off a clock set by the test (never the machine's)."""
+never tried. Now such a round keeps its build's quarter, and a search on a bound not complete gives way once it has used the round's share
+(the time left over the rounds left, from the search's own start) with no plan in hand (`_envelope.Net.yield_at`, `_envelope.YIELDED`). A round that gave way runs again, with all the time left, when no round after it made
+a plan, and under its share once a round after it made the first plan (`_rounds.widen`). Every figure here is counted in states or read off a clock set by the test (never the machine's)."""
 
 from types import SimpleNamespace
 
@@ -115,42 +114,19 @@ def _plan_net(**kwargs):
     return planner_plan.search_net(Clock(Budget.in_states(90)), **kwargs)
 
 
-def test_past_its_share_the_build_of_a_round_with_no_plan_in_hand_goes_on_only_at_a_pace_that_ends_within_its_quarter(monkeypatch):
-    # On a clock set here: a round with no plan in hand and 10 rounds left, its net the 100 s left. Its build may take the quarter (25 s),
-    # as before #1268, and its share of the time is 10 s (100 / 10, `room_of`: 4 / 10 of the quarter). Past 10 s:
-    # * a build whose model has grown at a pace that ends at 20 s goes on, and stops at 25 s;
-    # * one whose pace ends at 46 s stops at once, at 10 s (`PACE`);
-    # * one that grows its model and has no pace yet stops at 10 s (`QUARTER`);
-    # * one that does not grow (one model on every offer) goes on to 25 s, as before;
-    # and with 4 rounds left or fewer the share is the quarter itself: the rule is the old one.
-    from crafting_system.abstraction._pattern import Growth
-
+def test_the_build_of_a_round_with_no_plan_in_hand_keeps_its_whole_quarter_whatever_the_rounds_left(monkeypatch):
+    # On a clock set here: a round with no plan in hand and 10 rounds left, its net the 100 s left. Its build is not cut to its share (10 s):
+    # it has the quarter (25 s), as every round with no plan in hand had before #1268. R10's and R13's first plans come from such a build,
+    # not complete, that took its whole quarter (149 s, 146 s) and then held the plan in seconds; cut to the share, both had no plan.
     now = [0.0]
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
     net = _envelope.Net(seconds=100.0, blind=10)
-    assert _envelope_plan.room_of(net).quarter == pytest.approx(0.4) and _envelope_plan.room_of(_envelope.Net(seconds=100.0, blind=4)).quarter == 1.0
-    assert _envelope_plan.room_of(_envelope.Net(seconds=100.0)) is None
-    fast, slow, unknown, whole = (_envelope_plan.build_stop(net, 0.0) for _ in range(4))
-    fast.grows = slow.grows = unknown.grows = True
-    whole.grows = False
-    now[0] = 1.0
-    fast.grown(Growth(5, 12, 4, 4), fast.used())
-    slow.grown(Growth(5, 12, 4, 4), slow.used())
-    now[0] = 3.0
-    fast.grown(Growth(10, 12, 4, 12), fast.used())  # all 8 offers to add joined in 2 s: 1 + 2 * 8 / 8 = 3 s; set to 20 s below
-    fast.need = 20.0
-    slow.grown(Growth(10, 12, 4, 5), slow.used())  # 1 of 8 in 2 s: 1 + 2 * 8 / 1 = 17 s; set to 46 s below
-    slow.need = 46.0
-    now[0] = 9.9
-    assert fast() is None and slow() is None and unknown() is None and whole() is None
-    now[0] = 10.0
-    assert fast() is None and whole() is None
-    assert slow().startswith("stopped after 10 of the 100 seconds of the time limit: at the pace its model grew it would need about 46 s, more than the 25 s")
-    assert unknown().startswith("stopped after 10 of the 100 seconds of the time limit, its share of the round's time: its model had not grown")
+    assert _envelope_plan.room_of(net) is None
+    stop = _envelope_plan.build_stop(net, 0.0)
     now[0] = 24.9
-    assert fast() is None and whole() is None
+    assert stop() is None
     now[0] = 25.0
-    assert fast().startswith("stopped after 25 of the 100 seconds") and whole().startswith("stopped after 25 of the 100 seconds")
+    assert stop() is not None
 
 
 def test_a_search_with_no_plan_in_hand_gives_way_at_its_share_and_one_that_holds_a_plan_does_not():

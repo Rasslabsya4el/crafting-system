@@ -576,7 +576,7 @@ def search_net(
     and the run keeps its net (OR-40). `walked` (#1224): the plan in hand is one a stopped search walked to (#1142); its build has the same
     net and room, and keeps a quarter of it for the search unless the pace its model grows at ends within that room
     (`abstraction._pattern.Pace.verdict`). `blind` (#1268): the search begins with no plan in hand and `blind` rounds are left, this one
-    included: should its bound's build end before it is complete, the round keeps to its share of the net and gives way with no plan
+    included: should its bound's build end before it is complete, its search keeps to its share of the net and gives way with no plan
     (`Net.blind`, `_envelope_plan.YIELDED`)."""
     if clock is None:
         return None

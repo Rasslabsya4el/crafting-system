@@ -253,8 +253,8 @@ class Net:
     # (`abstraction._pattern.Growth`, #1135); set by `_plan.search_net`, 0 for none
     late: float = 0.0
     # a round of the planner's widening that began with no plan in hand while other rounds are left (`_rounds`, #1268): the rounds left, this
-    # one included. Should its bound's build end before it is complete, the round keeps to its share of the net (the net over `blind`) and
-    # gives way with no plan, so the rounds after it are tried (`_envelope_plan.BuildStop`, `YIELDED`); None: the whole net
+    # one included. Should its bound's build end before it is complete, its search keeps to its share of the net (the net over `blind`) and
+    # gives way with no plan, so the rounds after it are tried (`_envelope_plan._envelope_run`, `YIELDED`); None: the whole net
     blind: int | None = None
     # (seconds, states) set by `_envelope_plan` for such a round once its build ended before it was complete: the search gives way once it has
     # used them with no plan in hand (`YIELDED`); either None when the net has no such figure

@@ -25,8 +25,8 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   that cannot hold them cannot widen it (R11's essence round gave way on 2 of 9 runners, and its Exalted round then reached no plan). Until a plan is in hand, a round may take all the time left (the answer must hold a plan, OR-33)
   as long as its bound's build completes: a later round was taken not to give a plan sooner than the rounds before it, and R04 showed it
   can (#1268). A round with no plan in hand and other rounds after it (`RoundCall.blind`) whose build ends before it is complete has a
-  bound that does not show its search the way: past its share of the time (the time left over the rounds left) the build goes on only at a
-  pace that ends within its quarter, and the search gives way once it has used that share with no plan in hand (`_envelope.YIELDED`). Its
+  bound that does not show its search the way: the build keeps its quarter (R10's and R13's first plans come from such a build), and the
+  search gives way once it has used its share of the time (the time left over the rounds left) with no plan in hand (`_envelope.YIELDED`). Its
   group is set aside like a stopped one, and runs again after the last round, with all the time left, when no round after it made a plan;
   once a round after it makes the first plan, it runs again after the rounds left, under its share like them (its group is in no later round).
   R04's site plan: its bench crafts' round, then (after #973) its fossil sets' round, took every second left with no plan, and the rounds
