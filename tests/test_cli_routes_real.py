@@ -166,15 +166,15 @@ def test_the_states_of_a_policy_with_crafts_show_the_crafted_and_the_other_mods(
     from crafting_system.cli import build_report
 
     route_id, _, _, plan = solved
-    if route_id == "R11":
-        pytest.skip("no craft counts toward R11, so its states keep no other mods")
 
     text = " | ".join(state.description for state in build_report(plan, data).states)
 
     if route_id == "R05":
         # since ticket #457 a bench Life or resistance has no natural tier and counts toward no line of R05: no craft is offered,
-        # so no state holds a crafted mod or "other mods" (before it, the cheap answer was a bench craft that met "Life T1")
-        assert "other mods:" not in text and "crafted" not in text.replace("not crafted", "")
+        # so no state holds a crafted mod (before it, the cheap answer was a bench craft that met "Life T1"). Since #1289 the ring asks
+        # for its 20% Intrinsic quality, which a plan a route is judged against searches with the mods (`_quality_finish.applies`): the
+        # catalyst keeps the mods, so the model counts the other mods per side and the states say so.
+        assert "other mods:" in text and "crafted" not in text.replace("not crafted", "")
         return
     assert "other mods:" in text
 
@@ -279,7 +279,7 @@ OWNER_TARGETS = {
             ("30% increased Movement Speed", "T2", ("fractured",)),
             ("+# to maximum Life", "T2 or better", ()),
             ("+(43-50) to Intelligence", "Shrieking essence", ()),
-            ("(16-20)% chance to Avoid Elemental Ailments", "crafted", ()),
+            ("(21-25)% chance to Avoid Elemental Ailments", "crafted", ()),
         ],
         "Shrieking essence",
     ),
@@ -312,8 +312,9 @@ def test_the_page_shows_the_owners_target_the_fracture_on_every_card_and_the_one
     assert not any(text.startswith(forced[0].text.split(" · ")[0]) and " · T" in text for text in lines)  # no tier number for the essence's mod
     assert not any(text.startswith(("+# to Intelligence:", "+# to Strength:")) for text in lines)  # and no tier chance line for a mod that always comes
     if route_id == "R11":
-        (group,) = card.groups
+        group, finish = card.groups
         assert [member.note for member in group.members] == ["Shrieking essence", "Deafening essence"]
+        assert [member.note for member in finish.members] == ["crafted"] * 6  # the guide's last step, one of six bench crafts (#890, #1289)
         essences = {row.title for row in section.rows if "Essence of" in row.title}
         assert essences == {"Shrieking Essence of Loathing"}  # one choice, in the steps, the prices and the finished item
 

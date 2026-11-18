@@ -633,7 +633,7 @@ def test_the_real_r10_goal_card_marks_the_fractured_movement_speed_and_says_the_
     assert card.prefixes[1] == Slot("+# to maximum Life", "wanted", note="T2 or better")  # tier 1 or tier 2, the owner's target
     # the route's essence forces this mod: the line says the essence's tier, not the tier 2 the mod also is on the natural ladder
     assert card.suffixes[0] == Slot("+(43-50) to Intelligence", "wanted", note="Shrieking essence")
-    assert card.suffixes[1] == Slot("(16-20)% chance to Avoid Elemental Ailments", "wanted", note="crafted")
+    assert card.suffixes[1] == Slot("(21-25)% chance to Avoid Elemental Ailments", "wanted", note="crafted")
 
 
 def test_where_a_mod_comes_from_is_read_from_the_route_not_from_the_target_line():
@@ -706,6 +706,18 @@ def test_the_real_r11_goal_card_marks_the_fractured_chaos_resistance_and_names_e
             (
                 Slot(f"(7-8){reservation}", "wanted", ("suffix",), "Shrieking essence"),
                 Slot(f"(9-10){reservation}", "wanted", ("suffix",), "Deafening essence"),
+            ),
+        ),
+        # the guide's last step (#890, #1289): one of the six bench crafts it names, which also keeps a suffix open for it
+        Group(
+            "at least 1 of 6 of these:",
+            (
+                Slot("+(29-35)% to Fire Resistance", "wanted", ("suffix",), "crafted"),
+                Slot("+(29-35)% to Cold Resistance", "wanted", ("suffix",), "crafted"),
+                Slot("+(29-35)% to Lightning Resistance", "wanted", ("suffix",), "crafted"),
+                Slot("+(26-30) to Strength", "wanted", ("suffix",), "crafted"),
+                Slot("+(26-30) to Dexterity", "wanted", ("suffix",), "crafted"),
+                Slot("+(26-30) to Intelligence", "wanted", ("suffix",), "crafted"),
             ),
         ),
     )
