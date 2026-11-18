@@ -229,6 +229,8 @@ def test_the_draw_of_a_bought_listing_makes_no_member_at_an_opened_key(monkeypat
     """The listing's draw works only on the unopened listing, and every other action only on an opened item (a flag of the key): the build
     makes no member for either where the flag refuses it, nor asks the process pool for their distributions there (#830)."""
     monkeypatch.setattr(_pattern, "PRIME_FROM", 1)  # every key primes its offers (the product does from 16)
+    # each pair of the two draws is prepared: lumped (#1146) none is, and the Divine Orb draws nothing, so its pairs are not prepared (#1193)
+    monkeypatch.setattr(_pattern, "LUMP_ERASING", False)
     primed: list = []
     monkeypatch.setattr(Abstraction, "prime", lambda self, requests, **options: primed.extend(requests))
     draw = OpenListing(Rarity.RARE)
@@ -239,5 +241,6 @@ def test_the_draw_of_a_bought_listing_makes_no_member_at_an_opened_key(monkeypat
     assert len(model.keys) > 2 and model.keys[0].flags.unopened
     assert sum(count for (_, label), count in model.stats.modes.items() if label == "draw") == 1  # the start key alone
     assert primed and all((action is draw) == member.flags.unopened for member, action in primed)
+    assert {type(action) for _, action in primed} == {type(draw), type(CHAOS)}
     exact = exact_values(ab, start, offers)
     assert 0 < float(solve_packed(pack_pattern_model(model, offers)).value[0]) <= exact[start] * (1 + TOLERANCE)
