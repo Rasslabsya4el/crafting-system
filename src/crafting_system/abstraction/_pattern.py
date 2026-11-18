@@ -1318,7 +1318,14 @@ class PatternBuilder:
             if members is None:
                 members = by_mode[policy] = self.pattern.members(key, *policy)
                 self.stats.members += len(members)
-            requests.extend((member, offer.action) for member in members if not (LUMP_ERASING and self.ab.lumps(member, offer.action)))
+            last = self.ab.quality_last_action(offer.action)
+            requests.extend(
+                (member, offer.action)
+                for member in members
+                if not (LUMP_ERASING and self.ab.lumps(member, offer.action))
+                # the pairs `_offers_of_key` skips where only the quality is left, or a catalyst before it (#159): no kernel is made for them
+                and not (self.ab.quality_offer_pruned(member, offer.action) if last else self.ab.quality_finish_only(member, offer.action))
+            )
         self.ab.prime(requests, ask=ask)
 
     def _offers_of_key(self, i: int, first: int, tick) -> None:

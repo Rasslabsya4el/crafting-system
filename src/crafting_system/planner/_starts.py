@@ -122,7 +122,8 @@ def _plan_candidate(
             plan = make_plan(data, moved, prices, start_price_of=price, with_risk=False, **kwargs)
     except PlanError as error:
         return _Outcome(None, math.inf, math.inf, str(error), False)
-    return _Outcome(plan, plan.mean_remaining, plan.start_price.chaos + plan.mean_remaining, None, plan.approximation is not None, _proved(plan))
+    crafting = plan.mean_remaining + plan.quality_finish_value  # the quality finish depends on the start's own quality (#159), so starts compare with it
+    return _Outcome(plan, crafting, plan.start_price.chaos + crafting, None, plan.approximation is not None, _proved(plan))
 
 
 def _proved(plan: Plan) -> str:

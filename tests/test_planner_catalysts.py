@@ -12,9 +12,14 @@ So a target that asks for 20% Intrinsic quality on an item that holds every mod 
 with the one prefix of the bench craft `(15-23)% increased Elemental Damage with Attack Skills` (6 Orbs of Alteration at `a`; OR-2: asked by `mod:`)
 on a rare amulet that holds one suffix, `6a + E(0) k`: the craft comes first, the catalysts last (`Abstraction.quality_offer_pruned`: quality changes no odds).
 
-The lower bound of the method: the key of the bound's model holds the quality (`CompressedState.held`), so the model holds the catalyst's own
+The quality is a finish (`planner._quality_finish`): no other method changes the quality, so the plan is the plan of the mods without the quality
+(`Plan.mean_remaining`) plus `E(q0) k` (`Plan.quality_finish_value`), the whole in `Plan.total_mean`, and the search of the mods holds no quality.
+
+Where the finish is not exact (an offered action that corrupts the item, which then takes no catalyst; a run that names Hinekora's Lock) the quality
+is searched with the mods, as before: the key of the bound's model holds the quality (`CompressedState.held`), so the model holds the catalyst's own
 kernel, and its value at a state that meets every mod but the quality is the exact `E(q) k`. The search's first standing already has its lower
 figure at the plan's cost. For the offers left out of that model the catalyst's floor is its price (`_offer_kinds`: it reads the quality, TERMINAL).
+Both ways give the same mean (`test_the_finish_and_the_search_give_the_same_mean`).
 """
 
 import dataclasses
@@ -28,7 +33,7 @@ from test_cli_offers import with_currency_names
 from crafting_system.actions import ApplyCatalyst, expected_catalysts
 from crafting_system.items import CatalystType
 from crafting_system.planner import LockStatus, PlanError, PlanSettings, plan_target
-from crafting_system.planner import _envelope
+from crafting_system.planner import _envelope, _quality_finish
 from crafting_system.planner._offer_kinds import TERMINAL, _kind_of
 from crafting_system.planner._offers import Offer, PricedOffer
 from crafting_system.prices import PriceFile
@@ -77,8 +82,13 @@ def _prices(**chaos: float) -> PriceFile:
     return PriceFile("Test", datetime.datetime(2026, 10, 30, tzinfo=datetime.UTC), 300.0, {name: entry(value) for name, value in named.items()})
 
 
-def _plan(text: str, methods=("catalyst",), seen: list | None = None, prices: PriceFile | None = None):
+def _plan(text: str, methods=("catalyst",), seen: list | None = None, prices: PriceFile | None = None, searched: bool = False):
+    """The plan of `text`; `searched`: the quality is searched with the mods instead of finished last (the path where the finish is not exact)."""
     target = parse(text, methods=methods)
+    if searched:
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_quality_finish, "FINISH", False)
+            return plan_target(D, target, prices or _prices(), PlanSettings(recipe_starts=False, solver="envelope", watch=None if seen is None else seen.append))
     settings = PlanSettings(recipe_starts=False, solver="envelope", watch=None if seen is None else seen.append)
     return plan_target(D, target, prices or _prices(), settings)
 
@@ -99,34 +109,67 @@ def test_the_mean_number_of_catalysts_is_the_hand_worked_one():
 
 
 def test_an_item_with_every_mod_costs_its_catalysts_e_times_k():
+    plan = _plan(LIGHTNING_HELD)
+    assert plan.mean_remaining == 0.0  # the start holds every mod: the mods cost nothing
+    assert plan.quality_finish is not None and plan.quality_finish.catalyst.label == "Intrinsic Catalyst"
+    assert float(plan.quality_finish.uses) == pytest.approx(_mean(84), rel=1e-12)
+    assert plan.total_mean == pytest.approx(_mean(84) * K, rel=1e-9)  # 13.35 x 2 = 26.69
+    (said,) = [limit for limit in plan.limits if limit.kind == "quality-finish"]
+    assert said.labels == ("Intrinsic Catalyst",) and "13.35 on average" in said.why and "26.69 Chaos" in said.why
+
+
+def test_searched_with_the_mods_the_bound_is_the_plans_cost_from_the_first_standing():
     seen: list = []
-    plan = _plan(LIGHTNING_HELD, seen=seen)
-    assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)  # 13.35 x 2 = 26.69
+    plan = _plan(LIGHTNING_HELD, seen=seen, searched=True)
+    assert plan.quality_finish is None and "Intrinsic Catalyst" in {priced.label for priced in plan.offers}
+    assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)
     assert seen and seen[0].lower == pytest.approx(_mean(84) * K, rel=1e-9)  # the bound is the plan's cost from the first standing on
 
 
 def test_a_start_that_holds_ten_percent_of_the_type_pays_for_the_rest():
     text = LIGHTNING_HELD.replace("      values: [45]\n", "      values: [45]\n  quality:\n    type: intrinsic\n    percent: 10\n")
     plan = _plan(text)
-    assert plan.mean_remaining == pytest.approx(_mean(84, 10) * K, rel=1e-9)  # 6.79 x 2
+    assert plan.total_mean == pytest.approx(_mean(84, 10) * K, rel=1e-9)  # 6.79 x 2
+    assert plan.quality_finish.start_percent == 10
+
+
+def test_a_start_that_holds_the_quality_asked_adds_nothing():
+    text = LIGHTNING_HELD.replace("      values: [45]\n", "      values: [45]\n  quality:\n    type: intrinsic\n    percent: 20\n")
+    plan = _plan(text)
+    assert plan.total_mean == 0.0 and plan.quality_finish.catalyst is None
+    (said,) = [limit for limit in plan.limits if limit.kind == "quality-finish"]
+    assert "already has 20% Intrinsic quality" in said.why
 
 
 def test_a_start_that_holds_another_type_starts_again_from_zero_and_the_other_type_is_not_offered():
     text = LIGHTNING_HELD.replace("      values: [45]\n", "      values: [45]\n  quality:\n    type: tempering\n    percent: 15\n")
     plan = _plan(text)
-    assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)
-    assert {priced.label for priced in plan.offers} == {"Intrinsic Catalyst"}  # the Tempering Catalyst (0.01 c) would only restart the quality
+    assert plan.total_mean == pytest.approx(_mean(84) * K, rel=1e-9)
+    assert plan.quality_finish.catalyst.label == "Intrinsic Catalyst"  # the Tempering Catalyst (0.01 c) would only restart the quality
     (limit,) = [limit for limit in plan.limits if limit.kind == "quality-type"]
     assert "Tempering Catalyst" in limit.labels and "Intrinsic Catalyst" not in limit.labels
 
 
 def test_a_bench_craft_then_the_catalysts_cost_6a_plus_e_times_k():
+    plan = _plan(CRAFTED, methods=("bench-craft", "catalyst"))
+    assert plan.mean_remaining == pytest.approx(6 * A, rel=1e-9)  # the mods: the craft
+    assert plan.total_mean == pytest.approx(6 * A + _mean(84) * K, rel=1e-9)  # 3 + 26.69
+
+
+def test_the_finish_and_the_search_give_the_same_mean():
     seen: list = []
-    plan = _plan(CRAFTED, methods=("bench-craft", "catalyst"), seen=seen)
-    expected = 6 * A + _mean(84) * K  # 3 + 26.69
-    assert plan.mean_remaining == pytest.approx(expected, rel=1e-9)
+    finished = _plan(CRAFTED, methods=("bench-craft", "catalyst"))
+    searched = _plan(CRAFTED, methods=("bench-craft", "catalyst"), seen=seen, searched=True)
+    expected = 6 * A + _mean(84) * K
+    assert searched.quality_finish is None and searched.mean_remaining == pytest.approx(expected, rel=1e-9)
+    assert finished.total_mean == pytest.approx(searched.total_mean, rel=1e-9)
     assert all(standing.lower <= expected * (1 + 1e-9) for standing in seen)
     assert seen[-1].lower == pytest.approx(expected, rel=1e-9)  # proved: the bound met the plan
+
+
+def test_a_run_whose_methods_name_no_catalyst_is_refused_with_the_reason():
+    with pytest.raises(PlanError, match="20% Intrinsic quality, and no catalyst of that type is among the methods offered"):
+        _plan(CRAFTED, methods=("bench-craft",))
 
 
 def test_a_target_with_no_quality_is_offered_no_catalyst_and_told_nothing_of_it():
@@ -151,14 +194,15 @@ def test_the_plain_quality_of_a_weapon_or_armour_is_still_refused():
 
 def test_a_run_that_names_hinekoras_lock_plans_the_quality_without_it_and_says_so():
     plan = _plan(LIGHTNING_HELD, methods=("catalyst", "hinekora-lock"))
+    assert plan.quality_finish is None  # the Lock's burn keeps no quality: the quality is searched with the mods
     assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)
     assert plan.foresight is not None and plan.foresight.status is LockStatus.WITH_QUALITY
 
 
 def test_with_no_method_named_the_catalyst_is_offered_by_default():
     plan = plan_target(D, parse(LIGHTNING_HELD), _prices(), PlanSettings(recipe_starts=False, solver="envelope"))  # the target names none (OR-41)
-    assert "Intrinsic Catalyst" in {priced.label for priced in plan.offers}
-    assert plan.mean_remaining == pytest.approx(_mean(84) * K, rel=1e-9)
+    assert plan.quality_finish.catalyst.label == "Intrinsic Catalyst"
+    assert plan.total_mean == pytest.approx(_mean(84) * K, rel=1e-9)
 
 
 THREE = """\
@@ -177,7 +221,22 @@ start_item:
 """
 
 
-def test_the_quality_adds_e_times_k_to_a_rerolled_target_and_the_bound_does_not_copy_the_graph_per_percent():
+def test_the_quality_adds_e_times_k_to_a_rerolled_target_and_the_search_of_the_mods_is_the_same(monkeypatch):
+    monkeypatch.setattr(_envelope, "CHECK_SHARED", False)  # the rebuild of every shared kernel takes a minute here; the small targets above check it
+    # finished last, the quality costs the search of the mods nothing: the same bound and the same states as without it (R05 with its 20%
+    # Intrinsic quality got less far in its time net when the search held the quality, #159)
+    methods = ("chaos-orb", "annulment-orb", "exalted-orb", "catalyst")
+    prices = _prices(**{"Chaos Orb": 1.0, "Exalted Orb": 10.0, "Orb of Annulment": 5.0})
+    settings = PlanSettings(recipe_starts=False, solver="envelope")
+    plain = plan_target(D, parse(THREE.replace("quality:\n  type: intrinsic\n  min_percent: 20\n", ""), methods=methods), prices, settings)
+    asked = plan_target(D, parse(THREE, methods=methods), prices, settings)
+    assert asked.mean_remaining == pytest.approx(plain.mean_remaining, rel=1e-12)
+    assert asked.total_mean == pytest.approx(plain.mean_remaining + _mean(84) * K, rel=1e-9)
+    assert (asked.search.bound_keys, asked.search.touched) == (plain.search.bound_keys, plain.search.touched)
+
+
+def test_searched_with_the_mods_the_bound_does_not_copy_the_graph_per_percent(monkeypatch):
+    monkeypatch.setattr(_envelope, "CHECK_SHARED", False)  # the rebuild of every shared kernel takes a minute here; the small targets above check it
     # Where only the quality is left, the bound's model offers the catalysts alone (`Abstraction.quality_finish_only`): the other actions would
     # copy the item's graph once for each percent of quality (2,244 keys here before, 192 now; 112 without the quality)
     methods = ("chaos-orb", "annulment-orb", "exalted-orb", "catalyst")
@@ -185,7 +244,10 @@ def test_the_quality_adds_e_times_k_to_a_rerolled_target_and_the_bound_does_not_
     settings = PlanSettings(recipe_starts=False, solver="envelope")
     plain = plan_target(D, parse(THREE.replace("quality:\n  type: intrinsic\n  min_percent: 20\n", ""), methods=methods), prices, settings)
     seen: list = []
-    asked = plan_target(D, parse(THREE, methods=methods), prices, dataclasses.replace(settings, watch=seen.append))
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(_quality_finish, "FINISH", False)  # the quality searched with the mods, as where the finish is not exact
+        asked = plan_target(D, parse(THREE, methods=methods), prices, dataclasses.replace(settings, watch=seen.append))
+    assert asked.quality_finish is None
     assert asked.mean_remaining == pytest.approx(plain.mean_remaining + _mean(84) * K, rel=1e-9)
     assert seen[-1].lower == pytest.approx(asked.mean_remaining, rel=1e-9)
     assert asked.search.bound_keys <= 2 * plain.search.bound_keys

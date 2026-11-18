@@ -27,7 +27,9 @@ declares `Reads.quality` and `Adds.quality` (ADR-0027).
   prefixes and a Dextral one suffixes (`catalyst.sinistral_dextral_by_side`, approximate: an implicit is neither).
   A target written in displayed values becomes a base roll with `base_roll_for(displayed, q)`.
 
-The kind is a planner kind, offered by default since ticket #159 (OR-37: catalysts are in the beta). The quality is the last requirement of a goal
+The kind is a planner kind, offered by default since ticket #159 (OR-37: catalysts are in the beta). No other method of the beta changes the quality,
+so the planner adds it as a finish after the mods (`planner._quality_finish`: the mean number of catalysts from the start's quality, from these
+outcomes); where an offered action does change, read or corrupt it, the quality is searched with the mods. The quality is the last requirement of a goal
 (`abstraction.QualityWanted`, ticket #158): a catalyst is declared `Adds.only_quality`, so the planner's offers leave it out at every state that
 fails another requirement (`Abstraction.quality_offer_pruned`), and the envelope search pays for the catalysts of a goal state as it pays for any
 action, at the exact gain law above: the key of its bound holds the quality, so the bound's model holds the catalysts' own kernels and its value

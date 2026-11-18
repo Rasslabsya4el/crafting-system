@@ -42,12 +42,15 @@ def test_r06_is_not_planned_while_the_planner_refuses_its_implicit(data, target)
         make_plan(data, target, load_price_file(PRICES), solve_it=False)
 
 
-def test_without_its_implicit_r06_is_offered_the_intrinsic_catalyst_alone_of_the_catalysts(data, target):
-    # the target asks for 20% Intrinsic quality: the Intrinsic Catalyst is offered, and no catalyst of another type, which would restart it (#159)
-    quality_only = dataclasses.replace(target, implicits=(), actions=("catalyst",))  # named: the classic offers of a module's tests hold no catalyst
-    plan = make_plan(data, quality_only, load_price_file(PRICES), solve_it=False, start_price=1.0)
-    catalysts = {priced.label for priced in plan.offers if priced.label.endswith("Catalyst")}
-    assert catalysts == {"Intrinsic Catalyst"}
+def test_without_its_implicit_r06_finishes_its_quality_with_the_intrinsic_catalyst_alone_of_the_catalysts(data, target):
+    # the target asks for 20% Intrinsic quality: it is finished after the mods with the Intrinsic Catalyst, and no catalyst of another type, which
+    # would restart it, is offered (#159)
+    named = ("catalyst", "exalted-orb")  # named: the classic offers of a module's tests hold no catalyst
+    plan = make_plan(data, dataclasses.replace(target, implicits=(), actions=named), load_price_file(PRICES), solve_it=False, start_price=1.0)
+    assert plan.quality_finish is not None and plan.quality_finish.catalyst.label == "Intrinsic Catalyst"
+    assert not any(priced.label.endswith("Catalyst") for priced in plan.offers)  # the mods are planned without the quality
+    (other,) = [limit for limit in plan.limits if limit.kind == "quality-type"]
+    assert "Intrinsic Catalyst" not in other.labels and "Tempering Catalyst" in other.labels
 
 
 def test_the_route_reads_against_the_explicit_mods_and_the_offers(data, target):
