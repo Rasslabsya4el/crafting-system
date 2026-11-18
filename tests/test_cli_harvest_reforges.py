@@ -47,13 +47,13 @@ def test_the_sixteen_tagged_reforges_and_both_likelihood_reforges_are_offered_fo
     labels = {offer.label for offer in amulet_offers}
     assert {f"Harvest Reforge {craft.title()}" for craft in TABLE} <= labels
     assert "Harvest Reforge Influence" not in labels  # the start amulet has no influence
-    assert not labels & {"Harvest Reforge More Likely", "Harvest Reforge Less Likely"}  # not a planner kind, see below
+    assert {"Harvest Reforge More Likely", "Harvest Reforge Less Likely"} <= labels  # a planner kind since #975 (OR-37)
 
 
-def test_the_likelihood_reforges_are_a_catalog_kind_the_planner_leaves_out_with_its_reason():
+def test_the_likelihood_reforges_are_a_planner_kind():
     (entry,) = (entry for entry in kinds() if entry.name == "harvest-reforge-likelihood")
-    assert not entry.planner and "pruning (#118)" in entry.why_not
-    assert entry in kinds() and entry not in kinds(planner_only=True)
+    assert entry.planner and not entry.why_not
+    assert entry in kinds(planner_only=True)
 
 
 def test_every_reforge_is_priced_by_its_lifeforce(amulet_offers):

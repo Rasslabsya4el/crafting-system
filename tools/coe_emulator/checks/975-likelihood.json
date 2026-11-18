@@ -1,0 +1,10 @@
+[
+ {"id": "975-ring-4mods", "note": "#975: the two likelihood reforges on a rare ring with four plain mods: x10 / x0.1 on the held families, four mods drawn",
+  "base": "Metadata/Items/Rings/Ring1", "item_level": 86, "rarity": "rare",
+  "mods": ["FireResist8", "IncreasedLife7", "ColdResist8", "AddedPhysicalDamage4"],
+  "actions": ["Harvest Reforge More Likely", "Harvest Reforge Less Likely"], "repeats": 3000},
+ {"id": "975-ring-fractured-2mods", "note": "#975: a fractured Life and one other mod: the floor of four mods, the fractured mod kept and its family boosted",
+  "base": "Metadata/Items/Rings/Ring1", "item_level": 86, "rarity": "rare",
+  "mods": ["IncreasedLife7", "FireResist8"], "fractured": ["IncreasedLife7"],
+  "actions": ["Harvest Reforge More Likely", "Harvest Reforge Less Likely"], "repeats": 3000}
+]
