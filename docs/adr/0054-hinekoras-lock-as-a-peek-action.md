@@ -77,7 +77,7 @@ Origin: [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106) 
 - **The second solve takes the plain offers after the twins, without the bound pruning** of ADR-0031: that pruning is proved for the Lock-free model (its lower bound `rho` holds for policies without a Lock), so the solve with a Lock does not use it. The fallback of the gains for N reads the offers the Lock-free solve used, the ones the bound pruning kept on that path: a smaller fallback is never cheaper, so N is never overstated.
 - **N is found by branch and bound** over the visited states in falling `V(s)`, with `g(s) <= V(s) - c_min`, and stops after `GAIN_STATES` states on a plan that visits more (it is then not shown to be the largest gain; every gain found is still a true "would pay below"). The report says so (ticket #298).
 
-A burn is a self-loop: the planner refuses a target that names quality, sockets, implicits or an enchantment, so no state keeps what a burn changes.
+A burn is a self-loop: the planner refuses a target that names sockets, implicits or an enchantment, and offers no Lock on one that names quality (#159: the plan says so), so no state keeps what a burn changes.
 
 ## Amendment: what the build of `risk` and the simulator decided (ticket [#297](https://github.com/Rasslabsya4el/crafting-system/issues/297), B8-5, 2026-11-12)
 

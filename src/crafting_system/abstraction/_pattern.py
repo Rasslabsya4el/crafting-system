@@ -1416,7 +1416,14 @@ class PatternBuilder:
             if members is None:
                 members = by_mode[policy] = self.pattern.members(key, *policy)
                 self.stats.members += len(members)
-            requests.extend((member, offer.action) for member in members if not (LUMP_ERASING and self.ab.lumps(member, offer.action)))
+            last = self.ab.quality_last_action(offer.action)
+            requests.extend(
+                (member, offer.action)
+                for member in members
+                if not (LUMP_ERASING and self.ab.lumps(member, offer.action))
+                # the pairs `_offers_of_key` skips where only the quality is left, or a catalyst before it (#159): no kernel is made for them
+                and not (self.ab.quality_offer_pruned(member, offer.action) if last else self.ab.quality_finish_only(member, offer.action))
+            )
         self.ab.prime(requests, ask=ask)
 
     def _offers_of_key(self, i: int, first: int, tick) -> None:
@@ -1450,8 +1457,13 @@ class PatternBuilder:
                 stats.members += len(members)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             seen: set[int] = set()
+            last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             for member in members:
                 tick(oi, True)
+                if ab.quality_offer_pruned(member, offer.action) if last else ab.quality_finish_only(member, offer.action):
+                    # exact: a catalyst is pruned at every such state by the search too (`_envelope_plan`); another action where only the quality
+                    # is left changes no value (`Abstraction.quality_finish_only`), and the search then leaves it out there as the model does
+                    continue
                 stats.pairs += 1
                 if self.tally is not None:
                     self.tally.done += 1

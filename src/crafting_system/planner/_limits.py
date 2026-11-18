@@ -52,6 +52,7 @@ STRANDS = "strands"
 CRAFTS = "crafts"
 FIXED_MOD = "fixed-mod"
 ROLLS = "rolls"
+QUALITY = "quality-type"
 CRAFTED_MODS = "crafted-mods"
 NO_VEIL = "veiled-mods"
 UNPRICED = "unpriced"
@@ -69,6 +70,7 @@ STEPS = "step-numbers"
 STATE_LINE = "state-line"
 RISK = "risk"
 FINISH = "socket-finish"
+QUALITY_FINISH = "quality-finish"
 
 GROUPS: tuple[tuple[str, str], ...] = (
     (NOT_NAMED, "Methods this run's setting leaves out"),
@@ -82,6 +84,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (CRAFTS, "Bench crafts that count for nothing"),
     (FIXED_MOD, "Actions that add one fixed mod nobody wants"),
     (ROLLS, "Value rerolls without a roll limit"),
+    (QUALITY, "Catalysts of another quality type"),
     (CRAFTED_MODS, "Removing crafted mods"),
     (NO_VEIL, "Unveiling with no veiled mod"),
     (UNPRICED, "Actions with no price"),
@@ -92,6 +95,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (ROUNDS, "Methods searched in rounds"),
     (START, "The start item"),
     (FINISH, "The sockets"),
+    (QUALITY_FINISH, "The quality"),
     (SOLVE, "How the answer was found"),
     (REACHED, "A plan that reaches the target, not one shown near the best"),
     (BUDGET, "Time and memory limits that stopped a stage"),
@@ -617,6 +621,16 @@ def lock_with_donors_limit() -> Limit:
         SOLVE,
         "Hinekora's Lock is not offered",
         "the plan makes second items for its recombinations, and the planner cannot weigh the Lock in such a plan yet",
+        **claim("the plans without Hinekora's Lock", "Taking the Lock could make it cheaper."),
+    )
+
+
+def lock_with_quality_limit() -> Limit:
+    """The limit of a plan of a target that asks for quality when the run names Hinekora's Lock (#159): the Lock is not offered there."""
+    return Limit(
+        SOLVE,
+        "Hinekora's Lock is not offered",
+        "the target asks for quality, and the burn the Lock's previews need keeps no quality yet",
         **claim("the plans without Hinekora's Lock", "Taking the Lock could make it cheaper."),
     )
 

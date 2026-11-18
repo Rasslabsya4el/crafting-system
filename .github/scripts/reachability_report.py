@@ -954,6 +954,8 @@ def why_not_offered(data, kind, probe: Probe) -> str:
         missing = next((m for name, m in dropped.items() if name == label or name.startswith(label + " [")), None)
         if missing is not None:
             fates[f"dropped for lack of a price (missing: {missing[0]})"] += 1
+        elif action.adds(data).only_quality:  # a target that asks for no quality of its type is told nothing of it (#159)
+            fates["not offered (it only sets the quality, and the target asks for none of its type)"] += 1
         else:
             fates["not offered (removed by `usable_actions`, which needs a crafted mod)"] += 1
     return "; ".join(f"{text} ({count} of {len(members)})" if len(fates) > 1 or count != len(members) else text for text, count in sorted(fates.items()))

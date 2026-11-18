@@ -35,7 +35,7 @@ from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
 from crafting_system.solver import MAIN, Acquisition, Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
-from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
+from crafting_system.targets import KOfN, PlainQualityRequirement, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
 
 from ._approx import Approximation, climb
 from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_info
@@ -43,6 +43,8 @@ from ._axes import axis_what
 from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
+from . import _quality_finish
+from ._quality_finish import QualityFinish, QualityFinishRefused, plan_quality_finish, quality_finish_limits
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
@@ -189,6 +191,7 @@ class Plan:
     foresight: Foresight | None = None  # what the plan found about Hinekora's Lock (ticket #296, ADR-0057); None for a plan that was not solved
     finish: PlanFinish | None = None  # the socket finish added to every goal state (ticket #231, ADR-0045); None for a target that names no sockets
     donors: "DonorPlan | None" = None  # set when an offer takes donors (ticket #225): the product of the main item and its donors' processes
+    quality_finish: QualityFinish | None = None  # the catalyst quality applied after the mods (#159, `_quality_finish`); None when none is asked or it is searched
 
     def __post_init__(self) -> None:
         # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13),
@@ -243,11 +246,18 @@ class Plan:
 
     @property
     def finish_value(self) -> float:
-        """What the socket finish adds to every goal state (ADR-0045): its mean from the start item's sockets, 0 for a target with no sockets.
+        """What the finishes add to every goal state: the socket finish's mean from the start item's sockets (ADR-0045) and the quality finish's
+        from its quality (#159), 0 for a target that asks for neither.
 
-        One value for every goal state (no mod action changes sockets; Orb of Binding, which gives a goal a second one, is ticket #232), so the plan
-        of the mods is the cheapest with the finish too and only its mean grows (`_finish.py`)."""
-        return 0.0 if self.finish is None else self.finish.value
+        One value for every goal state (no mod action changes sockets; Orb of Binding, which gives a goal a second one, is ticket #232; no mod
+        action changes the quality where it is a finish), so the plan of the mods is the cheapest with the finishes too and only its mean grows
+        (`_finish.py`, `_quality_finish.py`)."""
+        return (0.0 if self.finish is None else self.finish.value) + self.quality_finish_value
+
+    @property
+    def quality_finish_value(self) -> float:
+        """What the quality finish adds to every goal state (#159): the mean cost of the catalysts from the start item's quality, 0 for none."""
+        return 0.0 if self.quality_finish is None else self.quality_finish.value
 
     def value_of(self, state: CompressedState) -> float:
         """The expected cost from `state` to the finished item: the solver's value of the mods plus the finish, which every goal state adds."""
@@ -255,7 +265,7 @@ class Plan:
 
     @property
     def total_mean(self) -> float:
-        """The expected cost of the whole craft from the start, the mods and the socket finish, without the price of the start item."""
+        """The expected cost of the whole craft from the start, the mods and the finishes, without the price of the start item."""
         return self.value_of(self.start)
 
 
@@ -448,23 +458,52 @@ def make_plan(
     reach (`cli._route.evaluate_route`, #986); `route_actions` are the labels it names (`cli._route.route_actions`), which lead the first round
     of the offers (#1110), and `judges_route` alone, with no labels, searches every offer at once (`_make_plan`). `methods` are the run's
     methods setting (`PlanSettings.methods`, #405): the plan is made with those alone (`with_methods`); None leaves the target's as they are,
-    which for a target read from a file is every beta method. The rest is `_make_plan`'s text.
+    which for a target read from a file is every beta method. A target that asks for a catalyst quality is planned without it, and the quality is
+    added as a finish (`_quality_finish`, #159: no other method changes the quality, so the catalysts come last and cost `Q(q0)` from the start
+    item's quality, `Plan.quality_finish`); where an offered action changes or reads the quality, or corrupts the item, the quality is searched
+    with the mods instead. The rest is `_make_plan`'s text.
     """
     target = with_methods(target, methods)
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
+    finished_last = _quality_finish.applies(target, offers, judged=judges_route or incumbent is not None or route_actions is not None)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
     with running(plan_budget.start() if plan_budget is not None else None) as clock:
         try:
             plan = _make_plan(
-                data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
+                data, replace(target, quality=None) if finished_last else target, prices, start_price=start_price, offers=offers,
+                aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
                 strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
                 incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
             )  # fmt: skip
+            if finished_last and not _quality_finish.holds(data, (p.offer.action for p in plan.offers if not isinstance(p.offer.action, BuyStartItem))):
+                # an offered action other than a catalyst changes or reads the quality, or corrupts the item (a recombinator, a Vaal Orb a run
+                # names): the finish is not exact, so the quality is searched with the mods, in the one search. The second plan shares the run's
+                # clock, so it pays what is left of the net: only a deferred method or a named corrupting one leads here, and checking the
+                # offers before the first plan would need the offers `_make_plan` chooses (#159)
+                finished_last = False
+                plan = _make_plan(
+                    data, target, prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds,
+                    rates=rates, strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver,
+                    with_risk=with_risk, incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
+                )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
             if clock is not None:
                 clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
             raise PlanError(stopped_refusal(clock, stop.binding)) from None
+    if finished_last:  # after the mods, so that a refusal of the target itself is said first
+        try:
+            plan = with_quality_finish(plan, plan_quality_finish(data, target, prices, price_source, names=target.actions))
+        except (QualityFinishRefused, OutOfScopeError) as error:
+            raise PlanError(str(error)) from error
     return with_bindings(plan, clock) if owns else plan
+
+
+def with_quality_finish(plan: Plan, quality: QualityFinish) -> Plan:
+    """`plan` of the mods with the quality finish added (#159): its value on every goal state, and the lines that say it (`_quality_finish`)."""
+    mods = plan.solution.values.get(plan.start, float("inf"))
+    upper_end = plan.approximation is not None or (plan.search is not None and not plan.search.exact)  # the mods' mean is then an upper end (OR-13)
+    said = quality_finish_limits(quality, mods, mods_at_most=upper_end)
+    return replace(plan, quality_finish=quality, limits=(*plan.limits, *said))
 
 
 def with_methods(target: Target, methods: tuple[str, ...] | None) -> Target:
@@ -631,7 +670,9 @@ def _make_plan(
     """Solve the target and measure the risk of the policy.
 
     `start_price` is the cost of the start item for this run (it wins over the price file);
-    `offers` default to `offers_for` the target. Raises `PlanError` when the target asks for `quality` or for an implicit that is not an
+    `offers` default to `offers_for` the target. Raises `PlanError` when the target asks for the plain quality of a weapon or armour (the
+    catalyst quality is planned since #159: as a finish after the mods, `make_plan`, or where that is not exact with the quality in the bound's key
+    and a catalyst offered last) or for an implicit that is not an
     Eldritch one (a base or a corrupted implicit; the Eldritch implicits are planned since #835: the bound's key holds the pair, and the
     Eldritch currencies are offered to a target that asks for one), when no offer has a price or no policy reaches the
     goal, and what the layers below raise for a bad input.
@@ -704,8 +745,11 @@ def _make_plan(
             f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
             ": the cut and the spend of strands are not built, so an answer would silently ignore them"
         )
-    if target.quality is not None:
-        raise PlanError("the target asks for quality, which the planner cannot plan yet")
+    if isinstance(target.quality, PlainQualityRequirement):
+        raise PlanError(
+            "the target asks for the plain quality of a weapon or armour, which the planner cannot plan yet (the quality currency is not a"
+            " method of the planner); it plans the catalyst quality of a ring, an amulet or a belt"
+        )
     if any(wish.corrupted or not any(mod_id in data.mods and eldritch_side(data.mods[mod_id]) for mod_id in wish.mod_ids) for wish in target.implicits):
         raise PlanError(
             "the target asks for an implicit that is not an Eldritch one (a base or a corrupted implicit), which the planner cannot plan yet;"
@@ -718,6 +762,8 @@ def _make_plan(
     price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price, price_source)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
+    if target.quality is not None and lock_wanted(target.actions):  # the run names the Lock, and a burn keeps no quality yet (#159)
+        limits += (_limits.lock_with_quality_limit(),)
     mod_names, finish_names = split_names(data, target.start_item, target.actions) if target.sockets is not None else (target.actions, None)
     chosen_here = offers is None  # the planner's own offers (a caller's are searched as given, in one search)
     if offers is None:
@@ -731,7 +777,7 @@ def _make_plan(
     priced, same = cheapest_per_class(priced)  # one craft of each class `blocking_crafts` offered (#886): the others are never cheaper
     if same:
         limits += (same_craft_limit(same),)
-    if not priced:
+    if not priced and not target.is_met_by(target.start_item):  # a start that meets the target needs no action (the mods of a quality finish, #159)
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
     listing = unopened_listing(data, target.start_item) if price_of_start.bought else None
@@ -896,8 +942,9 @@ def _make_plan(
             try:
                 with stage(APPROXIMATE_STAGE):
                     solved = climb(decision, start, merged)
-                burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
-                foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), lock_wanted(target.actions))
+                wanted = lock_wanted(target.actions) and not abstraction.tracks_quality  # a burn keeps no quality yet (#159)
+                burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None) if wanted else None
+                foresight = coarse_check(solved.solution.values, lock_price(prices, price_source), cheapest_cost(merged, burn), wanted)
             except ValueError as error:  # CoarseLockError among them: the Lock survives the pruning on the coarse bounds (ADR-0054)
                 raise PlanError(str(error)) from error
             limits += skipped_level_limits(solved.skipped)
@@ -1451,6 +1498,8 @@ def plan_foresight(
     lock = lock_price(prices, price_source)
     if not lock_wanted(target.actions):  # switched off: nothing is built
         return Foresight(LockStatus.SWITCHED_OFF, lock), None
+    if abstraction.tracks_quality:  # a burn keeps no quality yet (#159): nothing is built, and the answer says the Lock was not offered
+        return Foresight(LockStatus.WITH_QUALITY, lock), None
     burn = plan_burn(data, target.start_item, abstraction, prices, price_source, sockets=target.sockets is not None)
     cache: dict = {}
     plain = fallback if fallback is not None else offered if offered is not None else priced

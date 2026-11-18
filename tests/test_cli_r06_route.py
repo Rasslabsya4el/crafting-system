@@ -1,7 +1,7 @@
 """R06's given route on the real 3.29.3.3 dump, read against its target with nothing solved (ticket #901).
 
 R06 is a reference craft that the planner cannot plan yet: its target asks for the Heavy Belt's Strength implicit and 20% Intrinsic
-Catalyst quality, and `make_plan` refuses a target with an implicit or quality (#516). Its route file holds the guide's steps 2 and 3;
+Catalyst quality; the quality is planned since #159, and `make_plan` refuses the base implicit (#516). Its route file holds the guide's steps 2 and 3;
 step 4 (catalysts, Divine Orb, Blessed Orb, a bench craft) waits for route conditions on quality and the implicit roll. These check
 that the refusal is still the reason R06 is not planned, and that the written rules read against the target's explicit mods and the
 offers, so the file stays valid until it can be judged. They skip without the cached dump.
@@ -35,11 +35,22 @@ def target(data):
     return load_target(TARGET, data)
 
 
-def test_r06_is_not_planned_while_the_planner_refuses_its_implicit_and_quality(data, target):
+def test_r06_is_not_planned_while_the_planner_refuses_its_implicit(data, target):
     assert target.implicits and target.quality is not None
-    # quality is refused first; its base implicit is refused after it, as an implicit that is not an Eldritch one (#835)
-    with pytest.raises(PlanError, match="asks for quality"):
+    # the catalyst quality is planned since #159; the base implicit is refused, as an implicit that is not an Eldritch one (#835)
+    with pytest.raises(PlanError, match="implicit that is not an Eldritch one"):
         make_plan(data, target, load_price_file(PRICES), solve_it=False)
+
+
+def test_without_its_implicit_r06_finishes_its_quality_with_the_intrinsic_catalyst_alone_of_the_catalysts(data, target):
+    # the target asks for 20% Intrinsic quality: it is finished after the mods with the Intrinsic Catalyst, and no catalyst of another type, which
+    # would restart it, is offered (#159)
+    named = ("catalyst", "exalted-orb")  # named: the classic offers of a module's tests hold no catalyst
+    plan = make_plan(data, dataclasses.replace(target, implicits=(), actions=named), load_price_file(PRICES), solve_it=False, start_price=1.0)
+    assert plan.quality_finish is not None and plan.quality_finish.catalyst.label == "Intrinsic Catalyst"
+    assert not any(priced.label.endswith("Catalyst") for priced in plan.offers)  # the mods are planned without the quality
+    (other,) = [limit for limit in plan.limits if limit.kind == "quality-type"]
+    assert "Intrinsic Catalyst" not in other.labels and "Tempering Catalyst" in other.labels
 
 
 def test_the_route_reads_against_the_explicit_mods_and_the_offers(data, target):
