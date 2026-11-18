@@ -242,6 +242,9 @@ class Net:
     # the answer already holds a plan (OR-33), so the bound's build keeps no room for the search to make one and may take the search's whole net
     # (`_envelope_plan.build_stop`, `_plan.search_net`)
     held: bool = False
+    # a plan in hand that a stopped search walked to (#1142): the build keeps the room for its search a round with no plan keeps, unless the
+    # pace its model grows at ends within the round's room (`_envelope_plan.BuildStop`, `abstraction._pattern.Pace.verdict`, #1224)
+    walked: bool = False
     # the seconds the first plan's chain may take when they are more than `seconds`: a round whose bound's build, nearly done, went past the
     # round's share (`_envelope_plan.BuildStop`, #1135) still makes its first plan, in what is left of twice the share; None: `seconds` holds
     first: float | None = None

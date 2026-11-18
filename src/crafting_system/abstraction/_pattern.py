@@ -1043,9 +1043,10 @@ LATE = 1.0  # a nearly done build may go past its net by at most this many times
 
 @dataclass
 class Growth:
-    """Where a bound's build that grows its model stands (`_pattern_bound`, #988): the offers its model holds, the one being added included,
-    of the offers it was given. Set once the first model is solved; before that (the floors, the first model's keys) nothing is known of how
-    far the build is.
+    """Where a bound's build that grows its model stands (`_pattern_bound`, #988): the offers its model holds, the one being added included
+    (`inside`), of the offers it was given (`total`); and, since #1224, the offers of its first model (`start`) and of the last model it
+    solved (`solved`). Set each time a solved model lets more offers join; before that (the floors, the first model's keys) nothing is known
+    of how far the build is.
 
     **A nearly done build finishes (#1135).** A round of `_rounds` that begins with a plan in hand gives its bound's build its whole share
     (#1099), and a build that its share ends before it is complete leaves the round a weak lower figure and no search: R11's Exalted round,
@@ -1059,11 +1060,17 @@ class Growth:
     from done (R11's harvest swap round, 19 of 89 offers at its share) stops at its share as before. On the clock the time it takes past
     its share comes off the rounds after it, so `late` is at most half of what they have (`_plan.search_net`: none for the last round, whose
     share is all the time left, so the run never passes its net); a build that is not nearly done takes nothing from them. Counted in
-    states, pieces are not states: a late build takes no states from the rounds after it. The estimate counts every offer given as one that
-    may join, so it is the most the build can need only when the offers still out cost what those in cost: R11's is the evidence."""
+    states, pieces are not states: a late build takes no states from the rounds after it.
+
+    **The pace of the growth (#1224).** Once growth has added offers, the net knows more: the offers its solved models added since the first
+    one, and what that took (`Pace`). The need it then expects is that pace kept to the last offer (`Pace.need`), and it replaces the count
+    above, which takes the offers of the model being built as done: on R13 and R17 the first model held 49 of 51 and 64 of 69 offers and
+    the model adding the rest was all the build's work, never done (#1180)."""
 
     inside: int
     total: int
+    start: int = 0
+    solved: int = 0
 
     def nearly_done(self, used: float, given: float, late: float = LATE) -> bool:
         """Whether a build that has used `used` of its net `given` goes on past it, to at most `1 + late` times it (see the class text)."""
@@ -1072,26 +1079,99 @@ class Growth:
         return used * self.total / self.inside <= (1.0 + late) * given
 
 
-class Tally:
+class Pace:
+    """What a bound's build tells its net of how far it is (`Growth`, #1135, #1224), and the rule the net keeps with it (`verdict`).
+
+    `grown(growth, used)` is called by the build each time a solved model lets more offers join, `used` being what the net has counted so
+    far (seconds, or pieces of work). The first call marks where the growth began (the first model solved); from the second on, the growth
+    has a pace: the offers it added (`solved - start`) for what it used since. Kept to the offers still out, the build is expected to need
+    `need = grew_from + (used - grew_from) * (total - start) / (solved - start)` in all. The figure is set at a solved model and held until the next,
+    so a long model being built does not move it (R11's Exalted round: its third and fourth models, 12 Screaming essences, take 7 and 8 s of
+    its 38 s)."""
+
+    def __init__(self) -> None:
+        self.growth: Growth | None = None
+        self.grew_from: float | None = None  # the net's count when the first model was solved
+        self.need: float | None = None  # the build's expected need at its pace of growth, None until growth has added offers
+
+    def grown(self, growth: Growth, used: float) -> None:
+        self.growth = growth
+        if self.grew_from is None:
+            self.grew_from = used
+        if growth.solved > growth.start:
+            self.need = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
+
+    def verdict(self, used: float, given: float, room: "Room | None") -> str | None:
+        """Why a build that has used `used` of its net `given` stops now (`SHARE`, `QUARTER` or `PACE`), or None to go on.
+
+        With no plan in hand (`room` None) the build stops at its net, and the net is the quarter `SEARCH_PER_BUILD` leaves it (the caller
+        sizes it). With a plan in hand (#1099, #1224) its net is the round's whole share and its room `1 + room.late` times it:
+        * before `room.quarter` of the net it goes on;
+        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`), and stops as soon as it does
+          not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
+          no pace yet goes on when the plan in hand is held, and stops when it is one a stopped search walked to (`room.held` False, #1142:
+          R13's round 2, whose first model held 49 of 51 offers and whose second never ended, took its whole share and its search had none);
+        * past its net it goes on while nearly done: within its room at its pace, or, with no pace yet, by the offers it holds (`Growth`)."""
+        if room is None:
+            return SHARE if used >= given else None
+        whole = (1.0 + room.late) * given
+        if used >= given:
+            if room.late <= 0 or used >= whole:
+                return SHARE
+            if self.need is not None:
+                return None if self.need <= whole else SHARE
+            return None if self.growth is not None and self.growth.nearly_done(used, given, room.late) else SHARE
+        if used < room.quarter * given:
+            return None
+        if self.need is not None:
+            return None if self.need <= whole else PACE
+        return None if room.held else QUARTER
+
+
+SHARE, QUARTER, PACE = "share", "quarter", "pace"  # why a build's net stops it (`Pace.verdict`)
+
+
+@dataclass(frozen=True)
+class Room:
+    """What the bound's build of a round with a plan in hand may take (`Pace.verdict`, #1099, #1135, #1224): its net is the round's whole
+    share; `late` is how many times its net it may go past it, nearly done; `quarter` the part of its net past which it goes on only at a
+    pace that ends within that room (the quarter `_envelope_plan.SEARCH_PER_BUILD` leaves the build of a round with no plan in hand); `held`
+    whether the plan in hand is held (False: one a stopped search walked to, `_rounds.walked`)."""
+
+    late: float = 0.0
+    quarter: float = 0.25
+    held: bool = True
+
+
+class Tally(Pace):
     """The pieces of work of a bound's build counted against a cap, for a run that counts its work and not its seconds (#1101).
 
     A piece is a (member, offer) pair the builder looks at (`PatternBuilder`) or one offer's floor raised (`_offer_floor.OfferFloors`): what
-    the build spends its time and memory on, the same on every machine. Called, it is the build's net: the reason once `done` reaches `cap`
-    (`words(done, cap)`), else what `then` (another net, or None) says. With `finish` above 0 (a round that began with a plan in hand, #1135)
-    a build that is nearly done (`growth`, `Growth.nearly_done`) goes on past `cap`, to at most `1 + finish` times it, counted in its pieces as
-    the clock's net counts its seconds."""
+    the build spends its time and memory on, the same on every machine. Called, it is the build's net: the reason once `Pace.verdict` stops
+    the build at `done` pieces of its `cap` (`words(done, cap)`), else what `then` (another net, or None) says. With `room` (a round that
+    began with a plan in hand, #1099, #1135, #1224) the cap is the round's whole share of pieces, and the build goes on past a quarter of it,
+    or past it, as `Pace.verdict` says, counted in its pieces as the clock's net counts its seconds."""
 
-    def __init__(self, cap: int, words: Callable[[int, int], str], then: Callable[[], str | None] | None = None, finish: float = 0.0) -> None:
-        self.cap, self.words, self.then, self.done, self.finish = cap, words, then, 0, finish
-        self.growth: Growth | None = None  # set by the build once its first model is solved (`_pattern_bound`)
+    def __init__(self, cap: int, words: Callable[[int, int], str], then: Callable[[], str | None] | None = None, room: Room | None = None) -> None:
+        super().__init__()
+        self.cap, self.words, self.then, self.done, self.room = cap, words, then, 0, room
         self.late = False  # it went past `cap`, nearly done
 
+    def used(self) -> float:
+        return float(self.done)
+
     def __call__(self) -> str | None:
-        if self.done >= self.cap:
-            if self.growth is not None and self.growth.nearly_done(self.done, self.cap, self.finish):
-                self.late = True
+        stop = self.verdict(self.done, self.cap, self.room)
+        if stop is not None:
+            if stop == SHARE:
+                said = self.words(self.done, self.cap)
+            elif stop == PACE:
+                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, and at the pace its model grew it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
             else:
-                return self.words(self.done, self.cap) + (", the build having gone on past it, nearly done" if self.late else "")
+                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, its model had not grown past the first, and the plan in hand is not held: the rest is left for the search"
+            return said + (", the build having gone on past it, nearly done" if self.late else "")
+        if self.done >= self.cap:
+            self.late = True
         return None if self.then is None else self.then()
 
 
@@ -1558,4 +1638,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["Growth", "LATE", "Mode", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "Tally", "build_pattern_model"]
+__all__ = ["Growth", "LATE", "Mode", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]
