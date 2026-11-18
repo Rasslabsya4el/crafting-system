@@ -27,6 +27,7 @@ from datetime import date
 from typing import Any
 
 from crafting_system.budget import running
+from crafting_system.actions import sharing
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
@@ -166,7 +167,7 @@ def plan_with_starts(
     target = with_methods(target, kwargs.pop("methods", None))  # every start option is planned with the run's methods (#405)
     budget = as_budget(kwargs.pop("budget", None), net)
     kwargs = {**kwargs, "price_source": price_source, "budget": budget}  # every plan reads the trade prices under the profile setting
-    with running(budget.start() if budget is not None else None) as clock:
+    with running(budget.start() if budget is not None else None) as clock, sharing():  # the start options share their exact draws (#1194)
         plan = _with_starts(data, target, prices, recipe_starts, start_price, sources, offers, price_gap_percent, today, **kwargs)
     return with_bindings(plan, clock)
 

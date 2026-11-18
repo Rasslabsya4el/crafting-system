@@ -1,0 +1,26 @@
+dump ../../scratch/t1310/k-R17.pkl: keys 270559 (choice nodes 0), worked out 38919, kernels 395867, rows 463056, offers 15, start value 13.110480010480005, stopped stopped after 882 of the 899.153 seconds of the time limit, to leave the rest fo
+offers: Harvest Add Remove Lightning 403.9; Bench craft Prefixes Cannot Be Changed 353.2; Bench craft Can have up to 3 Crafted Modifiers 353.2; Bench craft Cannot roll Attack Modifiers 176.6; Remove Crafted Mods 0.3463; Orb of Alchemy 0.1235; Orb of Transmutation 0.01048; Orb of Alteration 0.1782; Regal Orb 0.1918; Exalted Orb 1.36; Orb of Annulment 12.73; Imprint with the Fenumal Plagued Arachnid 95; Imprint with the Fenumal Plagued Arachnid, replacing imprint 1 95; Restore imprint 1 1.048e-08; restart 533
+PARTS  part: distinct values | keys left when this part alone is dropped
+  flags           3 |  270479
+  fractured       1 |  270559
+  status        324 |  133733
+  held        18919 |   20620
+  crafted         6 |  231443
+  counts         16 |  270559
+  tags          256 |  194572
+  veiled          1 |  270559
+  counts: (3, 2) x67854 ; (2, 3) x47876 ; (2, 2) x44887 ; (3, 3) x39299 ; (3, 1) x20440 ; (1, 3) x17464 ; (1, 2) x12667 ; (2, 1) x11767 ; (1, 1) x2626 ; (3, 0) x2022 ; (0, 3) x1557 ; (0, 2) x1336 ; (2, 0) x707 ; (1, 0) x35 ; (0, 1) x18 ; (0, 0) x4
+  crafted: () x214969 ; (Slot(side=<Side.SUFFIX: 'suffix'>, kind='StrIntMasterItemGenerationCanHaveMultipleCraftedMods', contribution= x18739 ; (Slot(side=<Side.SUFFIX: 'suffix'>, kind='IntMasterItemGenerationCannotRollAttackAffixes', contribution=(<Stat x17748 ; (Slot(side=<Side.SUFFIX: 'suffix'>, kind='StrMasterItemGenerationCannotChangePrefixes', contribution=(<Status. x17597 ; (Slot(side=<Side.SUFFIX: 'suffix'>, kind='StrIntMasterItemGenerationCanHaveMultipleCraftedMods', contribution= x753 ; (Slot(side=<Side.SUFFIX: 'suffix'>, kind='IntMasterItemGenerationCannotRollAttackAffixes', contribution=(<Stat x753
+  fractured: () x270559
+  flags: Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()) x270455 ; Flags(rarity=<Rarity.MAGIC: 'magic'>, corrupted=False, influences=frozenset()) x103 ; Flags(rarity=<Rarity.NORMAL: 'normal'>, corrupted=False, influences=frozenset()) x1
+  tags: (((0, ()), 2), ((0, ('attack',)), 1), ((1, ()), 2)) x11333 ; (((0, ()), 2), ((1, ()), 2)) x11215 ; (((0, ()), 3), ((1, ()), 2)) x9657 ; (((0, ()), 1), ((0, ('attack',)), 1), ((1, ()), 2)) x8300 ; (((0, ()), 2), ((1, ()), 3)) x7987 ; (((0, ()), 2), ((0, ('caster',)), 1), ((1, ()), 2)) x7874
+  a status: (<Status.PASSING: 2>, <Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.PASSING: 2>, <Status.ABSENT: 0>)
+  leaves in the status: 6 ; keys by leaves PASSING: {0: 49804, 1: 106140, 2: 81036, 3: 28505, 4: 4735, 5: 332, 6: 7}
+MERGED full key: 270559 keys, 395867 kernels, 463056 rows; start value 13.110480010480005 (solver's error 2.7e-10); policy from the start visits 97 keys (16 at a tip's floor) and uses: Orb of Alteration x63; Orb of Annulment x16; Orb of Transmutation x1; Regal Orb x1
+MERGED without tags: 194572 keys, 312839 kernels, 355472 rows; start value 13.11048001048 (solver's error 4.3e-07); policy from the start visits 73 keys (12 at a tip's floor) and uses: Orb of Alteration x35; Orb of Annulment x23; Regal Orb x2; Orb of Transmutation x1
+MERGED without tags, counts: 105403 keys, 225185 kernels, 263621 rows; start value 0.2444480764587349 (solver's error 1.7e-12); policy from the start visits 46 keys (10 at a tip's floor) and uses: Orb of Alteration x34; Orb of Transmutation x1; Regal Orb x1
+MERGED without tags, counts, veiled: 105403 keys, 225185 kernels, 263621 rows; start value 0.2444480764587349 (solver's error 1.7e-12); policy from the start visits 46 keys (10 at a tip's floor) and uses: Orb of Alteration x34; Orb of Transmutation x1; Regal Orb x1
+MERGED without tags, counts, crafted: 86875 keys, 198694 kernels, 230516 rows; start value 0.047350824596386454 (solver's error 3.3e-13); policy from the start visits 87 keys (52 at a tip's floor) and uses: Orb of Alteration x24; Regal Orb x10; Orb of Transmutation x1
+MERGED flags, fractured, status only: 360 keys, 16128 kernels, 18222 rows; start value 0.047181494512181975 (solver's error 3.3e-13); policy from the start visits 165 keys (130 at a tip's floor) and uses: Regal Orb x34; Orb of Transmutation x1
+MERGED flags, status only: 360 keys, 16128 kernels, 18222 rows; start value 0.047181494512181975 (solver's error 3.3e-13); policy from the start visits 165 keys (130 at a tip's floor) and uses: Regal Orb x34; Orb of Transmutation x1
+MERGED status only: 324 keys, 16086 kernels, 18151 rows; start value 1.0479999999999999e-08 (solver's error 7.3e-14); policy from the start visits 1 keys (1 at a tip's floor) and uses: 
