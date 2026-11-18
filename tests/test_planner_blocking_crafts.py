@@ -216,9 +216,10 @@ def test_a_round_with_no_plan_in_hand_gives_way_once_it_has_a_plan_and_its_share
 
     groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abc"))
     now = [0.0]  # the run's clock, moved by hand: nothing reads the time
-    asked = []
+    asked, seen = [], []
 
     def search(chosen, call):
+        seen.append(chosen)
         if call.give_way is None:  # a plan is in hand: the round has its share, and here closes at once
             return SimpleNamespace(search=SimpleNamespace(lower=7.0), mean_remaining=7.0 if "b" in chosen else 10.0, stopped=None)
         for step in range(100):  # each of the search's rounds takes 50 s; the plan of 10 is in hand from the first
@@ -1264,6 +1265,166 @@ def test_a_round_that_proves_no_plan_with_a_plan_in_hand_is_set_aside_like_a_bea
     assert seen == [("a",), ("a", "b"), ("a", "c"), ("a", "b", "c")]
     assert [record.status for record in widened.records] == ["closed", "no plan", "beaten", "beaten"] and _rounds.all_closed(widened.records)
     assert widened.records[1].reason.endswith("the last round held them again, with every method")
+
+
+def test_a_nearly_done_build_goes_on_past_its_net_to_at_most_twice_it_and_one_far_from_done_stops(monkeypatch):
+    # #1135, on a hand clock (no real clock is read): a 20 s net of a round with a plan in hand, room for one more share past it
+    # (`Net.late` 1, `_plan.search_net`: three rounds or more left). Its build's model holds 80 of 84 offers (R11's
+    # Exalted round): at 20 s it is expected to need 20 * 84 / 80 = 21 s in all, within twice the net (40 s), so it goes on; at 39 s it would
+    # need 40.95 s: it stops. Holding 19 of 89 (R11's harvest swap round), it would need 93.7 s at 20 s: it stops at its net, as before. No
+    # build goes past 40 s, nor one that is not told how far it is (the first model), nor one of a round with no plan in hand, nor the last
+    # round's (its share is all the time left: past it the run would pass its net).
+    from types import SimpleNamespace
+
+    from crafting_system.abstraction._pattern import Growth
+    from crafting_system.budget import Budget
+
+    assert Growth(80, 84).nearly_done(20.0, 20.0) and not Growth(80, 84).nearly_done(39.0, 20.0) and not Growth(84, 84).nearly_done(40.0, 20.0)
+    assert not Growth(19, 89).nearly_done(20.0, 20.0) and not Growth(80, 84).nearly_done(20.0, 20.0, late=0.0)
+    assert Growth(80, 84).nearly_done(28.0, 20.0, late=0.5) and not Growth(80, 84).nearly_done(29.0, 20.0, late=0.5) and not Growth(80, 84).nearly_done(30.0, 20.0, late=0.5)
+    # the room past the share: none for the last round, half of the others' time for the second last, one share from three rounds left on
+    clock = SimpleNamespace(budget=Budget(seconds=600.0), left=lambda: 300.0)
+    assert [planner_plan.search_net(clock, searches, held=True).late for searches in (1, 2, 3, 10)] == [0.0, 0.5, 1.0, 1.0]
+    assert planner_plan.search_net(clock, 10).late == 0.0  # no plan in hand: the quarter's rule, no room past it
+    now = [0.0]
+    monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
+    near, far, blind, fresh = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=held, late=1.0), 0.0) for held in (True, True, True, False))
+    last = _envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=True, late=0.0), 0.0)  # the last round: no room past its share
+    last.growth = Growth(80, 84)
+    near.growth, far.growth, fresh.growth = Growth(80, 84), Growth(19, 89), Growth(80, 84)
+    now[0] = 20.0
+    assert near() is None and near.late
+    assert far() == blind() == "the time limit of 20 seconds was reached" and not far.late
+    assert fresh() == last() == "the time limit of 20 seconds was reached"
+    now[0] = 39.0
+    assert near() == "the time limit of 20 seconds was reached, the build having gone on past it to 39 s, nearly done"
+
+
+@pytest.mark.parametrize("late", [1.0, 0.0])
+def test_through_the_entry_a_round_whose_build_its_share_ends_nearly_done_finishes_it_and_finds_the_cheaper_plan(data, target, monkeypatch, late):
+    # #1135 (R11's Exalted round, essences in its base: a build of 24 to 28 s on a runner against a share of 26 to 27 s). The rounds of the
+    # #1099 test above, counted in states with a smaller net, `Budget.in_states(30)`: round 1 (the Exalted Orb alone) closes at
+    # 16e/3 + 2S = 153.33 having known 12 states; round 2 (the fillers) begins with that plan in hand and has the 18 states left over the 2
+    # rounds left, 9, so its build may do 4 * 9 = 36 pieces of work. It needs 51. Its room past them is half the other round's share
+    # (`Net.late` 0.5: 18 pieces, to 54). At 36 its model holds every offer of the round (the last joining), so it is expected to need 36
+    # pieces, within 54: it goes on, completes at 51, and the round closes on the filler's plan, 3(c + e) + 2S = 133. With no room past the
+    # net (`LATE` 0, the rule before), it stops at 36 while offers join, and the answer keeps 153.33. Under `in_states(28)` (a share of 8,
+    # 32 pieces, room to 48) it goes on to 48, short of 51: it stops there.
+    from crafting_system.abstraction import _pattern
+    from crafting_system.budget import Budget
+    from crafting_system.planner import _pattern_bound, _rounds
+
+    real_groups, real_bound = _rounds.round_groups, _envelope_plan.pattern_lower_bound
+
+    def named_alone(offers, named, added):
+        head, *rest = real_groups(offers, named, added)
+        asked = tuple(i for i in head.positions if offers[i].blocks is None)
+        fillers = tuple(i for i in head.positions if i not in asked)
+        return (_rounds.Group(asked, (), frozenset()), _rounds.Group(fillers, ("bench-craft",), head.features), *rest)
+
+    builds = []
+
+    def counted(*args, **kwargs):
+        bound = real_bound(*args, **kwargs)
+        builds.append((bound.pieces, bound.share, bound.phase, bound.late))
+        return bound
+
+    monkeypatch.setattr(_rounds, "round_groups", named_alone)
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", counted)
+    monkeypatch.setattr(_pattern, "LATE", late)
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 3)
+    monkeypatch.setattr(planner_plan, "MIN_OFFERS", 3)
+    prices = dataclasses.replace(_prices(), chaos_per_divine=92.0)
+
+    def planned(states):
+        builds.clear()
+        plan = plan_target(data, target, prices, PlanSettings(recipe_starts=False, start_price=S, solver="envelope", budget=Budget.in_states(states, build_per_state=1.0)))
+        return plan, _rounds_of(plan)
+
+    plan, (first, second, *_) = planned(30)
+    assert (first.status, first.states, first.upper) == ("closed", 12, pytest.approx(16 * E / 3 + 2 * S, rel=1e-9))
+    if late:
+        assert builds[1] == (51, 36, "complete", True)
+        assert second.status == "closed" and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+        assert _fills(plan.solution.policy[plan.start].label)
+        plan, (first, second, *_) = planned(28)
+        assert builds[1] == (48, 32, "growth", True) and second.status == "stopped"
+        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+    else:
+        assert builds[1] == (36, 36, "growth", False)
+        assert second.status == "stopped" and plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+
+
+def test_a_later_round_that_makes_the_first_plan_and_gives_way_joins_the_base_of_the_rounds_after_it():
+    # #1135 (R11's round 7, the essences: rounds 1 to 6 show no plan of their offers alone; on 2 of 9 runners the essence round made its plan
+    # of 597.28 c at about 52 s, past its share, and gave way, and the Exalted round, without the essences, reached no plan). Round 1 (a)
+    # shows no plan; round 2 (a, b) begins with no plan in hand, makes a plan of 10 and gives way at its share of 300 s (the 600 s left over
+    # its 2 rounds); round 3 holds b too, and its plan of 7 needs it. Before, a round that gave way did not join the base: round 3 held a
+    # and c only.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abc"))
+    now, seen = [0.0], []
+
+    def search(chosen, call):
+        seen.append(chosen)
+        if chosen == ("a",):
+            raise _rounds.NoPlan("no plan of a alone")
+        if call.give_way is None:  # a plan is in hand: round 3 closes at once, on 7 only with b
+            return SimpleNamespace(search=SimpleNamespace(lower=7.0), mean_remaining=7.0 if "b" in chosen else 10.0, stopped=None)
+        for step in range(100):
+            now[0] += 100.0
+            standing = SimpleNamespace(lower=1.0, upper=10.0, rounds=step, seconds=now[0])
+            if (said := call.give_way(standing)) is not None:
+                return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=10.0, stopped=said)
+        raise AssertionError("the round never gave way")
+
+    widened = _rounds.widen(
+        groups, tuple("abc"), search, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+        ended=lambda plan: (_rounds.STOPPED, plan.stopped) if plan.stopped else (_rounds.CLOSED, ""), left=lambda: 600.0 - now[0], clock_now=lambda: now[0],
+    )  # fmt: skip
+    assert seen == [("a",), ("a", "b"), ("a", "b", "c")]
+    assert [record.status for record in widened.records] == ["no plan", "gave way", "closed"] and widened.plan.mean_remaining == 7.0
+    assert not _rounds.all_closed(widened.records)  # the round that gave way did not finish: nothing calls the plan the cheapest of every method
+
+
+def test_once_the_first_plan_is_in_hand_the_rounds_left_go_by_their_offers_floors_lowest_first():
+    # #1135 (R11 without the guide: the Exalted Orb's round, its floor 9.64 c over the essences, was the tenth after the essence round, behind
+    # rounds whose floor was the essences' own 75.2 c; on probe 44104520931's runner 5 they took its share). Round 1 (a) makes the first plan
+    # of 100; the groups b, c, d, e then have floors (with the base a) of 75, 10, 75 and none (the floors pass was refused): c goes first, b
+    # and d keep their order, e goes last. Each floor is asked once, of the group's offers with the base, as a floors-only call.
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _rounds
+
+    groups = tuple(_rounds.Group((i,), (kind,), frozenset({"junk", kind})) for i, kind in enumerate("abcde"))
+    floors = {"b": 75.0, "c": 10.0, "d": 75.0, "e": ValueError("refused: the model of these offers cannot be built")}
+    asked = []
+
+    def search(chosen, call):
+        assert not call.floors
+        return SimpleNamespace(search=SimpleNamespace(lower=1.0), mean_remaining=100.0 if chosen == ("a",) else 90.0, stopped=None)
+
+    def floor(chosen, call):
+        assert call.floors and call.upper == 100.0 and call.held and call.searches == 4
+        asked.append(chosen)
+        if isinstance(figure := floors[chosen[-1]], Exception):
+            raise figure  # a refusal of the floors pass is no figure: the group goes last, and its round says the refusal itself
+        return figure
+
+    widened = _rounds.widen(
+        groups, tuple("abcde"), search, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+        ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: 600.0, clock_now=lambda: 0.0, floor=floor,
+    )  # fmt: skip
+    assert asked == [("a", "b"), ("a", "c"), ("a", "d"), ("a", "e")]  # once, after the first plan, never again
+    assert [record.kinds for record in widened.records][:5] == [("a",), ("c",), ("b",), ("d",), ("e",)]
+    assert _rounds.by_floor(groups, lambda group: {"a": 3.0, "b": None}.get(group.kinds[0], 3.0)) == [groups[0], *groups[2:], groups[1]]
+    assert _rounds.figure_of(floor, ("a", "b"), widened_call := _rounds.RoundCall(4, 100.0, False, held=True, floors=True), lambda: 0.0) is None
+    assert asked[-1] == ("a", "e")  # with the run's time used up nothing is asked
+    assert _rounds.figure_of(floor, ("a", "b"), widened_call, lambda: None) == 75.0
 
 
 def test_a_plan_in_hand_that_a_stopped_search_walked_to_is_not_held_by_the_next_round():

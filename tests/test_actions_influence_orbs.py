@@ -246,7 +246,7 @@ def test_the_answers_name_the_approximate_claims_they_read():
     assert "influence.exalt_refused_on_eldritch_implicit" not in recipe
 
 
-def test_the_catalog_offers_the_six_orbs_on_an_uninfluenced_rare_item_and_the_recipes_on_the_influences_it_has():
+def test_the_catalog_offers_the_six_orbs_on_an_uninfluenced_item_and_the_recipes_on_the_influences_it_has():
     plain_item = plain()
     assert [a for a in catalog(DATA, plain_item) if isinstance(a, InfluencedExaltedOrb)] == [InfluencedExaltedOrb(i) for i in Influence]
     assert not [a for a in catalog(DATA, plain_item) if isinstance(a, BeastInfluenceRecipe)]
@@ -254,7 +254,9 @@ def test_the_catalog_offers_the_six_orbs_on_an_uninfluenced_rare_item_and_the_re
     offered = catalog(DATA, shaper_item)
     assert not [a for a in offered if isinstance(a, InfluencedExaltedOrb)]
     assert [a for a in offered if isinstance(a, BeastInfluenceRecipe)] == [BeastInfluenceRecipe(SHAPER)]
-    assert not [a for a in catalog(DATA, helmet(roll(PLAIN, 1), rarity=Rarity.MAGIC)) if isinstance(a, InfluencedExaltedOrb)]
+    # a magic item becomes rare on the way (a Regal Orb), and the catalog is asked once, for the start item: the orbs are listed for it (#818)
+    magic = [a for a in catalog(DATA, helmet(roll(PLAIN, 1), rarity=Rarity.MAGIC)) if isinstance(a, InfluencedExaltedOrb)]
+    assert magic == [InfluencedExaltedOrb(i) for i in Influence]
 
 
 def test_an_orb_and_a_recipe_must_be_given_an_influence():

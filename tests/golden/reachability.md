@@ -12,10 +12,10 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 |  | Count |
 |---|---|
 | Action kinds in the catalog | 62 |
-| - with `planner=False` (no plan can use them) | 17 |
-| - with `planner=True` | 45 |
+| - with `planner=False` (no plan can use them) | 16 |
+| - with `planner=True` | 46 |
 | - `planner=True` and offered by at least one target (reachable) | 33 |
-| - `planner=True` and offered by no target | 12 |
+| - `planner=True` and offered by no target | 13 |
 | Benchmark targets | 18 |
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
@@ -25,7 +25,7 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
-Kinds that no target is offered: 29 of 62 (17 closed by `planner=False`, 12 planner kinds that no benchmark target reaches).
+Kinds that no target is offered: 29 of 62 (16 closed by `planner=False`, 13 planner kinds that no benchmark target reaches).
 
 ## 1. Action kinds
 
@@ -52,7 +52,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `augmentation-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r17, v01 |  |  |
 | `regal-orb` | yes |  | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r13, r14, r17, v01 |  |  |
 | `exalted-orb` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r14 |  |  |
-| `influenced-exalted-orb` | **no** | reads: implicits | none | `planner=False`: a goal built from a target does not name an influenced mod yet (the compressed state holds the orb's result since ticket #155) |  |
+| `influenced-exalted-orb` | yes | reads: any | none | not named in the target's `actions:` (12 of 19 entries); the kind lists no action for this start item nor for the items of the other rarities its actions reach (5 of 19 entries); the target is refused by `make_plan` (section 3) (r03, r06) |  |
 | `veiled-chaos-orb` | yes | reads: any | r05, r07, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12, r24 |  |  |
 | `orb-of-dominance` | **no** |  | none | `planner=False`: a goal built from a target does not name an influenced or an Elevated mod yet (the compressed state tells them apart since ticket #155) |  |
 | `veiled-exalted-orb` | yes | reads: any | r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
@@ -154,7 +154,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `price_source` | [planner] | `both` | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
 | `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 7 more |
 | `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 6 more |
-| `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
+| `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 7 more |
 | `--budget` | command `plan` |  | read | planner/_approx.py: climb (decides a branch; on the planning path); planner/_approx.py: climb (used in an operation; on the planning path); and 5 more |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--gap` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
@@ -163,7 +163,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
 | `--k` | command `trade` |  | read | prices/deepen.py: _deep_reading (an attribute or method of it is used; not on the planning path); prices/essence_recipe.py: _replaced (an attribute or method of it is used; on the planning path); and 16 more |
 | `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
-| `--memory-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
+| `--memory-limit` | command `plan` |  | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 7 more |
 | `--methods` | command `plan` |  | read | planner/_plan.py: with_methods (compared; on the planning path); planner/_plan.py: with_methods (formatted into text; on the planning path); and 5 more |
 | `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--net` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path) |

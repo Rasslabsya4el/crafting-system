@@ -13,15 +13,18 @@
 * `BeastInfluenceRecipe(influence)`: the six beast recipes "Add a Mod to a <influence> Item". No source says which mod they add; the
   model borrows the pool of the influence's Exalted Orb (the item already has the influence), and the claim is marked approximate.
 
-Each answers with an exact list or pool draw and none is a planner kind yet. The compressed state tells the influenced mods apart where
-Dominance reads them and keeps the Elevated tier since ticket #155 (below); what is left before a plan can offer them is a goal built from
-a target. A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
+Each answers with an exact list or pool draw. The influenced Exalted Orbs are a planner kind since #818 (a beta method, batch B2, OR-37): a
+goal built from a target names an influenced mod by its family and tier, as any mod, and the plan offers the six orbs by default (OR-41). The
+offers' floors class the orb TERMINAL (`planner/_offer_kinds`: it reads the implicits and changes the influences, so it leaves the start's
+shape), so its lower bound in the envelope search is its price. The Orb of Dominance and the beast recipes are not planner kinds yet (their
+`why_not`). The compressed state tells the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155
+(below). A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
 
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
 unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
-influence's orb for an item that has it (unverified, approximate). None is a planner kind yet.
+influence's orb for an item that has it (unverified, approximate). The orbs are a planner kind since #818; Dominance and the recipes are not yet.
 
 The compressed state (ticket #155, ADR-0030 amendment). `OrbOfDominance` declares `Reads.influenced` (an Awakener's Orb does too): the state then tells
 each influence mod of the item's influences apart by MOD (the kind `$<mod id>`), because the families of the data hold ordinary and influence mods
@@ -57,7 +60,7 @@ from crafting_system.rules import Rule, get_rule
 from . import add, metamods, outcomes, pool
 from .add import refuse_if_nothing_to_draw
 from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
-from .catalog import kind
+from .catalog import kind, listing_gap
 from .contract import Action, Adds, Reads
 from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
@@ -246,17 +249,21 @@ class InfluencedExaltedOrb(Action):
         return _draw_one(data, retained, self.influence, what, self.cut_of(data, item))
 
 
-@kind(
-    "influenced-exalted-orb",
-    order=76,
-    planner=False,
-    reads_item_state_while_not_planner="implicits",  # refused on an Eldritch implicit
-    why_not="a goal built from a target does not name an influenced mod yet (the compressed state holds the orb's result since ticket #155)",
-)
+@kind("influenced-exalted-orb", order=76, reads_item_state_while_not_planner="any")  # it reads the implicits: refused on an Eldritch implicit
 def _influenced_exalted_orbs(data: GameData, item: Item):
-    if item.rarity is Rarity.RARE and not item.influences:
-        for influence in Influence:
-            yield InfluencedExaltedOrb(influence)
+    # The catalog is asked once, for the start item. A normal or magic item becomes rare on the way (an essence, a Regal Orb), so the orbs are
+    # listed for it too (they were listed for a rare item only before #818). What no later item of a plan loses is checked here, so they are
+    # not offered where they can never act: an influence, a fractured mod, corruption and an item level under 68 stay for good (an Eldritch
+    # implicit and the rarity can change, and are `outcomes`'s refusals).
+    if item.influences or item.fractured_mods or item.corrupted or item.item_level < EXALT_MIN_ITEM_LEVEL.value:
+        return
+    try:  # an item class with no influence class key (a jewel, a flask) has no influence pool in the model: a model gap, said (#511)
+        influence_tag(data, item, Influence.SHAPER)
+    except OutOfScopeError as error:
+        listing_gap(error)
+        return
+    for influence in Influence:
+        yield InfluencedExaltedOrb(influence)
 
 
 # --- the Orb of Dominance ------------------------------------------------------------------------------------------
