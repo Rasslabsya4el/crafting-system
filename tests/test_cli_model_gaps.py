@@ -85,6 +85,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("actions/recombinator.py", "junk_craft_for", ("NotApplicableError",), LISTS, "the game: the bench does not make this craft on the item, not a candidate, silent"),
     ("actions/recombinator.py", "junk_craft_for", ("OutOfScopeError",), LISTS, "no rule for the craft on the item: not a candidate, and the listing is told"),
     ("actions/corruption.py", "_vaal_orb", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel: no rule for its pool, no Vaal Orb is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
+    ("actions/influence.py", "_influenced_exalted_orbs", ("OutOfScopeError",), LISTS, "an item class with no influence class key (a jewel, a flask): no influenced Exalted Orb is listed, and the listing is told"),
     ("actions/locus.py", "_locus", ("OutOfScopeError",), LISTS, "a Cluster or Timeless Jewel, an empty pool or one with no second draw: no Locus is listed, and the listing is told; the game's refusal is the `ValueError` clause after it"),
     ("actions/scope.py", "base_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "refused before the base was asked, whichever family: this probe item proves nothing, the next is asked (#848); `UnmodelledBase` is caught before it"),
     ("actions/socket_colours.py", "ChromaticOrb.burn_refusal", ("NotApplicableError", "OutOfScopeError"), EITHER, "the refusal's own text is returned, whichever family"),
@@ -272,7 +273,7 @@ def test_a_listing_clause_says_a_model_gap_and_keeps_the_game_refusal_silent():
     """Ticket #511: a model gap met while a kind lists its actions is told to the listing (`listing_gap`), and a game refusal there is not."""
     listing = [(file, function, caught, node) for file, function, caught, node in clauses_found() if (file, function, caught) in LISTING_CLAUSES]
 
-    assert len(listing) == len([clause for clause in CLAUSES if clause[3] == LISTS]) == 9  # fossil item x2, fossil x2, set, junk craft x2, Vaal, Locus
+    assert len(listing) == len([clause for clause in CLAUSES if clause[3] == LISTS]) == 10  # fossil item x2, fossil x2, set, junk craft x2, Vaal, Locus, influenced Exalted Orb
     for file, function, caught, node in listing:
         assert _says_a_listing_gap(node) is (caught == ("OutOfScopeError",)), (file, function, caught)
     for file, function, caught, node in clauses_found():  # the clause after a Vaal Orb's or a Locus' gap is the game's: silent
