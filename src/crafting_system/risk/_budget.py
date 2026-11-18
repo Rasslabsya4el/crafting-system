@@ -111,7 +111,7 @@ class Watch:
                 return True
         limit = parallel.active_memory_net()
         if limit is not None and now >= self.read:
-            held = parallel.own_mb()
+            held = parallel.own_mb(under=limit)
             took = time.monotonic() - now
             self.read = now + max(MEMORY_READ_SECONDS, MEMORY_READ_SHARE * took)
             if held is not None and held >= limit:

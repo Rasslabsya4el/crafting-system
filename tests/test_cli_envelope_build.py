@@ -167,7 +167,7 @@ def test_the_build_takes_a_quarter_of_the_time_and_all_of_the_memory(monkeypatch
     )
     clock.now = 0.0
     assert build_stop(Net(seconds=0.0), 0.0)() == "the time limit of 0 seconds was reached"  # a net of 0 s: at the first ask
-    monkeypatch.setattr(_envelope_plan, "resident_mb", lambda: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)
+    monkeypatch.setattr(_envelope_plan, "resident_mb", lambda under=None: 5000.0)  # the process holds 5 GB (a runner's /proc, or none on this PC)
     assert "5,000 MB" in build_stop(Net(memory_mb=1000.0), 0.0)()
     assert build_stop(Net(memory_mb=10_000.0), 0.0)() is None
 

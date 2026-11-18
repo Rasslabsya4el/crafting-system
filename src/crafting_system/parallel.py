@@ -23,6 +23,7 @@ here (`types.MappingProxyType` has none).
 
 import contextlib
 import copyreg
+import math
 import multiprocessing
 import os
 import sys
@@ -37,8 +38,10 @@ WORKERS_ENV = "CRAFTING_WORKERS"
 MIN_CHUNK = 1  # a chunk is never smaller than this many pieces
 ABANDON_SECONDS = 30.0  # the most an abandoned pool waits for its executor's thread to end (it ends at once once its workers are dead; a bound, not a measure)
 WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory while a memory net is set
+READ_SHARE = 20.0  # a net's question reads the proportional sizes at most once per this many times what the last reading took (`held_mb`, #1252)
 
 _memory_net: float | None = None  # the limit in MB of the run's memory net (`memory_net`), None when no net is set
+_dear: list = [-math.inf, None]  # when a net's question may next read the proportional sizes, and the last reading (`held_mb`)
 
 
 class MemoryNetReached(Exception):
@@ -74,26 +77,68 @@ def _proc_mb(pid: int | str) -> float | None:
     return None
 
 
-def own_mb() -> float | None:
+def own_mb(under: float | None = None) -> float | None:
     """The memory this process alone holds, in MB (its proportional size on Linux, so that a forked worker does not count its parent's pages as
-    its own), or None where it cannot be read (#738: a run of the cost figures reads it against the memory net)."""
+    its own), or None where it cannot be read (#738: a run of the cost figures reads it against the memory net).
+
+    `under` is the limit of the net that asks: while the resident size (`budget.process_mb`, microseconds) is under it, it is the answer, since
+    the proportional size is not above it (`held_mb`, #1252)."""
+    if under is not None:
+        cheap = budget.process_mb()
+        if cheap is not None and cheap < under:
+            return cheap
     own = _proc_mb("self")
     return own if own is not None else budget.process_mb()
 
 
-def held_mb() -> float | None:
+def held_mb(under: float | None = None) -> float | None:
     """The memory this process and its live workers hold, in MB, or None where it cannot be read.
 
     On Linux the sum of the proportional sizes (a page that a fork shares is counted once, split between the processes that share it); on Windows
     and macOS the sum of the resident sizes (`budget.process_mb`: the working set, the resident size; #540, #825), workers included.
+
+    `under` is the limit of a net that asks (#1252). The proportional size (`smaps_rollup` under `/proc`) costs about 8 ms per GB the process
+    maps, a resident size (`status` under `/proc`) some microseconds at any size, and no process's proportional size is above its resident
+    size (a page counts in full in each process that maps it, against a share of it). So the resident sum is read first, and while it is under
+    `under` it is the answer: the proportional sum is under the limit too, and the net is not reached. Only once the resident sum reaches it
+    (a process near its net, or forked workers whose shared pages each counts in full) is the proportional sum read, and that reading is made
+    at most once per `READ_SHARE` times what the last one took: in between, the last reading is the answer. So the questions of a net take at
+    most about 1/`READ_SHARE` of the time at any size, and a stop comes at most `READ_SHARE` times one reading late (some seconds near a
+    16 GB net with its workers alive). Without `under` the proportional sum is read every time: a figure that is said, and the questions that
+    must not come late, the wait on the workers (the caller is idle there, so the reading costs it nothing; OR-12) and the room check before the
+    search's arrays grow (#839).
     """
-    own = _proc_mb("self")
-    if own is not None:
-        return own + sum(_proc_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+    if under is not None:
+        cheap = _resident_sum()
+        if cheap is not None and cheap < under:
+            return cheap
+        now = _now()
+        if now < _dear[0] and _dear[1] is not None:
+            return _dear[1]
+        held = _proportional_sum()
+        _dear[0], _dear[1] = now + READ_SHARE * max(_now() - now, 0.0), held
+        return held
+    return _proportional_sum()
+
+
+def _now() -> float:
+    return time.perf_counter()
+
+
+def _resident_sum() -> float | None:
+    """The sum of the resident sizes of this process and its live workers (`budget.process_mb`), in MB, or None where it cannot be read."""
     own = budget.process_mb()
     if own is None:
         return None
     return own + sum(budget.process_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+
+
+def _proportional_sum() -> float | None:
+    """`held_mb` read in full: the sum of the proportional sizes where /proc gives them, else the sum of the resident sizes."""
+    own = _proc_mb("self")
+    if own is not None:
+        return own + sum(_proc_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+    return _resident_sum()
 
 
 def _watched_clock() -> "budget.Clock | None":
