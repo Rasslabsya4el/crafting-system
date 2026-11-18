@@ -1012,6 +1012,10 @@ class Search[S]:
         if self.p.restart is not None:
             self.restart_kernel = self._store([0], [1])
         stopped = None
+        if not self.goal[0] and not math.isfinite(self.lb[0]):
+            # the start's own bound proves that no plan of the offers reaches the goal (#1190: the offers' floors when no offer can enter E, or a
+            # bound's model whose start reaches no goal): that is the answer, before any net can stop the search and say "no plan found yet"
+            raise NoPolicy("no policy of the offers reaches the goal from the start", states=len(self.states))
         if not self.goal[0]:
             self._beaten(float(self.lb[0]), began)  # the start's own bound already reaches the plan in hand: nothing is expanded
             if math.isfinite(self.lb[0]):
