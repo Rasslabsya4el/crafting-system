@@ -155,6 +155,7 @@ class OfferFloors:
         if not actions:
             return
         known = self.views[0].known
+        self.ask()
         for reached in reached_by(data, item, lambda _item: actions)[1:]:
             state = ab.compress(reached)
             key = (state.flags, state.fractured)
@@ -164,9 +165,9 @@ class OfferFloors:
             self.views.append(ShapeView(ab, replace(state, slots=()), reached, self.chosen, (), known))
         if len(self.views) == 1:
             return
-        kinds = [[_kind_of(data, view.item, offer) if index else None for offer in priced] for index, view in enumerate(self.views)]
+        kinds = [[self._asked(position, _kind_of, data, view.item, offer) if index else None for position, offer in enumerate(priced)] for index, view in enumerate(self.views)]
         kinds[0] = [(entry.kind, None) for entry in self.entries]
-        reach = [[self._rarities(view, offer.offer.action) for offer in priced] for view in self.views]
+        reach = [[self._asked(position, self._rarities, view, offer.offer.action) for position, offer in enumerate(priced)] for view in self.views]
         restart = next((entry for entry in self.entries if isinstance(entry.priced.offer.action, BuyStartItem)), None)
         goal = ab.goal
         for index in range(1, len(self.views)):
@@ -190,9 +191,15 @@ class OfferFloors:
                 entries.append(entry)
             self.shape_entries.append(entries)
 
+    def _asked(self, position: int, function, *args):
+        """`function(*args)`, the net asked first at every 256th offer (OR-40)."""
+        if position % 256 == 0:
+            self.ask()
+        return function(*args)
+
     def _rarities(self, view: ShapeView, action):
         """The rarities one use of `action` leaves an item of the shape in: asked of the shape's item, then of its bare item; None when neither
-        answers (THE SHAPES, assumption (8): an action that applies nowhere there leaves no item of another rarity)."""
+        answers (THE SHAPES, assumption (7): an action that applies nowhere there leaves no item of another rarity)."""
         if isinstance(action, BuyStartItem):
             return None
         data = self.ab.data
@@ -216,6 +223,8 @@ class OfferFloors:
             for position, offer in enumerate(priced):
                 if not open_leaves:
                     return ()
+                if position % 256 == 0:
+                    self.ask()
                 rarities = reach[source][position]
                 kind = kinds[source][position][0]
                 if kind in (REFUSED, RESTART_KIND) or rarities is None or rarity not in rarities:

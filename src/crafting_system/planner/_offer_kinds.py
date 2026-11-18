@@ -165,7 +165,8 @@ bare item, gives the rarities of every state of the shape where the offer applie
 the bare item refuses is refused at every state of the shape (the bare item has the most room and holds the fewest families; what refuses it
 there is the rarity or the class, a Regal Orb on a Rare item, an Exalted Orb on a Magic one) (one that both refuse leaves none, as `_offers.reached_items`
 reads it); an erasing reroll's `Fixed` result (an Orb of Scouring) keeps of the state only what a reroll's kept mods are (`reach_bound` reads
-it at the bare item as it reads a reroll's kept mods); an addition that leaves the shape draws as one that keeps it does (the contract of
+it at the bare item as it reads a reroll's kept mods: a side a lock metamod keeps is not read there, as it is not for a Chaos Orb or a
+reforge, whose kept mods are the same `kept_by_reroll`; #1243 tracks it); an addition that leaves the shape draws as one that keeps it does (the contract of
 `Reads.pool_weight`, read by `add_bound` at the bare item). Floats: rho is lowered by 1e-12 of itself.
 """
 
