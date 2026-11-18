@@ -232,6 +232,9 @@ def approximate_inputs_of(plan: Plan, actions, data: GameData) -> tuple[Approxim
     finish = getattr(plan, "quality_finish", None)  # the catalyst of the quality finish (#159) is no action of the policy, and its gain law is approximate
     if finish is not None and finish.catalyst is not None:
         ids |= finish.catalyst.offer.action.claims(data)
+    implicit = getattr(plan, "implicit_finish", None)  # the Blessed Orb of the implicit finish (#1231) likewise: its roll law is approximate
+    if implicit is not None and implicit.orb is not None:
+        ids |= implicit.orb.offer.action.claims(data)
     starts = getattr(plan, "starts", None)  # a stand-in plan of a test has none
     if starts is not None:
         ids |= set(starts.claims)  # a recipe-made start item rests on claims no action of the policy cites (ADR-0059)

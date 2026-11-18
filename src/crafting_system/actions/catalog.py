@@ -39,6 +39,10 @@ changes no odds of the mods (ADR-0029), so such a kind can never make a plan of 
 report when the target asks for no quality, or when the kind lists nothing for the start item (a catalyst on boots), as it does the
 corrupting kinds (#159).
 
+A kind is `only_implicit_rolls` when every action it lists only rerolls the values of the item's implicits (`Adds.implicits` with
+`Adds.needs_roll_limit`: the Blessed Orb). Such a kind can change no odds of the mods either, so a planner leaves it unmentioned in its report
+when the target asks for no roll of an implicit the start item holds with a range (#1231).
+
 Two declarations are read by the shared tests, which therefore name no kind (ticket #334). `applies_only_to` names the item class
 that is the only one the kind works on (`"armour"`: body armours, boots, gloves and helmets; the fixture items of the contract suite
 are amulets, so the suite does not require that the kind applies to one, and fails when it does). `reads_item_state_while_not_planner`
@@ -95,6 +99,7 @@ class Kind:
     burns: bool = False
     player_why: str = field(default="", compare=False)
     only_quality: bool = False
+    only_implicit_rolls: bool = False
 
 
 _KINDS: dict[str, Kind] = {}
@@ -153,11 +158,12 @@ def kind(
     burns: bool = False,
     player_why: str = "",
     only_quality: bool = False,
+    only_implicit_rolls: bool = False,
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands, burns, player_why, only_quality))
+        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands, burns, player_why, only_quality, only_implicit_rolls))
         return members
 
     return decorate
