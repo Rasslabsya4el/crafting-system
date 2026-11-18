@@ -200,7 +200,8 @@ class Reads:
       weight of the mod that the item has is the tag of one of its influences, `pool.influence_spawn_test`) and on which mod each is,
       because the action upgrades one (an Orb of Dominance reads the tier and the Elevated version of the mod) or keeps one by its
       influence (an Awakener's Orb). The compressed state then tells each influence mod of the item's influences apart by MOD, as the kind
-      `$<mod id>`, and keeps the ordinary mods of its families as they were (a family often holds ordinary and influence mods both, so
+      `$<mod id>`, except the mods of a group every such action declares alike (`influence_alike`, #1238), which share the kind of
+      their first mod; it keeps the ordinary mods of its families as they were (a family often holds ordinary and influence mods both, so
       `by_mod` by family cannot say it); an Elevated mod is one of them (spawn weight 0 on the influence tag). Nothing changes for an item
       with no influence, and an action that only puts influence mods on the item (an influenced Exalted Orb, a beast recipe) need not
       declare it: the state tells apart what a reader in the same model needs (ticket #155).
@@ -952,6 +953,14 @@ class Action(ABC):
         then keeps it apart. Used by pruning (#118) to keep only the cheapest of a class of twins.
         """
         return None
+
+    def influence_alike(self, data: GameData, item: Item, mods: tuple[Mod, ...]) -> bool:
+        """For an action that declares `Reads.influenced`: whether it treats the influence mods `mods` alike on items like `item` (its base, item
+        level and influences; `mods` are one family on one side, decided by one influence tag, and give the goal the same). Alike: whichever of
+        them a slot holds, the action gives the same results up to which of `mods` each result holds in that slot, and refuses all of them or
+        none. The compressed state then names the group and not the mod (`abstraction._kinds`, #1238). False (the default) keeps them apart.
+        """
+        return False
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         """The ids of the registry claims the result or the price depends on.

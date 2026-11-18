@@ -575,6 +575,7 @@ class Abstraction:
             numbers=self._numbers,
             rollable=lambda: self._rollable_mods(influences),
             alike=self._alike,
+            group_influenced=not self._has_laws,
         )
         context = self._contexts[influences] = _Context(influences, kinds)
         return context
