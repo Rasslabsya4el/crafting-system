@@ -91,27 +91,29 @@ def own_mb(under: float | None = None) -> float | None:
     return own if own is not None else budget.process_mb()
 
 
-def held_mb(under: float | None = None) -> float | None:
+def held_mb(under: float | None = None, paced: bool = True) -> float | None:
     """The memory this process and its live workers hold, in MB, or None where it cannot be read.
 
     On Linux the sum of the proportional sizes (a page that a fork shares is counted once, split between the processes that share it); on Windows
     and macOS the sum of the resident sizes (`budget.process_mb`: the working set, the resident size; #540, #825), workers included.
 
     `under` is the limit of a net that asks (#1252). The proportional size (`smaps_rollup` under `/proc`) costs about 8 ms per GB the process
-    maps, a resident size (`status` under `/proc`) some microseconds at any size, and no process's proportional size is above its resident
-    size (a page counts in full in each process that maps it, against a share of it). So the resident sum is read first, and while it is under
-    `under` it is the answer: the proportional sum is under the limit too, and the net is not reached. Only once the resident sum reaches it
-    (a process near its net, or forked workers whose shared pages each counts in full) is the proportional sum read, and that reading is made
-    at most once per `READ_SHARE` times what the last one took: in between, the last reading is the answer. So the questions of a net take at
-    most about 1/`READ_SHARE` of the time at any size, and a stop comes at most `READ_SHARE` times one reading late (some seconds near a
-    16 GB net with its workers alive). Without `under` the proportional sum is read every time: a figure that is said, and the questions that
-    must not come late, the wait on the workers (the caller is idle there, so the reading costs it nothing; OR-12) and the room check before the
-    search's arrays grow (#839).
+    maps (up to 2.4 s for a process and four workers near a 12 GB net), while two upper figures of the proportional sum cost microseconds
+    (`_upper_sum`): the resident sum, since no process's proportional size is above its resident size, and on Linux the group's figure, the
+    anonymous pages of the run's control group counted once plus the file pages each process maps (#1258). The cheaper of the two is read
+    first, and while it is under `under` it is the answer: the proportional sum is under the limit too, and the net is not reached. Only once it
+    reaches the limit is the proportional sum read. With `paced` that reading is made at most once per `READ_SHARE` times what the last one
+    took: in between, the last reading is the answer, so the questions of a net take at most about 1/`READ_SHARE` of the time at any size, and
+    a stop comes at most `READ_SHARE` times one reading late. Without `paced` it is read at each question past the upper figure, never late: the
+    wait on the workers asks so (#1258: paced there, four workers passed a 12,000 MB net by up to 3 GB). Without `under` the proportional sum is
+    read every time: a figure that is said, and the room check before the search's arrays grow (#839).
     """
     if under is not None:
-        cheap = _resident_sum()
+        cheap = _upper_sum()
         if cheap is not None and cheap < under:
             return cheap
+        if not paced:
+            return _proportional_sum()
         now = _now()
         if now < _dear[0] and _dear[1] is not None:
             return _dear[1]
@@ -131,6 +133,81 @@ def _resident_sum() -> float | None:
     if own is None:
         return None
     return own + sum(budget.process_mb(child.pid) or 0.0 for child in multiprocessing.active_children())
+
+
+def _upper_sum() -> float | None:
+    """An upper figure of `_proportional_sum` read in microseconds: the least of the resident sum and the group's figure, or None where neither
+    can be read."""
+    figures = [figure for figure in (_resident_sum(), _group_sum()) if figure is not None]
+    return min(figures) if figures else None
+
+
+def _group_sum() -> float | None:
+    """An upper figure of the proportional sum of this process and its live workers from the control group they run in (cgroup v2, Linux), in MB,
+    or None where it cannot be read (no such group, or a worker in another group): the group's anonymous pages (`anon` of its `memory.stat`)
+    plus the file and shared pages each process maps (`RssFile` and `RssShmem` of its `status` under `/proc`), #1258.
+
+    Why it is not under the proportional sum: a process's proportional size counts each page it maps at its share (1/n for n mappers). An
+    anonymous page is charged once, to the group of the process that made it, and a fork's child stays in its parent's group, so each anonymous
+    page of these processes is in the group's `anon` once, however many of them share it, and their shares of it add up to at most 1. A file or
+    shared page may be charged to another group (a library another program loaded first), so those are added in full, as each process maps them.
+    The group's own pages that none of these processes maps (another program in the same group) only raise the figure. What it assumes: no
+    process of the run moved to another group after it made its pages (a move leaves them charged to the old group); the run never moves one.
+
+    Its cost: one `memory.stat` (about 13 us on the owner's server) and one `status` and `cgroup` file under `/proc` per process; the
+    proportional sizes it stands for cost seconds near a 12 GB net with four workers."""
+    group = _cgroup_of("self")
+    if group is None:
+        return None
+    pids = ["self"] + [str(child.pid) for child in multiprocessing.active_children()]
+    mapped = 0.0
+    for pid in pids:
+        if pid != "self" and _cgroup_of(pid) != group:
+            return None
+        fields = _status_fields(pid, ("RssFile:", "RssShmem:"))
+        if fields is None:
+            return None
+        mapped += sum(fields)
+    anon = _anon_of(group)
+    return None if anon is None else anon + mapped
+
+
+def _cgroup_of(pid: str) -> str | None:
+    """The cgroup v2 path of a process (its `0::` line under `/proc`), or None."""
+    try:
+        with open(os.path.join(os.sep, "proc", pid, "cgroup"), encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("0::"):
+                    return line[3:].strip()
+    except OSError:
+        pass
+    return None
+
+
+def _status_fields(pid: str, names: tuple[str, ...]) -> list[float] | None:
+    """The named fields of a process's `status` under `/proc`, in MB, in the order named, or None when one is missing."""
+    found: dict[str, float] = {}
+    try:
+        with open(os.path.join(os.sep, "proc", pid, "status"), encoding="utf-8") as handle:
+            for line in handle:
+                name = line.split(None, 1)[0] if line.strip() else ""
+                if name in names:
+                    found[name] = int(line.split()[1]) / 1024
+    except (OSError, ValueError, IndexError):
+        return None
+    return [found[name] for name in names] if len(found) == len(names) else None
+
+
+def _anon_of(group: str) -> float | None:
+    """The anonymous memory charged to a cgroup v2 group and its children (`anon` of its `memory.stat`), in MB, or None."""
+    try:
+        with open(os.path.join(os.sep, "sys", "fs", "cgroup", group.lstrip("/"), "memory.stat"), encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("anon "):
+                    return int(line.split()[1]) / 2**20
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
 
 
 def _proportional_sum() -> float | None:
@@ -340,10 +417,12 @@ class WorkerPool:
                 raise error
             if not waiting:
                 return
-            if _memory_net is not None and (held := held_mb()) is not None and held >= _memory_net:
+            limits = [limit for limit in (_memory_net, clock.budget.memory_mb if clock is not None else None) if limit is not None]
+            held = held_mb(under=min(limits), paced=False) if limits else None  # an upper figure under both limits, else read in full (#1258)
+            if _memory_net is not None and held is not None and held >= _memory_net:
                 self.abandon()
                 raise MemoryNetReached(f"this process and its workers held {held:,.0f} MB, the limit is {_memory_net:,.0f} MB; the workers were stopped")
-            if clock is not None and (found := clock.over(clock.stage, clock.what, held=held_mb() if clock.budget.memory_mb is not None else None)) is not None:
+            if clock is not None and (found := clock.over(clock.stage, clock.what, held=held if clock.budget.memory_mb is not None else None)) is not None:
                 self.abandon()
                 raise budget.BudgetExceeded(clock.bind(found))
             if deadline is not None and time.monotonic() >= deadline:
