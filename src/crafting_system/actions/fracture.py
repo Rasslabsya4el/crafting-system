@@ -75,7 +75,8 @@ class FracturingOrb(Action):
     def reads(self, data: GameData) -> Reads:
         # A mod the item holds becomes fractured: the count per side, and the pool weight the mod takes
         # out of later draws (so the family type of the junk), no family by name.
-        return Reads(junk=True, families=frozenset(), pool_weight=True, fractures=True)
+        # Its refusal reads the rarity, a corruption, the influences, a fractured mod and how many mods the item holds: of the junk, its count.
+        return Reads(junk=True, families=frozenset(), pool_weight=True, fractures=True, refusal_by_families=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It draws nothing, but the fractured copy of a mod is not a mod "named" in advance: `named` stays None.

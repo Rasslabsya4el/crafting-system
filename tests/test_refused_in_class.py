@@ -9,6 +9,9 @@ find the refusal it shared. And `Pattern.members` took the per-leaf best of ever
 * The class `Abstraction.refusal_class_of` gives a state is the class `_build` makes for it, and a pair whose class holds a refusal is one
   `kernel_key` refuses: on generated states, in the build's order.
 * `_fitting` is `best_of` over the pair, on hand-worked statuses.
+* An action that names no family (Remove Crafted Mods, a Fracturing Orb) has one refusal class at every member of a key: once a member is
+  refused in it the others are counted as refused and their items are not made (#1193); the model, the pairs and the refusals are those of
+  the build that looks each member's class up.
 * The model the build makes is the model before the ticket (each pair asked, every pair's status made whole, the members of `ANY` made
   again): the same keys, actions, kernels and values, the same pairs and refusals, on the hand-worked bow world and on a real route up to a
   net of pairs, with fewer `kernel_key` calls (OR-10, OR-12).
@@ -141,4 +144,69 @@ def test_the_bound_of_a_real_route_is_the_bound_before(route, tags, monkeypatch)
     assert new.model.stats.pairs == old.model.stats.pairs > 1_000
     assert new.model.stats.refused_pairs == old.model.stats.refused_pairs and new.model.stats.members == old.model.stats.members
     assert new_shared == old_shared > 0 and new_calls == old_calls - new_shared
+    assert new.pieces == old.pieces and str(new.model.stopped) == str(old.model.stopped)  # the counted net (`PIECES`) stops where it did
+
+
+def _profiles(ab: Abstraction, monkeypatch) -> list[int]:
+    """Count the states whose refusal class parts `ab` makes (`_junk_profile`: the item of the state is built for it)."""
+    calls = [0]
+    inner = ab._junk_profile
+
+    def counted(state):
+        calls[0] += 1
+        return inner(state)
+
+    monkeypatch.setattr(ab, "_junk_profile", counted)
+    return calls
+
+
+def test_the_actions_that_name_no_family_are_the_orb_and_the_removal():
+    ab = Abstraction(pattern_data(), GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+    assert {name for name, action in ACTIONS.items() if ab.refusal_names_no_junk(action)} == {"fracture", "remove"}
+    ab.share_refusals = False
+    assert not ab.refusal_names_no_junk(ACTIONS["fracture"])  # the reference of #1178 has no class
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_a_refusal_of_the_key_is_not_looked_up_at_each_member(tags, monkeypatch):
+    """The hand-worked world: the Fracturing Orb is asked at every pure junk assignment of a key (`ALL`) and is refused by most keys (fewer
+    than four mods, a fractured mod). With the refusal shared over the key, the same model with the same pairs, refusals and shared refusals,
+    from fewer items made to look a class up."""
+    data = pattern_data()
+    offers = [*offers_of(), PatternOffer("bench-lock", ACTIONS["bench-lock"], 1.0), PatternOffer("bench-craft", ACTIONS["bench-craft"], 2.0)]
+
+    def made(each: bool):
+        ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+        start = ab.compress(build(data, BOW, STARTS[0]))
+        calls, profiles = counting(ab, monkeypatch), _profiles(ab, monkeypatch)
+        with monkeypatch.context() as patch:
+            patch.setattr(_pattern, "SHARE_KEY_REFUSALS", not each)
+            return build_pattern_model(ab, start, offers, tags=tags), ab.refusals_shared, calls[0], profiles[0]
+
+    (old, old_shared, old_calls, old_profiles), (new, new_shared, new_calls, new_profiles) = made(True), made(False)
+    same_model(old, new)
+    assert new.stats.pairs == old.stats.pairs > 100
+    assert new.stats.refused_pairs == old.stats.refused_pairs and new.stats.members == old.stats.members
+    assert new_shared == old_shared > 0 and new_calls == old_calls
+    assert new_profiles < old_profiles
+
+
+@pytest.mark.parametrize(("route", "tags"), [case for case in CASES if case.id == "r13-auto"])
+def test_a_refusal_of_the_key_leaves_the_bound_of_a_real_route(route, tags, monkeypatch):
+    real_game_data()  # skips without the dump
+
+    def made(each: bool):
+        _, _, _, abstraction, start, priced, _ = E.build_model(route, "twins", True, False)
+        profiles = _profiles(abstraction, monkeypatch)
+        with monkeypatch.context() as patch:
+            patch.setattr(_pattern, "SHARE_KEY_REFUSALS", not each)
+            return pattern_lower_bound(abstraction, start, priced, tags=tags, pieces=PIECES), abstraction.refusals_shared, profiles[0]
+
+    (old, old_shared, old_profiles), (new, new_shared, new_profiles) = made(True), made(False)
+    same_model(old.model, new.model)
+    assert list(new.value) == list(old.value) and new.start_value == old.start_value
+    assert new.model.stats.pairs == old.model.stats.pairs > 1_000
+    assert new.model.stats.refused_pairs == old.model.stats.refused_pairs and new.model.stats.members == old.model.stats.members
+    assert new_shared == old_shared > 0
+    assert new_profiles <= old_profiles
     assert new.pieces == old.pieces and str(new.model.stopped) == str(old.model.stopped)  # the counted net (`PIECES`) stops where it did
