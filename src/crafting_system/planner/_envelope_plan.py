@@ -314,7 +314,8 @@ class BuildStop(Pace):
         self.late = False
 
     def used(self) -> float:
-        return time.perf_counter() - self.began
+        """The seconds the build has taken; 0 in a run counted in states, which reads no clock (its pieces net, `Tally`, keeps the pace)."""
+        return 0.0 if self.net.seconds is None else time.perf_counter() - self.began
 
     def __call__(self) -> str | None:
         net = self.net

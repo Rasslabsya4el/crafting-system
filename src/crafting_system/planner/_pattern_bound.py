@@ -71,7 +71,7 @@ class PatternBound:
     rounds: int = 1  # models built and solved (more than one when offers joined, #988)
     pieces: int = 0  # a build counted in pieces of work (`pieces` of `pattern_lower_bound`, #1101): the pieces it did; 0 otherwise
     share: int | None = None  # the pieces it was given; None for a build on the clock
-    late: bool = False  # nearly done when its net was reached, it went on past it (`Growth`, `finish` of `pattern_lower_bound`, #1135)
+    late: bool = False  # nearly done when its net was reached, it went on past it (`Growth`, `room` of `pattern_lower_bound`, #1135)
 
     @property
     def lower(self) -> float:
