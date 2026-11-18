@@ -1,0 +1,11 @@
+# TEST FIXTURE: the guide's route of R05 (`examples/routes/r05-strength-ring.yaml`) without its catalyst rule (step 3), for the naive crafter,
+# which judges no quality; its target is `tests/real_targets/r05-strength-ring-mods.yaml`. `tests/test_naive_crafter_routes.py` holds the rules
+# to the example's.
+
+name: R05, PoE Vault guide, the mods alone
+
+rules:
+  # Step 2: the essence again (this is also the first use, on the bought ring).
+  - when:
+      rarity: rare
+    do: Deafening Essence of Rage

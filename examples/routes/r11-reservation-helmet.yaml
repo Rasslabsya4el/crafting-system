@@ -8,15 +8,32 @@
 # examples/routes/r12-lightning-amulet.yaml.
 #
 # The route (TbXie, "Elemental Hit of the Spectrum gear and flasks", docs/research/
-# 2026-10-30-5-reference-routes.md, id R11):
-#   1. Buy a helmet with a fractured Chaos Resistance and use Essences of Loathing, at least
-#      Shrieking, until it has the Evasion and Life prefixes and an open suffix.
-#   2. Finish with a crafted Resistance or Attribute (not part of the target, see the target file).
+# 2026-10-30-5-reference-routes.md, id R11), in the guide's words (its page, read 2026-11-18 for #1289):
+#   1. "Buy a Fractured Chaos Resistance Base, use Essences of Loathing (at least Shrieking) until you hit an open
+#      Suffix & Evasion/Life prefixes you are happy with."
+#   2. "Finish off crafting Resistances/Stats as needed": a bench craft in the open suffix.
+#
+# The target asks at least 1 of the bench's Resistance and Attribute crafts at their top rank (OR-58, #890): the
+# three (29-35)% resistances cost 3 Chaos Orbs each at the bench, the three +(26-30) attributes 2 Chaos Orbs each.
+# The guide names none of the six ("as needed"), so this route takes the cheapest, an attribute; the three cost
+# the same and Dexterity is the one written.
 
 name: R11, TbXie guide
 
 rules:
-  # The guide allows Shrieking or Deafening; this route uses the cheaper one, Shrieking.
+  # Step 2: the Evasion and the Life are the target's, and a suffix is open (the fractured Chaos Resistance and the
+  # essence's reservation hold the other two): the bench craft.
+  - when:
+      rarity: rare
+      requirements:
+        - family: DefencesPercent
+          status: passing
+        - stat: "+# to maximum Life"
+          status: passing
+      open_suffixes: 1
+    do: "Bench craft +(26-30) to Dexterity"
+  # Step 1: the essence again (this is also the first use, on the bought helmet): the prefixes are not the target's,
+  # or all three suffixes are full. The guide allows Shrieking or Deafening; this route uses the cheaper one, Shrieking.
   - when:
       rarity: rare
     do: Shrieking Essence of Loathing

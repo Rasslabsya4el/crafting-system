@@ -14,15 +14,18 @@
 #     the Life-based version you can use any base you want. For the latter, I suggest looking for a pair of Two-Toned Boots (cold
 #     and lightning resistances)", so it accepts any base and this file takes the one it suggests (the Evasion and Energy Shield
 #     one has the cold and lightning implicit); no other base is made up.
-#   * "high Life": "+# to maximum Life", tier 1 or tier 2: +(115-129) (mod IncreasedLife8, needs item level 54) or +(100-114)
-#     (IncreasedLife7, item level 44), rolled and not crafted. The guide names no tier ("focus on a higher Life tier as well as a
-#     movement speed modifier alongside modifiers you'll be satisfied with"). A reference target names its tiers (OR-45, #901:
-#     "named tiers instead of high Life"), and "high" is read as the two top tiers, as the owner read R10's Life on boots (#895).
-#     The selector is the stat text, so the two-stat Life hybrids of the family do not count (as in R10). Until #901 the leaf was
-#     the family with no `min_tier` and asked tier 1 alone (OR-1).
-#   * "Movement Speed": as in R08, the rolled tier 1 (35%) or the plain bench craft at its top tier (no hybrid craft, #404).
-#   * "useful Resistances if rolled" and "acceptable other modifiers": not required. The guide asks for them only
-#     "if rolled", so a resistance is a bonus of the item, not a goal of the plan.
+#   * "a higher Life tier": "+# to maximum Life" at its top tier, +(115-129) (mod IncreasedLife8, needs item level 54), rolled and
+#     not crafted. The guide names no tier ("When reforging, focus on a higher Life tier as well as a movement speed modifier
+#     alongside modifiers you'll be satisfied with, such as resistance rolls or armor/evasion depending on your focus"), so the
+#     tier is the top one the item level allows (OR-1). From #901 to #1289 the leaf was `min_tier: 2`, "tier 1 or tier 2", by
+#     analogy to the owner's reading of R10's Life (#895); no owner quote names tier 2 for these boots (#1289). The selector is
+#     the stat text, so the two-stat Life hybrids of the family do not count (as in R10).
+#   * "a movement speed modifier": as in R08, the rolled tier 1 (35%, "You'll want a minimum item level of 86 so you'll be able to
+#     hit tier 1 movement speed") and only that (OR-58); the bench's (20-24)% is not an alternative since #1289.
+#   * "modifiers you'll be satisfied with, such as resistance rolls or armor/evasion depending on your focus": not written. The
+#     guide's words give examples ("such as") and leave the mods, their number and their tiers to the player, so this file cannot
+#     name them; they are listed for the owner in #1289's pull request, and none is made up (OR-58). The same holds for the
+#     finish, "You can either keep these or bench-craft the item to finish": no craft is named.
 #   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
 #     and made rare with an Orb of Alchemy; see `start_item` below for how that is modelled.
 
@@ -46,18 +49,13 @@ start_item:
 start: bought
 
 requirements:
-  # High Life, rolled: tier 1 or tier 2 (`min_tier: 2` is the worst tier that counts; OR-45, #901). Guide
+  # A higher Life tier, rolled: the top tier (no `min_tier`: OR-1; see the readings above). Guide
   # (poe-vault.com/guides/crafting-basic-boots): "When reforging, focus on a higher Life tier as well as a movement speed modifier".
   - stat: "+# to maximum Life"
-    min_tier: 2
     not_crafted: true
 
-  # Movement Speed: the rolled tier 1 (35%), or the plain bench craft (see R08: the guide says "tier 1 movement speed" and
-  # "bench-craft the movement speed").
-  - at_least: 1
-    of:
-      - family: MovementVelocity
-        min_tier: 1
-        not_crafted: true
-      - stat: "#% increased Movement Speed"
-        mod: EinharMasterMovementVelocity3
+  # Movement Speed: the rolled tier 1 (35%), and nothing in its place (OR-58; see R08).
+  # Guide: "You'll want a minimum item level of 86 so you'll be able to hit tier 1 movement speed, increasing your speed by 35%".
+  - family: MovementVelocity
+    min_tier: 1
+    not_crafted: true

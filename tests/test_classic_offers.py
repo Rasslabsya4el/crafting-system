@@ -5,7 +5,7 @@ silently: every planner kind is either classic or one #886 or #973 turned on (or
 """
 
 import pytest
-from cli_support import CLASSIC_CORRUPTING_KINDS, CLASSIC_KINDS, classic_offers
+from cli_support import CLASSIC_CORRUPTING_KINDS, CLASSIC_KINDS, CLASSIC_QUALITY_KINDS, classic_offers
 
 from crafting_system.actions import kinds
 from crafting_system.planner import _offers
@@ -35,7 +35,9 @@ def test_with_the_classic_offers_the_default_is_the_classic_kinds_and_it_is_undo
     with pytest.MonkeyPatch.context() as patch:
         classic_offers(patch)
 
-        assert [entry.name for entry in kinds(planner_only=True) if not entry.opt_in] == list(CLASSIC_KINDS)
+        on = [entry.name for entry in kinds(planner_only=True) if not entry.opt_in]
+        assert [name for name in on if name not in CLASSIC_QUALITY_KINDS] == list(CLASSIC_KINDS)
+        assert set(on) - set(CLASSIC_KINDS) == set(CLASSIC_QUALITY_KINDS) == {"catalyst"}  # for a target that asks for catalyst quality only (#1289)
         assert _offers.BLOCKING_CRAFTS is False and _offers.ELDRITCH_GATE is True
         assert dict(corrupted.DEFAULT_CORRUPTING_KINDS) == CLASSIC_CORRUPTING_KINDS == {"vaal": 1, "locus": 2}
 

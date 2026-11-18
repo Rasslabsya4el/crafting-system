@@ -34,7 +34,12 @@
 #     more at any tier (tiers 1 to 4). `r10-fractured-boots-70-life.yaml` keeps that reading of the guide's number.
 #   * The guide's priority list also names Lightning Resistance ("roughly 40%, but slightly lower values can do"), which the
 #     steps do not work toward ("Whatever additional stats you get is pure bonus"), so it is not asked.
-#   * "#% chance to Avoid Elemental Ailments": exactly the bench craft the guide uses, (16-20)%.
+#   * "Open suffix to craft "#% chance to avoid elemental ailments"" (the guide's priority list; it gives no number): the bench
+#     craft at the top rank the bench sells for boots of this item level, (21-25)% (mod EinharMasterAvoidElementalAilments2_,
+#     needs item level 60; OR-1, OR-58). Until #1289 the file asked the lower rank, (16-20)%.
+#   * "Murder Boots Will be the primary rare base of choice here" (the guide's page, read 2026-11-18): the guide's base is not the
+#     Sorcerer Boots of this file, which reads the research note's "Intelligence base". The start item is priced for Sorcerer
+#     Boots only, so the base stays until a start price for the guide's base exists (the issue is named in #1289's pull request).
 #   * "an open suffix for the craft": the item has three suffixes; the fractured prefix, the Life
 #     prefix and the essence suffix leave room, so the planner may craft there.
 
@@ -74,11 +79,11 @@ requirements:
     min_tier: 2
     not_crafted: true
 
-  # "#% chance to Avoid Elemental Ailments", exactly the bench craft of the guide, (16-20)%
-  # (mod EinharMasterAvoidElementalAilments1); the other tiers and the Loathing essence's copy do
-  # not count.
+  # "#% chance to Avoid Elemental Ailments", the bench craft of the guide at its top rank, (21-25)%
+  # (mod EinharMasterAvoidElementalAilments2_); the lower rank and the Loathing essence's copy do not count.
+  # Guide (same page, "Boots"): "Open suffix to craft "#% chance to avoid elemental ailments"".
   - family: AvoidElementalStatusAilments
-    mod: EinharMasterAvoidElementalAilments1
+    mod: EinharMasterAvoidElementalAilments2_
 
 # Where the crafting starts: boots that already have Movement Speed fractured.
 start_item:

@@ -36,6 +36,10 @@ CLASSIC_KINDS = (
     "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict", "foulborn-augmentation-orb", "foulborn-regal-orb",
     "orb-of-remembrance", "vaal", "locus", "unravelling-orb",
 )
+# * The catalysts stay on beside them (#1289): the kind came after #886 (#159), a target that asks for catalyst quality was refused before it,
+#   and R05's target is the guide's ring with its 20% Intrinsic quality (OR-58). A target that asks for no quality is offered no catalyst and
+#   its answer says no word about them (`planner/_offers`), so the records of the other routes hold.
+CLASSIC_QUALITY_KINDS = ("catalyst",)
 # * The corrupting kinds a target that takes a corrupted item could use without naming them, and no blocking crafts (`_offers.BLOCKING_CRAFTS`).
 CLASSIC_CORRUPTING_KINDS = {"vaal": 1, "locus": 2}
 
@@ -49,7 +53,7 @@ def classic_offers(patch) -> None:
 
     catalog = importlib.import_module("crafting_system.actions.catalog")  # the module: `crafting_system.actions.catalog` is also a function
     for name, entry in list(catalog._KINDS.items()):
-        if entry.planner and name not in CLASSIC_KINDS and not entry.opt_in:
+        if entry.planner and name not in CLASSIC_KINDS and name not in CLASSIC_QUALITY_KINDS and not entry.opt_in:
             patch.setitem(catalog._KINDS, name, dataclasses.replace(entry, opt_in=True))
         elif entry.planner and name in CLASSIC_KINDS and entry.opt_in:  # the Vaal Orb and the Locus, deferred since #1125 (OR-37), were classic
             patch.setitem(catalog._KINDS, name, dataclasses.replace(entry, opt_in=False))

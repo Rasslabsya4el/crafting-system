@@ -13,12 +13,23 @@
 #   2. Use Deafening Essence of Rage until the other modifiers are useful ones, Life or
 #      Resistances. The target asks the tier 1 Life (the owner's reading, #895), so the rule
 #      below is followed until the ring holds it.
-#   3. Catalyst quality (B2) and the bench on an open modifier (a free slot after the rolls; a
-#      bench craft meets no line of the target).
+#   3. "Finish the craft by applying 20x Intrinsic Catalyst to the ring. If you have any open modifiers, use the
+#      Crafting Bench to add another useful modifier." The catalysts are the first rule below: it is followed on the
+#      ring that holds the mods until the quality is the target's 20% (a ring that is the target is never acted on).
+#      The bench half is conditional and names no mod, so it is no rule here and no line of the target (listed for
+#      the owner in #1289's pull request).
 
 name: R05, PoE Vault guide
 
 rules:
+  # Step 3: the ring holds the tier 1 Life beside the essence's Strength: Intrinsic Catalysts until 20% quality.
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+    do: Intrinsic Catalyst
+  # Step 2: the essence again (this is also the first use, on the bought ring).
   - when:
       rarity: rare
     do: Deafening Essence of Rage

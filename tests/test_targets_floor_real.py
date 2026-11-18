@@ -5,8 +5,8 @@ when it is not there; CI fetches it (ticket #165).
 
 * Since ticket #457 the key `tiers_top_at_item_level` is gone: a leaf with no `min_tier` asks the top tier of its ladder at the file's level (OR-1) and the
   floor asks the one judgement of each source. Five targets stay at their level (their leaves need it, or no source gives a leaf), nine are lowered:
-  J01 to 1, R05 to 44, R08 to 72, R09 to 68, R10 and R10-70-life to 55, V01 to 64, R12 to 75 and R13 to 84 (the bench craft its damage line names needs 81).
-* R08 (Sorcerer Boots) needs only item level 72 (tier-2 Energy Shield %, the worst its target accepts since #901), not the 86 its file says.
+  J01 to 1, R05 to 44, R10 and R10-70-life to 60, V01 to 64, R12 to 75 and R13 to 84 (the bench craft its damage line names needs 81). The
+  tables below are the current lists: since #1289 R08, R09 and R17 stay at their level (the rolled 35% Movement Speed needs 86, OR-58).
 * A level below the floor is refused with the requirement that needs more; the level is set on the target and on its start item.
 """
 
@@ -60,21 +60,21 @@ def test_r13_needs_only_item_level_84_for_its_tier_1_resistances(data):
     binding = options.floor.binding
     assert binding is not None and binding.level == 84 and binding.source == "pool"
     assert "FireResistance tier 1" in binding.label and "ColdResistance tier 1" in binding.label
-    assert [node.level for node in options.floor.nodes] == [64, 84, 81]  # tier-1 Life needs 64; the named damage craft (bench) 81
+    # tier-1 Life needs 64; the named damage craft (bench) 81, the Elemental Damage with Attack Skills craft 50, the multimod 1 (#1289)
+    assert [node.level for node in options.floor.nodes] == [64, 84, 81, 50, 1]
 
 
-def test_r08_needs_only_item_level_72_for_its_tier_2_energy_shield(data):
+def test_r08_stays_at_item_level_86_for_its_rolled_tier_1_movement_speed(data):
     target = target_of(data, "r08-energy-shield-boots")
 
     options = item_level_options(data, target)
 
     assert target.item_level == 86
-    assert (options.floor.level, options.floor.kind) == (72, "derived")
-    found = spans(options)
-    assert found[0][0] == 72 and found[-1] == (86, 100) and (84, 84) in found  # each level where another tier opens is a plan of its own
+    assert (options.floor.level, options.floor.kind) == (86, "derived")  # until #1289 the bench Movement Speed (level 68) lowered it to 72
+    assert spans(options) == [(86, 100)]
     shield, speed = options.floor.nodes
-    assert (shield.level, shield.source) == (72, "pool")  # tier 2, (80-91)%: tier 1 or tier 2 counts since #901
-    assert (speed.level, speed.source) == (68, "bench")  # the bench Movement Speed (level 68) is named by `mod:`, so it is a way to the leaf; the rolled 35% needs 86
+    assert (shield.level, shield.source) == (84, "pool")  # the top tier of "#% increased Energy Shield" (OR-1; tier 1 or 2 from #901 to #1289)
+    assert (speed.level, speed.source, speed.mod_id) == (86, "pool", "MovementVelocity6")  # the rolled 35% alone: the guide's "minimum item level of 86"
 
 
 def test_r05_is_lowered_to_the_level_its_tiers_need(data):
@@ -96,20 +96,20 @@ STAYS = {
     "r04-penetrating-quiver": (81, "derived"),
     "r06-strength-heavy-belt": (75, "derived"),
     "r07-minion-wand": (84, "at target"),  # the minion speed and the Trigger are veiled and bench mods: no source the floor knows
+    "r08-energy-shield-boots": (86, "derived"),  # the rolled 35% Movement Speed needs 86 (OR-58, #1289)
+    "r09-life-boots": (86, "derived"),
     "r14-hunter-bow": (78, "at target"),
+    "r17-lightning-talisman": (85, "derived"),  # the top tier of all Attributes, of the post's picture, needs 85 (#1289)
     "r24-avoid-shock-boots": (86, "at target"),  # the Movement Speed + Onslaught is a veiled mod: no source the floor knows
 }
 LOWERED = {
     "j01-cobalt-life-attack-speed": 1,  # a jewel's mods all open at level 1
     "r05-strength-ring": 44,
-    "r08-energy-shield-boots": 72,
-    "r09-life-boots": 68,
-    "r10-fractured-boots": 55,
-    "r10-fractured-boots-70-life": 55,
+    "r10-fractured-boots": 60,  # the (21-25)% Avoid Elemental Ailments craft is sold from level 60 (#1289; the (16-20)% one from 55)
+    "r10-fractured-boots-70-life": 60,
     "r11-reservation-helmet": 81,  # the start helmet's fractured Chaos Resistance (tier 1) needs 81; the tier 1 Life opens at 64 and the tier 3 Evasion at 60 (#895)
     "r12-lightning-amulet": 75,  # the +1 gem level needs 75; the start amulet already holds the resistance (any tier)
     "r13-life-resist-belt": 84,  # the tier-1 resistances need 84
-    "r17-lightning-talisman": 75,  # the two +1 gem levels need 75
     "r20-rf-helmet": 82,  # the tier-1 Burning Damage and Concentrated Effect supports need 82
     "v01-minion-helmet": 64,
 }
@@ -185,7 +185,7 @@ def test_a_target_whose_leaf_needs_more_than_its_level_stays_at_its_level(data):
 # -- groups are equal pools -------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("stem", ["r05-strength-ring", "r08-energy-shield-boots"])
+@pytest.mark.parametrize("stem", ["r10-fractured-boots", "r13-life-resist-belt"])  # not R05: a target with catalyst quality is planned level by level
 def test_the_levels_of_a_group_open_one_pool_and_the_next_group_another(data, stem):
     target = target_of(data, stem)
     options = item_level_options(data, target)

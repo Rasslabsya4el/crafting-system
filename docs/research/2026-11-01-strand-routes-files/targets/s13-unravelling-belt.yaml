@@ -39,6 +39,11 @@ requirements:
   # bench can add it, and the bench copy is crafted by nature, so the line carries no not_crafted mark.
   - family: AllDamage
     mod: JunMaster2AllDamage3
+  # Since #1289 (OR-58) R13's target holds the second craft and the multimod of the post's picture, and this test target asks what R13 asks.
+  - family: IncreasedWeaponElementalDamagePercent
+    mod: EinharMasterWeaponElementalDamage2
+  - family: ItemGenerationCanHaveMultipleCraftedMods
+    mod: StrIntMasterItemGenerationCanHaveMultipleCraftedMods
 
 # Where the crafting starts: a normal Leather Belt with 82 Memory Strands and no mod.
 start_item:

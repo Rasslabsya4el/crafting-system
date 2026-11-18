@@ -1,11 +1,32 @@
-# Target for benchmark route R13: an alt-regal belt with tier-1 life, two tier-1 resistances and a
-# crafted damage modifier.
+# Target for benchmark route R13: an alt-regal belt with tier-1 life, two tier-1 resistances and the multimod with
+# two crafted damage modifiers.
 #
 # This file says WHAT you want to end with. It does not say how to craft it: the planner finds
 # that. Lines starting with # are comments and are ignored.
 #
-# The route (Reddit, 2021): alteration spam (on a Magic belt) for tier-1 life and a resistance, a regal for another
-# tier-1 resistance, then a multimod bench craft for the damage modifier.
+# The route (Reddit, 2021, thread pq4owv, "Alt-Regal, just as Chris intended", u/Fabere's "Rule 10" comment): "1. Alt spam for
+# T1 Life and a resist  2. Regal for another T1 resist  3. Multi-mod damage because I play softcore and hate defenses".
+#
+# The finished belt is the post itself: its picture (i.redd.it/y9c2oyb2m3o71.png, read 2026-11-18 for #1289) shows a Stygian
+# Vise of item level 86, "Quality (Attack Modifiers): +16%", with exactly six mods:
+#   prefix, tier 1:              +99(90-99) to maximum Life
+#   master crafted prefix:       30(24-32)% increased Elemental Damage with Attack Skills (rank 2)
+#   master crafted prefix:       17(15-17)% increased Damage
+#   suffix, tier 1:              +48(46-48)% to Fire Resistance
+#   suffix, tier 1:              +47(46-48)% to Cold Resistance
+#   master crafted suffix:       Can have up to 3 Crafted Modifiers
+# The author on the multimod, same thread: "Basically it allows you to craft two mods on an item instead of just one. Nice for
+# this instance where I had 3 open slots to use." So "Multi-mod damage" is the multimod and these two crafts (OR-58). Until
+# #1289 the file asked one craft, the (15-17)% increased Damage, and no multimod.
+#   * The base: the picture's belt is a Stygian Vise; this file keeps the Leather Belt it has had since #19 (the research note
+#     says "Rare Belt"), because the start item is priced for a Magic Leather Belt only. The two bases share the belt's mods.
+#     Named for the owner and filed (see #1289's pull request).
+#   * The quality: the picture shows 16% of the Abrasive type ("Attack Modifiers"); the post's three steps name no catalyst. The
+#     file does NOT ask it yet (the `quality:` block at the end is commented out), for a reason of the planner and not of the item:
+#     a target with catalyst quality is planned at its exact item level (a catalyst's gain depends on the level,
+#     `targets/floor.py`), so the start belt's price key becomes "Leather Belt, magic, item level 86", and the price files hold
+#     only "... item level 86-100": the belt would have no start price and R13 no plan at all. Whether the picture's quality
+#     belongs to the target is asked of the owner, and the missing price is filed (both named in #1289's pull request).
 
 # The base item: a Leather Belt, written by its English name as in the game. (When the game
 # data has several bases with one name, the planner skips the Battle Royale copies; if that still
@@ -51,10 +72,20 @@ requirements:
         min_tier: 1
         not_crafted: true
 
-  # Post: "Multi-mod damage because I play softcore and hate defenses" (the research note's "crafted damage modifier"). It is made at the bench, so it has no natural tier, and OR-2 asks the exact
-  # mod, not "any of N crafts": the craft the given route buys (examples/routes/r13-life-resist-belt.yaml,
-  # "the highest one the belt's item level allows") is "(15-17)% increased Damage", mod JunMaster2AllDamage3
-  # (needs item level 81; the belt is 86). The game data gives AllDamage a spawn weight of 0 on belts, so only the
-  # bench can add it, and the bench copy is crafted by nature, so the line carries no not_crafted mark.
+  # Post: "Multi-mod damage because I play softcore and hate defenses". The picture of the finished belt names the three crafts
+  # (see the head of this file); each is a bench mod with no natural tier, named by `mod:` (OR-2).
+  # "17(15-17)% increased Damage", master crafted prefix (needs item level 81; the belt is 86).
   - family: AllDamage
     mod: JunMaster2AllDamage3
+  # "30(24-32)% increased Elemental Damage with Attack Skills", master crafted prefix, rank 2 (the bench's top rank on a belt).
+  - family: IncreasedWeaponElementalDamagePercent
+    mod: EinharMasterWeaponElementalDamage2
+  # "Can have up to 3 Crafted Modifiers", master crafted suffix: without it the belt holds one crafted mod.
+  - family: ItemGenerationCanHaveMultipleCraftedMods
+    mod: StrIntMasterItemGenerationCanHaveMultipleCraftedMods
+
+# The catalyst quality of the picture's belt: "Quality (Attack Modifiers): +16%", the Abrasive type. Not asked yet (see the readings above):
+# uncomment once the owner has said the picture's quality is part of the target and the start belt has a price at its exact item level.
+# quality:
+#   type: abrasive
+#   min_percent: 16

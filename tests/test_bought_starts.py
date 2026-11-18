@@ -27,6 +27,7 @@ from crafting_system.targets.floor import target_at_level
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"
+FROZEN = ROOT / "tests" / "real_targets"  # R08 and R09 with a bench source for the Movement Speed: boots with several item levels to buy at
 FIXTURE = ROOT / "tests" / "fixtures" / "prices" / "bases-allflame-2026-11-01.json"
 ALCHEMY = 0.02716
 
@@ -48,7 +49,9 @@ def r13(data):
 
 @pytest.fixture(scope="module")
 def r08(data):
-    return load_target(TARGETS / "r08-energy-shield-boots.yaml", data)
+    """Sorcerer Boots that may be planned from item level 84: R08 as it was read before #1289 (`tests/real_targets/`, the Movement Speed rolled
+    or crafted). The reference target asks the rolled 35% alone since then (OR-58), so it has the one row of item level 86 and up."""
+    return load_target(FROZEN / "r08-energy-shield-boots-top-tier.yaml", data)
 
 
 def rows(listed):
@@ -230,8 +233,8 @@ def test_every_bought_example_target_lists_without_raising(data, prices):
 
 
 def test_a_thin_row_on_another_level_of_the_group_is_said(data, prices):
-    """R09's levels 69 to 71 are one pool: a thin row at 69 is set aside and named on the option priced from 70."""
-    r09 = load_target(TARGETS / "r09-life-boots.yaml", data)
+    """The levels 69 to 71 of R09 as it was read before #1289 are one pool: a thin row at 69 is set aside and named on the option priced from 70."""
+    r09 = load_target(FROZEN / "r09-life-boots-top-tier.yaml", data)
     names = {level: base_line_name(data, target_at_level(data, r09, level)) for level in (69, 70)}
     thin = PriceEntry(0.5, "poe.ninja", None, {"category": "BaseType"}, Provenance("ninja-stash", "Allflame", "2026-11-01", 2.0, "observations"))
     deep = PriceEntry(3.0, "poe.ninja", None, {"category": "BaseType"}, Provenance("ninja-stash", "Allflame", "2026-11-01", 40.0, "observations"))

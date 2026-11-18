@@ -23,7 +23,13 @@
 #   * "Bow Attacks fire an additional Arrow": the only tier (AdditionalArrowQuiver1_, a suffix).
 #   * "Maximum Life", "Increased Damage with Bow Skills": the guide names no tier, so the top tier the item level allows (OR-1),
 #     rolled (not crafted).
-#   * "Resistances or Attack Speed" in the last step is a free choice of the owner's, not part of the target.
+#   * STEP#9, "Remove the "Cannot roll Attack Modifiers" crafted mod (with the Crafting Bench) and craft something useful like
+#     Resistances or Attack Speed" (the guide's page, read 2026-11-18): the quiver the guide ends with holds that craft and no
+#     metamod, so the target asks at least 1 of the bench's Resistance and Attack Speed crafts for a quiver, each at its top rank
+#     (OR-1, OR-58): (29-35)% Fire, Cold or Lightning Resistance, or (7-12)% increased Attack Speed (the bench's only rank on a
+#     quiver). An item holds one crafted mod without "Can have up to 3 Crafted Modifiers", so this line also means the metamod is
+#     gone; the target language has no way to refuse a mod by name. The two-resistance crafts are not listed: the guide names
+#     "Resistances or Attack Speed". Until #1289 the file called step 9 "a free choice", not part of the target.
 #   * The guide's lists of "prefixes" and "suffixes" are not the item's sides: the Pierce is a prefix.
 
 # The base item. The game data has two bases named Penetrating Arrow Quiver; the older one is flagged
@@ -56,6 +62,19 @@ requirements:
   # item level allows (tier 2 at item level 81, which `min_tier: 2` also wrote before #404).
   - family: DamageWithWeaponTypeSkill
     not_crafted: true
+  # STEP#9 of the guide: the crafted suffix, which also means "Cannot roll Attack Modifiers" has been removed (OR-58).
+  # Guide (poe-vault.com/guides/shrapnel-ballista-hierophant-gear-flasks, "Quiver"): "Remove the "Cannot roll Attack Modifiers"
+  # crafted mod (with the Crafting Bench) and craft something useful like Resistances or Attack Speed."
+  - at_least: 1
+    of:
+      - family: FireResistance
+        mod: EinharMasterFireResist3_
+      - family: ColdResistance
+        mod: EinharMasterColdResist3__
+      - family: LightningResistance
+        mod: EinharMasterLightningResist3_
+      - family: IncreasedAttackSpeed
+        mod: EinharMasterAttackSpeed1
 
 # Where the crafting starts (OR-4, #545). The guide's step 1 is "Buy a Penetrating Arrow Quiver with item level 81 or higher; uncorrupted,
 # unfractured and no influence", and its step 2 is "Apply an Essence of Insanity": it names no rarity and no mod of the bought quiver,
