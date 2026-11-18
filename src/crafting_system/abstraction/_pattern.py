@@ -79,6 +79,18 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
 
 Every member offered is checked to be an item (`Abstraction._item_of`), so a member that no item has is never offered.
 
+**The impossible corner (#1192).** The lightest fill of each class, taken together, need not be an item: one family type can hold mods of two
+tag classes (on R20's helmet the one family of critical strike chance for socketed gems has an attack mod and a caster mod, each the lightest
+kind of its class), and two slots of one family are no item. `EXTREMES` rests on the corners of the box, so there the composition is offered
+at every fill (`ALL`, exact). `ANY` and `ONE` do not: by their own arguments above the pushed kernel and the refusals of the action are the
+same at every fill of the pure junk of a composition (the action reads of the pure junk its count and its classes; the families it names are
+relevant slots, enumerated, or folded families, the `named` members), so any one fill that is an item stands for all of them, as the lightest
+does where it is one. The composition is then offered at the first fill that is an item (`Pattern._assemble`), not at every one: on R20's
+guide offers a key of three prefixes and three suffixes had 11,263 members under `ONE` and 8,062 under `ANY` where a few dozen stand for
+them, and each was a pair of every such offer. With folded families to tell apart (`named`), every fill is still made. The rows of the
+model are the same (a pair left out gave a kernel another pair of its composition gave); a build counted in pieces counts the pairs it
+looks at, so it gets further on the same count.
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -250,6 +262,7 @@ LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
+SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
@@ -452,7 +465,7 @@ class PatternStats:
     restarted_keys: int = 0  # expanded keys a grown universe made again (`PatternBuilder._begin_again`, #1086)
     modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
-    fallbacks: int = 0  # keys whose extremes were impossible and used every member
+    fallbacks: int = 0  # compositions whose lightest (or heaviest) fill was no item: offered at every fill, or under `ANY` and `ONE` at one that is (#1192)
 
 
 @dataclass
@@ -930,20 +943,31 @@ class Pattern:
             return
         # a corner that two classes make impossible together (or no state at all): every assignment of this composition instead
         every = [_fills(universe.classes[SIDES[side_index]].get(tagset, []), count, blocked, Mode.ALL) for (side_index, tagset), count in sorted(need.items())]
+        if SHARE_FILLS and mode in (Mode.ANY, Mode.ONE) and not named:
+            # ... of which one stands for them all under these policies (module docstring, "The impossible corner", #1192): the first that is an item
+            for state in self._each_state(key, relevant, every):
+                if self._ok(state):
+                    self.fallbacks += 1
+                    yield state
+                    return
+            return
         found = [state for state in self._states(key, relevant, every) if self._ok(state)]
         if found:
             self.fallbacks += 1
         yield from found
 
     def _states(self, key: PatternKey, relevant, options) -> list[CompressedState]:
-        out = []
+        return list(self._each_state(key, relevant, options))
+
+    def _each_state(self, key: PatternKey, relevant, options) -> Iterator[CompressedState]:
+        """The state of `key` with the `relevant` slots and each pick of one fill from each class's `options`, in the order of the picks."""
+        held = self.held_of(key)
         for pick in product(*options) if options else [()]:
             slots = [*key.crafted, *key.veiled, *relevant]
             for part in pick:
                 slots.extend(part)
             slots.sort(key=_slot_key)
-            out.append(CompressedState(key.flags, key.fractured, key.status, tuple(slots), *self.held_of(key)))
-        return out
+            yield CompressedState(key.flags, key.fractured, key.status, tuple(slots), *held)
 
     def _ok(self, state: CompressedState) -> bool:
         """Whether the state is an item the abstraction can give to an action (every slot has a family of its own)."""
