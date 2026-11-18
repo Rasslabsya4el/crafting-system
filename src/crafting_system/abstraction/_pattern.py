@@ -186,8 +186,9 @@ kernel, and no new slot (theirs are of the universe already, and the named mods 
 pairs of the build (`stats.pairs`, the counted net's `Tally`), so a build counted in pieces stops where it did; a member the quality rule
 prunes (#159) is passed over before, as for any action, and counts as no pair. Its model gaps (a normal item,
 an item with no mod, a roll limit on the named mod) read the key and the action alone, so no member left out could have raised one. R04's
-round of bench crafts asked 73 crafts at every member of every key, 1.17 million pairs nearly all of distinct kernels (#1193). **Proved** so,
-and checked against every member on the hand-worked world and on real routes (`tests/test_certain_additions.py`).
+round of bench crafts asked 73 crafts at every member of every key, 1.17 million pairs nearly all of distinct kernels (#1193). **Proved** so;
+the tests compare the whole model built so with the one built asking every member, on the hand-worked world (bench crafts) and on a real
+route under a counted net (`tests/test_certain_additions.py`). An aspect beast, whose named mod is ordinary, rests on the argument alone.
 
 **The universe.** The members of a key are made of the ordinary slots an item can hold. They come from three places: the pool of an empty rare
 item (every mod a draw can give, under a roll limit once for each outcome of its roll, #830; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced

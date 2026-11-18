@@ -118,3 +118,4 @@ def test_the_bound_of_a_real_route_is_the_bound_before(route, tags):
     assert new.start_value == old.start_value
     assert new.model.stats.pairs == old.model.stats.pairs > 1_000
     assert new.model.stats.shared_pairs > 0
+    assert new.pieces == old.pieces and str(new.model.stopped) == str(old.model.stopped)  # the counted net (`PIECES`) stops where it did
