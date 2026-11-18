@@ -21,7 +21,7 @@ from html import escape
 
 import pytest
 from catalog_lists_support import CATALOG_LISTS, FIXTURE_WORLD, LIST, document_without, limits_without, one_element_to_a_line, page_without, text_without
-from cli_support import R12, price_file
+from cli_support import R12, price_file, r12_named
 from limits_support import of_kind
 from targets_support import DATA
 from two_runs_support import masked, without_timings
@@ -220,6 +220,24 @@ def test_every_kind_of_the_catalog_is_offered_or_in_one_list_or_unsaid_by_its_ow
         else:
             assert title not in named, entry.name
     assert kind_title(LOCK_KIND) in lists[OPT_IN]  # Hinekora's Lock: no kind of the catalog, off unless named (OR-37)
+
+
+def test_a_run_that_names_its_methods_lists_every_other_planner_kind_as_not_named():
+    """The run of `v01_minion_helmet.*`, whose recorded text no longer holds this list: a target that names its methods."""
+    target = r12_named()
+    named = make_plan(DATA, target, price_file(), budget=Budget.in_states(STATES))
+    lists = {kind: [label for limit in of_kind(named.limits, kind) for label in limit.labels] for kind in CATALOG_LISTS}
+
+    assert not lists[OPT_IN] and len(lists[NOT_NAMED]) == len(set(lists[NOT_NAMED]))
+    assert set(lists[NOT_NAMED]) <= {kind_title(entry.name) for entry in kinds(planner_only=True)} | {kind_title(LOCK_KIND)}
+    assert not set(lists[NOT_NAMED]) & set(lists[NOT_BUILT])
+    for entry in kinds(planner_only=True):
+        silent = entry.corrupting or entry.needs_strands or entry.only_quality or entry.only_implicit_rolls
+        if entry.name in target.actions:
+            assert kind_title(entry.name) not in lists[NOT_NAMED], entry.name
+        else:
+            assert kind_title(entry.name) in lists[NOT_NAMED] or silent, entry.name
+    assert kind_title(LOCK_KIND) in lists[NOT_NAMED]
 
 
 def test_what_the_answer_calls_unpriced_has_no_price_and_no_kept_offer_is_among_it(plan):
