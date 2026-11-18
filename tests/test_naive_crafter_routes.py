@@ -78,6 +78,26 @@ PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.js
 KEYS = ROOT / "tests" / "reconcile" / "expected_keys.txt"
 TARGETS = ROOT / "examples" / "targets"
 ROUTES = ROOT / "examples" / "routes"
+# R05 is played on its mods alone (#1289): its reference target asks the 20% Intrinsic quality of the guide's step 3 and its route applies the
+# catalysts, and the naive crafter judges no quality (`naive_crafter/world.py`). The frozen pair is the target without the quality block and the
+# route without the catalyst rule; `test_the_frozen_r05_route_is_the_examples_without_its_catalyst_rule` holds the route to the example's.
+MODS_ALONE = {"r05-strength-ring": (ROOT / "tests" / "real_targets" / "r05-strength-ring-mods.yaml", ROOT / "tests" / "real_routes" / "r05-strength-ring-mods.yaml")}
+
+
+def target_file(stem: str) -> Path:
+    return MODS_ALONE[stem][0] if stem in MODS_ALONE else TARGETS / f"{stem}.yaml"
+
+
+def route_file(stem: str) -> Path:
+    return MODS_ALONE[stem][1] if stem in MODS_ALONE else ROUTES / f"{stem}.yaml"
+
+
+def test_the_frozen_r05_route_is_the_examples_without_its_catalyst_rule():
+    example = yaml.safe_load((ROUTES / "r05-strength-ring.yaml").read_text(encoding="utf-8"))["rules"]
+    frozen = yaml.safe_load(route_file("r05-strength-ring").read_text(encoding="utf-8"))["rules"]
+    assert frozen == [rule for rule in example if not rule["do"].endswith("Catalyst")] and len(frozen) == len(example) - 1
+    target = yaml.safe_load((TARGETS / "r05-strength-ring.yaml").read_text(encoding="utf-8"))
+    assert {**target, "quality": None} == {**yaml.safe_load(target_file("r05-strength-ring").read_text(encoding="utf-8")), "quality": None}
 
 #            route id: (target and route file stem, plays in this file's run)
 COVERED = {
@@ -117,7 +137,7 @@ OUT = Path(os.environ["NAIVE_OUT"]) if os.environ.get("NAIVE_OUT") else None
 
 def route_labels(stem: str) -> list[str]:
     """The action labels of a route file, in the order the rules name them (plain YAML)."""
-    document = yaml.safe_load((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"))
+    document = yaml.safe_load((route_file(stem)).read_text(encoding="utf-8"))
     seen: list[str] = []
     for rule in document["rules"]:
         if rule["do"] not in seen:
@@ -163,9 +183,9 @@ def played(request) -> Played:
     route_id = request.param
     stem, plays = COVERED[route_id]
     data = real_game_data()
-    target = load_target(TARGETS / f"{stem}.yaml", data)
+    target = load_target(target_file(stem), data)
     plan = make_plan(data, target, load_price_file(PRICES), solve_it=False)
-    result = evaluate_route(plan, load_route(ROUTES / f"{stem}.yaml", plan, data), data)
+    result = evaluate_route(plan, load_route(route_file(stem), plan, data), data)
     assert result.gaps == () and result.risk.success_probability.value == pytest.approx(1.0), route_id
     spend = expected_spend(plan, result.policy)
     assert sum(spend.values()) == pytest.approx(result.risk.mean.value, rel=1e-9), "the chain's visits do not add up to risk.evaluate's mean"
@@ -173,9 +193,9 @@ def played(request) -> Played:
     # the solver certifies (#657). The exact side leaves that price out, so both sides are of the same process; #657 removes it (R13: 0.0016 Chaos a draw).
     drawn = spend.get(DRAW_LABEL, 0.0)
 
-    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS)
+    world = load_world(target_file(stem), PRICES, KEYS)
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     runs = RUNS_OVERRIDE or plays
     tally = t.simulate(Player(world, route, judge), runs, seed=555 * 1000 + SEED)
     if OUT is not None:
@@ -193,9 +213,9 @@ def recorded_for(route_id: str) -> dict:
 
 
 def play_world(stem: str, laws: Laws | None = None):
-    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS, laws=laws)
+    world = load_world(target_file(stem.removesuffix('-restart')), PRICES, KEYS, laws=laws)
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     return Player(world, route, judge)
 
 
@@ -351,9 +371,9 @@ def test_the_simulation_is_long_enough_to_say_something(played):
 def test_a_wrong_count_of_mods_for_the_rare_reroll_makes_the_route_disagree_with_the_planner(played):
     """If the law of 4, 5 or 6 mods were 1:1:1 instead of 8:3:1, the naive mean would be far from the planner's: the comparison has the power to see it."""
     stem, _ = COVERED[played.route]
-    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=Laws(rare=((4, 1), (5, 1), (6, 1))))
+    world = load_world(target_file(stem), PRICES, KEYS, laws=Laws(rare=((4, 1), (5, 1), (6, 1))))
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     wrong = t.simulate(Player(world, route, judge), 3000, seed=7)
     verdict = t.verdict_on(f"{played.route} with the wrong law", played.exact_mean, wrong.mean_se())
     print(verdict)  # the distance, shown with -rP
@@ -389,9 +409,9 @@ MUTATIONS = [
 @pytest.mark.parametrize(("played", "name", "laws", "plays"), [(route, name, laws, plays) for name, laws, route, plays in MUTATIONS], indirect=["played"])
 def test_each_rule_of_the_draw_turned_off_moves_a_cheap_route_past_the_line(played, name, laws, plays):
     stem, _ = COVERED[played.route]
-    world = load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS, laws=laws)
+    world = load_world(target_file(stem), PRICES, KEYS, laws=laws)
     judge = Judge(world)
-    route = read_route((ROUTES / f"{stem}.yaml").read_text(encoding="utf-8"), world, judge)
+    route = read_route((route_file(stem)).read_text(encoding="utf-8"), world, judge)
     wrong = t.simulate(Player(world, route, judge), plays, seed=7)
     verdict = t.verdict_on(f"{played.route} with {name}", played.exact_mean, wrong.mean_se())
     print(verdict)  # the distance, shown with -rP
@@ -447,15 +467,15 @@ def test_a_route_whose_target_the_naive_crafter_cannot_read_is_refused_naming_wh
     stem, why = UNREAD_TARGET[route]
     real_game_data()  # skips without the game data
     with pytest.raises(Unsupported, match=why):
-        load_world(TARGETS / f"{stem}.yaml", PRICES, KEYS)
+        load_world(target_file(stem), PRICES, KEYS)
 
 
 @pytest.mark.parametrize("route", list(NOT_COVERED))
 def test_a_route_with_a_mechanic_the_naive_crafter_lacks_is_refused_naming_it(route):
     stem, mechanics = NOT_COVERED[route]
     real_game_data()  # skips without the game data
-    world = load_world(TARGETS / f"{stem.removesuffix('-restart')}.yaml", PRICES, KEYS)
-    text = (ROUTES / f"{stem}.yaml").read_text(encoding="utf-8")
+    world = load_world(target_file(stem.removesuffix('-restart')), PRICES, KEYS)
+    text = (route_file(stem)).read_text(encoding="utf-8")
 
     missing = lacking(text, world)
     for mechanic in mechanics:

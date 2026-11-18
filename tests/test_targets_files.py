@@ -481,3 +481,23 @@ def test_the_r05_ring_is_not_met_by_a_lower_tier_life_a_resistance_or_another_st
     assert unmet_families(target, real, essence_strength, third_fire) == ["IncreasedLife", "quality"]
     assert unmet_families(target, real, top_life) == ["Strength", "quality"]
     assert unmet_families(target, real, rolled_strength, top_life) == ["Strength", "quality"]
+
+
+def test_no_reference_target_lets_a_crafted_mod_stand_in_for_a_rolled_one(real):
+    """OR-58 (#1289): in a group of a reference target every member is rolled (`not_crafted`) or none is. A group that mixes them is the fault the
+    owner named on R08 and R09 ("the rolled 35% Movement Speed or the bench's 20-24%"): the cheaper crafted member then stands for the guide's roll."""
+    from crafting_system.cli._benchmark import REFERENCES
+
+    def leaves(node):
+        if isinstance(node, KOfN):
+            for member in node.of:
+                yield from leaves(member)
+        else:
+            yield node
+
+    root = EXAMPLES.parents[1]
+    for bench in REFERENCES:
+        target = load_target(root / bench.target, real)
+        for node in target.requirements:
+            if isinstance(node, KOfN):
+                assert len({leaf.not_crafted for leaf in leaves(node)}) == 1, f"{bench.id}: a group mixes rolled and crafted members"

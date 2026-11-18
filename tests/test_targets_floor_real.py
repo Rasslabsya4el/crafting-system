@@ -5,8 +5,8 @@ when it is not there; CI fetches it (ticket #165).
 
 * Since ticket #457 the key `tiers_top_at_item_level` is gone: a leaf with no `min_tier` asks the top tier of its ladder at the file's level (OR-1) and the
   floor asks the one judgement of each source. Five targets stay at their level (their leaves need it, or no source gives a leaf), nine are lowered:
-  J01 to 1, R05 to 44, R08 to 72, R09 to 68, R10 and R10-70-life to 55, V01 to 64, R12 to 75 and R13 to 84 (the bench craft its damage line names needs 81).
-* R08 (Sorcerer Boots) needs only item level 72 (tier-2 Energy Shield %, the worst its target accepts since #901), not the 86 its file says.
+  J01 to 1, R05 to 44, R10 and R10-70-life to 60, V01 to 64, R12 to 75 and R13 to 84 (the bench craft its damage line names needs 81). The
+  tables below are the current lists: since #1289 R08, R09 and R17 stay at their level (the rolled 35% Movement Speed needs 86, OR-58).
 * A level below the floor is refused with the requirement that needs more; the level is set on the target and on its start item.
 """
 
@@ -106,7 +106,7 @@ LOWERED = {
     "j01-cobalt-life-attack-speed": 1,  # a jewel's mods all open at level 1
     "r05-strength-ring": 44,
     "r10-fractured-boots": 60,  # the (21-25)% Avoid Elemental Ailments craft is sold from level 60 (#1289; the (16-20)% one from 55)
-    "r10-fractured-boots-70-life": 55,
+    "r10-fractured-boots-70-life": 60,
     "r11-reservation-helmet": 81,  # the start helmet's fractured Chaos Resistance (tier 1) needs 81; the tier 1 Life opens at 64 and the tier 3 Evasion at 60 (#895)
     "r12-lightning-amulet": 75,  # the +1 gem level needs 75; the start amulet already holds the resistance (any tier)
     "r13-life-resist-belt": 84,  # the tier-1 resistances need 84
