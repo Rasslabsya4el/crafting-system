@@ -849,6 +849,7 @@ def first_sentence(text: str) -> str:
 def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targets_dir: Path = TARGETS_DIR) -> list[Probe]:
     from crafting_system.actions import kinds
     from crafting_system.cli import StartContext, make_plan, vendor_recipe_starts
+    from crafting_system.planner._offers import reached_items
     from crafting_system.planner._plan import PlanError, StartPrice
     from crafting_system.prices import load_price_file
     from crafting_system.targets import StartKind, load_target
@@ -858,16 +859,27 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
     ids = short_ids(stems)
     probes: list[Probe] = []
 
-    def members_of(item) -> tuple[dict, dict]:
+    def members_of(start, plan) -> tuple[dict, dict]:
+        """Each kind's actions for the start item, and for a kind that lists none there, for the items of the other rarities its actions reach
+        (`reached_items`, #973: a Transmutation or an Alchemy on the Normal item a Scouring leaves); each offered action's kind as the plan
+        names it. A kind already listing for the start item is not listed again (a fossil set's listing alone takes seconds)."""
         by_kind, owner = {}, {}
+        reached = reached_items(data, start, None, frozenset())
         for entry in kinds(planner_only=True):
-            try:
-                found = list(entry.members(data, item))
-            except Exception:  # noqa: BLE001  (a kind that cannot list for this item offers nothing)
-                found = []
+            found = []
+            for item in reached:
+                try:
+                    found = list(entry.members(data, item))
+                except Exception:  # noqa: BLE001  (a kind that cannot list for this item offers nothing)
+                    found = []
+                if found:
+                    break
             by_kind[entry.name] = found
             for action in found:
                 owner.setdefault(action, entry.name)
+        for priced in plan.offers:
+            if priced.offer.kind:
+                owner[priced.offer.action] = priced.offer.kind
         return by_kind, owner
 
     def plan_one(label: str, option: str, target, prices, **kwargs) -> Probe:
@@ -878,7 +890,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
             return Probe(label, option, "refused", str(result), target=target)
         if isinstance(result, BaseException):
             return Probe(label, option, "refused", f"{type(result).__name__}: {result}", target=target)
-        members, owner = members_of(target.start_item)
+        members, owner = members_of(target.start_item, result)
         return Probe(label, option, "plans", plan=result, target=target, members=members, owner=owner)
 
     for stem in stems:
@@ -938,7 +950,7 @@ def why_not_offered(data, kind, probe: Probe) -> str:
     if kind.opt_in and names is None:
         return "an opt-in kind and the target has no `actions:` key"
     if not members:
-        return "the kind lists no action for this start item"
+        return "the kind lists no action for this start item nor for the items of the other rarities its actions reach"
     left = {}
     for group in plan.limits:  # type: ignore[attr-defined]
         if group.kind in ACTION_LIMITS:  # the other limits list kinds by name, not actions by label

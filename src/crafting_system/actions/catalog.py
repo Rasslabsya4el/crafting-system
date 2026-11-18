@@ -9,8 +9,9 @@ are `planner` kinds, and `kinds()` lists the kinds themselves.
 
 `members` decides what can apply to the item or to what a policy makes of it: an essence of level 1 to
 4 works on a normal item only, so it is listed only for a normal item; the refusal that needs the
-item's mods (a full side, a family already on it) is `outcomes`'s, because the catalog is asked once
-for the start item and the policy then visits many states.
+item's mods (a full side, a family already on it) is `outcomes`'s, because the planner asks the catalog
+once per rarity the item can reach (`planner/_offers.py` `reached_items`, #973) and the policy then visits
+many states.
 
 A kind is `planner=False` when the planner cannot use it yet (a reason in `why_not`): it stays in the
 catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out. `why_not` is the developer's
