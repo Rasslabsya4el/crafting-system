@@ -256,3 +256,24 @@ def test_searched_with_the_mods_the_bound_does_not_copy_the_graph_per_percent(mo
 def test_a_named_lock_on_a_quality_target_is_said_in_the_answer():
     plan = _plan(LIGHTNING_HELD, methods=("catalyst", "hinekora-lock"))
     assert any(limit.what == "Hinekora's Lock is not offered" and "quality" in limit.why for limit in plan.limits)
+
+
+def test_the_catalysts_gain_law_is_an_approximate_input_of_the_finished_plan():
+    from crafting_system.cli._marking import approximate_inputs
+
+    plan = _plan(CRAFTED, methods=("bench-craft", "catalyst"))
+    assert "catalyst.gain_formula_and_rounding" in {found.claim for found in approximate_inputs(plan, plan.policy, D)}
+
+
+def test_a_start_that_holds_every_mod_has_a_step_bound_for_the_simulator():
+    from crafting_system.cli._verify import MIN_STEPS, max_steps_for
+
+    assert max_steps_for(_plan(LIGHTNING_HELD)) == MIN_STEPS  # no action is offered to the mods: nothing to divide by
+
+
+def test_a_plan_a_given_route_is_judged_against_keeps_the_catalyst_among_its_offers():
+    # a route may name the catalyst as one of its steps, so a judged plan searches the quality with the mods (#159)
+    target = parse(CRAFTED, methods=("bench-craft", "catalyst"))
+    plan = plan_target(D, target, _prices(), PlanSettings(recipe_starts=False, solver="envelope", judges_route=True))
+    assert plan.quality_finish is None and "Intrinsic Catalyst" in {priced.label for priced in plan.offers}
+    assert plan.mean_remaining == pytest.approx(6 * A + _mean(84) * K, rel=1e-9)

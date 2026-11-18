@@ -62,9 +62,12 @@ class QualityFinish:
         return 0.0 if self.catalyst is None else float(self.uses) * self.catalyst.cost
 
 
-def applies(target: Target, offers: Iterable | None = None) -> bool:
-    """Whether the quality of `target` is planned as a finish (module text); `offers` are a caller's own offers, None for the planner's."""
-    if not FINISH or not isinstance(target.quality, QualityRequirement) or lock_wanted(target.actions):
+def applies(target: Target, offers: Iterable | None = None, *, judged: bool = False) -> bool:
+    """Whether the quality of `target` is planned as a finish (module text); `offers` are a caller's own offers, None for the planner's.
+
+    A plan a given route is judged against (`judged`) keeps the quality in the search: the route may name a catalyst as one of its steps, so the
+    plan's offers and model must hold it (#159; reading a route's catalyst rule as the finish is #1234's)."""
+    if not FINISH or judged or not isinstance(target.quality, QualityRequirement) or lock_wanted(target.actions):
         return False
     return offers is None
 
@@ -172,7 +175,8 @@ def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_mo
             "Quality finished after the mods",
             why,
             "No step of the mods changes the quality, so finishing it last changes no step of the mods; the mean number of catalysts is exact at "
-            "the gain law of the catalysts.",
+            "the gain law read for the catalysts (an approximate input: the wiki's formula by item level; no player sample confirms its random "
+            "rounding).",
             labels,
         )
     ]

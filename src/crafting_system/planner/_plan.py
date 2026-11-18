@@ -466,7 +466,7 @@ def make_plan(
     target = with_methods(target, methods)
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
-    finished_last = _quality_finish.applies(target, offers)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
+    finished_last = _quality_finish.applies(target, offers, judged=judges_route or incumbent is not None or route_actions is not None)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
     with running(plan_budget.start() if plan_budget is not None else None) as clock:
         try:
             plan = _make_plan(
@@ -499,7 +499,8 @@ def make_plan(
 def with_quality_finish(plan: Plan, quality: QualityFinish) -> Plan:
     """`plan` of the mods with the quality finish added (#159): its value on every goal state, and the lines that say it (`_quality_finish`)."""
     mods = plan.solution.values.get(plan.start, float("inf"))
-    said = quality_finish_limits(quality, mods, mods_at_most=plan.approximation is not None)
+    upper_end = plan.approximation is not None or (plan.search is not None and not plan.search.exact)  # the mods' mean is then an upper end (OR-13)
+    said = quality_finish_limits(quality, mods, mods_at_most=upper_end)
     return replace(plan, quality_finish=quality, limits=(*plan.limits, *said))
 
 
