@@ -90,7 +90,9 @@ def held_mb(under: float | None = None) -> float | None:
     (a process near its net, or forked workers whose shared pages each counts in full) is the proportional sum read, and that reading is made
     at most once per `READ_SHARE` times what the last one took: in between, the last reading is the answer. So the questions of a net take at
     most about 1/`READ_SHARE` of the time at any size, and a stop comes at most `READ_SHARE` times one reading late (some seconds near a
-    16 GB net with its workers alive). Without `under` (a figure that is said, not a net's question) the proportional sum is read every time.
+    16 GB net with its workers alive). Without `under` the proportional sum is read every time: a figure that is said, and the questions that
+    must not come late, the wait on the workers (the caller is idle there, so the reading costs it nothing; OR-12) and the room check before the
+    search's arrays grow (#839).
     """
     if under is not None:
         cheap = _resident_sum()
@@ -324,10 +326,10 @@ class WorkerPool:
                 raise error
             if not waiting:
                 return
-            if _memory_net is not None and (held := held_mb(under=_memory_net)) is not None and held >= _memory_net:
+            if _memory_net is not None and (held := held_mb()) is not None and held >= _memory_net:
                 self.abandon()
                 raise MemoryNetReached(f"this process and its workers held {held:,.0f} MB, the limit is {_memory_net:,.0f} MB; the workers were stopped")
-            if clock is not None and (found := clock.over(clock.stage, clock.what, held=held_mb(under=clock.budget.memory_mb) if clock.budget.memory_mb is not None else None)) is not None:
+            if clock is not None and (found := clock.over(clock.stage, clock.what, held=held_mb() if clock.budget.memory_mb is not None else None)) is not None:
                 self.abandon()
                 raise budget.BudgetExceeded(clock.bind(found))
             if deadline is not None and time.monotonic() >= deadline:

@@ -334,7 +334,7 @@ def resident_mb(under: float | None = None) -> float | None:
 
     The workers that prime the distributions are processes of their own: a net that read this process alone let them take a runner's memory.
     `under` is the limit a net compares the reading with: below it the answer may be the cheap resident sum, an upper figure (`parallel.held_mb`,
-    #1252); a figure that is said (the peak of a round) passes none.
+    #1252); a figure that is said (the peak of a round) and the room check before the arrays grow pass none.
     """
     return parallel.held_mb(under=under)
 
@@ -1009,7 +1009,7 @@ class Search[S]:
     def _room_check(self, growth_mb: float) -> None:
         """Raise `MemoryNet` when the kernel arrays' next growth of `growth_mb` would take the process past the memory net (#839): the net is
         asked before the arrays grow, not after, so a search stops under its memory setting and not past it."""
-        used = resident_mb(under=self.net.memory_mb - growth_mb)
+        used = resident_mb()  # read in full, never paced: asked only before the arrays grow, and it must not come late (#1252)
         if used is not None and used + growth_mb >= self.net.memory_mb:
             raise MemoryNet(
                 f"the process held {used:,.0f} MB and the search's arrays were to grow by {growth_mb:,.0f} MB, past the limit of {self.net.memory_mb:,.0f} MB"

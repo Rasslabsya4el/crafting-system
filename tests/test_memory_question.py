@@ -90,7 +90,7 @@ def test_a_cheap_answer_does_not_wait_for_the_pace(monkeypatch):
 
 def test_the_searchs_questions_pass_their_limit(monkeypatch):
     """Every question of the envelope search and of its bound's build on its memory net (`Net.memory_mb`) passes the limit, so each is the cheap
-    read while the process is under it; only the round's peak, a figure that is said, reads in full."""
+    read while the process is under it; only the round's peak (a figure that is said) and the room check before the arrays grow read in full."""
     monkeypatch.setattr(budget, "ASK_EVERY", 1)
     monkeypatch.setattr(budget, "ASK_SECONDS", 0.0)  # no gate: every piece of every making asks
     asked = []
@@ -99,7 +99,7 @@ def test_the_searchs_questions_pass_their_limit(monkeypatch):
     envelope_result(ab, ab.compress(START_ITEM), make_offers(), net=Net(memory_mb=5_000.0))
     limits = [under for under in asked if under is not None]
     assert len(limits) > 100
-    assert all(0.0 < under <= 5_000.0 for under in limits)  # the net's limit, or what is left of it before the arrays grow
+    assert set(limits) == {5_000.0}  # the net's limit
     assert asked.count(None) < len(limits) / 10
 
 
@@ -108,4 +108,4 @@ def test_the_resident_sum_is_never_under_the_proportional_sum():
     """The reason the cheap answer is sound, on this process's own /proc: its resident size counts in full the pages it shares."""
     proportional = parallel.held_mb()
     resident = parallel.held_mb(under=float("inf"))
-    assert resident >= proportional > 0.0
+    assert resident >= proportional - 16.0 > 0.0  # 16 MB: what the process may free between the two reads
