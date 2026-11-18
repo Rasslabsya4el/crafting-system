@@ -164,7 +164,7 @@ def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_mo
         costs = "costs at most" if mods_at_most else "costs"
         held = f" from the start item's {finish.start_percent}%" if finish.start_percent else ""
         why = (
-            f"the last step, once the mods are made: {finish.catalyst.label} until the item has {what}{held}, {float(finish.uses):,.2f} on "
+            f"a last step, once the mods are made: {finish.catalyst.label} until the item has {what}{held}, {float(finish.uses):,.2f} on "
             f"average at {finish.catalyst.cost:,.2f} Chaos each, {finish.value:,.2f} Chaos on average; so the whole craft {costs} "
             f"{total:,.2f} Chaos on average after the start item; every other figure of this answer is of the mods alone"
         )
