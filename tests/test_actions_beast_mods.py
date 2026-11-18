@@ -195,6 +195,24 @@ def test_the_matrons_five_metamods_are_found_by_family_in_the_data():
     assert {mod.id for mod in wild_bristle_metamods(fewer)} == set(METAMODS) - {MULTI}
 
 
+def test_the_matrons_metamods_are_read_off_the_data_once_for_every_item():
+    """#1193: every use of the Matron walked all the mods of the data twice (21 ms each on the real data, 82 of the 147 s of a build of the
+    bound). What it reads there is the same for every item, so the mods are walked once for each data."""
+
+    class Counted(dict):
+        walks = 0
+
+        def values(self):
+            type(self).walks += 1
+            return super().values()
+
+    data = dataclasses.replace(SMALL, mods=Counted(SMALL.mods))
+    for item in (item_of(FIRE, COLD, LEECH, ES1), item_of(FIRE, ES1), item_of(ES1)):
+        assert outcome_table(WildBristleMatron().outcomes(data, item)) == tables(WildBristleMatron(), item)
+    assert {mod.id for mod in wild_bristle_metamods(data)} == set(METAMODS)
+    assert Counted.walks == 1
+
+
 # --- the side swaps: the hand oracle ----------------------------------------------------------------------------
 
 
