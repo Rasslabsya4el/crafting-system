@@ -6,7 +6,8 @@ seen through the label as a partition, not the label's names. Everything here is
 pieces a counted search counts), never timed:
 
 * a second build of the bound, for a model of more offers, makes no walk the first build made, and its bound is the one a build with no
-  store gives;
+  store gives; through the planner's entry, no round of a plan makes a walk an earlier round made, and the plan and its rounds' states are
+  those of a plan with no store, counted in states or not;
 * a call with other names for the same partition gets the kept walk renamed, equal to its own walk in chances and order; a label that
   tells the mods apart more finely is walked;
 * a guaranteed tag, blocked tags, kept mods, views and floats are part of the key and of the result;
@@ -17,6 +18,7 @@ pieces a counted search counts), never timed:
 """
 
 import random
+from contextlib import contextmanager
 from fractions import Fraction
 
 import pytest
@@ -24,13 +26,17 @@ from coarse_support import CHAOS, DATA, abstraction
 from proto_draw_support import family
 from test_draw_forward import LABELS, RARE, SMALL, real_pools, reweighed, tagged  # noqa: F401  (`real_pools` is a fixture)
 from test_packed_walk_light import START_ITEM, make_offers
+from test_planner_blocking_crafts import _prices, data, every_shared_kernel_checked  # noqa: F401  (fixtures)
 from test_prime_light import POOLS, PoolSpy, one_per_pool
+from test_stop_is_not_unreachable import _settings, _target
 
 from crafting_system import budget, parallel
 from crafting_system.abstraction import _prime
 from crafting_system.actions import draw
 from crafting_system.actions.draw import DrawStore, exact_distribution, exact_distributions, floating, guaranteed_candidates, shared_draws, sharing
 from crafting_system.items import Side
+from crafting_system.planner import _offers, _rounds, plan_target
+from crafting_system.planner import _plan as planner_plan
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 
 PREFIX, SUFFIX = Side.PREFIX, Side.SUFFIX
@@ -82,6 +88,65 @@ def test_outside_a_plan_nothing_is_kept():
     with sharing(10) as outer, sharing(99) as inner:  # a plan inside a plan (a start option, a second item) shares the outer store
         assert inner is outer is shared_draws() and outer.limit == 10
     assert shared_draws() is None
+
+
+# ---- a plan in rounds, through the planner's entry ------------------------------------------------------------------------------------------
+
+
+def _rounds_by_hand(monkeypatch):
+    """The belt of `test_planner_blocking_crafts` searched in rounds of three groups set by hand: the Exalted Orb, then one bench craft more, then the
+    other bench crafts. Each round is a `_make_plan` of its own, with a model of its own. Returns the stores the plans opened, and the
+    switch that plans with no store."""
+
+    def groups(data, goal, target, grouped, route):
+        crafts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "bench-craft")
+        exalts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "exalted-orb")
+        assert len(crafts) >= 2 and exalts
+        return (
+            _rounds.Group(exalts, ("exalted-orb",), frozenset()),
+            _rounds.Group(crafts[:1], ("bench-craft",), frozenset()),
+            _rounds.Group(crafts[1:], ("bench-craft",), frozenset()),
+        )
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    monkeypatch.setattr(planner_plan, "offer_groups", groups)
+    opened = []
+
+    @contextmanager
+    def recorded():
+        with sharing() as store:
+            if store.keys is None:
+                store.keys = []
+                opened.append(store)
+            yield store
+
+    @contextmanager
+    def no_store():
+        yield None
+
+    monkeypatch.setattr(planner_plan, "sharing", recorded)
+    return opened, lambda: monkeypatch.setattr(planner_plan, "sharing", no_store)
+
+
+def _read(plan):
+    """What a plan says that a test may compare: its cost, and how each of its rounds ended and with how many states."""
+    return plan.mean_remaining, [(record.status, record.states, record.reason) for record in plan.search.widening]
+
+
+@pytest.mark.parametrize("states", [None, 400])
+def test_through_the_entry_no_round_of_a_plan_makes_a_draw_an_earlier_round_made(tmp_path, data, monkeypatch, states):  # noqa: F811
+    opened, without = _rounds_by_hand(monkeypatch)
+    target = _target(tmp_path, data)
+    plan = plan_target(data, target, _prices(), _settings(states))
+    (store,) = opened  # one store for the plan and all its rounds
+    assert len(plan.search.widening) >= 3 and all(record.status == _rounds.CLOSED for record in plan.search.widening)
+    assert len(set(store.keys)) == len(store.keys) == store.walks  # no walk was made twice in the plan
+    assert store.hits > store.walks  # the rounds after the first asked more draws from the store than the plan made in all
+    assert shared_draws() is None  # the plan closed its store
+    without()
+    alone = plan_target(data, target, _prices(), _settings(states))
+    assert _read(plan) == _read(alone)  # the same plan and the same rounds, counted in states or not: the store changes no figure
+    assert plan.mean_remaining == pytest.approx(133.0)  # 3 (c + e) + 2 S, the belt's plan (`test_stop_is_not_unreachable`)
 
 
 # ---- the key is the partition, not the names ---------------------------------------------------------------------------------------------
