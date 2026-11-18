@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from crafting_system.data import Essence, GameData, conflicts
-from crafting_system.items import Item, Rarity, Side, UnknownBaseError, capacity
+from crafting_system.items import Item, Rarity, Side, UnknownBaseError, UnknownModError, capacity
 from crafting_system.items.words import mod_words
 from crafting_system.rules import get_rule
 
@@ -142,6 +142,8 @@ class ApplyEssence(Action):
         mod_id = _forced_mod_id(essence, base.item_class)
         if mod_id is None:
             raise NotApplicableError(f"{essence.name} gives no mod on {base.item_class}, so it takes no essence")  # a jewel too: JEWELS_TAKE_NO_ESSENCE
+        if mod_id not in data.mods:  # a game data cut down for a test may hold the essence and not its mod: said as for a missing base
+            raise UnknownModError(f"mod {mod_id} of {essence.name} is not in the game data")
         return data.mods[mod_id]
 
 

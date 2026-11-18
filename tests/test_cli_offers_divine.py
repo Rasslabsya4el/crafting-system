@@ -60,17 +60,20 @@ def test_a_roll_limit_on_a_mod_that_cannot_occur_on_the_item_does_not_offer_it()
     nowhere = next(mod.id for mod in DATA.mods.values() if mod.generation_type in ("prefix", "suffix") and mod.stats
                    and not any(weight.weight > 0 for weight in mod.spawn_weights) and mod.domain == "item")
     goal = Goal((Wanted(frozenset({nowhere}), min_roll=(1,)),))
-    offers, offered = divine_offers(goal, amulet(roll(RESIST)))
+    # the resistance is fractured: a Scouring leaves the amulet Magic, never Normal, so no Whispering essence (whose forced mod is this one,
+    # `ColdDamagePercentEssence1`) is offered for it (#973)
+    offers, offered = divine_offers(goal, amulet(roll(RESIST, fractured=True)))
 
     assert offers == []
     assert [limit.labels for limit in of_kind(offered.limits, "rolls")] == [("Divine Orb",)]  # a limit was asked for, so the report says why
 
 
-def test_a_normal_start_item_is_offered_no_divine_orb_even_when_a_draw_may_give_the_mod():
-    # the catalog lists the orb only for magic and rare items, so a normal start has none to offer
+def test_a_normal_start_item_is_offered_the_divine_orb_for_the_items_its_orbs_make_magic_or_rare():
+    # the catalog lists the orb only for magic and rare items; since #973 the offers are listed for every rarity the start reaches, and a
+    # Transmutation or an Alchemy makes the normal start magic or rare
     goal = Goal((Wanted(frozenset({LIFE}), min_roll=(20,)),))
 
-    assert divine_offers(goal, amulet(rarity=Rarity.NORMAL))[0] == []
+    assert [offer.action for offer in divine_offers(goal, amulet(rarity=Rarity.NORMAL))[0]] == [DivineOrb()]
 
 
 def test_a_divine_orb_is_priced_by_its_entry_of_the_price_file_or_by_the_divine_rate():
