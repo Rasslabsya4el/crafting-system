@@ -79,6 +79,7 @@ class GridInfo:
     cause: str = field(default="", repr=False)
     gave_up: tuple[str, ...] = field(default=(), repr=False)
     stopped: str = field(default="", repr=False)
+    stopped_by: str = field(default="", repr=False)  # the net behind `stopped`: `budget.TIME` or `budget.MEMORY`
 
 
 @dataclass(frozen=True, slots=True)

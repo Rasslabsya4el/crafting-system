@@ -26,7 +26,7 @@ from crafting_system import budget, parallel
 from crafting_system.budget import Budget
 from crafting_system.planner import PlanSettings, plan_target
 from crafting_system.planner import _plan
-from crafting_system.planner._limits import RISK, STOPPED_FIGURE, not_shown
+from crafting_system.planner._limits import RISK, STOPPED_FIGURE, STOPPED_FIGURE_MEMORY, not_shown, risk_limits
 from crafting_system.risk import _budget, _dense, _evaluate, _regen, evaluate
 from crafting_system.risk._chain import Chain
 from crafting_system.solver import Action, Outcome
@@ -141,7 +141,7 @@ def test_at_the_memory_net_a_run_of_the_figures_stops_at_once_and_says_so(monkey
 
     assert report.grid.bins == 0 and math.isinf(report.p50.high) and math.isinf(report.p90.high)
     assert report.grid.stopped == _regen.figures_words(budget.MEMORY, _evaluate.REGEN_SECONDS, None, False)
-    assert "memory limit" in report.grid.stopped
+    assert "memory limit" in report.grid.stopped and not_shown(report, report.p90) == STOPPED_FIGURE_MEMORY  # the cell names the memory net
 
 
 def test_a_pool_of_the_figures_past_the_memory_net_is_not_run_again_here(monkeypatch):
@@ -205,3 +205,14 @@ def test_through_the_entry_a_dear_plan_whose_run_spent_its_net_keeps_its_plan_an
     assert math.isinf(risk.p90.high) and not_shown(risk, risk.p90) == STOPPED_FIGURE
     (limit,) = [limit for limit in plan.limits if limit.kind == RISK and said in limit.why]
     assert "cheapest step" not in limit.why  # not the words of a grid too small to reach them
+
+
+def test_a_stopped_plan_that_may_not_finish_says_its_stop_too(spent, monkeypatch):
+    monkeypatch.setattr(_budget, "ALLOWANCE", 0)
+    stuck = {"s": Action("try", 1.0, (Outcome("goal", 1), Outcome("s", 8), Outcome("dead", 1)))}  # "dead" has no action: the plan may not finish
+
+    report = evaluate(stuck, "s", lambda state: state == "goal")
+
+    assert report.success_probability.value < 1.0 and report.grid.stopped
+    (said,) = [limit for limit in risk_limits(report) if limit.why == report.grid.stopped]
+    assert said.what == "The work on the cost figures was stopped"

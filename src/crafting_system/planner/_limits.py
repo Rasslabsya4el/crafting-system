@@ -457,6 +457,12 @@ def unresolved(risk, estimate) -> bool:
 
 UNRESOLVED = "not computed (the cost of the whole craft is far above its cheapest step)"
 STOPPED_FIGURE = "not computed (the work on the cost figures was stopped at its time limit)"  # `GridInfo.stopped` (#738)
+STOPPED_FIGURE_MEMORY = "not computed (the work on the cost figures was stopped at its memory limit)"
+
+
+def stopped_figure(risk) -> str:
+    """The cell of a figure the net of the cost figures stopped (#738), by the net that stopped it."""
+    return STOPPED_FIGURE_MEMORY if risk.grid.stopped_by == "memory" else STOPPED_FIGURE
 
 
 NOT_COMPUTED = {
@@ -477,7 +483,7 @@ def not_shown(risk, estimate) -> str | None:
     if risk.grid.cause and math.isinf(estimate.value):  # its own cause, not the grid's; a quantile the grid did compute is shown
         return NOT_COMPUTED[risk.grid.cause]
     if unresolved(risk, estimate):
-        return STOPPED_FIGURE if risk.grid.stopped else UNRESOLVED
+        return stopped_figure(risk) if risk.grid.stopped else UNRESOLVED
     return None
 
 
@@ -541,6 +547,15 @@ def risk_limits(risk) -> tuple[Limit, ...]:
     if loose is not None:
         found.append(loose)
     cut = [name for name, estimate in (("p50", risk.p50), ("p90", risk.p90), ("CVaR", risk.cvar)) if unresolved(risk, estimate)]
+    if risk.grid.stopped and not cut:  # a plan that may not finish: its stopped figures are not "unresolved", the stop is said all the same (#738)
+        found.append(
+            Limit(
+                RISK,
+                "The work on the cost figures was stopped",
+                risk.grid.stopped,
+                "Each cost figure shown is certified as far as the work reached; one it did not reach is marked as not computed.",
+            )
+        )
     if cut and risk.grid.stopped:  # the net of the cost figures stopped them (#738, OR-40), not the size of the grid
         found.append(
             Limit(

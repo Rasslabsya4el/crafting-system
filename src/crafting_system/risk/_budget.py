@@ -75,7 +75,8 @@ BASE_DELTA = 1e-12
 LOST_FLOOR = 1e-15  # a smaller remainder of the starting mass is float noise, not lost mass
 DEADLINE_BINS = 4096  # the plain loop looks at the clock once per this many bins
 ALLOWANCE = 2_000_000  # entries a run may still expand once the net of the cost figures has passed (#738): a cheap run ends exact, a dear one stops
-MEMORY_READ_SECONDS = 0.5  # a run reads its memory at most this often
+MEMORY_READ_SECONDS = 0.5  # a run reads its memory at most this often ...
+MEMORY_READ_SHARE = 20.0  # ... and at most once per this many times what the last read took (a read of a large process's proportional size takes ms)
 PLAIN_LIMIT = 300  # a chain with at most this many (states that can finish) * kmin runs the plain loop
 SLICE_ENTRIES = 1 << 14  # a block is expanded this many entries at a time: arrays that stay in the CPU cache
 DENSE_CELLS = 1 << 24  # the widest block range merged by a dense bincount (a float per cell)
@@ -93,7 +94,7 @@ class Watch:
         self.deadline = deadline
         self.done = 0  # entries expanded
         self.past_at: int | None = None  # entries expanded when the deadline was first seen passed
-        self.read = -math.inf
+        self.read = -math.inf  # when the memory may next be read
         self.stopped = ""
 
     def spend(self, entries: int) -> None:
@@ -109,9 +110,10 @@ class Watch:
                 self.stopped = budget.TIME
                 return True
         limit = parallel.active_memory_net()
-        if limit is not None and now - self.read >= MEMORY_READ_SECONDS:
-            self.read = now
+        if limit is not None and now >= self.read:
             held = parallel.own_mb()
+            took = time.monotonic() - now
+            self.read = now + max(MEMORY_READ_SECONDS, MEMORY_READ_SHARE * took)
             if held is not None and held >= limit:
                 self.stopped = budget.MEMORY
                 return True

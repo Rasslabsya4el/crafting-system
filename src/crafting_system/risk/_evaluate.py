@@ -333,7 +333,8 @@ def _figures_within(net, chain, free, free_found, mean, variance, levels, cvar_l
     reason = next((r.stopped for r in runs if r.stopped), "")
     stopped = "" if reached or not reason else _regen.figures_stopped(net, reason)  # the net cut the run short of a figure: said (OR-13)
     grid = GridInfo(
-        step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), cause=cause, stopped=stopped
+        step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), cause=cause, stopped=stopped,
+        stopped_by=reason if stopped else "",
     )
     return RiskReport(
         success,
@@ -644,7 +645,7 @@ def _stopped_report(
         report = _unordered_report(chain, (mean, variance), cvar_level, levels)
     else:
         report = _unordered_report(chain, None, cvar_level, levels, cause or IMPROPER)
-    return replace(report, grid=replace(report.grid, stopped=words))
+    return replace(report, grid=replace(report.grid, stopped=words, stopped_by=reason))
 
 
 def _level(value: float, name: str) -> float:
