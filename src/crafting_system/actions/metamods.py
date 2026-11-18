@@ -38,6 +38,7 @@ from .errors import NotApplicableError
 __all__ = [
     "BLOCKED_TAG",
     "BLOCKING",
+    "LOCKED_SIDE",
     "is_lock",
     "allowed_by_tags",
     "blocked_tags",

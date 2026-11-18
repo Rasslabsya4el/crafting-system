@@ -91,6 +91,38 @@ them, and each was a pair of every such offer. With folded families to tell apar
 model are the same (a pair left out gave a kernel another pair of its composition gave); a build counted in pieces counts the pairs it
 looks at, so it gets further on the same count.
 
+**The fills an action cannot tell apart (#1192).** `ALL` makes every fill of the pure junk: every multiset of family types, class by class.
+An action seldom reads which type a slot holds; what it reads of the junk is its own declaration (`Reads`), and two fills that show the
+action the same give it the same kernel pushed through the key, and the same refusal. So of the fills of a composition that an action
+cannot tell apart, the first that is an item is offered and the others are not (`Pattern.alike_of`, `_assemble_alike`): the rows of the
+model are the ones every fill gives, from fewer pairs. What an action reads of the pure junk of a side is one of three things.
+
+* **Nothing but its count and class**: an action that reads the junk through the families it names and adds no mod drawn from the pool
+  (`Reads.families` a set, no `pool_weight`: a Harvest swap, a catalyst, a socket craft, and under a lock an Annulment, a bench craft, a
+  Divine Orb). The families it names are relevant slots, enumerated; a pure junk type holds none of them (`Kinds._members_of`). Its result
+  keeps the pure junk slots or removes some, whatever their type, and the key counts them by class. One fill for each composition, as
+  `ONE` has; `ONE` itself asks `Reads.block_invariant` and no lock, which these keys or actions lack.
+  The same holds for the side an erasing reroll erases at a key with one lock (`Reads.junk` False: it "does not look at" the mods it
+  erases); the side it keeps is told apart by type, as before: the families kept leave its pool, and several mods are drawn.
+* **The weight a held family takes out of its draws**: an addition that keeps the mods (`Reads.pool_weight`, with `families` a set), where
+  `EXTREMES` is not its policy. A draw gives a mod of the pool with the chance of its weight among the families the item does not hold,
+  so a held family shows the draw the weight of its mods and nothing else; the key reads of a drawn mod its side, what it gives the goal
+  and its protected tags; and a draw the action restricts to tags (`Reads.draw_tags`) or makes at another item level (`Reads.draw_levels`)
+  reads those of each mod besides. Two family types whose mods have the same weights, summed over the mods alike in all that (for a
+  draw by tag, over the mods with the tag alone: the others are in no draw of the action), are exchanged by a renaming of the families
+  that the action's kernel and the key do not see: the held one of the first fill for the held one of the second, each staying in the
+  pool of the other fill with the same weights in the same classes of mods. The family types of the state are finer than that (they
+  carry every tag and level that any enabled action reads, and every mod's weight for the additions that draw from the whole pool), so
+  for one action many types are alike: on R17's ring a Harvest craft that adds a lightning mod reads of a family the weight of its
+  lightning mods, which most families lack, and about 320 fills a key showed it a handful of different pools.
+* **Which type each slot holds** (no reduction): a Fracturing Orb (the successor key holds the type of the mod fractured), a
+  recombinator, an action that reads the influence mods or weighs the held families (`held_weight_factor`), the veiled actions, an action
+  that declares no families, and the side a reroll keeps under a lock.
+
+The argument is the declaration's own: `Reads.families` and `Reads.pool_weight` say what of the junk a result may depend on, and the
+contract suite compares the actions against them. Checked here by building a model both ways (`SHARE_ALIKE`), on the hand-worked world
+and on real targets: the same rows at every key (`tests/test_pattern_alike_fills_real.py`).
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -242,7 +274,7 @@ from math import gcd, lcm
 from typing import NamedTuple
 
 from crafting_system import budget
-from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
+from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
 from crafting_system.items.model import VEILED_DOMAIN
@@ -250,7 +282,7 @@ from crafting_system.items.model import VEILED_DOMAIN
 from ._goal import Status
 from ._kernel import Abstraction
 from ._relaxed import ChoiceNode, relaxed_draw
-from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags
+from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags, protected_tags
 from ._rolls import is_rollable
 from ._state import CompressedState, Slot, best_of
 
@@ -271,9 +303,11 @@ TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
+SHARE_ALIKE = True  # under `ALL` the fills of the pure junk that an action cannot tell apart are offered at one of them (`Pattern.alike_of`, #1192); False: at every fill
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
+NOTHING = "nothing"  # what `Pattern.alike_of` says of a side whose pure junk an action reads by its count and class alone
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
 
 
@@ -549,6 +583,10 @@ class Pattern:
         self._snapshot_reps: dict[PatternKey, CompressedState] = {}  # a snapshot's key -> the first snapshot of it seen: the one the members hold
         self._snapshot_orders: dict[PatternKey, tuple] = {}
         self._partners: dict[frozenset, bool] = {}
+        self._alike: dict[tuple, tuple | None] = {}  # (action, the locked sides of a key) -> what the action reads of the pure junk of each side (`alike_of`)
+        self._tokens: dict[tuple, int] = {}  # (influences, side, type, what is read) -> the number of what a family of the type shows the reader (`_token`)
+        self._token_ids: dict[tuple, int] = {}
+        self._weighted: dict[frozenset, dict] = {}  # influences -> `Kinds._weighted_mods()`, made once
         self.grew = 0
         self.grown: list[tuple[frozenset, Slot]] = []  # the slots the universes gained, with their influences (`may_hold`, #1086)
         self.fallbacks = 0
@@ -830,6 +868,89 @@ class Pattern:
         mode = self.mode_of(action, key)
         return mode, self.named_of(action, key) if mode is Mode.ONE else frozenset()
 
+    def asked(self, action: Action, key: PatternKey) -> tuple[Mode, frozenset[str], tuple | None]:
+        """The members the build asks `action` at: its `policy`, and under `ALL` what it reads of the pure junk of each side (`alike_of`)."""
+        mode, named = self.policy(action, key)
+        return mode, named, self.alike_of(action, key) if mode is Mode.ALL else None
+
+    def locked_sides(self, key: PatternKey) -> frozenset[Side]:
+        """The sides a lock of the key keeps through a reroll (the lock is a crafted or a fractured mod: the key's)."""
+        mods = self.data.mods
+        ids = [slot.kind for slot in key.crafted] + [entry.mod_id for entry in key.fractured]
+        families = {family for mod_id in ids if mod_id in mods for family in mods[mod_id].families}
+        return frozenset(side for metamod, side in LOCKED_SIDE.items() if metamod.value in families)
+
+    def alike_of(self, action: Action, key: PatternKey) -> tuple | None:
+        """What `action` reads of the pure junk of each side at the members of `key`, from its own declarations; None when nothing says it
+        reads less than which family type each slot holds (module docstring, "The fills an action cannot tell apart", #1192).
+
+        One entry for the prefixes and one for the suffixes: `NOTHING` (the action reads the count and the class of those slots alone),
+        `(tags, levels)` (it reads the weight a held family takes out of its draws: of the mods with one of `tags`, all when empty, at the
+        item's level and at `levels`), or None (which type each slot holds).
+        """
+        if not SHARE_ALIKE:
+            return None
+        locked = self.locked_sides(key)
+        found = self._alike.get((action, locked), self)
+        if found is not self:
+            return found
+        reads = self.reads(action)
+        found = None
+        beyond = reads.fractures or reads.input_classes or reads.input_mods or reads.influenced or reads.offer or reads.needs_veiled
+        if action.held_weight_factor() is not None or beyond or self._veiled_reader(reads):
+            found = None
+        elif not reads.junk:
+            # an erasing reroll: at a key with a lock it keeps the locked side and reads nothing of the side it erases (`Reads.junk`)
+            if locked and len(locked) < len(SIDES):
+                found = tuple(None if side in locked else NOTHING for side in SIDES)
+        elif reads.families is not None and not reads.pool_weight:
+            found = (NOTHING, NOTHING)  # it reads the count of the junk and the families it names, which are relevant slots (`Reads.families`)
+        elif reads.families is not None and reads.pool_weight:
+            drawn = (tuple(sorted(reads.draw_tags)), tuple(sorted(reads.draw_levels)))
+            found = (drawn, drawn)  # an addition: the weight the held families take out of its draws (`Reads.pool_weight`, `draw_tags`, `draw_levels`)
+        self._alike[(action, locked)] = found
+        return found
+
+    def _token(self, influences: frozenset, side: Side, kind_type: "_PureType", read) -> int:
+        """A number for what a family of the pure type shows a reader of `read` (`alike_of`): two types of one number are alike to it.
+
+        `NOTHING`: one number for every type. None, and a folded family (told apart by name): the type's own. `(tags, levels)`: the weight
+        the family's mods take out of a draw, summed over the mods a draw and a key cannot tell apart (their side, what they give the goal
+        and their protected tags, and which of `tags` they carry), at the item's level and at each of `levels`; with `tags`, of the mods
+        that carry one alone (the draw is restricted to them), and a mod with no weight at any of those levels is in no such draw.
+        """
+        if read == NOTHING:
+            return 0
+        memo = (influences, side, kind_type.base, read)
+        found = self._tokens.get(memo)
+        if found is not None:
+            return found
+        kinds = self.ab._context(influences).kinds
+        shown: tuple = ("type", side, kind_type.base)
+        if read is not None and not kind_type.named and kind_type.base.startswith(TYPE_PREFIX):
+            tags, levels = frozenset(read[0]), read[1]
+            members = kinds._members_of(side, kind_type.base)
+            known = sorted(kinds._levels)
+            if members and all(level in known for level in levels):
+                at = [0] + [1 + known.index(level) for level in levels]
+                rows = self._weighted.get(influences)
+                if rows is None:
+                    rows = self._weighted[influences] = kinds._weighted_mods()
+                sums: dict[tuple, list] = {}
+                for other in SIDES:
+                    for mod, weights in rows.get((members[0][0], other.value), {}).values():
+                        own = tuple(sorted(tags & set(mod.implicit_tags)))
+                        weight = [weights[index] for index in at]
+                        if (tags and not own) or not any(weight):
+                            continue
+                        cls = (other.value, repr(kinds.profile(mod)), tuple(sorted(protected_tags(mod))), own)
+                        have = sums.setdefault(cls, [0] * len(at))
+                        for index, value in enumerate(weight):
+                            have[index] += value
+                shown = ("weights", side, tuple(sorted((cls, tuple(have)) for cls, have in sums.items())))
+        found = self._tokens[memo] = self._token_ids.setdefault(shown, 1 + len(self._token_ids))
+        return found
+
     def _has_partners(self, influences: frozenset) -> bool:
         """Whether the pool of an item with `influences` holds a family with mods on both sides (`partners`, #835)."""
         found = self._partners.get(influences)
@@ -845,10 +966,11 @@ class Pattern:
 
     # ---- the members of a key ---------------------------------------------------------------------------------
 
-    def members(self, key: PatternKey, mode: Mode, named: frozenset[str] = frozenset()) -> list[CompressedState]:
+    def members(self, key: PatternKey, mode: Mode, named: frozenset[str] = frozenset(), alike: tuple | None = None) -> list[CompressedState]:
         """The concrete states of `key` that stand for all of its members for an action of the policy `mode`; each is an item.
 
         `named` (with `ONE`): the folded families the action reads at this key (`named_of`): every way the pure junk holds them is a member.
+        `alike` (with `ALL`): what the action reads of the pure junk of each side (`alike_of`): one member for the fills it cannot tell apart.
         """
         if mode is Mode.RELAXED:  # the relaxed draw is made at one member for each relevant multiset and class composition (`_relaxed`)
             mode = Mode.ONE
@@ -876,7 +998,7 @@ class Pattern:
             for compositions in self._compositions(universe, key, rel_p, rel_s):
                 if allowance is not None:
                     allowance.tick()
-                for state in self._assemble(universe, key, relevant, compositions, blocked, mode, named):
+                for state in self._assemble(universe, key, relevant, compositions, blocked, mode, named, alike):
                     if allowance is not None:
                         allowance.tick()
                     found[state] = None
@@ -945,8 +1067,12 @@ class Pattern:
             yield {**first, **second}
 
     def _assemble(
-        self, universe: _Universe, key: PatternKey, relevant, need: dict[tuple, int], blocked, mode: Mode, named: frozenset[str] = frozenset()
+        self, universe: _Universe, key: PatternKey, relevant, need: dict[tuple, int], blocked, mode: Mode, named: frozenset[str] = frozenset(),
+        alike: tuple | None = None,
     ) -> Iterator[CompressedState]:
+        if mode is Mode.ALL and alike is not None:
+            yield from self._assemble_alike(universe, key, relevant, need, blocked, alike)
+            return
         options = []
         for (side_index, tagset), count in sorted(need.items()):
             side = SIDES[side_index]
@@ -972,6 +1098,26 @@ class Pattern:
         if found:
             self.fallbacks += 1
         yield from found
+
+    def _assemble_alike(self, universe: _Universe, key: PatternKey, relevant, need: dict[tuple, int], blocked, alike: tuple) -> Iterator[CompressedState]:
+        """`ALL` for an action that reads of the pure junk only what `alike` says: of the fills of a composition that show it the same
+        (the same numbers of `_token`, class by class), the first that is an item (module docstring, "The fills an action cannot tell apart")."""
+        grouped = []
+        for (side_index, tagset), count in sorted(need.items()):
+            side = SIDES[side_index]
+            items = universe.classes[side].get(tagset, [])
+            token = {item.slot: self._token(universe.influences, side, item.type, alike[side_index]) for item in items}
+            groups: dict[tuple, list] = {}
+            for fill in _fills(items, count, blocked, Mode.ALL):
+                groups.setdefault(tuple(sorted(token[slot] for slot in fill)), []).append(fill)
+            if not groups:
+                return
+            grouped.append(list(groups.values()))
+        for pick in product(*grouped) if grouped else [()]:
+            for state in self._each_state(key, relevant, pick):
+                if self._ok(state):
+                    yield state
+                    break
 
     def _states(self, key: PatternKey, relevant, options) -> list[CompressedState]:
         return list(self._each_state(key, relevant, options))
@@ -1354,7 +1500,7 @@ class PatternBuilder:
         self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key holds
-        self.members_kept: dict[int, dict[tuple[Mode, frozenset[str]], list[CompressedState]]] = {}
+        self.members_kept: dict[int, dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]]] = {}
         self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
         self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
         self.pattern.note(self.start)
@@ -1512,7 +1658,7 @@ class PatternBuilder:
         if self.pattern._twin is not None:
             self.pattern._twin.release_prepared(keep_erased=True)
 
-    def _prime(self, key: PatternKey, lo: int, hi: int, members_for: Callable[[tuple[Mode, frozenset[str]]], list[CompressedState]], ask: Callable[[], None] | None = None) -> None:
+    def _prime(self, key: PatternKey, lo: int, hi: int, members_for: Callable[[tuple[Mode, frozenset[str], tuple | None]], list[CompressedState]], ask: Callable[[], None] | None = None) -> None:
         """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
 
         The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
@@ -1529,7 +1675,7 @@ class PatternBuilder:
                 # make the item of every member, the ones the build then answers without one too (a certain addition, a refusal of the key;
                 # #1193: on R04's 19 offers the Fracturing Orb's pairs were prepared at every pure junk assignment of every key)
                 continue
-            policy = self.pattern.policy(offer.action, key)
+            policy = self.pattern.asked(offer.action, key)
             if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw
                 continue
             members = members_for(policy)  # the key's members of the policy, made once (`_offers_of_key`)
@@ -1551,16 +1697,16 @@ class PatternBuilder:
         the list `members` would make again, so the build is the same."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
         key = self.keys[i]
-        by_mode: dict[tuple[Mode, frozenset[str]], list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
-        anyone = (Mode.ANY, frozenset())
+        by_mode: dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
+        anyone = (Mode.ANY, frozenset(), None)
 
-        def members_for(policy: tuple[Mode, frozenset[str]]) -> list[CompressedState]:
+        def members_for(policy: tuple[Mode, frozenset[str], tuple | None]) -> list[CompressedState]:
             members = by_mode.get(policy)
             if members is None:
                 if policy == anyone and firsts is not None and firsts[1] == pattern.grew:
                     members = firsts[0]
                 else:
-                    members = pattern.members(key, *policy)
+                    members = pattern.members(key, *policy[:2]) if policy[2] is None else pattern.members(key, *policy)
                 by_mode[policy] = members
                 stats.members += len(members)
             return members
@@ -1583,7 +1729,7 @@ class PatternBuilder:
                 if kid is not None:
                     added.append((oi, kid))
                 continue
-            policy = pattern.policy(offer.action, key)
+            policy = pattern.asked(offer.action, key)
             members = members_for(policy)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
             certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
