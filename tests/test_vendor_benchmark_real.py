@@ -27,6 +27,7 @@ from pathlib import Path
 import golden_diff
 import pytest
 from abstraction_support import real_game_data
+from catalog_lists_support import document_without, text_without
 from cli_support import TODAY
 from report_steps_support import assert_report_is_the_page, blocks_of
 from route_view_support import GOLDEN, assert_golden
@@ -169,7 +170,7 @@ def test_the_first_step_is_built_from_the_chosen_candidate_alone(plan, data):
 
 
 def test_the_text_report_is_the_golden(report):
-    assert_golden("v01_minion_helmet", masked(render_text(report, target_name="v01-minion-helmet.yaml")), extension="txt")
+    assert_golden("v01_minion_helmet", text_without(masked(render_text(report, target_name="v01-minion-helmet.yaml")), report), extension="txt")
 
 
 def rounded(value, digits: int = 9):
@@ -198,7 +199,7 @@ def error_bound_to_its_order(document: dict) -> dict:
 
 
 def test_the_json_policy_is_the_golden(report):
-    document = without_timings(policy_document(report, None, target_name="v01-minion-helmet.yaml"))  # names no round's seconds (#1136)
+    document = document_without(without_timings(policy_document(report, None, target_name="v01-minion-helmet.yaml")))  # names no round's seconds (#1136), and not the lists read off the catalog (#1277)
     text = json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     path = GOLDEN / "v01_minion_helmet.json"
     if os.environ.get("UPDATE_GOLDEN"):
