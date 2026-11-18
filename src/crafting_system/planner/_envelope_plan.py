@@ -77,6 +77,7 @@ class CraftingProblem:
         self.index = model.index
         self.floors = bound.floors
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
+        self.holds = bound.holds  # an offer of the model held at some keys only has no abstract action at the others (#1325)
         self.tip = [not built for built in model.expanded] if model.expanded else [False] * len(model.keys)  # keys the build did not reach
         if goal is not None:
             self.tip = [tip or is_goal for tip, is_goal in zip(self.tip, model.goal)]
@@ -201,8 +202,8 @@ class CraftingProblem:
                 continue
             if restart:
                 low = priced.cost + self.start_lower
-            elif found is None or position not in self.in_model:
-                low = priced.cost  # no abstract action to read: the offer's own cost, or its floor below
+            elif found is None or position not in self.in_model or not self.holds(k, position):
+                low = priced.cost  # no abstract action to read (the model did not build it at this key, #1325): the offer's own cost, or its floor below
             elif position in found:
                 low = found[position]
             else:

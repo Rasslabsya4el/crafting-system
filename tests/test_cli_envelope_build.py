@@ -212,6 +212,27 @@ def test_the_model_on_part_of_the_offers_grows_until_it_equals_the_whole_at_the_
     assert_lower_bound(bound, ab, exact)
 
 
+def test_the_offers_that_join_are_built_only_at_the_keys_that_need_them_and_the_bound_stays_lower(world, floors_on):
+    """#1325: the five crafts are needed at 6 of the 10 keys of the first model (the keys where the floor action is the cheapest and the policy
+    goes, or of the start's shape); they are built there only, not at the 4 others nor at the keys found after, where the floor action keeps
+    their floors, until a later round finds them needed there too (in this small world, by the end, everywhere). The model is a lower bound at every state all the same, and the start's value is the model of every offer's: at the end the
+    floor action is the cheapest at no key that counts, so the policy is one of the whole model (`_binding`)."""
+    ab, start, offers, _, exact, whole = world
+    fresh = abstraction()
+    said = []
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
+    assert bound.complete and len(bound.narrow) == 5
+    assert any("5 offers more join the model, at 6 keys that need them (30 offers at a key)" in line for line in said)
+    expanded = [k for k, built in enumerate(bound.model.expanded) if built and not bound.model.goal[k]]
+    for position, keys in bound.narrow.items():
+        j = bound.positions.index(position)
+        for k in expanded:  # a key that does not hold the offer has no row of it; one that holds it was given it
+            assert any(index == j for index, _ in bound.model.actions[k]) <= (k in keys)
+            assert bound.holds(k, position) == (k in keys)
+    assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)
+    assert_lower_bound(bound, ab, exact)
+
+
 def test_the_search_on_the_floors_looks_at_no_more_states_than_on_the_model_of_every_offer(world, floors_on):
     """#988: the search on a bound whose model holds part of the offers expands the states the search on the model of every offer expands, and no
     more: the offers left out are where their floors rule them out. Before the fix the model stayed on its first two offers, its value at the start
