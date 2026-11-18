@@ -6,7 +6,13 @@ Rules read: OR-12, OR-13, OR-38. Nothing here cuts a key, an offer or an outcome
 
 ## Short answer
 
-ANSWER
+**The re-solved lead does not survive a coarse model built directly: the line of #1310's steps 2 to 5 closes in this form.** Counted on both dumps, with the same offers on both sides and the same coarse key as #1318's figures:
+
+1. **R24.** With the merged coarse model the re-solved lead ends in 237 of 60,895 keys; with the coarse model built directly the best of nine variants ends in **37,864 (62.18%)**, #1318's plain `worked` in 43,112 to 44,242 (71% to 73%), and the fixed lead from the same direct rows (the control) in 43,485 (71.41%). Today's build with no lead needs 45,890 under the same rule. The direct model itself is 16,268 to 19,958 coarse keys, so the build and its lead together work out **54,864 to 64,200 keys, 90% to 105% of the blind build's 60,895** (section 4).
+2. **R04.** No direct-row run finished. Stopped by hand after 82 to 134 minutes, they had worked out **22,987 to 39,900 keys and stood at 3.7% to 3.9% of the value**, where the merged lead ended in 3,000 keys; at 3,000 keys they stood at 1.5% to 2.2%. The direct model's start value is 1.50% of the exact one in every variant (the merge's: 8.21%), and today's build with no lead stood at 2.3% to 3.6% after as many keys: on R04 the direct lead is worth about as much as none.
+3. **Why.** What #1318's 3,000 and 237 rest on is the strength of the merged coarse rows, not the re-solve: the direct rows (exact only where `Pattern.mode_of` is `ANY` or the kernel is certain, the angelic stand-in elsewhere) prove 32.65% of R24's value (53.76% with the `ONE` rows exact) and 1.50% of R04's, against the merge's 86.48% and 8.21%; and with such rows solving again each round gains nothing over a fixed lead. On R04 the stand-ins of the Exalted Orb and the Fracturing Orb hold the direct value at 352.39 c whatever else is changed. **Prediction, not measured:** the line could reopen only with per-class arguments that make those rows near-exact, which the design note priced at two to three days each, one with no finished argument; nothing counted here says they would bring the lead near the merge's.
+
+Lead at or under the true value: checked at every key and every round of every run, 0 keys above it (section 1).
 
 ## 1. What was counted
 
@@ -65,7 +71,19 @@ The runs were made on this branch's tree (#1318's head 610d44e6 and the commits 
 
 ### R04 (100,771 keys; complete start value 23,534.09 c)
 
-R04ROWS
+No R04 run with direct rows finished. Each was stopped by hand at 23:00 (load 10), after 85 to 135 minutes, when every one had worked out more than 7 times the merged count's 3,000 keys at under 4% of the value; the row gives where it stood (keys worked out; the start value as a share of the complete one; and, for comparison at equal keys, the same share when the run had worked out 3,000 keys). The lead was above the truth at 0 keys in every round of every run.
+
+| Lead | Direct model: coarse keys found / worked out (at the stop) | Its start value | Stopped at (minutes) | Share at the stop | Share at 3,000 keys | Within 1% |
+|---|---|---|---|---|---|---|
+| merged coarse model, `worked` (#1318, the control) | 28,596 (merged) | 8.21% | **ended: 3,000 keys (2.98%)** (34 min) | 100% | 100% | 2,257 |
+| direct, `worked`, `demand` | 22,074 / 16,205 | 1.50% | 25,064 keys (24.9%) (120) | 3.79% | 2.18% | not reached |
+| direct, `worked`, `demand`, `MAX` | 22,668 / 16,682 | 1.50% | 25,529 keys (25.3%) (134) | 3.85% | 2.21% | not reached |
+| direct, `RATCHET`, `demand`, `MAX`, `ONE=exact` | 20,330 / 14,787 | 1.50% | 22,987 keys (22.8%) (82) | 3.66% | 2.19% | not reached |
+| direct, `RATCHET`, `floor`, `MAX`, `ONE=exact` | 5,549 / 1,972 (held) | 1.50% | 39,900 keys (39.6%) (82) | 3.67% | 1.52% | not reached |
+| direct, `static` (fixed lead) | R04STATIC |
+| today's floor (#1318, `floor`, mass:0.5; no coarse model) | - | 0.0% | stopped at 44,341 keys (44.0%) | 4.09% | 1.37% | not reached |
+
+At equal keys today's floor (no lead at all) stood at 2.34% after 23,004 keys and 3.59% after 39,929 (#1318's `led-R04-floor-mass-0.5.tsv`), against 3.66% and 3.67% here: on R04 the direct lead is worth about as much as no lead.
 
 ## 3. What the table says
 
@@ -74,7 +92,7 @@ R04ROWS
 - **Where the strength goes.** The direct model's own start value is 32.65% of the exact one on R24 (53.76% with `ONE=exact`), against the merge's 86.48% on the same coarse key; on R04 it is 1.50% in every variant (the merge's: 8.21%). On R04 the start value does not move with `ONE=exact`: what holds it at 352.39 c is the angelic stand-in of the Exalted Orb (`extremes`) and of the Fracturing Orb (`all`), the per-class arguments of the design note's section 5 that do not exist.
 - **The lead falls as the direct model learns.** With direct rows the led start value is not monotone: on R24 `demand` it goes from 32.65% at round 5 to 10.48% at round 39 before it climbs (`floor`: 20.73% at round 50; even `static`, 21.42% at round 56, where a worked key's own rows land on coarse keys below its lead), as coarse keys are worked out again at new representatives (more rows, a lower minimum) and as newly worked coarse keys send rows to keys not yet worked out. So the direct model's 32.65% at the start is in part the optimism of a model that has seen few members. With `MAX` and `RATCHET` the start value never falls below the first round's; that changes the count by -2.6 to +6.4 points (`floor`: 69.34% to 71.90%; `demand`: 75.81% to 69.46%), not by an order.
 
-R04SAYS
+- **R04: the direct rows do not lead the build at all.** The direct model's start value is 1.50% of the exact one in every variant (352.39 c, the figure `sdm.py` found on the guide's 8 offers in #1315), and the led build with it stood at 3.7% to 3.9% of the value after 23,000 to 40,000 keys, where the merged model ended in 3,000 and today's tip value, with no coarse model, stood at 2.3% to 3.6% after as many keys. Where the runs would have ended is not known; that they need far more than a few thousand keys is counted (7 to 13 times the merged count, under 4% of the value).
 
 ## 4. The cost of the direct model itself
 
@@ -82,10 +100,12 @@ The ticket asks for the cost of building the coarse model beside the exact keys 
 
 | Route | Variant | Direct model: coarse keys worked out | Its kernels and rows (seconds) | Its build along its own policy (seconds, load) | Peak memory of the run | Exact keys worked out | Sum of keys | Blind build on the same offers |
 |---|---|---|---|---|---|---|---|---|
-| R24 | best counted (`RATCHET`, `demand`, `MAX`, `ONE=exact`) | 19,958 | 30 s | 147 s (10.0) | 1.45 GB | 37,864 | **57,822 (95%)** | 60,895 |
-| R24 | `RATCHET`, `floor`, `MAX`, `ONE=exact` | 16,268 | 17 s | 137 s (9.8) | 1.06 GB | 38,596 | **54,864 (90%)** | 60,895 |
-| R24 | plain `worked`, `floor` (the ticket's count 1) | 16,220 | 9 s | 347 s (6.7) | 1.00 GB | 43,112 | 59,332 (97%) | 60,895 |
-| R04 | R04COSTROWS |
+| R24 | best counted (`RATCHET`, `demand`, `MAX`, `ONE=exact`) | 19,958 | 30 s | 147 s (9.9) | 1.45 GB | 37,864 | **57,822 (95%)** | 60,895 |
+| R24 | `RATCHET`, `floor`, `MAX`, `ONE=exact` | 16,268 | 17 s | 137 s (7.1) | 1.06 GB | 38,596 | **54,864 (90%)** | 60,895 |
+| R24 | plain `worked`, `floor` (the ticket's count 1) | 16,220 | 9 s | 347 s (7.0) | 1.00 GB | 43,112 | 59,332 (97%) | 60,895 |
+| R24 | plain `worked`, `demand` | 19,958 | 23 s | 350 s (7.0) | 1.56 GB | 44,242 | 64,200 (105%) | 60,895 |
+| R04 | `RATCHET`, `demand`, `MAX`, `ONE=exact` (at the stop) | 14,787 | not written (stopped) | 133 s (9.9) | 0.97 GB at the direct build; the led part was stopped before its peak was written | 22,987 (stopped, 3.66%) | more than 37,774 | 100,771 |
+| R04 | `RATCHET`, `floor`, `MAX`, `ONE=exact` (at the stop) | 1,972 | 7 s | 133 s (9.9) | as above | 39,900 (stopped, 3.67%) | more than 41,872 | 100,771 |
 
 What the seconds are: of a direct build's 133 to 388 s, 7 to 18 s are kernels and rows and the rest is the 187 to 443 solves of the model along its own policy (one solve a round, as `sdm.py` does it). A real build would not solve after each key; the count of coarse keys is the figure that carries over, the seconds are this script's. A coarse key here costs about as much to work out as an exact key (it is worked out at one to a few representatives, each with every offer), so the keys may be added as they are; that is a reading of the counts, not a timing of both on one footing.
 
@@ -98,8 +118,8 @@ What the seconds are: of a direct build's 133 to 388 s, 7 to 18 s are kernels an
 - **One rule.** All runs use `mass:0.5`, #1318's rule for its 237 and 3,000. Other rules were not counted with direct rows.
 - **The ratchet and the pins are this note's additions**, each sound given a sound coarse lead; other ways of combining a key's rows with its lead (a value iteration with the maximum at every state) were not counted.
 - **Keys are counted as equal**, coarse and exact; the seconds of a real build per key are not in these counts.
-R04NOTSHOWN
+- **Where the R04 runs would have ended.** All four were stopped by hand at 23:00 (section 2); the R04 `floor` and `static` runs of the plain variant were stopped before their led part to free their processes for the variants, and the `MAX`-only `floor` run on R04 was not run.
 
 ## 6. The tools
 
-`research/cheap-bound/dled.py`, `dled.sh`; the per-round files (`dled-ROUTE-MODE[-max].tsv`: keys worked out, start value, exact and coarse tips, coarse keys found and worked, keys above the truth, seconds) and the logs stay on the server under `.claude/scratch/t1322/`; `dled-results.txt` holds every run's result line.
+`research/cheap-bound/dled.py`, `dled.sh`; `dled-results.txt` (every run's `DIRECT` and `RESULT` lines, and the last per-round row of the stopped runs). The per-round files (`dled-ROUTE-MODE[-max].tsv`: keys worked out, start value, exact and coarse tips, coarse keys found and worked, keys above the truth, seconds) and the logs stay on the server under `.claude/scratch/t1322/` (an earlier set, made before a fault of `dled.py` was fixed, is in its `old-pendfloor/` and is not used: it gave a coarse key that was worked out the floor as soon as a new representative of it waited, and its leads collapsed).

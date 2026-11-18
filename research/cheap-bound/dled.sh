@@ -8,4 +8,4 @@ ulimit -v 12000000
 N=$M${MAX:+-max}${RATCHET:+-ratchet}${ONE:+-one$ONE}  # MAX=1 pins, RATCHET=1, ONE=exact: the variants of dled.py
 echo $$ > "$O/dled-$R-$N.pid"  # this wrapper's pid: wait on it
 timeout $((LIMIT + 1200)) uv run --no-sync python -u "$HERE/dled.py" "$R" "$D/k-$R.pkl" "$D/lead-$R.txt" "$M" "$O/dled-$R-$N.tsv" > "$O/dled-$R-$N.log" 2>&1
-echo "exit $? $R $M $RULE MAX=$MAX $(date +%T) load $(cut -d' ' -f1 /proc/loadavg)" >> "$O/dled-$R-$N.log"
+echo "exit $? $R $M $RULE MAX=$MAX $(date +%T) load $(uptime | sed 's/.*load average: //; s/,.*//')" >> "$O/dled-$R-$N.log"

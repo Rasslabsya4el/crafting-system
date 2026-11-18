@@ -37,7 +37,13 @@ MAX=1 (not in #1318's `worked`): with direct rows, a worked key's rows can be wo
 the direct model values at the floor), and the member rows that `worked` adds to a coarse state can only lower it (they are more actions in a
 minimum). With MAX=1 the coarse states keep their direct rows only, and a worked key whose rows are worth less than its coarse state's value is
 PINNED: its state's one action leads to its coarse state at no cost, so its value is its lead. Both are lower bounds of the key, so the larger is
-too; the pins are set again after each solve until none changes (at most 12 solves a round). The walk for tips follows a pinned key's rows.
+too if the coarse lead is (shown here by count only); the pins are set again after each solve until none changes (at most 12 solves a round). The walk
+for tips follows a pinned key's rows.
+
+RATCHET=1: each round the direct model is solved alone, and a coarse key's lead is the largest value it had in any round so far (each was checked
+under the truth); the exact part is solved with its tips at those leads (and the pins of MAX=1). ONE=exact: an offer whose mode at the
+representative is `ONE` takes the representative's exact kernel instead of the angelic stand-in (more optimistic in kind than the builder, which
+takes several members; checked by count like the rest).
 
 What is counted: exact keys worked out (until no tip, and until within 1% and 10%), the direct model's coarse keys found and worked out, its
 representatives, kernels and seconds, the run's peak memory (ru_maxrss), the 1-minute load, and the lead check."""
