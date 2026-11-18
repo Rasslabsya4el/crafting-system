@@ -2410,6 +2410,12 @@ class Abstraction:
         self._kernels += 1
         return cached
 
+    def _walk_shared(self, part: Outcomes) -> bool:
+        """Whether the plan being made holds the walk `_distribution` would ask for `part` (`actions.draw.DrawStore`, #1194); False for a
+        part that does not say."""
+        shared = getattr(part, "shared", None)
+        return shared is not None and shared(self._labeller(part.retained.influences, part.rolls_lucky))
+
     def _concrete(self, outcome, allowance: "budget.Allowance | None" = None) -> tuple[tuple[Hashable, Fraction], ...]:
         """One outcome of the engine, whose labels may be roll laws, as the outcomes of concrete rolls with their chances.
 

@@ -28,6 +28,7 @@ from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, Bud
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, unopened_listing
+from crafting_system.actions.draw import sharing
 from crafting_system.data import GameData
 from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
@@ -483,7 +484,8 @@ def make_plan(
     def mods_target() -> Target:
         return replace(target, quality=None if finished_last else target.quality, implicits=() if implicit_last else target.implicits)
 
-    with running(plan_budget.start() if plan_budget is not None else None) as clock:
+    # one store of exact draws for the whole plan: no round, start option or second item makes a walk another made (`actions.draw.DrawStore`, #1194)
+    with running(plan_budget.start() if plan_budget is not None else None) as clock, sharing():
         try:
             plan = _make_plan(
                 data, mods_target(), prices, start_price=start_price, offers=offers,

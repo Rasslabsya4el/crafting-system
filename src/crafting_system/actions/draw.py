@@ -25,9 +25,10 @@ that have room, and the unit leaves the pool whichever side it was drawn on. Uni
 when their parts have the same sides and the same weights per label, as one-sided families are.
 """
 
+import contextvars
 import random
-from collections import defaultdict
-from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from collections import OrderedDict, defaultdict
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from fractions import Fraction
 from math import comb, gcd
@@ -43,8 +44,11 @@ from .pool import PoolFamily, PoolMod
 from .scope import BasePassed, probing
 
 __all__ = [
+    "DrawStore",
     "Outcome",
     "floating",
+    "sharing",
+    "shared_draws",
     "guaranteed_candidates",
 ]
 
@@ -68,6 +72,159 @@ def floating():
         yield
     finally:
         NUMBER = saved
+
+
+DRAWS_SHARE = 0.15  # the share of the run's memory net (or of the machine's default net) the draws kept for a plan may fill (`sharing`)
+OUTCOME_BYTES = 1200  # what one kept outcome takes, about: its set of (label, count) pairs, its chance and its place in the table (measured on
+# a draw of 15,380 outcomes of the real boots pool, #1194: 1,212 bytes each)
+DRAWS_KEPT = 1_000_000  # the outcomes kept where neither the run nor the machine says how much memory there is
+GIVE_WAY = 0.6  # the draws are dropped, and no new one is kept, once the process holds this share of the run's memory net
+
+
+class DrawStore:
+    """The walks of `exact_distributions` made for one plan, kept so that no part of the plan makes one of them twice (#1194).
+
+    A plan searches its offers in rounds, each round with a model of its own (`abstraction.Abstraction`), whose caches start empty: the round
+    then made again every draw the round before it had made (R20: about 6 s for each of the large ones, in every round). What a walk reads
+    is not the model, though. It reads the pool through the caller's label only as a partition: which mods share a label, never what the label
+    is. So the key of a walk is what the engine works from once the labels are numbered in the order the pool shows them: the number type,
+    the classes of families with their sides, their weights per label number and their counts, the free slots, the totals and their chances,
+    the mods kept, the guaranteed draw's candidates (per part, label number and weight, in the order met) and, for each view, how it merges
+    the parts and the labels. Two calls with equal keys make the same walk step for step, so they give the same chances in the same order,
+    with the labels of one where the other has its own. The store keeps the result with its labels; a later call with the same labels gets a
+    copy, one with other labels gets it renamed (label number by label number; the store then keeps it under the new names), and both are
+    what the walk would have returned, to the last digit and in the same order. A model of more offers that tells the mods apart as an earlier one did (or names the same kinds otherwise:
+    a family type is "~3" in one model and "~5" in the next) therefore makes no walk the earlier one made; where it tells them apart more
+    finely the key differs and the walk is made, as it must be.
+
+    Nothing a plan says can depend on the store: a call gets the same result with or without it. Under a search counted in states
+    (`budget.Allowance` with a `given`) a kept walk adds to each stage's count what its making added, when the store holds those counts
+    and they fit the allowance; otherwise the walk is made again, counted, and cut where it would have been cut. So a run counted in states
+    stops where it stopped before.
+
+    **Memory.** `limit` is the number of outcomes kept: the walks least recently used leave once it is passed, and a walk larger than the
+    limit is not kept. The process's memory holds the store, so the run's memory net sees it; once the process holds `GIVE_WAY` of that net
+    the store is emptied and keeps nothing more (`sharing` gives it the net), so that the store is never what stops a run.
+    """
+
+    def __init__(self, limit: int, memory_mb: float | None = None) -> None:
+        self.limit = max(int(limit), 0)
+        self.memory_mb = memory_mb  # the run's memory net, or None
+        self.held = 0  # the outcomes kept now
+        self.walks = 0  # the walks made while the store was open
+        self.hits = 0  # the calls answered from a kept walk
+        self.renamed = 0  # those of them whose labels had other names than the kept ones (`find`)
+        self.dropped = 0  # the kept walks that left for room or for the memory net
+        self.keys: list[Hashable] | None = None  # a test's record: the key of every walk made, in order (None: not recorded)
+        self.fresh: list[tuple] | None = None  # a pool worker's record of what it kept, for its parent (`adopt`, `abstraction._prime`)
+        self._kept: OrderedDict[Hashable, tuple[list[tuple[tuple, dict]], dict[str, int] | None, int]] = OrderedDict()
+
+    def __len__(self) -> int:
+        return len(self._kept)
+
+    def holds(self, key: Hashable) -> bool:
+        return key in self._kept
+
+    def find(self, key: Hashable, names: Sequence[Sequence[Hashable]], allowance: "budget.Allowance | None") -> list[dict[Outcome, Fraction]] | None:
+        """The kept result of the walk `key` under the labels `names` (one list for each ordering), or None when the walk must be made."""
+        entry = self._kept.get(key)
+        if entry is None:
+            return None
+        shown, counts, _ = entry
+        if allowance is not None and allowance.given is not None:  # a count: the walk's pieces are counted as if it had been made
+            if counts is None or any(allowance.made.get(stage, 0) + made > allowance.given for stage, made in counts.items()):
+                return None  # no counts kept (it was made outside a count), or it would be cut: the walk is made, and cut where it is cut
+            for stage, made in counts.items():
+                allowance.add(stage, made)
+        self._kept.move_to_end(key)
+        self.hits += 1
+        renamed = False
+        for at, ((kept_names, outcomes), given) in enumerate(zip(shown, names)):
+            given = tuple(given)
+            if given != kept_names:  # other names for the same labels: kept from now on under these, the ones the next call most likely has
+                new = dict(zip(kept_names, given))
+                shown[at] = (given, {frozenset((new[name], n) for name, n in outcome): chance for outcome, chance in outcomes.items()})
+                renamed = True
+        self.renamed += renamed
+        return [dict(outcomes) for _, outcomes in shown]
+
+    def keep(self, key: Hashable, names: Sequence[Sequence[Hashable]], result: list[dict[Outcome, Fraction]], counts: dict[str, int] | None) -> None:
+        """Keep the result of the walk `key`, made under the labels `names`; `counts` is what each stage of a counted making added, or None."""
+        self.walks += 1
+        if self.keys is not None:
+            self.keys.append(key)
+        size = sum(len(outcomes) for outcomes in result) + 1  # an empty result still takes an entry
+        if self._gives_way():
+            return
+        self._add(key, ([(tuple(listed), dict(outcomes)) for listed, outcomes in zip(names, result)], counts, size))
+
+    def _gives_way(self) -> bool:
+        """Whether the process holds `GIVE_WAY` of the run's memory net: the store is then emptied, and keeps nothing."""
+        if self.memory_mb is None:
+            return False
+        clock = budget.active()
+        held = None if clock is None else clock.memory()
+        if held is None or held < GIVE_WAY * self.memory_mb:
+            return False
+        self.dropped += len(self._kept)
+        self._kept.clear()
+        self.held = 0
+        return True
+
+    def _add(self, key: Hashable, entry: tuple) -> None:
+        size = entry[2]
+        before = self._kept.pop(key, None)
+        if before is not None:
+            self.held -= before[2]
+        if size > self.limit:
+            return
+        while self._kept and self.held + size > self.limit:
+            _, (_, _, gone) = self._kept.popitem(last=False)
+            self.held -= gone
+            self.dropped += 1
+        self._kept[key] = entry
+        self.held += size
+        if self.fresh is not None:
+            self.fresh.append((key, entry))
+
+    def adopt(self, fresh: Iterable[tuple]) -> None:
+        """Keep what a pool worker kept (its `fresh`): the walks it made are this plan's too."""
+        for key, entry in fresh:
+            self.walks += 1
+            if self.keys is not None:
+                self.keys.append(key)
+            if not self._gives_way():
+                self._add(key, entry)
+
+
+_store: contextvars.ContextVar[DrawStore | None] = contextvars.ContextVar("crafting_system_draw_store", default=None)
+
+
+def shared_draws() -> DrawStore | None:
+    """The store of the plan being made (`sharing`), or None."""
+    return _store.get()
+
+
+@contextmanager
+def sharing(limit: int | None = None) -> Iterator[DrawStore]:
+    """Within the block every walk of `exact_distributions` is kept and no walk is made twice (`DrawStore`): one plan, with all its rounds,
+    start options and second items. A block inside another shares the outer store. `limit` is the number of outcomes kept; by default
+    `DRAWS_SHARE` of the run's memory net (`budget.active`), or of the machine's default net where the run has none, at `OUTCOME_BYTES` an
+    outcome: a setting of the machine the run is on (OR-40)."""
+    outer = _store.get()
+    if outer is not None:
+        yield outer
+        return
+    clock = budget.active()
+    net = None if clock is None else clock.budget.memory_mb
+    if limit is None:
+        room = net if net is not None else budget.default_memory_mb()
+        limit = DRAWS_KEPT if room is None else int(room * DRAWS_SHARE * 1024 * 1024 / OUTCOME_BYTES)
+    token = _store.set(DrawStore(limit, net))
+    try:
+        yield _store.get()
+    finally:
+        _store.reset(token)
 
 RARE_REROLL_RATIO = get_rule("affix_count.rare_reroll_ratio")
 KEPT_MODS_COUNT_IN_TOTAL = get_rule("chaos_orb.kept_mods_count_in_total")
@@ -222,6 +379,7 @@ def exact_distributions(
     blocked: frozenset[str] = frozenset(),
     *,
     own: bool = True,
+    peek: bool = False,
 ) -> list[dict[Outcome, Fraction]]:
     """The distribution of `exact_distribution` seen through `label` (unless not `own`), then through each of `views`, from one walk of `label`'s parts.
 
@@ -237,6 +395,10 @@ def exact_distributions(
     end states, each entry of a part's spread over its labels as the spread is built (the "spread" count, #1137) and each way of spreading a
     group's labels; past the allowance it raises `budget.OutcomesCut`. Every structure the walk holds is counted as it grows, so a cut walk
     has made at most one piece past the allowance at each stage.
+
+    Inside `sharing` (a plan) a walk made before in the block is not made again (`DrawStore`): the result is the same. With `peek` nothing is
+    made: the answer is whether the block's store holds this walk (False outside a block), for a caller that would otherwise send it to a
+    pool worker (`abstraction._prime`).
     """
     number = NUMBER
     allowance = budget.allowed()  # None outside a counted search: nothing is counted
@@ -322,7 +484,38 @@ def exact_distributions(
             )
         )
     if not totals:
-        return [{} for _ in orderings]
+        return False if peek else [{} for _ in orderings]
+
+    # the guaranteed draw's candidates: how many mods of each (part, label, weight), in the order the pool shows them
+    tagged: dict[tuple[int, int, Fraction], int] = defaultdict(int)
+    if tag is not None:
+        for family, entry in guaranteed_candidates(pool, free, tag, blocked):
+            tagged[(part_of[(class_of[family.family], family.side is Side.PREFIX)], mod_label[entry.mod.id], entry.weight)] += 1
+
+    store = _store.get()
+    key: Hashable = None
+    counted_from: dict[str, int] | None = None
+    if store is not None:
+        # all the walk reads (`DrawStore`): equal keys, the same walk
+        key = (
+            number is Fraction,
+            tuple(class_parts),
+            tuple(class_count),
+            room,
+            kept,
+            tuple(totals.items()),
+            None if tag is None else tuple(tagged.items()),
+            tuple((tuple(parts), tuple(labs), len(names), None if needed is None else tuple(needed), same) for parts, labs, names, needed, same in orderings),
+        )
+        if peek:
+            return store.holds(key)
+        found = store.find(key, [names for _, _, names, _, _ in orderings], allowance)
+        if found is not None:
+            return found
+        if allowance is not None and allowance.given is not None:
+            counted_from = dict(allowance.made)
+    elif peek:
+        return False
 
     whole = number is Fraction and all(type(weight) is int for weight in part_weight)  # every weight an integer: the walk keeps (numerator, denominator) pairs
 
@@ -526,13 +719,11 @@ def exact_distributions(
         found, first = ends(start, picks_of)
         spread_ends(found, first, None, number(1), (0,) * len(orderings))
     else:
-        groups: dict[tuple[int, int, Fraction], int] = defaultdict(int)
+        groups = tagged
         group_numbers: list[dict[tuple, int]] = [{} for _ in orderings]  # the guaranteed groups each ordering makes, in the order it met them
-        for family, entry in guaranteed_candidates(pool, free, tag, blocked):
-            part, lab = part_of[(class_of[family.family], family.side is Side.PREFIX)], mod_label[entry.mod.id]
-            groups[(part, lab, entry.weight)] += 1
+        for part, lab, weight in groups:  # in the order the candidates were met: a group is numbered when its first candidate is
             for numbers, (parts, labs, *_) in zip(group_numbers, orderings):
-                numbers.setdefault((parts[part], labs[lab], entry.weight), len(numbers))
+                numbers.setdefault((parts[part], labs[lab], weight), len(numbers))
         tagged_total = sum((n * number(weight) for (_, _, weight), n in groups.items()), number(0))
         by_part: dict[int, list[tuple[int, Fraction, tuple[int, ...]]]] = defaultdict(list)
         for (part, lab, weight), n in groups.items():
@@ -542,7 +733,7 @@ def exact_distributions(
             found, first = ends(start[:part] + (1,) + start[part + 1 :], picks_of)
             for lab, step, numbered in chosen:
                 spread_ends(found, first, (part, lab), step, numbered)
-    return [
+    result = [
         {
             frozenset((names[i], n) for i, n in enumerate(shown) if n): sums[o][shown]
             for shown in sorted(least[o], key=least[o].__getitem__)
@@ -550,6 +741,12 @@ def exact_distributions(
         }
         for o, (_, _, names, _, _) in enumerate(orderings)
     ]
+    if store is not None:
+        counts = None
+        if counted_from is not None:  # what each stage of this making added, in the order the stages were first counted
+            counts = {stage: made - counted_from.get(stage, 0) for stage, made in allowance.made.items() if made > counted_from.get(stage, 0)}
+        store.keep(key, [names for _, _, names, _, _ in orderings], result, counts)
+    return result
 
 
 def sample_new_mods(

@@ -17,12 +17,16 @@ pickling anything that goes out; only the distributions come back. Where there i
 In a run counted in states (`Budget.in_states`) `prime` does nothing either (#1105): the search counts the outcomes a kernel makes as they are
 made (`budget.Allowance`), and a distribution made ahead in a worker would be made uncounted, and only where there are workers to make it, so
 the same run would stop at different points on two machines.
+
+Inside a plan (`actions.draw.sharing`, #1194) a pool whose walk an earlier round of the plan made is not sent to a worker: the kernel call
+copies it. The walks the workers make go back with their results and are kept for the rounds to come.
 """
 
 from collections.abc import Callable, Iterable
 
 from crafting_system import budget, parallel
 from crafting_system.actions import Action, Fixed, Rerolled
+from crafting_system.actions.draw import shared_draws
 
 MIN_JOBS = 2  # fewer uncached pools than this are computed by the kernel call itself
 
@@ -34,10 +38,12 @@ def _hold(abstraction, jobs: list) -> tuple:
 def _compute(index: int):
     abstraction, jobs = parallel.context()
     (kind, key), (part, signature) = jobs[index]
+    store = shared_draws()  # the plan's store as the fork found it: the walks this job adds go back with its result (#1194)
+    if store is not None:
+        store.fresh = []
     with budget.unasked():  # a forked worker holds its parent's net, which raises the parent's stop: the parent asks its net between two results
-        if kind == "draw":
-            return abstraction._distribution(signature, part)
-        return abstraction._fracture_entries(part, signature)
+        made = abstraction._distribution(signature, part) if kind == "draw" else abstraction._fracture_entries(part, signature)
+    return made, () if store is None else store.fresh
 
 
 def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: int | None = None, ask: Callable[[], None] | None = None) -> int:
@@ -70,7 +76,7 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
                     key = (signature, abstraction._forced_label(part))
                     if key not in abstraction._fractures:
                         jobs.setdefault(("fracture", key), (part, signature))
-                elif signature not in abstraction._cache:
+                elif signature not in abstraction._cache and not abstraction._walk_shared(part):  # a walk the plan holds is a copy, made by the kernel
                     jobs.setdefault(("draw", signature), (part, signature))
         except ValueError:  # a refusal of either family (both are ValueErrors) or a bad request: left to `kernel`, which raises it in its own order
             continue
@@ -85,7 +91,10 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
         return 0
     except Exception:  # a worker failed (a refusal, a dead process): store nothing, the kernel call computes and raises as a serial run does
         return 0
-    for ((kind, key), _), result in zip(listed, results):
+    store = shared_draws()
+    for ((kind, key), _), (result, fresh) in zip(listed, results):
+        if store is not None:
+            store.adopt(fresh)  # the walks a worker made are kept for the rounds to come, as if this process had made them
         if kind == "draw":
             abstraction._cache[key] = result
         else:

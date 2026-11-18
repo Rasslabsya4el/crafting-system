@@ -241,6 +241,12 @@ class Outcomes:
             self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label, self.guaranteed_blocked
         )
 
+    def shared(self, label: Callable[[Mod], Hashable]) -> bool:
+        """Whether the plan being made already holds the walk `distribution(label)` would make (`draw.DrawStore`, #1194): it then costs a copy."""
+        return exact_distributions(
+            self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label, (), self.guaranteed_blocked, peek=True
+        )
+
     def distributions(
         self, label: Callable[[Mod], Hashable], views: Sequence[tuple[Callable[[Mod], Hashable], Callable[[Hashable], bool] | None]]
     ) -> list[Mapping[Outcome, Fraction]]:
