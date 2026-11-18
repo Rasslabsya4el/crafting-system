@@ -15,8 +15,8 @@ price file's (`prices.lock_price`); with none the Lock is dropped (ADR-0056) and
   legality filters that are no pruning stay: an offer the game refuses, a corrupting offer that ADR-0036 offers only at the states that meet every other
   requirement, a quality offer that ADR-0029 offers only at the last step;
 * the **fallback** is every plain action of `s` that is not previewable (the bench, Harvest, the restart, ...) and the cheapest legal burn of the
-  start item (`actions.burns_at`, `prices.cheapest_burn`, ADR-0056). The planner refuses a target that names quality, sockets, implicits or an
-  enchantment (`make_plan`), so a burn changes nothing the state keeps: it leads back to `s`, a cycle through the Lock that `solve_peek` handles.
+  start item (`actions.burns_at`, `prices.cheapest_burn`, ADR-0056). The planner refuses a target that names sockets, implicits or an
+  enchantment (`make_plan`), and offers no Lock on one that names quality (`Status.WITH_QUALITY`, #159), so a burn changes nothing the state keeps: it leads back to `s`, a cycle through the Lock that `solve_peek` handles.
   A corrupted state takes no Lock (`hinekora_lock.refused_on`), and a jewel has no burn.
 
 **Exact pruning** (ADR-0054): the Lock is offered at `s` only if `L + c_min < V_noLock(s)`. A Peek costs at least `L` plus the cheapest of its options
@@ -82,6 +82,7 @@ class Status(StrEnum):
     NO_OPTION = "no previewable action"  # no state the plan visits has a previewable option
     REFUSED = "refused"  # the start item takes no Lock (corrupted)
     SWITCHED_OFF = "off: the run's methods setting does not name it"  # a deferred method (OR-37): on only when `PlanSettings.methods` names it
+    WITH_QUALITY = "not offered on a target that asks for quality"  # the burn of its Peeks keeps no quality yet (#159): the plan is the one without the Lock
     WITH_SECOND_ITEMS = "not offered in a plan that makes second items"  # the target allows it, but a plan with donors has no Lock solve yet (#225, #796)
     NO_PRICE = "no price"  # the price file has none: the Lock is dropped, N is still found
     COARSE = "coarse"  # an approximate answer whose pruning removed the Lock everywhere: no N (the exact values it needs do not exist)
@@ -362,11 +363,11 @@ def plan_burn(
     """The burn of the plan's Peeks: the cheapest legal burn of the start item, or None.
 
     Its legality is read on the start item: a burn depends on the class, the corruption (a corrupted state takes no Lock), the implicits (refused
-    where the state keeps them, `BurnKeeps.implicits`), the quality (which the planner never keeps: it refuses a target that names it) and, for a
+    where the state keeps them, `BurnKeeps.implicits`), the quality (which a burn never keeps: a target that names it takes no Lock, `Status.WITH_QUALITY`, #159) and, for a
     target that names sockets (`sockets`), the sockets: the finish starts from them, so a burn that changes them is refused (`BurnKeeps.sockets`).
     """
     if abstraction.tracks_quality:
-        raise ValueError("the Lock's burn is built for states that keep no quality; the planner refuses a target that names it")
+        raise ValueError("the Lock's burn is built for states that keep no quality; the plan of a target that names it takes no Lock (`Status.WITH_QUALITY`)")
     keeps = BurnKeeps(quality=False, implicits=abstraction.tracks_implicits, enchantment=False, sockets=sockets)
     found = cheapest_burn(burns_at(data, item, keeps), data, prices, price_source)
     return None if found is None else BurnPrice(found.burn.label(data), found.cost)

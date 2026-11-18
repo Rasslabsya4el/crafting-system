@@ -229,6 +229,9 @@ def approximate_inputs_of(plan: Plan, actions, data: GameData) -> tuple[Approxim
     ids: set[str] = set()
     for action in actions:
         ids |= plan.offer_of(action).offer.action.claims(data)  # type: ignore[attr-defined]
+    finish = getattr(plan, "quality_finish", None)  # the catalyst of the quality finish (#159) is no action of the policy, and its gain law is approximate
+    if finish is not None and finish.catalyst is not None:
+        ids |= finish.catalyst.offer.action.claims(data)
     starts = getattr(plan, "starts", None)  # a stand-in plan of a test has none
     if starts is not None:
         ids |= set(starts.claims)  # a recipe-made start item rests on claims no action of the policy cites (ADR-0059)

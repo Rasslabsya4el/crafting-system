@@ -92,7 +92,9 @@ def test_k4_the_sentence_of_the_ticket_is_what_the_report_prints():
 def test_k2_the_kinds_the_planner_cannot_use_yet_are_listed_in_every_answer(plan):
     cannot = of_kind(plan.limits, "kinds-not-built")
 
-    assert sum(len(limit.labels) for limit in cannot) == sum(not entry.planner for entry in kinds())
+    # but a kind that only sets the quality (the quality currency), which this target, asking for none, could not use to lower its cost (#159)
+    assert load_target(R12, DATA).quality is None
+    assert sum(len(limit.labels) for limit in cannot) == sum(not entry.planner and not entry.only_quality for entry in kinds())
     assert all("cheapest among the methods the planner can use" in limit.guarantee for limit in cannot)
 
 

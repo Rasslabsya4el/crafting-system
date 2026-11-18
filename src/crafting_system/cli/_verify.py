@@ -120,7 +120,10 @@ def max_steps_for(plan: Plan) -> int:
     `STEPS_PER_MEAN` times that is far in the tail of any sane policy; a policy whose odds are
     badly wrong then ends as `unfinished` instead of running 100,000 clicks per run.
     """
-    cheapest = min(priced.cost for _, priced in chosen_offers(plan))
+    costs = [priced.cost for _, priced in chosen_offers(plan)]
+    if not costs:  # the start already meets what the policy plans (the mods of a quality finish, #159): no step is taken
+        return MIN_STEPS
+    cheapest = min(costs)
     bound = math.ceil(STEPS_PER_MEAN * max(plan.mean_remaining, cheapest) / cheapest)
     return max(MIN_STEPS, bound)
 
