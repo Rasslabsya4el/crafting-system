@@ -412,6 +412,10 @@ if MODE == "static":
     static_h = np.array([v0[cindex[CK[i]]] if CK[i] in cindex else cheapest for i in range(n)])
     over = int(np.sum((static_h > V * (1 + 1e-7) + 1e-9) & ~np.asarray(goal)))
     print(f"static lead: at the start {static_h[0]!r} ({100 * static_h[0] / V[0]:.2f}%); above the complete value at {over} keys", flush=True)
+    if os.environ.get("SAVELEAD"):  # #1321: the fixed direct lead of every exact key, saved for uled.py (LEAD=file:PATH); the led build is not run
+        np.save(os.environ["SAVELEAD"], static_h)
+        print(f"SAVED the static direct lead to {os.environ['SAVELEAD']}", flush=True)
+        sys.exit(0)
 
 reach(0)
 work_exact(0)
