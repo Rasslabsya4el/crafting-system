@@ -6,6 +6,7 @@ the older let go when the younger is full. An entry let go is computed again whe
 again is found among the model's kernels and gets its id), so the model is the model of the build that kept everything.
 
 * `Recent` keeps what was written or read in the last generation, lets the rest go, and counts what it let go.
+* A memo's generation is a share of the run's memory net in entries of a stated size (`kept_entries`, OR-40): no figure sized for a machine.
 * The model of the hand-worked bow world, built with one entry a generation (every answer let go almost at once), is the model of the build
   that keeps everything: the same keys, actions, kernels, values and start value, from more kernels made.
 * The same on a real route up to a net of pairs (R13, as `test_pattern_items_kept`), with memos small enough that they let entries go.
@@ -19,9 +20,10 @@ from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, STARTS, build, o
 from test_abstraction_pattern_real import CASES, E
 from test_pattern_items_kept import same_model
 
+from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, _pattern
 from crafting_system.abstraction._pattern import build_pattern_model
-from crafting_system.abstraction._recent import Recent
+from crafting_system.abstraction._recent import Recent, kept_entries
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 
 
@@ -49,6 +51,17 @@ def kept(keys: int | None, members: int | None):
         yield
     finally:
         _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT = before
+
+
+def test_a_memo_holds_a_share_of_the_memory_net():
+    # a 12 GB net (12,288 MB): `computed` may hold 1/12 of it, 1,024 MB, in two generations of 1 KB keys: 512 MB a generation, 2^19 keys
+    assert kept_entries(_pattern.KERNEL_KEY_SHARE, _pattern.KERNEL_KEY_BYTES, 12_288) == 1 << 19
+    # `_feasible` may hold 1/20 of it, 614.4 MB, in two generations of 300-byte members: 322,122,547 bytes a generation, 1,073,741 members
+    assert kept_entries(_pattern.MEMBER_SHARE, _pattern.MEMBER_BYTES, 12_288) == 1_073_741
+    assert kept_entries(1 / 12, 1024, 6_144) == 1 << 18  # half the net, half the memo
+    assert kept_entries(1 / 12, 1024, 1) == 4_096  # a tiny net: the fewest a generation holds
+    with parallel.memory_net(24_576):  # the run's net is the one read
+        assert kept_entries(1 / 12, 1024) == 1 << 20
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])

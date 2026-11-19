@@ -10,15 +10,30 @@ asked again after it left.
 
 `Recent` holds two generations of at most `size` entries each: entries are written into the young one; when it is full, the old one is let go
 and the young one becomes the old one. An entry read from the old generation is written into the young one again, so an entry asked at
-least once in every `size` writes stays. The rule is the same for every route and for every machine: a cache's size, not a cut of the
-search (OR-12).
+least once in every `size` writes stays. The rule is the same for every route: a cache's size, not a cut of the search (OR-12).
+
+**The size follows the run's memory net** (`kept_entries`, OR-40): a memo may hold a stated share of the net, so a generation holds
+`net * share / (2 * bytes of an entry)` entries; the bytes of an entry are a property of the entry's Python objects, the same on every route
+(measured on R04, #1335). The net is the run's (`parallel.memory_net`), else the default net of this machine (`budget.default_memory_mb`).
 """
 
 from __future__ import annotations
 
 from typing import Generic, Hashable, TypeVar
 
+from crafting_system import budget, parallel
+
 V = TypeVar("V")
+FEWEST_KEPT = 1 << 12  # a generation holds at least this many entries, on a machine whose memory cannot be read or a tiny net: a memo of a few MB
+UNREAD_NET_MB = 4096.0  # the net taken where neither the run nor the machine says one (a memo of a few hundred MB at most)
+
+
+def kept_entries(share: float, entry_bytes: float, net_mb: float | None = None) -> int:
+    """The entries of one generation of a memo that may hold `share` of a memory net of `net_mb` MB (default: the run's net, else the machine's
+    default net) in entries of about `entry_bytes` bytes each: two generations of them fill the share (module docstring)."""
+    if net_mb is None:
+        net_mb = parallel.active_memory_net() or budget.default_memory_mb() or UNREAD_NET_MB
+    return max(FEWEST_KEPT, int(net_mb * (1 << 20) * share / (2 * entry_bytes)))
 _MISSING = object()
 
 
