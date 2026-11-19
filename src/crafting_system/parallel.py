@@ -40,7 +40,7 @@ import os
 import sys
 from collections.abc import Callable, Iterable, Sequence
 import time
-from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
+from concurrent.futures import FIRST_EXCEPTION, Future, ProcessPoolExecutor, wait
 from types import MappingProxyType
 
 from crafting_system import budget
@@ -469,6 +469,19 @@ class WorkerPool:
             if deadline is not None and time.monotonic() >= deadline:
                 self.abandon()
                 raise TimeoutError(f"{len(waiting)} of {len(futures)} chunks did not come back in {timeout:.0f} s; their workers were stopped")
+
+    def submit(self, function: Callable, pieces: Sequence) -> Future:
+        """Start `function(pieces)` (on the whole list) in a worker now and return its future, for `gather`: the caller works on while the
+        workers do (#1340). A pool of two workers or more only."""
+        if self.workers < 2:
+            raise ValueError("submit needs a pool of two workers or more: with one, the caller runs its own code")
+        return self._start().submit(_run_whole, function, pieces)
+
+    def gather(self, futures: Sequence[Future]) -> list:
+        """The results of `submit`'s futures, in their order, waited on as `map` waits: the memory net and the run's net are watched, and past
+        either the workers are killed and the stop raised (`MemoryNetReached`, `budget.BudgetExceeded`)."""
+        self._wait(list(futures), None, _watched_clock())
+        return [future.result() for future in futures]
 
     def map_chunks(self, function: Callable, pieces: Iterable, *, chunk: int) -> list:
         """`[function(c) for c in chunks]`, where the chunks are consecutive runs of `chunk` pieces (the last may be shorter).

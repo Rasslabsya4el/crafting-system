@@ -146,6 +146,7 @@ from typing import Protocol
 import numpy as np
 
 from crafting_system import budget, parallel
+from ._ahead import Ahead, Round
 from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
 from crafting_system.solver._packed import BIG_TOTAL
 from crafting_system.solver._packed_solve import ACCEPT_BOUND, solve_graph
@@ -600,6 +601,8 @@ class Search[S]:
         gap_after: float | None = None,
         watch: Callable[[Standing], None] | None = None,
         beaten_at: float | None = None,
+        workers: int | None = None,
+        ahead_always: bool = False,
     ) -> None:
         if not (gap >= 0.0 and math.isfinite(gap)):
             raise ValueError(f"the gap of the stop is a share, zero or more (0.01 is 1%); got {gap!r}")
@@ -638,6 +641,13 @@ class Search[S]:
         self.tags: np.ndarray | None = None  # the tag (offer position, or FAKE) of the action the last solve chose at each node, NO_ACTION where none
         self.n_solved = 0
         self.restart_kernel: int | None = None
+        # the rounds' tips realized ahead in forked workers (`_ahead`, #1340): the worker count is the machine's (`CRAFTING_WORKERS`, OR-40); none
+        # where there is no fork (OR-57); `ahead_always` forks at every round, whatever the measures (the tests)
+        count = parallel.worker_count() if workers is None else workers
+        self.ahead = Ahead(count if parallel.can_inherit() else 1, POLL_SECONDS, always=ahead_always)
+        self._round: Round | None = None  # the pool of the round being walked
+        self._memo_at: dict[int, tuple[dict[S, int], float]] | None = None  # the kernels a worker made at the tip being realized, by offer
+        self._made: dict[int, dict[int, tuple[dict[S, int], float]]] | None = None  # in a worker: the kernels it made, by tip and offer
         self.prime_skip = 0  # states to leave before the problem is asked to prime again (see `realize`)
         self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
@@ -692,7 +702,21 @@ class Search[S]:
                 if not self._fresh_equal(state, position, kid):
                     raise ValueError(f"two states share the kernel key {key!r} but not its kernel (checked at {state!r})")
             return kid
-        weights = self._counted_kernel(state, position) if self.counted else self._netted_kernel(state, position)
+        held = self._memo_at.pop(position, None) if self._memo_at else None
+        if held is not None:  # made ahead in a worker at the round's start (`_ahead`): the same kernel this process would make here
+            weights, seconds = held
+            if self._round is not None:
+                self._round.useful += seconds
+        else:
+            mark = time.perf_counter()
+            if self._made is not None:  # a worker of `_ahead`: made plainly, the parent asks its nets (and counts nothing: no pool in a count)
+                weights = self.p.kernel(state, position)
+            else:
+                weights = self._counted_kernel(state, position) if self.counted else self._netted_kernel(state, position)
+            seconds = time.perf_counter() - mark
+            if self._made is not None:
+                self._made.setdefault(i, {})[position] = (weights, seconds)
+        self.ahead.making += seconds
         kid = self._store([self.intern(s) for s in weights], list(weights.values()))
         if key is not None:
             self.shared[key] = kid
@@ -805,7 +829,8 @@ class Search[S]:
         rows, cands = self.rows[i], self.cands[i]
         best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
-        prime = getattr(self.p, "prime", None) if not self.counted else None  # a count makes every kernel in the process, counted (`_prime`, #1105)
+        # a count makes every kernel in the process, counted (`_prime`, #1105); a tip a worker realized ahead (`_ahead`), and a worker, need none
+        prime = getattr(self.p, "prime", None) if not self.counted and self._memo_at is None and self._made is None else None
         tighten = getattr(self.p, "tighten", None)
         primed = 0  # how many of the offers at the end of `cands` have been primed
         self.prime_skip = max(self.prime_skip - 1, 0)
@@ -1386,8 +1411,17 @@ class Search[S]:
                 break
             mark = time.perf_counter()
             polled = mark
+            tips = fake.tolist()
+            self.ahead.making = 0.0
+            pool = self._round = Round(self, tips, self.ahead) if not self.counted and self.ahead.pays(len(tips)) else None
+            if pool is None:
+                self.ahead.processes = 1
+            walked = 0
             try:
-                for i in fake.tolist():
+                for i in tips:
+                    if pool is not None:
+                        self._memo_at = pool.at(walked, i)
+                    walked += 1
                     if not self.expanded[i]:
                         self.expand(i)
                     self.realize(i, force=True)
@@ -1408,6 +1442,11 @@ class Search[S]:
             except _Cut as cut:  # the count's net, met inside the making of a kernel (#1105): the round ends as at the net, its plan in hand
                 stopped = cut.reason
                 self.p.release()
+            finally:
+                self._memo_at = self._round = None
+                if pool is not None:
+                    pool.close(walked)
+                self.ahead.end_round(walked)
             self.stats.expand_seconds += time.perf_counter() - mark
             if stopped is not None:
                 break
