@@ -960,23 +960,33 @@ def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_wh
     # with a plan in hand (`Net.held`) it goes on past 5 s while the pace its model grows at ends within the net (its first model solved at
     # 1 s, half of the 8 offers to add joined by 3 s: 1 + 2 * 8 / 4 = 5 s), and only the net itself stops it. One whose model has not grown
     # yet has nothing to show it will end there: it stops at 5 s too, and the search has the rest. The clock is a figure set here.
+    # #1325: a build that runs past the 5 s its pace foretold, its next model unsolved, has the overrun charged to that pace: 5 + (used - 5)
+    # * 8 / 4, past the net of 20 s from 12.5 s on. One whose next model is solved on its way (all 12 offers at 9 s: 1 + 8 * 8 / 8 = 9 s,
+    # and at most 9 + (used - 9) * 8 / 8 = used after it) reaches the net itself.
     from crafting_system.abstraction._pattern import Growth
 
     now = [0.0]
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
-    fresh, held, blind = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True))
-    held.grows = blind.grows = True  # both grow their model from part of their offers (`_pattern_bound`)
+    fresh, held, blind, late = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True, True))
+    held.grows = blind.grows = late.grows = True  # all grow their model from part of their offers (`_pattern_bound`)
     now[0] = 1.0
-    held.grown(Growth(5, 12, 4, 4), held.used())
-    blind.grown(Growth(5, 12, 4, 4), blind.used())
+    for build in (held, blind, late):
+        build.grown(Growth(5, 12, 4, 4), build.used())
     now[0] = 3.0
     held.grown(Growth(10, 12, 4, 8), held.used())
-    assert held.need == pytest.approx(5.0)
+    late.grown(Growth(10, 12, 4, 8), late.used())
+    assert held.need == pytest.approx(5.0) == late.need
     now[0] = 4.9
     assert fresh() is None and held() is None and blind() is None
     now[0] = 5.0
     assert fresh().startswith("stopped after 5 of the 20 seconds") and held() is None
     assert blind().startswith("stopped after 5 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown")
+    now[0] = 9.0
+    held.grown(Growth(12, 12, 4, 12), held.used())
+    now[0] = 12.4
+    assert late() is None and late.need == pytest.approx(5.0 + 7.4 * 2)
+    now[0] = 12.6
+    assert late().startswith("stopped after 13 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its next model was not solved")
     now[0] = 19.9
     assert held() is None
     now[0] = 20.0
@@ -1367,11 +1377,11 @@ def test_through_the_entry_a_round_whose_build_its_share_ends_nearly_done_finish
         assert second.status == "closed" and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
         assert _fills(plan.solution.policy[plan.start].label)
         plan, (first, second, *_) = planned(28)
-        assert builds[1] == (48, 32, "growth", True) and second.status == "stopped"
-        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        assert builds[1] == (49, 32, "growth", True) and second.status == "stopped"  # (#1325: 48 before; an offer built at the keys that need it)
+        assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # (#1325: its search on the bound it stopped finds the cheaper plan)
     else:
-        assert builds[1] == (36, 36, "growth", False)
-        assert second.status == "stopped" and plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        assert builds[1] == (37, 36, "growth", False)  # (#1325: 36 before)
+        assert second.status == "stopped" and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # (#1325: as above)
 
 
 def test_a_later_round_that_makes_the_first_plan_and_gives_way_joins_the_base_of_the_rounds_after_it():
@@ -1479,7 +1489,7 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     # 1): a share of 27 s and room for one more (`Room.late` 1: 54 s); its first model (10 of 84 offers) is solved at 2.5 s, its second (18)
     # at 4.3 s: at that pace it needs 2.5 + 1.8 * 74 / 8 = 19.15 s; its third (30) at 11.6 s: 2.5 + 9.1 * 74 / 20 = 36.17 s; it ends at
     # 38.3 s. The figure holds between two solved models: its fourth model takes 8.5 s, and the pace is not read off a model being built.
-    from crafting_system.abstraction._pattern import PACE, QUARTER, SHARE, Growth, Pace, Room
+    from crafting_system.abstraction._pattern import OUTRUN, PACE, QUARTER, SHARE, Growth, Pace, Room, Tally
 
     def exalted() -> Pace:
         pace = Pace()
@@ -1497,6 +1507,14 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     assert pace.need == pytest.approx(2.5 + 9.1 * 74 / 20)
     assert pace.verdict(19.0, 27.0, walked) is None  # inside its fourth model: the pace of the third holds
     assert pace.verdict(27.0, 27.0, walked) is None and pace.verdict(38.3, 27.0, walked) is None  # past the share, within 54 s at its pace
+    # #1325: past the 36.17 s foretold, no model solved, the overrun is charged to the pace, with no jump: 36.17 at 36.17 s, and at its end
+    # (38.3 s) 36.17 + 2.13 * 74 / 20 = 44.05 s, within its room; it would stop past 36.17 + 17.83 * 20 / 74 = 40.99 s
+    late = exalted()
+    late.grown(Growth(40, 84, 10, 30), 11.6)
+    assert late.verdict(36.17, 27.0, walked) is None and late.need == pytest.approx(2.5 + 9.1 * 74 / 20) and not late.outrun
+    assert late.verdict(36.2, 27.0, walked) is None and late.need == pytest.approx(36.17 + 0.03 * 3.7, abs=1e-3) and late.outrun
+    assert late.verdict(38.3, 27.0, walked) is None and late.need == pytest.approx(2.5 + 9.1 * 3.7 + (38.3 - 2.5 - 9.1 * 3.7) * 3.7)
+    assert late.verdict(40.9, 27.0, walked) is None and late.verdict(41.1, 27.0, walked) == SHARE  # past its share: the share's reason
     assert pace.verdict(54.0, 27.0, walked) == SHARE  # never past its room
     assert pace.verdict(27.0, 27.0, Room(late=0.0)) == SHARE  # the last round: no room past its share
     # R13's round 2 (#1142, heavy run 44097630217): its first model held 49 of 51 offers and the model adding the other 2 never ended; R17's
@@ -1524,6 +1542,39 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     assert slow.verdict(4.9, 20.0, held) is None and slow.verdict(8.0, 20.0, held) == PACE and slow.verdict(8.0, 20.0, walked) == PACE
     # with no plan in hand the net is the quarter itself: the build stops at it, whatever its pace
     assert exalted().verdict(6.8, 6.8, None) == SHARE and exalted().verdict(6.7, 6.8, None) is None
+    # #1325, R13's site plan (server runs n1325-R13 to n1325d-R13): with per-key joining a model's work is no longer in proportion to its
+    # offers. A round's share of 20 s, room 40 s: its first model (54 of 78 offers) solved at 0.3 s, its second (4 offers at the 29 keys
+    # that need them) at 0.4 s, so its pace foretells 0.3 + 0.1 * 24 / 4 = 0.9 s; its third model (5 offers more) begins the build again at
+    # 8,943 keys and is not solved in 40 s. Read alone, that figure let it run to 40 s, nearly done, and its search had 0 s. Past 0.9 s it
+    # has outrun it, and the overrun is charged to the pace of the 4 offers it was read from: 0.9 + (used - 0.9) * 24 / 4, past the room
+    # of 40 s from 7.42 s on: it stops there, and its search has the rest of the share
+    r13 = Pace()
+    r13.grows = True
+    r13.grown(Growth(58, 78, 54, 54), 0.3)
+    r13.grown(Growth(63, 78, 54, 58), 0.4)
+    assert r13.need == pytest.approx(0.9)
+    assert r13.verdict(7.4, 20.0, held) is None and r13.need == pytest.approx(0.9 + 6.5 * 6)
+    assert r13.verdict(7.5, 20.0, held) == OUTRUN == r13.verdict(7.5, 20.0, walked) and r13.need == pytest.approx(0.9 + 6.6 * 6)
+    # counted in pieces the same rule holds, and the stop names the forecast it ran past and the need it reads now
+    tally = Tally(20_000, lambda done, cap: "pieces", room=held)
+    tally.grows = True
+    tally.grown(Growth(58, 78, 54, 54), 300.0)
+    tally.grown(Growth(63, 78, 54, 58), 400.0)
+    tally.done = 7_400
+    assert tally() is None
+    tally.done = 7_500
+    assert tally() == (
+        "it had done 7,500 of its 20,000 pieces of work, past the 900 its model's pace of growth foretold, its next model unsolved, and with "
+        "what it ran over charged to that pace it would need about 40,500, more than it may take: the rest is left for the search"
+    )
+    # a build that keeps to its pace goes on: its third model solved before the 13 s foretold, the figure moves on
+    steady = Pace()
+    steady.grows = True
+    steady.grown(Growth(58, 78, 54, 54), 1.0)
+    steady.grown(Growth(63, 78, 54, 58), 3.0)
+    assert steady.need == pytest.approx(13.0) and steady.verdict(12.9, 20.0, held) is None and steady.need == pytest.approx(13.0)
+    steady.grown(Growth(70, 78, 54, 63), 12.0)
+    assert steady.need == pytest.approx(1.0 + 11.0 * 24 / 9) and not steady.outrun
 
 
 @pytest.mark.parametrize("pace", [True, False])
@@ -1572,7 +1623,7 @@ def test_through_the_entry_after_a_walked_plan_a_round_whose_build_grows_at_a_pa
     assert (first.status, first.states, first.upper) == ("closed", 12, pytest.approx(16 * E / 3 + 2 * S, rel=1e-9))
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
     if pace:
-        assert builds[1] == (51, 4 * 14, "complete", 5)
+        assert builds[1] == (51, 4 * 14, "complete", 18)  # (#1325: 5 models before; an offer is built at the keys that need it, and found needed at more keys in later models)
         assert second.status == "closed"
     else:
         assert builds[1] == (14, 4 * 14, "growth", 1)
@@ -1590,7 +1641,7 @@ def _one_offer_per_model(monkeypatch):
 
     def one_at_a_time(*args, **kwargs):
         more, limits = real_binding(*args, **kwargs)
-        return more[-1:], limits
+        return dict(list(more.items())[-1:]), limits  # (the offer with the largest floor, with the keys that need it, #1325)
 
     monkeypatch.setattr(_pattern_bound, "_binding", one_at_a_time)
     monkeypatch.setattr(_offer_floor.OfferFloors, "initial", lambda self: real_initial(self)[:1])

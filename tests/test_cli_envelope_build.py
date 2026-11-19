@@ -212,6 +212,27 @@ def test_the_model_on_part_of_the_offers_grows_until_it_equals_the_whole_at_the_
     assert_lower_bound(bound, ab, exact)
 
 
+def test_the_offers_that_join_are_built_only_at_the_keys_that_need_them_and_the_bound_stays_lower(world, floors_on):
+    """#1325: the five crafts are needed at 6 of the 10 keys of the first model (the keys where the floor action is the cheapest and the policy
+    goes, or of the start's shape); they are built there only, not at the 4 others nor at the keys found after, where the floor action keeps
+    their floors, until a later round finds them needed there too (in this small world, by the end, everywhere). The model is a lower bound at every state all the same, and the start's value is the model of every offer's: at the end the
+    floor action is the cheapest at no key that counts, so the policy is one of the whole model (`_binding`)."""
+    ab, start, offers, _, exact, whole = world
+    fresh = abstraction()
+    said = []
+    bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
+    assert bound.complete and len(bound.narrow) == 5
+    assert any("5 offers more join the model, at 6 keys that need them (30 offers at a key)" in line for line in said)
+    expanded = [k for k, built in enumerate(bound.model.expanded) if built and not bound.model.goal[k]]
+    for position, keys in bound.narrow.items():
+        j = bound.positions.index(position)
+        for k in expanded:  # a key that does not hold the offer has no row of it; one that holds it was given it
+            assert any(index == j for index, _ in bound.model.actions[k]) <= (k in keys)
+            assert bound.holds(k, position) == (k in keys)
+    assert bound.start_value == pytest.approx(whole.start_value, rel=1e-8)
+    assert_lower_bound(bound, ab, exact)
+
+
 def test_the_search_on_the_floors_looks_at_no_more_states_than_on_the_model_of_every_offer(world, floors_on):
     """#988: the search on a bound whose model holds part of the offers expands the states the search on the model of every offer expands, and no
     more: the offers left out are where their floors rule them out. Before the fix the model stayed on its first two offers, its value at the start
@@ -918,3 +939,74 @@ def test_a_bound_whose_build_went_past_the_round_s_share_leaves_its_search_the_r
     with pytest.raises(NoPolicy, match="the time limit of 0 seconds"):
         envelope_result(ab, start, offers, net=Net(seconds=10.0, held=True, late=1.0), bound=bound)
     assert nets[-1].first is None
+
+
+def test_a_key_that_keeps_needing_offers_is_given_as_many_more_as_it_holds_the_least_floors_first():
+    """#1325, `_doubled`, on hand-worked numbers. Key 1 holds offers 0, 1 and 2 and needs offer 3 this round: it is given 3 - 1 = 2 more, the
+    two least floors it neither holds nor is given (offers 4 and 5, 1.1 and 1.2; offer 6 has no finite floor in its class), so it holds
+    6 next round, twice its 3. Key 2 holds nothing and needs nothing: it is given nothing. Which offers a key holds changes only how many
+    rounds the growth takes: the floor action of a key carries the least floor of every offer it does not hold (`_floor_of`)."""
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from crafting_system.planner._pattern_bound import _doubled
+
+    price = {3: 1.0, 4: 1.1, 5: 1.2, 6: float("inf"), 7: 1.5}
+    floors = SimpleNamespace(lower=lambda position, klass: price[position])
+    holders = {0: {1}, 1: {1}, 2: {1}}
+    needs = {3: [1]}
+    found = [(1.0, 3)]
+    added = _doubled(needs, holders, {9: np.array([1, 2])}, [3, 4, 5, 6, 7], floors, found)
+    assert added == 2
+    assert needs == {3: [1], 4: [1], 5: [1]}
+    assert sorted(found) == [(1.0, 3), (1.1, 4), (1.2, 5)]
+    assert _doubled({3: [1]}, {}, {9: np.array([1, 2])}, [3, 4], floors, []) == 0  # nothing held at some keys only: nothing to double
+
+
+def test_a_class_of_another_shape_found_binding_builds_its_offers_at_as_many_more_binding_keys_as_already_hold_them():
+    """#1325, `_spread`, on hand-worked numbers. The policy reaches binding key 1 of a class of another shape (OTHER); keys 2 to 5 of that class
+    are binding too, the policy does not reach them, and keys 1 and 2 already hold offers built at some keys only: 2 more keys are added, the
+    two most binding (least ratio of the floor action to the model's best: key 5, 0.1, then key 3, 0.3). Key 6, of the start's shape (INSIDE),
+    is not one of them (those keys count whether reached or not). With no offer held at some keys only, nothing is added: the first round
+    builds at the reached keys alone, and the keys double from there."""
+    from collections import defaultdict
+    from types import SimpleNamespace
+
+    from crafting_system.planner._offer_floor import INSIDE, OTHER
+    from crafting_system.planner._pattern_bound import _spread
+
+    klass = {1: OTHER, 2: OTHER, 3: OTHER, 4: OTHER, 5: OTHER, 6: INSIDE}
+    model = SimpleNamespace(
+        keys=[SimpleNamespace(flags=k, fractured=False, status=None, held=defaultdict(lambda: None)) for k in range(7)], expanded=[True] * 7
+    )
+    floors = SimpleNamespace(klass=lambda flags, *_: klass.get(flags, OTHER))
+    ratio = {2: 0.5, 3: 0.3, 4: 0.9, 5: 0.1, 6: 0.05}.get
+    by_class = {OTHER: [1]}
+    _spread(by_class, [2, 3, 4, 5, 6], ratio, model, floors, {10: {1}, 11: {1, 2}})
+    assert by_class == {OTHER: [1, 5, 3]}
+    alone = {OTHER: [1]}
+    _spread(alone, [2, 3, 4, 5, 6], ratio, model, floors, {})
+    assert alone == {OTHER: [1]}
+
+
+def test_the_floor_action_of_a_key_is_the_least_floor_of_the_offers_it_does_not_hold():
+    """#1325, `_floor_of`, on hand-worked numbers. Offers 0 to 3, floors 5, 1, 2 and 3; offer 0 is outside the model, offers 1 and 2 are held at
+    some keys only (1 at key 7, 2 at keys 7 and 8), offer 3 is held everywhere (not in `outside`, not in `holders`). Key 7 holds 1 and 2: its
+    floor action is offer 0's 5. Key 8 holds 2 only: offer 1's 1. Key 9 holds neither: offer 1's 1. A tip (not expanded) carries the least floor
+    of every offer, 1; a key with no floor below infinity has no floor action."""
+    from collections import defaultdict
+    from types import SimpleNamespace
+
+    from crafting_system.planner._pattern_bound import _floor_of
+
+    floor_of = {0: 5.0, 1: 1.0, 2: 2.0, 3: 3.0}
+    floors = SimpleNamespace(
+        classes=(0,), klass=lambda *_: 0, lower=lambda position, klass: floor_of[position],
+        floor=lambda names, klass: min((floor_of[p] for p in names), default=float("inf")),
+    )  # fmt: skip
+    key = SimpleNamespace(flags=0, fractured=False, status=None, held=defaultdict(lambda: None))
+    floor = _floor_of(floors, [0], [None] * 4, {1: {7}, 2: {7, 8}})
+    assert [floor(k, key, True) for k in (7, 8, 9)] == [5.0, 1.0, 1.0]
+    assert floor(7, key, False) == 1.0
+    assert _floor_of(floors, [], [None] * 4, {1: {7}})(7, key, True) is None  # nothing outside, and it holds the one held at some keys only

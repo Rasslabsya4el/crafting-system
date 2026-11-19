@@ -8,6 +8,7 @@ never tried. Now such a round keeps its build's quarter, and a search on a bound
 (the time left over the rounds left, from the search's own start) with no plan in hand (`_envelope.Net.yield_at`, `_envelope.YIELDED`). A round that gave way runs again, with all the time left, when no round after it made
 a plan, and under its share once a round after it made the first plan (`_rounds.widen`). Every figure here is counted in states or read off a clock set by the test (never the machine's)."""
 
+import weakref
 from types import SimpleNamespace
 
 import pytest
@@ -197,3 +198,28 @@ def test_on_the_clock_the_order_pass_takes_one_round_s_share_and_the_groups_it_d
     widened = _first_plan_then(floor, left=lambda: 600.0, clock_now=lambda: now[0])
     assert asked == [("b", 150.0), ("c", 90.0), ("d", 30.0)]
     assert [record.kinds for record in widened.records][:5] == [("a",), ("c",), ("d",), ("b",), ("e",)]
+
+
+def test_a_round_s_error_kept_until_the_run_ends_does_not_keep_that_round_s_search_alive():
+    # #1325: the first round's error is kept until the run ends; its traceback held the frames it was raised from, and with them the round's
+    # whole search (R11: 4,084 MB at the next round's start). Here the search of the only round raises from a frame that holds its store, with
+    # a cause raised one frame deeper: once `widen` returns, the error is still there and the store is freed.
+    class Store:
+        pass
+
+    alive = []
+
+    def deeper(store):
+        raise RuntimeError("deep in the search")
+
+    def search(chosen, call):
+        store = Store()
+        alive.append(weakref.ref(store))
+        try:
+            deeper(store)
+        except RuntimeError as cause:
+            raise _gave_way(3) from cause
+
+    widened = _widen(GROUPS[:1], search)
+    assert str(widened.error) == "deep in the search"  # (a stop keeps its cause: what the caller raises, with its words)
+    assert alive and all(ref() is None for ref in alive)

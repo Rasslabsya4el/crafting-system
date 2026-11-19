@@ -371,18 +371,18 @@ def widen(
             )
         except BudgetExceeded as stop:
             status, reason = STOPPED, stop.binding.words()
-            error = error or stop
+            error = error or _bare(stop)
         except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next round widens them
             status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
-            proof = proof or none.__cause__ or none  # what the run says when every round showed no plan (the last held every offer)
+            proof = proof or _bare(none.__cause__ or none)  # what the run says when every round showed no plan (the last held every offer)
         except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
             status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
-            error = error or stop.__cause__ or stop
+            error = error or _bare(stop.__cause__ or stop)
             if blind is not None and stop.reason.startswith(YIELDED):
                 gave_way.append((-1, group))  # (its record's place is set below)
         except ValueError as refusal:  # a `PlanError`: the round's offers reach no plan, or the search refused them
             status, reason, touched = REFUSED, str(refusal), states_of(refusal)
-            error = error or refusal
+            error = error or _bare(refusal)
         if plan is not None:
             status, reason = ended(plan)
             if give_way is not None and status == STOPPED and reason.startswith(give_way.said):  # (a counted run may add its build's stop after it)
@@ -518,6 +518,23 @@ def _all_ended(records: Sequence[RoundRecord]) -> bool:
     """Every round so far closed (exactly, within the gap, beaten, or with no plan): only then is the last round that holds the set-aside
     groups again due."""
     return all(record.status in (CLOSED, WITHIN, BEATEN, NONE) for record in records)
+
+
+def _bare(error: BaseException) -> BaseException:
+    """`error` and every error of its chain without their tracebacks (#1325). A round's error is kept until the run ends (the first one is what
+    the caller raises), and its traceback holds the frames the search raised it from, with their locals: the round's whole search and kernel
+    stores (R11: the 11th round began with 4,084 MB held, the previous round's search of 64,672 states held by its `_kernel` frames). What the
+    caller reads of it is its type, its words and the counts it carries (`states_of`), not its frames."""
+    seen: set[int] = set()
+    stack: list[BaseException | None] = [error]
+    while stack:
+        each = stack.pop()
+        if each is None or id(each) in seen:
+            continue
+        seen.add(id(each))
+        each.__traceback__ = None
+        stack.extend((each.__cause__, each.__context__))
+    return error
 
 
 def states_of(error: BaseException) -> int | None:

@@ -262,8 +262,9 @@ universe may miss that slot, and the members that hold it are not made (issue #5
 """
 
 import time
+from bisect import bisect_left
 from collections import Counter, defaultdict
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import nullcontext
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
@@ -523,6 +524,7 @@ class PatternModel:
     index: dict[PatternKey, int]
     expanded: list[bool] = field(default_factory=list)  # key -> whether its actions were built; a key the build did not reach is a tip (no actions, not a dead end)
     stopped: str | None = None  # why the build ended before every key was expanded (a net), None for a complete model
+    narrow: dict[int, frozenset[int]] = field(default_factory=dict)  # an offer built at some keys only (#1325): offer index -> those keys; at any other key it is not built
 
 
 def pattern_refusal(abstraction: Abstraction) -> str | None:
@@ -1344,20 +1346,49 @@ class Pace:
     has a pace: the offers it added (`solved - start`) for what it used since. Kept to the offers still out, the build is expected to need
     `need = grew_from + (used - grew_from) * (total - start) / (solved - start)` in all. The figure is set at a solved model and held until the next,
     so a long model being built does not move it (R11's Exalted round: its third and fourth models, 12 Screaming essences, take 7 and 8 s of
-    its 38 s)."""
+    its 38 s) while it stays within that figure.
+
+    **A build that outruns its pace (#1325).** The figure is a forecast from the models solved so far. A build that has used more than
+    it, its next model still unsolved, has shown that the forecast was too low, by the time it has run over (`used - forecast`). That
+    time is charged to the work the forecast was read from: the pace becomes what the solved models' offers took plus the overrun, and
+    kept to the offers still out it gives `forecast + (used - forecast) * (total - start) / (solved - start)` (`reckon`). The figure has
+    no jump: at the forecast it is the forecast, and it grows from there by as many seconds a second as the offers still out are to those
+    the pace was read from. The build stops once it passes the room (`OUTRUN`), as any build whose pace ends past its room does.
+
+    Since per-key joining (#1325) a model's work is no longer in proportion to its offers: an offer built at the 29 keys that need it
+    costs a fraction of a second, and the next model, whose offers grow the universe and begin the build again at 8,943 keys, costs the
+    round's whole share. On R13's site plan the second model (4 offers at 29 keys) was solved at once and its pace foretold 0.9 s; read
+    alone, that figure let the third run to twice the share, nearly done: 26 builds ran past their share, 13 searches had 0 s, and the
+    plan cost 390,773 c against main's 89,548 to 95,719 c. With the overrun charged (24 offers out for 4 solved: 6 s a second) it stops
+    at about 7.4 s of a room of 40 s. A build that overruns a little goes on: R11's Exalted round, foretold 36.17 s from its third model
+    and ending at 38.3 s, reads at most 36.17 + 2.13 * 74 / 20 = 44 s there, within its room of 54 s."""
 
     def __init__(self) -> None:
         self.growth: Growth | None = None
         self.grew_from: float | None = None  # the net's count when the first model was solved
         self.need: float | None = None  # the build's expected need at its pace of growth, None until growth has added offers
         self.grows = False  # the build grows its model from part of its offers (its offers' floors are worked out, `_pattern_bound`)
+        self.forecast: float | None = None  # the need its pace foretold at its last solved model (`grown`)
+        self.outrun = False  # it has used more than its pace foretold, its next model unsolved (`reckon`, #1325)
 
     def grown(self, growth: Growth, used: float) -> None:
         self.growth = growth
         if self.grew_from is None:
             self.grew_from = used
         if growth.solved > growth.start:
-            self.need = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
+            self.need = self.forecast = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
+            self.outrun = False
+
+    def reckon(self, used: float) -> float | None:
+        """The need `verdict` reads when the build has used `used` (see the class text): the forecast of its pace while the build keeps to
+        it; once it has used more, its next model unsolved, `forecast + (used - forecast) * (total - start) / (solved - start)`, the overrun
+        charged to the work the pace was read from (it raises `need`, so what a stop says names it). None with no pace."""
+        growth, forecast = self.growth, self.forecast
+        if forecast is None or growth is None or growth.solved <= growth.start or used <= forecast:
+            return self.need
+        self.outrun = True
+        self.need = max(forecast, forecast + (used - forecast) * (growth.total - growth.start) / (growth.solved - growth.start))
+        return self.need
 
     def verdict(self, used: float, given: float, room: "Room | None") -> str | None:
         """Why a build that has used `used` of its net `given` stops now (`SHARE`, `QUARTER` or `PACE`), or None to go on.
@@ -1365,29 +1396,32 @@ class Pace:
         With no plan in hand (`room` None) the build stops at its net, and the net is the quarter `SEARCH_PER_BUILD` leaves it (the caller
         sizes it). With a plan in hand (#1099, #1224) its net is the round's whole share and its room `1 + room.late` times it:
         * before `room.quarter` of the net it goes on;
-        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`), and stops as soon as it does
+        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`, or once the build has
+          outrun it that forecast with the overrun charged to its pace, `reckon`, #1325), and stops as soon as it does
           not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
           no pace yet that grows its model (`grows`: its first model not solved, or its growth has added no offer) has nothing that shows
           it will end there: it stops, whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its
           second never ended; R17's site plan: rounds whose first model of 10 to 69 offers was not solved after their whole share, and
           whose searches had 0 s). One that does not grow (one model on every offer, or still working out its offers' floors, or a
           floors pass alone, `_rounds.by_floor`) keeps the whole share, as since #1099;
-        * past its net it goes on while nearly done: only at a pace that ends within its room."""
+        * past its net it goes on while nearly done: only at a pace that ends within its room (`reckon`)."""
         if room is None:
             return SHARE if used >= given else None
         whole = (1.0 + room.late) * given
         if used >= given:
             if room.late <= 0 or used >= whole:
                 return SHARE
-            return None if self.need is not None and self.need <= whole else SHARE
+            need = self.reckon(used)
+            return None if need is not None and need <= whole else SHARE
         if used < room.quarter * given:
             return None
-        if self.need is not None:
-            return None if self.need <= whole else PACE
+        need = self.reckon(used)
+        if need is not None:
+            return None if need <= whole else (OUTRUN if self.outrun else PACE)
         return QUARTER if self.grows else None
 
 
-SHARE, QUARTER, PACE = "share", "quarter", "pace"  # why a build's net stops it (`Pace.verdict`)
+SHARE, QUARTER, PACE, OUTRUN = "share", "quarter", "pace", "outrun"  # why a build's net stops it (`Pace.verdict`)
 
 
 @dataclass(frozen=True)
@@ -1425,6 +1459,8 @@ class Tally(Pace):
                 said = self.words(self.done, self.cap)
             elif stop == PACE:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, and at the pace its model grew it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
+            elif stop == OUTRUN:
+                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, past the {self.forecast:,.0f} its model's pace of growth foretold, its next model unsolved, and with what it ran over charged to that pace it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
             else:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work and its model had not grown past its first, so nothing showed that it would end within what it may take: the rest is left for the search"
             return said + (", the build having gone on past it, nearly done" if self.late else "")
@@ -1499,7 +1535,11 @@ class PatternBuilder:
         self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
         self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
-        self.done = 0  # the number of offers every expanded key holds
+        self.done = 0  # the number of offers every expanded key has been given (each built there unless it is held at some keys only)
+        self.wide: list[int] = []  # the offers built at every key, in order
+        self.narrow: dict[int, set[int]] = {}  # an offer built only at some keys (#1325): offer number -> the numbers of those keys
+        self.at_key: dict[int, list[int]] = {}  # key number -> the offers held at it only (`narrow`)
+        self.pending: dict[int, list[int]] = {}  # an expanded key -> the offers of `narrow` it is to be given at the next pass
         self.members_kept: dict[int, dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]]] = {}
         self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
         self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
@@ -1519,16 +1559,25 @@ class PatternBuilder:
                 raise RuntimeError(f"more than {self.max_keys} keys")
         return found
 
-    def extend(self, offers: Sequence[PatternOffer]) -> PatternModel:
-        """Add `offers` to the model and build what they add; the snapshot of the model, with `stopped` set if a net ended the build."""
+    def extend(
+        self, offers: Sequence[PatternOffer], at: Sequence[Iterable[int] | None] | None = None, spread: dict[int, Iterable[int]] | None = None
+    ) -> PatternModel:
+        """Add `offers` to the model and build what they add; the snapshot of the model, with `stopped` set if a net ended the build.
+
+        `at` (one entry an offer, #1325): the numbers of the expanded keys an offer is built at, None for every key. An offer held at some keys only is
+        not built at any other key, nor at a key found later; the model's `narrow` says where it is, and the bound's floor action carries its floor
+        at every other key (`_pattern_bound`). `spread`: offers already held at some keys (offer number -> keys) that are to be built at these too."""
         if self.dead:
             raise RuntimeError("the build was stopped; use the model of the round before")
+        first = len(self.offers)
         self.offers.extend(offers)
         if self.done == 0 and not any(self.expanded):
             # nothing is expanded yet: the names of the offers seed the universe before the first pass, as `build_pattern_model` always did. Seeding them
             # as an addition would count as growth and begin the whole first pass again (R04: a second pass of 280 s where the model takes 96 s).
             self._reset()
+            self._place(first, at, spread)
         else:
+            self._place(first, at, spread)
             self.pattern.grew = 0
             self.pattern.grown = []
             self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
@@ -1548,6 +1597,36 @@ class PatternBuilder:
             self.restarts += 1
             self._begin_again()
 
+    def _place(self, first: int, at, spread) -> None:
+        """Record where the offers from number `first` on are built (`extend`), and give each expanded key the ones it is to be given."""
+        for n, oi in enumerate(range(first, len(self.offers))):
+            keys = None if at is None else at[n]
+            if keys is None:
+                self.wide.append(oi)
+            else:
+                self.narrow[oi] = set()
+                self._hold(oi, keys)
+        for oi, keys in (spread or {}).items():
+            self._hold(oi, keys)
+
+    def _hold(self, oi: int, keys: Iterable[int]) -> None:
+        holders = self.narrow[oi]
+        for k in keys:
+            if k in holders:
+                continue
+            holders.add(k)
+            self.at_key.setdefault(k, []).append(oi)
+            if self.expanded[k]:
+                self.pending.setdefault(k, []).append(oi)
+
+    def _given(self, i: int) -> list[int]:
+        """The offers key number `i` is to be given at this pass: all it holds when it is not expanded, else the ones added since."""
+        if not self.expanded[i]:
+            return sorted([*self.wide, *self.at_key.get(i, ())]) if self.narrow else self.wide
+        new = self.wide[bisect_left(self.wide, self.done) :]
+        pending = self.pending.get(i)
+        return sorted([*new, *pending]) if pending else new
+
     def _begin_again(self) -> None:
         """The universe grew (`Pattern.grown`): every expanded key a grown slot may be in is made again (members, row, gaps); keys and kernels stay."""
         grown, pattern = self.pattern.grown, self.pattern
@@ -1560,6 +1639,7 @@ class PatternBuilder:
             self.rows[i] = []
             self.expanded[i] = False
             self.members_kept.pop(i, None)
+            self.pending.pop(i, None)  # made again from the start: it is given all it holds
         keys = {self.keys[i] for i in again}
         self.gaps = {found: value for found, value in self.gaps.items() if found[0] not in keys}
         self.stats.restarted_keys += len(again)
@@ -1577,7 +1657,8 @@ class PatternBuilder:
         stats.seconds = time.perf_counter() - self.began
         stats.modes = Counter(self.stats.modes)
         return PatternModel(
-            list(self.keys), list(self.goal), [list(row) for row in self.rows], list(self.kernels), stats, dict(self.index), list(self.expanded), stopped
+            list(self.keys), list(self.goal), [list(row) for row in self.rows], list(self.kernels), stats, dict(self.index), list(self.expanded), stopped,
+            {oi: frozenset(keys) for oi, keys in self.narrow.items()},
         )
 
     def _pass(self) -> str | None:
@@ -1630,19 +1711,20 @@ class PatternBuilder:
                 i += 1
                 continue
             if not self.goal[i]:
-                first = self.done if self.expanded[i] else 0
-                if first < len(offers):
+                given = self._given(i)
+                if given:
                     firsts = None
                     if not self.expanded[i]:  # a key expanded before had a member: the universe only grows
                         firsts = (pattern.members(self.keys[i], Mode.ANY), pattern.grew)
                         if not firsts[0]:
                             raise _no_member(self.keys[i])
                     try:
-                        self._offers_of_key(i, first, tick, firsts)
+                        self._offers_of_key(i, given, tick, firsts)
                     except _Stopped as reached:
                         self._release()
                         return reached.reason
                     self._release()
+            self.pending.pop(i, None)
             self.expanded[i] = True
             i += 1
             now = time.perf_counter()
@@ -1658,8 +1740,8 @@ class PatternBuilder:
         if self.pattern._twin is not None:
             self.pattern._twin.release_prepared(keep_erased=True)
 
-    def _prime(self, key: PatternKey, lo: int, hi: int, members_for: Callable[[tuple[Mode, frozenset[str], tuple | None]], list[CompressedState]], ask: Callable[[], None] | None = None) -> None:
-        """Make, side by side in a process pool, the exact distributions that the offers `lo` to `hi` need at the members of `key` (ticket #250, #626).
+    def _prime(self, key: PatternKey, chunk: Sequence[int], members_for: Callable[[tuple[Mode, frozenset[str], tuple | None]], list[CompressedState]], ask: Callable[[], None] | None = None) -> None:
+        """Make, side by side in a process pool, the exact distributions that the offers numbered `chunk` need at the members of `key` (ticket #250, #626).
 
         The kernel of a fossil set is a distribution of seconds, computed once per pool and cached; a model built on hundreds of offers asked for them
         one after the other. Nothing is built here and nothing changes in the answer; with one worker, or no `fork`, this does nothing. A chunk is
@@ -1667,7 +1749,7 @@ class PatternBuilder:
         `ask` (the build's tick) is called between two pairs the chunk prepares before the pool starts, and raises when the net is reached (#1179).
         """
         requests = []
-        for offer in self.offers[lo:hi]:
+        for offer in (self.offers[oi] for oi in chunk):
             if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
             if not self.pattern.draws(offer.action):
@@ -1689,8 +1771,8 @@ class PatternBuilder:
             )
         self.ab.prime(requests, ask=ask)
 
-    def _offers_of_key(self, i: int, first: int, tick, firsts: tuple[list[CompressedState], int] | None = None) -> None:
-        """Add to the row of key number `i` the abstract actions of the offers from number `first` on (one `(offer index, kernel id)` for each distinct pushed kernel).
+    def _offers_of_key(self, i: int, given: Sequence[int], tick, firsts: tuple[list[CompressedState], int] | None = None) -> None:
+        """Add to the row of key number `i` the abstract actions of the offers numbered `given` (one `(offer index, kernel id)` for each distinct pushed kernel).
 
         `firsts`: the members of the key for `Mode.ANY` that the pass made to check the key has one, with the pattern's growth count then. The
         offers of policy `ANY` take them while the universe has not grown since (#1256: each key made them twice, 7 s of R04's round 8); they are
@@ -1711,11 +1793,11 @@ class PatternBuilder:
                 stats.members += len(members)
             return members
         added: list[tuple[int, int]] = []
-        for oi in range(first, len(offers)):
+        for n, oi in enumerate(given):
             offer = offers[oi]
             tick(oi)
-            if (oi - first) % PRIME_CHUNK == 0 and len(offers) - first >= PRIME_FROM:
-                self._prime(key, oi, min(oi + PRIME_CHUNK, len(offers)), members_for, lambda: tick(oi, True))
+            if n % PRIME_CHUNK == 0 and len(given) >= PRIME_FROM:
+                self._prime(key, given[n : n + PRIME_CHUNK], members_for, lambda: tick(oi, True))
             if offer.action is None:
                 if i != self.start_id:
                     added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
@@ -2023,4 +2105,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]
+__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "OUTRUN", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]
