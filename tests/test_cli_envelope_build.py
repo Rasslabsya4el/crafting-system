@@ -988,3 +988,25 @@ def test_a_class_of_another_shape_found_binding_builds_its_offers_at_as_many_mor
     alone = {OTHER: [1]}
     _spread(alone, [2, 3, 4, 5, 6], ratio, model, floors, {})
     assert alone == {OTHER: [1]}
+
+
+def test_the_floor_action_of_a_key_is_the_least_floor_of_the_offers_it_does_not_hold():
+    """#1325, `_floor_of`, on hand-worked numbers. Offers 0 to 3, floors 5, 1, 2 and 3; offer 0 is outside the model, offers 1 and 2 are held at
+    some keys only (1 at key 7, 2 at keys 7 and 8), offer 3 is held everywhere (not in `outside`, not in `holders`). Key 7 holds 1 and 2: its
+    floor action is offer 0's 5. Key 8 holds 2 only: offer 1's 1. Key 9 holds neither: offer 1's 1. A tip (not expanded) carries the least floor
+    of every offer, 1; a key with no floor below infinity has no floor action."""
+    from collections import defaultdict
+    from types import SimpleNamespace
+
+    from crafting_system.planner._pattern_bound import _floor_of
+
+    floor_of = {0: 5.0, 1: 1.0, 2: 2.0, 3: 3.0}
+    floors = SimpleNamespace(
+        classes=(0,), klass=lambda *_: 0, lower=lambda position, klass: floor_of[position],
+        floor=lambda names, klass: min((floor_of[p] for p in names), default=float("inf")),
+    )  # fmt: skip
+    key = SimpleNamespace(flags=0, fractured=False, status=None, held=defaultdict(lambda: None))
+    floor = _floor_of(floors, [0], [None] * 4, {1: {7}, 2: {7, 8}})
+    assert [floor(k, key, True) for k in (7, 8, 9)] == [5.0, 1.0, 1.0]
+    assert floor(7, key, False) == 1.0
+    assert _floor_of(floors, [], [None] * 4, {1: {7}})(7, key, True) is None  # nothing outside, and it holds the one held at some keys only
