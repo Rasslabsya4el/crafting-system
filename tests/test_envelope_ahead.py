@@ -76,23 +76,35 @@ def test_a_pool_that_meets_the_memory_net_is_dropped_and_the_search_goes_on_alon
     assert pooled.ahead.stopped is not None and pooled.ahead.pooled == 1  # one pool, dropped at its first window: no other round forks
 
 
-def test_the_rule_forks_when_the_saving_passes_the_fork_and_the_loss_per_tip():
+def test_the_rule_forks_the_workers_that_save_the_most_or_none():
     ahead = _ahead.Ahead(4, 0.5)
-    assert not ahead.pays(1000)  # nothing measured yet: the first round's pace is unknown
-    ahead.per_tip = 0.001  # 1 ms of kernels per tip: 100 tips save 75 ms on 4 workers
-    assert ahead.pays(100) == (0.075 > _ahead.FORK_PRIOR)
-    ahead.fork = 0.2
-    assert not ahead.pays(100) and ahead.pays(300)  # 225 ms > 200 ms
-    ahead.lost, ahead.lost_tips = 1.0, 2000  # half a millisecond lost per tip: 300 tips cost 200 + 150 ms, save 225
-    assert not ahead.pays(300) and ahead.pays(2000)  # 1,500 ms > 200 + 1,000
-    assert not _ahead.Ahead(1, 0.5, always=True).pays(1000)  # one worker: never
-    assert not _ahead.Ahead(4, 0.5, always=True).pays(1)
+    assert ahead.workers_for(1000) == 0  # nothing measured yet: the first round's pace is unknown
+    ahead.per_tip, ahead.fork = 0.001, 0.02  # 1 ms of kernels per tip, 20 ms to fork a worker
+    # 100 tips: two workers save 50 - 40 ms, three 66.7 - 60, four 75 - 80: two
+    assert ahead.workers_for(100) == 2
+    assert ahead.workers_for(60) == 0  # two save 30 ms for a 40 ms fork
+    assert ahead.workers_for(10_000) == 4  # 7,500 - 80 ms
+    ahead.lost, ahead.lost_tips = 1.0, 2000  # half a millisecond lost per tip: 10,000 tips lose 5 s more, and four still save 2.42 s
+    assert ahead.workers_for(10_000) == 4 and ahead.workers_for(200) == 0  # 200 tips lose 100 ms, more than any count saves past its fork
+    assert _ahead.Ahead(1, 0.5, always=True).workers_for(1000) == 0  # one worker: never
+    assert _ahead.Ahead(4, 0.5, always=True).workers_for(1) == 0
+    assert _ahead.Ahead(4, 0.5, always=True).workers_for(2) == 4
 
 
 def test_a_window_holds_a_few_polls_of_work_per_worker_and_a_chunk_per_worker_at_least():
     ahead = _ahead.Ahead(4, 0.5)
-    assert ahead.window() == 4 * _ahead.CHUNKS
+    assert ahead.window(4) == 4 * _ahead.CHUNKS
     ahead.per_tip = 0.01
-    assert ahead.window() == int(_ahead.WINDOW * 0.5 * 4 / 0.01)
+    assert ahead.window(3) == int(_ahead.WINDOW * 0.5 * 3 / 0.01)
     ahead.per_tip = 10.0
-    assert ahead.window() == 4 * _ahead.CHUNKS
+    assert ahead.window(4) == 4 * _ahead.CHUNKS
+
+
+def test_workers_that_take_the_search_to_its_memory_net_are_stopped_and_the_search_goes_on_as_one_process(monkeypatch):
+    # the memory read is planted: past the net while a pool is open (its fork holds the objects frozen), under it once the workers are stopped
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 2e9 if parallel._frozen[0] else 1.0)
+    net = Net(memory_mb=1e9)
+    _, _, alone = _search(2, 0.0, net=net, workers=1)
+    pooled, _, ahead = _search(2, 0.0, net=net, workers=3, ahead_always=True)
+    _same(alone, ahead)
+    assert alone.stopped is None and pooled.ahead.stopped is not None and "the workers were stopped" in pooled.ahead.stopped

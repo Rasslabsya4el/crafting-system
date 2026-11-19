@@ -15,11 +15,12 @@ The tips are cut into windows and each window into chunks, `CHUNKS` per worker; 
 tips of the one before, and between two windows this process asks its nets as it does between two tips. A window holds about `WINDOW` polls of
 the round's work per worker (`POLL_SECONDS`), so the nets are asked about as often as with one process.
 
-When a pool pays (`Ahead.pays`). A pool is forked for a round only when the kernels it would make save more time than the pool costs, both
+When a pool pays (`Ahead.workers_for`). A pool is forked for a round only when the kernels it would make save more time than the pool costs, both
 measured in this run: the saving is the round's tips times the seconds of kernel making per tip of the last round (made here or in a worker),
-times `1 - 1/workers`; the cost is the seconds the last fork took (the first `submit`, where the workers are forked) plus, per tip, what the
-pooled rounds lost beyond their useful work spread over the workers (sending, waiting on the slowest chunk, kernels made and not asked for).
-Before this run forked one, a fork is taken to cost `FORK_PRIOR`. No number here is sized for a route (OR-12): the worker count and the memory
+times `1 - 1/workers`; the cost is the seconds of the fork of each worker, as the last pool's fork measured them (the first `submit`, where the
+workers are forked: it grows with the process's size and the workers' number), plus, per tip, what the pooled rounds lost beyond their useful
+work spread over the workers (sending, waiting on the slowest chunk, kernels made and not asked for). The round forks the number of workers, up to
+the machine's, that saves the most, or none when none saves anything; before this run forked one, a worker's fork is taken to cost `FORK_PRIOR`. No number here is sized for a route (OR-12): the worker count and the memory
 net are the machine's settings (OR-40). The rule decides only when work is done, never a result.
 
 Not used with one worker (`CRAFTING_WORKERS=1`), where there is no fork (Windows, OR-57), in a run counted in states (`Search.counted`: the count
@@ -35,9 +36,9 @@ from crafting_system import budget, parallel
 
 CHUNKS = 4  # the chunks of a window per worker: a slow chunk holds one worker for a part of the window (speed only, never a result)
 WINDOW = 4  # the polls of work per worker a window holds (`POLL_SECONDS`): the nets are asked between two windows
-# Seconds a pool costs before this run measured one: `_prime`'s measure on R04 (about 60 ms a pool, #1193). The first fork's own measure
-# replaces it; it only decides whether the first pool is tried.
-FORK_PRIOR = 0.06
+# Seconds the fork of one worker costs before this run measured one: `_prime`'s measure on R04 (about 60 ms a pool, #1193), taken for a pool of
+# four. The first fork's own measure replaces it; it only decides whether the first pool is tried.
+FORK_PRIOR = 0.015
 
 
 def _hold(search: object) -> object:
@@ -75,7 +76,7 @@ class Ahead:
         self.poll = poll
         self.always = always  # a pool at every round of two tips or more, whatever the measures (the tests: they never read the clock)
         self.stopped: str | None = None  # the memory net a pool met: no pool again in this search
-        self.fork: float | None = None  # seconds of the last fork (the first `submit` of a round's pool)
+        self.fork: float | None = None  # seconds of the fork of one worker, at the last pool (its first `submit`, over its workers)
         self.lost = 0.0  # seconds the pooled rounds waited beyond the useful work spread over the workers, the forks left out
         self.lost_tips = 0  # the tips of those rounds
         self.making = 0.0  # seconds of kernel making in this round so far: here, or in a worker for the kernels taken from it
@@ -83,23 +84,29 @@ class Ahead:
         self.pooled = 0  # rounds that forked a pool
         self.processes = 1  # processes at work in the last round (this one and its workers)
 
-    def pays(self, tips: int) -> bool:
+    def workers_for(self, tips: int) -> int:
+        """The workers a round of `tips` tips forks: the count that saves the most time by the measures (the module's note), or 0."""
         if tips < 2 or self.workers < 2 or self.stopped is not None:
-            return False
+            return 0
         if self.always:
-            return True
+            return self.workers
         if self.per_tip is None:
-            return False
-        saving = self.per_tip * tips * (1.0 - 1.0 / self.workers)
-        cost = (FORK_PRIOR if self.fork is None else self.fork) + (self.lost / self.lost_tips if self.lost_tips else 0.0) * tips
-        return saving > cost
+            return 0
+        fork = FORK_PRIOR if self.fork is None else self.fork
+        lost = (self.lost / self.lost_tips if self.lost_tips else 0.0) * tips
+        best, choice = 0.0, 0
+        for count in range(2, self.workers + 1):
+            gain = self.per_tip * tips * (1.0 - 1.0 / count) - fork * count - lost
+            if gain > best:
+                best, choice = gain, count
+        return choice
 
-    def window(self) -> int:
+    def window(self, workers: int) -> int:
         """Tips per window: about `WINDOW` polls of work per worker at the last round's pace, and at least a chunk per worker."""
-        least = self.workers * CHUNKS
+        least = workers * CHUNKS
         if self.per_tip is None or self.per_tip <= 0.0:
             return least
-        return max(least, int(WINDOW * self.poll * self.workers / self.per_tip))
+        return max(least, int(WINDOW * self.poll * workers / self.per_tip))
 
     def end_round(self, tips: int) -> None:
         if tips:
@@ -110,11 +117,11 @@ class Ahead:
 class Round:
     """The pool of one round: windows of its tips made ahead in the workers, handed to the search tip by tip (`at`)."""
 
-    def __init__(self, search: object, tips: Sequence[int], ahead: Ahead) -> None:
+    def __init__(self, search: object, tips: Sequence[int], ahead: Ahead, workers: int) -> None:
         self.ahead = ahead
         self.tips = list(tips)
-        self.size = ahead.window()
-        self.workers = min(ahead.workers, max(2, -(-len(self.tips) // CHUNKS)))
+        self.workers = workers
+        self.size = ahead.window(workers)
         self.pool: parallel.WorkerPool | None = parallel.WorkerPool(_hold, (search,), workers=self.workers)
         self.pending: list[tuple[int, list[Future]]] = []  # (first tip's place, futures of its chunks), oldest first
         self.next = 0  # the place of the first tip not yet sent
@@ -134,7 +141,7 @@ class Round:
         futures = [self.pool.submit(_make, window[start : start + step]) for start in range(0, len(window), step)]
         if not self.forked:  # the workers are forked at the first submit
             self.forked = True
-            self.ahead.fork = time.perf_counter() - mark
+            self.ahead.fork = (time.perf_counter() - mark) / self.workers
         self.pending.append((self.next, futures))
         self.next += len(window)
 
@@ -159,6 +166,17 @@ class Round:
                     self.memo.update(made)
                 self._send()
         return self.memo.pop(tip, None)
+
+    def give_room(self, limit: float, growth: float = 0.0) -> None:
+        """Drop the pool when this process and its workers hold `limit` MB or more, with `growth` MB to come: the search's own memory net reads the
+        workers too (`resident_mb`), and a net they took it to is met by stopping them, the search going on alone as one process does (no pool
+        again in this search)."""
+        if self.pool is None:
+            return
+        held = parallel.held_mb(under=limit - growth, paced=False)
+        if held is not None and held + growth >= limit:
+            self.ahead.stopped = f"this process and its workers held {held:,.0f} MB, the limit is {limit:,.0f} MB; the workers were stopped"
+            self._drop()
 
     def _drop(self) -> None:
         pool, self.pool = self.pool, None

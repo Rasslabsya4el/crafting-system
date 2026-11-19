@@ -1221,6 +1221,8 @@ class Search[S]:
     def _room_check(self, growth_mb: float) -> None:
         """Raise `MemoryNet` when the kernel arrays' next growth of `growth_mb` would take the process past the memory net (#839): the net is
         asked before the arrays grow, not after, so a search stops under its memory setting and not past it."""
+        if self._round is not None:  # a round's workers hold memory of their own: they are stopped first if they take the search past its net
+            self._round.give_room(self.net.memory_mb, growth_mb)
         used = resident_mb()  # read in full, never paced: asked only before the arrays grow, and it must not come late (#1252)
         if used is not None and used + growth_mb >= self.net.memory_mb:
             raise MemoryNet(
@@ -1413,7 +1415,8 @@ class Search[S]:
             polled = mark
             tips = fake.tolist()
             self.ahead.making = 0.0
-            pool = self._round = Round(self, tips, self.ahead) if not self.counted and self.ahead.pays(len(tips)) else None
+            count = 0 if self.counted else self.ahead.workers_for(len(tips))
+            pool = self._round = Round(self, tips, self.ahead, count) if count else None
             if pool is None:
                 self.ahead.processes = 1
             walked = 0
@@ -1431,6 +1434,8 @@ class Search[S]:
                         break
                     if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
                         polled = time.perf_counter()
+                        if pool is not None and self.net.memory_mb is not None:  # the workers are stopped before their memory stops the search
+                            pool.give_room(self.net.memory_mb)
                         # here, where the clock polls, a states net is asked only beside a time or memory net (the run is on the clock anyway): a
                         # count alone (`Budget.in_states`) is asked above, at every state, so that it does not depend on the machine's speed
                         stopped = self._net(began, states=self.net.seconds is not None or self.net.memory_mb is not None)
