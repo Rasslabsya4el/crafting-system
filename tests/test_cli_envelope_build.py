@@ -962,3 +962,29 @@ def test_a_key_that_keeps_needing_offers_is_given_as_many_more_as_it_holds_the_l
     assert needs == {3: [1], 4: [1], 5: [1]}
     assert sorted(found) == [(1.0, 3), (1.1, 4), (1.2, 5)]
     assert _doubled({3: [1]}, {}, {9: np.array([1, 2])}, [3, 4], floors, []) == 0  # nothing held at some keys only: nothing to double
+
+
+def test_a_class_of_another_shape_found_binding_builds_its_offers_at_as_many_more_binding_keys_as_already_hold_them():
+    """#1325, `_spread`, on hand-worked numbers. The policy reaches binding key 1 of a class of another shape (OTHER); keys 2 to 5 of that class
+    are binding too, the policy does not reach them, and keys 1 and 2 already hold offers built at some keys only: 2 more keys are added, the
+    two most binding (least ratio of the floor action to the model's best: key 5, 0.1, then key 3, 0.3). Key 6, of the start's shape (INSIDE),
+    is not one of them (those keys count whether reached or not). With no offer held at some keys only, nothing is added: the first round
+    builds at the reached keys alone, and the keys double from there."""
+    from collections import defaultdict
+    from types import SimpleNamespace
+
+    from crafting_system.planner._offer_floor import INSIDE, OTHER
+    from crafting_system.planner._pattern_bound import _spread
+
+    klass = {1: OTHER, 2: OTHER, 3: OTHER, 4: OTHER, 5: OTHER, 6: INSIDE}
+    model = SimpleNamespace(
+        keys=[SimpleNamespace(flags=k, fractured=False, status=None, held=defaultdict(lambda: None)) for k in range(7)], expanded=[True] * 7
+    )
+    floors = SimpleNamespace(klass=lambda flags, *_: klass.get(flags, OTHER))
+    ratio = {2: 0.5, 3: 0.3, 4: 0.9, 5: 0.1, 6: 0.05}.get
+    by_class = {OTHER: [1]}
+    _spread(by_class, [2, 3, 4, 5, 6], ratio, model, floors, {10: {1}, 11: {1, 2}})
+    assert by_class == {OTHER: [1, 5, 3]}
+    alone = {OTHER: [1]}
+    _spread(alone, [2, 3, 4, 5, 6], ratio, model, floors, {})
+    assert alone == {OTHER: [1]}
