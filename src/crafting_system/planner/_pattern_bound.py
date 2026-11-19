@@ -384,13 +384,14 @@ def _binding(
     reached = np.zeros(n, dtype=bool)
     reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
     shaped = np.array([not isinstance(key, ChoiceNode) and floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
+    wide = binding.copy()  # every key where the floor action is the cheapest: the offers needed are built there, reached or not (below)
     binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape (OTHER: the cost of an offer as its floor; SHAPED + S: rho_S, #973) is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
         return {}, dict.fromkeys(floors.classes)
     limit: dict[int, float | None] = dict.fromkeys(floors.classes)
     by_class: dict[int, list[int]] = {}
-    for k in np.flatnonzero(binding[: len(model.keys)]).tolist():
-        key = model.keys[k]
+    for k in np.flatnonzero(wide[: len(model.keys)]).tolist():  # (#1325: the policy, moved off a key given offers, reaches the next binding key
+        key = model.keys[k]  # of its class in the next round; R24 crept a cent a round over one key at a time; given at every binding key, it does not)
         if not model.expanded[k]:
             continue
         klass = floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS])
