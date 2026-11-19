@@ -154,11 +154,11 @@ world (`tests/test_pattern_member_views.py`); the model built both ways is the s
 on a counted build of R04's quiver; R04's first bound on the server: the same 78,715 keys, 145,259 kernels and start value, from 182,642
 kernels made where every member made 1,644,703.
 
-**The side an erasing reroll erases under a lock (#1352).** A reroll that does not read the junk (`Reads.junk` False: a Chaos Orb, an essence,
-a fossil set, a Harvest reforge) erases every ordinary mod, but at a key whose lock keeps one side it keeps that side's (`metamods.kept_by_reroll`).
-Its policy there is `ALL`, with the pure junk of the erased side made once (`alike_of`, above); the relevant multisets of the erased side were
-still every one, and each member was given the whole item: on R04's model 6, 1,245 fossil sets at thousands of members of a key built their
-outcomes at each, 15 to 50 s a key, and made no kernel that a member of the same kept side had not made.
+**The side an erasing reroll erases under a lock (#1352).** A reroll that does not read the junk (`Reads.junk` False: a Chaos Orb, a Harvest
+reforge, an Alteration, a Scouring, a Veiled Chaos Orb; a fossil set and an essence too, though they refuse an item with a lock) erases every
+ordinary mod, but at a key whose lock keeps one side it keeps that side's (`metamods.kept_by_reroll`). Its policy there is `ALL`, with the pure
+junk of the erased side made once (`alike_of`, above); the relevant multisets of the erased side were still every one, and each member was
+given the whole item, so each built the outcomes again for no kernel a member of the same kept side had not made.
 
 *Lemma.* Let `a` be an action that does not read the junk, and `key` a key whose crafted and fractured mods lock exactly one side `L` (with no
 lock outside the crafted domain in the game data: `Abstraction._kept_sides`). If two members `m1`, `m2` of `key` have the same ordinary slots on
@@ -171,7 +171,7 @@ have the same view, so the same pair and the same kernel. What the view leaves o
 keeps and reads no other (the contract of `Reads.junk`, the one `_erases` rests on at an item with no lock, checked by the contract suite), so
 the item without the other side's mods gives the outcomes the whole item gives; the slots it keeps are read back from `origins` as before.
 **Proved** so, given the declaration; and checked by brute force: every kernel of every such action at every state with a lock that a seeded
-walk of the hand-worked bow meets (with the fixture fossils: single, summed, Sanctified, Glyphic, Fractured) is the kernel of the whole item,
+walk of the hand-worked bow meets (with the fixture fossils, which refuse there) is the kernel of the whole item,
 exactly (`KEPT_VIEW`), and every member of every such key gives through the key what the others of its kept slots give
 (`tests/test_pattern_kept_sides.py`).
 
@@ -915,7 +915,7 @@ class Pattern:
         """The sides a lock of `key` keeps, when the kernel of `action` at its members reads their ordinary slots on those sides alone (module
         docstring, "The side an erasing reroll erases", #1352): the abstraction gives the action an item without the other side's
         (`Abstraction._kept_sides`). None for any other action or key."""
-        if not SHARE_KEPT:
+        if not SHARE_KEPT or self.reads(action).junk:
             return None
         probe = CompressedState(key.flags, key.fractured, key.status, tuple(key.crafted), *self.held_of(key))
         return None if self.ab._erases(probe, action) else self.ab._kept_sides(probe, action)
@@ -1884,16 +1884,17 @@ class PatternBuilder:
                 continue
             members = members_for(policy)  # the key's members of the policy, made once (`_offers_of_key`)
             kept = self.pattern.kept_sides(offer.action, key)
-            if kept is not None:  # the build asks one member of each multiset of the kept slots (#1352): the others make the same pair
-                members = list({self.pattern.kept_view(member, kept): member for member in reversed(members)}.values())
             last = self.ab.quality_last_action(offer.action)
-            requests.extend(
-                (member, offer.action)
+            asked = [
+                member
                 for member in members
                 if not (LUMP_ERASING and self.ab.lumps(member, offer.action))
                 # the pairs `_offers_of_key` skips where only the quality is left, or a catalyst before it (#159): no kernel is made for them
                 and not (self.ab.quality_offer_pruned(member, offer.action) if last else self.ab.quality_finish_only(member, offer.action))
-            )
+            ]
+            if kept is not None:  # the build asks the first member of each multiset of the kept slots (#1352): the others make the same pair
+                asked = list({self.pattern.kept_view(member, kept): member for member in reversed(asked)}.values())
+            requests.extend((member, offer.action) for member in asked)
         self.ab.prime(requests, ask=ask)
 
     def _offers_of_key(self, i: int, given: Sequence[int], tick, firsts: tuple[list[CompressedState], int] | None = None) -> None:

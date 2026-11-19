@@ -70,6 +70,14 @@ class FossilWeights:
             known = self.memo[key] = self._factor(tags, level, tags_only)
         return known
 
+    def class_factor(self, tags: frozenset[str], level: int | None) -> Fraction:
+        """The factor `factor` gives a mod with the tag set `tags` and, under a Sanctified Fossil, the required level `level` (None otherwise)."""
+        key = (tags, level, False)
+        known = self.memo.get(key)
+        if known is None:
+            known = self.memo[key] = self._factor(tags, level, False)
+        return known
+
     def tag_factor(self, tags: frozenset[str], *, tags_only: bool = False) -> Fraction:
         """The factor of a mod with the tag set `tags`, without the Sanctified level rule (what `factor` multiplies)."""
         key = (tags, None, tags_only)
