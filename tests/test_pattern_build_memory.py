@@ -10,7 +10,8 @@ again is found among the model's kernels and gets its id), so the model is the m
 * The model of the hand-worked bow world, built with one entry a generation (every answer let go almost at once), is the model of the build
   that keeps everything: the same keys, actions, kernels, values and start value, from more kernels made.
 * The same on a real route up to a net of pairs (R13, as `test_pattern_items_kept`), with memos small enough that they let entries go.
-* A bound whose model grows keeps the members of its keys lately expanded only (`members_kept`, #1341): a list let go is made again, the same.
+* A bound whose model grows keeps the members of its keys lately expanded only (`members_kept`, #1341): a list let go is made again, the same;
+  a key made again on a grown universe never reads a list made before.
 """
 
 import contextlib
@@ -26,10 +27,11 @@ from test_pattern_items_kept import same_model
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, _pattern
-from crafting_system.abstraction._pattern import build_pattern_model
+from crafting_system.abstraction._pattern import PatternBuilder, PatternOffer, build_pattern_model
 from crafting_system.abstraction._recent import Recent, kept_entries
 from crafting_system.planner._offer_floor import OfferFloors
-from crafting_system.planner._pattern_bound import pattern_lower_bound
+from crafting_system.planner._pattern_bound import pack_pattern_model, pattern_lower_bound
+from crafting_system.solver import solve_packed
 
 
 def test_a_memo_keeps_what_was_used_in_the_last_generation():
@@ -78,6 +80,8 @@ def test_a_memo_holds_a_share_of_the_memory_net():
     assert kept_entries(_pattern.KERNEL_KEY_SHARE, _pattern.KERNEL_KEY_BYTES, 12_288) == 1 << 19
     # `_feasible` may hold 1/20 of it, 614.4 MB, in two generations of 300-byte members: 322,122,547 bytes a generation, 1,073,741 members
     assert kept_entries(_pattern.MEMBER_SHARE, _pattern.MEMBER_BYTES, 12_288) == 1_073_741
+    # `members_kept` may hold 1/12 of it, 1,024 MB, in two generations of 300-byte members in the keys' lists: 1,789,569 members a generation
+    assert kept_entries(_pattern.LISTS_SHARE, _pattern.LISTS_BYTES, 12_288) == 1_789_569
     assert kept_entries(1 / 12, 1024, 6_144) == 1 << 18  # half the net, half the memo
     assert kept_entries(1 / 12, 1024, 1) == 4_096  # a tiny net: the fewest a generation holds
     with parallel.memory_net(24_576):  # the run's net is the one read
@@ -136,3 +140,32 @@ def test_a_growing_bound_that_lets_its_keys_members_go_is_the_bound_that_keeps_t
     same_model(whole.model, small.model)
     assert list(small.value) == list(whole.value) and small.start_value == whole.start_value
     assert small.model.stats.members > whole.model.stats.members  # the lists let go were made again
+
+
+@pytest.mark.parametrize("lists", [None, 2], ids=["kept", "let-go"])
+def test_a_bound_that_begins_again_on_a_grown_universe_with_its_keys_members_let_go_is_the_bound_built_at_once(lists):
+    """#1341: a key made again when the universe grows (`_begin_again`) takes no list of its members made before: its lists are kept under the
+    times it was made again, so an older list is never read, kept or let go. Grown in two steps, with a memo that keeps the lists or one that
+    lets them go almost at once, the model is the one built at once on every offer: the same keys and the same value at each."""
+    data = pattern_data()
+    offers = [*offers_of(), PatternOffer("essence-outside-pool", ACTIONS["essence-outside-pool"], 4.0)]
+
+    def fresh():
+        ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
+        return ab, ab.compress(build(data, BOW, STARTS[0]))
+
+    ab, start = fresh()
+    whole = build_pattern_model(ab, start, offers)
+    ab, start = fresh()
+    with kept(None, None, lists):
+        builder = PatternBuilder(ab, start, grow=True)
+        builder.extend(offers[:-1])
+        grown = builder.extend(offers[-1:])
+    assert builder.restarts == 1 and 0 < grown.stats.restarted_keys < len(grown.keys)  # the keys the essence's slot fits began again
+    assert set(grown.index) == set(whole.index)
+    by_whole = solve_packed(pack_pattern_model(whole, offers)).value
+    by_grown = solve_packed(pack_pattern_model(grown, offers)).value
+    for key, k in whole.index.items():
+        assert float(by_grown[grown.index[key]]) == pytest.approx(float(by_whole[k]), rel=1e-9), key
+    if lists is not None:
+        assert builder.members_kept.generation > 0  # lists were let go
