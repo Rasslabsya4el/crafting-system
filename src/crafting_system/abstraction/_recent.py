@@ -19,7 +19,7 @@ least once in every `size` writes stays. The rule is the same for every route: a
 
 from __future__ import annotations
 
-from typing import Generic, Hashable, TypeVar
+from typing import Callable, Generic, Hashable, TypeVar
 
 from crafting_system import budget, parallel
 
@@ -40,14 +40,16 @@ _MISSING = object()
 class Recent(Generic[V]):
     """A dict-like memo of the entries written or read in the last `size` to `2 * size` writes (module docstring)."""
 
-    __slots__ = ("size", "young", "old", "generation", "dropped")
+    __slots__ = ("size", "young", "old", "generation", "dropped", "weigh", "weight")
 
-    def __init__(self, size: int) -> None:
+    def __init__(self, size: int, weigh: Callable[[V], int] | None = None) -> None:
         if size < 1:
             raise ValueError("a memo keeps at least one entry")
         self.size = size
         self.young: dict[Hashable, V] = {}
         self.old: dict[Hashable, V] = {}
+        self.weigh = weigh  # an entry's weight (a list of members: its length, #1341); None: each entry weighs 1, and `size` counts entries
+        self.weight = 0  # the weight written into the young generation: it is full at `size`
         self.generation = 0  # how many times the old generation was let go
         self.dropped = 0  # how many entries were let go
 
@@ -73,10 +75,12 @@ class Recent(Generic[V]):
     def __setitem__(self, key: Hashable, value: V) -> None:
         young = self.young
         young[key] = value
-        if len(young) >= self.size:
+        self.weight += 1 if self.weigh is None else max(1, self.weigh(value))
+        if self.weight >= self.size:
             self.dropped += len(self.old)
             self.old = young
             self.young = {}
+            self.weight = 0
             self.generation += 1
 
     def items(self) -> dict[Hashable, V]:
