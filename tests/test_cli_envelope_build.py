@@ -939,3 +939,26 @@ def test_a_bound_whose_build_went_past_the_round_s_share_leaves_its_search_the_r
     with pytest.raises(NoPolicy, match="the time limit of 0 seconds"):
         envelope_result(ab, start, offers, net=Net(seconds=10.0, held=True, late=1.0), bound=bound)
     assert nets[-1].first is None
+
+
+def test_a_key_that_keeps_needing_offers_is_given_as_many_more_as_it_holds_the_least_floors_first():
+    """#1325, `_doubled`, on hand-worked numbers. Key 1 holds offers 0, 1 and 2 and needs offer 3 this round: it is given 3 - 1 = 2 more, the
+    two least floors it neither holds nor is given (offers 4 and 5, 1.1 and 1.2; offer 6 has no finite floor in its class), so it holds
+    6 next round, twice its 3. Key 2 holds nothing and needs nothing: it is given nothing. Which offers a key holds changes only how many
+    rounds the growth takes: the floor action of a key carries the least floor of every offer it does not hold (`_floor_of`)."""
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from crafting_system.planner._pattern_bound import _doubled
+
+    price = {3: 1.0, 4: 1.1, 5: 1.2, 6: float("inf"), 7: 1.5}
+    floors = SimpleNamespace(lower=lambda position, klass: price[position])
+    holders = {0: {1}, 1: {1}, 2: {1}}
+    needs = {3: [1]}
+    found = [(1.0, 3)]
+    added = _doubled(needs, holders, {9: np.array([1, 2])}, [3, 4, 5, 6, 7], floors, found)
+    assert added == 2
+    assert needs == {3: [1], 4: [1], 5: [1]}
+    assert sorted(found) == [(1.0, 3), (1.1, 4), (1.2, 5)]
+    assert _doubled({3: [1]}, {}, {9: np.array([1, 2])}, [3, 4], floors, []) == 0  # nothing held at some keys only: nothing to double
