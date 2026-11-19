@@ -8,6 +8,8 @@ again is found among the model's kernels and gets its id), so the model is the m
 * `Recent` keeps what was written or read in the last generation, lets the rest go, and counts what it let go.
 * The model of the hand-worked bow world, built with one entry a generation (every answer let go almost at once), is the model of the build
   that keeps everything: the same keys, actions, kernels, values and start value, from more kernels made.
+* The pairs an erasing action shares from state to state (`Abstraction._shared_by`) are kept up to a weight in pool mods too: with a
+  weight of one pair, the same model.
 * The same on a real route up to a net of pairs (R13, as `test_pattern_items_kept`), with memos small enough that they let entries go.
 """
 
@@ -19,7 +21,7 @@ from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, STARTS, build, o
 from test_abstraction_pattern_real import CASES, E
 from test_pattern_items_kept import same_model
 
-from crafting_system.abstraction import Abstraction, _pattern
+from crafting_system.abstraction import Abstraction, _kernel, _pattern
 from crafting_system.abstraction._pattern import build_pattern_model
 from crafting_system.abstraction._recent import Recent
 from crafting_system.planner._pattern_bound import pattern_lower_bound
@@ -40,28 +42,30 @@ def test_a_memo_keeps_what_was_used_in_the_last_generation():
 
 
 @contextlib.contextmanager
-def kept(keys: int | None, members: int | None):
-    """The build with memos of `keys` kernel keys and `members` members a generation (None: as large as no build fills)."""
-    before = _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT
+def kept(keys: int | None, members: int | None, weight: int | None = None):
+    """The build with memos of `keys` kernel keys and `members` members a generation, and shared pairs of `weight` pool mods in all (None: as
+    large as no build fills)."""
+    before = _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT, _kernel.SHARED_WEIGHT
     _pattern.KERNEL_KEYS_KEPT = keys or 1 << 62
     _pattern.MEMBERS_KEPT = members or 1 << 62
+    _kernel.SHARED_WEIGHT = weight or 1 << 62
     try:
         yield
     finally:
-        _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT = before
+        _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT, _kernel.SHARED_WEIGHT = before
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
 def test_the_build_that_lets_answers_go_is_the_build_that_keeps_them(tags):
     data = pattern_data()
 
-    def made(keys, members):
+    def made(keys, members, weight=None):
         ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
         start = ab.compress(build(data, BOW, STARTS[0]))
-        with kept(keys, members):
+        with kept(keys, members, weight):
             return build_pattern_model(ab, start, offers_of(), tags=tags)
 
-    whole, small = made(None, None), made(1, 1)
+    whole, small = made(None, None), made(1, 1, 1)
     same_model(whole, small)
     assert small.stats.pairs == whole.stats.pairs > 100
     assert small.stats.kernels > whole.stats.kernels  # kernels let go were made again, and found the same ids
@@ -74,12 +78,12 @@ PIECES = 30_000  # the build stops after so many (member, offer) pairs, as in `t
 def test_the_bound_of_a_real_route_is_the_bound_that_keeps_every_answer(route, tags):
     real_game_data()  # skips without the dump
 
-    def made(keys, members):
+    def made(keys, members, weight=None):
         _, _, _, abstraction, start, priced, _ = E.build_model(route, "twins", True, False)
-        with kept(keys, members):
+        with kept(keys, members, weight):
             return pattern_lower_bound(abstraction, start, priced, tags=tags, pieces=PIECES)
 
-    whole, small = made(None, None), made(64, 256)
+    whole, small = made(None, None), made(64, 256, 2_000)
     same_model(whole.model, small.model)
     assert list(small.value) == list(whole.value)
     assert small.start_value == whole.start_value

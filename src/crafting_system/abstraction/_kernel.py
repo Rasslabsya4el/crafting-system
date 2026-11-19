@@ -123,7 +123,10 @@ TYPES_KEPT = 65_536  # the families of pool tables whose type is remembered by o
 SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
 # families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
-# 120 small objects a part: some kilobytes to some tens of kilobytes a pair, so at most a few hundred megabytes at the cap
+# 120 small objects a part: some kilobytes to some tens of kilobytes a pair, so at most a few hundred megabytes at the cap. Measured, a pair
+# held more (#1335: 1,437 MB in 4,096 pairs on R13, 721 MB in 1,153 on R04), so the pairs are also kept up to ...
+SHARED_WEIGHT = 1 << 20  # ... this many pool mods in all (`_pair_weight`: the mods of the pools of its parts; about 600 bytes each where the
+# action reweighs the pool), the least recently used leaving first. A cache's size, the same for every route: a pair let go is prepared again
 
 
 class _View(NamedTuple):
@@ -143,6 +146,13 @@ class _View(NamedTuple):
     imprints: tuple[CompressedState, ...]
     strands: int
     replaced: tuple[str, ...]
+
+
+def _pair_weight(prepared: "_Prepared") -> int:
+    """What a prepared pair weighs in `Abstraction._shared_by`: one, and the mods of the pool of each of its parts (#1335)."""
+    if prepared.outcomes is None:
+        return 1
+    return 1 + sum(len(family.mods) for _, part in prepared.outcomes.components for family in getattr(part, "pool", ()))
 
 
 @dataclass
@@ -314,6 +324,8 @@ class Abstraction:
         self._canonical: dict[tuple[frozenset[Influence], str, tuple[Status, ...], bool], str] = {}
         self._prepared_by: dict[Hashable, _Prepared] = {}  # (action, view) -> the pair, for a view that holds the whole state: dropped after each state
         self._shared_by: dict[Hashable, _Prepared] = {}  # the same for a view smaller than its state (many states have it): kept, the latest used last
+        self._shared_weights: dict[Hashable, int] = {}  # a pair of `_shared_by` -> its weight (`_pair_weight`)
+        self._shared_weight = 0  # the sum of those weights (at most `SHARED_WEIGHT`, past one pair)
         self._items_by: dict[tuple[_View, bool], tuple[Item, Origins] | ValueError] = {}  # (view, erasing) -> `_item_of` of it, or what it raised (`_item_of_view`)
         self._enabled_checked: set[Action] = set()  # the actions `_check_enabled` passed
         self._refused_by: dict[Hashable, NotApplicableError] = {}  # the refusal class of a pair (`_refusal_class`) -> the game's refusal of it
@@ -1491,6 +1503,8 @@ class Abstraction:
         self._profiles.clear()
         if not keep_erased:
             self._shared_by.clear()
+            self._shared_weights.clear()
+            self._shared_weight = 0
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
         """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
@@ -1579,8 +1593,13 @@ class Abstraction:
             except (NotApplicableError, OutOfScopeError) as refusal:
                 prepared = _Prepared(None, {}, refusal=unraised(refusal))
             store[key] = prepared
-            if shared and len(store) > SHARED_PAIRS:
-                del store[next(iter(store))]
+            if shared:
+                weight = self._shared_weights[key] = _pair_weight(prepared)
+                self._shared_weight += weight
+                while len(store) > 1 and (len(store) > SHARED_PAIRS or self._shared_weight > SHARED_WEIGHT):
+                    oldest = next(iter(store))
+                    del store[oldest]
+                    self._shared_weight -= self._shared_weights.pop(oldest)
         elif shared:
             store[key] = store.pop(key)  # the latest used is last
         if prepared.outcomes is None:
