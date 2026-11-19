@@ -155,7 +155,7 @@ def test_a_forked_pool_holds_its_parents_objects_frozen_until_it_closes():
     """#1345: the collector of a forked worker walked its parent's whole heap and copied most of its shared pages; the objects made before the
     fork are frozen, in the workers and here, while the pool lives, and go back to the collector when it closes or is abandoned."""
     assert gc.get_freeze_count() == 0
-    kept = [{"piece": piece} for piece in range(1000)]  # objects of the parent that the collector tracks
+    kept = [[piece] for piece in range(1000)]  # objects of the parent that the collector tracks (a list is tracked; a dict of ints is not)
     with WorkerPool(make_base, (0,), workers=2) as pool:
         frozen = pool.map(frozen_in_worker, [1, 2, 3])
         assert [piece for piece, _ in frozen] == [1, 2, 3]
@@ -181,6 +181,22 @@ def test_a_forked_pool_leaves_frozen_what_was_frozen_before_it():
         assert gc.get_freeze_count() >= before
     finally:
         gc.unfreeze()
+
+
+@pytest.mark.skipif(not parallel.can_inherit(), reason="only a forked worker shares its parent's pages")
+def test_two_forked_pools_open_at_once_thaw_when_the_last_closes():
+    first = WorkerPool(make_base, (0,), workers=2)
+    second = WorkerPool(make_base, (0,), workers=2)
+    try:
+        assert first.map(add_offset, [1, 2]) == [(1, 7), (2, 14)]
+        assert second.map(add_offset, [1, 2]) == [(1, 7), (2, 14)]
+        first.close()
+        assert gc.get_freeze_count() > 0  # the second pool's workers still share the pages
+        assert [count > 0 for _, count in second.map(frozen_in_worker, [1, 2])] == [True, True]
+    finally:
+        first.close()
+        second.close()
+    assert gc.get_freeze_count() == 0
 
 
 def test_a_serial_pool_freezes_nothing():

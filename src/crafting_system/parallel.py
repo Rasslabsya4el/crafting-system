@@ -27,7 +27,8 @@ process: about 1.7 GB per worker in one second and 2 GB in 20 s, so three worker
 stand-in heap of 2.3 GB: 1.7 GB per worker in one second, and 10 to 20 MB once frozen). Frozen objects are walked by neither the workers'
 collections nor this process's while the pool lives, so the pages stay shared; the objects made after the fork are collected as before, and
 the frozen ones go back to the collector when the pool closes (`gc.unfreeze`, which like `gc.freeze` moves a list and does not walk it). A
-pool forked while something else holds objects frozen leaves them frozen when it closes: it cannot tell its own from the others.
+pool forked while something else (not a pool) holds objects frozen leaves them frozen when it closes: it cannot tell its own from the others.
+Pools open at once in one process share the freeze: the last one to close thaws.
 """
 
 import contextlib
@@ -51,6 +52,7 @@ WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory while 
 READ_SHARE = 20.0  # a net's question reads the proportional sizes at most once per this many times what the last reading took (`held_mb`, #1252)
 
 _memory_net: float | None = None  # the limit in MB of the run's memory net (`memory_net`), None when no net is set
+_frozen: list = [0, False]  # how many forked pools of this process hold its objects frozen now, and whether they thaw them when the last closes
 _dear: list = [-math.inf, None]  # when a net's question may next read the proportional sizes, and the last reading (`held_mb`)
 
 
@@ -326,7 +328,7 @@ class WorkerPool:
         self._executor: ProcessPoolExecutor | None = None
         self._local: object = None
         self._have_local = False
-        self._froze = False  # whether this pool froze the objects of this process for its forked workers (`_start`) and must thaw them
+        self._froze = False  # whether this pool holds the objects of this process frozen for its forked workers (`_freeze`)
 
     def __enter__(self) -> "WorkerPool":
         return self
@@ -335,37 +337,52 @@ class WorkerPool:
         self.close()
 
     def close(self) -> None:
-        if self._executor is not None:
-            self._executor.shutdown(wait=True, cancel_futures=True)
-            self._executor = None
-        self._thaw()
+        try:
+            if self._executor is not None:
+                self._executor.shutdown(wait=True, cancel_futures=True)
+                self._executor = None
+        finally:
+            self._thaw()
+
+    def _freeze(self) -> None:
+        """Freeze the objects of this process before the fork of this pool's workers (the module's note, #1345)."""
+        if not self._froze:
+            self._froze = True
+            if _frozen[0] == 0:
+                _frozen[1] = gc.get_freeze_count() == 0
+            _frozen[0] += 1
+            gc.freeze()
 
     def _thaw(self) -> None:
-        """Give the objects this pool froze before its fork back to the collector (the module's note, #1345)."""
+        """Give the objects frozen for the forks back to the collector once the last forked pool of this process closes (#1345)."""
         if self._froze:
             self._froze = False
-            gc.unfreeze()
+            _frozen[0] -= 1
+            if _frozen[0] == 0 and _frozen[1]:
+                gc.unfreeze()
 
     def abandon(self) -> None:
         """Kill the workers and drop the pool without waiting on them (a worker that does not return must not hold the caller, #535)."""
-        executor, self._executor = self._executor, None
-        if executor is not None:
-            results = executor._result_queue  # (the shutdown below drops it)
-            workers = list((executor._processes or {}).values())
-            manager = executor._executor_manager_thread
-            executor.kill_workers()  # kills the live workers and shuts the executor down without waiting (Python 3.14)
-            # A worker killed while it was sending a result leaves part of a message in the result pipe: the executor's thread reads on for the rest
-            # and never ends, and the interpreter waits for that thread at exit (#1179: R14 stopped at its memory net, wrote its answer, and did not
-            # exit). The workers are dead, so closing this process's own end for writing gives that read an end of file: the thread sees a broken
-            # pool and ends. It is waited for here: a thread still winding down holds its own lock, and a pool forked next would copy that lock held,
-            # so its workers would hang at their own exit and the next pool's thread with them (seen in `tests/test_parallel.py`, one run in two).
-            for worker in workers:
-                worker.join()
-            if results is not None:
-                results._writer.close()
-            if manager is not None:
-                manager.join(ABANDON_SECONDS)
-        self._thaw()
+        try:
+            executor, self._executor = self._executor, None
+            if executor is not None:
+                results = executor._result_queue  # (the shutdown below drops it)
+                workers = list((executor._processes or {}).values())
+                manager = executor._executor_manager_thread
+                executor.kill_workers()  # kills the live workers and shuts the executor down without waiting (Python 3.14)
+                # A worker killed while it was sending a result leaves part of a message in the result pipe: the executor's thread reads on for the rest
+                # and never ends, and the interpreter waits for that thread at exit (#1179: R14 stopped at its memory net, wrote its answer, and did not
+                # exit). The workers are dead, so closing this process's own end for writing gives that read an end of file: the thread sees a broken
+                # pool and ends. It is waited for here: a thread still winding down holds its own lock, and a pool forked next would copy that lock held,
+                # so its workers would hang at their own exit and the next pool's thread with them (seen in `tests/test_parallel.py`, one run in two).
+                for worker in workers:
+                    worker.join()
+                if results is not None:
+                    results._writer.close()
+                if manager is not None:
+                    manager.join(ABANDON_SECONDS)
+        finally:
+            self._thaw()
 
     def _start(self) -> ProcessPoolExecutor:
         if self._executor is None:
@@ -373,9 +390,8 @@ class WorkerPool:
             method = "fork" if "fork" in methods else "spawn"
             if method != "fork":
                 copyreg.pickle(MappingProxyType, _pickle_mapping_proxy)
-            elif not self._froze:  # the workers are forked at the first submit, after this: their parent's objects are frozen by then (#1345)
-                self._froze = gc.get_freeze_count() == 0
-                gc.freeze()
+            else:  # the workers are forked at the first submit, after this: their parent's objects are frozen by then (#1345)
+                self._freeze()
             self._executor = ProcessPoolExecutor(
                 max_workers=self.workers,
                 mp_context=multiprocessing.get_context(method),
