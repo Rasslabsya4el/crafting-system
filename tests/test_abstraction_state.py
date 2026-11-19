@@ -67,7 +67,7 @@ def test_a_state_holds_its_fields_in_slots_and_a_pickle_carries_them_without_the
 
     assert not hasattr(state, "__dict__")
     carried = pickle.loads(pickle.dumps(state))
-    assert carried._hash is None and carried._order_key is None
+    assert not hasattr(carried, "_hash") and not hasattr(carried, "_order_key")
     assert carried == state and hash(carried) == hashed and carried.order_key == order
     assert copy.deepcopy(state) == state and dataclasses.replace(state, strands=1) != state
 

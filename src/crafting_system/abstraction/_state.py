@@ -166,8 +166,17 @@ class OfferedMod:
     __getstate__ = _state_without_hash
 
 
+# The fields are slots (#1332): a state held a dict of its attributes, about 300 bytes of the 500 a state took, and a bound's build holds
+# millions of states (the members it tried, `Pattern._feasible`: 1.6 million at 22 minutes of R13).
+class _Cached:
+    """The slots of what a state makes when first asked, its hash and its order key: they are no fields of the state (equality, the fields'
+    list and a pickle leave them out), and unset until made."""
+
+    __slots__ = ("_hash", "_order_key")
+
+
 @dataclass(frozen=True, slots=True)
-class CompressedState:
+class CompressedState(_Cached):
     """The part of an item that decides what an action can do next.
 
     `fractured` is sorted by `(mod_id, contribution)`; `status` is per leaf, of the whole item;
@@ -206,16 +215,12 @@ class CompressedState:
     imprints: tuple["CompressedState", ...] = ()
     strands: int = 0
     replaced: tuple[str, ...] = ()
-    # the hash and the order key, made when first asked (both read every field, and a state is asked often). The fields are slots (#1332): a
-    # state held a dict of its attributes, about 300 bytes of the 500 a state took, and a bound's build holds millions of states (the members
-    # it tried, `Pattern._feasible`: 1.6 million at 22 minutes of R13)
-    _hash: int | None = field(default=None, init=False, repr=False, compare=False)
-    _order_key: tuple | None = field(default=None, init=False, repr=False, compare=False)
 
     def __hash__(self) -> int:
-        value = self._hash
-        if value is not None:
-            return value
+        try:
+            return self._hash
+        except AttributeError:
+            pass
         parts = (self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints)
         if self.strands:  # at 0 strands the hash of before ticket #277
             parts = (*parts, self.strands)
@@ -228,9 +233,10 @@ class CompressedState:
     @property
     def order_key(self) -> tuple:
         """A total order on states made of plain values, the same in every process: how the imprints of a state are sorted (`repr` is not stable)."""
-        value = self._order_key
-        if value is not None:
-            return value
+        try:
+            return self._order_key
+        except AttributeError:
+            pass
         flags = self.flags
         value = (
             (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences)), flags.unopened),
@@ -256,8 +262,6 @@ class CompressedState:
     def __setstate__(self, state: tuple) -> None:
         for name, value in zip(_STATE_FIELDS, state, strict=True):
             object.__setattr__(self, name, value)
-        object.__setattr__(self, "_hash", None)
-        object.__setattr__(self, "_order_key", None)
 
     def __repr__(self) -> str:
         """The dataclass repr, with the item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
