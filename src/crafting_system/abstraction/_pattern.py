@@ -149,8 +149,10 @@ the same contributions with the key's own slots): the same key. So the pushed ke
 The build asks such an action once for each multiset of views at a key (`SHARE_VIEWS`: the first member with those views; the others take
 its answer: its kernel, its refusal or its model gap; `stats.view_pairs`), before its kernel key is made: the rows are the ones every member
 gives, from one kernel each. The pairs left out still count as pairs, as a certain addition's do, so a counted build stops where it did.
-Checked both ways on the hand-worked world, with a lock and without, against every member of every key a seeded walk meets
-(`tests/test_pattern_member_views.py`), and on R04's and R13's first bounds (the same model and values).
+Checked against every member of every key a seeded walk meets, with a lock and without, on the hand-worked world and on the Eldritch
+world (`tests/test_pattern_member_views.py`); the model built both ways is the same on the hand-worked world (exact and approximate) and
+on a counted build of R04's quiver; R04's first bound on the server: the same 78,715 keys, 145,259 kernels and start value, from 182,642
+kernels made where every member made 1,644,703.
 
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe

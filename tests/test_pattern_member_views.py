@@ -14,10 +14,12 @@ from pathlib import Path
 
 from abstraction_support import real_game_data
 from pattern_support import pushed as pushed_through_key
-from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, OTHER_STARTS, STARTS, build, offers_of, pattern_data
+import test_pattern_eldritch as eldritch
+from abstraction_removals_support import CASTER, FIRE, FIRE_RES, NC, SPEED_TIER_1
+from test_abstraction_pattern import ACTIONS, BOW, EXTRA_PREFIXES, EXTRA_SUFFIXES, GOAL, LEVEL, OTHER_STARTS, STARTS, build, pattern_data
 from test_pattern_items_kept import same_model
 
-from crafting_system.abstraction import Abstraction, _pattern
+from crafting_system.abstraction import Abstraction, Goal, Wanted, _pattern
 from crafting_system.abstraction._pattern import Mode, Pattern, PatternOffer, build_pattern_model
 from crafting_system.actions import ActionError
 from crafting_system.actions.eldritch import EldritchAnnulmentOrb
@@ -103,24 +105,61 @@ def _frozen(found):
 
 
 def test_the_whole_model_of_the_hand_worked_world_is_the_model_built_at_every_member():
-    """A complete build from every start, both ways: the same keys in the same order, the same rows and kernels (so the same values)."""
+    """A complete build from several starts, both ways, for a goal that takes any of three prefixes (so several relevant slots give it
+    the same, and the Annulment cannot tell them apart): the same keys in the same order, the same rows and kernels (so the same values),
+    exact and approximate, from fewer kernels."""
     data = pattern_data()
-    offers = [*offers_of(), PatternOffer("bench-lock", ACTIONS["bench-lock"], 1.0), PatternOffer("bench-craft", ACTIONS["bench-craft"], 1.0)]
-    fewer = 0
-    for ids in STARTS:
+    a, b, c = (name for name, _ in EXTRA_PREFIXES)
+    goal = Goal((SPEED_TIER_1, Wanted(frozenset({FIRE, a, b}))))
+    names = ("annul", "remove", "exalted", "chaos", "fracture", "bench-lock", "bench-craft")
+    offers = [PatternOffer(name, ACTIONS[name], 1.0 + n) for n, name in enumerate(names)]
+    shared = 0
+    for ids in ((c, FIRE_RES, CASTER, EXTRA_SUFFIXES[1][0]), (c, CASTER, EXTRA_SUFFIXES[0][0], NC)):
+        for approximate in (False, True):
 
-        def made(before: bool):
-            ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(ACTIONS.values()), metamods=True)
-            start = ab.compress(build(data, BOW, ids))
-            with every_member() if before else contextlib.nullcontext():
-                return build_pattern_model(ab, start, offers, tags=True)
+            def made(before: bool):
+                ab = Abstraction(data, goal, BOW, LEVEL, tuple(ACTIONS[name] for name in names), metamods=True)
+                start = ab.compress(build(data, BOW, ids))
+                with every_member() if before else contextlib.nullcontext():
+                    return build_pattern_model(ab, start, offers, tags=True, approximate=approximate)
 
-        old, new = made(True), made(False)
-        same_model(old, new)
-        assert new.stopped is None and all(new.expanded)
-        assert new.stats.pairs == old.stats.pairs and new.stats.kernels <= old.stats.kernels and old.stats.view_pairs == 0
-        fewer += old.stats.kernels - new.stats.kernels
-    assert fewer == 0  # this world's relevant slots each give the goal something of their own: R04's quiver below is the one that shares
+            old, new = made(True), made(False)
+            same_model(old, new)
+            assert new.stopped is None and all(new.expanded)
+            assert new.stats.pairs == old.stats.pairs and new.stats.refused_pairs == old.stats.refused_pairs and old.stats.view_pairs == 0
+            assert new.stats.kernels < old.stats.kernels
+            shared += new.stats.view_pairs
+    assert shared > 1_000
+
+
+def test_on_the_eldritch_world_the_members_of_one_view_give_one_kernel():
+    """The Eldritch Annulment, the Embers, the Ichor and the Orb of Conflict: every member of every key a seeded walk meets."""
+    ab = eldritch.abstraction()
+    actions = [action for action, _ in eldritch.OFFERED.values()]
+    pattern = Pattern(ab, None, actions)
+    covered = [action for action in actions if pattern.views_only(action)]
+    assert len(covered) == len(actions) - 1  # all but the Eldritch Exalted Orb, which draws
+    rng = random.Random(1338)
+    states: dict = {}
+    for _ in range(60):
+        state = ab.compress(eldritch.START)
+        for _ in range(8):
+            states[state] = None
+            try:
+                kernel = ab.kernel(state, rng.choice(actions))
+            except ActionError:
+                continue
+            state = rng.choices(list(kernel), weights=[float(chance) for chance in kernel.values()])[0]
+    groups = 0
+    for key in dict.fromkeys(map(pattern.key, states)):
+        by_view: dict = {}
+        for member in pattern.members(key, Mode.ALL):
+            by_view.setdefault(pattern.view(member), []).append(member)
+        for action in covered:
+            for members in by_view.values():
+                assert len({_frozen(pushed_through_key(pattern, ab, member, action)) for member in members}) == 1, (key, action)
+                groups += 1
+    assert groups > 100
 
 
 def test_on_r04s_quiver_the_model_built_once_per_view_is_the_model_built_at_every_member():
