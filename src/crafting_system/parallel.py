@@ -23,11 +23,12 @@ here (`types.MappingProxyType` has none).
 
 import contextlib
 import copyreg
+import gc
 import math
 import multiprocessing
 import os
 import sys
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 import time
 from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
 from types import MappingProxyType
@@ -247,6 +248,31 @@ def worker_count(env: dict[str, str] | None = None) -> int:
         return max(1, len(os.sched_getaffinity(0)))
     except AttributeError:  # no affinity call on Windows and macOS
         return max(1, os.cpu_count() or 1)
+
+
+@contextlib.contextmanager
+def kept_objects() -> Iterator[Callable[[], None]]:
+    """A stretch of work that keeps what it makes for long: inside it, the cyclic collector does not walk again what was alive at the last `settle()`.
+
+    The bound's build keeps millions of objects (keys, rows, kernels, members, the abstraction's caches) and makes many more that live for one
+    key only. Python's collector is generational: each full collection walks every object alive, so the kept ones were walked again and again
+    (#1340: 17 to 28% of R04's build, 11% of R13's run, in the main process). `settle` (called between two units of work, when what is alive is
+    what the work keeps) moves every object alive into the collector's permanent generation (`gc.freeze`, a constant-time move); the collector
+    then walks only what was made since. No value changes: the collector frees cycles only, and a frozen object is still freed by its count.
+    A cycle made garbage while frozen is freed when the stretch ends: everything is unfrozen then, and the next collection walks it once.
+    Nested inside another stretch, or where objects are already frozen by someone else (a pool's parent, `risk._regen`), `settle` does nothing.
+    """
+    if gc.get_freeze_count():
+        yield _settle_nothing
+        return
+    try:
+        yield gc.freeze
+    finally:
+        gc.unfreeze()
+
+
+def _settle_nothing() -> None:
+    return None
 
 
 def can_inherit() -> bool:

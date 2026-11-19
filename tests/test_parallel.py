@@ -240,3 +240,43 @@ def test_a_failed_chunk_ends_the_wait_at_once_and_kills_the_hung_one(monkeypatch
             with pytest.raises(KeyError):
                 pool.map(hangs_or_fails, [1, 2], chunk=1, timeout=3600.0)  # the hour is never reached: the failure ends the wait
             assert pool._executor is None
+
+
+def test_kept_objects_freezes_what_is_alive_at_settle_and_unfreezes_at_the_end():
+    """#1340: inside the stretch, what is alive at `settle` is out of the collector's walks; the end gives it back, and a cycle made garbage while
+    frozen is freed by the next collection."""
+    import gc
+    import weakref
+
+    class Node:
+        pass
+
+    assert gc.get_freeze_count() == 0
+    with parallel.kept_objects() as settle:
+        kept = [[] for _ in range(100)]
+        node = Node()
+        node.me = node
+        seen = weakref.ref(node)
+        settle()
+        assert gc.get_freeze_count() >= len(kept)
+        del node
+        gc.collect()
+        assert seen() is not None  # the frozen cycle is not walked
+    assert gc.get_freeze_count() == 0
+    gc.collect()
+    assert seen() is None  # given back: the cycle is freed
+
+
+def test_kept_objects_settles_nothing_where_objects_are_already_frozen():
+    import gc
+
+    gc.freeze()
+    try:
+        before = gc.get_freeze_count()
+        with parallel.kept_objects() as settle:
+            alive = [[] for _ in range(100)]
+            settle()
+            assert gc.get_freeze_count() == before
+        assert gc.get_freeze_count() == before and alive
+    finally:
+        gc.unfreeze()

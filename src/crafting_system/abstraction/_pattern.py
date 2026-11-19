@@ -274,7 +274,7 @@ from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
 
-from crafting_system import budget
+from crafting_system import budget, parallel
 from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
@@ -1668,15 +1668,16 @@ class PatternBuilder:
 
         The net on the clock and on memory is asked inside the making of a key's members and of one kernel too (`budget.asking`, #1217, #1238),
         not only between two offers: either can run for minutes and take gigabytes. A build counted in pieces of work asks at its pieces alone."""
-        with self.ab.approximate() if self.approximate else nullcontext():
+        with self.ab.approximate() if self.approximate else nullcontext(), parallel.kept_objects() as settle:
             try:
                 with budget.asking(self.stop if self.tally is None else None):
-                    return self._pass_keys()
+                    return self._pass_keys(settle)
             except budget.NetReached as reached:  # inside a making: the key's row is whole or untouched, as at a stop between two offers
                 self._release()
                 return reached.reason
 
-    def _pass_keys(self) -> str | None:
+    def _pass_keys(self, settle: Callable[[], None] = lambda: None) -> str | None:
+        """The keys' loop of `_pass`. `settle` is called after each key: what is alive then is what the build keeps (`parallel.kept_objects`, #1340)."""
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
         last = polled = time.perf_counter()
         i = 0
@@ -1728,6 +1729,7 @@ class PatternBuilder:
                     self._release()
             self.pending.pop(i, None)
             self.expanded[i] = True
+            settle()
             i += 1
             now = time.perf_counter()
             if progress is not None and now - last >= 30:
