@@ -184,11 +184,20 @@ class CraftingProblem:
         """The floor of the state's class (`OfferFloors.at`): rho outside E in the start's shape, rho_S in the claim of another known shape, else 0."""
         return 0.0 if self.floors is None else self.floors.at(self._klass(state))
 
+    def split_candidates(self, state: CompressedState) -> tuple[list[tuple[float, int]], list[tuple[float, int]]]:
+        """`candidates` in two parts (#1337): the offers whose `la` the state's key of the model gives, and the rest, whose `la` is the offer's
+        price, its floor of the state's class or the restart's: the same at every state that prunes the same offers, so the search holds one copy
+        of them for all those states (`_envelope.Search.intern_offers`). A part only says what is likely shared: the search shares by content."""
+        out = self.candidates(state)
+        own = self._own
+        return [entry for entry in out if entry[1] in own], [entry for entry in out if entry[1] not in own]
+
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
         found = None if k is None or self.tip[k] else self.lowest[k]
         klass = self._klass(state)
         out: list[tuple[float, int]] = []
+        own = self._own = set()  # the positions whose `la` the key gave (`split_candidates`)
         for position, priced in enumerate(self.offers):
             action = priced.offer.action
             restart = isinstance(action, BuyStartItem)
@@ -206,6 +215,7 @@ class CraftingProblem:
                 low = priced.cost  # no abstract action to read (the model did not build it at this key, #1325): the offer's own cost, or its floor below
             elif position in found:
                 low = found[position]
+                own.add(position)
             else:
                 continue  # the model holds the offer and no member of the key can take it
             if self.floors is not None:

@@ -427,6 +427,160 @@ class Kernels:
         )  # fmt: skip
 
 
+def _sorted_arrays(entries: Iterable[tuple[float, int]]) -> tuple[np.ndarray, np.ndarray]:
+    """The entries (la, position) as two arrays sorted by (la, position) from the largest, the least last (as `Search.expand` lists them)."""
+    listed = sorted(entries, key=lambda c: (c[0], c[1]), reverse=True)
+    return np.array([la for la, _ in listed], dtype=np.float64), np.array([position for _, position in listed], dtype=np.int64)
+
+
+class Offers:
+    """The offers of an expanded node not realized yet, the least `la` first out (#1337): what was a list of (la, position) tuples, held compact.
+
+    The list held every offer of the state: R13's search on its 190-offer bound lists 5,557 offers at each state, a tuple of 64 bytes and its float
+    of 24 with a slot of 8 (about 470 KB a state), and grew the run by 4.4 GB over the first plan's 10,263 states. Here the offers whose `la` the
+    state's own key gives (`own`) are two arrays, and the offers whose `la` is their price or floor (`base`, `Problem.split_candidates`) are one
+    pair of arrays shared by every state that lists the same (`Search.intern_offers`); a node keeps how much of each is left and what was taken
+    out of it elsewhere than at its end (`gone`). The `la` stored is the problem's own; the slack (`SLACK`) is applied when it is read, so every
+    figure read is the one the list held.
+
+    The order out is the list's to the last tie: the least slackened `la` first; among equal ones, an entry put back (`insort`, the list's
+    `bisect.insort`, which put it after every entry of an `la` at least its own) first, the later put back first; then the listed entries by
+    the least (la, position), the order the list was sorted in. Positions are unique in a node (each offer is listed once and put back only
+    after it was taken out)."""
+
+    __slots__ = ("own_la", "own_pos", "own_n", "base_la", "base_pos", "base_n", "gone", "added")
+
+    def __init__(self, own: tuple[np.ndarray, np.ndarray], base: tuple[np.ndarray, np.ndarray] | None = None) -> None:
+        self.own_la, self.own_pos = own
+        self.own_n = len(self.own_la)
+        self.base_la, self.base_pos = base if base is not None else (None, None)
+        self.base_n = 0 if base is None else len(self.base_la)
+        self.gone: set[int] | None = None  # positions taken out of `own` or `base` before their live end
+        self.added: list[tuple[float, int]] | None = None  # entries put back, as the list held them (slackened `la`), the next out last
+
+    def __len__(self) -> int:
+        return (0 if self.added is None else len(self.added)) + self.own_n + self.base_n - (0 if self.gone is None else len(self.gone))
+
+    def __bool__(self) -> bool:
+        return len(self) > 0
+
+    def _end(self, la: np.ndarray | None, pos: np.ndarray | None, n: int) -> int:
+        """The index of the live end of one part (the next out of it), -1 when it is empty."""
+        gone = self.gone
+        n -= 1
+        while n >= 0 and gone is not None and int(pos[n]) in gone:
+            n -= 1
+        return n
+
+    def _ends(self, skip: int = 0):
+        """Yield the entries in the order out: (slackened la, position, part, index); part 0 is `added`, 1 `own`, 2 `base`."""
+        added = self.added or []
+        ia = len(added) - 1
+        io = self._end(self.own_la, self.own_pos, self.own_n)
+        ib = self._end(self.base_la, self.base_pos, self.base_n)
+        gone = self.gone
+        while ia >= 0 or io >= 0 or ib >= 0:
+            best = None
+            if ia >= 0:
+                best = (added[ia][0], added[ia][1], 0, ia)
+            for part, index, la_arr, pos_arr in ((1, io, self.own_la, self.own_pos), (2, ib, self.base_la, self.base_pos)):
+                if index < 0:
+                    continue
+                raw, position = float(la_arr[index]), int(pos_arr[index])
+                la = raw * (1.0 - SLACK)
+                if best is None or la < best[0]:
+                    best = (la, position, part, index)
+                elif la == best[0] and best[2] != 0:  # a tie of two listed entries: the least (la, position) of the list's sort first
+                    other_raw = float((self.own_la if best[2] == 1 else self.base_la)[best[3]])
+                    if (raw, position) < (other_raw, best[1]):
+                        best = (la, position, part, index)
+            yield best
+            part, index = best[2], best[3]
+            if part == 0:
+                ia -= 1
+            else:
+                pos_arr = self.own_pos if part == 1 else self.base_pos
+                index -= 1
+                while index >= 0 and gone is not None and int(pos_arr[index]) in gone:
+                    index -= 1
+                if part == 1:
+                    io = index
+                else:
+                    ib = index
+
+    def tail(self, count: int) -> list[tuple[float, int]]:
+        """The next `count` entries out, the next first (the list's `reversed(cands[-count:])`)."""
+        return [(la, position) for la, position, _, _ in itertools.islice(self._ends(), count)]
+
+    def last(self) -> tuple[float, int]:
+        """The next entry out (the list's `cands[-1]`)."""
+        la, position, _, _ = next(self._ends())
+        return la, position
+
+    def least(self) -> float:
+        """The least `la` left (the list's `cands[-1][0]`)."""
+        return next(self._ends())[0]
+
+    def _drop(self, part: int, index: int, position: int) -> None:
+        """Take entry `index` of part 1 or 2 out: at its live end the part shortens (and forgets the gone entries past it), else it is gone."""
+        pos_arr = self.own_pos if part == 1 else self.base_pos
+        n = self.own_n if part == 1 else self.base_n
+        if self._end(None, pos_arr, n) == index:
+            if self.gone is not None:
+                for k in range(index + 1, n):
+                    self.gone.discard(int(pos_arr[k]))
+                if not self.gone:
+                    self.gone = None
+            if part == 1:
+                self.own_n = index
+            else:
+                self.base_n = index
+        else:
+            if self.gone is None:
+                self.gone = set()
+            self.gone.add(position)
+
+    def pop(self) -> tuple[float, int]:
+        """Take the next entry out and return it (the list's `cands.pop()`)."""
+        la, position, part, index = next(self._ends())
+        if part == 0:
+            self.added.pop()
+            if not self.added:
+                self.added = None
+        else:
+            self._drop(part, index, position)
+        return la, position
+
+    def take(self, position: int | None) -> tuple[float, int] | None:
+        """Take the entry of `position` out wherever it stands and return it, None when there is none (the list's `remove` of the one found)."""
+        if position is None:
+            return None
+        if self.added is not None:
+            for k, entry in enumerate(self.added):
+                if entry[1] == position:
+                    del self.added[k]
+                    if not self.added:
+                        self.added = None
+                    return entry
+        if self.gone is not None and position in self.gone:
+            return None
+        for part, la_arr, pos_arr, n in ((1, self.own_la, self.own_pos, self.own_n), (2, self.base_la, self.base_pos, self.base_n)):
+            if n == 0:
+                continue
+            hit = np.flatnonzero(pos_arr[:n] == position)
+            if hit.size:
+                index = int(hit[0])
+                self._drop(part, index, position)
+                return float(la_arr[index]) * (1.0 - SLACK), int(pos_arr[index])
+        return None
+
+    def insort(self, entry: tuple[float, int]) -> None:
+        """Put an entry back (the list's `bisect.insort(cands, entry, key=lambda c: -c[0])`)."""
+        if self.added is None:
+            self.added = []
+        bisect.insort(self.added, entry, key=lambda c: -c[0])
+
+
 class Search[S]:
     """The envelope search of a `Problem`: see the module text."""
 
@@ -473,7 +627,8 @@ class Search[S]:
         self.expanded = bytearray()
         self.lb = np.zeros(1024)
         self.rows: dict[int, list[tuple[int, float, int, float]]] = {}  # expanded node -> realized (position, cost, kernel, chance of the node itself in it)
-        self.cands: dict[int, list[tuple[float, int]]] = {}  # expanded node -> offers not realized yet, the least `la` last
+        self.cands: dict[int, Offers] = {}  # expanded node -> offers not realized yet, the least `la` first out (#1337)
+        self.bases: dict[bytes, tuple[np.ndarray, np.ndarray]] = {}  # the shared part of the nodes' offers, by its content (`intern_offers`)
         self.kernels = Kernels(self._room_check if self.net.memory_mb is not None else None)
         self.shared: dict[Hashable, int] = {}
         self.hits = 0
@@ -588,13 +743,25 @@ class Search[S]:
     def expand(self, i: int) -> None:
         """List the offers of node `i` with their lower bounds; nothing is realized yet."""
         self.expanded[i] = 1
-        listed = sorted(self.p.candidates(self.states[i]), key=lambda c: (c[0], c[1]), reverse=True)
-        self.cands[i] = [(la * (1.0 - SLACK), position) for la, position in listed]
+        split = getattr(self.p, "split_candidates", None)
+        own, rest = split(self.states[i]) if split is not None else (self.p.candidates(self.states[i]), ())
+        offers = self.cands[i] = Offers(_sorted_arrays(own), self.intern_offers(rest) if rest else None)
         self.rows[i] = []
         self.stats.expanded += 1
-        self.stats.candidates += len(listed)
-        if self.guard and listed:
-            self._consistent(i, self.cands[i][-1][0])  # the last is the least `la`
+        self.stats.candidates += len(offers)
+        if self.guard and offers:
+            self._consistent(i, offers.least())
+
+    def intern_offers(self, entries: Sequence[tuple[float, int]]) -> tuple[np.ndarray, np.ndarray]:
+        """The sorted arrays of these entries, one pair for every node that lists the same (#1337): the offers whose `la` is their price or floor
+        are most of a node's when the bound's model holds few of them (R13: 5,367 of 5,557), and the same at many states."""
+        la, pos = _sorted_arrays(entries)
+        key = la.tobytes() + pos.tobytes()
+        found = self.bases.get(key)
+        if found is None:  # read-only views of the key itself: the content is held once
+            n = len(la)
+            found = self.bases[key] = (np.frombuffer(key, dtype=np.float64, count=n), np.frombuffer(key, dtype=np.int64, count=n, offset=8 * n))
+        return found
 
     def _consistent(self, i: int, least: float) -> None:
         """Raise `BoundError` when the bound of node `i` is above `least`, the least lower bound of its offers (a consistent bound is at most that)."""
@@ -640,11 +807,11 @@ class Search[S]:
         tighten = getattr(self.p, "tighten", None)
         primed = 0  # how many of the offers at the end of `cands` have been primed
         self.prime_skip = max(self.prime_skip - 1, 0)
-        while cands and (first or cands[-1][0] < best):
+        while cands and (first or cands.least() < best):
             if prime is not None and primed == 0 and not self.prime_skip:
                 # the offers still to be realized are among those whose bound is below the best now (it only falls): ask the problem to make their
                 # expensive parts side by side before they are built one by one
-                ahead = [position for la, position in reversed(cands[-PRIME_AHEAD:]) if first or la < best]
+                ahead = [position for la, position in cands.tail(PRIME_AHEAD) if first or la < best]
                 if len(ahead) >= PRIME_FROM:
                     made = prime(self.states[i], ahead)
                     # a call that found everything made already (the pools of one offer are the same at most states) costs the preparation of every offer
@@ -658,7 +825,7 @@ class Search[S]:
             if tighten is not None and not was_first:
                 raised = tighten(self.states[i], position, best)
                 if raised is not None and (raised := raised * (1.0 - SLACK)) > la and raised >= best:
-                    bisect.insort(cands, (raised, position), key=lambda c: -c[0])  # `cands` holds the least `la` last
+                    cands.insort((raised, position))
                     self.stats.tightened += 1
                     continue
             try:
@@ -666,7 +833,7 @@ class Search[S]:
             except Refused:
                 continue
             except _Cut:
-                bisect.insort(cands, (la, position), key=lambda c: -c[0])  # left open: the offer is still to be realized
+                cands.insort((la, position))  # left open: the offer is still to be realized
                 raise
             cost = self.p.cost(position)
             rows.append((position, cost, kid, self._self_mass(i, kid)))
@@ -698,16 +865,15 @@ class Search[S]:
             rows, cands = self.rows[i], self.cands[i]
             wanted = self._first_choice(i, choose)
             for position in wanted:
-                held = [c for c in cands if c[1] == position]
-                if not held:
+                held = cands.take(position)  # a refused offer is not asked again: it has no action here
+                if held is None:
                     continue
-                cands.remove(held[0])  # a refused offer is not asked again: it has no action here
                 try:
                     kid = self._kernel(i, position)
                 except Refused:
                     continue
                 except _Cut as cut:  # the count's net, met inside the making of a kernel (#1105): the chain ends here, the offer left open
-                    bisect.insort(cands, held[0], key=lambda c: -c[0])
+                    cands.insort(held)
                     return cut.reason
                 rows.append((position, self.p.cost(position), kid, self._self_mass(i, kid)))
                 self.stats.realized += 1
@@ -751,9 +917,8 @@ class Search[S]:
             if not self.expanded[i]:
                 self.expand(i)
             rows, cands = self.rows[i], self.cands[i]
-            restart = [c for c in cands if c[1] == self.p.restart]  # the upper graph holds the restart at every state already: it is left open
-            for c in restart:
-                cands.remove(c)
+            took = cands.take(self.p.restart)  # the upper graph holds the restart at every state already: it is left open
+            restart = [] if took is None else [took]
             met = False
             while cands:
                 if time.perf_counter() - polled >= POLL_SECONDS:  # a state of many offers, each a heavy kernel: the net is asked between them too
@@ -799,10 +964,10 @@ class Search[S]:
         return None
 
     @staticmethod
-    def _refile(cands: list[tuple[float, int]], entries: Iterable[tuple[float, int]]) -> None:
-        """Put offers back among a state's offers not realized yet, which hold the least `la` last."""
+    def _refile(cands: Offers, entries: Iterable[tuple[float, int]]) -> None:
+        """Put offers back among a state's offers not realized yet."""
         for entry in entries:
-            bisect.insort(cands, entry, key=lambda c: -c[0])
+            cands.insort(entry)
 
     def _first_choice(self, i: int, choose: Callable[[S], Sequence[int] | None] | None) -> Iterable[int]:
         """The offers the first plan tries at node `i`, in order (the first the game allows is realized): the incumbent's; else the problem's
@@ -831,17 +996,17 @@ class Search[S]:
         cands = self.cands[i]
         tighten = getattr(self.p, "tighten", None)
         while cands:
-            entry = cands[-1]
-            la, position = entry
-            if tighten is not None and len(cands) > 1:
-                raised = tighten(self.states[i], position, cands[-2][0])
+            ahead = cands.tail(2)
+            la, position = ahead[0]
+            if tighten is not None and len(ahead) > 1:
+                raised = tighten(self.states[i], position, ahead[1][0])
                 if raised is not None and (raised := raised * (1.0 - SLACK)) > la:
                     cands.pop()
-                    bisect.insort(cands, (raised, position), key=lambda c: -c[0])  # `cands` holds the least `la` last
+                    cands.insort((raised, position))
                     self.stats.tightened += 1
                     continue  # the same offer again when it is still the least, now settled against the next
             yield position
-            if cands and cands[-1] is entry:
+            if cands and cands.last()[1] == position:  # positions are unique in a node: the caller left it there
                 cands.pop()
 
     # ---- the graphs ---------------------------------------------------------------------------------------------
@@ -884,9 +1049,10 @@ class Search[S]:
                     made += 1
                 if lower:
                     held = self.cands[i]
-                    if held and math.isfinite(held[-1][0]):
+                    least = held.least() if held else math.inf
+                    if math.isfinite(least):
                         tags.append(FAKE)
-                        costs.append(max(held[-1][0], FLOOR))
+                        costs.append(max(least, FLOOR))
                         kernels.append(fake_kernel)
                         selves.append(0.0)
                         made += 1
