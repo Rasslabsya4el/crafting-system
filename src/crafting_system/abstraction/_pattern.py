@@ -154,6 +154,31 @@ world (`tests/test_pattern_member_views.py`); the model built both ways is the s
 on a counted build of R04's quiver; R04's first bound on the server: the same 78,715 keys, 145,259 kernels and start value, from 182,642
 kernels made where every member made 1,644,703.
 
+**The side an erasing reroll erases under a lock (#1352).** A reroll that does not read the junk (`Reads.junk` False: a Chaos Orb, an essence,
+a fossil set, a Harvest reforge) erases every ordinary mod, but at a key whose lock keeps one side it keeps that side's (`metamods.kept_by_reroll`).
+Its policy there is `ALL`, with the pure junk of the erased side made once (`alike_of`, above); the relevant multisets of the erased side were
+still every one, and each member was given the whole item: on R04's model 6, 1,245 fossil sets at thousands of members of a key built their
+outcomes at each, 15 to 50 s a key, and made no kernel that a member of the same kept side had not made.
+
+*Lemma.* Let `a` be an action that does not read the junk, and `key` a key whose crafted and fractured mods lock exactly one side `L` (with no
+lock outside the crafted domain in the game data: `Abstraction._kept_sides`). If two members `m1`, `m2` of `key` have the same ordinary slots on
+`L` (as a multiset: `Pattern.kept_view`), then `a` refuses both or neither, and their kernels are equal (so pushed through the key, too).
+
+*Argument.* The abstraction gives `a` at a state with such a lock the item of the view without the ordinary slots off `L` (`Abstraction._view`
+with `_kept_sides`), and makes the pair, the refusal and the kernel from `(a, view)` alone (`kernel_key`, step 1). The members of one key hold
+the same flags, fractured, crafted and veiled slots and item state beyond the mods (the lemma above); with the same ordinary slots on `L` they
+have the same view, so the same pair and the same kernel. What the view leaves out is no loss: `a` keeps of the ordinary mods only those a lock
+keeps and reads no other (the contract of `Reads.junk`, the one `_erases` rests on at an item with no lock, checked by the contract suite), so
+the item without the other side's mods gives the outcomes the whole item gives; the slots it keeps are read back from `origins` as before.
+**Proved** so, given the declaration; and checked by brute force: every kernel of every such action at every state with a lock that a seeded
+walk of the hand-worked bow meets (with the fixture fossils: single, summed, Sanctified, Glyphic, Fractured) is the kernel of the whole item,
+exactly (`KEPT_VIEW`), and every member of every such key gives through the key what the others of its kept slots give
+(`tests/test_pattern_kept_sides.py`).
+
+The build asks such an action once for each multiset of the kept slots at a key (`SHARE_KEPT`: the first member with them; the others take its
+answer, as under `SHARE_VIEWS`; `stats.kept_pairs`), and primes it there alone (`_prime`). The pairs left out still count as pairs. The model
+built both ways is the same on the hand-worked bow with the suffixes locked, exact and approximate.
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -295,7 +320,7 @@ universe may miss that slot, and the members that hold it are not made (issue #5
 import time
 from bisect import bisect_left
 from collections import Counter, defaultdict
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from contextlib import nullcontext
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
@@ -346,6 +371,7 @@ SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered f
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
 SHARE_ALIKE = True  # under `ALL` the fills of the pure junk that an action cannot tell apart are offered at one of them (`Pattern.alike_of`, #1192); False: at every fill
+SHARE_KEPT = True  # an action that erases the ordinary mods is asked once for each multiset of the ordinary slots a key's lock keeps (`Pattern.kept_sides`, #1352); False: at every member
 SHARE_VIEWS = True  # an action that tells ordinary slots apart by what the key reads of them alone is asked once for each multiset of those views at a key (`Pattern.views_only`, #1338); False: at every member
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
@@ -552,6 +578,7 @@ class PatternStats:
     modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
     view_pairs: int = 0  # pairs answered by the pair of a member with the same views of its ordinary slots (`Pattern.views_only`, #1338)
+    kept_pairs: int = 0  # pairs answered by the pair of a member with the same ordinary slots on the sides a lock keeps (`Pattern.kept_sides`, #1352)
     fallbacks: int = 0  # compositions whose lightest (or heaviest) fill was no item: offered at every fill, or under `ANY` and `ONE` at one that is (#1192)
 
 
@@ -883,6 +910,20 @@ class Pattern:
                 and action.held_weight_factor() is None and adds.named == frozenset() and not adds.draws and not adds.fractures
             )  # fmt: skip
         return found
+
+    def kept_sides(self, action: Action, key: PatternKey) -> frozenset | None:
+        """The sides a lock of `key` keeps, when the kernel of `action` at its members reads their ordinary slots on those sides alone (module
+        docstring, "The side an erasing reroll erases", #1352): the abstraction gives the action an item without the other side's
+        (`Abstraction._kept_sides`). None for any other action or key."""
+        if not SHARE_KEPT:
+            return None
+        probe = CompressedState(key.flags, key.fractured, key.status, tuple(key.crafted), *self.held_of(key))
+        return None if self.ab._erases(probe, action) else self.ab._kept_sides(probe, action)
+
+    @staticmethod
+    def kept_view(member: CompressedState, sides: frozenset) -> tuple:
+        """The ordinary slots of `member` on `sides` (`kept_sides`): all of a member the kernel of such an action reads that the key does not hold."""
+        return tuple(slot for slot in member.slots if not slot.crafted and slot.side in sides)
 
     def view(self, member: CompressedState) -> frozenset:
         """The multiset of what the key reads of each ordinary slot of `member`: its side, its protected tags and what it gives the goal."""
@@ -1842,6 +1883,9 @@ class PatternBuilder:
             if policy[0] is Mode.RELAXED:  # no fine kernel is made for a relaxed draw
                 continue
             members = members_for(policy)  # the key's members of the policy, made once (`_offers_of_key`)
+            kept = self.pattern.kept_sides(offer.action, key)
+            if kept is not None:  # the build asks one member of each multiset of the kept slots (#1352): the others make the same pair
+                members = list({self.pattern.kept_view(member, kept): member for member in reversed(members)}.values())
             last = self.ab.quality_last_action(offer.action)
             requests.extend(
                 (member, offer.action)
@@ -1908,7 +1952,8 @@ class PatternBuilder:
             keyed = SHARE_KEY_REFUSALS and classed is not None and ab.refusal_names_no_junk(offer.action)
             refused_at_key = False  # a member's refusal class, which is the key's (`keyed`), holds a refusal: every member's does
             seen: set[int] = set()
-            by_view: dict[frozenset, int] | None = {} if pattern.views_only(offer.action) else None  # the views of a member -> its answer (#1338)
+            sides = pattern.kept_sides(offer.action, key)  # the sides of the only ordinary slots the action reads at this key (#1352)
+            by_view: dict[Hashable, int] | None = {} if sides is not None or pattern.views_only(offer.action) else None  # the views of a member -> its answer (#1338, #1352)
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             if policy[0] is Mode.RELAXED:
                 relaxed = self._relaxed_rows(key, oi, offer, members, last, tick)
@@ -1944,10 +1989,13 @@ class PatternBuilder:
                     continue
                 view = None
                 if by_view is not None:
-                    view = pattern.view(member)
+                    view = pattern.view(member) if sides is None else pattern.kept_view(member, sides)
                     kid = by_view.get(view)
-                    if kid is not None:  # a member with these views was asked: its answer is this one's (module docstring, #1338)
-                        stats.view_pairs += 1
+                    if kid is not None:  # a member with these views was asked: its answer is this one's (module docstring, #1338, #1352)
+                        if sides is None:
+                            stats.view_pairs += 1
+                        else:
+                            stats.kept_pairs += 1
                         if kid == REFUSED:
                             stats.refused_pairs += 1
                         elif kid == GAP:
