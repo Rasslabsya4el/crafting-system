@@ -45,6 +45,22 @@ def _hold(search: object) -> object:
     return search
 
 
+def _list(states: Sequence[object]) -> tuple[dict, dict[object, tuple], float]:
+    """In a worker: the listings of these states (`Search.listing`), by state, for the first plan's chain."""
+    search = parallel.context()
+    listed: dict[object, tuple] = {}
+    began = time.perf_counter()
+    with budget.unasked():
+        for state in states:
+            try:
+                listed[state] = search.listing(state)
+            except Exception:  # left to the parent, which meets it at this state
+                break
+            finally:
+                search.p.release()
+    return {}, listed, time.perf_counter() - began
+
+
 def _make(tips: Sequence[int]) -> tuple[dict[int, dict[int, tuple[object, float]]], dict[object, tuple], float]:
     """In a worker: realize these tips as `Search.run` does and return the kernels made, by tip and offer, each with its seconds, and the
     listings of the tips it expanded, by state (`Search.listing`)."""
@@ -86,29 +102,33 @@ class Ahead:
         self.pooled = 0  # rounds that forked a pool
         self.processes = 1  # processes at work in the last round (this one and its workers)
 
-    def workers_for(self, tips: int) -> int:
-        """The workers a round of `tips` tips forks: the count that saves the most time by the measures (the module's note), or 0."""
+    def workers_for(self, tips: int, per_item: float | None = None) -> int:
+        """The workers a round of `tips` tips forks (or a chain with that many states ahead, `per_item` seconds each): the count that saves the
+        most time by the measures (the module's note), or 0."""
         if tips < 2 or self.workers < 2 or self.stopped is not None:
             return 0
         if self.always:
             return self.workers
-        if self.per_tip is None:
+        pace = self.per_tip if per_item is None else per_item
+        if pace is None:
             return 0
         fork = FORK_PRIOR if self.fork is None else self.fork
         lost = (self.lost / self.lost_tips if self.lost_tips else 0.0) * tips
         best, choice = 0.0, 0
         for count in range(2, self.workers + 1):
-            gain = self.per_tip * tips * (1.0 - 1.0 / count) - fork * count - lost
+            gain = pace * tips * (1.0 - 1.0 / count) - fork * count - lost
             if gain > best:
                 best, choice = gain, count
         return choice
 
-    def window(self, workers: int) -> int:
-        """Tips per window: about `WINDOW` polls of work per worker at the last round's pace, and at least a chunk per worker."""
+    def window(self, workers: int, per_item: float | None = None) -> int:
+        """Items per window: about `WINDOW` polls of work per worker at the pace measured (the last round's per tip, unless another is
+        given), and at least a chunk per worker."""
         least = workers * CHUNKS
-        if self.per_tip is None or self.per_tip <= 0.0:
+        pace = self.per_tip if per_item is None else per_item
+        if pace is None or pace <= 0.0:
             return least
-        return max(least, int(WINDOW * self.poll * workers / self.per_tip))
+        return max(least, int(WINDOW * self.poll * workers / pace))
 
     def end_round(self, tips: int) -> None:
         if tips:
@@ -117,43 +137,55 @@ class Ahead:
 
 
 class Round:
-    """The pool of one round: windows of its tips made ahead in the workers, handed to the search tip by tip (`at`)."""
+    """A pool that makes ahead, in windows, the work of a list of nodes the search walks in its order, and hands it over node by node (`at`):
+    the tips of a round (`_make`: kernels and listings), or the states of the first plan's chain (`_list`: listings; the chain's queue grows as it
+    is walked, and a window is sent once the queue holds one)."""
 
-    def __init__(self, search: object, tips: Sequence[int], ahead: Ahead, workers: int) -> None:
+    def __init__(self, search: object, items: list[int], ahead: Ahead, workers: int, *, chain: bool = False, per_item: float | None = None) -> None:
         self.search = search
         self.ahead = ahead
-        self.tips = list(tips)
+        self.items = items  # the search's own list: a chain's queue grows while it is walked
+        self.chain = chain
         self.workers = workers
-        self.size = ahead.window(workers)
+        self.size = ahead.window(workers, per_item)
         self.pool: parallel.WorkerPool | None = parallel.WorkerPool(_hold, (search,), workers=self.workers)
-        self.pending: list[tuple[int, list[Future]]] = []  # (first tip's place, futures of its chunks), oldest first
-        self.next = 0  # the place of the first tip not yet sent
+        self.pending: list[tuple[int, list[Future]]] = []  # (first item's place, futures of its chunks), oldest first
+        self.next = 0  # the place of the first item not yet sent
         self.memo: dict[int, dict[int, tuple[object, float]]] = {}
         self.waited = 0.0
-        self.useful = 0.0  # the workers' seconds of the kernels the search took from them (added by `Search._kernel`)
+        self.useful = 0.0  # the workers' seconds of the work the search took from them (added by `Search._kernel` and `Search.expand`)
         self.forked = False
         ahead.pooled += 1
         ahead.processes = 1 + self.workers
 
-    def _send(self) -> None:
-        if self.pool is None or self.next >= len(self.tips):
-            return
-        window = self.tips[self.next : self.next + self.size]
-        step = max(1, -(-len(window) // (self.workers * CHUNKS)))
+    def _send(self, place: int) -> bool:
+        start = max(self.next, place + 1 if self.chain else place)
+        window = self.items[start : start + self.size]
+        if self.chain:  # the states, sent as they are: the workers forked before the chain met them
+            if len(window) < min(self.size, self.workers * CHUNKS):
+                return False
+            search = self.search
+            pieces = [search.states[j] for j in window if not search.expanded[j]]
+        else:
+            pieces = window
+        if not window:
+            return False
+        step = max(1, -(-len(pieces) // (self.workers * CHUNKS)))
         mark = time.perf_counter()
-        futures = [self.pool.submit(_make, window[start : start + step]) for start in range(0, len(window), step)]
-        if not self.forked:  # the workers are forked at the first submit
+        futures = [self.pool.submit(_list if self.chain else _make, pieces[at : at + step]) for at in range(0, len(pieces), step)]
+        if not self.forked and futures:  # the workers are forked at the first submit
             self.forked = True
             self.ahead.fork = (time.perf_counter() - mark) / self.workers
-        self.pending.append((self.next, futures))
-        self.next += len(window)
+        self.pending.append((start, futures))
+        self.next = start + len(window)
+        return True
 
     def at(self, place: int, tip: int) -> dict[int, tuple[object, float]] | None:
-        """The kernels made ahead at the tip at this place of the round (offer -> (weights, seconds)), or None: the search makes them."""
-        if self.pool is not None and place == 0:
-            self._send()
-            self._send()
-        if self.pool is not None and self.pending and self.pending[0][0] == place:
+        """The kernels made ahead at the node at this place (offer -> (weights, seconds)), or None: the search makes them. The listings made
+        ahead go to the search's `_listed`, where `expand` takes them."""
+        while self.pool is not None and len(self.pending) < 2 and self._send(place):
+            pass
+        if self.pool is not None and self.pending and self.pending[0][0] <= place:
             _, futures = self.pending.pop(0)
             mark = time.perf_counter()
             try:
@@ -168,7 +200,8 @@ class Round:
                 for made, listed, _ in results:
                     self.memo.update(made)
                     self.search._listed.update(listed)
-                self._send()
+                while self.pool is not None and len(self.pending) < 2 and self._send(place):
+                    pass
         return self.memo.pop(tip, None)
 
     def give_room(self, limit: float, growth: float = 0.0) -> None:

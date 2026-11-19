@@ -914,12 +914,24 @@ class Search[S]:
         seen = {0}
         walked: set[int] = set()  # the kernels whose successors are all in the queue: states that share a kernel (`kernel_key`) share its successors
         polled = -math.inf  # the memory is read at the first state, and then every `POLL_SECONDS`
-        for i in queue:
+        self.ahead.making = 0.0
+        for place, i in enumerate(queue):
             if self.goal[i]:
                 continue
             poll = time.perf_counter() - polled >= POLL_SECONDS
             if poll:
                 polled = time.perf_counter()
+            if poll or self.ahead.always:
+                # the states of the queue ahead listed in forked workers (`_ahead`, #1340), once the pace of the chain so far says it saves time
+                pool = self._round
+                if pool is None and not self.counted and place and hasattr(self.p, "listing"):
+                    count = self.ahead.workers_for(len(queue) - place - 1, self.ahead.making / place)
+                    if count:
+                        pool = self._round = Round(self, queue, self.ahead, count, chain=True, per_item=self.ahead.making / place)
+                if pool is not None and self.net.memory_mb is not None:  # the workers are stopped before their memory stops the chain
+                    pool.give_room(self.net.memory_mb)
+            if self._round is not None:
+                self._round.at(place, i)
             # the clock at every state; the state net waits for the first round, so the chain is whole, except in a run counted in states (#1101):
             # there it is the only net, and a chain over a blind bound walks tens of thousands of states, so the count is asked at every state
             stopped = self._net(began, memory=poll, states=self.net.pieces is not None, seconds=self.net.first)
@@ -1302,6 +1314,11 @@ class Search[S]:
             except MemoryNet as stop:
                 stopped = str(stop)
                 self.kernels.room = None  # the stop's own plan is solved over what the search holds
+            finally:
+                if self._round is not None:  # the chain's pool (`_seed`)
+                    self._round.close(len(self.states))
+                    self._round = None
+                self.ahead.making = 0.0
             self.stats.expand_seconds += time.perf_counter() - mark
             try:
                 upper = self._upper()[2]
