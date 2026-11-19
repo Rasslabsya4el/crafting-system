@@ -1349,21 +1349,26 @@ class Pace:
     its 38 s) while it stays within that figure.
 
     **A build that outruns its pace (#1325).** The figure is a forecast from the models solved so far. A build that has used more than
-    it, its next model still unsolved, has shown that the forecast was too low; from then on the figure is the pace of the work it has
-    finished, the time it has used for the offers its solved models hold (`reckon`): it grows as the build goes on, and the build stops
-    once it passes the room (`OUTRUN`), as any build whose pace ends past its room does. Since per-key joining (#1325) a model's work is no
-    longer in proportion to its offers: an offer built at the 29 keys that need it costs a fraction of a second, and the next model, whose
-    offers grow the universe and begin the build again at 8,943 keys, costs the round's whole share. On R13's site plan the second model
-    (4 offers at 29 keys) was solved at once and its pace foretold well under a second; read alone, that figure let the third run to twice
-    the share, nearly done: 26 builds ran past their share, 13 searches had 0 s, and the plan cost 390,773 c against main's 89,548 to
-    95,719 c. A build that keeps to its pace, each model solved before the figure (R11's Exalted round: 19.15 s, then 36.17 s), goes on as
-    before."""
+    it, its next model still unsolved, has shown that the forecast was too low, by the time it has run over (`used - forecast`). That
+    time is charged to the work the forecast was read from: the pace becomes what the solved models' offers took plus the overrun, and
+    kept to the offers still out it gives `forecast + (used - forecast) * (total - start) / (solved - start)` (`reckon`). The figure has
+    no jump: at the forecast it is the forecast, and it grows from there by as many seconds a second as the offers still out are to those
+    the pace was read from. The build stops once it passes the room (`OUTRUN`), as any build whose pace ends past its room does.
+
+    Since per-key joining (#1325) a model's work is no longer in proportion to its offers: an offer built at the 29 keys that need it
+    costs a fraction of a second, and the next model, whose offers grow the universe and begin the build again at 8,943 keys, costs the
+    round's whole share. On R13's site plan the second model (4 offers at 29 keys) was solved at once and its pace foretold 0.9 s; read
+    alone, that figure let the third run to twice the share, nearly done: 26 builds ran past their share, 13 searches had 0 s, and the
+    plan cost 390,773 c against main's 89,548 to 95,719 c. With the overrun charged (24 offers out for 4 solved: 6 s a second) it stops
+    at about 7.4 s of a room of 40 s. A build that overruns a little goes on: R11's Exalted round, foretold 36.17 s from its third model
+    and ending at 38.3 s, reads at most 36.17 + 2.13 * 74 / 20 = 44 s there, within its room of 54 s."""
 
     def __init__(self) -> None:
         self.growth: Growth | None = None
         self.grew_from: float | None = None  # the net's count when the first model was solved
         self.need: float | None = None  # the build's expected need at its pace of growth, None until growth has added offers
         self.grows = False  # the build grows its model from part of its offers (its offers' floors are worked out, `_pattern_bound`)
+        self.forecast: float | None = None  # the need its pace foretold at its last solved model (`grown`)
         self.outrun = False  # it has used more than its pace foretold, its next model unsolved (`reckon`, #1325)
 
     def grown(self, growth: Growth, used: float) -> None:
@@ -1371,20 +1376,18 @@ class Pace:
         if self.grew_from is None:
             self.grew_from = used
         if growth.solved > growth.start:
-            self.need = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
+            self.need = self.forecast = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
             self.outrun = False
 
     def reckon(self, used: float) -> float | None:
-        """The need `verdict` reads when the build has used `used` (see the class text): the figure its pace foretold while the build keeps
-        to it; once it has used more, its next model unsolved, the figure of the work it has finished, `grew_from + (used - grew_from) *
-        (total - start) / (solved - start)`, which grows with `used` (it raises `need`, so what a stop says names it). None with no pace."""
-        growth = self.growth
-        if self.need is None or growth is None or self.grew_from is None or growth.solved <= growth.start:
-            return self.need
-        if not self.outrun and used <= self.need:
+        """The need `verdict` reads when the build has used `used` (see the class text): the forecast of its pace while the build keeps to
+        it; once it has used more, its next model unsolved, `forecast + (used - forecast) * (total - start) / (solved - start)`, the overrun
+        charged to the work the pace was read from (it raises `need`, so what a stop says names it). None with no pace."""
+        growth, forecast = self.growth, self.forecast
+        if forecast is None or growth is None or growth.solved <= growth.start or used <= forecast:
             return self.need
         self.outrun = True
-        self.need = max(self.need, self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start))
+        self.need = max(forecast, forecast + (used - forecast) * (growth.total - growth.start) / (growth.solved - growth.start))
         return self.need
 
     def verdict(self, used: float, given: float, room: "Room | None") -> str | None:
@@ -2102,4 +2105,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]
+__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "OUTRUN", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]

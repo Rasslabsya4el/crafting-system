@@ -958,25 +958,35 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
 def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_while_its_pace_ends_within_its_net(monkeypatch):
     # #1099, #1224, on the clock: a build keeps three times its time for the search (`SEARCH_PER_BUILD`), so of a 20 s net it stops at 5 s;
     # with a plan in hand (`Net.held`) it goes on past 5 s while the pace its model grows at ends within the net (its first model solved at
-    # 1 s, 8 of the 76 offers to add joined by 3 s: 1 + 2 * 76 / 8 = 20 s), and only the net itself stops it. One whose model has not grown
+    # 1 s, half of the 8 offers to add joined by 3 s: 1 + 2 * 8 / 4 = 5 s), and only the net itself stops it. One whose model has not grown
     # yet has nothing to show it will end there: it stops at 5 s too, and the search has the rest. The clock is a figure set here.
+    # #1325: a build that runs past the 5 s its pace foretold, its next model unsolved, has the overrun charged to that pace: 5 + (used - 5)
+    # * 8 / 4, past the net of 20 s from 12.5 s on. One whose next model is solved on its way (all 12 offers at 9 s: 1 + 8 * 8 / 8 = 9 s,
+    # and at most 9 + (used - 9) * 8 / 8 = used after it) reaches the net itself.
     from crafting_system.abstraction._pattern import Growth
 
     now = [0.0]
     monkeypatch.setattr(_envelope_plan.time, "perf_counter", lambda: now[0])
-    fresh, held, blind = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True))
-    held.grows = blind.grows = True  # both grow their model from part of their offers (`_pattern_bound`)
+    fresh, held, blind, late = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True, True))
+    held.grows = blind.grows = late.grows = True  # all grow their model from part of their offers (`_pattern_bound`)
     now[0] = 1.0
-    held.grown(Growth(5, 80, 4, 4), held.used())
-    blind.grown(Growth(5, 80, 4, 4), blind.used())
+    for build in (held, blind, late):
+        build.grown(Growth(5, 12, 4, 4), build.used())
     now[0] = 3.0
-    held.grown(Growth(13, 80, 4, 12), held.used())
-    assert held.need == pytest.approx(20.0)
+    held.grown(Growth(10, 12, 4, 8), held.used())
+    late.grown(Growth(10, 12, 4, 8), late.used())
+    assert held.need == pytest.approx(5.0) == late.need
     now[0] = 4.9
     assert fresh() is None and held() is None and blind() is None
     now[0] = 5.0
     assert fresh().startswith("stopped after 5 of the 20 seconds") and held() is None
     assert blind().startswith("stopped after 5 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown")
+    now[0] = 9.0
+    held.grown(Growth(12, 12, 4, 12), held.used())
+    now[0] = 12.4
+    assert late() is None and late.need == pytest.approx(5.0 + 7.4 * 2)
+    now[0] = 12.6
+    assert late().startswith("stopped after 13 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its next model was not solved")
     now[0] = 19.9
     assert held() is None
     now[0] = 20.0
@@ -1496,11 +1506,15 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     pace.grown(Growth(40, 84, 10, 30), 11.6)
     assert pace.need == pytest.approx(2.5 + 9.1 * 74 / 20)
     assert pace.verdict(19.0, 27.0, walked) is None  # inside its fourth model: the pace of the third holds
-    # the fourth model (52 offers) is solved at 20.1 s and the last (84) at 36.0 s (figures set here: its 17 models, in round numbers)
-    pace.grown(Growth(52, 84, 10, 40), 20.1)
-    assert pace.verdict(27.0, 27.0, walked) is None  # past the share, within 54 s at its pace
-    pace.grown(Growth(84, 84, 10, 80), 36.0)
-    assert pace.verdict(38.3, 27.0, walked) is None  # its last model is solved at 38.3 s
+    assert pace.verdict(27.0, 27.0, walked) is None and pace.verdict(38.3, 27.0, walked) is None  # past the share, within 54 s at its pace
+    # #1325: past the 36.17 s foretold, no model solved, the overrun is charged to the pace, with no jump: 36.17 at 36.17 s, and at its end
+    # (38.3 s) 36.17 + 2.13 * 74 / 20 = 44.05 s, within its room; it would stop past 36.17 + 17.83 * 20 / 74 = 40.99 s
+    late = exalted()
+    late.grown(Growth(40, 84, 10, 30), 11.6)
+    assert late.verdict(36.17, 27.0, walked) is None and late.need == pytest.approx(2.5 + 9.1 * 74 / 20) and not late.outrun
+    assert late.verdict(36.2, 27.0, walked) is None and late.need == pytest.approx(36.17 + 0.03 * 3.7, abs=1e-3) and late.outrun
+    assert late.verdict(38.3, 27.0, walked) is None and late.need == pytest.approx(2.5 + 9.1 * 3.7 + (38.3 - 2.5 - 9.1 * 3.7) * 3.7)
+    assert late.verdict(40.9, 27.0, walked) is None and late.verdict(41.1, 27.0, walked) == SHARE  # past its share: the share's reason
     assert pace.verdict(54.0, 27.0, walked) == SHARE  # never past its room
     assert pace.verdict(27.0, 27.0, Room(late=0.0)) == SHARE  # the last round: no room past its share
     # R13's round 2 (#1142, heavy run 44097630217): its first model held 49 of 51 offers and the model adding the other 2 never ended; R17's
@@ -1532,15 +1546,15 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     # offers. A round's share of 20 s, room 40 s: its first model (54 of 78 offers) solved at 0.3 s, its second (4 offers at the 29 keys
     # that need them) at 0.4 s, so its pace foretells 0.3 + 0.1 * 24 / 4 = 0.9 s; its third model (5 offers more) begins the build again at
     # 8,943 keys and is not solved in 40 s. Read alone, that figure let it run to 40 s, nearly done, and its search had 0 s. Past 0.9 s it
-    # has outrun it, and the figure is the pace of what it finished, 4 offers: 0.3 + (used - 0.3) * 24 / 4, past the room of 40 s from
-    # 6.92 s on: it stops there, and its search has the rest of the share
+    # has outrun it, and the overrun is charged to the pace of the 4 offers it was read from: 0.9 + (used - 0.9) * 24 / 4, past the room
+    # of 40 s from 7.42 s on: it stops there, and its search has the rest of the share
     r13 = Pace()
     r13.grows = True
     r13.grown(Growth(58, 78, 54, 54), 0.3)
     r13.grown(Growth(63, 78, 54, 58), 0.4)
     assert r13.need == pytest.approx(0.9)
-    assert r13.verdict(6.9, 20.0, held) is None and r13.need == pytest.approx(0.3 + 6.6 * 6)
-    assert r13.verdict(7.0, 20.0, held) == OUTRUN == r13.verdict(7.0, 20.0, walked) and r13.need == pytest.approx(0.3 + 6.7 * 6)
+    assert r13.verdict(7.4, 20.0, held) is None and r13.need == pytest.approx(0.9 + 6.5 * 6)
+    assert r13.verdict(7.5, 20.0, held) == OUTRUN == r13.verdict(7.5, 20.0, walked) and r13.need == pytest.approx(0.9 + 6.6 * 6)
     # a build that keeps to its pace goes on: its third model solved before the 13 s foretold, the figure moves on
     steady = Pace()
     steady.grows = True
