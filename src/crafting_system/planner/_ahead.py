@@ -16,7 +16,7 @@ tips of the one before, and between two windows this process asks its nets as it
 the round's work per worker (`POLL_SECONDS`), so the nets are asked about as often as with one process.
 
 When a pool pays (`Ahead.workers_for`). A pool is forked for a round only when the kernels it would make save more time than the pool costs, both
-measured in this run: the saving is the round's tips times the seconds of kernel making per tip of the last round (made here or in a worker),
+measured in this run: the saving is the round's tips times the seconds of work per tip (listings and kernels, made here or in a worker) of the rounds so far,
 times `1 - 1/workers`; the cost is the seconds of the fork of each worker, as the last pool's fork measured them (the first `submit`, where the
 workers are forked: it grows with the process's size and the workers' number), plus, per tip, what the pooled rounds lost beyond their useful
 work spread over the workers (sending, waiting on the slowest chunk, kernels made and not asked for). The round forks the number of workers, up to
@@ -98,7 +98,9 @@ class Ahead:
         self.lost = 0.0  # seconds the pooled rounds waited beyond the useful work spread over the workers, the forks left out
         self.lost_tips = 0  # the tips of those rounds
         self.making = 0.0  # seconds of kernel making in this round so far: here, or in a worker for the kernels taken from it
-        self.per_tip: float | None = None  # seconds of kernel making per tip, of the last round that had tips
+        self.per_tip: float | None = None  # seconds of work (listings and kernels) per tip, over the rounds so far (`end_round`)
+        self.walked = 0  # the tips of the rounds so far
+        self.spent = 0.0  # their seconds of work
         self.pooled = 0  # rounds that forked a pool
         self.processes = 1  # processes at work in the last round (this one and its workers)
 
@@ -122,7 +124,7 @@ class Ahead:
         return choice
 
     def window(self, workers: int, per_item: float | None = None) -> int:
-        """Items per window: about `WINDOW` polls of work per worker at the pace measured (the last round's per tip, unless another is
+        """Items per window: about `WINDOW` polls of work per worker at the pace measured (the rounds' per tip, unless another is
         given), and at least a chunk per worker."""
         least = workers * CHUNKS
         pace = self.per_tip if per_item is None else per_item
@@ -131,8 +133,12 @@ class Ahead:
         return max(least, int(WINDOW * self.poll * workers / pace))
 
     def end_round(self, tips: int) -> None:
-        if tips:
-            self.per_tip = self.making / tips
+        """Add the round's work to the pace: the seconds per tip of all the rounds so far, so that a round whose tips needed nothing (all
+        listed and realized before) does not make the next one look free (R13: a round of 89 such tips, then one of 1,539 walked alone)."""
+        self.walked += tips
+        self.spent += self.making
+        if self.walked:
+            self.per_tip = self.spent / self.walked
         self.making = 0.0
 
 

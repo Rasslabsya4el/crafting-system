@@ -183,3 +183,13 @@ def test_a_fork_that_fails_leaves_the_search_to_this_process(monkeypatch):
     pooled, _, ahead = _search(4, 0.3, workers=3, ahead_always=True)
     _same(alone, ahead)
     assert pooled.ahead.pooled
+
+
+def test_the_pace_is_that_of_all_the_rounds_so_a_round_that_needed_nothing_does_not_make_the_next_look_free():
+    ahead = _ahead.Ahead(4, 0.5)
+    ahead.making = 2.0
+    ahead.end_round(100)  # 20 ms a tip
+    ahead.end_round(89)  # tips listed and realized before: no work
+    assert ahead.per_tip == pytest.approx(2.0 / 189)
+    ahead.fork = 0.04
+    assert ahead.workers_for(1539) == 4
