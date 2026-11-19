@@ -1367,11 +1367,11 @@ def test_through_the_entry_a_round_whose_build_its_share_ends_nearly_done_finish
         assert second.status == "closed" and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
         assert _fills(plan.solution.policy[plan.start].label)
         plan, (first, second, *_) = planned(28)
-        assert builds[1] == (48, 32, "growth", True) and second.status == "stopped"
-        assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        assert builds[1] == (49, 32, "growth", True) and second.status == "stopped"  # (#1325: 48 before; an offer built at the keys that need it)
+        assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # (#1325: its search on the bound it stopped finds the cheaper plan)
     else:
-        assert builds[1] == (36, 36, "growth", False)
-        assert second.status == "stopped" and plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
+        assert builds[1] == (37, 36, "growth", False)  # (#1325: 36 before)
+        assert second.status == "stopped" and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # (#1325: as above)
 
 
 def test_a_later_round_that_makes_the_first_plan_and_gives_way_joins_the_base_of_the_rounds_after_it():
@@ -1572,7 +1572,7 @@ def test_through_the_entry_after_a_walked_plan_a_round_whose_build_grows_at_a_pa
     assert (first.status, first.states, first.upper) == ("closed", 12, pytest.approx(16 * E / 3 + 2 * S, rel=1e-9))
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
     if pace:
-        assert builds[1] == (51, 4 * 14, "complete", 5)
+        assert builds[1] == (51, 4 * 14, "complete", 18)  # (#1325: 5 models before; an offer is built at the keys that need it, and found needed at more keys in later models)
         assert second.status == "closed"
     else:
         assert builds[1] == (14, 4 * 14, "growth", 1)
@@ -1590,7 +1590,7 @@ def _one_offer_per_model(monkeypatch):
 
     def one_at_a_time(*args, **kwargs):
         more, limits = real_binding(*args, **kwargs)
-        return more[-1:], limits
+        return dict(list(more.items())[-1:]), limits  # (the offer with the largest floor, with the keys that need it, #1325)
 
     monkeypatch.setattr(_pattern_bound, "_binding", one_at_a_time)
     monkeypatch.setattr(_offer_floor.OfferFloors, "initial", lambda self: real_initial(self)[:1])
