@@ -130,6 +130,9 @@ def test_the_build_of_the_hand_worked_world_is_the_build_before(tags, monkeypatc
 @pytest.mark.parametrize(("route", "tags"), [case for case in CASES if case.id == "r13-auto"])
 def test_the_bound_of_a_real_route_is_the_bound_before(route, tags, monkeypatch):
     real_game_data()  # skips without the dump
+    # both ways ask each Annulment and Remove Crafted Mods pair: a pair answered by its member's views (#1338) asks no `kernel_key` either,
+    # so the count of calls below would mix the two savings
+    monkeypatch.setattr(_pattern, "SHARE_VIEWS", False)
 
     def made(before: bool):
         _, _, _, abstraction, start, priced, _ = E.build_model(route, "twins", True, False)
