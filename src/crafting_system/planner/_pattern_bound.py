@@ -384,20 +384,21 @@ def _binding(
     reached = np.zeros(n, dtype=bool)
     reached[policy_reach(graph, np.asarray(solved.action), 0)] = True  # a key the policy of the model reaches from the start can change the value of the start
     shaped = np.array([not isinstance(key, ChoiceNode) and floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS]) in (INSIDE, OUTSIDE) for key in model.keys] + [False] * (n - len(model.keys)), dtype=bool)
-    wide = binding.copy()  # every key where the floor action is the cheapest: the offers needed are built there, reached or not (below)
+    unreached = binding & ~(reached | shaped)  # binding keys of another shape the policy does not reach: some get the offers all the same (`_spread`)
     binding &= reached | shaped  # and so do the keys of the start's shape, where the floors are strong: the search goes there; a key of another shape (OTHER: the cost of an offer as its floor; SHAPED + S: rho_S, #973) is left to the search unless the policy reaches it
     if not binding[: len(model.keys)].any():
         return {}, dict.fromkeys(floors.classes)
     limit: dict[int, float | None] = dict.fromkeys(floors.classes)
     by_class: dict[int, list[int]] = {}
-    for k in np.flatnonzero(wide[: len(model.keys)]).tolist():  # (#1325: the policy, moved off a key given offers, reaches the next binding key
-        key = model.keys[k]  # of its class in the next round; R24 crept a cent a round over one key at a time; given at every binding key, it does not)
+    for k in np.flatnonzero(binding[: len(model.keys)]).tolist():
+        key = model.keys[k]
         if not model.expanded[k]:
             continue
         klass = floors.klass(key.flags, key.fractured, key.status, key.held[IMPRINTS])
-        bound = float(best[k])
-        limit[klass] = bound if limit[klass] is None else max(limit[klass], bound)
         by_class.setdefault(klass, []).append(k)
+    _spread(by_class, np.flatnonzero(unreached[: len(model.keys)]).tolist(), lambda k: fake[k] / best[k], model, floors, held)
+    for klass, keys in by_class.items():
+        limit[klass] = float(best[keys].max())
     keys_of = {klass: np.array(keys, dtype=np.int64) for klass, keys in by_class.items()}
     best_of = {klass: best[keys] for klass, keys in keys_of.items()}
     found: list[tuple[float, int]] = []
@@ -425,6 +426,34 @@ def _binding(
     )
     found.sort()
     return {position: sorted(needs[position]) for _, position in found}, limit
+
+
+def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: PatternModel, floors: OfferFloors, holders: dict[int, set[int]]) -> None:
+    """Add to a class of another shape where the policy reaches a binding key as many more binding keys of that class as already hold offers
+    built at some keys only, the most binding first (the least ratio of the floor action to the model's best), so the keys a class's offers are
+    built at double each round it is found binding (#1325).
+
+    The policy, moved off a key given offers, reaches the next binding key of its class in the next round: R24 crept a cent a round over one key
+    at a time (64 rounds, start value 222.03 to 222.82); given at every binding key at once, 2,884 offers were built at all 18,469 keys, the join
+    of the whole model again. Doubling, a class is found binding at most about log2 of its keys times in a row. Which keys hold an offer changes
+    nothing of the bound's soundness (`_floor_of`): only how many rounds the growth takes."""
+    if not unreached or not holders:
+        return
+    klass_of = lambda k: floors.klass(model.keys[k].flags, model.keys[k].fractured, model.keys[k].status, model.keys[k].held[IMPRINTS])  # noqa: E731
+    wanted = {klass for klass in by_class if klass not in (INSIDE, OUTSIDE)}
+    if not wanted:
+        return
+    holding: dict[int, int] = {}
+    for k in set().union(*holders.values()):
+        if (klass := klass_of(k)) in wanted:
+            holding[klass] = holding.get(klass, 0) + 1
+    spare: dict[int, list[tuple[float, int]]] = {}
+    for k in unreached:
+        if model.expanded[k] and (klass := klass_of(k)) in wanted and holding.get(klass):
+            spare.setdefault(klass, []).append((float(ratio(k)), k))
+    for klass, keys in spare.items():
+        keys.sort()
+        by_class[klass].extend(k for _, k in keys[: holding[klass]])
 
 
 def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
