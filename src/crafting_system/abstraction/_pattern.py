@@ -123,6 +123,35 @@ The argument is the declaration's own: `Reads.families` and `Reads.pool_weight` 
 contract suite compares the actions against them. Checked here by building a model both ways (`SHARE_ALIKE`), on the hand-worked world
 and on real targets: the same rows at every key (`tests/test_pattern_alike_fills_real.py`).
 
+**The members an action cannot tell apart (#1338).** `ONE` makes one member for each relevant multiset, because a bench craft, a Divine Orb
+or an unveil reads which relevant mods a member holds. An Annulment does not: at R04's keys of thousands of relevant multisets it was asked
+at each (597,014 pairs in five minutes of the first bound) and each pair was a kernel key of its own (the key holds the slots kept), 596,911
+kernels for 13,284 distinct ones. Call the *view* of an ordinary slot what the key reads of it: its side, its protected tags and what it
+gives the goal (`Pattern.view`: `key` counts the slots by side and by (side, protected tags), and the status of a state is the per-leaf best
+of what its slots give, the very function `members` checks a status against).
+
+*Lemma.* Let `a` be an action that is declared block-invariant, names no family of the junk (`Reads.families` empty), adds no mod (no
+draw, nothing named, no fracture: `Adds`) and reads nothing else of a mod (no pool weight, variant, reroll of values, influence, tier or
+input: `Pattern.views_only`). If two members `m1`, `m2` of a key have the same multiset of views, then `a` refuses both or neither, and
+their kernels pushed through the key are equal.
+
+*Argument.* The members of one key hold the same flags, fractured, crafted and veiled slots and item state beyond the mods; they differ in
+their ordinary slots alone. Equal multisets of views give a bijection `p` from the ordinary slots of `m1` to those of `m2` that keeps each
+view. `a` reads of an ordinary slot no family and no mod (its declaration) and adds none, so each outcome of `a` at `m1` is `m1` with some
+of its ordinary slots removed, the rest kept, and the parts the key holds changed as the action does (an implicit, the quality, a crafted
+mod removed); which slots it removes, and with what chance, it reads from the key and from the side and the protected tags of each slot
+(the Annulment: one removable slot uniformly, a removable slot being one not on a locked side and of no tag a metamod protects; the
+Eldritch Annulment the same on the dominant side, which the key holds; Remove Crafted Mods, an Ember, an Ichor, an Orb of Conflict, a
+Harvest quality enchant: none). The same outcome at `m2` removes the slots `p` maps those to, with the same chance, and its refusals read
+the same counts. The two successors then have ordinary slots of the same views, so the same counts, tags and status (a per-leaf best of
+the same contributions with the key's own slots): the same key. So the pushed kernels are equal, outcome by outcome. **Proved** so.
+
+The build asks such an action once for each multiset of views at a key (`SHARE_VIEWS`: the first member with those views; the others take
+its answer: its kernel, its refusal or its model gap; `stats.view_pairs`), before its kernel key is made: the rows are the ones every member
+gives, from one kernel each. The pairs left out still count as pairs, as a certain addition's do, so a counted build stops where it did.
+Checked both ways on the hand-worked world, with a lock and without, against every member of every key a seeded walk meets
+(`tests/test_pattern_member_views.py`), and on R04's and R13's first bounds (the same model and values).
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -293,6 +322,8 @@ from ._state import CompressedState, Slot, best_of
 # member that is not a state of the route it says nothing about the states that are, and dropping the action from the key could put the bound
 # above the exact cost. The build refuses and says why. The clauses name the families themselves (`tests/test_cli_model_gaps.py` scans for them).
 
+REFUSED = -3  # what `PatternBuilder._offers_of_key` notes for the views of a member the action refuses (#1338) ...
+GAP = -4  # ... and of a member where it is a model gap at every member of the key
 CHOICE = -2  # the offer index of a row of a choice node (`_relaxed`): a step of a relaxed draw, at no cost (carried at `FLOOR_COST`)
 SINK = -1  # the successor of the mass an approximate kernel does not account for: a state that costs nothing (the goal)
 SHRINK = Fraction(2**30 - 1, 2**30)  # every chance of a float kernel is taken this much lower; the float error is 1e-13, so no chance is above its exact one
@@ -311,6 +342,7 @@ SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered f
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
 SHARE_ALIKE = True  # under `ALL` the fills of the pure junk that an action cannot tell apart are offered at one of them (`Pattern.alike_of`, #1192); False: at every fill
+SHARE_VIEWS = True  # an action that tells ordinary slots apart by what the key reads of them alone is asked once for each multiset of those views at a key (`Pattern.views_only`, #1338); False: at every member
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
@@ -515,6 +547,7 @@ class PatternStats:
     restarted_keys: int = 0  # expanded keys a grown universe made again (`PatternBuilder._begin_again`, #1086)
     modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
+    view_pairs: int = 0  # pairs answered by the pair of a member with the same views of its ordinary slots (`Pattern.views_only`, #1338)
     fallbacks: int = 0  # compositions whose lightest (or heaviest) fill was no item: offered at every fill, or under `ANY` and `ONE` at one that is (#1192)
 
 
@@ -580,6 +613,7 @@ class Pattern:
         self._reads: dict[Action, object] = {}
         self._only_named: dict[Action, bool] = {}
         self._draws: dict[Action, bool] = {}
+        self._views_only: dict[Action, bool] = {}
         self._feasible: Recent[bool] = Recent(MEMBERS_KEPT or kept_entries(MEMBER_SHARE, MEMBER_BYTES))  # member state -> whether it is an item (`_ok`), the members asked lately (#1335)
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
@@ -826,6 +860,37 @@ class Pattern:
         if found is None:
             found = self._draws[action] = action.adds(self.data).draws
         return found
+
+    def views_only(self, action: Action) -> bool:
+        """Whether the kernel of `action` at a member, pushed through the key, is a function of the key and of the multiset of the views of the
+        member's ordinary slots (`view`): it is block-invariant, names no family of the junk, draws no mod and adds none, and reads nothing
+        else of a mod (module docstring, "The members an action cannot tell apart", #1338)."""
+        found = self._views_only.get(action)
+        if found is None:
+            reads = self.reads(action)
+            adds = action.adds(self.data)
+            beyond = (
+                reads.pool_weight or reads.variants or reads.fractures or reads.rerolls_values or reads.input_mods or reads.input_classes
+                or reads.input_influenced or reads.influenced or reads.offer or reads.needs_veiled or reads.by_mod or reads.draw_tags
+                or reads.draw_levels
+            )  # fmt: skip
+            found = self._views_only[action] = bool(
+                SHARE_VIEWS and reads.junk and reads.block_invariant and reads.families == frozenset() and not beyond
+                and action.held_weight_factor() is None and adds.named == frozenset() and not adds.draws and not adds.fractures
+            )  # fmt: skip
+        return found
+
+    def view(self, member: CompressedState) -> frozenset:
+        """The multiset of what the key reads of each ordinary slot of `member`: its side, its protected tags and what it gives the goal."""
+        seen: Counter = Counter()
+        for slot in member.slots:
+            if slot.crafted or self.is_veiled(slot):
+                continue
+            tagset = self._tag_kind.get(slot.kind)
+            if tagset is None:
+                tagset = self._tag_kind[slot.kind] = _tagset(slot.kind)
+            seen[(slot.side, tagset, slot.contribution)] += 1
+        return frozenset(seen.items())
 
     def holds_lock(self, key: PatternKey) -> bool:
         """Whether the key holds a lock (`Prefixes` / `Suffixes Cannot Be Changed`), crafted or fractured: a reroll then keeps the locked side."""
@@ -1827,6 +1892,7 @@ class PatternBuilder:
             keyed = SHARE_KEY_REFUSALS and classed is not None and ab.refusal_names_no_junk(offer.action)
             refused_at_key = False  # a member's refusal class, which is the key's (`keyed`), holds a refusal: every member's does
             seen: set[int] = set()
+            by_view: dict[frozenset, int] | None = {} if pattern.views_only(offer.action) else None  # the views of a member -> its answer (#1338)
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             if policy[0] is Mode.RELAXED:
                 relaxed = self._relaxed_rows(key, oi, offer, members, last, tick)
@@ -1860,15 +1926,33 @@ class PatternBuilder:
                     stats.refused_pairs += 1
                     refused_at_key = keyed
                     continue
+                view = None
+                if by_view is not None:
+                    view = pattern.view(member)
+                    kid = by_view.get(view)
+                    if kid is not None:  # a member with these views was asked: its answer is this one's (module docstring, #1338)
+                        stats.view_pairs += 1
+                        if kid == REFUSED:
+                            stats.refused_pairs += 1
+                        elif kid == GAP:
+                            stats.gap_pairs += 1
+                        elif kid not in seen:
+                            seen.add(kid)
+                            added.append((oi, kid))
+                        continue
                 try:
                     ck = ab.kernel_key(member, offer.action)
                 except NotApplicableError:
                     stats.refused_pairs += 1
                     refused_at_key = keyed and found is not None and ab.refused_in_class(found, count=False)
+                    if view is not None:
+                        by_view[view] = REFUSED
                     continue
                 except OutOfScopeError as gap:
                     if _gap_everywhere(pattern, self.gaps, key, offer):
                         stats.gap_pairs += 1
+                        if view is not None:
+                            by_view[view] = GAP
                         continue
                     raise _gap(offer, key, gap) from gap
                 kid = self.computed.get(ck)
@@ -1882,10 +1966,14 @@ class PatternBuilder:
                             exact = ab.kernel(member, offer.action)
                     except NotApplicableError:
                         stats.refused_pairs += 1
+                        if view is not None:
+                            by_view[view] = REFUSED
                         continue
                     except OutOfScopeError as gap:
                         if _gap_everywhere(pattern, self.gaps, key, offer):
                             stats.gap_pairs += 1
+                            if view is not None:
+                                by_view[view] = GAP
                             continue
                         raise _gap(offer, key, gap) from gap
                     stats.kernels += 1
@@ -1901,6 +1989,8 @@ class PatternBuilder:
                     if self.parts_of != self.computed.generation:  # the keys that held the parts are going: the parts go with them (#1335)
                         self.parts, self.parts_of = {}, self.computed.generation
                     kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
+                if view is not None:
+                    by_view[view] = kid
                 if kid not in seen:
                     seen.add(kid)
                     added.append((oi, kid))
