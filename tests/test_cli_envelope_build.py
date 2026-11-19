@@ -799,11 +799,11 @@ def new_names_gain(monkeypatch):
     """`_seed_named` counts every action new to a universe as a slot gained, as an essence's forced mod is (R11: four of its essences joined the model
     of the bound with a mod the pool does not list, each beginning the build again, #1086); the slots themselves are seeded as they are."""
     real = _pattern._Universe._seed_named
-    seen: dict[int, set] = {}
+    seen: dict[int, tuple] = {}  # id of a universe -> (the universe, its actions): the universe is held, so a later one never takes its id
 
     def gaining(self, pattern, actions):
         real(self, pattern, actions)
-        known = seen.setdefault(id(self), set())
+        known = seen.setdefault(id(self), (self, set()))[1]
         new = [action for action in actions if action not in known]
         known.update(new)
         return len(new)
