@@ -477,6 +477,7 @@ def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of,
         for k in keys:
             given[k] = given.get(k, 0) + 1
     added = 0
+    asked = {p: set(keys) for p, keys in needs.items()}  # (a set: `needs[p]` may name thousands of keys)
     ranked: dict[int, list[tuple[float, int]]] = {}
     for klass, keys in keys_of.items():
         if klass in (INSIDE, OUTSIDE):  # the start's shape: the floors are strong and `needed` names the few offers that could lower a key's value
@@ -491,12 +492,13 @@ def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of,
             for low, p in ranked[klass]:
                 if want == 0:
                     break
-                if k in holders.get(p, ()) or k in needs.get(p, ()):
+                if k in holders.get(p, ()) or k in asked.get(p, ()):
                     continue
                 if p not in needs:
                     needs[p] = []
                     found.append((low, p))
                 needs[p].append(k)
+                asked.setdefault(p, set()).add(k)
                 want -= 1
                 added += 1
     return added
