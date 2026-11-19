@@ -285,6 +285,7 @@ from ._kernel import Abstraction
 from ._relaxed import ChoiceNode, relaxed_draw
 from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags, protected_tags
 from ._rolls import is_rollable
+from ._recent import Recent, kept_entries
 from ._state import CompressedState, Slot, best_of
 
 # The two families of refusal an action raises (`actions/errors.py`, #506). A game refusal (`NotApplicableError`: the game forbids the action on that
@@ -301,6 +302,10 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+KERNEL_KEY_SHARE, KERNEL_KEY_BYTES = 1 / 12, 1024  # `computed` may hold this share of the memory net, in keys of about 1 KB with their parts (`kept_entries`, #1335)
+MEMBER_SHARE, MEMBER_BYTES = 1 / 20, 300  # `Pattern._feasible` may hold this share, in members of about 300 bytes (#1335); a 12 GB net: 2^19 keys, about 2^20 members a generation
+KERNEL_KEYS_KEPT: int | None = None  # a generation of `computed` set by hand (the tests); None: from the net (`kept_entries`)
+MEMBERS_KEPT: int | None = None  # a generation of `Pattern._feasible` set by hand (the tests); None: from the net
 SHARE_KEY_PARTS = True  # a kernel key stored in `PatternBuilder.computed` holds its parts shared with the other keys (`_shared_parts`, #1332); False: as made
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
@@ -575,7 +580,7 @@ class Pattern:
         self._reads: dict[Action, object] = {}
         self._only_named: dict[Action, bool] = {}
         self._draws: dict[Action, bool] = {}
-        self._feasible: dict[CompressedState, bool] = {}
+        self._feasible: Recent[bool] = Recent(MEMBERS_KEPT or kept_entries(MEMBER_SHARE, MEMBER_BYTES))  # member state -> whether it is an item (`_ok`), the members asked lately (#1335)
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
         self._pure_reads: dict[tuple, bool] = {}
@@ -1534,8 +1539,9 @@ class PatternBuilder:
         self.expanded: list[bool] = []
         self.kernel_ids: dict[tuple, int] = {}
         self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
-        self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model; each key stored with its parts shared (`_shared_parts`, #1332)
-        self.parts: dict = {}  # one object for each distinct part of the stored kernel keys (`_shared_parts`)
+        self.computed: Recent[int] = Recent(KERNEL_KEYS_KEPT or kept_entries(KERNEL_KEY_SHARE, KERNEL_KEY_BYTES))  # kernel key of the abstraction -> kernel id of the model, the keys asked lately (#1335); each stored with its parts shared (`_shared_parts`, #1332)
+        self.parts: dict = {}  # one object for each distinct part of the kernel keys stored since `computed` last let a generation go (`_shared_parts`)
+        self.parts_of = 0  # the generation of `computed` that `parts` serves
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key has been given (each built there unless it is held at some keys only)
         self.wide: list[int] = []  # the offers built at every key, in order
@@ -1892,6 +1898,8 @@ class PatternBuilder:
                         pushed[self._intern(successor)] += chance
                     if self.approximate:
                         pushed = _lowered(pushed)
+                    if self.parts_of != self.computed.generation:  # the keys that held the parts are going: the parts go with them (#1335)
+                        self.parts, self.parts_of = {}, self.computed.generation
                     kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
                 if kid not in seen:
                     seen.add(kid)
