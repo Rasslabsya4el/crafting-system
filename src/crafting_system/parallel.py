@@ -261,12 +261,17 @@ def kept_objects() -> Iterator[Callable[[], None]]:
     permanent generation (`gc.freeze`, a constant-time move); the collector's own collections then walk only what was made since. No value
     changes: the collector frees cycles only, and a frozen object is still freed by its count. A cycle that a later unit drops while it is
     frozen is freed when the stretch ends: everything is unfrozen then, on every way out, and the next collection walks it once.
+    The stretch settles once as it begins, before the work's own clock starts: that one walk is of everything the process holds (a bound's
+    earlier rounds, or a test process's earlier tests), and inside the stretch it would be a pause of the work's clock as long as that heap
+    is big (#1340: 0.8 s on a test process of 16 million objects, enough to move where a net on the clock stopped a small build); each
+    `settle` after it walks only what the work made since.
     Nested inside another stretch, or where objects are already frozen by someone else (a pool's parent, `risk._regen`), `settle` does nothing.
     """
     if gc.get_freeze_count():
         yield _settle_nothing
         return
     try:
+        _settle()
         yield _settle
     finally:
         gc.unfreeze()

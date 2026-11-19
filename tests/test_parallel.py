@@ -276,6 +276,28 @@ def test_kept_objects_freezes_what_is_alive_at_settle_and_unfreezes_at_the_end()
     assert seen() is None  # given back: the cycle is freed
 
 
+def test_kept_objects_settles_as_it_begins():
+    """#1340: the stretch collects and freezes as it begins, so that its first `settle` walks only what the work made (a walk of the whole
+    heap inside the work is a pause on its clock): a cycle already garbage is freed then, what is alive is frozen."""
+    import gc
+    import weakref
+
+    class Node:
+        pass
+
+    if gc.get_freeze_count():
+        pytest.skip("objects are frozen already: the stretch settles nothing")
+    dropped = Node()
+    dropped.me = dropped
+    gone = weakref.ref(dropped)
+    alive = [[] for _ in range(100)]
+    del dropped
+    with parallel.kept_objects():
+        assert gone() is None
+        assert gc.get_freeze_count() >= len(alive)
+    assert gc.get_freeze_count() == 0
+
+
 def test_kept_objects_unfreezes_when_the_work_raises():
     import gc
 
